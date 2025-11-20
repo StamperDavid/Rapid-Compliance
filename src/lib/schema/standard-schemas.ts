@@ -1,6 +1,27 @@
 // Complete Standard CRM Schema Definitions
 
 export const STANDARD_SCHEMAS = {
+  leads: {
+    id: 'leads',
+    name: 'Lead',
+    pluralName: 'Leads',
+    singularName: 'Lead',
+    icon: '🎯',
+    fields: [
+      { id: 'f1', key: 'first_name', label: 'First Name', type: 'text', required: true },
+      { id: 'f2', key: 'last_name', label: 'Last Name', type: 'text', required: true },
+      { id: 'f3', key: 'email', label: 'Email', type: 'email', required: true },
+      { id: 'f4', key: 'phone', label: 'Phone', type: 'phoneNumber', required: false },
+      { id: 'f5', key: 'company', label: 'Company', type: 'text', required: false },
+      { id: 'f6', key: 'title', label: 'Job Title', type: 'text', required: false },
+      { id: 'f7', key: 'lead_source', label: 'Lead Source', type: 'singleSelect', required: false, options: ['Website', 'Referral', 'Cold Call', 'Social Media', 'Email Campaign', 'Trade Show', 'Other'] },
+      { id: 'f8', key: 'lead_status', label: 'Status', type: 'singleSelect', required: true, options: ['New', 'Contacted', 'Qualified', 'Unqualified', 'Converted'] },
+      { id: 'f9', key: 'rating', label: 'Rating', type: 'singleSelect', required: false, options: ['Hot', 'Warm', 'Cold'] },
+      { id: 'f10', key: 'estimated_value', label: 'Estimated Value', type: 'currency', required: false },
+      { id: 'f11', key: 'notes', label: 'Notes', type: 'longText', required: false }
+    ]
+  },
+
   companies: {
     id: 'companies',
     name: 'Company',
@@ -191,6 +212,9 @@ export const STANDARD_SCHEMAS = {
 };
 
 export const PICKLIST_VALUES = {
+  lead_source: ['Website', 'Referral', 'Cold Call', 'Social Media', 'Email Campaign', 'Trade Show', 'Other'],
+  lead_status: ['New', 'Contacted', 'Qualified', 'Unqualified', 'Converted'],
+  lead_rating: ['Hot', 'Warm', 'Cold'],
   industry: ['Technology', 'Healthcare', 'Finance', 'Manufacturing', 'Retail', 'Services', 'Other'],
   company_status: ['Active', 'Inactive', 'Prospect'],
   contact_status: ['Active', 'Inactive'],

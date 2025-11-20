@@ -1,14 +1,47 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import AdminBar from '@/components/AdminBar';
+import FilterBuilder from '@/components/FilterBuilder';
+import { FilterEngine } from '@/lib/filters/filter-engine';
+import type { ViewFilter } from '@/types/filters';
 
-type ViewType = 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'orders' | 'tasks';
+type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'orders' | 'tasks';
 
 export default function CRMPage() {
   const [config, setConfig] = useState<any>(null);
-  const [activeView, setActiveView] = useState<ViewType>('companies');
+  const [activeView, setActiveView] = useState<ViewType>('leads');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showFilterBuilder, setShowFilterBuilder] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<ViewFilter | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({});
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [theme, setTheme] = useState<any>(null);
+
+  // Load theme
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('appTheme');
+    if (savedTheme) {
+      try {
+        setTheme(JSON.parse(savedTheme));
+      } catch (error) {
+        console.error('Failed to load theme:', error);
+      }
+    }
+  }, []);
+
+  // Show toast notification
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // Load configuration
   useEffect(() => {
@@ -18,64 +51,175 @@ export default function CRMPage() {
     }
   }, []);
 
-  // Sample data
-  const [companies] = useState([
+  // Sample data with setters
+  const [leads, setLeads] = useState([
+    { id: '1', first_name: 'Sarah', last_name: 'Williams', email: 'sarah@newtech.com', phone: '555-0400', company: 'NewTech Inc', title: 'Marketing Director', lead_source: 'Website', lead_status: 'New', rating: 'Hot', estimated_value: 75000 },
+    { id: '2', first_name: 'Michael', last_name: 'Brown', email: 'mbrown@startup.io', phone: '555-0500', company: 'Startup.io', title: 'CEO', lead_source: 'Referral', lead_status: 'Contacted', rating: 'Warm', estimated_value: 150000 },
+    { id: '3', first_name: 'Emily', last_name: 'Davis', email: 'emily@enterprise.com', phone: '555-0600', company: 'Enterprise Corp', title: 'VP Operations', lead_source: 'Cold Call', lead_status: 'Qualified', rating: 'Hot', estimated_value: 200000 },
+  ]);
+
+  const [companies, setCompanies] = useState([
     { id: '1', name: 'Acme Corp', website: 'acme.com', phone: '555-0100', industry: 'Technology', status: 'Active', annual_revenue: 5000000 },
     { id: '2', name: 'Global Industries', website: 'global.com', phone: '555-0200', industry: 'Manufacturing', status: 'Active', annual_revenue: 12000000 },
     { id: '3', name: 'Tech Solutions', website: 'techsol.com', phone: '555-0300', industry: 'Technology', status: 'Prospect', annual_revenue: 2500000 },
   ]);
 
-  const [contacts] = useState([
+  const [contacts, setContacts] = useState([
     { id: '1', first_name: 'John', last_name: 'Doe', email: 'john@acme.com', phone: '555-0101', title: 'CEO', company_id: '1', status: 'Active' },
     { id: '2', first_name: 'Jane', last_name: 'Smith', email: 'jane@global.com', phone: '555-0201', title: 'VP Sales', company_id: '2', status: 'Active' },
     { id: '3', first_name: 'Bob', last_name: 'Johnson', email: 'bob@techsol.com', phone: '555-0301', title: 'CTO', company_id: '3', status: 'Active' },
   ]);
 
-  const [deals] = useState([
+  const [deals, setDeals] = useState([
     { id: '1', name: 'Q1 2024 Contract', company_id: '1', contact_id: '1', amount: 50000, stage: 'Proposal', probability: 60, expected_close_date: '2024-03-31' },
     { id: '2', name: 'Enterprise License', company_id: '2', contact_id: '2', amount: 125000, stage: 'Negotiation', probability: 80, expected_close_date: '2024-02-28' },
     { id: '3', name: 'Consulting Package', company_id: '3', contact_id: '3', amount: 75000, stage: 'Qualification', probability: 40, expected_close_date: '2024-04-15' },
   ]);
 
-  const [products] = useState([
+  const [products, setProducts] = useState([
     { id: '1', name: 'Premium Plan', sku: 'PLAN-PREM', price: 299, category: 'Subscription', active: true, stock_quantity: 999 },
     { id: '2', name: 'Enterprise Plan', sku: 'PLAN-ENT', price: 999, category: 'Subscription', active: true, stock_quantity: 999 },
     { id: '3', name: 'Consulting Hours', sku: 'CONS-HR', price: 200, category: 'Service', active: true, stock_quantity: 0 },
   ]);
 
-  const [quotes] = useState([
+  const [quotes, setQuotes] = useState([
     { id: '1', quote_number: 'QUO-001', company_id: '1', quote_date: '2024-01-10', expiry_date: '2024-02-10', total: 50000, status: 'Sent' },
     { id: '2', quote_number: 'QUO-002', company_id: '2', quote_date: '2024-01-15', expiry_date: '2024-02-15', total: 125000, status: 'Accepted' },
   ]);
 
-  const [invoices] = useState([
+  const [invoices, setInvoices] = useState([
     { id: '1', invoice_number: 'INV-001', company_id: '1', invoice_date: '2024-01-15', due_date: '2024-02-15', total: 50000, paid_amount: 25000, balance: 25000, status: 'Partial' },
     { id: '2', invoice_number: 'INV-002', company_id: '2', invoice_date: '2024-01-20', due_date: '2024-02-20', total: 125000, paid_amount: 125000, balance: 0, status: 'Paid' },
   ]);
 
-  const [orders] = useState([
+  const [orders, setOrders] = useState([
     { id: '1', order_number: 'ORD-001', company_id: '1', order_date: '2024-01-15', total: 50000, status: 'Processing' },
   ]);
 
-  const [tasks] = useState([
+  const [tasks, setTasks] = useState([
     { id: '1', subject: 'Follow up with Acme', due_date: '2024-01-25', priority: 'High', status: 'In Progress' },
     { id: '2', subject: 'Send proposal to Global', due_date: '2024-01-26', priority: 'Urgent', status: 'Not Started' },
     { id: '3', subject: 'Schedule demo with Tech Solutions', due_date: '2024-01-27', priority: 'Normal', status: 'Not Started' },
   ]);
 
   const dataMap: Record<ViewType, any[]> = {
-    companies, contacts, deals, products, quotes, invoices, orders, tasks
+    leads, companies, contacts, deals, products, quotes, invoices, orders, tasks
   };
 
-  const getActiveData = () => dataMap[activeView] || [];
+  const setterMap: Record<ViewType, Function> = {
+    leads: setLeads,
+    companies: setCompanies,
+    contacts: setContacts,
+    deals: setDeals,
+    products: setProducts,
+    quotes: setQuotes,
+    invoices: setInvoices,
+    orders: setOrders,
+    tasks: setTasks,
+  };
+
+  const getActiveData = () => {
+    let data = dataMap[activeView] || [];
+    
+    // Apply filters first
+    if (activeFilter) {
+      data = FilterEngine.applyFilter(data, activeFilter);
+    }
+    
+    // Then apply search
+    if (searchQuery) {
+      data = data.filter((record: any) => {
+        return Object.values(record).some((value: any) => 
+          String(value).toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      });
+    }
+    
+    return data;
+  };
+
   const getSchema = () => STANDARD_SCHEMAS[activeView];
+  
   const getCompanyName = (companyId: string) => {
     const company = companies.find(c => c.id === companyId);
     return company?.name || '-';
   };
 
+  // CRUD Operations
+  const handleAdd = () => {
+    setFormData({});
+    setShowAddModal(true);
+  };
+
+  const handleEdit = (record: any) => {
+    setSelectedRecord(record);
+    setFormData({ ...record });
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (record: any) => {
+    setSelectedRecord(record);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleSaveNew = () => {
+    const newRecord = {
+      ...formData,
+      id: Date.now().toString(),
+    };
+    
+    const setter = setterMap[activeView];
+    setter((prev: any[]) => [...prev, newRecord]);
+    setShowAddModal(false);
+    setFormData({});
+    showToast(`${getSchema().singularName} added successfully!`, 'success');
+  };
+
+  const handleSaveEdit = () => {
+    const setter = setterMap[activeView];
+    setter((prev: any[]) => 
+      prev.map(item => item.id === selectedRecord.id ? { ...item, ...formData } : item)
+    );
+    setShowEditModal(false);
+    setFormData({});
+    setSelectedRecord(null);
+    showToast(`${getSchema().singularName} updated successfully!`, 'success');
+  };
+
+  const confirmDelete = () => {
+    const setter = setterMap[activeView];
+    setter((prev: any[]) => prev.filter(item => item.id !== selectedRecord.id));
+    setShowDeleteConfirm(false);
+    setSelectedRecord(null);
+    showToast(`${getSchema().singularName} deleted successfully!`, 'success');
+  };
+
+  const handleExport = () => {
+    const data = getActiveData();
+    const csv = [
+      Object.keys(data[0] || {}).join(','),
+      ...data.map((row: any) => Object.values(row).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${activeView}-${Date.now()}.csv`;
+    a.click();
+  };
+
+  const brandName = theme?.branding?.companyName || config?.businessName || 'AI CRM';
+  const logoUrl = theme?.branding?.logoUrl;
+  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#000000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
+      {/* Admin Bar */}
+      <AdminBar />
+
+      {/* Main Content Area */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
       {/* Sidebar */}
       <div style={{ 
         width: sidebarOpen ? '260px' : '70px',
@@ -88,19 +232,25 @@ export default function CRMPage() {
       }}>
         {/* Brand */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ fontSize: '1.5rem' }}>🚀</div>
-            {sidebarOpen && (
-              <div>
-                <h1 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#ffffff', margin: 0 }}>
-                  {config?.businessName || 'AI CRM'}
-                </h1>
-                <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
-                  {config?.industry ? STANDARD_SCHEMAS[config.industry]?.name : 'Platform'}
-                </p>
-              </div>
+          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}>
+            {logoUrl ? (
+              <img src={logoUrl} alt={brandName} style={{ maxHeight: sidebarOpen ? '40px' : '32px', maxWidth: sidebarOpen ? '150px' : '32px', objectFit: 'contain' }} />
+            ) : (
+              <>
+                <div style={{ fontSize: '1.5rem' }}>🚀</div>
+                {sidebarOpen && (
+                  <div>
+                    <h1 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#ffffff', margin: 0 }}>
+                      {brandName}
+                    </h1>
+                    <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
+                      {config?.industry ? STANDARD_SCHEMAS[config.industry]?.name : 'Platform'}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
-          </div>
+          </Link>
         </div>
 
         {/* Navigation */}
@@ -109,22 +259,22 @@ export default function CRMPage() {
             <button
               key={key}
               onClick={() => setActiveView(key as ViewType)}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: activeView === key ? '#1a1a1a' : 'transparent',
-                color: activeView === key ? '#6366f1' : '#999',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: activeView === key ? '600' : '400',
-                borderLeft: activeView === key ? '3px solid #6366f1' : '3px solid transparent',
-                textAlign: 'left',
-                transition: 'all 0.2s'
-              }}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  backgroundColor: activeView === key ? '#1a1a1a' : 'transparent',
+                  color: activeView === key ? primaryColor : '#999',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: activeView === key ? '600' : '400',
+                  borderLeft: activeView === key ? `3px solid ${primaryColor}` : '3px solid transparent',
+                  textAlign: 'left',
+                  transition: 'all 0.2s'
+                }}
               onMouseEnter={(e) => {
                 if (activeView !== key) e.currentTarget.style.backgroundColor = '#111';
               }}
@@ -138,7 +288,7 @@ export default function CRMPage() {
           ))}
         </nav>
 
-        {/* Collapse Button */}
+        {/* Settings Links - REMOVED (now in AdminBar) */}
         <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -178,39 +328,87 @@ export default function CRMPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button style={{
-              padding: '0.625rem 1.25rem',
-              backgroundColor: '#6366f1',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.875rem'
-            }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                padding: '0.625rem 1rem',
+                backgroundColor: '#1a1a1a',
+                color: '#fff',
+                border: '1px solid #333',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                minWidth: '200px'
+              }}
+            />
+            <button
+              onClick={() => setShowFilterBuilder(true)}
+              style={{
+                padding: '0.625rem 1rem',
+                backgroundColor: activeFilter ? primaryColor : '#1a1a1a',
+                color: activeFilter ? '#fff' : '#999',
+                border: `1px solid ${activeFilter ? primaryColor : '#333'}`,
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              🔍 Filter
+              {activeFilter && activeFilter.groups[0]?.conditions.length > 0 && (
+                <span style={{ padding: '2px 6px', backgroundColor: theme?.colors?.primary?.dark || '#4f46e5', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '600' }}>
+                  {activeFilter.groups.reduce((sum, g) => sum + g.conditions.length, 0)}
+                </span>
+              )}
+            </button>
+            {activeFilter && (
+              <button
+                onClick={() => setActiveFilter(null)}
+                style={{
+                  padding: '0.625rem',
+                  backgroundColor: '#1a1a1a',
+                  color: '#dc2626',
+                  border: '1px solid #333',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+                title="Clear filters"
+              >
+                ×
+              </button>
+            )}
+            <button 
+              onClick={handleAdd}
+              style={{
+                padding: '0.625rem 1.25rem',
+                backgroundColor: primaryColor,
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.875rem'
+              }}>
               + New {getSchema().singularName}
             </button>
-            <button style={{
-              padding: '0.625rem 1rem',
-              backgroundColor: '#1a1a1a',
-              color: '#999',
-              border: '1px solid #333',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontSize: '0.875rem'
-            }}>
-              Import
-            </button>
-            <button style={{
-              padding: '0.625rem 1rem',
-              backgroundColor: '#1a1a1a',
-              color: '#999',
-              border: '1px solid #333',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontSize: '0.875rem'
-            }}>
+            <button 
+              onClick={handleExport}
+              style={{
+                padding: '0.625rem 1rem',
+                backgroundColor: '#1a1a1a',
+                color: '#999',
+                border: '1px solid #333',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem'
+              }}>
               Export
             </button>
           </div>
@@ -256,7 +454,7 @@ export default function CRMPage() {
                         {field.type === 'currency' ? (
                           <span style={{ fontWeight: '600' }}>${Number(record[field.key] || 0).toLocaleString()}</span>
                         ) : field.type === 'lookup' && field.key === 'company_id' ? (
-                          <span style={{ color: '#6366f1' }}>{getCompanyName(record[field.key])}</span>
+                          <span style={{ color: primaryColor }}>{getCompanyName(record[field.key])}</span>
                         ) : field.type === 'checkbox' ? (
                           <span style={{
                             padding: '0.25rem 0.5rem',
@@ -271,7 +469,7 @@ export default function CRMPage() {
                           <span style={{
                             padding: '0.25rem 0.75rem',
                             backgroundColor: '#1a1a1a',
-                            color: record[field.key] === 'Active' || record[field.key] === 'Paid' ? '#10b981' : '#6366f1',
+                            color: record[field.key] === 'Active' || record[field.key] === 'Paid' ? theme?.colors?.success?.main || '#10b981' : primaryColor,
                             borderRadius: '9999px',
                             fontSize: '0.75rem',
                             border: '1px solid #333'
@@ -284,13 +482,14 @@ export default function CRMPage() {
                       </td>
                     ))}
                     <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                      <button style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem' }}>
-                        View
-                      </button>
-                      <button style={{ color: '#999', background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem' }}>
+                      <button 
+                        onClick={() => handleEdit(record)}
+                        style={{ color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem' }}>
                         Edit
                       </button>
-                      <button style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}>
+                      <button 
+                        onClick={() => handleDelete(record)}
+                        style={{ color: theme?.colors?.error?.main || '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem' }}>
                         Delete
                       </button>
                     </td>
@@ -301,12 +500,217 @@ export default function CRMPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '500px', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+              Add New {getSchema().singularName}
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {getSchema().fields.map((field: any) => (
+                <div key={field.key}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                    {field.label}
+                  </label>
+                  {field.type === 'select' ? (
+                    <select
+                      value={formData[field.key] || ''}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    >
+                      <option value="">Select...</option>
+                      {field.options?.map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : field.type === 'checkbox' ? (
+                    <input
+                      type="checkbox"
+                      checked={formData[field.key] || false}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
+                      style={{ width: '1.25rem', height: '1.25rem' }}
+                    />
+                  ) : field.type === 'lookup' && field.key === 'company_id' ? (
+                    <select
+                      value={formData[field.key] || ''}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    >
+                      <option value="">Select Company...</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>{company.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      value={formData[field.key] || ''}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNew}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: primaryColor, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Add {getSchema().singularName}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '500px', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+              Edit {getSchema().singularName}
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {getSchema().fields.map((field: any) => (
+                <div key={field.key}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
+                    {field.label}
+                  </label>
+                  {field.type === 'select' ? (
+                    <select
+                      value={formData[field.key] || ''}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    >
+                      <option value="">Select...</option>
+                      {field.options?.map((opt: string) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : field.type === 'checkbox' ? (
+                    <input
+                      type="checkbox"
+                      checked={formData[field.key] || false}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
+                      style={{ width: '1.25rem', height: '1.25rem' }}
+                    />
+                  ) : field.type === 'lookup' && field.key === 'company_id' ? (
+                    <select
+                      value={formData[field.key] || ''}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    >
+                      <option value="">Select Company...</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>{company.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                      value={formData[field.key] || ''}
+                      onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                      style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => setShowEditModal(false)}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: primaryColor, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '400px' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+              Confirm Delete
+            </h3>
+            <p style={{ color: '#999', marginBottom: '1.5rem' }}>
+              Are you sure you want to delete this {getSchema().singularName}? This action cannot be undone.
+            </p>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: theme?.colors?.error?.main || '#dc2626', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Filter Builder Modal */}
+      {showFilterBuilder && (
+        <FilterBuilder
+          fields={getSchema().fields.map((f: any) => ({
+            key: f.key,
+            label: f.label,
+            type: f.type,
+            options: f.options
+          }))}
+          onApply={(filter) => setActiveFilter(filter)}
+          onClose={() => setShowFilterBuilder(false)}
+          initialFilter={activeFilter || undefined}
+        />
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '2rem',
+          right: '2rem',
+          padding: '1rem 1.5rem',
+          backgroundColor: toast.type === 'success' ? '#065f46' : '#7f1d1d',
+          color: toast.type === 'success' ? '#6ee7b7' : '#fca5a5',
+          borderRadius: '0.5rem',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          zIndex: 100,
+          fontWeight: '600',
+          border: `1px solid ${toast.type === 'success' ? '#10b981' : '#dc2626'}`
+        }}>
+          {toast.message}
+        </div>
+      )}
+      </div>
     </div>
   );
-
-  function getCompanyName(companyId: string) {
-    const company = companies.find((c: any) => c.id === companyId);
-    return company?.name || '-';
-  }
 }
 

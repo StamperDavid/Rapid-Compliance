@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import AdminBar from '@/components/AdminBar';
 
 interface Field {
   id: string;
@@ -115,20 +116,23 @@ export default function SchemaBuilderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
+      <AdminBar />
+      
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="text-indigo-600 hover:text-indigo-800">
-                ← Back
+      <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}>
+        <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <Link href="/workspace/demo/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+                ← Back to Settings
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">Schema Builder</h1>
+              <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Schema Editor</h1>
             </div>
             <button
               onClick={() => setIsCreating(true)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              style={{ padding: '0.625rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
             >
               + Create Schema
             </button>
@@ -136,51 +140,51 @@ export default function SchemaBuilderPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
         {/* Existing Schemas */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
           {schemas.map((schema) => (
-            <div key={schema.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">{schema.icon}</span>
+            <div key={schema.id} style={{ backgroundColor: '#0a0a0a', borderRadius: '0.75rem', border: '1px solid #1a1a1a', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '2rem' }}>{schema.icon}</span>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">{schema.name}</h3>
-                    <p className="text-sm text-gray-500">{schema.pluralName}</p>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{schema.name}</h3>
+                    <p style={{ fontSize: '0.875rem', color: '#666', margin: 0 }}>{schema.pluralName}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => deleteSchema(schema.id)}
-                  className="text-red-500 hover:text-red-700"
+                  style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}
                   title="Delete"
                 >
                   🗑️
                 </button>
               </div>
               
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Fields ({schema.fields.length})</p>
+              <div style={{ marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>Fields ({schema.fields.length})</p>
                 {schema.fields.slice(0, 3).map((field) => (
-                  <div key={field.id} className="flex items-center justify-between text-sm bg-gray-50 px-3 py-2 rounded">
-                    <span className="text-gray-700">{field.label}</span>
-                    <span className="text-gray-500 text-xs">{field.type}</span>
+                  <div key={field.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem', backgroundColor: '#111', padding: '0.625rem 0.875rem', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
+                    <span style={{ color: '#fff' }}>{field.label}</span>
+                    <span style={{ color: '#666', fontSize: '0.75rem' }}>{field.type}</span>
                   </div>
                 ))}
                 {schema.fields.length > 3 && (
-                  <p className="text-xs text-gray-500">+{schema.fields.length - 3} more</p>
+                  <p style={{ fontSize: '0.75rem', color: '#666' }}>+{schema.fields.length - 3} more</p>
                 )}
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+              <div style={{ paddingTop: '1rem', borderTop: '1px solid #1a1a1a', display: 'flex', gap: '0.5rem' }}>
                 <Link
                   href={`/workspace/demo/entities/${schema.name.toLowerCase()}`}
-                  className="flex-1 text-center px-3 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm hover:bg-indigo-100 transition"
+                  style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#6366f1', borderRadius: '0.5rem', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid #333', fontWeight: '500' }}
                 >
                   View Data
                 </Link>
                 <button
                   onClick={() => setEditingSchema(schema)}
-                  className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg text-sm hover:bg-gray-100 transition"
+                  style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: '#222', color: '#999', borderRadius: '0.5rem', fontSize: '0.875rem', border: '1px solid #333', cursor: 'pointer', fontWeight: '500' }}
                 >
                   Edit
                 </button>
@@ -191,23 +195,23 @@ export default function SchemaBuilderPage() {
 
         {/* Create Schema Form */}
         {isCreating && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">Create New Schema</h2>
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
+            <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', maxWidth: '48rem', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div style={{ position: 'sticky', top: 0, backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Create New Schema</h2>
                 <button
                   onClick={() => setIsCreating(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {/* Basic Info */}
-                <div className="grid md:grid-cols-2 gap-4">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
                       Schema Name
                     </label>
                     <input
@@ -215,11 +219,11 @@ export default function SchemaBuilderPage() {
                       value={newSchema.name}
                       onChange={(e) => setNewSchema({ ...newSchema, name: e.target.value })}
                       placeholder="e.g., Company, Deal, Lead"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
                       Plural Name
                     </label>
                     <input
@@ -227,13 +231,13 @@ export default function SchemaBuilderPage() {
                       value={newSchema.pluralName}
                       onChange={(e) => setNewSchema({ ...newSchema, pluralName: e.target.value })}
                       placeholder="e.g., Companies, Deals, Leads"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
                     Icon (Emoji)
                   </label>
                   <input
@@ -241,44 +245,44 @@ export default function SchemaBuilderPage() {
                     value={newSchema.icon}
                     onChange={(e) => setNewSchema({ ...newSchema, icon: e.target.value })}
                     placeholder="📋"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                   />
                 </div>
 
                 {/* Fields */}
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-gray-900">Fields</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Fields</h3>
                     <button
                       onClick={addField}
-                      className="px-3 py-1 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600"
+                      style={{ padding: '0.5rem 1rem', backgroundColor: '#10b981', color: 'white', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', border: 'none', cursor: 'pointer' }}
                     >
                       + Add Field
                     </button>
                   </div>
 
-                  <div className="space-y-4">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {newSchema.fields.map((field, index) => (
-                      <div key={field.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
-                        <div className="grid md:grid-cols-3 gap-3">
+                      <div key={field.id} style={{ backgroundColor: '#111', borderRadius: '0.5rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                           <input
                             type="text"
                             value={field.label}
                             onChange={(e) => updateField(index, 'label', e.target.value)}
                             placeholder="Field Label"
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            style={{ padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                           />
                           <input
                             type="text"
                             value={field.key}
                             onChange={(e) => updateField(index, 'key', e.target.value)}
                             placeholder="field_key"
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            style={{ padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                           />
                           <select
                             value={field.type}
                             onChange={(e) => updateField(index, 'type', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            style={{ padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                           >
                             {FIELD_TYPES.map(type => (
                               <option key={type} value={type}>{type}</option>
@@ -286,20 +290,20 @@ export default function SchemaBuilderPage() {
                           </select>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <label className="flex items-center space-x-2">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <input
                               type="checkbox"
                               checked={field.required}
                               onChange={(e) => updateField(index, 'required', e.target.checked)}
-                              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              style={{ width: '1rem', height: '1rem' }}
                             />
-                            <span className="text-sm text-gray-700">Required</span>
+                            <span style={{ fontSize: '0.875rem', color: '#999' }}>Required</span>
                           </label>
                           {index > 0 && (
                             <button
                               onClick={() => removeField(index)}
-                              className="text-red-500 hover:text-red-700 text-sm"
+                              style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                             >
                               Remove
                             </button>
@@ -311,17 +315,17 @@ export default function SchemaBuilderPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #1a1a1a' }}>
                   <button
                     onClick={() => setIsCreating(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    style={{ flex: 1, padding: '0.75rem 1rem', border: '1px solid #333', color: '#999', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleCreateSchema}
                     disabled={!newSchema.name}
-                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: newSchema.name ? '#6366f1' : '#333', color: 'white', borderRadius: '0.5rem', cursor: newSchema.name ? 'pointer' : 'not-allowed', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
                   >
                     Create Schema
                   </button>
@@ -334,4 +338,3 @@ export default function SchemaBuilderPage() {
     </div>
   );
 }
-
