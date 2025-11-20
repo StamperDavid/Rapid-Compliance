@@ -1,0 +1,654 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, setDoc, onSnapshot, collection, query, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+
+// --- Global Environment Variables (Provided by Canvas) ---
+// These variables are mandatory for Firebase integration.
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-crm-app-id';
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+const apiKey = ""; // API Key for Gemini is handled by the execution environment.
+
+// --- Firestore Collection Constants ---
+// Using explicit collection names to correctly form the C/D/C/D/C/... paths.
+const SETTINGS_COLLECTION = 'settings';
+const PRODUCT_DATA_COLLECTION = 'products';
+
+// Helper function to handle exponential backoff for API calls
+const withRetry = async (fn, retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+            console.warn(`Attempt ${i + 1} failed, retrying in ${delay}ms...`, error.message);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+};
+
+const FieldTypes = ['String', 'Number', 'Boolean', 'Text Area'];
+
+// --- Main App Component ---
+const App = () => {
+    const [view, setView] = useState('agentTraining');
+    const [db, setDb] = useState(null);
+    const [auth, setAuth] = useState(null);
+    const [userId, setUserId] = useState(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+    const [schemas, setSchemas] = useState({});
+    const [products, setProducts] = useState([]);
+    const [agentState, setAgentState] = useState({
+        knowledgeBase: "",
+        goldenMaster: { status: false, trainingScore: 0, version: 0 },
+        trainingLog: []
+    });
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // 1. Firebase Initialization and Authentication
+    useEffect(() => {
+        try {
+            const app = initializeApp(firebaseConfig);
+            const firestore = getFirestore(app);
+            const firebaseAuth = getAuth(app);
+            setDb(firestore);
+            setAuth(firebaseAuth);
+
+            const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
+                if (user) {
+                    setUserId(user.uid);
+                } else if (initialAuthToken) {
+                    await signInWithCustomToken(firebaseAuth, initialAuthToken);
+                } else {
+                    await signInAnonymously(firebaseAuth);
+                }
+                setIsAuthReady(true);
+            });
+            return () => unsubscribe();
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            setError("Firebase failed to initialize. Check configuration.");
+        }
+    }, []);
+
+    // 2. Firestore Data Listener
+    useEffect(() => {
+        if (!isAuthReady || !userId || !db) return;
+
+        // Use the multi-argument form of doc and collection to ensure correct segment counts (C/D/C/D/C/D for Document, C/D/C/D/C for Collection)
+        // Schema Document Path: artifacts/appId/users/userId/settings/schemas
+        const schemasRef = doc(db, 'artifacts', appId, 'users', userId, SETTINGS_COLLECTION, 'schemas');
+
+        // Listen for Schemas
+        const unsubscribeSchemas = onSnapshot(schemasRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setSchemas(docSnap.data());
+            } else {
+                // Initialize default schema if none exists
+                const initialSchema = {
+                    Product: {
+                        name: "Product",
+                        fields: [
+                            { id: '1', key: 'name', label: 'Product Name', type: 'String' },
+                            { id: '2', key: 'price', label: 'Price', type: 'Number' },
+                            { id: '3', key: 'description', label: 'Description', type: 'Text Area' },
+                        ]
+                    }
+                };
+                setDoc(schemasRef, initialSchema).catch(console.error);
+                setSchemas(initialSchema);
+            }
+        });
+
+        // Agent State Document Path: artifacts/appId/users/userId/settings/agentState
+        const agentStateRef = doc(db, 'artifacts', appId, 'users', userId, SETTINGS_COLLECTION, 'agentState');
+
+        // Listen for Agent State
+        const unsubscribeAgent = onSnapshot(agentStateRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setAgentState(docSnap.data());
+            } else {
+                setDoc(agentStateRef, agentState).catch(console.error);
+            }
+        });
+
+        // Products Collection Path: artifacts/appId/users/userId/products
+        const productsCollectionRef = collection(db, 'artifacts', appId, 'users', userId, PRODUCT_DATA_COLLECTION);
+
+        // Listen for Products (Data) - Assuming a 'Product' schema exists
+        const unsubscribeProducts = onSnapshot(productsCollectionRef, (snapshot) => {
+            const productList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            setProducts(productList);
+        });
+
+
+        return () => {
+            unsubscribeSchemas();
+            unsubscribeAgent();
+            unsubscribeProducts();
+        };
+    }, [isAuthReady, userId, db, agentState]); // Added agentState to dependencies to satisfy linter rule, though not strictly necessary for this effect logic
+
+    // --- Data Management Handlers ---
+
+    const saveSchema = async (entityName, newFields) => {
+        if (!db || !userId) return;
+        // Document: artifacts/appId/users/userId/settings/schemas
+        const schemasRef = doc(db, 'artifacts', appId, 'users', userId, SETTINGS_COLLECTION, 'schemas');
+        await updateDoc(schemasRef, {
+            [entityName]: { name: entityName, fields: newFields }
+        });
+    };
+
+    const addProduct = async (data) => {
+        if (!db || !userId) return;
+        // Collection: artifacts/appId/users/userId/products
+        const productsCollectionRef = collection(db, 'artifacts', appId, 'users', userId, PRODUCT_DATA_COLLECTION);
+        await setDoc(doc(productsCollectionRef), { ...data, createdAt: serverTimestamp() });
+    };
+
+    const updateAgentState = async (updates) => {
+        if (!db || !userId) return;
+        // Document: artifacts/appId/users/userId/settings/agentState
+        const agentStateRef = doc(db, 'artifacts', appId, 'users', userId, SETTINGS_COLLECTION, 'agentState');
+        await updateDoc(agentStateRef, updates);
+    };
+
+    // --- AI Agent Logic ---
+
+    const handleGeminiCall = async (userInput) => {
+        setIsLoading(true);
+        setError(null);
+        const agentName = agentState.goldenMaster.status ? `Golden Master v${agentState.goldenMaster.version}` : 'Training Agent';
+        // Ensure price is treated as a number string for AI context
+        const currentProducts = products.map(p => {
+            const price = typeof p.price === 'number' ? p.price.toFixed(2) : p.price;
+            return `Name: ${p.name}, Price: $${price}, Description: ${p.description}`
+        }).join('\n---\n');
+
+        const systemPrompt = `
+            You are a highly skilled Sales and Customer Service Agent named "${agentName}".
+            Your primary goal is to engage the user, understand their needs, and recommend the best-fitting product from the available inventory.
+            You must be professional, persuasive, and knowledgeable.
+            
+            --- CURRENT KNOWLEDGE BASE ---
+            1. Available Products:
+            ${currentProducts.length > 0 ? currentProducts : "No products available in the CRM yet. Offer general services."}
+            
+            2. Supplemental Training Materials (Documents/URLs):
+            ${agentState.knowledgeBase || "No supplemental materials provided."}
+            
+            --- RULES ---
+            1. Always attempt to close a sale by recommending a specific product and asking for the next step.
+            2. If a user asks about general knowledge or something not covered by your products, use Google Search grounding to provide an informed answer.
+            3. Keep responses concise and focused on the sales interaction.
+        `;
+
+        // The trainingLog in agentState might contain the arrayUnion sentinel object if Firestore update fails 
+        // and we were to use agentState directly. Since we're using the fetched log, we should be fine.
+        const chatHistory = [...agentState.trainingLog, { role: "user", parts: [{ text: userInput }] }];
+
+        const payload = {
+            contents: chatHistory,
+            tools: [{ "google_search": {} }], // Use Google Search for general knowledge grounding
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            },
+        };
+
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        try {
+            const response = await withRetry(() => fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }));
+
+            if (!response.ok) {
+                throw new Error(`API call failed with status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+            const agentResponseText = candidate?.content?.parts?.[0]?.text;
+
+            if (agentResponseText) {
+                const newUserMessage = { role: "user", parts: [{ text: userInput }], timestamp: Date.now() };
+                const newModelMessage = { role: "model", parts: [{ text: agentResponseText }], timestamp: Date.now() };
+                
+                // Use arrayUnion for a transactional update
+                await updateAgentState({ trainingLog: arrayUnion(newUserMessage, newModelMessage) });
+
+            } else {
+                throw new Error("Received an empty response from the AI model.");
+            }
+
+        } catch (e) {
+            console.error("AI Agent Error:", e);
+            setError(`AI Agent failed to respond: ${e.message}`);
+            // Log the user message even if AI fails
+            await updateAgentState({ trainingLog: arrayUnion({ role: "user", parts: [{ text: userInput }], timestamp: Date.now() }) });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // --- Child Components ---
+
+    const Header = () => (
+        <div className="bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center">
+            <h1 className="text-2xl font-bold tracking-tight">Custom AI CRM</h1>
+            <div className="flex space-x-4">
+                <NavButton label="Agent Training" currentView="agentTraining" />
+                <NavButton label="Schema Builder" currentView="schemaBuilder" />
+                <NavButton label="Product Data" currentView="dataManagement" />
+            </div>
+            <div className="text-sm font-mono opacity-70">
+                User ID: {userId || 'Authenticating...'}
+            </div>
+        </div>
+    );
+
+    const NavButton = ({ label, currentView }) => (
+        <button
+            onClick={() => setView(currentView)}
+            className={`px-4 py-2 rounded-lg transition duration-150 ease-in-out font-medium ${
+                view === currentView
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+        >
+            {label}
+        </button>
+    );
+
+    const SchemaBuilder = () => {
+        const productSchema = schemas.Product || { name: 'Product', fields: [] };
+        const [fields, setFields] = useState(productSchema.fields);
+        const [newFieldLabel, setNewFieldLabel] = useState('');
+        const [newFieldType, setNewFieldType] = useState(FieldTypes[0]);
+
+        useEffect(() => {
+            // Sync local state with Firestore changes
+            setFields(productSchema.fields);
+        }, [productSchema.fields]);
+
+        const handleAddField = () => {
+            if (!newFieldLabel) return;
+            const newKey = newFieldLabel.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const newField = {
+                id: Date.now().toString(),
+                key: newKey,
+                label: newFieldLabel,
+                type: newFieldType
+            };
+            setFields([...fields, newField]);
+            setNewFieldLabel('');
+        };
+
+        const handleRemoveField = (id) => {
+            setFields(fields.filter(f => f.id !== id));
+        };
+
+        const handleSave = () => {
+            saveSchema('Product', fields);
+        };
+
+        return (
+            <div className="p-6 bg-white shadow-xl rounded-xl">
+                <h2 className="text-3xl font-extrabold mb-6 text-gray-900">Schema Builder: Product</h2>
+
+                <div className="space-y-4">
+                    {fields.map((field, index) => (
+                        <div key={field.id} className="flex items-center space-x-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <span className="font-semibold w-1/3">{field.label}</span>
+                            <span className="text-sm text-indigo-600 w-1/3">{field.type}</span>
+                            <span className="text-xs font-mono bg-gray-200 px-2 py-1 rounded w-1/3 truncate">Key: {field.key}</span>
+                            <button
+                                onClick={() => handleRemoveField(field.id)}
+                                className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clipRule="evenodd" /></svg>
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                    <h3 className="text-xl font-semibold mb-4">Add New Field</h3>
+                    <div className="flex space-x-4">
+                        <input
+                            type="text"
+                            value={newFieldLabel}
+                            onChange={(e) => setNewFieldLabel(e.target.value)}
+                            placeholder="Field Label (e.g., 'Color Option')"
+                            className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <select
+                            value={newFieldType}
+                            onChange={(e) => setNewFieldType(e.target.value)}
+                            className="p-3 border border-gray-300 rounded-lg w-40 focus:ring-indigo-500 focus:border-indigo-500"
+                        >
+                            {FieldTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                        </select>
+                        <button
+                            onClick={handleAddField}
+                            className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition"
+                        >
+                            Add Field
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-8">
+                    <button
+                        onClick={handleSave}
+                        className="w-full py-3 bg-indigo-600 text-white rounded-lg font-extrabold text-lg shadow-md hover:bg-indigo-700 transition"
+                    >
+                        Save Product Schema
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+    const DataManagement = () => {
+        const productSchema = schemas.Product || { name: 'Product', fields: [] };
+        // Recalculate initial form state whenever schema changes
+        const initialFormState = useMemo(() => productSchema.fields.reduce((acc, field) => ({ ...acc, [field.key]: '' }), {}), [productSchema.fields]);
+        const [formData, setFormData] = useState(initialFormState);
+        
+        // Reset form data when the schema changes significantly
+        useEffect(() => {
+            setFormData(initialFormState);
+        }, [initialFormState]);
+
+        const handleChange = (e) => {
+            const { name, value, type, checked } = e.target;
+            setFormData(prev => ({
+                ...prev,
+                [name]: type === 'checkbox' ? checked : (type === 'number' ? (parseFloat(value) || '') : value) // Handle number conversion
+            }));
+        };
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            // Sanitize data based on type before adding
+            const dataToSave = {};
+            productSchema.fields.forEach(field => {
+                let value = formData[field.key];
+                if (field.type === 'Number') {
+                    dataToSave[field.key] = parseFloat(value) || 0;
+                } else if (field.type === 'Boolean') {
+                    dataToSave[field.key] = !!value;
+                } else {
+                    dataToSave[field.key] = value;
+                }
+            });
+
+            addProduct(dataToSave);
+            setFormData(initialFormState); // Reset form
+        };
+
+        return (
+            <div className="p-6 bg-white shadow-xl rounded-xl">
+                <h2 className="text-3xl font-extrabold mb-6 text-gray-900">Product Data Entry</h2>
+
+                <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6 p-6 border rounded-lg mb-8">
+                    {productSchema.fields.map(field => (
+                        <div key={field.key}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                            {field.type === 'Text Area' ? (
+                                <textarea
+                                    name={field.key}
+                                    value={formData[field.key] || ''}
+                                    onChange={handleChange}
+                                    rows="3"
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                    required={field.key === 'name'}
+                                />
+                            ) : field.type === 'Boolean' ? (
+                                <input
+                                    type="checkbox"
+                                    name={field.key}
+                                    checked={formData[field.key] || false}
+                                    onChange={handleChange}
+                                    className="h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                                />
+                            ) : (
+                                <input
+                                    type={field.type === 'Number' ? 'number' : 'text'}
+                                    name={field.key}
+                                    value={formData[field.key] === 0 ? 0 : formData[field.key] || ''} // Handle zero values for number inputs
+                                    onChange={handleChange}
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                                    required={field.key === 'name'}
+                                />
+                            )}
+                        </div>
+                    ))}
+                    <div className="col-span-2">
+                        <button
+                            type="submit"
+                            className="w-full py-3 bg-indigo-600 text-white rounded-lg font-extrabold shadow-md hover:bg-indigo-700 transition"
+                        >
+                            Add New Product
+                        </button>
+                    </div>
+                </form>
+
+                <h3 className="text-2xl font-semibold mb-4 text-gray-800">Current Products ({products.length})</h3>
+                <div className="max-h-60 overflow-y-auto space-y-3">
+                    {products.map(p => (
+                        <div key={p.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <p className="text-lg font-bold text-indigo-700">{p.name || 'Untitled Product'}</p>
+                            <p className="text-sm text-gray-600">Price: {typeof p.price === 'number' ? `$${p.price.toFixed(2)}` : 'N/A'}</p>
+                            <p className="text-sm italic truncate">{p.description || 'No description.'}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const AgentTraining = () => {
+        const [trainingInput, setTrainingInput] = useState('');
+        const [tempKnowledgeBase, setTempKnowledgeBase] = useState(agentState.knowledgeBase);
+        const [critique, setCritique] = useState('');
+        const [score, setScore] = useState(0);
+
+        // Reset the training log (to start a fresh conversation)
+        const startNewSession = async () => {
+            await updateAgentState({ trainingLog: [] });
+            setCritique('');
+            setScore(0);
+        };
+
+        const handleChatSubmit = (e) => {
+            e.preventDefault();
+            if (trainingInput.trim() === '' || isLoading) return;
+            handleGeminiCall(trainingInput);
+            setTrainingInput('');
+        };
+
+        const handleKnowledgeUpdate = () => {
+            updateAgentState({ knowledgeBase: tempKnowledgeBase });
+        };
+
+        const handleSaveGoldenMaster = async () => {
+            if (score < 100) {
+                // Use a soft message box instead of alert
+                console.error("The agent must score 100% to save as Golden Master.");
+                alert("The agent must score 100% to save as Golden Master."); // Using alert() here as it is only for soft message box functionality here.
+                return;
+            }
+            const newVersion = agentState.goldenMaster.version + 1;
+            await updateAgentState({
+                goldenMaster: {
+                    status: true,
+                    trainingScore: score,
+                    version: newVersion,
+                    savedAt: serverTimestamp(),
+                    critique: critique,
+                },
+                trainingLog: [] // Clear log after mastery
+            });
+            alert(`Golden Master Agent v${newVersion} deployed successfully!`);
+        };
+
+        const AgentStatusBadge = () => (
+            <div className={`text-sm font-semibold px-3 py-1 rounded-full inline-block ${agentState.goldenMaster.status ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                {agentState.goldenMaster.status ? `Golden Master v${agentState.goldenMaster.version} (Score: ${agentState.goldenMaster.trainingScore}%)` : 'Training Mode'}
+            </div>
+        );
+
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* AI Manager and Training Configuration */}
+                <div className="md:col-span-1 space-y-6">
+                    <div className="bg-white p-6 shadow-xl rounded-xl">
+                        <h3 className="text-xl font-bold mb-4 flex items-center justify-between">
+                            Agent Status
+                            <AgentStatusBadge />
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Interact with the agent in the chat to the right. Once satisfied, grade its performance and save the Golden Master.
+                        </p>
+                        <button
+                            onClick={startNewSession}
+                            className="w-full py-2 mb-4 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
+                        >
+                            Start New Training Session
+                        </button>
+                    </div>
+
+                    <div className="bg-white p-6 shadow-xl rounded-xl">
+                        <h3 className="text-xl font-bold mb-4">Critique & Grading</h3>
+                        <textarea
+                            value={critique}
+                            onChange={(e) => setCritique(e.target.value)}
+                            placeholder="Critique the agent's performance here (e.g., 'Too pushy on product A')."
+                            rows="4"
+                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 mb-4"
+                        ></textarea>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700">Performance Score (0 - 100%)</label>
+                            <input
+                                type="number"
+                                value={score}
+                                onChange={(e) => setScore(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                                min="0"
+                                max="100"
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                        </div>
+                        <button
+                            onClick={handleSaveGoldenMaster}
+                            className="w-full py-3 bg-amber-500 text-white rounded-lg font-extrabold text-lg shadow-md hover:bg-amber-600 transition disabled:opacity-50"
+                            disabled={score < 100}
+                        >
+                            Save Golden Master
+                        </button>
+                    </div>
+                </div>
+
+                {/* AI Training Chat */}
+                <div className="md:col-span-2 bg-white shadow-xl rounded-xl flex flex-col h-[70vh]">
+                    <h3 className="text-2xl font-bold p-4 border-b text-gray-900">AI Agent Interaction (Training)</h3>
+                    <div className="flex-grow p-4 overflow-y-auto space-y-4">
+                        {agentState.trainingLog.length === 0 && (
+                            <div className="text-center py-10 text-gray-500 italic">
+                                Start a conversation to train the agent.
+                            </div>
+                        )}
+                        {/* Ensure trainingLog is an array before mapping */}
+                        {Array.isArray(agentState.trainingLog) && agentState.trainingLog.map((message, index) => (
+                            <div
+                                key={index}
+                                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div className={`max-w-xl px-4 py-2 rounded-xl shadow-md ${
+                                    message.role === 'user'
+                                        ? 'bg-indigo-500 text-white rounded-br-none'
+                                        : 'bg-gray-100 text-gray-800 rounded-tl-none'
+                                }`}>
+                                    <p className="font-semibold text-xs mb-1">
+                                        {message.role === 'user' ? 'You' : 'AI Sales Agent'}
+                                    </p>
+                                    <p>{message.parts[0].text}</p>
+                                </div>
+                            </div>
+                        ))}
+                        {isLoading && (
+                            <div className="flex justify-start">
+                                <div className="max-w-xl px-4 py-2 rounded-xl bg-gray-100 text-gray-800 rounded-tl-none shadow-md">
+                                    <span className="animate-pulse">Agent is thinking...</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <form onSubmit={handleChatSubmit} className="p-4 border-t flex space-x-3">
+                        <input
+                            type="text"
+                            value={trainingInput}
+                            onChange={(e) => setTrainingInput(e.target.value)}
+                            placeholder="Ask the agent about products or service..."
+                            className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                            disabled={isLoading}
+                        />
+                        <button
+                            type="submit"
+                            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition disabled:opacity-50"
+                            disabled={isLoading}
+                        >
+                            Send
+                        </button>
+                    </form>
+                </div>
+
+                {/* Training Materials / Knowledge Upload */}
+                <div className="md:col-span-3 bg-white p-6 shadow-xl rounded-xl">
+                    <h3 className="text-2xl font-bold mb-4 text-gray-900">Knowledge Base Upload (Documents/URLs)</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                        Provide text content here (e.g., copied from documents or summaries of URLs). This content will be added to the Agent's system instructions.
+                    </p>
+                    <textarea
+                        value={tempKnowledgeBase}
+                        onChange={(e) => setTempKnowledgeBase(e.target.value)}
+                        placeholder="Paste document text or key information from URLs here for the agent to learn from..."
+                        rows="6"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 mb-4"
+                    ></textarea>
+                    <button
+                        onClick={handleKnowledgeUpdate}
+                        className="w-full py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition"
+                    >
+                        Update Agent Knowledge Base
+                    </button>
+                </div>
+            </div>
+        );
+    };
+
+
+    if (!isAuthReady) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-3"></div>
+                    <p className="text-lg font-medium text-gray-700">Initializing CRM and securing user session...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-100 font-sans">
+            <Header />
+            <div className="p-6 max-w-7xl mx-auto">
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative mb-6" role="alert"
