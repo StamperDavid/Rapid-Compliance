@@ -117,9 +117,31 @@ export interface APIKeysConfig {
     slack?: {
       webhookUrl: string;
       botToken?: string;
+      teamId?: string;
     };
     zapier?: {
       webhookUrl: string;
+      apiKey?: string;
+    };
+    googleWorkspace?: {
+      clientId: string;
+      clientSecret: string;
+      refreshToken?: string;
+    };
+    microsoft365?: {
+      clientId: string;
+      clientSecret: string;
+      tenantId: string;
+      refreshToken?: string;
+    };
+    mailchimp?: {
+      apiKey: string;
+      serverPrefix: string; // e.g., 'us1', 'us2'
+      audienceId?: string;
+    };
+    hubspot?: {
+      apiKey: string;
+      portalId?: string;
     };
     custom?: Array<{
       name: string;
@@ -169,5 +191,10 @@ export type APIServiceName =
   | 'googleAnalytics'
   | 'mixpanel'
   | 'slack'
-  | 'zapier';
+  | 'zapier'
+  | 'googleWorkspace'
+  | 'microsoft365'
+  | 'mailchimp'
+  | 'hubspot';
+
 

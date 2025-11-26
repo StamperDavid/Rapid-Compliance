@@ -254,3 +254,4 @@ export const Cart: React.FC<CartProps> = ({ items, onRemove, onCheckout }) => {
   );
 };
 
+

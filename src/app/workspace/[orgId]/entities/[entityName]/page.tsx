@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import AdminBar from '@/components/AdminBar';
 
 interface Record {
   id: string;
@@ -65,23 +66,28 @@ export default function EntityTablePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
+      <AdminBar />
+      
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/workspace/demo/schemas" className="text-indigo-600 hover:text-indigo-800">
-                ← Schemas
+      <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}>
+        <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <Link href="/workspace/demo-org/schemas" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+                ← Back to Schemas
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900 capitalize">{entityName}</h1>
-              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                {records.length} records
-              </span>
+              <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>
+              <div>
+                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fff', margin: 0, textTransform: 'capitalize' }}>{entityName}</h1>
+                <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
+                  {records.length} records
+                </p>
+              </div>
             </div>
             <button
               onClick={() => setIsAdding(true)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              style={{ padding: '0.625rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
             >
               + Add Record
             </button>
@@ -89,72 +95,70 @@ export default function EntityTablePage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem' }}>
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {fields.map(field => (
-                    <th key={field.key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {field.label}
-                    </th>
-                  ))}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+        <div style={{ backgroundColor: '#0a0a0a', borderRadius: '0.75rem', border: '1px solid #1a1a1a', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ backgroundColor: '#111' }}>
+              <tr>
+                {fields.map(field => (
+                  <th key={field.key} style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase', borderBottom: '2px solid #1a1a1a' }}>
+                    {field.label}
                   </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {records.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    {fields.map(field => (
-                      <td key={field.key} className="px-6 py-4 whitespace-nowrap">
-                        {field.type === 'checkbox' ? (
-                          <span className={`px-2 py-1 rounded-full text-xs ${record[field.key] ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {record[field.key] ? 'Yes' : 'No'}
-                          </span>
-                        ) : field.key === 'price' ? (
-                          <span className="text-gray-900 font-medium">${Number(record[field.key]).toFixed(2)}</span>
-                        ) : (
-                          <span className="text-gray-900">{record[field.key]}</span>
-                        )}
-                      </td>
-                    ))}
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                      <button
-                        onClick={() => handleEdit(record)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-3"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(record.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
+                <th style={{ padding: '1rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#999', textTransform: 'uppercase', borderBottom: '2px solid #1a1a1a' }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((record) => (
+                <tr key={record.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  {fields.map(field => (
+                    <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#fff' }}>
+                      {field.type === 'checkbox' ? (
+                        <span style={{ padding: '0.25rem 0.5rem', backgroundColor: record[field.key] ? '#065f46' : '#333', color: record[field.key] ? '#6ee7b7' : '#999', borderRadius: '0.25rem', fontSize: '0.75rem' }}>
+                          {record[field.key] ? 'Yes' : 'No'}
+                        </span>
+                      ) : field.key === 'price' ? (
+                        <span style={{ fontWeight: '600' }}>${Number(record[field.key]).toFixed(2)}</span>
+                      ) : (
+                        record[field.key]
+                      )}
+                    </td>
+                  ))}
+                  <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                    <button
+                      onClick={() => handleEdit(record)}
+                      style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem', fontWeight: '500' }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(record.id)}
+                      style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
           {records.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No records yet. Click "Add Record" to get started.</p>
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+              <p>No records yet. Click "Add Record" to get started.</p>
             </div>
           )}
         </div>
 
         {/* Add/Edit Modal */}
         {(isAdding || editingId) && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
-              <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-                <h2 className="text-2xl font-bold text-gray-900">
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
+            <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', maxWidth: '40rem', width: '100%' }}>
+              <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
                   {isAdding ? 'Add Record' : 'Edit Record'}
                 </h2>
                 <button
@@ -163,16 +167,16 @@ export default function EntityTablePage() {
                     setEditingId(null);
                     setFormData({ id: '', name: '', price: 0, description: '', inStock: true });
                   }}
-                  className="text-gray-500 hover:text-gray-700"
+                  style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {fields.map(field => (
                   <div key={field.key}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
                       {field.label}
                     </label>
                     {field.type === 'checkbox' ? (
@@ -180,34 +184,34 @@ export default function EntityTablePage() {
                         type="checkbox"
                         checked={formData[field.key] as boolean}
                         onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        style={{ width: '1.25rem', height: '1.25rem' }}
                       />
                     ) : (
                       <input
                         type={field.type}
                         value={formData[field.key]}
                         onChange={(e) => setFormData({ ...formData, [field.key]: field.type === 'number' ? parseFloat(e.target.value) : e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                         placeholder={`Enter ${field.label.toLowerCase()}`}
                       />
                     )}
                   </div>
                 ))}
 
-                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid #1a1a1a' }}>
                   <button
                     onClick={() => {
                       setIsAdding(false);
                       setEditingId(null);
                       setFormData({ id: '', name: '', price: 0, description: '', inStock: true });
                     }}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                    style={{ flex: 1, padding: '0.75rem 1rem', border: '1px solid #333', color: '#999', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={isAdding ? handleAdd : handleUpdate}
-                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                    style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
                   >
                     {isAdding ? 'Add' : 'Update'}
                   </button>
@@ -220,4 +224,5 @@ export default function EntityTablePage() {
     </div>
   );
 }
+
 

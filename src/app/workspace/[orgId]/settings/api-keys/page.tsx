@@ -102,10 +102,16 @@ export default function APIKeysPage() {
       { id: 'gcs', label: 'Google Cloud Storage', icon: '🗄️' },
       { id: 'cloudinary', label: 'Cloudinary', icon: '🖼️' },
     ],
-    'Analytics & Other': [
-      { id: 'analytics', label: 'Google Analytics', icon: '📊' },
+    'Business Apps': [
       { id: 'slack', label: 'Slack', icon: '💬' },
-      { id: 'hubspot', label: 'HubSpot', icon: '🎯' },
+      { id: 'zapier', label: 'Zapier', icon: '⚡' },
+      { id: 'google-workspace', label: 'Google Workspace', icon: '📧' },
+      { id: 'microsoft-365', label: 'Microsoft 365', icon: '📨' },
+      { id: 'mailchimp', label: 'Mailchimp', icon: '📮' },
+      { id: 'hubspot', label: 'HubSpot', icon: '🔶' },
+    ],
+    'Analytics': [
+      { id: 'analytics', label: 'Google Analytics', icon: '📊' },
     ],
   };
 
@@ -182,8 +188,8 @@ export default function APIKeysPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
-                ← Back to Dashboard
+              <Link href="/workspace/demo-org/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+                ← Back to Settings
               </Link>
               <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>
               <div>
@@ -700,6 +706,123 @@ export default function APIKeysPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <SecureInput label="Webhook URL" value={keys.integrations?.slack?.webhookUrl} onChange={(v: string) => updateKey(['integrations', 'slack', 'webhookUrl'], v)} keyName="slack-webhook" placeholder="https://hooks.slack.com/services/..." />
+              </div>
+            </div>
+          )}
+
+          {/* Zapier */}
+          {expandedCard === 'zapier' && (
+            <div id="card-zapier" style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '2rem' }}>⚡</span>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', margin: 0 }}>Zapier</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#999', margin: 0 }}>Connect 5,000+ apps with automation</p>
+                </div>
+                <button onClick={() => setExpandedCard(null)} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <SecureInput label="Webhook URL" value={keys.integrations?.zapier?.webhookUrl} onChange={(v: string) => updateKey(['integrations', 'zapier', 'webhookUrl'], v)} keyName="zapier-webhook" placeholder="https://hooks.zapier.com/hooks/catch/..." />
+                <SecureInput label="API Key (Optional)" value={keys.integrations?.zapier?.apiKey} onChange={(v: string) => updateKey(['integrations', 'zapier', 'apiKey'], v)} keyName="zapier-api" placeholder="..." />
+                <a href="https://zapier.com/app/connections" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem', textDecoration: 'underline' }}>Configure Zapier integration →</a>
+              </div>
+            </div>
+          )}
+
+          {/* Google Workspace */}
+          {expandedCard === 'google-workspace' && (
+            <div id="card-google-workspace" style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '2rem' }}>📧</span>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', margin: 0 }}>Google Workspace</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#999', margin: 0 }}>Gmail, Calendar, Drive integration</p>
+                </div>
+                <button onClick={() => setExpandedCard(null)} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <TextInput label="Client ID" value={keys.integrations?.googleWorkspace?.clientId} onChange={(v: string) => updateKey(['integrations', 'googleWorkspace', 'clientId'], v)} placeholder="xxxxx.apps.googleusercontent.com" />
+                <SecureInput label="Client Secret" value={keys.integrations?.googleWorkspace?.clientSecret} onChange={(v: string) => updateKey(['integrations', 'googleWorkspace', 'clientSecret'], v)} keyName="gworkspace-secret" placeholder="GOCSPX-..." />
+                <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.5' }}>
+                    💡 After saving, users will connect via OAuth to grant access to their Gmail, Calendar, and Drive.
+                  </div>
+                </div>
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem', textDecoration: 'underline' }}>Get Google OAuth credentials →</a>
+              </div>
+            </div>
+          )}
+
+          {/* Microsoft 365 */}
+          {expandedCard === 'microsoft-365' && (
+            <div id="card-microsoft-365" style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '2rem' }}>📨</span>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', margin: 0 }}>Microsoft 365</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#999', margin: 0 }}>Outlook, Teams, OneDrive integration</p>
+                </div>
+                <button onClick={() => setExpandedCard(null)} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <TextInput label="Client ID (Application ID)" value={keys.integrations?.microsoft365?.clientId} onChange={(v: string) => updateKey(['integrations', 'microsoft365', 'clientId'], v)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                <SecureInput label="Client Secret" value={keys.integrations?.microsoft365?.clientSecret} onChange={(v: string) => updateKey(['integrations', 'microsoft365', 'clientSecret'], v)} keyName="m365-secret" placeholder="..." />
+                <TextInput label="Tenant ID" value={keys.integrations?.microsoft365?.tenantId} onChange={(v: string) => updateKey(['integrations', 'microsoft365', 'tenantId'], v)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.5' }}>
+                    💡 After saving, users will connect via OAuth to grant access to Outlook, Teams, and OneDrive.
+                  </div>
+                </div>
+                <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem', textDecoration: 'underline' }}>Register app in Azure →</a>
+              </div>
+            </div>
+          )}
+
+          {/* Mailchimp */}
+          {expandedCard === 'mailchimp' && (
+            <div id="card-mailchimp" style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '2rem' }}>📮</span>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', margin: 0 }}>Mailchimp</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#999', margin: 0 }}>Email marketing and contact sync</p>
+                </div>
+                <button onClick={() => setExpandedCard(null)} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <SecureInput label="API Key" value={keys.integrations?.mailchimp?.apiKey} onChange={(v: string) => updateKey(['integrations', 'mailchimp', 'apiKey'], v)} keyName="mailchimp" placeholder="xxxxx-usX" />
+                <TextInput label="Server Prefix" value={keys.integrations?.mailchimp?.serverPrefix} onChange={(v: string) => updateKey(['integrations', 'mailchimp', 'serverPrefix'], v)} placeholder="us1" />
+                <TextInput label="Audience ID (Optional)" value={keys.integrations?.mailchimp?.audienceId} onChange={(v: string) => updateKey(['integrations', 'mailchimp', 'audienceId'], v)} placeholder="..." />
+                <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.5' }}>
+                    💡 Sync your CRM contacts to Mailchimp audiences and send email campaigns
+                  </div>
+                </div>
+                <a href="https://admin.mailchimp.com/account/api/" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem', textDecoration: 'underline' }}>Get Mailchimp API key →</a>
+              </div>
+            </div>
+          )}
+
+          {/* HubSpot */}
+          {expandedCard === 'hubspot' && (
+            <div id="card-hubspot" style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                <span style={{ fontSize: '2rem' }}>🔶</span>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', margin: 0 }}>HubSpot</h3>
+                  <p style={{ fontSize: '0.875rem', color: '#999', margin: 0 }}>Two-way CRM sync with HubSpot</p>
+                </div>
+                <button onClick={() => setExpandedCard(null)} style={{ color: '#666', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <SecureInput label="Private App Access Token" value={keys.integrations?.hubspot?.apiKey} onChange={(v: string) => updateKey(['integrations', 'hubspot', 'apiKey'], v)} keyName="hubspot" placeholder="pat-..." />
+                <TextInput label="Portal ID (Optional)" value={keys.integrations?.hubspot?.portalId} onChange={(v: string) => updateKey(['integrations', 'hubspot', 'portalId'], v)} placeholder="12345678" />
+                <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.5' }}>
+                    💡 Sync contacts, deals, and companies bidirectionally with HubSpot
+                  </div>
+                </div>
+                <a href="https://app.hubspot.com/private-apps" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.875rem', textDecoration: 'underline' }}>Create private app in HubSpot →</a>
               </div>
             </div>
           )}

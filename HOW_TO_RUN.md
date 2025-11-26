@@ -181,3 +181,4 @@ Your project is at: `E:\AI Sales Platform`
 
 **You're ready to go!** Just run `.\scripts\quick-start.ps1` and start building! 🚀
 
+

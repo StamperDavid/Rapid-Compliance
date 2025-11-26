@@ -1,0 +1,1558 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+
+export default function OnboardingWizard() {
+  const params = useParams();
+  const router = useRouter();
+  const orgId = params.orgId as string;
+  
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    // Step 1: Business Basics
+    businessName: '',
+    industry: '',
+    website: '',
+    companySize: '',
+    
+    // Step 2: Business Understanding
+    problemSolved: '',
+    uniqueValue: '',
+    whyBuy: '',
+    whyNotBuy: '',
+    
+    // Step 3: Products/Services Overview
+    primaryOffering: '',
+    priceRange: '',
+    targetCustomer: '',
+    customerDemographics: '',
+    
+    // Step 4: Product/Service Details
+    topProducts: '',
+    productComparison: '',
+    seasonalOfferings: '',
+    whoShouldNotBuy: '',
+    
+    // Step 5: Pricing & Sales Strategy
+    pricingStrategy: '',
+    discountPolicy: '',
+    volumeDiscounts: '',
+    firstTimeBuyerIncentive: '',
+    financingOptions: '',
+    
+    // Step 6: Operations & Fulfillment
+    geographicCoverage: '',
+    deliveryTimeframes: '',
+    inventoryConstraints: '',
+    capacityLimitations: '',
+    
+    // Step 7: Policies & Guarantees
+    returnPolicy: '',
+    warrantyTerms: '',
+    cancellationPolicy: '',
+    satisfactionGuarantee: '',
+    
+    // Step 8: Agent Goals & Objectives
+    primaryObjective: 'sales',
+    secondaryObjectives: [] as string[],
+    successMetrics: '',
+    escalationRules: '',
+    
+    // Step 9: Sales Process & Flow
+    typicalSalesFlow: '',
+    qualificationCriteria: '',
+    discoveryQuestions: '',
+    closingStrategy: '',
+    
+    // Step 10: Objection Handling
+    commonObjections: '',
+    priceObjections: '',
+    timeObjections: '',
+    competitorObjections: '',
+    
+    // Step 11: Customer Service
+    supportScope: '',
+    technicalSupport: '',
+    orderTracking: '',
+    complaintResolution: '',
+    
+    // Step 12: Agent Personality
+    tone: 'professional',
+    agentName: '',
+    greeting: '',
+    closingMessage: '',
+    
+    // Step 13: Behavioral Controls
+    closingAggressiveness: 5,
+    questionFrequency: 3,
+    responseLength: 'balanced',
+    proactiveLevel: 5,
+    
+    // Step 14: Knowledge Base Upload
+    uploadedDocs: [] as File[],
+    urls: [] as string[],
+    faqs: '',
+    competitorUrls: [] as string[],
+    
+    // Step 15: Compliance & Legal
+    requiredDisclosures: '',
+    privacyCompliance: false,
+    industryRegulations: '',
+    prohibitedTopics: '',
+    
+    // Step 16: Advanced Configuration (Optional)
+    enableAdvanced: false,
+    customFunctions: [] as any[],
+    conversationFlowLogic: '',
+    responseLengthLimit: 0,
+    industryTemplate: '',
+    knowledgePriority: [] as any[]
+  });
+
+  const totalSteps = 16;
+
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const nextStep = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const completeOnboarding = () => {
+    // Save all data and redirect to training
+    console.log('Onboarding complete:', formData);
+    alert('Your AI agent persona has been created! Now let\'s train it to perfection.');
+    router.push(`/workspace/${orgId}/settings/ai-agents/training`);
+  };
+
+  const primaryColor = '#6366f1';
+
+  // Helper to render text input
+  const TextInput = ({ label, field, placeholder, required = false }: any) => (
+    <div>
+      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+        {label} {required && '*'}
+      </label>
+      <input
+        type="text"
+        value={formData[field as keyof typeof formData] as string}
+        onChange={(e) => updateField(field, e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#0a0a0a',
+          border: '1px solid #333',
+          borderRadius: '0.5rem',
+          color: '#fff',
+          fontSize: '1rem'
+        }}
+      />
+    </div>
+  );
+
+  // Helper to render textarea
+  const TextArea = ({ label, field, placeholder, rows = 4, helper = '', required = false }: any) => (
+    <div>
+      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+        {label} {required && '*'}
+      </label>
+      <textarea
+        value={formData[field as keyof typeof formData] as string}
+        onChange={(e) => updateField(field, e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#0a0a0a',
+          border: '1px solid #333',
+          borderRadius: '0.5rem',
+          color: '#fff',
+          fontSize: '1rem',
+          resize: 'vertical'
+        }}
+      />
+      {helper && (
+        <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+          {helper}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#000', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      padding: '2rem'
+    }}>
+      <div style={{ maxWidth: '900px', width: '100%' }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+            Build Your AI Sales Team
+          </h1>
+          <p style={{ color: '#666', fontSize: '1rem' }}>
+            The more detail you provide, the smarter your agent will be
+          </p>
+        </div>
+
+        {/* Progress Bar */}
+        <div style={{ marginBottom: '3rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <span style={{ color: '#999', fontSize: '0.875rem' }}>Step {currentStep} of {totalSteps}</span>
+            <span style={{ color: '#999', fontSize: '0.875rem' }}>{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
+          </div>
+          <div style={{ 
+            height: '8px', 
+            backgroundColor: '#1a1a1a', 
+            borderRadius: '9999px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              height: '100%', 
+              width: `${(currentStep / totalSteps) * 100}%`,
+              backgroundColor: primaryColor,
+              transition: 'width 0.3s'
+            }} />
+          </div>
+        </div>
+
+        {/* Step Content */}
+        <div style={{ 
+          backgroundColor: '#1a1a1a', 
+          border: '1px solid #333', 
+          borderRadius: '1rem', 
+          padding: '3rem',
+          marginBottom: '2rem',
+          minHeight: '500px'
+        }}>
+          {/* Step 1: Business Basics */}
+          {currentStep === 1 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Tell us about your business
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Basic information to get started
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextInput label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Industry *
+                  </label>
+                  <select
+                    value={formData.industry}
+                    onChange={(e) => updateField('industry', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="">Select your industry...</option>
+                    <option value="retail">Retail / E-commerce</option>
+                    <option value="services">Professional Services</option>
+                    <option value="manufacturing">Manufacturing / Wholesale</option>
+                    <option value="realestate">Real Estate</option>
+                    <option value="healthcare">Healthcare / Medical</option>
+                    <option value="hospitality">Hospitality / Tourism</option>
+                    <option value="automotive">Automotive</option>
+                    <option value="finance">Financial Services / Insurance</option>
+                    <option value="education">Education / Training</option>
+                    <option value="construction">Construction / Contracting</option>
+                    <option value="legal">Legal Services</option>
+                    <option value="fitness">Fitness / Wellness</option>
+                    <option value="home_services">Home Services</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <TextInput label="Website" field="website" placeholder="https://yourwebsite.com" />
+                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem' }}>
+                  We'll analyze your website to help build your agent's knowledge
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Company Size *
+                  </label>
+                  <select
+                    value={formData.companySize}
+                    onChange={(e) => updateField('companySize', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="">Select...</option>
+                    <option value="solo">Just me</option>
+                    <option value="small">2-10 employees</option>
+                    <option value="medium">11-50 employees</option>
+                    <option value="large">51+ employees</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Business Understanding */}
+          {currentStep === 2 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  What makes your business unique?
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  These answers will shape how your agent sells
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="What problem does your business solve for customers?" 
+                  field="problemSolved" 
+                  placeholder="e.g., We help outdoor enthusiasts find reliable, affordable gear so they can enjoy nature without breaking the bank"
+                  helper="Be specific - this helps your agent understand your value proposition"
+                  required
+                />
+
+                <TextArea 
+                  label="What makes you different from competitors?" 
+                  field="uniqueValue" 
+                  placeholder="e.g., We offer lifetime warranties, free repairs, and expert guides with every purchase. Our gear is tested in extreme conditions."
+                  helper="Your unique selling points - what competitors don't offer"
+                  required
+                />
+
+                <TextArea 
+                  label="Why do customers choose to buy from you?" 
+                  field="whyBuy" 
+                  placeholder="e.g., Quality products, expert advice, excellent customer service, fast shipping, satisfaction guarantee"
+                  rows={3}
+                  required
+                />
+
+                <TextArea 
+                  label="What are common reasons customers DON'T buy?" 
+                  field="whyNotBuy" 
+                  placeholder="e.g., Price concerns, shipping time, not sure which product is right for them, prefer to see in-store first"
+                  rows={3}
+                  helper="Your agent will learn how to overcome these objections"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Products/Services Overview */}
+          {currentStep === 3 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  What do you sell?
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Overview of your offerings and target customers
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    What do you primarily sell? *
+                  </label>
+                  <select
+                    value={formData.primaryOffering}
+                    onChange={(e) => updateField('primaryOffering', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="">Select...</option>
+                    <option value="physical">Physical Products</option>
+                    <option value="digital">Digital Products / Downloads</option>
+                    <option value="services">Services / Consulting</option>
+                    <option value="subscriptions">Subscriptions / Memberships</option>
+                    <option value="appointments">Appointments / Bookings</option>
+                    <option value="mixed">Mix of Products & Services</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Typical price range *
+                  </label>
+                  <select
+                    value={formData.priceRange}
+                    onChange={(e) => updateField('priceRange', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="">Select...</option>
+                    <option value="under50">Under $50</option>
+                    <option value="50-200">$50 - $200</option>
+                    <option value="200-500">$200 - $500</option>
+                    <option value="500-1000">$500 - $1,000</option>
+                    <option value="1000-5000">$1,000 - $5,000</option>
+                    <option value="5000-20000">$5,000 - $20,000</option>
+                    <option value="20000plus">$20,000+</option>
+                    <option value="varies">Varies significantly</option>
+                  </select>
+                </div>
+
+                <TextArea 
+                  label="Who is your ideal customer?" 
+                  field="targetCustomer" 
+                  placeholder="e.g., Outdoor enthusiasts aged 25-45, active lifestyle, values quality over price, environmentally conscious"
+                  helper="Describe their demographics, psychographics, and buying behavior"
+                  required
+                />
+
+                <TextArea 
+                  label="Customer demographics & buying patterns" 
+                  field="customerDemographics" 
+                  placeholder="e.g., 60% male, 40% female. Most purchase during fall/spring. Average order $250. Repeat customer rate 45%."
+                  rows={3}
+                  helper="Any patterns your agent should know about your customers"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Product/Service Details */}
+          {currentStep === 4 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Product/Service Details
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Help your agent understand what you offer in detail
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="Your top products/services (list 3-5)" 
+                  field="topProducts" 
+                  placeholder="1. Premium Backpack ($199) - 50L capacity, waterproof, lifetime warranty&#10;2. Camping Tent ($349) - 4-person, easy setup, all-weather&#10;3. Hiking Boots ($159) - Gore-Tex, ankle support, trail-tested"
+                  rows={6}
+                  helper="Include key features, benefits, and pricing"
+                  required
+                />
+
+                <TextArea 
+                  label="How do your products/services compare to competitors?" 
+                  field="productComparison" 
+                  placeholder="e.g., Our backpacks cost 20% more than budget brands but last 3x longer. Compared to premium brands, we're 30% cheaper with same quality. We're the only brand offering lifetime repairs."
+                  rows={4}
+                  helper="Competitive advantages your agent can use in conversations"
+                />
+
+                <TextArea 
+                  label="Seasonal offerings or promotions" 
+                  field="seasonalOfferings" 
+                  placeholder="e.g., Winter sale (Nov-Jan) - 25% off winter gear. Summer clearance (Aug-Sep) - Last season models 40% off. Black Friday - Sitewide 30% off."
+                  rows={3}
+                  helper="Help your agent know when to mention special offers"
+                />
+
+                <TextArea 
+                  label="Who should NOT buy from you? (Qualification criteria)" 
+                  field="whoShouldNotBuy" 
+                  placeholder="e.g., Casual users looking for cheapest option, people needing immediate delivery (same-day), international customers (we only ship USA), resellers (B2C only)"
+                  rows={4}
+                  helper="Help your agent qualify leads and set proper expectations"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 5: Pricing & Sales Strategy */}
+          {currentStep === 5 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Pricing & Sales Strategy
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  How your agent should handle pricing and discounts
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Pricing strategy *
+                  </label>
+                  <select
+                    value={formData.pricingStrategy}
+                    onChange={(e) => updateField('pricingStrategy', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="">Select...</option>
+                    <option value="fixed">Fixed pricing - no negotiation</option>
+                    <option value="tiered">Tiered pricing - volume based</option>
+                    <option value="custom">Custom quotes - varies by customer</option>
+                    <option value="negotiable">Negotiable - some flexibility</option>
+                    <option value="mixed">Mixed - depends on product/service</option>
+                  </select>
+                </div>
+
+                <TextArea 
+                  label="Discount policy - when can agent offer discounts?" 
+                  field="discountPolicy" 
+                  placeholder="e.g., First-time buyers: 10% off. Orders over $500: 15% off. Abandoned cart: Send 20% coupon after 24hrs. Never discount below 30% margin."
+                  rows={4}
+                  helper="Be specific about when and how much discount is allowed"
+                  required
+                />
+
+                <TextArea 
+                  label="Volume/bulk discount structure" 
+                  field="volumeDiscounts" 
+                  placeholder="e.g., 10-25 units: 10% off. 26-50 units: 15% off. 51+ units: 20% off + free shipping. Wholesale inquiries: escalate to sales manager."
+                  rows={4}
+                  helper="If applicable - how pricing changes with quantity"
+                />
+
+                <TextArea 
+                  label="First-time buyer incentive" 
+                  field="firstTimeBuyerIncentive" 
+                  placeholder="e.g., 15% off first purchase with code WELCOME15. Free shipping on first order. Free gear guide ebook with first purchase."
+                  rows={3}
+                  helper="Special offers for new customers"
+                />
+
+                <TextArea 
+                  label="Financing or payment plan options" 
+                  field="financingOptions" 
+                  placeholder="e.g., Affirm available for orders $200+. Pay in 4 with Klarna. Net 30 for approved business accounts. No credit check financing through Bread."
+                  rows={3}
+                  helper="Payment options besides upfront payment"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 6: Operations & Fulfillment */}
+          {currentStep === 6 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Operations & Fulfillment
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Delivery, coverage, and capacity details
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="Geographic coverage - where do you serve/ship?" 
+                  field="geographicCoverage" 
+                  placeholder="e.g., Shipping: All 50 US states. Free shipping over $100. International: Canada only ($25 flat rate). AK/HI: Additional $15 shipping."
+                  rows={4}
+                  helper="Your agent needs to know service areas and limitations"
+                  required
+                />
+
+                <TextArea 
+                  label="Delivery/service timeframes" 
+                  field="deliveryTimeframes" 
+                  placeholder="e.g., Standard shipping: 5-7 business days. Expedited: 2-3 business days. Services: First available appointment within 2 weeks. Custom orders: 3-4 week lead time."
+                  rows={4}
+                  helper="Set proper expectations with customers"
+                  required
+                />
+
+                <TextArea 
+                  label="Inventory constraints or stock issues" 
+                  field="inventoryConstraints" 
+                  placeholder="e.g., Popular items may backorder during peak season. Check real-time stock before promising availability. Made-to-order items non-refundable."
+                  rows={3}
+                  helper="Help your agent manage customer expectations"
+                />
+
+                <TextArea 
+                  label="Capacity limitations (for service businesses)" 
+                  field="capacityLimitations" 
+                  placeholder="e.g., Book 2 weeks in advance. Max 4 projects simultaneously. Emergency service: 24hr response, 2x rate. Weekend work by request only."
+                  rows={3}
+                  helper="If applicable - scheduling and capacity constraints"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 7: Policies & Guarantees */}
+          {currentStep === 7 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Policies & Guarantees
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Returns, warranties, and customer protections
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="Return/refund policy" 
+                  field="returnPolicy" 
+                  placeholder="e.g., 30-day money-back guarantee. Items must be unused with tags. Free return shipping. Refund within 5-7 business days. Custom/clearance items final sale."
+                  rows={4}
+                  helper="Your agent needs to explain this clearly to build trust"
+                  required
+                />
+
+                <TextArea 
+                  label="Warranty terms" 
+                  field="warrantyTerms" 
+                  placeholder="e.g., Lifetime warranty on manufacturing defects. Normal wear excluded. Free repairs for life. Warranty transferable to new owner. Submit claim through website."
+                  rows={4}
+                  helper="Product guarantees and coverage details"
+                />
+
+                <TextArea 
+                  label="Cancellation policy" 
+                  field="cancellationPolicy" 
+                  placeholder="e.g., Cancel before shipping: Full refund. After shipping: Subject to return policy. Services: Cancel 48hrs before appointment for full refund. Same-day cancellation: 50% fee."
+                  rows={4}
+                  helper="Order or appointment cancellation terms"
+                />
+
+                <TextArea 
+                  label="Satisfaction guarantee" 
+                  field="satisfactionGuarantee" 
+                  placeholder="e.g., 100% satisfaction guaranteed or money back. If not happy, we'll make it right - exchange, credit, or refund. No questions asked within 30 days."
+                  rows={3}
+                  helper="Any additional guarantees or promises you make"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 8: Agent Goals & Objectives */}
+          {currentStep === 8 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  What should your agent accomplish?
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Define success for your AI agent
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Primary Objective *
+                  </label>
+                  <select
+                    value={formData.primaryObjective}
+                    onChange={(e) => updateField('primaryObjective', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="sales">Close Sales (e-commerce, direct sales)</option>
+                    <option value="leads">Generate Qualified Leads</option>
+                    <option value="appointments">Book Appointments / Consultations</option>
+                    <option value="support">Customer Support & Service</option>
+                    <option value="mixed">Mixed (Sales + Support)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+                    Secondary Objectives (check all that apply)
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {[
+                      { value: 'upsell', label: 'Upsell / Cross-sell Products' },
+                      { value: 'collect_info', label: 'Collect Customer Information' },
+                      { value: 'answer_questions', label: 'Answer Product Questions' },
+                      { value: 'handle_returns', label: 'Handle Returns / Exchanges' },
+                      { value: 'track_orders', label: 'Track Orders / Shipping' },
+                      { value: 'provide_quotes', label: 'Provide Custom Quotes' },
+                      { value: 'schedule_followup', label: 'Schedule Follow-up Contacts' },
+                      { value: 'gather_feedback', label: 'Gather Customer Feedback' }
+                    ].map((obj) => (
+                      <label key={obj.value} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.secondaryObjectives.includes(obj.value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateField('secondaryObjectives', [...formData.secondaryObjectives, obj.value]);
+                            } else {
+                              updateField('secondaryObjectives', formData.secondaryObjectives.filter(v => v !== obj.value));
+                            }
+                          }}
+                          style={{ width: '20px', height: '20px' }}
+                        />
+                        <span style={{ color: '#ccc', fontSize: '0.875rem' }}>{obj.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <TextArea 
+                  label="Success metrics - how do you measure agent performance?" 
+                  field="successMetrics" 
+                  placeholder="e.g., Conversion rate >3%, Average order value >$200, Customer satisfaction >4.5/5, Response time <30 seconds, Escalation rate <10%"
+                  rows={3}
+                  helper="How will you know if your agent is successful?"
+                />
+
+                <TextArea 
+                  label="When should the agent hand off to a human?" 
+                  field="escalationRules" 
+                  placeholder="e.g., Custom orders over $5,000, Technical issues requiring diagnostics, Angry/abusive customers, Refund requests over $500, Legal questions, Wholesale inquiries"
+                  rows={4}
+                  helper="Clear escalation criteria to prevent issues"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 9: Sales Process & Flow */}
+          {currentStep === 9 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Your Sales Process
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Teach your agent how you sell
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="Describe your typical sales flow (step-by-step)" 
+                  field="typicalSalesFlow" 
+                  placeholder="e.g., 1) Greet and identify need 2) Ask qualification questions 3) Recommend 2-3 products 4) Answer questions about features/shipping 5) Handle price objections 6) Explain warranty 7) Create urgency with limited stock 8) Close with discount code for first-time buyers"
+                  rows={6}
+                  helper="The exact process your agent should follow"
+                  required
+                />
+
+                <TextArea 
+                  label="Lead qualification criteria - how do you know they're a good fit?" 
+                  field="qualificationCriteria" 
+                  placeholder="e.g., Budget: $200+ for outdoor gear. Timeline: Ready to buy within 30 days. Use case: Active outdoor activities. Geography: USA only. Decision maker: Yes."
+                  rows={4}
+                  helper="What makes someone a qualified lead vs tire-kicker?"
+                />
+
+                <TextArea 
+                  label="Discovery questions your agent should ask" 
+                  field="discoveryQuestions" 
+                  placeholder="e.g., What activities will you use this for? How often do you [activity]? What's your experience level? What's your budget range? When do you need this by? Have you used similar products before?"
+                  rows={5}
+                  helper="Questions to understand customer needs and qualify them"
+                  required
+                />
+
+                <TextArea 
+                  label="Your closing strategy - how do you ask for the sale?" 
+                  field="closingStrategy" 
+                  placeholder="e.g., Always ask for the sale after answering questions. Use assumptive close: 'Shall I add this to your cart?' Create urgency with stock levels. Offer first-time discount. Provide clear next steps. Follow up abandoned carts in 24hrs."
+                  rows={5}
+                  helper="Specific techniques your agent should use to close"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 10: Objection Handling */}
+          {currentStep === 10 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Objection Handling
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Teach your agent how to overcome common objections
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="Common customer objections and how to handle them" 
+                  field="commonObjections" 
+                  placeholder="e.g., 'I need to think about it' → Ask what specific concerns they have. 'I'll shop around' → Explain our price match guarantee. 'Not sure this will work' → Offer 30-day trial with free returns."
+                  rows={6}
+                  helper="List objections and your proven responses"
+                  required
+                />
+
+                <TextArea 
+                  label="Price objections - 'It's too expensive'" 
+                  field="priceObjections" 
+                  placeholder="e.g., Explain value vs cost (lasts 10 years). Compare to daily coffee cost. Highlight lifetime warranty saves money long-term. Offer payment plan. Show budget option. Emphasize we're 30% cheaper than premium brands with same quality."
+                  rows={5}
+                  helper="Specific strategies for price resistance"
+                  required
+                />
+
+                <TextArea 
+                  label="Time/urgency objections - 'I'll come back later'" 
+                  field="timeObjections" 
+                  placeholder="e.g., Mention current sale ends Friday. Low stock on popular items. Price going up next month. Hold item for 24hrs. Send follow-up email with additional 10% off."
+                  rows={4}
+                  helper="How to create urgency without being pushy"
+                />
+
+                <TextArea 
+                  label="Competitor objections - 'I found it cheaper elsewhere'" 
+                  field="competitorObjections" 
+                  placeholder="e.g., Price match guarantee - we'll beat any verified price by 5%. Explain total cost of ownership (our warranty vs theirs). Show hidden fees competitors charge. Emphasize our customer service and free lifetime repairs."
+                  rows={5}
+                  helper="How to compete against other options"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 11: Customer Service */}
+          {currentStep === 11 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Customer Service & Support
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  How your agent should handle support issues
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="What support issues can your agent handle?" 
+                  field="supportScope" 
+                  placeholder="e.g., Order status/tracking, Product questions, Returns/exchanges, Size/fit guidance, Account issues, Shipping changes, Payment questions, Product care instructions"
+                  rows={4}
+                  helper="What customer service topics your agent can address"
+                  required
+                />
+
+                <TextArea 
+                  label="Technical support capabilities" 
+                  field="technicalSupport" 
+                  placeholder="e.g., Basic troubleshooting from manual. Setup instructions. Common issues and fixes. Escalate hardware failures. Can walk through product assembly. Cannot diagnose complex technical problems."
+                  rows={4}
+                  helper="What technical help can your agent provide?"
+                />
+
+                <TextArea 
+                  label="Order tracking and status updates" 
+                  field="orderTracking" 
+                  placeholder="e.g., Check order status in real-time. Provide tracking numbers. Explain shipping delays. Update shipping address before shipment. Cannot cancel after processing (escalate to support)."
+                  rows={4}
+                  helper="How agent handles order inquiries"
+                />
+
+                <TextArea 
+                  label="Complaint resolution process" 
+                  field="complaintResolution" 
+                  placeholder="e.g., Listen empathetically. Apologize for issue. Offer immediate solution (refund/replacement/discount). Escalate if >$200 issue or customer very angry. Log complaint for review. Follow up in 48hrs."
+                  rows={5}
+                  helper="How to handle unhappy customers"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 12: Agent Personality */}
+          {currentStep === 12 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Agent Personality
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  How should your agent communicate?
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextInput label="Agent Name (optional)" field="agentName" placeholder="e.g., Alex, Sam, or leave blank" />
+                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem' }}>
+                  Give your agent a human name or leave blank for generic greeting
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Tone *
+                  </label>
+                  <select
+                    value={formData.tone}
+                    onChange={(e) => updateField('tone', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="professional">Professional & Polished</option>
+                    <option value="friendly">Friendly & Conversational</option>
+                    <option value="enthusiastic">Enthusiastic & Energetic</option>
+                    <option value="empathetic">Empathetic & Understanding</option>
+                    <option value="technical">Technical & Expert</option>
+                    <option value="consultative">Consultative & Advisory</option>
+                  </select>
+                </div>
+
+                <TextArea 
+                  label="Opening greeting" 
+                  field="greeting" 
+                  placeholder="e.g., Hi! I'm here to help you find the perfect outdoor gear. What are you looking for today?"
+                  rows={2}
+                  helper="First message customers see - make it welcoming"
+                  required
+                />
+
+                <TextArea 
+                  label="Closing message (after sale or end of conversation)" 
+                  field="closingMessage" 
+                  placeholder="e.g., Thanks for choosing us! You'll get a confirmation email shortly. Feel free to reach out if you have any questions. Happy adventuring!"
+                  rows={3}
+                  helper="How to wrap up conversations professionally"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 13: Behavioral Controls */}
+          {currentStep === 13 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Behavioral Controls
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Fine-tune how your agent behaves
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    Closing Aggressiveness: {formData.closingAggressiveness}/10
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={formData.closingAggressiveness}
+                    onChange={(e) => updateField('closingAggressiveness', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    <span>Passive (1-3): Helpful, doesn't push</span>
+                    <span>Balanced (4-7): Guides to purchase</span>
+                    <span>Aggressive (8-10): Always closing</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    Question Frequency: Ask {formData.questionFrequency} questions before recommending
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="7"
+                    value={formData.questionFrequency}
+                    onChange={(e) => updateField('questionFrequency', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    <span>Quick (1-2): Fast recommendations</span>
+                    <span>Balanced (3-4): Standard discovery</span>
+                    <span>Thorough (5-7): Deep understanding</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Response Length Preference
+                  </label>
+                  <select
+                    value={formData.responseLength}
+                    onChange={(e) => updateField('responseLength', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="concise">Concise (1-2 sentences, quick responses)</option>
+                    <option value="balanced">Balanced (3-4 sentences, detailed but brief)</option>
+                    <option value="detailed">Detailed (5+ sentences, thorough explanations)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    Proactive vs Reactive: {formData.proactiveLevel}/10
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={formData.proactiveLevel}
+                    onChange={(e) => updateField('proactiveLevel', parseInt(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    <span>Reactive (1-3): Only answers questions</span>
+                    <span>Balanced (4-7): Suggests & answers</span>
+                    <span>Proactive (8-10): Volunteers info</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 14: Knowledge Base Upload */}
+          {currentStep === 14 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Upload Your Knowledge Base
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  The more you provide, the smarter your agent
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Upload Documents
+                  </label>
+                  <div style={{
+                    border: '2px dashed #333',
+                    borderRadius: '0.75rem',
+                    padding: '3rem 2rem',
+                    textAlign: 'center',
+                    backgroundColor: '#0a0a0a',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📄</div>
+                    <div style={{ color: '#ccc', fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600' }}>
+                      Drag & drop files or click to browse
+                    </div>
+                    <div style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                      PDFs, Excel, Word, images - Product catalogs, price lists, manuals, policies
+                    </div>
+                    <button style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: primaryColor,
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600'
+                    }}>
+                      Choose Files
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Website URLs (we'll extract the content)
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="url"
+                      placeholder="https://yoursite.com/products"
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        backgroundColor: '#0a0a0a',
+                        border: '1px solid #333',
+                        borderRadius: '0.5rem',
+                        color: '#fff',
+                        fontSize: '1rem'
+                      }}
+                    />
+                    <button style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#222',
+                      color: primaryColor,
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600'
+                    }}>
+                      + Add
+                    </button>
+                  </div>
+                  <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                    We'll analyze these pages for products, pricing, FAQs, and policies
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Competitor Websites (optional - for competitive intelligence)
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="url"
+                      placeholder="https://competitor.com"
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        backgroundColor: '#0a0a0a',
+                        border: '1px solid #333',
+                        borderRadius: '0.5rem',
+                        color: '#fff',
+                        fontSize: '1rem'
+                      }}
+                    />
+                    <button style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#222',
+                      color: primaryColor,
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600'
+                    }}>
+                      + Add
+                    </button>
+                  </div>
+                  <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                    Your agent will learn how you compare to competitors
+                  </div>
+                </div>
+
+                <TextArea 
+                  label="FAQs or additional knowledge (paste here)" 
+                  field="faqs" 
+                  placeholder="Paste frequently asked questions, policies, or any other information your agent should know..."
+                  rows={8}
+                  helper="This will be added to your agent's knowledge base"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 15: Compliance & Legal */}
+          {currentStep === 15 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Compliance & Legal
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Important disclosures and restrictions
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <TextArea 
+                  label="Required disclosures (legal/regulatory)" 
+                  field="requiredDisclosures" 
+                  placeholder="e.g., 'I am an AI assistant, not a human representative' OR 'These statements have not been evaluated by the FDA' OR 'Past performance does not guarantee future results'"
+                  rows={4}
+                  helper="Legally required statements your agent must include"
+                />
+
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.privacyCompliance}
+                      onChange={(e) => updateField('privacyCompliance', e.target.checked)}
+                      style={{ width: '20px', height: '20px' }}
+                    />
+                    <div>
+                      <div style={{ color: '#ccc', fontSize: '0.875rem', fontWeight: '600' }}>
+                        Enable Privacy & Data Protection Compliance (GDPR/CCPA)
+                      </div>
+                      <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                        Includes data collection notices and opt-out options
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <TextArea 
+                  label="Industry-specific regulations" 
+                  field="industryRegulations" 
+                  placeholder="e.g., HIPAA compliance (healthcare), SEC regulations (financial), FTC guidelines (advertising), Industry certifications required"
+                  rows={4}
+                  helper="Any special compliance requirements for your industry"
+                />
+
+                <TextArea 
+                  label="Prohibited topics (what agent should NOT discuss)" 
+                  field="prohibitedTopics" 
+                  placeholder="e.g., Medical advice, Legal advice, Political opinions, Personal opinions on competitors, Guarantees we can't fulfill, Off-label use of products"
+                  rows={5}
+                  helper="Topics your agent must avoid to prevent liability"
+                  required
+                />
+
+                <div style={{
+                  padding: '1.5rem',
+                  backgroundColor: '#0a0a0a',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '0.75rem',
+                  marginTop: '1rem'
+                }}>
+                  <div style={{ color: '#f59e0b', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    ⚠️ Important: Review Before Launch
+                  </div>
+                  <div style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                    You'll have a chance to train and test your agent before it goes live. Make sure all information is accurate and compliant with your industry regulations.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 16: Advanced Configuration */}
+          {currentStep === 16 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Advanced Configuration (Optional)
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  For power users who want more control
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Industry Template Selection */}
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Start with an Industry Template (Optional)
+                  </label>
+                  <select
+                    value={formData.industryTemplate}
+                    onChange={(e) => updateField('industryTemplate', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  >
+                    <option value="">None - Use my custom configuration</option>
+                    <option value="b2b_highticket">High-Ticket B2B Sales</option>
+                    <option value="ecommerce_complex">E-commerce with Complex Shipping Rules</option>
+                    <option value="appointments">Appointment-Based Service Business</option>
+                    <option value="retail_inventory">Retail with Inventory Management</option>
+                  </select>
+                  <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    Templates provide pre-configured settings you can customize
+                  </div>
+                </div>
+
+                {/* Custom Function Definitions */}
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    Custom Function Definitions
+                  </label>
+                  <div style={{
+                    backgroundColor: '#0a0a0a',
+                    border: '1px solid #333',
+                    borderRadius: '0.75rem',
+                    padding: '1.5rem'
+                  }}>
+                    <div style={{ color: '#ccc', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                      Define custom actions your agent can perform (e.g., check inventory, calculate shipping, verify credit)
+                    </div>
+                    <button style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#222',
+                      color: primaryColor,
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600'
+                    }}>
+                      + Add Custom Function
+                    </button>
+                    {formData.customFunctions.length > 0 && (
+                      <div style={{ marginTop: '1rem', color: '#666', fontSize: '0.875rem' }}>
+                        {formData.customFunctions.length} custom function(s) defined
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Advanced Behavioral Controls */}
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    Advanced Behavioral Controls
+                  </label>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <TextArea 
+                      label="Conversation Flow Logic" 
+                      field="conversationFlowLogic" 
+                      placeholder="e.g., First ask about budget, then use case, then timeline. If budget > $1000, mention premium line first. If timeline urgent, skip detailed discovery and recommend top 3 products immediately."
+                      rows={5}
+                      helper="Define the exact order and conditions for conversation flow"
+                    />
+
+                    <div>
+                      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                        Strict Response Length Limit (characters)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.responseLengthLimit || ''}
+                        onChange={(e) => updateField('responseLengthLimit', parseInt(e.target.value) || 0)}
+                        placeholder="0 = no limit"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          backgroundColor: '#0a0a0a',
+                          border: '1px solid #333',
+                          borderRadius: '0.5rem',
+                          color: '#fff',
+                          fontSize: '1rem'
+                        }}
+                      />
+                      <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                        Force responses to be under this character count (useful for SMS/chat widgets)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Compliance & Legal Advanced */}
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.privacyCompliance}
+                      onChange={(e) => updateField('privacyCompliance', e.target.checked)}
+                      style={{ width: '20px', height: '20px' }}
+                    />
+                    <div>
+                      <div style={{ color: '#ccc', fontSize: '0.875rem', fontWeight: '600' }}>
+                        Enable Enhanced Privacy & Compliance Mode
+                      </div>
+                      <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                        GDPR, CCPA, HIPAA compliance with data collection notices and opt-outs
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Knowledge Priority */}
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    Knowledge Source Priority
+                  </label>
+                  <div style={{
+                    backgroundColor: '#0a0a0a',
+                    border: '1px solid #333',
+                    borderRadius: '0.75rem',
+                    padding: '1.5rem'
+                  }}>
+                    <div style={{ color: '#ccc', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                      Set priority levels for different knowledge sources when answering questions
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#999', fontSize: '0.875rem' }}>
+                      <div>1. Product Catalog (always highest priority)</div>
+                      <div>2. Official Documentation (uploaded PDFs)</div>
+                      <div>3. Website Content (scraped URLs)</div>
+                      <div>4. FAQs & Custom Instructions</div>
+                      <div>5. General Training Data</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skip/Continue Option */}
+                <div style={{
+                  padding: '1.5rem',
+                  backgroundColor: '#0a0a0a',
+                  border: '1px solid ' + primaryColor,
+                  borderRadius: '0.75rem',
+                  marginTop: '1rem',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ color: primaryColor, fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    💡 Most Users Skip This Step
+                  </div>
+                  <div style={{ color: '#ccc', fontSize: '0.875rem' }}>
+                    The configurations from Steps 1-15 are sufficient for 95% of users. You can always come back and configure advanced settings later from the Agent Persona page.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Buttons */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            onClick={prevStep}
+            disabled={currentStep === 1}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: currentStep === 1 ? '#1a1a1a' : '#222',
+              color: currentStep === 1 ? '#666' : '#fff',
+              border: '1px solid #333',
+              borderRadius: '0.5rem',
+              cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '600'
+            }}
+          >
+            ← Previous
+          </button>
+
+          <div style={{ color: '#666', fontSize: '0.875rem' }}>
+            Step {currentStep} of {totalSteps}
+          </div>
+
+          {currentStep < totalSteps ? (
+            <button
+              onClick={nextStep}
+              style={{
+                padding: '0.75rem 2rem',
+                backgroundColor: primaryColor,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}
+            >
+              Continue →
+            </button>
+          ) : (
+            <button
+              onClick={completeOnboarding}
+              style={{
+                padding: '1rem 2.5rem',
+                background: `linear-gradient(135deg, ${primaryColor}, #8b5cf6)`,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                boxShadow: `0 10px 40px ${primaryColor}33`
+              }}
+            >
+              🚀 Start Training Your AI Agent
+            </button>
+          )}
+        </div>
+
+        {/* Progress Indicator Dots */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: i + 1 === currentStep ? '24px' : '8px',
+                height: '8px',
+                borderRadius: '9999px',
+                backgroundColor: i + 1 <= currentStep ? primaryColor : '#333',
+                transition: 'all 0.3s'
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

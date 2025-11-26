@@ -1032,3 +1032,4 @@ export interface ProductReview {
   updatedAt: Timestamp;
 }
 
+

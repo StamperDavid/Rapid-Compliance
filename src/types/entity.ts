@@ -293,3 +293,4 @@ export interface EntityGroup {
   collapsed?: string[]; // IDs of collapsed groups
 }
 
+

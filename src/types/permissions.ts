@@ -317,3 +317,4 @@ export function isRoleHigherThan(role1: UserRole, role2: UserRole): boolean {
   return ROLE_HIERARCHY[role1] > ROLE_HIERARCHY[role2];
 }
 
+

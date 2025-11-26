@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import AdminBar from '@/components/AdminBar';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 interface Field {
   id: string;
@@ -35,19 +36,22 @@ const FIELD_TYPES = [
 ];
 
 export default function SchemaBuilderPage() {
-  const [schemas, setSchemas] = useState<Schema[]>([
-    {
-      id: 'schema_1',
-      name: 'Product',
-      pluralName: 'Products',
-      icon: '📦',
-      fields: [
-        { id: 'f1', key: 'name', label: 'Product Name', type: 'text', required: true },
-        { id: 'f2', key: 'price', label: 'Price', type: 'currency', required: true },
-        { id: 'f3', key: 'description', label: 'Description', type: 'longText', required: false }
-      ]
-    }
-  ]);
+  // Convert STANDARD_SCHEMAS to the format we need
+  const standardSchemasArray: Schema[] = Object.values(STANDARD_SCHEMAS).map(schema => ({
+    id: schema.id,
+    name: schema.name,
+    pluralName: schema.pluralName,
+    icon: schema.icon,
+    fields: schema.fields.map(f => ({
+      id: f.id,
+      key: f.key,
+      label: f.label,
+      type: f.type,
+      required: f.required
+    }))
+  }));
+
+  const [schemas, setSchemas] = useState<Schema[]>(standardSchemasArray);
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingSchema, setEditingSchema] = useState<Schema | null>(null);
@@ -124,7 +128,7 @@ export default function SchemaBuilderPage() {
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Link href="/workspace/demo/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+              <Link href="/workspace/demo-org/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
                 ← Back to Settings
               </Link>
               <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>
@@ -141,6 +145,19 @@ export default function SchemaBuilderPage() {
       </div>
 
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
+        {/* Info Box */}
+        <div style={{ backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>💡</span>
+            <div>
+              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#6ee7b7', marginBottom: '0.5rem' }}>Standard CRM Schemas</div>
+              <div style={{ fontSize: '0.875rem', color: '#86efac', lineHeight: '1.6' }}>
+                Below are the 10 standard CRM schemas that come pre-configured. You can customize these or create entirely new schemas for your business needs (e.g., Projects, Properties, Vehicles, Cases, etc.).
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Existing Schemas */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
           {schemas.map((schema) => (
@@ -177,7 +194,7 @@ export default function SchemaBuilderPage() {
 
               <div style={{ paddingTop: '1rem', borderTop: '1px solid #1a1a1a', display: 'flex', gap: '0.5rem' }}>
                 <Link
-                  href={`/workspace/demo/entities/${schema.name.toLowerCase()}`}
+                  href={`/workspace/demo-org/entities/${schema.name.toLowerCase()}`}
                   style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#6366f1', borderRadius: '0.5rem', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid #333', fontWeight: '500' }}
                 >
                   View Data

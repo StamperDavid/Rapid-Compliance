@@ -2,17 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import AdminBar from '@/components/AdminBar';
 import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
 
-type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'orders' | 'tasks';
+type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
 export default function CRMPage() {
+  const searchParams = useSearchParams();
   const [config, setConfig] = useState<any>(null);
   const [activeView, setActiveView] = useState<ViewType>('leads');
+  
+  // Update activeView based on URL query parameter
+  useEffect(() => {
+    const viewParam = searchParams.get('view') as ViewType | null;
+    if (viewParam && ['leads', 'companies', 'contacts', 'deals', 'products', 'quotes', 'invoices', 'payments', 'orders', 'tasks'].includes(viewParam)) {
+      setActiveView(viewParam);
+    }
+  }, [searchParams]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -24,6 +34,10 @@ export default function CRMPage() {
   const [formData, setFormData] = useState<any>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [theme, setTheme] = useState<any>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
 
   // Load theme
   useEffect(() => {
@@ -92,6 +106,12 @@ export default function CRMPage() {
     { id: '2', invoice_number: 'INV-002', company_id: '2', invoice_date: '2024-01-20', due_date: '2024-02-20', total: 125000, paid_amount: 125000, balance: 0, status: 'Paid' },
   ]);
 
+  const [payments, setPayments] = useState([
+    { id: '1', payment_number: 'PAY-001', invoice_id: '1', payment_date: '2024-01-20', amount: 25000, payment_method: 'Stripe', transaction_id: 'ch_3abc123xyz', status: 'Completed' },
+    { id: '2', payment_number: 'PAY-002', invoice_id: '2', payment_date: '2024-01-25', amount: 125000, payment_method: 'Bank Transfer', transaction_id: 'ACH-987654', status: 'Completed' },
+    { id: '3', payment_number: 'PAY-003', invoice_id: '1', payment_date: '2024-02-01', amount: 25000, payment_method: 'Credit Card', transaction_id: 'ch_4def456uvw', status: 'Completed' },
+  ]);
+
   const [orders, setOrders] = useState([
     { id: '1', order_number: 'ORD-001', company_id: '1', order_date: '2024-01-15', total: 50000, status: 'Processing' },
   ]);
@@ -103,7 +123,7 @@ export default function CRMPage() {
   ]);
 
   const dataMap: Record<ViewType, any[]> = {
-    leads, companies, contacts, deals, products, quotes, invoices, orders, tasks
+    leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks
   };
 
   const setterMap: Record<ViewType, Function> = {
@@ -114,6 +134,7 @@ export default function CRMPage() {
     products: setProducts,
     quotes: setQuotes,
     invoices: setInvoices,
+    payments: setPayments,
     orders: setOrders,
     tasks: setTasks,
   };
@@ -209,6 +230,85 @@ export default function CRMPage() {
     a.click();
   };
 
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split('\n').filter(line => line.trim());
+      if (lines.length < 2) {
+        showToast('Invalid CSV file', 'error');
+        return;
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const data = lines.slice(1, 6).map(line => {
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+        return headers.reduce((obj: any, header, idx) => {
+          obj[header] = values[idx] || '';
+          return obj;
+        }, {});
+      });
+
+      setImportPreview(data);
+
+      // Auto-map columns intelligently
+      const schema = getSchema();
+      const mapping: Record<string, string> = {};
+      headers.forEach(header => {
+        const lowerHeader = header.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const matchedField = schema.fields.find((f: any) => 
+          f.key.toLowerCase() === lowerHeader || 
+          f.label.toLowerCase() === header.toLowerCase() ||
+          lowerHeader.includes(f.key.toLowerCase())
+        );
+        if (matchedField) {
+          mapping[header] = matchedField.key;
+        }
+      });
+      setColumnMapping(mapping);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportConfirm = () => {
+    if (!importFile) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      
+      const newRecords = lines.slice(1).map((line, idx) => {
+        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+        const record: any = { id: `import-${Date.now()}-${idx}` };
+        
+        headers.forEach((header, i) => {
+          const targetField = columnMapping[header];
+          if (targetField && values[i]) {
+            record[targetField] = values[i];
+          }
+        });
+        
+        return record;
+      });
+
+      const setter = setterMap[activeView];
+      setter((prev: any[]) => [...prev, ...newRecords]);
+      
+      setShowImportModal(false);
+      setImportFile(null);
+      setImportPreview([]);
+      setColumnMapping({});
+      showToast(`Successfully imported ${newRecords.length} ${getSchema().pluralName}!`, 'success');
+    };
+    reader.readAsText(importFile);
+  };
+
   const brandName = theme?.branding?.companyName || config?.businessName || 'AI CRM';
   const logoUrl = theme?.branding?.logoUrl;
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
@@ -255,6 +355,40 @@ export default function CRMPage() {
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
+          {/* Dashboard Link */}
+          <Link
+            href="/dashboard"
+            style={{
+              width: '100%',
+              padding: '0.875rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              backgroundColor: 'transparent',
+              color: '#999',
+              border: 'none',
+              fontSize: '0.875rem',
+              fontWeight: '400',
+              borderLeft: '3px solid transparent',
+              textAlign: 'left',
+              transition: 'all 0.2s',
+              textDecoration: 'none'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#111';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <span style={{ fontSize: '1.25rem' }}>📊</span>
+            {sidebarOpen && <span>Dashboard</span>}
+          </Link>
+
+          {/* Divider */}
+          <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '0.5rem 0' }}></div>
+
+          {/* Entity Navigation */}
           {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
             <button
               key={key}
@@ -385,18 +519,18 @@ export default function CRMPage() {
               </button>
             )}
             <button 
-              onClick={handleAdd}
+              onClick={() => setShowImportModal(true)}
               style={{
-                padding: '0.625rem 1.25rem',
-                backgroundColor: primaryColor,
-                color: 'white',
-                border: 'none',
+                padding: '0.625rem 1rem',
+                backgroundColor: '#1a1a1a',
+                color: '#999',
+                border: '1px solid #333',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.875rem'
+                fontSize: '0.875rem',
+                fontWeight: '500'
               }}>
-              + New {getSchema().singularName}
+              📥 Import
             </button>
             <button 
               onClick={handleExport}
@@ -409,7 +543,21 @@ export default function CRMPage() {
                 cursor: 'pointer',
                 fontSize: '0.875rem'
               }}>
-              Export
+              📤 Export
+            </button>
+            <button 
+              onClick={handleAdd}
+              style={{
+                padding: '0.625rem 1.25rem',
+                backgroundColor: primaryColor,
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.875rem'
+              }}>
+              + New {getSchema().singularName}
             </button>
           </div>
         </div>
@@ -689,6 +837,174 @@ export default function CRMPage() {
           onClose={() => setShowFilterBuilder(false)}
           initialFilter={activeFilter || undefined}
         />
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: '#0a0a0a', borderRadius: '1rem', border: '1px solid #333', padding: '2rem', minWidth: '700px', maxWidth: '900px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+              Import {getSchema().pluralName}
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '1.5rem' }}>
+              Upload a CSV file. We'll automatically map columns to your {getSchema().singularName} schema.
+            </p>
+
+            {!importFile ? (
+              // File Upload
+              <div>
+                <label 
+                  htmlFor="import-file-upload"
+                  style={{
+                    display: 'block',
+                    border: '2px dashed #333',
+                    borderRadius: '0.75rem',
+                    padding: '3rem',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: '#111',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = primaryColor;
+                    e.currentTarget.style.backgroundColor = '#1a1a1a';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#333';
+                    e.currentTarget.style.backgroundColor = '#111';
+                  }}
+                >
+                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📄</div>
+                  <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                    Click to upload or drag and drop
+                  </p>
+                  <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                    CSV files only (Max 10MB)
+                  </p>
+                  <input
+                    id="import-file-upload"
+                    type="file"
+                    accept=".csv"
+                    onChange={handleImportFile}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
+                <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
+                  <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                    💡 Expected Columns for {getSchema().pluralName}:
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {getSchema().fields.slice(0, 8).map((field: any) => (
+                      <span key={field.key} style={{ padding: '0.25rem 0.75rem', backgroundColor: '#222', color: primaryColor, borderRadius: '9999px', fontSize: '0.75rem', border: '1px solid #333' }}>
+                        {field.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Preview and Mapping
+              <div>
+                <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>📄 {importFile.name}</p>
+                      <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                        {importPreview.length} records found (showing first 5)
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setImportFile(null);
+                        setImportPreview([]);
+                        setColumnMapping({});
+                      }}
+                      style={{ padding: '0.5rem 0.75rem', backgroundColor: '#222', color: '#999', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
+                    >
+                      Change File
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem' }}>
+                    Column Mapping (auto-detected):
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', maxHeight: '200px', overflowY: 'auto', padding: '0.5rem' }}>
+                    {Object.keys(columnMapping).map((csvColumn) => (
+                      <div key={csvColumn} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                        <span style={{ color: '#999', flex: 1 }}>{csvColumn}</span>
+                        <span style={{ color: '#666' }}>→</span>
+                        <select
+                          value={columnMapping[csvColumn]}
+                          onChange={(e) => setColumnMapping(prev => ({ ...prev, [csvColumn]: e.target.value }))}
+                          style={{ flex: 1, padding: '0.375rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.75rem' }}
+                        >
+                          <option value="">Skip</option>
+                          {getSchema().fields.map((field: any) => (
+                            <option key={field.key} value={field.key}>{field.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preview Table */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem' }}>
+                    Preview (first 5 rows):
+                  </h4>
+                  <div style={{ backgroundColor: '#111', borderRadius: '0.5rem', border: '1px solid #1a1a1a', overflow: 'auto', maxHeight: '300px' }}>
+                    <table style={{ width: '100%', fontSize: '0.75rem' }}>
+                      <thead style={{ backgroundColor: '#1a1a1a', position: 'sticky', top: 0 }}>
+                        <tr>
+                          {Object.keys(importPreview[0] || {}).map(col => (
+                            <th key={col} style={{ padding: '0.75rem', textAlign: 'left', color: '#999', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid #333' }}>
+                              {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.map((row, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                            {Object.values(row).map((val: any, i) => (
+                              <td key={i} style={{ padding: '0.75rem', color: '#fff' }}>{val}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportFile(null);
+                  setImportPreview([]);
+                  setColumnMapping({});
+                }}
+                style={{ flex: 1, padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Cancel
+              </button>
+              {importFile && (
+                <button
+                  onClick={handleImportConfirm}
+                  style={{ flex: 1, padding: '0.75rem', backgroundColor: primaryColor, color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  Import {importPreview.length} Records
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Toast Notification */}

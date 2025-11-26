@@ -36,42 +36,45 @@ export default function SettingsPage() {
     {
       title: 'Core Configuration',
       items: [
-        { icon: '🏢', label: 'Organization', description: 'Company name, details, and general settings', href: '/workspace/demo/settings/organization', permission: canManageOrganization },
-        { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: '/workspace/demo/settings/api-keys', permission: canManageAPIKeys },
-        { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, and billing', href: '/workspace/demo/settings/billing', permission: canManageBilling },
+        { icon: '🏢', label: 'Organization', description: 'Company name, details, and general settings', href: '/workspace/demo-org/settings/organization', permission: canManageOrganization },
+        { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: '/workspace/demo-org/settings/api-keys', permission: canManageAPIKeys },
+        { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, and billing', href: '/workspace/demo-org/settings/billing', permission: canManageBilling },
+      ]
+    },
+    {
+      title: 'E-Commerce',
+      items: [
+        { icon: '🛒', label: 'Online Storefront', description: 'Enable store, choose products/services/both, customize theme, generate embed codes', href: '/workspace/demo-org/settings/storefront', permission: canManageOrganization },
       ]
     },
     {
       title: 'Customization',
       items: [
-        { icon: '🎨', label: 'Theme & Branding', description: 'White-label your platform with custom colors, logo, and styling', href: '/workspace/demo/settings/theme', permission: canManageTheme },
-        { icon: '📧', label: 'Email Templates', description: 'Customize email notifications and branding', href: '/workspace/demo/settings/email-templates', permission: canManageTheme },
-        { icon: '🌐', label: 'Custom Domain', description: 'Connect your custom domain for white-labeling', href: '/workspace/demo/settings/domain', permission: canManageOrganization },
+        { icon: '🎨', label: 'CRM Theme & Branding', description: 'White-label your CRM platform with custom colors and logo', href: '/workspace/demo-org/settings/theme', permission: canManageTheme },
+        { icon: '📧', label: 'Email Templates', description: 'Customize email notifications and branding', href: '/workspace/demo-org/settings/email-templates', permission: canManageTheme },
       ]
     },
     {
       title: 'Users & Access',
       items: [
-        { icon: '👥', label: 'Team Members', description: 'Invite users, manage roles and permissions', href: '/workspace/demo/settings/users', permission: canViewAllUsers },
-        { icon: '🔐', label: 'Security', description: 'Two-factor auth, IP restrictions, audit logs', href: '/workspace/demo/settings/security', permission: canManageOrganization },
-        { icon: '🔔', label: 'Notifications', description: 'Configure email and push notification preferences', href: '/workspace/demo/settings/notifications', permission: true },
+        { icon: '👥', label: 'Team Members', description: 'Invite users, manage roles and permissions', href: '/workspace/demo-org/settings/users', permission: canViewAllUsers },
+        { icon: '🔐', label: 'Security', description: 'Two-factor auth, IP restrictions, audit logs', href: '/workspace/demo-org/settings/security', permission: canManageOrganization },
       ]
     },
     {
       title: 'Integrations',
       items: [
-        { icon: '🔌', label: 'Integrations', description: 'Connect Slack, Zapier, and other third-party apps', href: '/workspace/demo/settings/integrations', permission: canManageIntegrations },
-        { icon: '🌐', label: 'Webhooks', description: 'Configure webhooks for real-time event notifications', href: '/workspace/demo/settings/webhooks', permission: canManageIntegrations },
-        { icon: '🔑', label: 'API Access', description: 'Generate API keys for external integrations', href: '/workspace/demo/settings/api-access', permission: canManageOrganization },
+        { icon: '📊', label: 'Accounting Software', description: 'Sync invoices, payments, and customers to QuickBooks, Xero, FreshBooks, Wave', href: '/workspace/demo-org/settings/accounting', permission: canManageIntegrations },
+        { icon: '🔌', label: 'Business Apps', description: 'Connect Slack, Zapier, and other third-party apps', href: '/workspace/demo-org/settings/integrations', permission: canManageIntegrations },
+        { icon: '🌐', label: 'Webhooks', description: 'Configure webhooks for real-time event notifications', href: '/workspace/demo-org/settings/webhooks', permission: canManageIntegrations },
       ]
     },
     {
       title: 'Advanced',
       items: [
-        { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: '/workspace/demo/schemas', permission: canManageOrganization },
-        { icon: '📊', label: 'Data & Import', description: 'Import/export data, manage schemas', href: '/import', permission: true },
-        { icon: '⚙️', label: 'Workflows', description: 'Automation rules and workflow configuration', href: '/workspace/demo/settings/workflows', permission: canManageOrganization },
-        { icon: '🤖', label: 'AI Agents', description: 'Configure and train AI assistants', href: '/workspace/demo/settings/ai-agents', permission: canManageOrganization },
+        { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: '/workspace/demo-org/schemas', permission: canManageOrganization },
+        { icon: '⚙️', label: 'Workflows', description: 'Automation rules and workflow configuration', href: '/workspace/demo-org/settings/workflows', permission: canManageOrganization },
+        { icon: '🤖', label: 'AI Agents', description: 'Configure and train AI assistants', href: '/workspace/demo-org/settings/ai-agents', permission: canManageOrganization },
       ]
     }
   ];
@@ -92,7 +95,7 @@ export default function SettingsPage() {
         }}>
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             <Link
-              href="/dashboard"
+              href="/crm"
               style={{
                 width: '100%',
                 padding: '0.875rem 1.25rem',
@@ -107,8 +110,8 @@ export default function SettingsPage() {
                 textDecoration: 'none'
               }}
             >
-              <span style={{ fontSize: '1.25rem' }}>📊</span>
-              {sidebarOpen && <span>Dashboard</span>}
+              <span style={{ fontSize: '1.25rem' }}>🏠</span>
+              {sidebarOpen && <span>Back to CRM</span>}
             </Link>
 
             {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
@@ -159,15 +162,8 @@ export default function SettingsPage() {
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
-              <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '1.5rem' }}>
-                {logoUrl ? (
-                  <img src={logoUrl} alt={brandName} style={{ maxHeight: '40px', maxWidth: '150px', objectFit: 'contain' }} />
-                ) : (
-                  <>
-                    <span style={{ fontSize: '1.5rem' }}>🚀</span>
-                    <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff' }}>{brandName}</span>
-                  </>
-                )}
+              <Link href="/crm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+                ← Back to CRM
               </Link>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Settings</h1>
               <p style={{ color: '#666', fontSize: '0.875rem' }}>
@@ -188,7 +184,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 {canManageOrganization && (
-                  <Link href="/workspace/demo/settings/organization" style={{ padding: '0.625rem 1.25rem', backgroundColor: '#222', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}>
+                  <Link href="/workspace/demo-org/settings/organization" style={{ padding: '0.625rem 1.25rem', backgroundColor: '#222', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}>
                     Edit Details
                   </Link>
                 )}

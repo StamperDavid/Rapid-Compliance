@@ -36,7 +36,7 @@ export default function AdminBar() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.5rem' }}>
         {/* Left: Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+          <Link href="/crm" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
             {logoUrl ? (
               <img src={logoUrl} alt={brandName} style={{ height: '32px', maxWidth: '150px', objectFit: 'contain' }} />
             ) : (
@@ -54,7 +54,7 @@ export default function AdminBar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {canAccessSettings && (
             <Link 
-              href="/workspace/demo/settings"
+              href="/workspace/demo-org/settings"
               style={{ padding: '0.5rem 1rem', color: '#999', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', borderRadius: '0.375rem', transition: 'all 0.2s' }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}

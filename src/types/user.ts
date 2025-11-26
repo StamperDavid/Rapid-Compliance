@@ -108,3 +108,4 @@ export interface Invitation {
   status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
 }
 
+
