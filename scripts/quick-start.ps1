@@ -1,7 +1,13 @@
 # Quick Start Script - AI CRM Platform
 # Simplified version that just starts the essentials
 
+# CRITICAL: Ensure we're in the project root directory
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+Set-Location $projectRoot
+
 Write-Host "Quick Starting AI CRM Platform..." -ForegroundColor Cyan
+Write-Host "Project Directory: $projectRoot" -ForegroundColor Gray
 Write-Host ""
 
 # Check if dependencies are installed
@@ -25,7 +31,8 @@ Write-Host ""
 Write-Host "Opening in new window..." -ForegroundColor Gray
 Write-Host ""
 
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm run dev"
+# Start in new window with explicit directory change
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$projectRoot'; npm run dev"
 
 Start-Sleep -Seconds 3
 

@@ -36,7 +36,6 @@ export default function SettingsPage() {
     {
       title: 'Core Configuration',
       items: [
-        { icon: '🏢', label: 'Organization', description: 'Company name, details, and general settings', href: '/workspace/demo-org/settings/organization', permission: canManageOrganization },
         { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: '/workspace/demo-org/settings/api-keys', permission: canManageAPIKeys },
         { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, and billing', href: '/workspace/demo-org/settings/billing', permission: canManageBilling },
       ]
@@ -48,10 +47,16 @@ export default function SettingsPage() {
       ]
     },
     {
+      title: 'Email & SMS',
+      items: [
+        { icon: '📧', label: 'Email Templates', description: 'Customize email notifications and branding', href: '/workspace/demo-org/settings/email-templates', permission: canManageTheme },
+        { icon: '📱', label: 'SMS Messages', description: 'Configure automated text messages with custom triggers', href: '/workspace/demo-org/settings/sms-messages', permission: canManageTheme },
+      ]
+    },
+    {
       title: 'Customization',
       items: [
         { icon: '🎨', label: 'CRM Theme & Branding', description: 'White-label your CRM platform with custom colors and logo', href: '/workspace/demo-org/settings/theme', permission: canManageTheme },
-        { icon: '📧', label: 'Email Templates', description: 'Customize email notifications and branding', href: '/workspace/demo-org/settings/email-templates', permission: canManageTheme },
       ]
     },
     {

@@ -12,7 +12,21 @@ A fully customizable, industry-agnostic CRM platform with AI agents, workflow au
 
 ### Installation
 
-#### Option 1: Automated Setup (Windows PowerShell)
+#### EASIEST: Double-Click to Start (Windows)
+1. Navigate to project folder: `C:\Users\David\PycharmProjects\AI Sales Platform`
+2. Double-click `START.bat`
+3. Done! Server starts on http://localhost:3000
+
+#### Option 1: Simple PowerShell Command
+```powershell
+# Navigate to project
+cd "C:\Users\David\PycharmProjects\AI Sales Platform"
+
+# Start server
+.\START.ps1
+```
+
+#### Option 2: Automated Setup (Windows PowerShell)
 ```powershell
 # Run the setup script
 .\scripts\setup-dev.ps1
@@ -21,7 +35,7 @@ A fully customizable, industry-agnostic CRM platform with AI agents, workflow au
 .\scripts\quick-start.ps1
 ```
 
-#### Option 2: Manual Setup
+#### Option 3: Manual Setup
 ```bash
 # Clone the repository
 git clone <your-repo-url>
@@ -245,6 +259,13 @@ Installs all dependencies, creates directory structure, and configures environme
 
 ### Quick Start
 ```powershell
+# EASIEST - Just double-click this file in Windows Explorer:
+START.bat
+
+# OR run from PowerShell:
+.\START.ps1
+
+# OR use the full script:
 .\scripts\quick-start.ps1
 ```
 Fastest way to start the dev server.

@@ -2,10 +2,18 @@
 
 ## Windows (PowerShell)
 
-### Option 1: Automated Quick Start (Recommended)
+### Option 1: Double-Click START.bat (EASIEST!)
+Just double-click `START.bat` in the project root. Done!
+
+### Option 2: Run START.ps1
+```powershell
+.\START.ps1
+```
+
+### Option 3: Automated Quick Start
 ```powershell
 # Navigate to project directory
-cd "E:\AI Sales Platform"
+cd "C:\Users\David\PycharmProjects\AI Sales Platform"
 
 # Run quick start (installs dependencies and starts server)
 .\scripts\quick-start.ps1
@@ -41,6 +49,9 @@ This will:
 
 ### Option 4: Manual Start
 ```powershell
+# IMPORTANT: Make sure you're in the project directory first!
+cd "C:\Users\David\PycharmProjects\AI Sales Platform"
+
 # Install dependencies (first time only)
 npm install
 
@@ -177,8 +188,23 @@ Once the server is running:
 
 ## Current File Location
 
-Your project is at: `E:\AI Sales Platform`
+Your project is at: `C:\Users\David\PycharmProjects\AI Sales Platform`
 
-**You're ready to go!** Just run `.\scripts\quick-start.ps1` and start building! 🚀
+## Quick Reference Commands
+
+**Always run these from the project root directory!**
+
+```powershell
+# Navigate to project first
+cd "C:\Users\David\PycharmProjects\AI Sales Platform"
+
+# Then start server (pick one):
+.\START.bat                    # Easiest - just double-click
+.\START.ps1                    # Simple PowerShell script
+.\scripts\quick-start.ps1      # Full script with checks
+npm run dev                    # Direct npm command
+```
+
+**You're ready to go!** Just run `.\START.bat` and start building! 🚀
 
 

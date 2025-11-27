@@ -8,6 +8,11 @@ param(
     [switch]$All
 )
 
+# Ensure we're in the project root
+$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+Set-Location $projectRoot
+
 Write-Host "Starting AI CRM Platform Development Environment" -ForegroundColor Cyan
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host ""

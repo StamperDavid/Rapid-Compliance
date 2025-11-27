@@ -12,11 +12,18 @@ export default function EmailTemplatesPage() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'templates' | 'campaigns'>('templates');
+  const [activeTab, setActiveTab] = useState<'templates' | 'campaigns' | 'designer'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState('welcome');
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
   const [campaignFilters, setCampaignFilters] = useState<EntityFilter[]>([]);
   const [estimatedRecipients, setEstimatedRecipients] = useState(0);
+  const [customTemplates, setCustomTemplates] = useState<any[]>([]);
+  const [editingCustomTemplate, setEditingCustomTemplate] = useState<any | null>(null);
+  const [showDesigner, setShowDesigner] = useState(false);
+  const [uploadedAssets, setUploadedAssets] = useState<any[]>([]);
+  const [showAssetLibrary, setShowAssetLibrary] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState<any>(null);
+  const [designerBlocks, setDesignerBlocks] = useState<any[]>([]);
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -31,13 +38,25 @@ export default function EmailTemplatesPage() {
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
-  const templates = [
+  const baseTemplates = [
     { id: 'welcome', name: 'Welcome Email', description: 'Sent when a new contact is added', icon: '👋', type: 'automated' },
     { id: 'invoice', name: 'Invoice Email', description: 'Sent when an invoice is created', icon: '📄', type: 'automated' },
     { id: 'payment', name: 'Payment Confirmation', description: 'Sent when a payment is received', icon: '💳', type: 'automated' },
     { id: 'reminder', name: 'Payment Reminder', description: 'Sent before payment due date', icon: '⏰', type: 'automated' },
     { id: 'quote', name: 'Quote Email', description: 'Sent when a quote is generated', icon: '📝', type: 'automated' },
     { id: 'notification', name: 'Task Notification', description: 'Sent when a task is assigned', icon: '📋', type: 'automated' }
+  ];
+
+  // Combine base templates with custom templates
+  const templates = [
+    ...baseTemplates,
+    ...customTemplates.map(ct => ({
+      id: ct.id,
+      name: ct.name,
+      description: 'Custom designed template',
+      icon: '🎨',
+      type: 'custom'
+    }))
   ];
 
   const campaigns = [
@@ -96,6 +115,7 @@ Best regards,
     name: '',
     subject: '',
     body: '',
+    templateId: '',
     sendType: 'immediate' as 'immediate' | 'scheduled',
     scheduledDate: '',
     scheduledTime: ''
@@ -233,6 +253,21 @@ Best regards,
                 📧 Automated Templates
               </button>
               <button
+                onClick={() => setActiveTab('designer')}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: 'transparent',
+                  color: activeTab === 'designer' ? primaryColor : '#999',
+                  border: 'none',
+                  borderBottom: activeTab === 'designer' ? `2px solid ${primaryColor}` : '2px solid transparent',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+              >
+                🎨 Custom Templates
+              </button>
+              <button
                 onClick={() => setActiveTab('campaigns')}
                 style={{
                   padding: '0.75rem 1.5rem',
@@ -335,6 +370,1356 @@ Best regards,
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Templates Designer Tab */}
+            {activeTab === 'designer' && (
+              <div>
+                {!showDesigner ? (
+                  <>
+                    {/* Custom Templates Library */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                      <div>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Custom Email Templates</h2>
+                        <p style={{ color: '#999', fontSize: '0.875rem' }}>Design beautiful promotional emails and use them in automated workflows</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingCustomTemplate({
+                            id: `custom_${Date.now()}`,
+                            name: 'New Custom Template',
+                            type: 'custom',
+                            html: '',
+                            blocks: []
+                          });
+                          setDesignerBlocks([]);
+                          setShowDesigner(true);
+                        }}
+                        style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                      >
+                        + Create Custom Template
+                      </button>
+                    </div>
+
+                    {customTemplates.length === 0 ? (
+                      <div style={{ backgroundColor: '#1a1a1a', border: '2px dashed #333', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎨</div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>No custom templates yet</h3>
+                        <p style={{ color: '#999', marginBottom: '2rem' }}>Create beautiful, Amazon-style promotional emails with our visual designer</p>
+                        <button
+                          onClick={() => {
+                            setEditingCustomTemplate({
+                              id: `custom_${Date.now()}`,
+                              name: 'New Custom Template',
+                              type: 'custom',
+                              html: '',
+                              blocks: []
+                            });
+                            setShowDesigner(true);
+                          }}
+                          style={{ padding: '0.75rem 2rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                        >
+                          Create Your First Template
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                        {customTemplates.map((template) => (
+                          <div key={template.id} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                            {/* Preview */}
+                            <div style={{ height: '200px', backgroundColor: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #333' }}>
+                              {template.preview ? (
+                                <img src={template.preview} alt={template.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <div style={{ textAlign: 'center', color: '#666' }}>
+                                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📧</div>
+                                  <div style={{ fontSize: '0.875rem' }}>Email Preview</div>
+                                </div>
+                              )}
+                            </div>
+                            {/* Info */}
+                            <div style={{ padding: '1.25rem' }}>
+                              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>{template.name}</h3>
+                              <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '1rem' }}>Last edited: {new Date().toLocaleDateString()}</p>
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                  onClick={() => {
+                                    setEditingCustomTemplate(template);
+                                    setDesignerBlocks(template.blocks || []);
+                                    setShowDesigner(true);
+                                  }}
+                                  style={{ flex: 1, padding: '0.625rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm('Delete this template?')) {
+                                      setCustomTemplates(customTemplates.filter(t => t.id !== template.id));
+                                    }
+                                  }}
+                                  style={{ padding: '0.625rem 1rem', backgroundColor: '#222', color: '#ef4444', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem' }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Visual Email Designer */
+                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', overflow: 'hidden' }}>
+                    {/* Designer Header */}
+                    <div style={{ padding: '1.5rem', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ flex: 1 }}>
+                        <input
+                          type="text"
+                          value={editingCustomTemplate?.name || ''}
+                          onChange={(e) => setEditingCustomTemplate({ ...editingCustomTemplate, name: e.target.value })}
+                          style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', backgroundColor: 'transparent', border: 'none', outline: 'none', width: '100%' }}
+                          placeholder="Template Name"
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button
+                          onClick={() => setShowDesigner(false)}
+                          style={{ padding: '0.625rem 1.25rem', backgroundColor: '#222', color: '#999', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Generate HTML from blocks
+                            let generatedHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${editingCustomTemplate.name}</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+    .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+`;
+                            
+                            designerBlocks.forEach(block => {
+                              if (block.type === 'hero' && block.content.imageUrl) {
+                                const link = block.content.linkUrl ? `<a href="${block.content.linkUrl}">` : '';
+                                const linkClose = block.content.linkUrl ? '</a>' : '';
+                                generatedHtml += `
+    <div style="width: 100%; height: ${block.content.height || '400px'}; overflow: hidden;">
+      ${link}<img src="${block.content.imageUrl}" alt="Hero" style="width: 100%; height: 100%; object-fit: cover; display: block;" />${linkClose}
+    </div>`;
+                              }
+                              
+                              if (block.type === 'text') {
+                                generatedHtml += `
+    <div style="padding: 20px; font-size: ${block.content.fontSize || '16px'}; color: ${block.content.color || '#000000'}; text-align: ${block.content.align || 'left'};">
+      ${block.content.text || ''}
+    </div>`;
+                              }
+                              
+                              if (block.type === 'button') {
+                                generatedHtml += `
+    <div style="padding: 20px; text-align: center;">
+      <a href="${block.content.url || '#'}" style="display: inline-block; padding: 14px 40px; background-color: ${block.content.bgColor || primaryColor}; color: ${block.content.textColor || '#ffffff'}; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+        ${block.content.text || 'Button'}
+      </a>
+    </div>`;
+                              }
+                              
+                              if (block.type === 'image' && block.content.imageUrl) {
+                                const link = block.content.linkUrl ? `<a href="${block.content.linkUrl}">` : '';
+                                const linkClose = block.content.linkUrl ? '</a>' : '';
+                                generatedHtml += `
+    <div style="padding: 10px;">
+      ${link}<img src="${block.content.imageUrl}" alt="${block.content.alt || 'Image'}" style="width: ${block.content.width || '100%'}; height: auto; display: block;" />${linkClose}
+    </div>`;
+                              }
+                              
+                              if (block.type === 'divider') {
+                                generatedHtml += `
+    <div style="padding: 10px 20px;">
+      <hr style="border: none; border-top: ${block.content.thickness || '1px'} ${block.content.style || 'solid'} ${block.content.color || '#cccccc'}; margin: 0;" />
+    </div>`;
+                              }
+                              
+                              if (block.type === 'spacer') {
+                                generatedHtml += `
+    <div style="height: ${block.content.height || '40px'};"></div>`;
+                              }
+                              
+                              if (block.type === 'html') {
+                                generatedHtml += block.content.html || '';
+                              }
+                            });
+                            
+                            generatedHtml += `
+  </div>
+</body>
+</html>`;
+                            
+                            // Save template with generated HTML
+                            const savedTemplate = {
+                              ...editingCustomTemplate,
+                              html: generatedHtml,
+                              blocks: designerBlocks
+                            };
+                            
+                            const updated = customTemplates.find(t => t.id === editingCustomTemplate.id)
+                              ? customTemplates.map(t => t.id === editingCustomTemplate.id ? savedTemplate : t)
+                              : [...customTemplates, savedTemplate];
+                            
+                            setCustomTemplates(updated);
+                            setShowDesigner(false);
+                            setSelectedBlock(null);
+                            alert('✅ Template saved successfully! You can now use it in automated workflows and campaigns.');
+                          }}
+                          style={{ padding: '0.625rem 1.25rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                        >
+                          💾 Save Template
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Designer Content */}
+                    <div style={{ display: 'flex', minHeight: '600px' }}>
+                      {/* Tools Sidebar */}
+                      <div style={{ width: '280px', backgroundColor: '#0a0a0a', borderRight: '1px solid #333', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        {/* Upload Assets */}
+                        <div style={{ padding: '1.5rem', borderBottom: '1px solid #333' }}>
+                          <button
+                            onClick={() => setShowAssetLibrary(true)}
+                            style={{ width: '100%', padding: '0.875rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}
+                          >
+                            📁 Asset Library
+                          </button>
+                          <label style={{ display: 'block', width: '100%', padding: '0.875rem', backgroundColor: '#1a1a1a', border: '1px dashed #666', borderRadius: '0.5rem', textAlign: 'center', cursor: 'pointer', fontSize: '0.875rem', color: '#999' }}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => {
+                                const files = Array.from(e.target.files || []);
+                                const newAssets = files.map(file => ({
+                                  id: `asset_${Date.now()}_${Math.random()}`,
+                                  name: file.name,
+                                  url: URL.createObjectURL(file),
+                                  type: 'image',
+                                  uploadedAt: new Date()
+                                }));
+                                setUploadedAssets([...uploadedAssets, ...newAssets]);
+                                alert(`${files.length} image(s) uploaded to your library!`);
+                              }}
+                              style={{ display: 'none' }}
+                            />
+                            ⬆️ Upload Images
+                          </label>
+                        </div>
+
+                        {/* Design Elements */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+                          <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', marginBottom: '1rem', textTransform: 'uppercase' }}>Design Elements</h3>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'hero',
+                                  content: { imageUrl: '', linkUrl: '', height: '400px' }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', transition: 'all 0.2s' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>🖼️ Hero Image</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Full-width banner</div>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'text',
+                                  content: { text: 'Enter your text here...', align: 'left', fontSize: '16px', color: '#000000' }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>📝 Text Block</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Headline / Paragraph</div>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'button',
+                                  content: { text: 'Click Here', url: '', bgColor: primaryColor, textColor: '#ffffff', width: 'auto' }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>🔘 Button</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Call-to-action</div>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'image',
+                                  content: { imageUrl: '', alt: '', width: '100%', linkUrl: '' }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>📷 Image</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>From your library</div>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'productGrid',
+                                  content: { columns: 3, productIds: [], showPrice: true, showButton: true }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>🛍️ Product Grid</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>2-4 columns</div>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'divider',
+                                  content: { color: '#cccccc', thickness: '1px', style: 'solid' }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>➖ Divider</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Horizontal line</div>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'spacer',
+                                  content: { height: '40px' }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>⬜ Spacer</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Add spacing</div>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                const newBlock = {
+                                  id: `block_${Date.now()}`,
+                                  type: 'social',
+                                  content: { links: [{ platform: 'facebook', url: '' }, { platform: 'twitter', url: '' }, { platform: 'instagram', url: '' }], iconSize: '32px' }
+                                };
+                                setDesignerBlocks([...designerBlocks, newBlock]);
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>🔗 Social Links</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Icons + URLs</div>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                const html = prompt('Paste your custom HTML here:');
+                                if (html) {
+                                  const newBlock = {
+                                    id: `block_${Date.now()}`,
+                                    type: 'html',
+                                    content: { html }
+                                  };
+                                  setDesignerBlocks([...designerBlocks, newBlock]);
+                                }
+                              }}
+                              style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem' }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1a1a1a'}
+                            >
+                              <div style={{ marginBottom: '0.25rem' }}>💻 Custom HTML</div>
+                              <div style={{ fontSize: '0.75rem', color: '#666' }}>Paste code</div>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Pro Tip */}
+                        <div style={{ padding: '1.5rem', borderTop: '1px solid #333' }}>
+                          <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#86efac', marginBottom: '0.5rem', fontWeight: '600' }}>💡 Pro Tip</div>
+                            <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.4' }}>
+                              Use {`{{customer_name}}`}, {`{{product_name}}`} to personalize!
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Canvas */}
+                      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto', backgroundColor: '#f5f5f5' }}>
+                        <div style={{ maxWidth: '600px', margin: '0 auto', backgroundColor: '#fff', minHeight: '600px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', borderRadius: '0.5rem', overflow: 'hidden' }}>
+                          {designerBlocks.length === 0 ? (
+                            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#999' }}>
+                              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👈</div>
+                              <p style={{ fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600', color: '#666' }}>Start building your email</p>
+                              <p style={{ fontSize: '0.875rem' }}>Click elements on the left to add them to your design</p>
+                              <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '0.5rem', color: '#0369a1', fontSize: '0.875rem' }}>
+                                Upload your images first, then drag them into image blocks!
+                              </div>
+                            </div>
+                          ) : (
+                            designerBlocks.map((block, index) => (
+                              <div
+                                key={block.id}
+                                onClick={() => setSelectedBlock(block)}
+                                style={{
+                                  position: 'relative',
+                                  cursor: 'pointer',
+                                  border: selectedBlock?.id === block.id ? `2px solid ${primaryColor}` : '2px solid transparent',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                {/* Block Content */}
+                                {block.type === 'hero' && (
+                                  <div style={{ width: '100%', height: block.content.height || '400px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                    {block.content.imageUrl ? (
+                                      <img src={block.content.imageUrl} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                      <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+                                        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🖼️</div>
+                                        <div>Click to select an image</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {block.type === 'text' && (
+                                  <div style={{ padding: '20px', fontSize: block.content.fontSize || '16px', color: block.content.color || '#000000', textAlign: block.content.align || 'left' }}>
+                                    {block.content.text || 'Text block'}
+                                  </div>
+                                )}
+                                
+                                {block.type === 'button' && (
+                                  <div style={{ padding: '20px', textAlign: 'center' }}>
+                                    <a href={block.content.url || '#'} style={{ display: 'inline-block', padding: '14px 40px', backgroundColor: block.content.bgColor || primaryColor, color: block.content.textColor || '#ffffff', textDecoration: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '16px' }}>
+                                      {block.content.text || 'Button'}
+                                    </a>
+                                  </div>
+                                )}
+                                
+                                {block.type === 'image' && (
+                                  <div style={{ padding: '10px' }}>
+                                    {block.content.imageUrl ? (
+                                      <img src={block.content.imageUrl} alt={block.content.alt || 'Image'} style={{ width: block.content.width || '100%', height: 'auto', display: 'block' }} />
+                                    ) : (
+                                      <div style={{ backgroundColor: '#e5e7eb', padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
+                                        <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📷</div>
+                                        <div>Click to select an image</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {block.type === 'productGrid' && (
+                                  <div style={{ padding: '20px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${block.content.columns || 3}, 1fr)`, gap: '15px' }}>
+                                      {[1, 2, 3].map(i => (
+                                        <div key={i} style={{ border: '1px dashed #d1d5db', padding: '15px', borderRadius: '8px', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
+                                          <div style={{ backgroundColor: '#f3f4f6', height: '120px', marginBottom: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🛍️</div>
+                                          <div>Product {i}</div>
+                                          {block.content.showPrice && <div style={{ fontWeight: 'bold', color: '#000' }}>$99.99</div>}
+                                          {block.content.showButton && (
+                                            <div style={{ marginTop: '10px', padding: '8px', backgroundColor: primaryColor, color: '#fff', borderRadius: '4px', fontSize: '0.75rem' }}>Shop Now</div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {block.type === 'divider' && (
+                                  <div style={{ padding: '10px 20px' }}>
+                                    <hr style={{ border: 'none', borderTop: `${block.content.thickness || '1px'} ${block.content.style || 'solid'} ${block.content.color || '#cccccc'}`, margin: 0 }} />
+                                  </div>
+                                )}
+                                
+                                {block.type === 'spacer' && (
+                                  <div style={{ height: block.content.height || '40px', backgroundColor: 'transparent' }} />
+                                )}
+                                
+                                {block.type === 'social' && (
+                                  <div style={{ padding: '20px', textAlign: 'center' }}>
+                                    <div style={{ display: 'inline-flex', gap: '15px' }}>
+                                      {(block.content.links || []).map((link: any, i: number) => (
+                                        <div key={i} style={{ width: block.content.iconSize || '32px', height: block.content.iconSize || '32px', backgroundColor: '#3b5998', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>
+                                          {link.platform[0].toUpperCase()}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {block.type === 'html' && (
+                                  <div dangerouslySetInnerHTML={{ __html: block.content.html || '' }} />
+                                )}
+                                
+                                {/* Block Actions */}
+                                {selectedBlock?.id === block.id && (
+                                  <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '6px', backgroundColor: 'rgba(0,0,0,0.8)', padding: '6px', borderRadius: '6px' }}>
+                                    {index > 0 && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const newBlocks = [...designerBlocks];
+                                          [newBlocks[index], newBlocks[index - 1]] = [newBlocks[index - 1], newBlocks[index]];
+                                          setDesignerBlocks(newBlocks);
+                                        }}
+                                        style={{ padding: '4px 8px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                      >
+                                        ↑
+                                      </button>
+                                    )}
+                                    {index < designerBlocks.length - 1 && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const newBlocks = [...designerBlocks];
+                                          [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
+                                          setDesignerBlocks(newBlocks);
+                                        }}
+                                        style={{ padding: '4px 8px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                      >
+                                        ↓
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm('Delete this block?')) {
+                                          setDesignerBlocks(designerBlocks.filter(b => b.id !== block.id));
+                                          setSelectedBlock(null);
+                                        }
+                                      }}
+                                      style={{ padding: '4px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Properties Panel */}
+                      <div style={{ width: '320px', backgroundColor: '#0a0a0a', borderLeft: '1px solid #333', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        {selectedBlock ? (
+                          /* Block Settings */
+                          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff' }}>
+                                {selectedBlock.type === 'hero' && '🖼️ Hero Image'}
+                                {selectedBlock.type === 'text' && '📝 Text Block'}
+                                {selectedBlock.type === 'button' && '🔘 Button'}
+                                {selectedBlock.type === 'image' && '📷 Image'}
+                                {selectedBlock.type === 'productGrid' && '🛍️ Product Grid'}
+                                {selectedBlock.type === 'divider' && '➖ Divider'}
+                                {selectedBlock.type === 'spacer' && '⬜ Spacer'}
+                                {selectedBlock.type === 'social' && '🔗 Social Links'}
+                              </h3>
+                              <button
+                                onClick={() => setSelectedBlock(null)}
+                                style={{ padding: '4px 8px', backgroundColor: '#222', color: '#999', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            {/* Hero Image Settings */}
+                            {selectedBlock.type === 'hero' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.75rem' }}>
+                                    Banner Image
+                                  </label>
+                                  {selectedBlock.content.imageUrl ? (
+                                    <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+                                      <img src={selectedBlock.content.imageUrl} alt="Preview" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '6px' }} />
+                                      <button
+                                        onClick={() => {
+                                          const newBlocks = designerBlocks.map(b => 
+                                            b.id === selectedBlock.id ? { ...b, content: { ...b.content, imageUrl: '' } } : b
+                                          );
+                                          setDesignerBlocks(newBlocks);
+                                          setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, imageUrl: '' } });
+                                        }}
+                                        style={{ position: 'absolute', top: '6px', right: '6px', padding: '4px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                  <button
+                                    onClick={() => setShowAssetLibrary(true)}
+                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px dashed #666', borderRadius: '0.5rem', color: '#999', cursor: 'pointer', fontSize: '0.875rem' }}
+                                  >
+                                    📁 Choose from Library
+                                  </button>
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Link URL (optional)
+                                  </label>
+                                  <input
+                                    type="url"
+                                    value={selectedBlock.content.linkUrl || ''}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, linkUrl: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, linkUrl: e.target.value } });
+                                    }}
+                                    placeholder="https://yoursite.com/sale"
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Height
+                                  </label>
+                                  <select
+                                    value={selectedBlock.content.height || '400px'}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, height: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, height: e.target.value } });
+                                    }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  >
+                                    <option value="300px">Small (300px)</option>
+                                    <option value="400px">Medium (400px)</option>
+                                    <option value="500px">Large (500px)</option>
+                                    <option value="600px">Extra Large (600px)</option>
+                                  </select>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Text Block Settings */}
+                            {selectedBlock.type === 'text' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Text Content
+                                  </label>
+                                  <textarea
+                                    value={selectedBlock.content.text || ''}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, text: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, text: e.target.value } });
+                                    }}
+                                    rows={5}
+                                    placeholder="Enter your text here... Use {{customer_name}} for personalization"
+                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }}
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Text Size
+                                  </label>
+                                  <select
+                                    value={selectedBlock.content.fontSize || '16px'}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, fontSize: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, fontSize: e.target.value } });
+                                    }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  >
+                                    <option value="12px">Small (12px)</option>
+                                    <option value="14px">Regular (14px)</option>
+                                    <option value="16px">Medium (16px)</option>
+                                    <option value="20px">Large (20px)</option>
+                                    <option value="24px">Heading (24px)</option>
+                                    <option value="32px">Big Heading (32px)</option>
+                                  </select>
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Text Color
+                                  </label>
+                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                      type="color"
+                                      value={selectedBlock.content.color || '#000000'}
+                                      onChange={(e) => {
+                                        const newBlocks = designerBlocks.map(b => 
+                                          b.id === selectedBlock.id ? { ...b, content: { ...b.content, color: e.target.value } } : b
+                                        );
+                                        setDesignerBlocks(newBlocks);
+                                        setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, color: e.target.value } });
+                                      }}
+                                      style={{ width: '60px', height: '40px', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer' }}
+                                    />
+                                    <input
+                                      type="text"
+                                      value={selectedBlock.content.color || '#000000'}
+                                      onChange={(e) => {
+                                        const newBlocks = designerBlocks.map(b => 
+                                          b.id === selectedBlock.id ? { ...b, content: { ...b.content, color: e.target.value } } : b
+                                        );
+                                        setDesignerBlocks(newBlocks);
+                                        setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, color: e.target.value } });
+                                      }}
+                                      placeholder="#000000"
+                                      style={{ flex: 1, padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Alignment
+                                  </label>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                                    {['left', 'center', 'right'].map(align => (
+                                      <button
+                                        key={align}
+                                        onClick={() => {
+                                          const newBlocks = designerBlocks.map(b => 
+                                            b.id === selectedBlock.id ? { ...b, content: { ...b.content, align } } : b
+                                          );
+                                          setDesignerBlocks(newBlocks);
+                                          setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, align } });
+                                        }}
+                                        style={{
+                                          padding: '0.625rem',
+                                          backgroundColor: selectedBlock.content.align === align ? primaryColor : '#1a1a1a',
+                                          border: selectedBlock.content.align === align ? `1px solid ${primaryColor}` : '1px solid #333',
+                                          borderRadius: '0.375rem',
+                                          color: '#fff',
+                                          cursor: 'pointer',
+                                          fontSize: '0.75rem',
+                                          textTransform: 'capitalize'
+                                        }}
+                                      >
+                                        {align}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Button Block Settings */}
+                            {selectedBlock.type === 'button' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Button Text
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={selectedBlock.content.text || ''}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, text: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, text: e.target.value } });
+                                    }}
+                                    placeholder="Shop Now"
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Link URL
+                                  </label>
+                                  <input
+                                    type="url"
+                                    value={selectedBlock.content.url || ''}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, url: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, url: e.target.value } });
+                                    }}
+                                    placeholder="https://yoursite.com"
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  />
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Button Color
+                                  </label>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                    {[primaryColor, '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'].map(color => (
+                                      <button
+                                        key={color}
+                                        onClick={() => {
+                                          const newBlocks = designerBlocks.map(b => 
+                                            b.id === selectedBlock.id ? { ...b, content: { ...b.content, bgColor: color } } : b
+                                          );
+                                          setDesignerBlocks(newBlocks);
+                                          setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, bgColor: color } });
+                                        }}
+                                        style={{
+                                          height: '40px',
+                                          backgroundColor: color,
+                                          border: selectedBlock.content.bgColor === color ? '3px solid #fff' : '1px solid #333',
+                                          borderRadius: '0.375rem',
+                                          cursor: 'pointer'
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <input
+                                      type="color"
+                                      value={selectedBlock.content.bgColor || primaryColor}
+                                      onChange={(e) => {
+                                        const newBlocks = designerBlocks.map(b => 
+                                          b.id === selectedBlock.id ? { ...b, content: { ...b.content, bgColor: e.target.value } } : b
+                                        );
+                                        setDesignerBlocks(newBlocks);
+                                        setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, bgColor: e.target.value } });
+                                      }}
+                                      style={{ width: '60px', height: '40px', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer' }}
+                                    />
+                                    <span style={{ fontSize: '0.75rem', color: '#999' }}>Custom color</span>
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Text Color
+                                  </label>
+                                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {['#ffffff', '#000000'].map(color => (
+                                      <button
+                                        key={color}
+                                        onClick={() => {
+                                          const newBlocks = designerBlocks.map(b => 
+                                            b.id === selectedBlock.id ? { ...b, content: { ...b.content, textColor: color } } : b
+                                          );
+                                          setDesignerBlocks(newBlocks);
+                                          setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, textColor: color } });
+                                        }}
+                                        style={{
+                                          flex: 1,
+                                          padding: '0.625rem',
+                                          backgroundColor: color,
+                                          border: selectedBlock.content.textColor === color ? `2px solid ${primaryColor}` : '1px solid #333',
+                                          borderRadius: '0.375rem',
+                                          color: color === '#ffffff' ? '#000' : '#fff',
+                                          cursor: 'pointer',
+                                          fontSize: '0.75rem'
+                                        }}
+                                      >
+                                        {color === '#ffffff' ? 'White' : 'Black'}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Image Block Settings */}
+                            {selectedBlock.type === 'image' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.75rem' }}>
+                                    Select Image
+                                  </label>
+                                  {selectedBlock.content.imageUrl ? (
+                                    <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+                                      <img src={selectedBlock.content.imageUrl} alt="Preview" style={{ width: '100%', height: 'auto', borderRadius: '6px' }} />
+                                      <button
+                                        onClick={() => {
+                                          const newBlocks = designerBlocks.map(b => 
+                                            b.id === selectedBlock.id ? { ...b, content: { ...b.content, imageUrl: '' } } : b
+                                          );
+                                          setDesignerBlocks(newBlocks);
+                                          setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, imageUrl: '' } });
+                                        }}
+                                        style={{ position: 'absolute', top: '6px', right: '6px', padding: '4px 8px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                  <button
+                                    onClick={() => setShowAssetLibrary(true)}
+                                    style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', border: '1px dashed #666', borderRadius: '0.5rem', color: '#999', cursor: 'pointer', fontSize: '0.875rem' }}
+                                  >
+                                    📁 Choose from Library
+                                  </button>
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Image Width
+                                  </label>
+                                  <select
+                                    value={selectedBlock.content.width || '100%'}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, width: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, width: e.target.value } });
+                                    }}
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  >
+                                    <option value="100%">Full Width</option>
+                                    <option value="75%">75%</option>
+                                    <option value="50%">50%</option>
+                                    <option value="300px">300px</option>
+                                    <option value="400px">400px</option>
+                                  </select>
+                                </div>
+                                
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Link URL (optional)
+                                  </label>
+                                  <input
+                                    type="url"
+                                    value={selectedBlock.content.linkUrl || ''}
+                                    onChange={(e) => {
+                                      const newBlocks = designerBlocks.map(b => 
+                                        b.id === selectedBlock.id ? { ...b, content: { ...b.content, linkUrl: e.target.value } } : b
+                                      );
+                                      setDesignerBlocks(newBlocks);
+                                      setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, linkUrl: e.target.value } });
+                                    }}
+                                    placeholder="https://yoursite.com"
+                                    style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Product Grid Settings */}
+                            {selectedBlock.type === 'productGrid' && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                    Number of Columns
+                                  </label>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.5rem' }}>
+                                    {[2, 3, 4].map(cols => (
+                                      <button
+                                        key={cols}
+                                        onClick={() => {
+                                          const newBlocks = designerBlocks.map(b => 
+                                            b.id === selectedBlock.id ? { ...b, content: { ...b.content, columns: cols } } : b
+                                          );
+                                          setDesignerBlocks(newBlocks);
+                                          setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, columns: cols } });
+                                        }}
+                                        style={{
+                                          padding: '0.75rem',
+                                          backgroundColor: selectedBlock.content.columns === cols ? primaryColor : '#1a1a1a',
+                                          border: selectedBlock.content.columns === cols ? `1px solid ${primaryColor}` : '1px solid #333',
+                                          borderRadius: '0.375rem',
+                                          color: '#fff',
+                                          cursor: 'pointer',
+                                          fontSize: '0.875rem',
+                                          fontWeight: '600'
+                                        }}
+                                      >
+                                        {cols}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem' }}>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedBlock.content.showPrice}
+                                      onChange={(e) => {
+                                        const newBlocks = designerBlocks.map(b => 
+                                          b.id === selectedBlock.id ? { ...b, content: { ...b.content, showPrice: e.target.checked } } : b
+                                        );
+                                        setDesignerBlocks(newBlocks);
+                                        setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, showPrice: e.target.checked } });
+                                      }}
+                                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                    <span style={{ fontSize: '0.875rem', color: '#ccc' }}>Show Prices</span>
+                                  </label>
+                                  
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedBlock.content.showButton}
+                                      onChange={(e) => {
+                                        const newBlocks = designerBlocks.map(b => 
+                                          b.id === selectedBlock.id ? { ...b, content: { ...b.content, showButton: e.target.checked } } : b
+                                        );
+                                        setDesignerBlocks(newBlocks);
+                                        setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, showButton: e.target.checked } });
+                                      }}
+                                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                    <span style={{ fontSize: '0.875rem', color: '#ccc' }}>Show "Shop Now" Buttons</span>
+                                  </label>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Spacer Settings */}
+                            {selectedBlock.type === 'spacer' && (
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                                  Space Height
+                                </label>
+                                <select
+                                  value={selectedBlock.content.height || '40px'}
+                                  onChange={(e) => {
+                                    const newBlocks = designerBlocks.map(b => 
+                                      b.id === selectedBlock.id ? { ...b, content: { ...b.content, height: e.target.value } } : b
+                                    );
+                                    setDesignerBlocks(newBlocks);
+                                    setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, height: e.target.value } });
+                                  }}
+                                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                                >
+                                  <option value="20px">Small (20px)</option>
+                                  <option value="40px">Medium (40px)</option>
+                                  <option value="60px">Large (60px)</option>
+                                  <option value="80px">Extra Large (80px)</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* No Block Selected */
+                          <div style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#666' }}>
+                              <div>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👆</div>
+                                <p style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>Click any block on the canvas</p>
+                                <p style={{ fontSize: '0.75rem', color: '#555' }}>to edit its settings</p>
+                              </div>
+                            </div>
+                            
+                            <div style={{ borderTop: '1px solid #333', paddingTop: '1.5rem' }}>
+                              <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', marginBottom: '1rem', textTransform: 'uppercase' }}>Advanced Options</h4>
+                              
+                              <div style={{ marginBottom: '1rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>
+                                  Import HTML
+                                </label>
+                                <input
+                                  type="file"
+                                  accept=".html,.htm"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      const reader = new FileReader();
+                                      reader.onload = (event) => {
+                                        const html = event.target?.result as string;
+                                        const newBlock = {
+                                          id: `block_${Date.now()}`,
+                                          type: 'html',
+                                          content: { html }
+                                        };
+                                        setDesignerBlocks([...designerBlocks, newBlock]);
+                                      };
+                                      reader.readAsText(file);
+                                    }
+                                  }}
+                                  style={{ width: '100%', padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', color: '#999', fontSize: '0.75rem', cursor: 'pointer' }}
+                                />
+                              </div>
+
+                              <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#999', lineHeight: '1.5' }}>
+                                💡 Design in Mailchimp, Canva, or any tool, then import the HTML here
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SMS Messages Tab */}
+            {activeTab === 'sms' && (
+              <div style={{ display: 'flex', gap: '2rem' }}>
+                {/* SMS Template List */}
+                <div style={{ width: '320px' }}>
+                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>📱 About SMS Messages</div>
+                    <div style={{ fontSize: '0.75rem', color: '#ccc', lineHeight: '1.5' }}>
+                      Create automated text messages for customer updates, reminders, and notifications. Messages are sent via Twilio.
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', marginBottom: '0.75rem', textTransform: 'uppercase' }}>Predefined Triggers</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {[
+                        { id: 'order_confirmation', name: 'Order Confirmation', icon: '✅', description: 'Sent when order is placed' },
+                        { id: 'order_shipped', name: 'Order Shipped', icon: '📦', description: 'Sent when order ships' },
+                        { id: 'appointment_reminder', name: 'Appointment Reminder', icon: '📅', description: '24hrs before appointment' },
+                        { id: 'appointment_confirmed', name: 'Appointment Confirmed', icon: '✓', description: 'When appointment booked' },
+                        { id: 'payment_received', name: 'Payment Received', icon: '💳', description: 'When payment processed' },
+                        { id: 'payment_due', name: 'Payment Reminder', icon: '⏰', description: 'Before payment due date' },
+                        { id: 'service_complete', name: 'Service Completed', icon: '✨', description: 'After service finished' },
+                        { id: 'delivery_arrived', name: 'Delivery Notification', icon: '🚚', description: 'When delivery arrives' }
+                      ].map(trigger => (
+                        <button
+                          key={trigger.id}
+                          onClick={() => {
+                            setSelectedSmsTemplate(trigger.id);
+                            setSmsContent(smsTemplates.find(t => t.id === trigger.id)?.message || '');
+                          }}
+                          style={{
+                            padding: '1rem',
+                            backgroundColor: selectedSmsTemplate === trigger.id ? '#222' : 'transparent',
+                            border: selectedSmsTemplate === trigger.id ? `1px solid ${primaryColor}` : '1px solid #333',
+                            borderRadius: '0.5rem',
+                            color: '#fff',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                            <span style={{ fontSize: '1.25rem' }}>{trigger.icon}</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{trigger.name}</span>
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#999', paddingLeft: '2rem' }}>{trigger.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999', textTransform: 'uppercase' }}>Custom Triggers</h3>
+                      <button
+                        onClick={() => setShowSmsCustomTrigger(true)}
+                        style={{ padding: '0.375rem 0.75rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                      >
+                        + New
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {smsTemplates.filter(t => t.isCustom).map(template => (
+                        <button
+                          key={template.id}
+                          onClick={() => {
+                            setSelectedSmsTemplate(template.id);
+                            setSmsContent(template.message);
+                          }}
+                          style={{
+                            padding: '1rem',
+                            backgroundColor: selectedSmsTemplate === template.id ? '#222' : 'transparent',
+                            border: selectedSmsTemplate === template.id ? `1px solid ${primaryColor}` : '1px solid #333',
+                            borderRadius: '0.5rem',
+                            color: '#fff',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                            <span style={{ fontSize: '1.25rem' }}>🎯</span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>{template.name}</span>
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#999', paddingLeft: '2rem' }}>{template.trigger}</div>
+                        </button>
+                      ))}
+                      
+                      {smsTemplates.filter(t => t.isCustom).length === 0 && (
+                        <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#666', fontSize: '0.75rem', border: '1px dashed #333', borderRadius: '0.5rem' }}>
+                          No custom triggers yet.<br/>Click "+ New" to create one
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SMS Message Editor */}
+                <div style={{ flex: 1 }}>
+                  {selectedSmsTemplate ? (
+                    <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
+                      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+                        {smsTemplates.find(t => t.id === selectedSmsTemplate)?.name || 'SMS Template'}
+                      </h2>
+
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                          Message Content
+                        </label>
+                        <textarea
+                          value={smsContent}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 160) {
+                              setSmsContent(e.target.value);
+                            }
+                          }}
+                          rows={6}
+                          placeholder="Hi {{customer_name}}, your order #{{order_number}} has been confirmed!"
+                          style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                          <div style={{ fontSize: '0.75rem', color: smsContent.length > 140 ? '#f59e0b' : '#999' }}>
+                            {smsContent.length}/160 characters {smsContent.length > 160 && '(1 extra SMS)'}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                            {Math.ceil(smsContent.length / 160)} SMS {smsContent.length > 160 ? 'messages' : 'message'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#999', marginBottom: '0.5rem' }}>Available Variables:</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
+                          <button
+                            onClick={() => setSmsContent(smsContent + '{{customer_name}}')}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            + {`{{customer_name}}`}
+                          </button>
+                          <button
+                            onClick={() => setSmsContent(smsContent + '{{order_number}}')}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            + {`{{order_number}}`}
+                          </button>
+                          <button
+                            onClick={() => setSmsContent(smsContent + '{{appointment_date}}')}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            + {`{{appointment_date}}`}
+                          </button>
+                          <button
+                            onClick={() => setSmsContent(smsContent + '{{company_name}}')}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            + {`{{company_name}}`}
+                          </button>
+                          <button
+                            onClick={() => setSmsContent(smsContent + '{{tracking_link}}')}
+                            style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            + {`{{tracking_link}}`}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ padding: '1rem', backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.5' }}>
+                          <strong style={{ display: 'block', marginBottom: '0.5rem' }}>📱 SMS Best Practices:</strong>
+                          • Keep messages under 160 characters to avoid extra charges<br/>
+                          • Always include your business name<br/>
+                          • Add opt-out option: "Reply STOP to unsubscribe"<br/>
+                          • Personalize with customer name when possible
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                        <button 
+                          onClick={() => alert('Test SMS would be sent to your phone number')}
+                          style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                        >
+                          📤 Send Test SMS
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const updated = smsTemplates.map(t => 
+                              t.id === selectedSmsTemplate ? { ...t, message: smsContent } : t
+                            );
+                            if (!smsTemplates.find(t => t.id === selectedSmsTemplate)) {
+                              updated.push({ id: selectedSmsTemplate, message: smsContent });
+                            }
+                            setSmsTemplates(updated);
+                            alert('✅ SMS template saved!');
+                          }}
+                          style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                        >
+                          💾 Save Template
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ backgroundColor: '#1a1a1a', border: '1px dashed #333', borderRadius: '1rem', padding: '4rem 2rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📱</div>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Select an SMS Template</h3>
+                      <p style={{ color: '#999', marginBottom: '1rem' }}>Choose a predefined trigger or create a custom one to get started</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -465,6 +1850,44 @@ Best regards,
                 placeholder="Holiday Sale 2025"
                 style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
               />
+            </div>
+
+            {/* Template Selection */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                Email Template (Optional)
+              </label>
+              <select
+                value={newCampaign.templateId}
+                onChange={(e) => {
+                  const templateId = e.target.value;
+                  setNewCampaign({ ...newCampaign, templateId });
+                  
+                  // Load template content if custom template selected
+                  if (templateId) {
+                    const customTemplate = customTemplates.find(t => t.id === templateId);
+                    if (customTemplate && customTemplate.html) {
+                      setNewCampaign({
+                        ...newCampaign,
+                        templateId,
+                        subject: customTemplate.name,
+                        body: customTemplate.html
+                      });
+                    }
+                  }
+                }}
+                style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+              >
+                <option value="">Create from scratch</option>
+                <optgroup label="Custom Templates">
+                  {customTemplates.map(template => (
+                    <option key={template.id} value={template.id}>🎨 {template.name}</option>
+                  ))}
+                </optgroup>
+                {customTemplates.length === 0 && (
+                  <option disabled style={{ color: '#666' }}>No custom templates yet - create one in the Custom Templates tab</option>
+                )}
+              </select>
             </div>
 
             {/* Email Content */}
@@ -629,6 +2052,239 @@ Best regards,
                   {newCampaign.sendType === 'immediate' ? '📤 Send Now' : '📅 Schedule Campaign'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom SMS Trigger Modal */}
+      {showSmsCustomTrigger && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem' }}>
+          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', width: '100%', maxWidth: '700px' }}>
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid #333' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Create Custom SMS Trigger</h2>
+              <p style={{ fontSize: '0.875rem', color: '#999' }}>Define when this SMS should be automatically sent</p>
+            </div>
+
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                  Trigger Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., VIP Customer Welcome"
+                  style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                  When should this trigger?
+                </label>
+                <select style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                  <option>When a record is created...</option>
+                  <option>When a record is updated...</option>
+                  <option>When a field changes...</option>
+                  <option>On a specific date/time...</option>
+                  <option>When a condition is met...</option>
+                </select>
+
+                <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.75rem' }}>
+                    Conditions (optional)
+                  </label>
+                  
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <select style={{ padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.375rem', color: '#fff', fontSize: '0.875rem' }}>
+                        <option>Select field...</option>
+                        <option>Customer Tier</option>
+                        <option>Order Total</option>
+                        <option>Status</option>
+                        <option>Tags</option>
+                      </select>
+                      <select style={{ padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.375rem', color: '#fff', fontSize: '0.875rem' }}>
+                        <option>equals</option>
+                        <option>greater than</option>
+                        <option>less than</option>
+                        <option>contains</option>
+                      </select>
+                      <input type="text" placeholder="Value" style={{ padding: '0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.375rem', color: '#fff', fontSize: '0.875rem' }} />
+                    </div>
+                  </div>
+                  
+                  <button style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: primaryColor, border: `1px solid ${primaryColor}`, borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}>
+                    + Add Condition
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                  Timing
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <button style={{ padding: '1rem', backgroundColor: '#222', border: `2px solid ${primaryColor}`, borderRadius: '0.5rem', color: '#fff', cursor: 'pointer', textAlign: 'left' }}>
+                    <div style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>⚡ Send Immediately</div>
+                    <div style={{ fontSize: '0.75rem', color: '#999' }}>When trigger fires</div>
+                  </button>
+                  <button style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', cursor: 'pointer', textAlign: 'left' }}>
+                    <div style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>⏱️ Delay</div>
+                    <div style={{ fontSize: '0.75rem', color: '#999' }}>Wait before sending</div>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ padding: '1rem', backgroundColor: '#2e1a1a', border: '1px solid #4a2d2d', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: '#fca5a5', lineHeight: '1.5' }}>
+                  <strong style={{ display: 'block', marginBottom: '0.5rem' }}>⚠️ Important:</strong>
+                  SMS messages require customer consent. Make sure you have permission to text your customers and include opt-out instructions.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid #333' }}>
+                <button
+                  onClick={() => setShowSmsCustomTrigger(false)}
+                  style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const newTrigger = {
+                      id: `custom_${Date.now()}`,
+                      name: 'Custom SMS Trigger',
+                      trigger: 'Custom condition',
+                      isCustom: true,
+                      message: ''
+                    };
+                    setSmsTemplates([...smsTemplates, newTrigger]);
+                    setSelectedSmsTemplate(newTrigger.id);
+                    setShowSmsCustomTrigger(false);
+                    alert('✅ Custom trigger created! Now set up your message.');
+                  }}
+                  style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+                >
+                  Create Trigger
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Asset Library Modal */}
+      {showAssetLibrary && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '2rem' }}>
+          <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', width: '100%', maxWidth: '900px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Asset Library</h2>
+                <p style={{ fontSize: '0.875rem', color: '#999' }}>Your uploaded images and assets</p>
+              </div>
+              <button
+                onClick={() => setShowAssetLibrary(false)}
+                style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#999', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem' }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Upload New */}
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid #333' }}>
+              <label style={{ display: 'block', padding: '2rem', backgroundColor: '#0a0a0a', border: '2px dashed #666', borderRadius: '0.75rem', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    const newAssets = files.map(file => ({
+                      id: `asset_${Date.now()}_${Math.random()}`,
+                      name: file.name,
+                      url: URL.createObjectURL(file),
+                      type: 'image',
+                      uploadedAt: new Date()
+                    }));
+                    setUploadedAssets([...uploadedAssets, ...newAssets]);
+                  }}
+                  style={{ display: 'none' }}
+                />
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📁</div>
+                <div style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>Click to upload images</div>
+                <div style={{ fontSize: '0.875rem', color: '#999' }}>or drag and drop files here</div>
+                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem' }}>Supports: JPG, PNG, GIF, WebP</div>
+              </label>
+            </div>
+
+            {/* Assets Grid */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+              {uploadedAssets.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🖼️</div>
+                  <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>No assets uploaded yet</p>
+                  <p style={{ fontSize: '0.875rem' }}>Upload your images, logos, and graphics to use in your emails</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+                  {uploadedAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      onClick={() => {
+                        if (selectedBlock) {
+                          const newBlocks = designerBlocks.map(b => 
+                            b.id === selectedBlock.id ? { ...b, content: { ...b.content, imageUrl: asset.url } } : b
+                          );
+                          setDesignerBlocks(newBlocks);
+                          setSelectedBlock({ ...selectedBlock, content: { ...selectedBlock.content, imageUrl: asset.url } });
+                          setShowAssetLibrary(false);
+                        }
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        borderRadius: '0.5rem',
+                        overflow: 'hidden',
+                        border: '1px solid #333',
+                        transition: 'all 0.2s',
+                        backgroundColor: '#0a0a0a'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = primaryColor;
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#333';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    >
+                      <div style={{ aspectRatio: '1', overflow: 'hidden', backgroundColor: '#222' }}>
+                        <img 
+                          src={asset.url} 
+                          alt={asset.name} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      </div>
+                      <div style={{ padding: '0.75rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#ccc', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {asset.name}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: '#666' }}>
+                          {new Date(asset.uploadedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '1.5rem', borderTop: '1px solid #333', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                {uploadedAssets.length > 0 ? `${uploadedAssets.length} asset${uploadedAssets.length !== 1 ? 's' : ''} in your library` : 'Upload images to get started'}
+              </p>
             </div>
           </div>
         </div>

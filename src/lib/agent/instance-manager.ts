@@ -536,3 +536,4 @@ ${this.summarizeRecentConversations(customerMemory)}
 // Singleton instance
 export const agentInstanceManager = new AgentInstanceManager();
 
+
