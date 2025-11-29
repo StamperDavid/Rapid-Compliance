@@ -70,6 +70,26 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
     case 'paypal':
       return processPayPalPayment(request, defaultProvider);
     
+    case 'authorizenet':
+      const { processAuthorizeNetPayment } = await import('./payment-providers');
+      return processAuthorizeNetPayment(request, defaultProvider);
+    
+    case 'braintree':
+      const { processBraintreePayment } = await import('./payment-providers');
+      return processBraintreePayment(request, defaultProvider);
+    
+    case '2checkout':
+      const { process2CheckoutPayment } = await import('./payment-providers');
+      return process2CheckoutPayment(request, defaultProvider);
+    
+    case 'razorpay':
+      const { processRazorpayPayment } = await import('./payment-providers');
+      return processRazorpayPayment(request, defaultProvider);
+    
+    case 'mollie':
+      const { processMolliePayment } = await import('./payment-providers');
+      return processMolliePayment(request, defaultProvider);
+    
     default:
       return {
         success: false,
@@ -179,11 +199,82 @@ async function processSquarePayment(
   request: PaymentRequest,
   providerConfig: any
 ): Promise<PaymentResult> {
-  // TODO: Implement Square payment
-  return {
-    success: false,
-    error: 'Square payment not yet implemented',
-  };
+  try {
+    // Get Square API credentials
+    const orgId = request.workspaceId.split('/')[0];
+    const squareKeys = await apiKeyService.getServiceKey(orgId, 'square');
+    
+    if (!squareKeys) {
+      return {
+        success: false,
+        error: 'Square API credentials not configured',
+      };
+    }
+    
+    const { accessToken, locationId } = squareKeys as any;
+    
+    if (!accessToken || !locationId) {
+      return {
+        success: false,
+        error: 'Square access token or location ID missing',
+      };
+    }
+    
+    // Use Square API
+    const { Client, Environment } = await import('square');
+    const client = new Client({
+      accessToken,
+      environment: providerConfig.mode === 'production' ? Environment.Production : Environment.Sandbox,
+    });
+    
+    // Create payment
+    const { result, statusCode } = await client.paymentsApi.createPayment({
+      sourceId: request.paymentToken || '', // Square payment token from frontend
+      idempotencyKey: `${request.workspaceId}-${Date.now()}`, // Unique key
+      amountMoney: {
+        amount: BigInt(Math.round(request.amount * 100)), // Convert to cents
+        currency: request.currency.toUpperCase() as any,
+      },
+      locationId,
+      customerId: undefined, // Can link to Square customer
+      referenceId: request.metadata?.orderId,
+      note: `Payment for ${request.customer.email}`,
+      buyerEmailAddress: request.customer.email,
+    });
+    
+    if (statusCode === 200 && result.payment) {
+      const payment = result.payment;
+      
+      return {
+        success: true,
+        transactionId: payment.id || '',
+        provider: 'square',
+        cardLast4: payment.cardDetails?.card?.last4,
+        cardBrand: payment.cardDetails?.card?.cardBrand,
+        processingFee: calculateSquareFee(request.amount),
+      };
+    } else {
+      return {
+        success: false,
+        error: 'Square payment failed',
+      };
+    }
+  } catch (error: any) {
+    console.error('Square payment error:', error);
+    return {
+      success: false,
+      error: error.message || 'Square payment processing failed',
+    };
+  }
+}
+
+/**
+ * Calculate Square processing fee
+ */
+function calculateSquareFee(amount: number): number {
+  // Square fee: 2.6% + $0.10 (card present) or 2.9% + $0.30 (card not present)
+  // Using card not present rate
+  return amount * 0.029 + 0.30;
 }
 
 /**
@@ -193,11 +284,146 @@ async function processPayPalPayment(
   request: PaymentRequest,
   providerConfig: any
 ): Promise<PaymentResult> {
-  // TODO: Implement PayPal payment
-  return {
-    success: false,
-    error: 'PayPal payment not yet implemented',
-  };
+  try {
+    // Get PayPal API credentials
+    const orgId = request.workspaceId.split('/')[0];
+    const paypalKeys = await apiKeyService.getServiceKey(orgId, 'paypal');
+    
+    if (!paypalKeys) {
+      return {
+        success: false,
+        error: 'PayPal API credentials not configured',
+      };
+    }
+    
+    const { clientId, clientSecret, mode } = paypalKeys as any;
+    
+    if (!clientId || !clientSecret) {
+      return {
+        success: false,
+        error: 'PayPal client ID or secret missing',
+      };
+    }
+    
+    // PayPal API base URL
+    const baseURL = mode === 'live' 
+      ? 'https://api-m.paypal.com'
+      : 'https://api-m.sandbox.paypal.com';
+    
+    // Get access token
+    const authResponse = await fetch(`${baseURL}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Language': 'en_US',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: 'grant_type=client_credentials',
+    });
+    
+    if (!authResponse.ok) {
+      return {
+        success: false,
+        error: 'PayPal authentication failed',
+      };
+    }
+    
+    const { access_token } = await authResponse.json();
+    
+    // Create order
+    const orderResponse = await fetch(`${baseURL}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${access_token}`,
+      },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [{
+          reference_id: request.metadata?.orderId || 'default',
+          amount: {
+            currency_code: request.currency.toUpperCase(),
+            value: request.amount.toFixed(2),
+          },
+          description: `Payment from ${request.customer.email}`,
+        }],
+        payer: {
+          email_address: request.customer.email,
+          name: {
+            given_name: request.customer.firstName,
+            surname: request.customer.lastName,
+          },
+        },
+      }),
+    });
+    
+    if (!orderResponse.ok) {
+      const error = await orderResponse.json();
+      return {
+        success: false,
+        error: error.message || 'PayPal order creation failed',
+      };
+    }
+    
+    const order = await orderResponse.json();
+    
+    // If we have a payment token (order ID from frontend), capture it
+    if (request.paymentToken) {
+      const captureResponse = await fetch(`${baseURL}/v2/checkout/orders/${request.paymentToken}/capture`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${access_token}`,
+        },
+      });
+      
+      if (!captureResponse.ok) {
+        return {
+          success: false,
+          error: 'PayPal payment capture failed',
+        };
+      }
+      
+      const captureResult = await captureResponse.json();
+      
+      if (captureResult.status === 'COMPLETED') {
+        return {
+          success: true,
+          transactionId: captureResult.id,
+          provider: 'paypal',
+          processingFee: calculatePayPalFee(request.amount),
+        };
+      } else {
+        return {
+          success: false,
+          error: `PayPal payment status: ${captureResult.status}`,
+        };
+      }
+    }
+    
+    // Return order ID for frontend to complete
+    return {
+      success: true,
+      transactionId: order.id,
+      provider: 'paypal',
+    };
+    
+  } catch (error: any) {
+    console.error('PayPal payment error:', error);
+    return {
+      success: false,
+      error: error.message || 'PayPal payment processing failed',
+    };
+  }
+}
+
+/**
+ * Calculate PayPal processing fee
+ */
+function calculatePayPalFee(amount: number): number {
+  // PayPal fee: 2.9% + $0.30 (standard)
+  return amount * 0.029 + 0.30;
 }
 
 /**
