@@ -1,6 +1,7 @@
 /**
  * Permission Check Hook
  * Client-side hook for checking user permissions
+ * Now uses Firebase Auth
  */
 
 'use client';
@@ -8,36 +9,102 @@
 import { useState, useEffect } from 'react';
 import type { UserRole } from '@/types/permissions';
 import { hasPermission, type RolePermissions } from '@/types/permissions';
+import { onAuthStateChange, type AuthUser } from '@/lib/auth/auth-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
+
+export interface AppUser {
+  id: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  organizationId: string;
+  workspaceId?: string;
+}
 
 export function useAuth() {
-  // In production, this would come from Firebase Auth
-  // For now, using localStorage for demo
-  const [user, setUser] = useState<{
-    id: string;
-    email: string;
-    displayName: string;
-    role: UserRole;
-    organizationId: string;
-  } | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load from localStorage or auth context
-    const stored = localStorage.getItem('currentUser');
-    if (stored) {
-      setUser(JSON.parse(stored));
-    } else {
-      // Default demo user
+    // Check if Firebase is configured
+    import('@/lib/firebase/config').then(({ isFirebaseConfigured }) => {
+      if (!isFirebaseConfigured) {
+        // Demo mode - use demo user with admin permissions
+        setUser({
+          id: 'demo-user',
+          email: 'admin@demo.com',
+          displayName: 'Demo Admin',
+          role: 'admin', // Admin role has canAccessSettings = true
+          organizationId: 'demo',
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Firebase is configured - use real auth
+      const unsubscribe = onAuthStateChange(async (authUser: AuthUser | null) => {
+        if (authUser) {
+          try {
+            // Load user profile from Firestore to get role and organization
+            const userProfile = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
+            
+            // Get user's organization membership
+            const orgMemberships = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, [
+              // In production, would query by userId in members array
+            ]);
+            
+            // For now, use first organization or default
+            const defaultOrg = orgMemberships[0] || { id: 'demo', name: 'Demo Organization' };
+            
+            setUser({
+              id: authUser.uid,
+              email: authUser.email || '',
+              displayName: authUser.displayName || userProfile?.displayName || 'User',
+              role: (userProfile?.role as UserRole) || 'admin', // Default to admin instead of employee
+              organizationId: userProfile?.currentOrganizationId || defaultOrg.id,
+              workspaceId: userProfile?.currentWorkspaceId,
+            });
+          } catch (error) {
+            console.error('Error loading user profile:', error);
+            // Fallback to basic user info with admin role
+            setUser({
+              id: authUser.uid,
+              email: authUser.email || '',
+              displayName: authUser.displayName || 'User',
+              role: 'admin', // Default to admin so settings are accessible
+              organizationId: 'demo',
+            });
+          }
+        } else {
+          // No auth user - use demo mode
+          setUser({
+            id: 'demo-user',
+            email: 'admin@demo.com',
+            displayName: 'Demo Admin',
+            role: 'admin',
+            organizationId: 'demo',
+          });
+        }
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    }).catch((error) => {
+      console.error('Error checking Firebase config:', error);
+      // Fallback to demo mode
       setUser({
         id: 'demo-user',
         email: 'admin@demo.com',
-        displayName: 'Admin User',
+        displayName: 'Demo Admin',
         role: 'admin',
-        organizationId: 'demo'
+        organizationId: 'demo',
       });
-    }
+      setLoading(false);
+    });
   }, []);
 
-  return { user, setUser };
+  return { user, setUser, loading };
 }
 
 export function usePermission(permission: keyof RolePermissions): boolean {

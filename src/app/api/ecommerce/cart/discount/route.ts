@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
+import { applyDiscountCode, removeDiscountCode } from '@/lib/ecommerce/cart-service';
+import { z } from 'zod';
+import { validateInput } from '@/lib/validation/schemas';
+
+const discountSchema = z.object({
+  sessionId: z.string(),
+  workspaceId: z.string(),
+  code: z.string(),
+});
+
+/**
+ * POST /api/ecommerce/cart/discount - Apply discount code
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const body = await request.json();
+    const validation = validateInput(discountSchema, body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.errors.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { sessionId, workspaceId, code } = validation.data;
+
+    const cart = await applyDiscountCode(sessionId, workspaceId, code);
+
+    return NextResponse.json({
+      success: true,
+      cart,
+    });
+  } catch (error: any) {
+    console.error('Error applying discount:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to apply discount code' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/ecommerce/cart/discount - Remove discount code
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('sessionId') || request.headers.get('x-session-id');
+    const workspaceId = searchParams.get('workspaceId');
+    const code = searchParams.get('code');
+
+    if (!sessionId || !workspaceId || !code) {
+      return NextResponse.json(
+        { success: false, error: 'sessionId, workspaceId, and code required' },
+        { status: 400 }
+      );
+    }
+
+    const cart = await removeDiscountCode(sessionId, workspaceId, code);
+
+    return NextResponse.json({
+      success: true,
+      cart,
+    });
+  } catch (error: any) {
+    console.error('Error removing discount:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to remove discount code' },
+      { status: 500 }
+    );
+  }
+}
+

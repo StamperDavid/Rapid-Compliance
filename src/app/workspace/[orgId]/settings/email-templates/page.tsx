@@ -7,6 +7,8 @@ import FilterBuilder from '@/components/FilterBuilder';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import type { EntityFilter } from '@/types/filters';
+import { sendEmail } from '@/lib/email/email-service';
+import { sendSMS } from '@/lib/sms/sms-service';
 
 export default function EmailTemplatesPage() {
   const { user } = useAuth();
@@ -24,6 +26,9 @@ export default function EmailTemplatesPage() {
   const [showAssetLibrary, setShowAssetLibrary] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [designerBlocks, setDesignerBlocks] = useState<any[]>([]);
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message?: string } | null>(null);
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -361,10 +366,99 @@ Best regards,
                       </div>
                     </div>
 
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                        Test Email Address
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                          type="email"
+                          value={testEmailAddress}
+                          onChange={(e) => setTestEmailAddress(e.target.value)}
+                          placeholder="your@email.com"
+                          style={{ flex: 1, padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!testEmailAddress) {
+                              alert('Please enter a test email address');
+                              return;
+                            }
+                            setIsSendingTest(true);
+                            setTestEmailResult(null);
+                            try {
+                              // Replace variables in email content
+                              let processedSubject = emailContent.subject;
+                              let processedBody = emailContent.body;
+                              const variables: Record<string, string> = {
+                                contact_name: 'Test User',
+                                contact_email: testEmailAddress,
+                                company_name: 'Test Company',
+                                support_email: 'support@test.com',
+                                invoice_number: 'INV-001',
+                                amount: '$1,000.00',
+                              };
+                              for (const [key, value] of Object.entries(variables)) {
+                                processedSubject = processedSubject.replace(new RegExp(`{{${key}}}`, 'g'), value);
+                                processedBody = processedBody.replace(new RegExp(`{{${key}}}`, 'g'), value);
+                              }
+
+                              const result = await sendEmail({
+                                to: testEmailAddress,
+                                subject: processedSubject,
+                                html: processedBody.replace(/\n/g, '<br>'),
+                                text: processedBody,
+                                tracking: {
+                                  trackOpens: true,
+                                  trackClicks: true,
+                                },
+                              });
+
+                              if (result.success) {
+                                setTestEmailResult({ success: true, message: `Test email sent! Message ID: ${result.messageId}` });
+                                setTestEmailAddress('');
+                              } else {
+                                setTestEmailResult({ success: false, message: result.error || 'Failed to send email' });
+                              }
+                            } catch (error: any) {
+                              setTestEmailResult({ success: false, message: error.message || 'Failed to send email' });
+                            } finally {
+                              setIsSendingTest(false);
+                            }
+                          }}
+                          disabled={isSendingTest || !testEmailAddress}
+                          style={{
+                            padding: '0.75rem 1.5rem',
+                            backgroundColor: isSendingTest || !testEmailAddress ? '#444' : '#222',
+                            color: '#fff',
+                            border: '1px solid #333',
+                            borderRadius: '0.5rem',
+                            cursor: isSendingTest || !testEmailAddress ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {isSendingTest ? 'Sending...' : 'Send Test Email'}
+                        </button>
+                      </div>
+                      {testEmailResult && (
+                        <div style={{
+                          marginTop: '0.75rem',
+                          padding: '0.75rem',
+                          backgroundColor: testEmailResult.success ? '#0f4c0f' : '#4c0f0f',
+                          border: `1px solid ${testEmailResult.success ? '#4ade80' : '#f87171'}`,
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          color: testEmailResult.success ? '#4ade80' : '#f87171'
+                        }}>
+                          {testEmailResult.success ? '✓ ' : '✗ '}
+                          {testEmailResult.message}
+                        </div>
+                      )}
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                      <button style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}>
-                        Send Test Email
-                      </button>
                       <button style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
                         Save Template
                       </button>

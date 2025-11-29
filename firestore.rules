@@ -1,0 +1,266 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to get user's organization ID
+    function getUserOrgId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
+    }
+    
+    // Helper function to check if user belongs to organization
+    function belongsToOrg(orgId) {
+      return isAuthenticated() && getUserOrgId() == orgId;
+    }
+    
+    // Helper function to check user role
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Helper function to check if user is admin or owner
+    function isAdminOrOwner() {
+      return getUserRole() in ['admin', 'owner'];
+    }
+    
+    // Helper function to check if user is manager or above
+    function isManagerOrAbove() {
+      return getUserRole() in ['admin', 'owner', 'manager'];
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can update their own profile (except role and organizationId)
+      allow update: if isAuthenticated() 
+        && request.auth.uid == userId
+        && !('role' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('organizationId' in request.resource.data.diff(resource.data).affectedKeys());
+      
+      // Only admins can create/delete users
+      allow create, delete: if isAuthenticated() && isAdminOrOwner();
+      
+      // Admins can read all users in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+    }
+    
+    // Organizations collection
+    match /organizations/{orgId} {
+      // Users can read their own organization
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Only owners can update organization
+      allow update: if isAuthenticated() 
+        && belongsToOrg(orgId)
+        && getUserRole() == 'owner';
+      
+      // Only platform admins can create/delete organizations
+      // (This would be handled server-side in production)
+      allow create: if isAuthenticated() && isAdminOrOwner();
+      allow delete: if false; // Never allow deletion via client
+    }
+    
+    // Workspaces collection
+    match /workspaces/{workspaceId} {
+      // Users can read workspaces in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update workspaces
+      allow create, update: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && isManagerOrAbove();
+      
+      // Only owners can delete workspaces
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // Schemas collection
+    match /schemas/{schemaId} {
+      // Users can read schemas in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update schemas
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete schemas
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // Records collection (entity records)
+    match /records/{recordId} {
+      // Users can read records in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // All authenticated users can create/update records in their organization
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId();
+      
+      // Managers and above can delete records
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && isManagerOrAbove();
+    }
+    
+    // Workflows collection
+    match /workflows/{workflowId} {
+      // Users can read workflows in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update workflows
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete workflows
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // Email campaigns collection
+    match /emailCampaigns/{campaignId} {
+      // Users can read campaigns in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update campaigns
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete campaigns
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // Nurture sequences collection
+    match /nurtureSequences/{sequenceId} {
+      // Users can read sequences in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update sequences
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete sequences
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // API keys collection (client-specific)
+    match /apiKeys/{keyId} {
+      // Users can only read their own organization's API keys
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && isManagerOrAbove();
+      
+      // Only owners can create/update/delete API keys
+      allow create, update, delete: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && getUserRole() == 'owner';
+    }
+    
+    // Platform API keys (admin-only)
+    match /admin/{document=**} {
+      // Only platform admins can access
+      allow read, write: if isAuthenticated() 
+        && getUserRole() == 'admin'
+        && getUserOrgId() == 'platform'; // Special platform organization
+    }
+    
+    // Golden Masters collection (AI agent configs)
+    match /goldenMasters/{masterId} {
+      // Users can read Golden Masters in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // Customer Memories collection (AI agent memories)
+    match /customerMemories/{memoryId} {
+      // Users can read memories in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // All authenticated users can create/update (for AI agent use)
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId();
+      
+      // Managers and above can delete
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && isManagerOrAbove();
+    }
+    
+    // Themes collection
+    match /themes/{themeId} {
+      // Users can read themes in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // Integrations collection
+    match /integrations/{integrationId} {
+      // Users can read integrations in their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId);
+      
+      // Managers and above can create/update
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.organizationId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+    }
+    
+    // Default: Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+

@@ -183,6 +183,7 @@ export type APIServiceName =
   | 'paypal'
   | 'sendgrid'
   | 'resend'
+  | 'integrations'
   | 'smtp'
   | 'twilio'
   | 'vonage'

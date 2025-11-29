@@ -38,17 +38,68 @@ export default function OrganizationSettingsPage() {
         console.error('Failed to load theme:', error);
       }
     }
-  }, []);
+    
+    // Load organization data from Firestore
+    const loadOrganizationData = async () => {
+      if (!user?.organizationId) return;
+      
+      try {
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const orgData = await FirestoreService.get(
+          COLLECTIONS.ORGANIZATIONS,
+          user.organizationId
+        );
+        
+        if (orgData) {
+          setFormData(prev => ({
+            ...prev,
+            companyName: orgData.name || orgData.companyName || prev.companyName,
+            businessType: orgData.businessType || prev.businessType,
+            industry: orgData.industry || prev.industry,
+            website: orgData.website || prev.website,
+            phone: orgData.phone || prev.phone,
+            email: orgData.email || prev.email,
+            address: orgData.address || prev.address,
+            city: orgData.city || prev.city,
+            state: orgData.state || prev.state,
+            zipCode: orgData.zipCode || prev.zipCode,
+            country: orgData.country || prev.country,
+            taxId: orgData.taxId || prev.taxId,
+            timezone: orgData.timezone || prev.timezone,
+            currency: orgData.currency || prev.currency,
+            fiscalYearStart: orgData.fiscalYearStart || prev.fiscalYearStart,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load organization data:', error);
+      }
+    };
+    
+    loadOrganizationData();
+  }, [user?.organizationId]);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   const handleSave = async () => {
+    if (!user?.organizationId) return;
+    
     setSaving(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Save to Firestore
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}`,
+        user.organizationId,
+        {
+          ...formData,
+          updatedAt: new Date().toISOString(),
+        },
+        false
+      );
+      
       alert('Organization settings saved successfully!');
     } catch (error) {
+      console.error('Failed to save organization settings:', error);
       alert('Failed to save settings');
     } finally {
       setSaving(false);
@@ -418,5 +469,7 @@ export default function OrganizationSettingsPage() {
     </div>
   );
 }
+
+
 
 

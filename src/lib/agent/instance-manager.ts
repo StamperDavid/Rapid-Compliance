@@ -98,6 +98,15 @@ export class AgentInstanceManager implements InstanceLifecycleService {
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
     const { businessContext, agentPersona, behaviorConfig } = goldenMaster;
     
+    // Include training learnings in system prompt (from Golden Master)
+    const trainingNotes = goldenMaster.trainedScenarios || [];
+    const recentLearnings = trainingNotes.length > 0
+      ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${goldenMaster.trainingCompletedAt || 'Not yet'}.`
+      : '';
+    
+    const updatedGuidelines = ''; // From training feedback if available
+    const behavioralChanges = ''; // From training feedback if available
+    
     let prompt = `You are an AI sales and customer service agent for ${businessContext.businessName}.
 
 # Your Role & Objectives
@@ -422,16 +431,34 @@ ${this.summarizeRecentConversations(customerMemory)}
     await this.storeActiveInstance(instance);
   }
   
-  // ===== Database/Storage Methods (implement with your actual DB) =====
+  // ===== Database/Storage Methods =====
   
   private async getActiveGoldenMaster(orgId: string): Promise<GoldenMaster | null> {
-    // TODO: Implement - fetch from Firestore where orgId matches and isActive = true
-    return null;
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const goldenMasters = await FirestoreService.getAll(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+        []
+      );
+      const active = goldenMasters.find((gm: any) => gm.isActive === true);
+      return active as GoldenMaster | null;
+    } catch (error) {
+      console.error('Error fetching Golden Master:', error);
+      return null;
+    }
   }
   
   private async getCustomerMemory(customerId: string, orgId: string): Promise<CustomerMemory | null> {
-    // TODO: Implement - fetch from Firestore collection: customerMemories/${orgId}/${customerId}
-    return null;
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      return await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        customerId
+      );
+    } catch (error) {
+      console.error('Error fetching customer memory:', error);
+      return null;
+    }
   }
   
   private async createCustomerMemory(customerId: string, orgId: string): Promise<CustomerMemory> {
@@ -461,6 +488,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       contextFlags: {
         hasActiveCart: false,
         hasOpenTicket: false,
+        waitingOnRefund: false,
         isVIP: false,
         hasComplaint: false,
         isBlacklisted: false,
@@ -485,28 +513,77 @@ ${this.summarizeRecentConversations(customerMemory)}
   }
   
   private async saveCustomerMemory(memory: CustomerMemory): Promise<void> {
-    // TODO: Implement - save to Firestore
-    console.log('[Instance Manager] Saving customer memory:', memory.customerId);
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${memory.orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        memory.customerId,
+        memory,
+        true
+      );
+    } catch (error) {
+      console.error('Error saving customer memory:', error);
+      throw error;
+    }
   }
   
   private async storeActiveInstance(instance: AgentInstance): Promise<void> {
-    // TODO: Implement - store in Redis or in-memory cache for fast access
-    console.log('[Instance Manager] Storing active instance:', instance.instanceId);
+    // Store in Firestore for persistence (in production, also use Redis for fast access)
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${instance.orgId}/activeInstances`,
+        instance.instanceId,
+        {
+          ...instance,
+          createdAt: instance.spawnedAt,
+          lastActivityAt: new Date().toISOString(),
+        },
+        true
+      );
+    } catch (error) {
+      console.error('Error storing active instance:', error);
+    }
   }
   
   private async getActiveInstance(instanceId: string): Promise<AgentInstance | null> {
-    // TODO: Implement - fetch from Redis/cache
-    return null;
+    // In production, check Redis first, then Firestore
+    // For now, just check Firestore
+    try {
+      // Need orgId to query - this is a limitation of current design
+      // In production, maintain a lookup table or use Redis with instanceId as key
+      return null;
+    } catch (error) {
+      console.error('Error getting active instance:', error);
+      return null;
+    }
   }
   
   private async removeActiveInstance(instanceId: string): Promise<void> {
-    // TODO: Implement - remove from Redis/cache
-    console.log('[Instance Manager] Removing active instance:', instanceId);
+    try {
+      // In production, remove from Redis and Firestore
+      // For now, just log
+      console.log('[Instance Manager] Removing active instance:', instanceId);
+    } catch (error) {
+      console.error('Error removing active instance:', error);
+    }
   }
   
   private async archiveInstance(instance: AgentInstance): Promise<void> {
-    // TODO: Implement - save to Firestore for analytics/history
-    console.log('[Instance Manager] Archiving instance:', instance.instanceId);
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${instance.orgId}/archivedInstances`,
+        instance.instanceId,
+        {
+          ...instance,
+          archivedAt: new Date().toISOString(),
+        },
+        false
+      );
+    } catch (error) {
+      console.error('Error archiving instance:', error);
+    }
   }
   
   private async notifyHumanAgents(instance: AgentInstance, reason: string): Promise<void> {
@@ -535,5 +612,7 @@ ${this.summarizeRecentConversations(customerMemory)}
 
 // Singleton instance
 export const agentInstanceManager = new AgentInstanceManager();
+
+
 
 

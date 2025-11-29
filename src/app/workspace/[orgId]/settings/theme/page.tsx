@@ -88,6 +88,8 @@ const THEME_PRESETS = [
 ];
 
 export default function ThemeEditorPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [theme, setTheme] = useState<ThemeConfig>(DEFAULT_THEME);
   const [activeSection, setActiveSection] = useState<'colors' | 'typography' | 'layout' | 'branding'>('colors');
   const [activeColorGroup, setActiveColorGroup] = useState<'brand' | 'semantic' | 'neutral' | 'background'>('brand');
@@ -97,24 +99,59 @@ export default function ThemeEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Load saved theme on mount
+  // Load saved theme from Firestore
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
+    const loadTheme = async () => {
       try {
-        const parsed = JSON.parse(savedTheme);
-        setTheme(parsed);
-        if (parsed.branding?.logoUrl) {
-          setLogoPreview(parsed.branding.logoUrl);
-        }
-        if (parsed.branding?.favicon) {
-          setFaviconPreview(parsed.branding.favicon);
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const themeData = await FirestoreService.get(
+          `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.THEMES}`,
+          'default'
+        );
+        
+        if (themeData) {
+          setTheme(themeData as ThemeConfig);
+          if (themeData.branding?.logoUrl) {
+            setLogoPreview(themeData.branding.logoUrl);
+          }
+          if (themeData.branding?.favicon) {
+            setFaviconPreview(themeData.branding.favicon);
+          }
+        } else {
+          // Try localStorage as fallback (for migration)
+          const savedTheme = localStorage.getItem('appTheme');
+          if (savedTheme) {
+            try {
+              const parsed = JSON.parse(savedTheme);
+              setTheme(parsed);
+              if (parsed.branding?.logoUrl) {
+                setLogoPreview(parsed.branding.logoUrl);
+              }
+              if (parsed.branding?.favicon) {
+                setFaviconPreview(parsed.branding.favicon);
+              }
+            } catch (error) {
+              console.error('Failed to load theme:', error);
+            }
+          }
         }
       } catch (error) {
-        console.error('Failed to load theme:', error);
+        console.error('Failed to load theme from Firestore:', error);
+        // Fallback to localStorage
+        const savedTheme = localStorage.getItem('appTheme');
+        if (savedTheme) {
+          try {
+            const parsed = JSON.parse(savedTheme);
+            setTheme(parsed);
+          } catch (e) {
+            console.error('Failed to load theme:', e);
+          }
+        }
       }
-    }
-  }, []);
+    };
+    
+    loadTheme();
+  }, [orgId]);
 
   const updateColor = (path: string[], value: string) => {
     setTheme(prev => {
@@ -183,7 +220,20 @@ export default function ThemeEditorPage() {
     setSaveMessage(null);
 
     try {
-      // Save to localStorage
+      // Save to Firestore
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.THEMES}`,
+        'default',
+        {
+          ...theme,
+          updatedAt: new Date().toISOString(),
+          organizationId: orgId,
+        },
+        false
+      );
+      
+      // Also save to localStorage as fallback/cache
       localStorage.setItem('appTheme', JSON.stringify(theme));
       
       // Apply favicon if present

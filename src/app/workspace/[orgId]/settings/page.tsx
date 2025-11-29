@@ -75,6 +75,12 @@ export default function SettingsPage() {
       ]
     },
     {
+      title: 'Analytics & Reporting',
+      items: [
+        { icon: '📈', label: 'Analytics Dashboard', description: 'Revenue reports, pipeline analysis, forecasting, and win/loss', href: '/dashboard?view=revenue', permission: canManageOrganization },
+      ]
+    },
+    {
       title: 'Advanced',
       items: [
         { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: '/workspace/demo-org/schemas', permission: canManageOrganization },

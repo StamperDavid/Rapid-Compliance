@@ -5,11 +5,16 @@ import Link from 'next/link';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import WorkflowBuilder from '@/components/workflows/WorkflowBuilder';
+import { Workflow } from '@/types/workflow';
 
 export default function WorkflowsPage() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] = useState<Partial<Workflow> | null>(null);
+  const [workflowsList, setWorkflowsList] = useState(workflows);
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -94,13 +99,19 @@ export default function WorkflowsPage() {
                 <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Workflows</h1>
                 <p style={{ color: '#666', fontSize: '0.875rem' }}>Automation rules and workflow configuration</p>
               </div>
-              <button style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
+              <button 
+                onClick={() => {
+                  setEditingWorkflow(null);
+                  setShowBuilder(true);
+                }}
+                style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+              >
                 + Create Workflow
               </button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
-              {workflows.map(workflow => (
+              {workflowsList.map(workflow => (
                 <div key={workflow.id} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                     <div style={{ flex: 1 }}>
@@ -119,7 +130,13 @@ export default function WorkflowsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid #333' }}>
                     <div style={{ fontSize: '0.875rem', color: '#666' }}>Runs today: <span style={{ color: primaryColor, fontWeight: '600' }}>{workflow.runsToday}</span></div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
+                      <button 
+                        onClick={() => {
+                          setEditingWorkflow(workflow as any);
+                          setShowBuilder(true);
+                        }}
+                        style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                      >
                         Edit
                       </button>
                       <button onClick={() => alert(`Workflow ${workflow.active ? 'paused' : 'activated'}`)} style={{ padding: '0.5rem 1rem', backgroundColor: workflow.active ? '#4c3d0f' : primaryColor, color: workflow.active ? '#fbbf24' : '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
@@ -133,6 +150,38 @@ export default function WorkflowsPage() {
           </div>
         </div>
       </div>
+
+      {showBuilder && (
+        <WorkflowBuilder
+          workflow={editingWorkflow}
+          onSave={(workflow) => {
+            // MOCK: Save workflow (will be replaced with API call)
+            if (editingWorkflow && (editingWorkflow as any).id) {
+              // Update existing
+              setWorkflowsList(workflowsList.map(w => 
+                (w as any).id === (editingWorkflow as any).id 
+                  ? { ...w, ...workflow } as any
+                  : w
+              ));
+            } else {
+              // Create new
+              const newWorkflow = {
+                ...workflow,
+                id: workflowsList.length + 1,
+                active: true,
+                runsToday: 0,
+              };
+              setWorkflowsList([...workflowsList, newWorkflow as any]);
+            }
+            setShowBuilder(false);
+            setEditingWorkflow(null);
+          }}
+          onCancel={() => {
+            setShowBuilder(false);
+            setEditingWorkflow(null);
+          }}
+        />
+      )}
     </div>
   );
 }

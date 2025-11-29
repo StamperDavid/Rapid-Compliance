@@ -8,10 +8,12 @@ import AdminBar from '@/components/AdminBar';
 import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
+import { useAuth } from '@/hooks/useAuth';
 
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
 export default function CRMPage() {
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const [config, setConfig] = useState<any>(null);
   const [activeView, setActiveView] = useState<ViewType>('leads');
@@ -57,13 +59,29 @@ export default function CRMPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Load configuration
+  // Load configuration from Firestore
   useEffect(() => {
-    const stored = localStorage.getItem('crmConfig');
-    if (stored) {
-      setConfig(JSON.parse(stored));
-    }
-  }, []);
+    if (!user?.organizationId) return;
+    
+    const loadConfig = async () => {
+      try {
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const configData = await FirestoreService.get(
+          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/crmConfig`,
+          'default'
+        );
+        
+        if (configData) {
+          setConfig(configData);
+        }
+      } catch (error) {
+        console.error('Failed to load CRM config:', error);
+        // Continue with null config (defaults will be used)
+      }
+    };
+    
+    loadConfig();
+  }, [user?.organizationId]);
 
   // Sample data with setters
   const [leads, setLeads] = useState([

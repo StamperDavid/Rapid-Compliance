@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function OnboardingWizard() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const orgId = params.orgId as string;
   
   const [currentStep, setCurrentStep] = useState(1);
@@ -14,6 +16,8 @@ export default function OnboardingWizard() {
     businessName: '',
     industry: '',
     website: '',
+    faqPageUrl: '',
+    socialMediaUrls: [] as string[],
     companySize: '',
     
     // Step 2: Business Understanding
@@ -130,68 +134,123 @@ export default function OnboardingWizard() {
     }
   };
 
-  const completeOnboarding = () => {
-    // Save all data and redirect to training
-    console.log('Onboarding complete:', formData);
-    alert('Your AI agent persona has been created! Now let\'s train it to perfection.');
-    router.push(`/workspace/${orgId}/settings/ai-agents/training`);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState('');
+
+  const completeOnboarding = async () => {
+    setIsAnalyzing(true);
+    setAnalysisProgress('Saving onboarding data...');
+    
+    // Save onboarding data
+    const onboardingData = {
+      ...formData,
+      completedAt: new Date(),
+    };
+
+    try {
+      // Save onboarding data to Firestore
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/onboarding`,
+        'current',
+        {
+          ...onboardingData,
+          completedAt: new Date().toISOString(),
+          organizationId: orgId,
+        },
+        false
+      );
+
+      // Process onboarding: persona → knowledge → Golden Master
+      setAnalysisProgress('Building AI agent persona...');
+      const { processOnboarding } = await import('@/lib/agent/onboarding-processor');
+      
+      // Get current user ID
+      const userId = user?.uid || 'system';
+      
+      setAnalysisProgress('Processing knowledge base...');
+      const result = await processOnboarding({
+        onboardingData,
+        organizationId: orgId,
+        userId,
+      });
+
+      if (result.success) {
+        setAnalysisProgress('✅ Complete! Your AI agent is ready for training.');
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          alert('✅ Onboarding complete! Your AI agent persona has been created and is ready for training. You can now go to the Training Center to train your agent.');
+          router.push(`/workspace/${orgId}/settings/ai-agents/training`);
+        }, 2000);
+      } else {
+        throw new Error(result.error || 'Failed to process onboarding');
+      }
+    } catch (error: any) {
+      console.error('Failed to complete onboarding:', error);
+      setIsAnalyzing(false);
+      alert(`❌ Error: ${error.message || 'Failed to complete onboarding. Please try again.'}`);
+    }
   };
 
   const primaryColor = '#6366f1';
 
   // Helper to render text input
-  const TextInput = ({ label, field, placeholder, required = false }: any) => (
-    <div>
-      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-        {label} {required && '*'}
-      </label>
-      <input
-        type="text"
-        value={formData[field as keyof typeof formData] as string}
-        onChange={(e) => updateField(field, e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#0a0a0a',
-          border: '1px solid #333',
-          borderRadius: '0.5rem',
-          color: '#fff',
-          fontSize: '1rem'
-        }}
-      />
-    </div>
-  );
+  const TextInput = ({ label, field, placeholder, required = false }: any) => {
+    return (
+      <div>
+        <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+          {label} {required && '*'}
+        </label>
+        <input
+          type="text"
+          value={formData[field as keyof typeof formData] as string}
+          onChange={(e) => updateField(field, e.target.value)}
+          placeholder={placeholder}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#0a0a0a',
+            border: '1px solid #333',
+            borderRadius: '0.5rem',
+            color: '#fff',
+            fontSize: '1rem'
+          }}
+        />
+      </div>
+    );
+  };
 
   // Helper to render textarea
-  const TextArea = ({ label, field, placeholder, rows = 4, helper = '', required = false }: any) => (
-    <div>
-      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-        {label} {required && '*'}
-      </label>
-      <textarea
-        value={formData[field as keyof typeof formData] as string}
-        onChange={(e) => updateField(field, e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#0a0a0a',
-          border: '1px solid #333',
-          borderRadius: '0.5rem',
-          color: '#fff',
-          fontSize: '1rem',
-          resize: 'vertical'
-        }}
-      />
-      {helper && (
-        <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-          {helper}
-        </div>
-      )}
-    </div>
-  );
+  const TextArea = ({ label, field, placeholder, rows = 4, helper = '', required = false }: any) => {
+    return (
+      <div>
+        <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+          {label} {required && '*'}
+        </label>
+        <textarea
+          value={formData[field as keyof typeof formData] as string}
+          onChange={(e) => updateField(field, e.target.value)}
+          placeholder={placeholder}
+          rows={rows}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#0a0a0a',
+            border: '1px solid #333',
+            borderRadius: '0.5rem',
+            color: '#fff',
+            fontSize: '1rem',
+            resize: 'vertical'
+          }}
+        />
+        {helper && (
+          <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+            {helper}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{ 
@@ -293,9 +352,81 @@ export default function OnboardingWizard() {
                   </select>
                 </div>
 
-                <TextInput label="Website" field="website" placeholder="https://yourwebsite.com" />
-                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem' }}>
-                  We'll analyze your website to help build your agent's knowledge
+                <TextInput label="Website URL" field="website" placeholder="https://yourwebsite.com" />
+                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
+                  We'll automatically analyze your website to learn about your company, products, and services
+                </div>
+
+                <TextInput label="FAQ Page URL (optional)" field="faqPageUrl" placeholder="https://yourwebsite.com/faq" />
+                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
+                  Help your agent learn common questions and answers
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Social Media URLs (optional)
+                  </label>
+                  <div style={{ color: '#666', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                    Help your agent understand your brand voice and customer interactions
+                  </div>
+                  {formData.socialMediaUrls.map((url, index) => (
+                    <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => {
+                          const updated = [...formData.socialMediaUrls];
+                          updated[index] = e.target.value;
+                          updateField('socialMediaUrls', updated);
+                        }}
+                        placeholder="https://facebook.com/yourpage or https://instagram.com/yourpage"
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          backgroundColor: '#0a0a0a',
+                          border: '1px solid #333',
+                          borderRadius: '0.5rem',
+                          color: '#fff',
+                          fontSize: '0.875rem'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = formData.socialMediaUrls.filter((_, i) => i !== index);
+                          updateField('socialMediaUrls', updated);
+                        }}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          backgroundColor: '#4c0f0f',
+                          color: '#f87171',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '600'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => updateField('socialMediaUrls', [...formData.socialMediaUrls, ''])}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#222',
+                      color: primaryColor,
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    + Add Social Media URL
+                  </button>
                 </div>
 
                 <div>
@@ -1516,24 +1647,61 @@ export default function OnboardingWizard() {
               Continue →
             </button>
           ) : (
-            <button
-              onClick={completeOnboarding}
-              style={{
-                padding: '1rem 2.5rem',
-                background: `linear-gradient(135deg, ${primaryColor}, #8b5cf6)`,
-                color: '#fff',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '700',
-                textTransform: 'uppercase',
+            <>
+              {isAnalyzing ? (
+                <div style={{
+                  padding: '2rem',
+                  backgroundColor: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '0.75rem',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+                  <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                    Analyzing Your Company...
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
+                    {analysisProgress || 'Processing...'}
+                  </div>
+                  <div style={{
+                    width: '100%',
+                    height: '4px',
+                    backgroundColor: '#333',
+                    borderRadius: '2px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundColor: primaryColor,
+                      animation: 'pulse 2s ease-in-out infinite'
+                    }} />
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '1rem' }}>
+                    This may take a few minutes. Your agent is learning about your company, products, and services...
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={completeOnboarding}
+                  style={{
+                    padding: '1rem 2.5rem',
+                    background: `linear-gradient(135deg, ${primaryColor}, #8b5cf6)`,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 boxShadow: `0 10px 40px ${primaryColor}33`
               }}
             >
               🚀 Start Training Your AI Agent
             </button>
+          )}
+            </>
           )}
         </div>
 

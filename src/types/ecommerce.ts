@@ -804,8 +804,8 @@ export interface Order {
   // Payment
   payment: OrderPayment;
   
-  // Shipping
-  shipping: OrderShipping;
+  // Shipping Info
+  shippingInfo: OrderShipping;
   
   // Status
   status: OrderStatus;

@@ -1,0 +1,217 @@
+/**
+ * API Authentication Middleware
+ * Validates authentication tokens and user permissions for API routes
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { FirestoreService } from '@/lib/db/firestore-service';
+
+// Firebase Admin SDK (optional - only if configured)
+let adminAuth: any = null;
+let adminInitialized = false;
+
+async function initializeAdminAuth() {
+  if (adminInitialized) {
+    return adminAuth;
+  }
+
+  if (typeof window !== 'undefined') {
+    return null; // Client-side, skip
+  }
+
+  try {
+    // Dynamically import firebase-admin (only if available)
+    const admin = await import('firebase-admin');
+    const { getApps, initializeApp, cert } = admin.app;
+    const { getAuth } = admin.auth;
+
+    // Check if already initialized
+    const existingApps = getApps();
+    if (existingApps.length > 0) {
+      adminAuth = getAuth(existingApps[0]);
+      adminInitialized = true;
+      return adminAuth;
+    }
+
+    // Initialize with service account or use default credentials
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+      : undefined;
+
+    let app;
+    if (serviceAccount) {
+      app = initializeApp({
+        credential: cert(serviceAccount),
+      });
+    } else {
+      // Use default credentials (for GCP deployment)
+      app = initializeApp();
+    }
+
+    adminAuth = getAuth(app);
+    adminInitialized = true;
+    return adminAuth;
+  } catch (error) {
+    console.error('Failed to initialize Firebase Admin:', error);
+    adminInitialized = true; // Mark as initialized to prevent retries
+    return null;
+  }
+}
+
+export interface AuthenticatedUser {
+  uid: string;
+  email: string | null;
+  emailVerified: boolean;
+  organizationId?: string;
+  role?: string;
+}
+
+/**
+ * Extract and verify authentication token from request
+ */
+async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser | null> {
+  try {
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+
+    const token = authHeader.substring(7);
+
+    // Try to verify token using Firebase Admin SDK
+    const auth = await initializeAdminAuth();
+    
+    if (!auth) {
+      // In development, if admin SDK is not configured, allow requests
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️ Firebase Admin not configured. Skipping token verification in development.');
+        return null; // Will be handled by requireAuth
+      }
+      return null;
+    }
+
+    const decodedToken = await auth.verifyIdToken(token);
+
+    // Get user profile from Firestore
+    const userProfile = await FirestoreService.get('users', decodedToken.uid);
+    
+    return {
+      uid: decodedToken.uid,
+      email: decodedToken.email || null,
+      emailVerified: decodedToken.email_verified || false,
+      organizationId: userProfile?.organizationId,
+      role: userProfile?.role,
+    };
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Authentication middleware for API routes
+ * Use this to protect API routes that require authentication
+ */
+export async function requireAuth(
+  request: NextRequest
+): Promise<{ user: AuthenticatedUser } | NextResponse> {
+  const user = await verifyAuthToken(request);
+
+  // In development, allow bypass if Firebase Admin is not configured
+  if (!user && process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ Development mode: Allowing unauthenticated request');
+    return {
+      user: {
+        uid: 'dev-user',
+        email: 'dev@example.com',
+        emailVerified: true,
+        organizationId: 'dev-org',
+        role: 'admin',
+      },
+    };
+  }
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
+  return { user };
+}
+
+/**
+ * Optional authentication - returns user if authenticated, null otherwise
+ */
+export async function optionalAuth(
+  request: NextRequest
+): Promise<AuthenticatedUser | null> {
+  try {
+    const user = await verifyAuthToken(request);
+    return user;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Require specific role
+ */
+export async function requireRole(
+  request: NextRequest,
+  allowedRoles: string[]
+): Promise<{ user: AuthenticatedUser } | NextResponse> {
+  const authResult = await requireAuth(request);
+  
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const { user } = authResult;
+
+  if (!user.role || !allowedRoles.includes(user.role)) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions' },
+      { status: 403 }
+    );
+  }
+
+  return { user };
+}
+
+/**
+ * Require organization membership
+ */
+export async function requireOrganization(
+  request: NextRequest,
+  organizationId?: string
+): Promise<{ user: AuthenticatedUser } | NextResponse> {
+  const authResult = await requireAuth(request);
+  
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const { user } = authResult;
+
+  // If organizationId is provided, verify user belongs to it
+  if (organizationId && user.organizationId !== organizationId) {
+    return NextResponse.json(
+      { success: false, error: 'Access denied to this organization' },
+      { status: 403 }
+    );
+  }
+
+  // If no organizationId provided, user must have one
+  if (!user.organizationId) {
+    return NextResponse.json(
+      { success: false, error: 'User must belong to an organization' },
+      { status: 403 }
+    );
+  }
+
+  return { user };
+}
+

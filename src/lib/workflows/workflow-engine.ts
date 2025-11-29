@@ -1,0 +1,343 @@
+/**
+ * Workflow Execution Engine
+ * Handles workflow triggers, conditions, and actions
+ * MOCK IMPLEMENTATION - Ready for backend integration
+ */
+
+import { Workflow, WorkflowTrigger, WorkflowAction, WorkflowCondition } from '@/types/workflow';
+import { where, orderBy, limit } from 'firebase/firestore';
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  triggerId: string;
+  triggerData: any;
+  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  startedAt: Date;
+  completedAt?: Date;
+  error?: string;
+  actionResults: Array<{
+    actionId: string;
+    status: 'success' | 'failed' | 'skipped';
+    result?: any;
+    error?: string;
+  }>;
+}
+
+/**
+ * Execute workflow
+ * MOCK: Simulates workflow execution, will use Cloud Functions in real implementation
+ */
+export async function executeWorkflow(
+  workflow: Workflow,
+  triggerData: any
+): Promise<WorkflowExecution> {
+  const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const execution: WorkflowExecution = {
+    id: executionId,
+    workflowId: workflow.id,
+    triggerId: workflow.trigger.id,
+    triggerData,
+    status: 'running',
+    startedAt: new Date(),
+    actionResults: [],
+  };
+
+  try {
+    // MOCK: Check conditions
+    if (workflow.conditions && workflow.conditions.length > 0) {
+      const conditionsMet = await evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator || 'and');
+      if (!conditionsMet) {
+        execution.status = 'completed';
+        execution.completedAt = new Date();
+        return execution;
+      }
+    }
+
+    // MOCK: Execute actions sequentially
+    for (const action of workflow.actions) {
+      try {
+        const result = await executeAction(action, triggerData, workflow);
+        execution.actionResults.push({
+          actionId: action.id,
+          status: 'success',
+          result,
+        });
+      } catch (error: any) {
+        execution.actionResults.push({
+          actionId: action.id,
+          status: 'failed',
+          error: error.message,
+        });
+        
+        // Stop execution if action fails and workflow is set to stop on error
+        if (workflow.settings.onError === 'stop') {
+          execution.status = 'failed';
+          execution.error = `Action ${action.name} failed: ${error.message}`;
+          execution.completedAt = new Date();
+          return execution;
+        }
+      }
+    }
+
+    execution.status = 'completed';
+    execution.completedAt = new Date();
+
+    // Store execution in Firestore
+    const orgId = triggerData?.organizationId || (workflow as any).organizationId;
+    const workspaceId = triggerData?.workspaceId || (workflow as any).workspaceId;
+    
+    if (orgId && workspaceId) {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
+        execution.id,
+        {
+          ...execution,
+          startedAt: execution.startedAt.toISOString(),
+          completedAt: execution.completedAt?.toISOString(),
+        }
+      );
+    }
+
+    return execution;
+  } catch (error: any) {
+    execution.status = 'failed';
+    execution.error = error.message;
+    execution.completedAt = new Date();
+    return execution;
+  }
+}
+
+/**
+ * Evaluate workflow conditions
+ * MOCK: Evaluates conditions against trigger data
+ */
+async function evaluateConditions(
+  conditions: WorkflowCondition[],
+  triggerData: any,
+  operator: 'and' | 'or'
+): Promise<boolean> {
+  const results = await Promise.all(
+    conditions.map(condition => evaluateCondition(condition, triggerData))
+  );
+
+  if (operator === 'and') {
+    return results.every(r => r);
+  } else {
+    return results.some(r => r);
+  }
+}
+
+/**
+ * Evaluate single condition
+ */
+function evaluateCondition(condition: WorkflowCondition, triggerData: any): boolean {
+  const fieldValue = getNestedValue(triggerData, condition.field);
+  
+  switch (condition.operator) {
+    case 'equals':
+      return fieldValue === condition.value;
+    case 'not_equals':
+      return fieldValue !== condition.value;
+    case 'contains':
+      return String(fieldValue).includes(String(condition.value));
+    case 'not_contains':
+      return !String(fieldValue).includes(String(condition.value));
+    case 'greater_than':
+      return Number(fieldValue) > Number(condition.value);
+    case 'less_than':
+      return Number(fieldValue) < Number(condition.value);
+    case 'greater_than_or_equal':
+      return Number(fieldValue) >= Number(condition.value);
+    case 'less_than_or_equal':
+      return Number(fieldValue) <= Number(condition.value);
+    case 'exists':
+      return fieldValue !== undefined && fieldValue !== null;
+    case 'not_exists':
+      return fieldValue === undefined || fieldValue === null;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Execute workflow action
+ * REAL: Executes actions using real services
+ */
+async function executeAction(
+  action: WorkflowAction,
+  triggerData: any,
+  workflow: Workflow
+): Promise<any> {
+  const organizationId = triggerData?.organizationId || workflow.workspaceId;
+  
+  if (!organizationId) {
+    throw new Error('Organization ID required for workflow execution');
+  }
+  
+  // Import action executors
+  const { executeEmailAction } = await import('./actions/email-action');
+  const { executeSMSAction } = await import('./actions/sms-action');
+  const { executeEntityAction } = await import('./actions/entity-action');
+  const { executeHTTPAction } = await import('./actions/http-action');
+  const { executeDelayAction } = await import('./actions/delay-action');
+  const { executeConditionalAction } = await import('./actions/conditional-action');
+  
+  switch (action.type) {
+    case 'send_email':
+      return executeEmailAction(action as any, triggerData, organizationId);
+    
+    case 'send_sms':
+      return executeSMSAction(action as any, triggerData, organizationId);
+    
+    case 'create_entity':
+    case 'update_entity':
+    case 'delete_entity':
+      return executeEntityAction(action as any, triggerData, organizationId);
+    
+    case 'http_request':
+      return executeHTTPAction(action as any, triggerData);
+    
+    case 'delay':
+      return executeDelayAction(action as any, triggerData);
+    
+    case 'conditional_branch':
+      return executeConditionalAction(action as any, triggerData, workflow, organizationId);
+    
+    case 'send_slack':
+      // TODO: Implement Slack action
+      throw new Error('Slack action not yet implemented');
+    
+    case 'loop':
+      // TODO: Implement loop action
+      throw new Error('Loop action not yet implemented');
+    
+    case 'ai_agent':
+      // TODO: Implement AI agent action
+      throw new Error('AI agent action not yet implemented');
+    
+    case 'cloud_function':
+      // TODO: Implement Cloud Function action
+      throw new Error('Cloud Function action not yet implemented');
+    
+    case 'create_task':
+      // TODO: Implement create task action
+      throw new Error('Create task action not yet implemented');
+    
+    default:
+      throw new Error(`Unknown action type: ${(action as any).type}`);
+  }
+}
+
+/**
+ * Get nested value from object using dot notation
+ */
+function getNestedValue(obj: any, path: string): any {
+  return path.split('.').reduce((current, key) => current?.[key], obj);
+}
+
+/**
+ * Register workflow trigger listener
+ * REAL: Sets up trigger listeners based on trigger type
+ */
+export async function registerWorkflowTrigger(
+  workflow: Workflow,
+  organizationId: string,
+  workspaceId: string
+): Promise<void> {
+  const { registerFirestoreTrigger } = await import('./triggers/firestore-trigger');
+  const { registerWebhookTrigger } = await import('./triggers/webhook-trigger');
+  const { registerScheduleTrigger } = await import('./triggers/schedule-trigger');
+  
+  switch (workflow.trigger.type) {
+    case 'entity.created':
+    case 'entity.updated':
+    case 'entity.deleted':
+      await registerFirestoreTrigger(workflow, organizationId, workspaceId);
+      break;
+    
+    case 'webhook':
+      await registerWebhookTrigger(workflow, organizationId, workspaceId);
+      break;
+    
+    case 'schedule':
+      await registerScheduleTrigger(workflow, organizationId, workspaceId);
+      break;
+    
+    case 'manual':
+    case 'ai_agent':
+    case 'form.submitted':
+    case 'email.received':
+      // These don't need registration
+      break;
+    
+    default:
+      console.warn(`Unknown trigger type: ${(workflow.trigger as any).type}`);
+  }
+  
+  console.log(`[Workflow Engine] Registered trigger for workflow ${workflow.id}`);
+}
+
+/**
+ * Unregister workflow trigger listener
+ */
+export async function unregisterWorkflowTrigger(
+  workflowId: string,
+  organizationId: string,
+  workspaceId: string
+): Promise<void> {
+  const { unregisterFirestoreTrigger } = await import('./triggers/firestore-trigger');
+  const { unregisterScheduleTrigger } = await import('./triggers/schedule-trigger');
+  
+  // Unregister all trigger types (safe to call even if not registered)
+  await Promise.all([
+    unregisterFirestoreTrigger(workflowId, organizationId, workspaceId).catch(() => {}),
+    unregisterScheduleTrigger(workflowId, organizationId, workspaceId).catch(() => {}),
+  ]);
+  
+  console.log(`[Workflow Engine] Unregistered trigger for workflow ${workflowId}`);
+}
+
+/**
+ * Get workflow execution history
+ * MOCK: Will query database in real implementation
+ */
+export async function getWorkflowExecutions(
+  workflowId: string,
+  organizationId: string,
+  workspaceId: string,
+  limit: number = 50
+): Promise<WorkflowExecution[]> {
+  // Load executions from Firestore
+  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const executions = await FirestoreService.getAll(
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
+    [
+      where('workflowId', '==', workflowId),
+      orderBy('startedAt', 'desc'),
+      firestoreLimit(limit),
+    ]
+  );
+  
+  // Convert Firestore data back to WorkflowExecution format
+  return executions.map((e: any) => ({
+    ...e,
+    startedAt: new Date(e.startedAt),
+    completedAt: e.completedAt ? new Date(e.completedAt) : undefined,
+  })) as WorkflowExecution[];
+}
+
+/**
+ * Test workflow execution
+ * MOCK: Executes workflow with test data
+ */
+export async function testWorkflowExecution(
+  workflow: Workflow,
+  testData: any
+): Promise<WorkflowExecution> {
+  return executeWorkflow(workflow, testData);
+}
+
+
+

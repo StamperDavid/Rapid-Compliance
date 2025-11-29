@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AdminBar from '@/components/AdminBar';
+import { useAuth } from '@/hooks/useAuth';
 
 interface StorefrontConfig {
   enabled: boolean;
@@ -73,28 +74,56 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 };
 
 export default function StorefrontSettingsPage() {
+  const { user } = useAuth();
   const [config, setConfig] = useState<StorefrontConfig>(DEFAULT_CONFIG);
   const [activeTab, setActiveTab] = useState<'setup' | 'theme' | 'widgets'>('setup');
   const [showPreview, setShowPreview] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load saved config
+  // Load saved config from Firestore
   useEffect(() => {
-    const saved = localStorage.getItem('storefrontConfig');
-    if (saved) {
+    if (!user?.organizationId) return;
+    
+    const loadConfig = async () => {
       try {
-        setConfig(JSON.parse(saved));
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const configData = await FirestoreService.get(
+          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/storefrontConfig`,
+          'default'
+        );
+        
+        if (configData) {
+          setConfig(configData as StorefrontConfig);
+        }
       } catch (error) {
         console.error('Failed to load storefront config:', error);
       }
-    }
-  }, []);
+    };
+    
+    loadConfig();
+  }, [user?.organizationId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!user?.organizationId) return;
+    
     setIsSaving(true);
-    localStorage.setItem('storefrontConfig', JSON.stringify(config));
-    setTimeout(() => setIsSaving(false), 1000);
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/storefrontConfig`,
+        'default',
+        {
+          ...config,
+          updatedAt: new Date().toISOString(),
+        },
+        false
+      );
+    } catch (error) {
+      console.error('Failed to save storefront config:', error);
+    } finally {
+      setTimeout(() => setIsSaving(false), 1000);
+    }
   };
 
   const updateConfig = (path: string[], value: any) => {

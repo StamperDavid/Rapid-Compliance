@@ -34,8 +34,8 @@ class APIKeyService {
       }
     }
 
-    // Fetch from storage (localStorage for now, will be Firestore in production)
-    const keys = this.fetchKeysFromStorage(organizationId);
+    // Fetch from Firestore
+    const keys = await this.fetchKeysFromFirestore(organizationId);
     
     if (keys) {
       this.keysCache = keys;
@@ -101,9 +101,8 @@ class APIKeyService {
    * Save API keys (encrypted)
    */
   async saveKeys(organizationId: string, keys: Partial<APIKeysConfig>): Promise<void> {
-    // In production, this would save to Firestore with encryption
-    // For now, use localStorage
-    const existingKeys = this.fetchKeysFromStorage(organizationId) || this.getDefaultKeys(organizationId);
+    // Save to Firestore
+    const existingKeys = await this.fetchKeysFromFirestore(organizationId) || this.getDefaultKeys(organizationId);
     
     const updatedKeys: APIKeysConfig = {
       ...existingKeys,
@@ -113,7 +112,18 @@ class APIKeyService {
       updatedBy: 'current-user', // TODO: Get from auth context
     };
 
-    localStorage.setItem(`api-keys-${organizationId}`, JSON.stringify(updatedKeys));
+    // Save to Firestore
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.API_KEYS}`,
+      organizationId,
+      {
+        ...updatedKeys,
+        createdAt: updatedKeys.createdAt.toISOString(),
+        updatedAt: updatedKeys.updatedAt.toISOString(),
+      },
+      false
+    );
     
     // Clear cache to force reload
     this.keysCache = null;
@@ -158,15 +168,26 @@ class APIKeyService {
 
   // Private helper methods
 
-  private fetchKeysFromStorage(organizationId: string): APIKeysConfig | null {
-    if (typeof window === 'undefined') return null;
-    
-    const stored = localStorage.getItem(`api-keys-${organizationId}`);
-    if (!stored) return null;
-
+  private async fetchKeysFromFirestore(organizationId: string): Promise<APIKeysConfig | null> {
     try {
-      return JSON.parse(stored);
-    } catch {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const keysData = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.API_KEYS}`,
+        organizationId
+      );
+
+      if (!keysData) {
+        return null;
+      }
+
+      // Convert Firestore data back to APIKeysConfig format
+      return {
+        ...keysData,
+        createdAt: keysData.createdAt ? new Date(keysData.createdAt) : new Date(),
+        updatedAt: keysData.updatedAt ? new Date(keysData.updatedAt) : new Date(),
+      } as APIKeysConfig;
+    } catch (error) {
+      console.error('Error fetching API keys from Firestore:', error);
       return null;
     }
   }

@@ -1,0 +1,77 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { processKnowledgeBase } from '@/lib/agent/knowledge-processor';
+import { indexKnowledgeBase } from '@/lib/agent/vector-search';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+
+export async function POST(request: NextRequest) {
+  try {
+    // Authentication
+    const authResult = await requireOrganization(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+    const { user } = authResult;
+
+    // Parse form data (multipart/form-data for file uploads)
+    const formData = await request.formData();
+    const organizationId = formData.get('organizationId') as string;
+    const files = formData.getAll('files') as File[];
+    const urls = formData.get('urls') ? JSON.parse(formData.get('urls') as string) : [];
+    const faqs = formData.get('faqs') as string;
+
+    // Verify user has access
+    if (user.organizationId !== organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    // Process knowledge base
+    const knowledgeBase = await processKnowledgeBase({
+      organizationId,
+      uploadedFiles: files,
+      urls,
+      faqs,
+    });
+
+    // Save to Firestore
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
+      'current',
+      {
+        ...knowledgeBase,
+        organizationId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      false
+    );
+
+    // Index knowledge base (generate embeddings)
+    try {
+      await indexKnowledgeBase(organizationId);
+    } catch (error) {
+      console.warn('Failed to index knowledge base (embeddings):', error);
+      // Continue even if indexing fails
+    }
+
+    return NextResponse.json({
+      success: true,
+      knowledgeBase: {
+        documents: knowledgeBase.documents.length,
+        urls: knowledgeBase.urls.length,
+        faqs: knowledgeBase.faqs.length,
+        products: knowledgeBase.productCatalog?.products.length || 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error uploading knowledge base:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to upload knowledge base' },
+      { status: 500 }
+    );
+  }
+}
+

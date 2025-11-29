@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AuthProvider } from '@/components/AuthProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'AI CRM Platform',
+  title: 'AI Sales Platform',
   description: 'Multi-tenant CRM with AI agents and e-commerce',
 };
 
@@ -14,12 +18,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
+      <body className={inter.className}>
+        <ErrorBoundary>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
 }
-

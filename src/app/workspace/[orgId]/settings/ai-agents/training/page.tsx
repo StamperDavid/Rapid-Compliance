@@ -17,6 +17,10 @@ export default function AgentTrainingPage() {
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [sessionTopic, setSessionTopic] = useState<string>('');
 
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState('');
+  const [knowledgeBaseReady, setKnowledgeBaseReady] = useState(false);
+
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme) {
@@ -26,7 +30,75 @@ export default function AgentTrainingPage() {
         console.error('Failed to load theme:', error);
       }
     }
-  }, []);
+
+    // Check if knowledge base has been built, if not, build it automatically
+    checkAndBuildKnowledgeBase();
+  }, [orgId]);
+
+  const checkAndBuildKnowledgeBase = async () => {
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { getActiveGoldenMaster } = await import('@/lib/agent/golden-master-builder');
+      const { getProcessingStatus } = await import('@/lib/agent/onboarding-processor');
+      
+      // Check if Golden Master already exists
+      const existingGM = await getActiveGoldenMaster(orgId);
+      if (existingGM) {
+        setKnowledgeBaseReady(true);
+        setGoldenMasterVersion(parseInt(existingGM.version.replace('v', '')) || 1);
+        return;
+      }
+      
+      // Check processing status
+      const status = await getProcessingStatus(orgId);
+      if (status.hasGoldenMaster) {
+        setKnowledgeBaseReady(true);
+        return;
+      }
+      
+      // Check if onboarding is complete
+      const onboardingData = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/onboarding`,
+        'current'
+      );
+      
+      if (!onboardingData || !onboardingData.completedAt) {
+        // Onboarding not complete yet
+        return;
+      }
+      
+      // Onboarding complete but Golden Master not created - process it now
+      setIsAnalyzing(true);
+      setAnalysisProgress('Processing onboarding data...');
+      
+      const { processOnboarding } = await import('@/lib/agent/onboarding-processor');
+      const userId = user?.uid || 'system';
+      
+      setAnalysisProgress('Building AI agent persona...');
+      const result = await processOnboarding({
+        onboardingData,
+        organizationId: orgId,
+        userId,
+      });
+      
+      if (result.success && result.goldenMaster) {
+        setAnalysisProgress('✅ Complete! Your AI agent is ready for training.');
+        setKnowledgeBaseReady(true);
+        setGoldenMasterVersion(parseInt(result.goldenMaster.version.replace('v', '')) || 1);
+        
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          alert(`✅ Your AI agent has been automatically configured!\n\n• Persona created: ${result.persona?.name || 'AI Assistant'}\n• Knowledge base processed: ${result.knowledgeBase?.documents.length || 0} documents, ${result.knowledgeBase?.urls.length || 0} URLs, ${result.knowledgeBase?.faqs.length || 0} FAQs\n• Golden Master v${result.goldenMaster?.version} created\n\nYour agent is ready for training!`);
+        }, 2000);
+      } else {
+        throw new Error(result.error || 'Failed to process onboarding');
+      }
+    } catch (error) {
+      console.error('Error checking/processing knowledge base:', error);
+      setIsAnalyzing(false);
+      // Continue anyway - they can still train
+    }
+  };
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
@@ -124,18 +196,99 @@ export default function AgentTrainingPage() {
   const [sessionFeedback, setSessionFeedback] = useState('');
   const [sessionScore, setSessionScore] = useState(0);
 
-  const handleSendMessage = () => {
-    if (!userInput.trim()) return;
-    setTrainingLog([...trainingLog, { role: 'user', message: userInput, timestamp: new Date().toLocaleTimeString() }]);
+  const handleSendMessage = async () => {
+    if (!userInput.trim() || !user?.organizationId) return;
+    
+    const userMessage = userInput.trim();
     setUserInput('');
-    // Simulate agent response
-    setTimeout(() => {
-      setTrainingLog((prev: any[]) => [...prev, { 
-        role: 'agent', 
-        message: 'This is a simulated response. Connect to Gemini API for real responses.', 
-        timestamp: new Date().toLocaleTimeString() 
-      }]);
-    }, 1000);
+    
+    // Add user message to log
+    const newUserMessage = { 
+      role: 'user', 
+      message: userMessage, 
+      timestamp: new Date().toLocaleTimeString() 
+    };
+    setTrainingLog([...trainingLog, newUserMessage]);
+    
+    // Show loading state
+    setIsAnalyzing(true);
+    
+    try {
+      // Get Golden Master for training
+      const { getActiveGoldenMaster } = await import('@/lib/agent/golden-master-builder');
+      const activeGoldenMaster = await getActiveGoldenMaster(user.organizationId);
+      
+      // Build system prompt from Golden Master
+      let systemPrompt = '';
+      if (activeGoldenMaster) {
+        // Use the pre-compiled system prompt from Golden Master
+        systemPrompt = activeGoldenMaster.systemPrompt;
+        
+        // Add training mode context
+        systemPrompt += `\n\n# TRAINING MODE
+You are being trained on: ${sessionTopic || 'General sales conversation'}
+Practice responding naturally and professionally. The trainer will provide feedback.
+`;
+      } else {
+        systemPrompt = `You are a sales and customer service agent in training mode. Practice responding naturally and professionally.`;
+      }
+      
+      // Build conversation history
+      const conversationHistory = trainingLog.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.message }]
+      }));
+      
+      // Add current user message
+      conversationHistory.push({
+        role: 'user',
+        parts: [{ text: userMessage }]
+      });
+      
+      // Call Gemini API
+      const { sendChatMessage } = await import('@/lib/ai/gemini-service');
+      const response = await sendChatMessage(conversationHistory, systemPrompt);
+      
+      // Add agent response to log
+      const newAgentMessage = {
+        role: 'agent',
+        message: response.text,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setTrainingLog(prev => [...prev, newAgentMessage]);
+      
+      // Save training conversation to Firestore
+      try {
+        const trainingData = {
+          organizationId: user.organizationId,
+          topic: sessionTopic || 'General',
+          messages: [...trainingLog, newUserMessage, newAgentMessage],
+          timestamp: new Date().toISOString(),
+          score: sessionScore || 0,
+          feedback: sessionFeedback || ''
+        };
+        
+        await FirestoreServiceTraining.set(
+          `${COLLECTIONSTraining.ORGANIZATIONS}/${user.organizationId}/trainingSessions`,
+          `session_${Date.now()}`,
+          trainingData,
+          false
+        );
+      } catch (error) {
+        console.error('Failed to save training session:', error);
+      }
+      
+    } catch (error: any) {
+      console.error('Error in training chat:', error);
+      const errorMessage = {
+        role: 'agent',
+        message: `Error: ${error.message || 'Failed to get response. Please check your Gemini API key configuration.'}`,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setTrainingLog(prev => [...prev, errorMessage]);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleEndSession = () => {
@@ -231,6 +384,66 @@ export default function AgentTrainingPage() {
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', marginTop: '1rem' }}>Training Center</h1>
               <p style={{ color: '#666', fontSize: '0.875rem' }}>Improve your agent with targeted training scenarios</p>
             </div>
+
+            {/* Knowledge Analysis Status */}
+            {isAnalyzing && (
+              <div style={{
+                marginBottom: '2rem',
+                padding: '1.5rem',
+                backgroundColor: '#1a1a1a',
+                border: `1px solid ${primaryColor}`,
+                borderRadius: '0.75rem',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+                <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                  Automatically Learning About Your Company...
+                </div>
+                <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
+                  {analysisProgress || 'Processing...'}
+                </div>
+                <div style={{
+                  width: '100%',
+                  height: '4px',
+                  backgroundColor: '#333',
+                  borderRadius: '2px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: primaryColor,
+                    animation: 'pulse 2s ease-in-out infinite'
+                  }} />
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '1rem' }}>
+                  Scanning CRM, analyzing website, extracting FAQs, and learning brand voice...
+                </div>
+              </div>
+            )}
+
+            {knowledgeBaseReady && !isAnalyzing && (
+              <div style={{
+                marginBottom: '2rem',
+                padding: '1rem 1.5rem',
+                backgroundColor: '#0f4c0f',
+                border: '1px solid #4ade80',
+                borderRadius: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem'
+              }}>
+                <div style={{ fontSize: '1.5rem' }}>✅</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: '#4ade80', fontWeight: '600', fontSize: '0.875rem' }}>
+                    Agent Knowledge Base Ready
+                  </div>
+                  <div style={{ color: '#4ade80', fontSize: '0.75rem', opacity: 0.8 }}>
+                    Your agent has automatically learned about your company, products, services, and brand voice
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Status Badge */}
             <div style={{ 

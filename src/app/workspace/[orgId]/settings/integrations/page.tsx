@@ -1,15 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import QuickBooksIntegration from '@/components/integrations/QuickBooksIntegration';
+import XeroIntegration from '@/components/integrations/XeroIntegration';
+import StripeIntegration from '@/components/integrations/StripeIntegration';
+import PayPalIntegration from '@/components/integrations/PayPalIntegration';
+import GmailIntegration from '@/components/integrations/GmailIntegration';
+import OutlookIntegration from '@/components/integrations/OutlookIntegration';
+import GoogleCalendarIntegration from '@/components/integrations/GoogleCalendarIntegration';
+import OutlookCalendarIntegration from '@/components/integrations/OutlookCalendarIntegration';
+import SlackIntegration from '@/components/integrations/SlackIntegration';
+import TeamsIntegration from '@/components/integrations/TeamsIntegration';
+import ZapierIntegration from '@/components/integrations/ZapierIntegration';
+import { Integration } from '@/types/integrations';
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [integrations, setIntegrations] = useState<Record<string, Integration | null>>({});
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -20,18 +34,163 @@ export default function IntegrationsPage() {
         console.error('Failed to load theme:', error);
       }
     }
-  }, []);
+
+    // Load saved integrations from Firestore
+    const loadIntegrations = async () => {
+      if (!user?.organizationId) return;
+      
+      try {
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const integrationsData = await FirestoreService.get(
+          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+          'all'
+        );
+        
+        if (integrationsData) {
+          setIntegrations(integrationsData as Record<string, Integration | null>);
+        }
+      } catch (error) {
+        console.error('Failed to load integrations:', error);
+      }
+    };
+    
+    loadIntegrations();
+  }, [user?.organizationId]);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const textColor = theme?.colors?.text?.primary || '#ffffff';
+  const bgPaper = theme?.colors?.background?.paper || '#1a1a1a';
+  const borderColor = theme?.colors?.border?.main || '#333333';
 
-  const integrations = [
-    { id: 'slack', name: 'Slack', description: 'Get notifications in Slack channels', icon: '💬', connected: true },
-    { id: 'zapier', name: 'Zapier', description: 'Connect 5,000+ apps via Zapier', icon: '⚡', connected: false },
-    { id: 'google-workspace', name: 'Google Workspace', description: 'Sync with Gmail, Calendar, Drive', icon: '📧', connected: true },
-    { id: 'microsoft-365', name: 'Microsoft 365', description: 'Integrate with Outlook, Teams, OneDrive', icon: '📨', connected: false },
-    { id: 'mailchimp', name: 'Mailchimp', description: 'Sync contacts and campaigns', icon: '📮', connected: false },
-    { id: 'hubspot', name: 'HubSpot', description: 'Two-way sync with HubSpot CRM', icon: '🔶', connected: false }
+  const handleConnect = async (integrationId: string, integration: Partial<Integration>) => {
+    if (!user?.organizationId) return;
+    
+    const updated = {
+      ...integrations,
+      [integrationId]: integration as Integration,
+    };
+    setIntegrations(updated);
+    
+    // Save to Firestore
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+        'all',
+        updated,
+        false
+      );
+    } catch (error) {
+      console.error('Failed to save integration:', error);
+    }
+  };
+
+  const handleDisconnect = async (integrationId: string) => {
+    if (!user?.organizationId) return;
+    
+    const updated = {
+      ...integrations,
+      [integrationId]: null,
+    };
+    setIntegrations(updated);
+    
+    // Save to Firestore
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+        'all',
+        updated,
+        false
+      );
+    } catch (error) {
+      console.error('Failed to disconnect integration:', error);
+    }
+  };
+
+  const handleUpdate = async (integrationId: string, updates: any) => {
+    if (!user?.organizationId) return;
+    
+    const current = integrations[integrationId];
+    if (current) {
+      const updated = {
+        ...integrations,
+        [integrationId]: { ...current, ...updates },
+      };
+      setIntegrations(updated);
+      
+      // Save to Firestore
+      try {
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        await FirestoreService.set(
+          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/${COLLECTIONS.INTEGRATIONS}`,
+          'all',
+          updated,
+          false
+        );
+      } catch (error) {
+        console.error('Failed to update integration:', error);
+      }
+    }
+  };
+
+  const integrationCategories = [
+    {
+      id: 'accounting',
+      name: 'Accounting',
+      icon: '📊',
+      integrations: [
+        { id: 'quickbooks', component: QuickBooksIntegration },
+        { id: 'xero', component: XeroIntegration },
+      ],
+    },
+    {
+      id: 'payment',
+      name: 'Payment Processing',
+      icon: '💳',
+      integrations: [
+        { id: 'stripe', component: StripeIntegration },
+        { id: 'paypal', component: PayPalIntegration },
+      ],
+    },
+    {
+      id: 'email',
+      name: 'Email',
+      icon: '📧',
+      integrations: [
+        { id: 'gmail', component: GmailIntegration },
+        { id: 'outlook', component: OutlookIntegration },
+      ],
+    },
+    {
+      id: 'calendar',
+      name: 'Calendar',
+      icon: '📅',
+      integrations: [
+        { id: 'google-calendar', component: GoogleCalendarIntegration },
+        { id: 'outlook-calendar', component: OutlookCalendarIntegration },
+      ],
+    },
+    {
+      id: 'communication',
+      name: 'Communication',
+      icon: '💬',
+      integrations: [
+        { id: 'slack', component: SlackIntegration },
+        { id: 'teams', component: TeamsIntegration },
+      ],
+    },
+    {
+      id: 'automation',
+      name: 'Automation',
+      icon: '⚡',
+      integrations: [
+        { id: 'zapier', component: ZapierIntegration },
+      ],
+    },
   ];
+
+  const connectedCount = Object.values(integrations).filter(i => i && i.status === 'connected').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
@@ -113,95 +272,122 @@ export default function IntegrationsPage() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
-              <Link href="/workspace/demo-org/settings" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+              <Link 
+                href="/workspace/demo-org/settings" 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  color: primaryColor, 
+                  fontSize: '0.875rem', 
+                  fontWeight: '500', 
+                  textDecoration: 'none', 
+                  marginBottom: '1.5rem' 
+                }}
+              >
                 ← Back to Settings
               </Link>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Business Apps</h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>
-                Connect Slack, Zapier, and other third-party applications
-              </p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: textColor, marginBottom: '0.5rem' }}>
+                    Integrations
+                  </h1>
+                  <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                    Connect your favorite apps and services
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Connected Apps Summary */}
+            {/* Summary Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Connected Apps</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: primaryColor }}>2</div>
+              <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
+                <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>Connected</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: primaryColor }}>{connectedCount}</div>
               </div>
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Available</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>{integrations.length}</div>
+              <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
+                <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '0.5rem' }}>Available</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: textColor }}>
+                  {integrationCategories.reduce((sum, cat) => sum + cat.integrations.length, 0)}
+                </div>
               </div>
             </div>
 
-            {/* Integrations Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-              {integrations.map(integration => (
-                <div
-                  key={integration.id}
+            {/* Category Filter */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setActiveCategory(null)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: activeCategory === null ? primaryColor : 'transparent',
+                  border: `1px solid ${activeCategory === null ? primaryColor : borderColor}`,
+                  borderRadius: '0.375rem',
+                  color: activeCategory === null ? '#fff' : textColor,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer'
+                }}
+              >
+                All
+              </button>
+              {integrationCategories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setActiveCategory(category.id)}
                   style={{
-                    backgroundColor: '#1a1a1a',
-                    border: integration.connected ? `1px solid ${primaryColor}` : '1px solid #333',
-                    borderRadius: '1rem',
-                    padding: '1.5rem'
+                    padding: '0.5rem 1rem',
+                    backgroundColor: activeCategory === category.id ? primaryColor : 'transparent',
+                    border: `1px solid ${activeCategory === category.id ? primaryColor : borderColor}`,
+                    borderRadius: '0.375rem',
+                    color: activeCategory === category.id ? '#fff' : textColor,
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'start', gap: '1rem', marginBottom: '1rem' }}>
-                    <div style={{ fontSize: '3rem' }}>{integration.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>{integration.name}</h3>
-                      <p style={{ fontSize: '0.875rem', color: '#999' }}>{integration.description}</p>
-                    </div>
+                  <span>{category.icon}</span>
+                  <span>{category.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Integrations by Category */}
+            {integrationCategories
+              .filter(cat => !activeCategory || cat.id === activeCategory)
+              .map((category) => (
+                <div key={category.id} style={{ marginBottom: '3rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>{category.icon}</span>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: textColor }}>
+                      {category.name}
+                    </h2>
                   </div>
-                  {integration.connected && (
-                    <div style={{ padding: '0.75rem', backgroundColor: '#0f4c0f', border: '1px solid #4ade80', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: '600' }}>✓ Connected</div>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: integration.connected ? '#222' : primaryColor,
-                        color: '#fff',
-                        border: integration.connected ? '1px solid #333' : 'none',
-                        borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
-                      }}
-                    >
-                      {integration.connected ? 'Configure' : 'Connect'}
-                    </button>
-                    {integration.connected && (
-                      <button
-                        style={{
-                          padding: '0.75rem 1rem',
-                          backgroundColor: '#4c0f0f',
-                          color: '#f87171',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600'
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
+                    {category.integrations.map(({ id, component: Component }) => (
+                      <Component
+                        key={id}
+                        integration={integrations[id] as any}
+                        onConnect={(integration) => handleConnect(id, integration)}
+                        onDisconnect={() => handleDisconnect(id)}
+                        onUpdate={(updates) => {
+                          if (id === 'quickbooks' || id === 'xero') {
+                            handleUpdate(id, { syncSettings: { ...(integrations[id] as any)?.syncSettings, ...updates } });
+                          } else {
+                            handleUpdate(id, { settings: { ...(integrations[id] as any)?.settings, ...updates } });
+                          }
                         }}
-                      >
-                        Disconnect
-                      </button>
-                    )}
+                      />
+                    ))}
                   </div>
                 </div>
               ))}
-            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-

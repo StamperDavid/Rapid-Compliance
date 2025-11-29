@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AdminBar from '@/components/AdminBar';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AccountingConfig {
   platform: 'quickbooks' | 'xero' | 'freshbooks' | 'wave' | 'sage' | 'none';
@@ -78,25 +79,53 @@ const PLATFORMS = [
 ];
 
 export default function AccountingPage() {
+  const { user } = useAuth();
   const [config, setConfig] = useState<AccountingConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('accountingConfig');
-    if (saved) {
+    if (!user?.organizationId) return;
+    
+    const loadConfig = async () => {
       try {
-        setConfig(JSON.parse(saved));
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const configData = await FirestoreService.get(
+          `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/accountingConfig`,
+          'default'
+        );
+        
+        if (configData) {
+          setConfig(configData as AccountingConfig);
+        }
       } catch (error) {
         console.error('Failed to load accounting config:', error);
       }
-    }
-  }, []);
+    };
+    
+    loadConfig();
+  }, [user?.organizationId]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!user?.organizationId) return;
+    
     setIsSaving(true);
-    localStorage.setItem('accountingConfig', JSON.stringify(config));
-    setTimeout(() => setIsSaving(false), 1000);
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${user.organizationId}/accountingConfig`,
+        'default',
+        {
+          ...config,
+          updatedAt: new Date().toISOString(),
+        },
+        false
+      );
+    } catch (error) {
+      console.error('Failed to save accounting config:', error);
+    } finally {
+      setTimeout(() => setIsSaving(false), 1000);
+    }
   };
 
   const updateConfig = (path: string[], value: any) => {

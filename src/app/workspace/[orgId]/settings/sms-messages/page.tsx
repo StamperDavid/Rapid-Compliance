@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
+import { sendSMS } from '@/lib/sms/sms-service';
 
 export default function SmsMessagesPage() {
   const { user } = useAuth();
@@ -13,6 +14,9 @@ export default function SmsMessagesPage() {
   const [selectedSmsTemplate, setSelectedSmsTemplate] = useState<string | null>(null);
   const [showCustomTrigger, setShowCustomTrigger] = useState(false);
   const [smsContent, setSmsContent] = useState('');
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
+  const [testSMSResult, setTestSMSResult] = useState<{ success: boolean; message?: string } | null>(null);
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -269,13 +273,78 @@ export default function SmsMessagesPage() {
                       </div>
                     </div>
 
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>
+                        Test Phone Number
+                      </label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                          type="tel"
+                          value={testPhoneNumber}
+                          onChange={(e) => setTestPhoneNumber(e.target.value)}
+                          placeholder="+1234567890"
+                          style={{ flex: 1, padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
+                        />
+                        <button
+                          onClick={async () => {
+                            if (!testPhoneNumber) {
+                              alert('Please enter a test phone number');
+                              return;
+                            }
+                            setIsSendingTest(true);
+                            setTestSMSResult(null);
+                            try {
+                              const result = await sendSMS({
+                                to: testPhoneNumber,
+                                message: smsContent || 'Test SMS message',
+                                organizationId: 'demo-org',
+                              });
+
+                              if (result.success) {
+                                setTestSMSResult({ success: true, message: `Test SMS sent! Message ID: ${result.messageId}` });
+                                setTestPhoneNumber('');
+                              } else {
+                                setTestSMSResult({ success: false, message: result.error || 'Failed to send SMS' });
+                              }
+                            } catch (error: any) {
+                              setTestSMSResult({ success: false, message: error.message || 'Failed to send SMS' });
+                            } finally {
+                              setIsSendingTest(false);
+                            }
+                          }}
+                          disabled={isSendingTest || !testPhoneNumber || !smsContent}
+                          style={{
+                            padding: '0.75rem 1.5rem',
+                            backgroundColor: isSendingTest || !testPhoneNumber || !smsContent ? '#444' : '#222',
+                            color: '#fff',
+                            border: '1px solid #333',
+                            borderRadius: '0.5rem',
+                            cursor: isSendingTest || !testPhoneNumber || !smsContent ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {isSendingTest ? 'Sending...' : '📤 Send Test SMS'}
+                        </button>
+                      </div>
+                      {testSMSResult && (
+                        <div style={{
+                          marginTop: '0.75rem',
+                          padding: '0.75rem',
+                          backgroundColor: testSMSResult.success ? '#0f4c0f' : '#4c0f0f',
+                          border: `1px solid ${testSMSResult.success ? '#4ade80' : '#f87171'}`,
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          color: testSMSResult.success ? '#4ade80' : '#f87171'
+                        }}>
+                          {testSMSResult.success ? '✓ ' : '✗ '}
+                          {testSMSResult.message}
+                        </div>
+                      )}
+                    </div>
+
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                      <button 
-                        onClick={() => alert('Test SMS would be sent to your phone number')}
-                        style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
-                      >
-                        📤 Send Test SMS
-                      </button>
                       <button 
                         onClick={() => {
                           const updated = smsTemplates.map(t => 
