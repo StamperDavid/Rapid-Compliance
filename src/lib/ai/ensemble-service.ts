@@ -6,6 +6,7 @@
  */
 
 import { sendUnifiedChatMessage, UnifiedChatMessage, UnifiedChatResponse } from './unified-ai-service';
+import { sendWithFallback, circuitBreaker } from './model-fallback-service';
 
 export interface EnsembleRequest {
   messages: UnifiedChatMessage[];
@@ -68,7 +69,8 @@ export async function sendEnsembleRequest(
       const modelStartTime = Date.now();
       
       try {
-        const response = await sendUnifiedChatMessage({
+        // Use fallback service for automatic retries
+        const response = await sendWithFallback({
           model,
           messages: request.messages,
           systemInstruction: request.systemInstruction,
@@ -78,6 +80,11 @@ export async function sendEnsembleRequest(
         }, organizationId);
         
         const responseTime = Date.now() - modelStartTime;
+        
+        // Record if fallback was used
+        if (response.fallbackOccurred) {
+          console.log(`[Ensemble] Model ${model} used fallback: ${response.model}`);
+        }
         
         // Score the response
         const metrics = analyzeResponse(response.text, request.messages);

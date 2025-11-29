@@ -1,0 +1,309 @@
+/**
+ * Model Fallback Service
+ * Handles graceful degradation when AI models fail
+ * 
+ * Fallback Chain:
+ * 1. Try primary model
+ * 2. If fail: Try provider fallback (e.g., GPT-4 → GPT-3.5-turbo)
+ * 3. If fail: Try different provider (e.g., OpenAI → Anthropic)
+ * 4. If all fail: Use Gemini as last resort (always available, no API key needed in dev)
+ */
+
+import { sendUnifiedChatMessage, UnifiedChatMessage, UnifiedChatResponse } from './unified-ai-service';
+
+export interface FallbackRequest {
+  model: string;
+  messages: UnifiedChatMessage[];
+  systemInstruction?: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+}
+
+export interface FallbackResponse extends UnifiedChatResponse {
+  fallbackOccurred: boolean;
+  attemptedModels: string[];
+  failureReasons: string[];
+}
+
+/**
+ * Model fallback chains
+ */
+const FALLBACK_CHAINS: Record<string, string[]> = {
+  // OpenAI fallbacks
+  'gpt-4': ['gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
+  'gpt-4-turbo': ['gpt-3.5-turbo', 'claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
+  'gpt-3.5-turbo': ['gemini-2.0-flash-exp', 'claude-3.5-sonnet'],
+  
+  // Anthropic fallbacks
+  'claude-3.5-sonnet': ['claude-3-sonnet', 'gpt-4-turbo', 'gemini-2.0-flash-exp'],
+  'claude-3-opus': ['claude-3.5-sonnet', 'gpt-4', 'gemini-2.0-flash-exp'],
+  'claude-3-sonnet': ['claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
+  'claude-3-haiku': ['gemini-2.0-flash-exp', 'gpt-3.5-turbo'],
+  
+  // Gemini fallbacks (shouldn't need these, but just in case)
+  'gemini-2.0-flash-exp': ['gemini-pro', 'gpt-3.5-turbo'],
+  'gemini-pro': ['gemini-2.0-flash-exp', 'gpt-3.5-turbo'],
+};
+
+/**
+ * Send request with automatic fallback on failure
+ */
+export async function sendWithFallback(
+  request: FallbackRequest,
+  organizationId?: string
+): Promise<FallbackResponse> {
+  const { model, messages, systemInstruction, temperature, maxTokens, topP } = request;
+  
+  // Build fallback chain
+  const fallbackChain = [model, ...(FALLBACK_CHAINS[model] || ['gemini-2.0-flash-exp'])];
+  const attemptedModels: string[] = [];
+  const failureReasons: string[] = [];
+  
+  // Try each model in the chain
+  for (const currentModel of fallbackChain) {
+    attemptedModels.push(currentModel);
+    
+    try {
+      console.log(`[Fallback] Attempting model: ${currentModel}`);
+      
+      const response = await sendUnifiedChatMessage({
+        model: currentModel,
+        messages,
+        systemInstruction,
+        temperature,
+        maxTokens,
+        topP,
+      }, organizationId);
+      
+      // Success!
+      const fallbackOccurred = currentModel !== model;
+      
+      if (fallbackOccurred) {
+        console.log(`[Fallback] Success with fallback model ${currentModel} (primary was ${model})`);
+      }
+      
+      return {
+        ...response,
+        fallbackOccurred,
+        attemptedModels,
+        failureReasons,
+      };
+      
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error';
+      failureReasons.push(`${currentModel}: ${errorMessage}`);
+      
+      console.warn(`[Fallback] Model ${currentModel} failed: ${errorMessage}`);
+      
+      // Continue to next model in chain
+      continue;
+    }
+  }
+  
+  // All models failed
+  const errorSummary = `All models failed. Attempted: ${attemptedModels.join(', ')}. Errors: ${failureReasons.join('; ')}`;
+  console.error(`[Fallback] ${errorSummary}`);
+  
+  throw new Error(errorSummary);
+}
+
+/**
+ * Get recommended fallback model for a given model
+ */
+export function getRecommendedFallback(model: string): string {
+  const chain = FALLBACK_CHAINS[model];
+  return chain?.[0] || 'gemini-2.0-flash-exp';
+}
+
+/**
+ * Check if a model is available (has API key configured)
+ */
+export async function isModelAvailable(
+  model: string,
+  organizationId: string = 'demo'
+): Promise<boolean> {
+  try {
+    // Try to send a minimal test request
+    await sendUnifiedChatMessage({
+      model,
+      messages: [{ role: 'user', content: 'test' }],
+      maxTokens: 1,
+    }, organizationId);
+    
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Get all available models for an organization
+ */
+export async function getAvailableModels(
+  organizationId: string = 'demo'
+): Promise<string[]> {
+  const allModels = [
+    'gpt-4',
+    'gpt-4-turbo',
+    'gpt-3.5-turbo',
+    'claude-3.5-sonnet',
+    'claude-3-opus',
+    'claude-3-sonnet',
+    'claude-3-haiku',
+    'gemini-2.0-flash-exp',
+    'gemini-pro',
+  ];
+  
+  const availabilityChecks = await Promise.all(
+    allModels.map(async (model) => ({
+      model,
+      available: await isModelAvailable(model, organizationId),
+    }))
+  );
+  
+  return availabilityChecks
+    .filter(check => check.available)
+    .map(check => check.model);
+}
+
+/**
+ * Smart model selection based on availability
+ * Returns best available model for the use case
+ */
+export async function selectBestAvailableModel(
+  preferredModel: string,
+  organizationId: string = 'demo'
+): Promise<string> {
+  // Check if preferred model is available
+  if (await isModelAvailable(preferredModel, organizationId)) {
+    return preferredModel;
+  }
+  
+  // Try fallback chain
+  const fallbackChain = FALLBACK_CHAINS[preferredModel] || [];
+  
+  for (const fallbackModel of fallbackChain) {
+    if (await isModelAvailable(fallbackModel, organizationId)) {
+      console.log(`[Fallback] Using ${fallbackModel} instead of ${preferredModel}`);
+      return fallbackModel;
+    }
+  }
+  
+  // Default to Gemini (no API key required in dev)
+  return 'gemini-2.0-flash-exp';
+}
+
+/**
+ * Retry with exponential backoff
+ */
+export async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Don't retry on auth errors
+      if (error.message?.includes('API key') || error.message?.includes('401')) {
+        throw error;
+      }
+      
+      // Calculate delay with exponential backoff
+      const delay = baseDelay * Math.pow(2, attempt);
+      
+      console.warn(`[Retry] Attempt ${attempt + 1}/${maxRetries} failed: ${error.message}. Retrying in ${delay}ms...`);
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError!;
+}
+
+/**
+ * Circuit breaker pattern for model calls
+ */
+class CircuitBreaker {
+  private failures: Map<string, number> = new Map();
+  private lastFailTime: Map<string, number> = new Map();
+  private readonly failureThreshold = 5;
+  private readonly resetTimeout = 60000; // 1 minute
+  
+  /**
+   * Check if circuit is open (too many failures)
+   */
+  isOpen(model: string): boolean {
+    const failures = this.failures.get(model) || 0;
+    const lastFail = this.lastFailTime.get(model) || 0;
+    const timeSinceLastFail = Date.now() - lastFail;
+    
+    // Reset if timeout passed
+    if (timeSinceLastFail > this.resetTimeout) {
+      this.failures.set(model, 0);
+      return false;
+    }
+    
+    return failures >= this.failureThreshold;
+  }
+  
+  /**
+   * Record a failure
+   */
+  recordFailure(model: string): void {
+    const failures = (this.failures.get(model) || 0) + 1;
+    this.failures.set(model, failures);
+    this.lastFailTime.set(model, Date.now());
+    
+    if (failures >= this.failureThreshold) {
+      console.warn(`[CircuitBreaker] Circuit opened for ${model} (${failures} failures)`);
+    }
+  }
+  
+  /**
+   * Record a success
+   */
+  recordSuccess(model: string): void {
+    this.failures.set(model, 0);
+  }
+}
+
+export const circuitBreaker = new CircuitBreaker();
+
+/**
+ * Send with circuit breaker protection
+ */
+export async function sendWithCircuitBreaker(
+  request: FallbackRequest,
+  organizationId?: string
+): Promise<FallbackResponse> {
+  const { model } = request;
+  
+  // Check circuit breaker
+  if (circuitBreaker.isOpen(model)) {
+    console.warn(`[CircuitBreaker] Circuit is open for ${model}, using fallback`);
+    
+    // Use fallback directly
+    const fallbackModel = getRecommendedFallback(model);
+    return sendWithFallback({
+      ...request,
+      model: fallbackModel,
+    }, organizationId);
+  }
+  
+  try {
+    const response = await sendWithFallback(request, organizationId);
+    circuitBreaker.recordSuccess(model);
+    return response;
+  } catch (error) {
+    circuitBreaker.recordFailure(model);
+    throw error;
+  }
+}
+
