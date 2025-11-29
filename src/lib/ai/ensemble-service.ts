@@ -148,12 +148,12 @@ export async function sendEnsembleRequest(
   switch (request.mode || 'best') {
     case 'consensus':
       ({ response: bestResponse, model: selectedModel, reasoning, confidence: confidenceScore } = 
-        findConsensus(successfulResponses));
+        await findConsensus(successfulResponses, request.messages, organizationId));
       break;
     
     case 'synthesize':
       ({ response: bestResponse, reasoning, confidence: confidenceScore } = 
-        synthesizeResponses(successfulResponses));
+        await synthesizeResponses(successfulResponses, request.messages, organizationId));
       selectedModel = 'synthesized';
       break;
     
@@ -416,40 +416,181 @@ function selectBestResponse(responses: EnsembleModelResponse[]): {
 
 /**
  * Find consensus among responses
+ * Cross-checks facts and identifies agreements/disagreements
  */
-function findConsensus(responses: EnsembleModelResponse[]): {
+async function findConsensus(
+  responses: EnsembleModelResponse[],
+  originalMessages: UnifiedChatMessage[],
+  organizationId?: string
+): Promise<{
   response: string;
   model: string;
   reasoning: string;
   confidence: number;
-} {
-  // For now, use best response
-  // TODO: Implement actual consensus algorithm (check for common themes, facts)
-  const best = selectBestResponse(responses);
+}> {
+  // Sort by score
+  const sorted = [...responses].sort((a, b) => b.score - a.score);
   
-  return {
-    ...best,
-    reasoning: `Consensus reached (${responses.length} models queried). ${best.reasoning}`,
-  };
+  // If only one response, no consensus needed
+  if (sorted.length === 1) {
+    return {
+      response: sorted[0].response,
+      model: sorted[0].model,
+      reasoning: `Single model response from ${sorted[0].model}`,
+      confidence: sorted[0].score,
+    };
+  }
+  
+  // Build consensus analysis prompt
+  const consensusPrompt = `You are a fact-checking expert. You will analyze ${sorted.length} different AI responses to find CONSENSUS and identify any CONTRADICTIONS.
+
+ORIGINAL QUESTION:
+${originalMessages[originalMessages.length - 1]?.content || ''}
+
+RESPONSES TO ANALYZE:
+${sorted.map((r, i) => `
+Response ${i + 1} from ${r.model}:
+${r.response}
+`).join('\n')}
+
+ANALYSIS INSTRUCTIONS:
+1. Identify facts that ALL models agree on
+2. Identify contradictions or disagreements
+3. Determine which facts are most reliable (based on agreement)
+4. Flag any potentially incorrect information
+5. Create a consensus answer that includes only verified information
+
+Provide:
+- CONSENSUS FACTS: (what all/most models agree on)
+- CONTRADICTIONS: (what models disagree on, if any)
+- FINAL CONSENSUS ANSWER: (answer based on agreed facts)
+
+RESPONSE:`;
+
+  try {
+    // Use GPT-4 for consensus analysis
+    const { sendUnifiedChatMessage } = await import('./unified-ai-service');
+    
+    const consensusResponse = await sendUnifiedChatMessage({
+      model: 'gpt-4-turbo',
+      messages: [
+        { role: 'user', content: consensusPrompt }
+      ],
+      temperature: 0.2, // Very low temperature for factual analysis
+      maxTokens: 2048,
+    }, organizationId);
+    
+    // Calculate confidence based on agreement
+    // Higher confidence if responses are similar
+    const avgScore = sorted.reduce((sum, r) => sum + r.score, 0) / sorted.length;
+    const scoreVariance = sorted.reduce((sum, r) => sum + Math.pow(r.score - avgScore, 2), 0) / sorted.length;
+    const agreementBonus = Math.max(0, 10 - scoreVariance / 10); // Lower variance = higher agreement
+    
+    return {
+      response: consensusResponse.text,
+      model: 'consensus',
+      reasoning: `Consensus analysis from ${sorted.length} models. Agreement bonus: +${agreementBonus.toFixed(1)} confidence.`,
+      confidence: Math.min(100, avgScore + agreementBonus),
+    };
+  } catch (error: any) {
+    console.error('[Consensus] Failed to analyze:', error.message);
+    
+    // Fallback to best response
+    const best = sorted[0];
+    return {
+      response: best.response,
+      model: best.model,
+      reasoning: `Consensus analysis failed, using best single response from ${best.model}.`,
+      confidence: best.score,
+    };
+  }
 }
 
 /**
  * Synthesize best answer from multiple responses
+ * Uses GPT-4 as synthesis orchestrator to combine best parts
  */
-function synthesizeResponses(responses: EnsembleModelResponse[]): {
+async function synthesizeResponses(
+  responses: EnsembleModelResponse[],
+  originalMessages: UnifiedChatMessage[],
+  organizationId?: string
+): Promise<{
   response: string;
   reasoning: string;
   confidence: number;
-} {
-  // For now, use best response
-  // TODO: Implement actual synthesis (combine best parts of multiple answers)
-  const best = selectBestResponse(responses);
+}> {
+  // Sort by score
+  const sorted = [...responses].sort((a, b) => b.score - a.score);
   
-  return {
-    response: best.response,
-    reasoning: `Synthesized from ${responses.length} models. Best elements from ${best.model}.`,
-    confidence: best.confidence,
-  };
+  // If only one response, no need to synthesize
+  if (sorted.length === 1) {
+    return {
+      response: sorted[0].response,
+      reasoning: `Single model response from ${sorted[0].model}`,
+      confidence: sorted[0].score,
+    };
+  }
+  
+  // Build synthesis prompt
+  const synthesisPrompt = `You are a synthesis expert. You will receive ${sorted.length} different AI responses to the same question. Your job is to create a SUPERIOR answer by combining the best elements from each response.
+
+ORIGINAL QUESTION:
+${originalMessages[originalMessages.length - 1]?.content || ''}
+
+RESPONSES TO SYNTHESIZE:
+${sorted.map((r, i) => `
+Response ${i + 1} from ${r.model} (Score: ${r.score.toFixed(1)}/100):
+${r.response}
+`).join('\n')}
+
+SYNTHESIS INSTRUCTIONS:
+1. Identify the best parts of each response (facts, explanations, examples)
+2. Remove redundant information
+3. Combine unique insights and strengths from each
+4. Ensure the final answer is coherent and well-structured
+5. Make it better than any single response
+
+Create a synthesized answer that is:
+- More comprehensive than any single response
+- More accurate (cross-checked facts)
+- Better structured
+- More helpful
+
+SYNTHESIZED ANSWER:`;
+
+  try {
+    // Use sendUnifiedChatMessage to synthesize
+    const { sendUnifiedChatMessage } = await import('./unified-ai-service');
+    
+    const synthesisResponse = await sendUnifiedChatMessage({
+      model: 'gpt-4-turbo', // Use GPT-4 for synthesis
+      messages: [
+        { role: 'user', content: synthesisPrompt }
+      ],
+      temperature: 0.3, // Lower temperature for more focused synthesis
+      maxTokens: 2048,
+    }, organizationId);
+    
+    // Calculate confidence (average of top responses)
+    const topResponses = sorted.slice(0, 3);
+    const avgConfidence = topResponses.reduce((sum, r) => sum + r.score, 0) / topResponses.length;
+    
+    return {
+      response: synthesisResponse.text,
+      reasoning: `Synthesized from ${sorted.length} models using GPT-4. Combined best elements from ${sorted.slice(0, 3).map(r => r.model).join(', ')}.`,
+      confidence: Math.min(95, avgConfidence + 5), // Boost confidence slightly for synthesis
+    };
+  } catch (error: any) {
+    console.error('[Synthesis] Failed to synthesize:', error.message);
+    
+    // Fallback to best response
+    const best = sorted[0];
+    return {
+      response: best.response,
+      reasoning: `Synthesis failed, using best single response from ${best.model}.`,
+      confidence: best.score,
+    };
+  }
 }
 
 /**
