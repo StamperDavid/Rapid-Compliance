@@ -52,7 +52,8 @@ export interface EnsembleModelResponse {
  * Send request to multiple models and return best answer
  */
 export async function sendEnsembleRequest(
-  request: EnsembleRequest
+  request: EnsembleRequest,
+  organizationId?: string
 ): Promise<EnsembleResponse> {
   const startTime = Date.now();
   
@@ -74,7 +75,7 @@ export async function sendEnsembleRequest(
           temperature: request.temperature,
           maxTokens: request.maxTokens,
           topP: request.topP,
-        });
+        }, organizationId);
         
         const responseTime = Date.now() - modelStartTime;
         
@@ -448,7 +449,8 @@ function synthesizeResponses(responses: EnsembleModelResponse[]): {
  * Stream ensemble responses (returns best as it comes in, then upgrades)
  */
 export async function* streamEnsembleRequest(
-  request: EnsembleRequest
+  request: EnsembleRequest,
+  organizationId?: string
 ): AsyncGenerator<{ chunk: string; model?: string; isFinal?: boolean }, void, unknown> {
   // For streaming, we'll use the fastest model first, then upgrade to best
   const modelsToQuery = request.models || selectSmartModels(request.messages);
@@ -469,7 +471,7 @@ export async function* streamEnsembleRequest(
     temperature: request.temperature,
     maxTokens: request.maxTokens,
     topP: request.topP,
-  })) {
+  }, organizationId)) {
     yield { chunk };
   }
   

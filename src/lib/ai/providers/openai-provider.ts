@@ -12,16 +12,40 @@ import type {
   AIFunction,
 } from '@/types/ai-models';
 import { MODEL_CAPABILITIES } from '@/types/ai-models';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
 
 export class OpenAIProvider implements ModelProvider {
   provider = 'openai' as const;
   private apiKey: string;
   private baseURL = 'https://api.openai.com/v1';
+  private organizationId: string;
   
-  constructor() {
-    this.apiKey = process.env.OPENAI_API_KEY || '';
+  constructor(organizationId: string = 'demo') {
+    this.organizationId = organizationId;
+    this.apiKey = process.env.OPENAI_API_KEY || ''; // Fallback to env
     if (!this.apiKey) {
-      console.warn('[OpenAI] API key not configured');
+      console.warn('[OpenAI] API key not configured in env, will attempt to load from database');
+    }
+  }
+  
+  /**
+   * Load API key from database or use cached value
+   */
+  private async getApiKey(): Promise<string> {
+    if (this.apiKey) return this.apiKey;
+    
+    try {
+      const keys = await apiKeyService.getKeys(this.organizationId);
+      this.apiKey = keys?.ai?.openaiApiKey || '';
+      
+      if (!this.apiKey) {
+        throw new Error('OpenAI API key not configured');
+      }
+      
+      return this.apiKey;
+    } catch (error) {
+      console.error('[OpenAI] Failed to load API key:', error);
+      throw new Error('OpenAI API key not configured');
     }
   }
   
@@ -31,15 +55,13 @@ export class OpenAIProvider implements ModelProvider {
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const startTime = Date.now();
     
-    if (!this.apiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
+    const apiKey = await this.getApiKey();
     
     try {
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -100,15 +122,13 @@ export class OpenAIProvider implements ModelProvider {
    * Send chat request with streaming
    */
   async* chatStream(request: ChatRequest): AsyncGenerator<string, void, unknown> {
-    if (!this.apiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
+    const apiKey = await this.getApiKey();
     
     try {
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -168,12 +188,11 @@ export class OpenAIProvider implements ModelProvider {
    * Check if model is available
    */
   async isAvailable(model: ModelName): Promise<boolean> {
-    if (!this.apiKey) return false;
-    
     try {
+      const apiKey = await this.getApiKey();
       const response = await fetch(`${this.baseURL}/models/${model}`, {
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
         },
       });
       

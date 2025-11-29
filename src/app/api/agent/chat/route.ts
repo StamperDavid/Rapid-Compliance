@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEnsembleRequest, streamEnsembleRequest } from '@/lib/ai/ensemble-service';
+import { sendEnsembleRequest, streamEnsembleRequest, EnsembleRequest } from '@/lib/ai/ensemble-service';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
               maxTokens: modelConfig.maxTokens,
               topP: modelConfig.topP,
               mode: ensembleMode,
-            })) {
+            }, orgId)) {
               controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
             }
             controller.close();
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         maxTokens: modelConfig.maxTokens,
         topP: modelConfig.topP,
         mode: ensembleMode,
-      });
+      }, orgId);
 
       // Save conversation to customer memory
       await instanceManager.addMessageToMemory(

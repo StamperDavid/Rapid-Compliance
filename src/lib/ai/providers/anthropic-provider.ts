@@ -11,17 +11,41 @@ import type {
   ModelName,
 } from '@/types/ai-models';
 import { MODEL_CAPABILITIES } from '@/types/ai-models';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
 
 export class AnthropicProvider implements ModelProvider {
   provider = 'anthropic' as const;
   private apiKey: string;
   private baseURL = 'https://api.anthropic.com/v1';
   private apiVersion = '2023-06-01';
+  private organizationId: string;
   
-  constructor() {
-    this.apiKey = process.env.ANTHROPIC_API_KEY || '';
+  constructor(organizationId: string = 'demo') {
+    this.organizationId = organizationId;
+    this.apiKey = process.env.ANTHROPIC_API_KEY || ''; // Fallback to env
     if (!this.apiKey) {
-      console.warn('[Anthropic] API key not configured');
+      console.warn('[Anthropic] API key not configured in env, will attempt to load from database');
+    }
+  }
+  
+  /**
+   * Load API key from database or use cached value
+   */
+  private async getApiKey(): Promise<string> {
+    if (this.apiKey) return this.apiKey;
+    
+    try {
+      const keys = await apiKeyService.getKeys(this.organizationId);
+      this.apiKey = keys?.ai?.anthropicApiKey || '';
+      
+      if (!this.apiKey) {
+        throw new Error('Anthropic API key not configured');
+      }
+      
+      return this.apiKey;
+    } catch (error) {
+      console.error('[Anthropic] Failed to load API key:', error);
+      throw new Error('Anthropic API key not configured');
     }
   }
   
@@ -30,10 +54,7 @@ export class AnthropicProvider implements ModelProvider {
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const startTime = Date.now();
-    
-    if (!this.apiKey) {
-      throw new Error('Anthropic API key not configured');
-    }
+    const apiKey = await this.getApiKey();
     
     try {
       // Extract system message
@@ -43,7 +64,7 @@ export class AnthropicProvider implements ModelProvider {
       const response = await fetch(`${this.baseURL}/messages`, {
         method: 'POST',
         headers: {
-          'x-api-key': this.apiKey,
+          'x-api-key': apiKey,
           'anthropic-version': this.apiVersion,
           'Content-Type': 'application/json',
         },
@@ -114,9 +135,7 @@ export class AnthropicProvider implements ModelProvider {
    * Send chat request with streaming
    */
   async* chatStream(request: ChatRequest): AsyncGenerator<string, void, unknown> {
-    if (!this.apiKey) {
-      throw new Error('Anthropic API key not configured');
-    }
+    const apiKey = await this.getApiKey();
     
     try {
       const systemMessage = request.messages.find(m => m.role === 'system');
@@ -125,7 +144,7 @@ export class AnthropicProvider implements ModelProvider {
       const response = await fetch(`${this.baseURL}/messages`, {
         method: 'POST',
         headers: {
-          'x-api-key': this.apiKey,
+          'x-api-key': apiKey,
           'anthropic-version': this.apiVersion,
           'Content-Type': 'application/json',
         },

@@ -37,15 +37,16 @@ export interface UnifiedChatRequest {
  * Send chat message using the appropriate provider
  */
 export async function sendUnifiedChatMessage(
-  request: UnifiedChatRequest
+  request: UnifiedChatRequest,
+  organizationId?: string
 ): Promise<UnifiedChatResponse> {
   const { model, messages, systemInstruction, temperature, maxTokens, topP } = request;
   
   // Determine provider from model name
   if (model.startsWith('gpt-')) {
-    return await sendOpenAIMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
+    return await sendOpenAIMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
   } else if (model.startsWith('claude-')) {
-    return await sendAnthropicMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
+    return await sendAnthropicMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
   } else {
     // Default to Gemini
     return await sendGeminiMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
@@ -56,12 +57,13 @@ export async function sendUnifiedChatMessage(
  * Stream chat message using the appropriate provider
  */
 export async function* streamUnifiedChatMessage(
-  request: UnifiedChatRequest
+  request: UnifiedChatRequest,
+  organizationId?: string
 ): AsyncGenerator<string, void, unknown> {
   const { model, messages, systemInstruction, temperature, maxTokens, topP } = request;
   
   if (model.startsWith('gpt-')) {
-    const provider = new OpenAIProvider();
+    const provider = new OpenAIProvider(organizationId);
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
     
     yield* provider.chatStream({
@@ -72,7 +74,7 @@ export async function* streamUnifiedChatMessage(
       topP,
     });
   } else if (model.startsWith('claude-')) {
-    const provider = new AnthropicProvider();
+    const provider = new AnthropicProvider(organizationId);
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
     
     yield* provider.chatStream({
@@ -96,9 +98,10 @@ async function sendOpenAIMessage(
   model: string,
   messages: UnifiedChatMessage[],
   systemInstruction?: string,
-  config?: { temperature?: number; maxTokens?: number; topP?: number }
+  config?: { temperature?: number; maxTokens?: number; topP?: number },
+  organizationId?: string
 ): Promise<UnifiedChatResponse> {
-  const provider = new OpenAIProvider();
+  const provider = new OpenAIProvider(organizationId);
   
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
   
@@ -125,9 +128,10 @@ async function sendAnthropicMessage(
   model: string,
   messages: UnifiedChatMessage[],
   systemInstruction?: string,
-  config?: { temperature?: number; maxTokens?: number; topP?: number }
+  config?: { temperature?: number; maxTokens?: number; topP?: number },
+  organizationId?: string
 ): Promise<UnifiedChatResponse> {
-  const provider = new AnthropicProvider();
+  const provider = new AnthropicProvider(organizationId);
   
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
   
