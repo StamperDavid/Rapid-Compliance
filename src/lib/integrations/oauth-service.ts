@@ -283,12 +283,44 @@ async function getOAuthConfig(
       };
     
     case 'quickbooks':
-      // TODO: Implement QuickBooks OAuth
-      throw new Error('QuickBooks OAuth not yet implemented');
+      const quickbooks = (apiKeys as any).integrations?.quickbooks;
+      if (!quickbooks?.clientId || !quickbooks?.clientSecret) {
+        throw new Error('QuickBooks OAuth credentials not configured');
+      }
+      return {
+        provider: 'quickbooks',
+        clientId: quickbooks.clientId,
+        clientSecret: quickbooks.clientSecret,
+        redirectUri: `${baseUrl}/api/integrations/oauth/callback/quickbooks`,
+        scopes: [
+          'com.intuit.quickbooks.accounting',
+          'com.intuit.quickbooks.payment',
+        ],
+        authorizationUrl: quickbooks.environment === 'production'
+          ? 'https://appcenter.intuit.com/connect/oauth2'
+          : 'https://appcenter.intuit.com/connect/oauth2', // Same for both
+        tokenUrl: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
+      };
     
     case 'xero':
-      // TODO: Implement Xero OAuth
-      throw new Error('Xero OAuth not yet implemented');
+      const xero = (apiKeys as any).integrations?.xero;
+      if (!xero?.clientId || !xero?.clientSecret) {
+        throw new Error('Xero OAuth credentials not configured');
+      }
+      return {
+        provider: 'xero',
+        clientId: xero.clientId,
+        clientSecret: xero.clientSecret,
+        redirectUri: `${baseUrl}/api/integrations/oauth/callback/xero`,
+        scopes: [
+          'offline_access',
+          'accounting.transactions',
+          'accounting.contacts',
+          'accounting.settings',
+        ],
+        authorizationUrl: 'https://login.xero.com/identity/connect/authorize',
+        tokenUrl: 'https://identity.xero.com/connect/token',
+      };
     
     default:
       throw new Error(`Unsupported provider: ${provider}`);
