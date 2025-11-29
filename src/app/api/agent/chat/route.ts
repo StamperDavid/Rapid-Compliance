@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendChatMessage, streamChatMessage } from '@/lib/ai/gemini-service';
+import { sendEnsembleRequest, streamEnsembleRequest } from '@/lib/ai/ensemble-service';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
-import type { ChatMessage } from '@/lib/ai/gemini-service';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,15 +53,29 @@ export async function POST(request: NextRequest) {
     const instanceManager = new AgentInstanceManager();
     const instance = await instanceManager.spawnInstance(customerId, orgId);
 
+    // Get agent configuration
+    const agentConfig = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+      'default'
+    );
+    
+    const useEnsemble = (agentConfig as any)?.useEnsemble !== false; // Default to true
+    const ensembleMode = (agentConfig as any)?.ensembleMode || 'best';
+    const modelConfig = (agentConfig as any)?.modelConfig || {
+      temperature: 0.7,
+      maxTokens: 2048,
+      topP: 0.9,
+    };
+
     // Build conversation history
-    const messages: ChatMessage[] = [
+    const messages = [
       ...instance.customerMemory.conversationHistory.map((msg: any) => ({
-        role: msg.role as 'user' | 'model',
-        parts: [{ text: msg.content || msg.text }],
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content || msg.text,
       })),
       {
-        role: 'user',
-        parts: [{ text: message }],
+        role: 'user' as const,
+        content: message,
       },
     ];
 
@@ -69,7 +83,12 @@ export async function POST(request: NextRequest) {
     let enhancedSystemPrompt = instance.systemPrompt;
     try {
       const { enhanceChatWithRAG } = await import('@/lib/agent/rag-service');
-      const ragResult = await enhanceChatWithRAG(messages, orgId, instance.systemPrompt);
+      // Convert to RAG format temporarily
+      const ragMessages = messages.map(m => ({
+        role: m.role === 'user' ? 'user' as const : 'model' as const,
+        parts: [{ text: m.content }],
+      }));
+      const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
       console.warn('RAG enhancement failed, using base prompt:', error);
@@ -77,14 +96,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (stream) {
-      // Stream response
-      const stream = new ReadableStream({
+      // Stream response (use fastest model first for streaming)
+      const responseStream = new ReadableStream({
         async start(controller) {
           try {
-            const { streamChatMessage } = await import('@/lib/ai/gemini-service');
-            
-            for await (const chunk of streamChatMessage(messages, enhancedSystemPrompt)) {
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+            for await (const chunk of streamEnsembleRequest({
+              messages,
+              systemInstruction: enhancedSystemPrompt,
+              temperature: modelConfig.temperature,
+              maxTokens: modelConfig.maxTokens,
+              topP: modelConfig.topP,
+              mode: ensembleMode,
+            })) {
+              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
             }
             controller.close();
           } catch (error: any) {
@@ -93,7 +117,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return new Response(stream, {
+      return new Response(responseStream, {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -101,21 +125,39 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      // Regular response
-      const response = await sendChatMessage(messages, enhancedSystemPrompt);
+      // Ensemble mode: Query multiple models and return best
+      const ensembleResponse = await sendEnsembleRequest({
+        messages,
+        systemInstruction: enhancedSystemPrompt,
+        temperature: modelConfig.temperature,
+        maxTokens: modelConfig.maxTokens,
+        topP: modelConfig.topP,
+        mode: ensembleMode,
+      });
 
       // Save conversation to customer memory
       await instanceManager.addMessageToMemory(
         customerId,
         orgId,
         message,
-        response.text
+        ensembleResponse.bestResponse
       );
 
       return NextResponse.json({
         success: true,
-        response: response.text,
-        usage: response.usage,
+        response: ensembleResponse.bestResponse,
+        model: ensembleResponse.selectedModel,
+        confidenceScore: ensembleResponse.confidenceScore,
+        reasoning: ensembleResponse.reasoning,
+        allResponses: ensembleResponse.allResponses.map(r => ({
+          model: r.model,
+          provider: r.provider,
+          score: r.score,
+          cost: r.usage.cost,
+          responseTime: r.responseTime,
+        })),
+        totalCost: ensembleResponse.totalCost,
+        processingTime: ensembleResponse.processingTime,
       });
     }
   } catch (error: any) {
