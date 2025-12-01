@@ -27,14 +27,17 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(emailSendSchema, body);
 
     if (!validation.success) {
+      const validationError = validation as { success: false; errors: any };
+      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      })) || [];
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map(e => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );
@@ -55,11 +58,19 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    // Send email
+    // Verify required email fields
+    if (!emailData.to || !emailData.subject) {
+      return NextResponse.json(
+        { success: false, error: 'to and subject are required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Send email with type assertion after validation
     const result = await sendEmail({
       ...emailData,
       metadata: { ...emailData.metadata, organizationId, userId: user.uid },
-    });
+    } as any);
 
     if (!result.success) {
       const response = NextResponse.json(

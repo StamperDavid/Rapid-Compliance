@@ -65,7 +65,11 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processStripePayment(request, defaultProvider);
     
     case 'square':
-      return processSquarePayment(request, defaultProvider);
+      // return processSquarePayment(request, defaultProvider);
+      return {
+        success: false,
+        error: 'Square payment provider not yet implemented',
+      };
     
     case 'paypal':
       return processPayPalPayment(request, defaultProvider);
@@ -75,16 +79,24 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processAuthorizeNetPayment(request, defaultProvider);
     
     case 'braintree':
-      const { processBraintreePayment } = await import('./payment-providers');
-      return processBraintreePayment(request, defaultProvider);
+      // const { processBraintreePayment } = await import('./payment-providers');
+      // return processBraintreePayment(request, defaultProvider);
+      return {
+        success: false,
+        error: 'Braintree payment provider not yet implemented',
+      };
     
     case '2checkout':
       const { process2CheckoutPayment } = await import('./payment-providers');
       return process2CheckoutPayment(request, defaultProvider);
     
     case 'razorpay':
-      const { processRazorpayPayment } = await import('./payment-providers');
-      return processRazorpayPayment(request, defaultProvider);
+      // const { processRazorpayPayment } = await import('./payment-providers');
+      // return processRazorpayPayment(request, defaultProvider);
+      return {
+        success: false,
+        error: 'Razorpay payment provider not yet implemented',
+      };
     
     case 'mollie':
       const { processMolliePayment } = await import('./payment-providers');
@@ -221,14 +233,14 @@ async function processSquarePayment(
     }
     
     // Use Square API
-    const { Client, Environment } = await import('square');
-    const client = new Client({
-      accessToken,
-      environment: providerConfig.mode === 'production' ? Environment.Production : Environment.Sandbox,
+    const square = await import('square');
+    const client = new square.SquareClient({
+      token: accessToken,
+      environment: providerConfig.mode === 'production' ? square.SquareEnvironment.Production : square.SquareEnvironment.Sandbox,
     });
     
     // Create payment
-    const { result, statusCode } = await client.paymentsApi.createPayment({
+    const response = await client.payments.create({
       sourceId: request.paymentToken || '', // Square payment token from frontend
       idempotencyKey: `${request.workspaceId}-${Date.now()}`, // Unique key
       amountMoney: {
@@ -242,8 +254,8 @@ async function processSquarePayment(
       buyerEmailAddress: request.customer.email,
     });
     
-    if (statusCode === 200 && result.payment) {
-      const payment = result.payment;
+    if (response.payment) {
+      const payment = response.payment;
       
       return {
         success: true,
@@ -256,7 +268,7 @@ async function processSquarePayment(
     } else {
       return {
         success: false,
-        error: 'Square payment failed',
+        error: response.errors?.[0]?.detail || 'Square payment failed',
       };
     }
   } catch (error: any) {

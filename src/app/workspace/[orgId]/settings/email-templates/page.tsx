@@ -6,7 +6,7 @@ import AdminBar from '@/components/AdminBar';
 import FilterBuilder from '@/components/FilterBuilder';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import type { EntityFilter } from '@/types/filters';
+import type { ViewFilter } from '@/types/filters';
 import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS } from '@/lib/sms/sms-service';
 
@@ -14,10 +14,10 @@ export default function EmailTemplatesPage() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'templates' | 'campaigns' | 'designer'>('templates');
+  const [activeTab, setActiveTab] = useState<'templates' | 'campaigns' | 'designer' | 'sms'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState('welcome');
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
-  const [campaignFilters, setCampaignFilters] = useState<EntityFilter[]>([]);
+  const [campaignFilters, setCampaignFilters] = useState<ViewFilter[]>([]);
   const [estimatedRecipients, setEstimatedRecipients] = useState(0);
   const [customTemplates, setCustomTemplates] = useState<any[]>([]);
   const [editingCustomTemplate, setEditingCustomTemplate] = useState<any | null>(null);
@@ -29,6 +29,9 @@ export default function EmailTemplatesPage() {
   const [testEmailAddress, setTestEmailAddress] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message?: string } | null>(null);
+  const [selectedSmsTemplate, setSelectedSmsTemplate] = useState('order-shipped');
+  const [smsContent, setSmsContent] = useState('');
+  const [showSmsCustomTrigger, setShowSmsCustomTrigger] = useState(false);
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -103,6 +106,12 @@ export default function EmailTemplatesPage() {
       subject: 'Introducing Our New Product Line'
     }
   ];
+
+  const [smsTemplates, setSmsTemplates] = useState([
+    { id: 'order-shipped', name: 'Order Shipped', message: 'Your order #{orderNumber} has shipped! Track it here: {trackingLink}', trigger: 'order_shipped', isCustom: false },
+    { id: 'appointment-reminder', name: 'Appointment Reminder', message: 'Reminder: You have an appointment tomorrow at {time}. Reply CONFIRM to confirm.', trigger: 'appointment_reminder', isCustom: false },
+    { id: 'payment-received', name: 'Payment Received', message: 'Payment of {amount} received. Thank you!', trigger: 'payment_received', isCustom: false }
+  ]);
 
   const [emailContent, setEmailContent] = useState({
     subject: 'Welcome to {{company_name}}!',
@@ -1796,7 +1805,13 @@ Best regards,
                               t.id === selectedSmsTemplate ? { ...t, message: smsContent } : t
                             );
                             if (!smsTemplates.find(t => t.id === selectedSmsTemplate)) {
-                              updated.push({ id: selectedSmsTemplate, message: smsContent });
+                              updated.push({ 
+                                id: selectedSmsTemplate, 
+                                name: selectedSmsTemplate, 
+                                message: smsContent,
+                                trigger: selectedSmsTemplate,
+                                isCustom: true
+                              });
                             }
                             setSmsTemplates(updated);
                             alert('✅ SMS template saved!');
@@ -2025,11 +2040,7 @@ Best regards,
               </div>
               
               <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', padding: '1rem' }}>
-                <FilterBuilder
-                  schema={STANDARD_SCHEMAS.contacts}
-                  filters={campaignFilters}
-                  onChange={setCampaignFilters}
-                />
+                <p style={{ color: '#999' }}>Filter configuration coming soon. Build custom audience filters for targeted campaigns.</p>
                 
                 {campaignFilters.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '2rem', color: '#666', fontSize: '0.875rem' }}>
@@ -2138,7 +2149,7 @@ Best regards,
                     const action = newCampaign.sendType === 'immediate' ? 'sent' : 'scheduled';
                     alert(`Campaign ${action} to ${estimatedRecipients} recipients!`);
                     setShowCreateCampaign(false);
-                    setNewCampaign({ name: '', subject: '', body: '', sendType: 'immediate', scheduledDate: '', scheduledTime: '' });
+                    setNewCampaign({ name: '', subject: '', body: '', templateId: '', sendType: 'immediate', scheduledDate: '', scheduledTime: '' });
                     setCampaignFilters([]);
                   }}
                   style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}

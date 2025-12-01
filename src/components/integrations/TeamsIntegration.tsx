@@ -41,7 +41,7 @@ export default function TeamsIntegration({
         description: 'Get notifications in Teams channels',
         icon: '💼',
         category: 'communication',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         settings: {
           notifications: {
@@ -58,13 +58,13 @@ export default function TeamsIntegration({
             general: 'General',
           },
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
     }, 2000);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

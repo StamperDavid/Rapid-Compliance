@@ -24,14 +24,17 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(smsSendSchema, body);
 
     if (!validation.success) {
+      const validationError = validation as { success: false; errors: any };
+      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      })) || [];
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map(e => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );
@@ -47,12 +50,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send SMS
+    // Verify required fields
+    if (!smsData.to || !smsData.message) {
+      return NextResponse.json(
+        { success: false, error: 'to and message are required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Send SMS with type assertion after validation
     const result = await sendSMS({
       ...smsData,
       organizationId,
       metadata: { ...smsData.metadata, userId: user.uid },
-    });
+    } as any);
 
     if (!result.success) {
       return NextResponse.json(

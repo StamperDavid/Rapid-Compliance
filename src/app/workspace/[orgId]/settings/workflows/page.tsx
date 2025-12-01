@@ -14,7 +14,7 @@ export default function WorkflowsPage() {
   const [theme, setTheme] = useState<any>(null);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Partial<Workflow> | null>(null);
-  const [workflowsList, setWorkflowsList] = useState(workflows);
+  const [workflowsList, setWorkflowsList] = useState<any[]>([]);
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');

@@ -24,13 +24,10 @@ export async function GET(request: NextRequest) {
     );
 
     if (!agentConfig) {
-      // Return defaults if no config exists
+      // Return defaults if no config exists (single model - ensemble removed for MVP)
       return NextResponse.json({
         success: true,
-        aiMode: 'ensemble',
-        ensembleMode: 'best',
-        useEnsemble: true,
-        model: 'gemini-2.0-flash-exp',
+        selectedModel: 'gpt-4-turbo',
         modelConfig: {
           temperature: 0.7,
           maxTokens: 2048,
@@ -58,7 +55,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId, aiMode, ensembleMode, model, modelConfig, useEnsemble } = body;
+    const { orgId, selectedModel, modelConfig } = body;
 
     if (!orgId) {
       return NextResponse.json(
@@ -67,15 +64,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save agent configuration
+    // Save agent configuration (single model - ensemble removed for MVP)
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
       'default',
       {
-        aiMode: aiMode || 'ensemble',
-        ensembleMode: ensembleMode || 'best',
-        useEnsemble: useEnsemble !== false,
-        model: model || 'gemini-2.0-flash-exp',
+        selectedModel: selectedModel || 'gpt-4-turbo',
         modelConfig: modelConfig || {
           temperature: 0.7,
           maxTokens: 2048,

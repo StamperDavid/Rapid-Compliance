@@ -5,7 +5,7 @@
  */
 
 import { Workflow, WorkflowTrigger, WorkflowAction, WorkflowCondition } from '@/types/workflow';
-import { where, orderBy, limit } from 'firebase/firestore';
+import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 
 export interface WorkflowExecution {
   id: string;

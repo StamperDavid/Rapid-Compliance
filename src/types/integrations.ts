@@ -11,11 +11,15 @@ import { Timestamp } from 'firebase/firestore';
 export type IntegrationCategory =
   | 'payment'
   | 'scheduling'
+  | 'calendar'
+  | 'email'
   | 'ecommerce'
   | 'crm'
   | 'communication'
   | 'productivity'
   | 'analytics'
+  | 'accounting'
+  | 'automation'
   | 'other';
 
 /**
@@ -84,12 +88,13 @@ export interface ConnectedIntegration {
   organizationId: string;
   
   // Provider
-  providerId: string;
-  providerName: string;
-  category: IntegrationCategory;
+  provider: string;
+  providerId?: string;
+  providerName?: string;
+  category?: IntegrationCategory;
   
   // Authentication
-  authType: 'oauth' | 'api_key' | 'webhook' | 'custom';
+  authType?: 'oauth' | 'api_key' | 'webhook' | 'custom';
   
   // OAuth
   accessToken?: string;
@@ -105,7 +110,8 @@ export interface ConnectedIntegration {
   webhookSecret?: string;
   
   // Configuration
-  config: Record<string, any>;
+  config?: Record<string, any>;
+  settings?: Record<string, any>;
   
   // Status
   status: 'active' | 'error' | 'disconnected';
@@ -113,12 +119,220 @@ export interface ConnectedIntegration {
   lastError?: string;
   
   // Usage
-  usageCount: number;
+  usageCount?: number;
   lastUsedAt?: Timestamp | string;
   
   // Metadata
   connectedAt: Timestamp | string;
-  connectedBy: string;
+  connectedBy?: string;
+  
+  // Common optional fields
+  name?: string;
+  description?: string;
+  icon?: string;
+  email?: string;
+}
+
+// Gmail Integration
+export interface GmailIntegration extends ConnectedIntegration {
+  provider: 'gmail';
+  email: string;
+  settings: {
+    syncDirection?: 'inbound' | 'outbound' | 'bidirectional';
+    syncFolders?: string[];
+    autoCreateContacts?: boolean;
+    trackOpens?: boolean;
+    trackClicks?: boolean;
+  };
+}
+
+// Google Calendar Integration
+export interface GoogleCalendarIntegration extends ConnectedIntegration {
+  provider: 'google-calendar';
+  email: string;
+  calendarId?: string;
+  settings: {
+    defaultCalendar?: string;
+    syncDirection?: 'inbound' | 'outbound' | 'bidirectional';
+    autoCreateEvents?: boolean;
+    reminderMinutes?: number;
+    reminderSettings?: {
+      defaultReminderMinutes?: number;
+      emailReminders?: boolean;
+      popupReminders?: boolean;
+    };
+  };
+}
+
+// Slack Integration
+export interface SlackIntegration extends ConnectedIntegration {
+  provider: 'slack';
+  teamName?: string;
+  settings: {
+    workspaceName?: string;
+    defaultChannel?: string;
+    notifyOnNewLeads?: boolean;
+    notifyOnDeals?: boolean;
+    notifications?: {
+      newDeal?: boolean;
+      dealWon?: boolean;
+      dealLost?: boolean;
+      newLead?: boolean;
+      taskAssigned?: boolean;
+      taskDue?: boolean;
+    };
+    channels?: {
+      deals?: string;
+      leads?: string;
+      tasks?: string;
+      general?: string;
+    };
+  };
+}
+
+// Microsoft Teams Integration
+export interface TeamsIntegration extends ConnectedIntegration {
+  provider: 'teams';
+  teamName?: string;
+  settings: {
+    tenantId?: string;
+    defaultTeam?: string;
+    notifyOnNewLeads?: boolean;
+    syncMeetings?: boolean;
+    notifications?: {
+      newDeal?: boolean;
+      dealWon?: boolean;
+      dealLost?: boolean;
+      newLead?: boolean;
+      taskDue?: boolean;
+    };
+    channels?: {
+      deals?: string;
+      leads?: string;
+      tasks?: string;
+      general?: string;
+    };
+  };
+}
+
+// Outlook Integration
+export interface OutlookIntegration extends ConnectedIntegration {
+  provider: 'outlook';
+  email: string;
+  settings: {
+    syncDirection?: 'inbound' | 'outbound' | 'bidirectional';
+    syncFolders?: string[];
+    autoCreateContacts?: boolean;
+    trackOpens?: boolean;
+    trackClicks?: boolean;
+  };
+}
+
+// Outlook Calendar Integration
+export interface OutlookCalendarIntegration extends ConnectedIntegration {
+  provider: 'outlook-calendar';
+  email: string;
+  calendarId?: string;
+  settings: {
+    defaultCalendar?: string;
+    syncDirection?: 'inbound' | 'outbound' | 'bidirectional';
+    syncCalendars?: string[];
+    autoCreateEvents?: boolean;
+    reminderSettings?: {
+      defaultReminderMinutes?: number;
+      emailReminders?: boolean;
+      popupReminders?: boolean;
+    };
+  };
+}
+
+// Stripe Integration
+export interface StripeIntegration extends ConnectedIntegration {
+  provider: 'stripe';
+  apiKey?: string;
+  accountId?: string;
+  settings: {
+    accountId?: string;
+    liveMode?: boolean;
+    autoSyncPayments?: boolean;
+    webhookSecret?: string;
+    autoCreateCustomers?: boolean;
+    autoCreateInvoices?: boolean;
+  };
+}
+
+// PayPal Integration
+export interface PayPalIntegration extends ConnectedIntegration {
+  provider: 'paypal';
+  clientId?: string;
+  clientSecret?: string;
+  mode?: 'sandbox' | 'live';
+  settings: {
+    merchantId?: string;
+    mode?: 'sandbox' | 'live';
+    autoSyncTransactions?: boolean;
+    autoCreateCustomers?: boolean;
+    autoCreateInvoices?: boolean;
+  };
+}
+
+// QuickBooks Integration
+export interface QuickBooksIntegration extends ConnectedIntegration {
+  provider: 'quickbooks';
+  realmId?: string;
+  companyName?: string;
+  settings: {
+    companyId?: string;
+    realmId?: string;
+    autoSyncInvoices?: boolean;
+    autoSyncPayments?: boolean;
+  };
+  syncSettings?: {
+    syncCustomers?: boolean;
+    syncInvoices?: boolean;
+    syncPayments?: boolean;
+    syncExpenses?: boolean;
+    syncItems?: boolean;
+    syncDirection?: 'inbound' | 'outbound' | 'bidirectional';
+  };
+}
+
+// Xero Integration
+export interface XeroIntegration extends ConnectedIntegration {
+  provider: 'xero';
+  organizationName?: string;
+  settings: {
+    tenantId?: string;
+    organizationName?: string;
+    autoSyncInvoices?: boolean;
+    autoSyncContacts?: boolean;
+  };
+  syncSettings?: {
+    syncCustomers?: boolean;
+    syncInvoices?: boolean;
+    syncPayments?: boolean;
+    syncContacts?: boolean;
+    syncItems?: boolean;
+    syncDirection?: 'inbound' | 'outbound' | 'bidirectional';
+  };
+}
+
+// Zapier Integration
+export interface ZapierIntegration extends ConnectedIntegration {
+  provider: 'zapier';
+  webhookUrl?: string;
+  settings: {
+    apiKey?: string;
+    activeZaps?: number;
+    webhookUrl?: string;
+    enabledZaps?: any[];
+    webhookSecurity?: {
+      enabled?: boolean;
+      secret?: string;
+      ipWhitelist?: string[];
+      requiresAuth?: boolean;
+    };
+  };
 }
 
 /**

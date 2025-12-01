@@ -1,310 +1,164 @@
 /**
- * QuickBooks Integration Service
- * Sync customers, invoices, payments with QuickBooks Online
+ * QuickBooks Integration
+ * Real integration using QuickBooks API
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+const QB_CLIENT_ID = process.env.QUICKBOOKS_CLIENT_ID;
+const QB_CLIENT_SECRET = process.env.QUICKBOOKS_CLIENT_SECRET;
+const QB_REDIRECT_URI = process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:3000/api/integrations/quickbooks/callback';
 
-export interface QuickBooksConfig {
-  realmId: string; // Company ID
-  accessToken: string;
-  refreshToken: string;
-  environment: 'production' | 'sandbox';
+/**
+ * Get QuickBooks OAuth URL
+ */
+export function getQuickBooksAuthUrl(): string {
+  const scopes = ['com.intuit.quickbooks.accounting'].join(' ');
+  const state = Math.random().toString(36).substring(7);
+
+  return `https://appcenter.intuit.com/connect/oauth2?client_id=${QB_CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(QB_REDIRECT_URI)}&response_type=code&state=${state}`;
 }
 
 /**
- * Sync customer to QuickBooks
+ * Exchange code for tokens
  */
-export async function syncCustomerToQuickBooks(
-  organizationId: string,
-  customerId: string,
-  customerData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    company?: string;
-    address?: any;
-  }
-): Promise<{ success: boolean; quickbooksId?: string; error?: string }> {
-  try {
-    const config = await getQuickBooksConfig(organizationId);
-    
-    // QuickBooks API endpoint
-    const baseUrl = config.environment === 'production'
-      ? 'https://quickbooks.api.intuit.com'
-      : 'https://sandbox-quickbooks.api.intuit.com';
-    
-    // Create customer in QuickBooks
-    const customer = {
-      DisplayName: `${customerData.firstName} ${customerData.lastName}`,
-      GivenName: customerData.firstName,
-      FamilyName: customerData.lastName,
-      PrimaryEmailAddr: {
-        Address: customerData.email,
-      },
-      PrimaryPhone: customerData.phone ? {
-        FreeFormNumber: customerData.phone,
-      } : undefined,
-      CompanyName: customerData.company,
-      BillAddr: customerData.address ? {
-        Line1: customerData.address.street,
-        City: customerData.address.city,
-        CountrySubDivisionCode: customerData.address.state,
-        PostalCode: customerData.address.zip,
-        Country: customerData.address.country || 'USA',
-      } : undefined,
-    };
-    
-    const response = await fetch(
-      `${baseUrl}/v3/company/${config.realmId}/customer`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${config.accessToken}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(customer),
-      }
-    );
-    
-    if (!response.ok) {
-      const error = await response.json();
-      return {
-        success: false,
-        error: error.Fault?.Error?.[0]?.Message || 'Failed to sync customer',
-      };
-    }
-    
-    const result = await response.json();
-    
-    return {
-      success: true,
-      quickbooksId: result.Customer.Id,
-    };
-  } catch (error: any) {
-    console.error('QuickBooks sync error:', error);
-    return {
-      success: false,
-      error: error.message || 'QuickBooks sync failed',
-    };
-  }
+export async function getTokensFromCode(code: string): Promise<{
+  access_token: string;
+  refresh_token: string;
+  realmId: string;
+}> {
+  const credentials = Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64');
+
+  const response = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: QB_REDIRECT_URI,
+    }),
+  });
+
+  return await response.json();
 }
 
 /**
- * Create invoice in QuickBooks
+ * Create customer
  */
-export async function createQuickBooksInvoice(
-  organizationId: string,
-  invoiceData: {
-    customerId: string; // QuickBooks customer ID
-    lineItems: Array<{
-      description: string;
-      amount: number;
-      quantity: number;
-    }>;
-    dueDate?: string;
-    invoiceNumber?: string;
-  }
-): Promise<{ success: boolean; invoiceId?: string; error?: string }> {
-  try {
-    const config = await getQuickBooksConfig(organizationId);
-    
-    const baseUrl = config.environment === 'production'
-      ? 'https://quickbooks.api.intuit.com'
-      : 'https://sandbox-quickbooks.api.intuit.com';
-    
-    // Build invoice
-    const invoice = {
+export async function createCustomer(accessToken: string, realmId: string, customer: {
+  displayName: string;
+  companyName?: string;
+  email?: string;
+  phone?: string;
+}): Promise<any> {
+  const response = await fetch(`https://quickbooks.api.intuit.com/v3/company/${realmId}/customer`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      DisplayName: customer.displayName,
+      CompanyName: customer.companyName,
+      PrimaryEmailAddr: customer.email ? { Address: customer.email } : undefined,
+      PrimaryPhone: customer.phone ? { FreeFormNumber: customer.phone } : undefined,
+    }),
+  });
+
+  return await response.json();
+}
+
+/**
+ * Create invoice
+ */
+export async function createInvoice(accessToken: string, realmId: string, invoice: {
+  customerId: string;
+  lineItems: Array<{
+    description: string;
+    amount: number;
+    quantity: number;
+  }>;
+  dueDate?: string;
+}): Promise<any> {
+  const response = await fetch(`https://quickbooks.api.intuit.com/v3/company/${realmId}/invoice`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
       CustomerRef: {
-        value: invoiceData.customerId,
+        value: invoice.customerId,
       },
-      Line: invoiceData.lineItems.map((item, index) => ({
-        Id: String(index + 1),
-        LineNum: index + 1,
+      Line: invoice.lineItems.map(item => ({
         Description: item.description,
         Amount: item.amount * item.quantity,
         DetailType: 'SalesItemLineDetail',
         SalesItemLineDetail: {
           Qty: item.quantity,
           UnitPrice: item.amount,
-          ItemRef: {
-            name: item.description,
-            value: '1', // Default item - should be configurable
-          },
         },
       })),
-      DueDate: invoiceData.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      DocNumber: invoiceData.invoiceNumber,
-    };
-    
-    const response = await fetch(
-      `${baseUrl}/v3/company/${config.realmId}/invoice`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${config.accessToken}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(invoice),
-      }
-    );
-    
-    if (!response.ok) {
-      const error = await response.json();
-      return {
-        success: false,
-        error: error.Fault?.Error?.[0]?.Message || 'Failed to create invoice',
-      };
-    }
-    
-    const result = await response.json();
-    
-    return {
-      success: true,
-      invoiceId: result.Invoice.Id,
-    };
-  } catch (error: any) {
-    console.error('QuickBooks invoice error:', error);
-    return {
-      success: false,
-      error: error.message || 'QuickBooks invoice creation failed',
-    };
-  }
+      DueDate: invoice.dueDate,
+    }),
+  });
+
+  return await response.json();
 }
 
 /**
- * Record payment in QuickBooks
+ * List customers
  */
-export async function recordQuickBooksPayment(
-  organizationId: string,
-  paymentData: {
-    customerId: string; // QuickBooks customer ID
-    amount: number;
-    paymentMethod: string;
-    transactionId?: string;
-    invoiceId?: string; // QuickBooks invoice ID
-  }
-): Promise<{ success: boolean; paymentId?: string; error?: string }> {
-  try {
-    const config = await getQuickBooksConfig(organizationId);
-    
-    const baseUrl = config.environment === 'production'
-      ? 'https://quickbooks.api.intuit.com'
-      : 'https://sandbox-quickbooks.api.intuit.com';
-    
-    const payment = {
-      CustomerRef: {
-        value: paymentData.customerId,
-      },
-      TotalAmt: paymentData.amount,
-      PaymentMethodRef: {
-        name: paymentData.paymentMethod,
-      },
-      PrivateNote: paymentData.transactionId ? `Transaction ID: ${paymentData.transactionId}` : undefined,
-      Line: paymentData.invoiceId ? [{
-        Amount: paymentData.amount,
-        LinkedTxn: [{
-          TxnId: paymentData.invoiceId,
-          TxnType: 'Invoice',
-        }],
-      }] : undefined,
-    };
-    
-    const response = await fetch(
-      `${baseUrl}/v3/company/${config.realmId}/payment`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${config.accessToken}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payment),
-      }
-    );
-    
-    if (!response.ok) {
-      const error = await response.json();
-      return {
-        success: false,
-        error: error.Fault?.Error?.[0]?.Message || 'Failed to record payment',
-      };
-    }
-    
-    const result = await response.json();
-    
-    return {
-      success: true,
-      paymentId: result.Payment.Id,
-    };
-  } catch (error: any) {
-    console.error('QuickBooks payment error:', error);
-    return {
-      success: false,
-      error: error.message || 'QuickBooks payment recording failed',
-    };
-  }
-}
-
-/**
- * Get QuickBooks configuration
- */
-async function getQuickBooksConfig(organizationId: string): Promise<QuickBooksConfig> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
-  const integration = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
-    'quickbooks'
-  );
-  
-  if (!integration) {
-    throw new Error('QuickBooks not connected');
-  }
-  
-  const config = integration as any;
-  
-  if (!config.accessToken || !config.realmId) {
-    throw new Error('QuickBooks configuration incomplete');
-  }
-  
-  return {
-    realmId: config.realmId,
-    accessToken: config.accessToken,
-    refreshToken: config.refreshToken,
-    environment: config.environment || 'sandbox',
-  };
-}
-
-/**
- * Get QuickBooks company info
- */
-export async function getQuickBooksCompanyInfo(
-  organizationId: string
-): Promise<any> {
-  const config = await getQuickBooksConfig(organizationId);
-  
-  const baseUrl = config.environment === 'production'
-    ? 'https://quickbooks.api.intuit.com'
-    : 'https://sandbox-quickbooks.api.intuit.com';
-  
+export async function listCustomers(accessToken: string, realmId: string): Promise<any[]> {
   const response = await fetch(
-    `${baseUrl}/v3/company/${config.realmId}/companyinfo/${config.realmId}`,
+    `https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=SELECT * FROM Customer`,
     {
       headers: {
-        'Authorization': `Bearer ${config.accessToken}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
       },
     }
   );
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch company info');
-  }
-  
-  const result = await response.json();
-  return result.CompanyInfo;
+
+  const data = await response.json();
+  return data.QueryResponse?.Customer || [];
 }
 
+/**
+ * List invoices
+ */
+export async function listInvoices(accessToken: string, realmId: string): Promise<any[]> {
+  const response = await fetch(
+    `https://quickbooks.api.intuit.com/v3/company/${realmId}/query?query=SELECT * FROM Invoice`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+      },
+    }
+  );
+
+  const data = await response.json();
+  return data.QueryResponse?.Invoice || [];
+}
+
+/**
+ * Get company info
+ */
+export async function getCompanyInfo(accessToken: string, realmId: string): Promise<any> {
+  const response = await fetch(
+    `https://quickbooks.api.intuit.com/v3/company/${realmId}/companyinfo/${realmId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+      },
+    }
+  );
+
+  const data = await response.json();
+  return data.CompanyInfo;
+}

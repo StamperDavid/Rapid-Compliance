@@ -32,14 +32,17 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(subscriptionCreateSchema, body);
 
     if (!validation.success) {
+      const validationError = validation as { success: false; errors: any };
+      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      })) || [];
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map(e => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );
@@ -64,6 +67,7 @@ export async function POST(request: NextRequest) {
     const subscription = await createSubscription(
       customer.id,
       planId,
+      organizationId,
       trialDays || 14
     );
 
@@ -84,7 +88,12 @@ export async function POST(request: NextRequest) {
       success: true,
       customerId: customer.id,
       subscriptionId: subscription.id,
-      clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+      clientSecret: 
+        typeof subscription.latest_invoice === 'object' && subscription.latest_invoice !== null
+          ? (typeof subscription.latest_invoice.payment_intent === 'object' && subscription.latest_invoice.payment_intent !== null
+              ? subscription.latest_invoice.payment_intent.client_secret
+              : undefined)
+          : undefined,
     });
   } catch (error: any) {
     console.error('Error creating subscription:', error);

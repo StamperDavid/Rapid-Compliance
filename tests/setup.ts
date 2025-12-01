@@ -5,7 +5,10 @@
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
-process.env.NODE_ENV = 'test';
+Object.defineProperty(process.env, 'NODE_ENV', {
+  value: 'test',
+  writable: true,
+});
 
 // Mock Firestore
 jest.mock('@/lib/db/firestore-service', () => ({

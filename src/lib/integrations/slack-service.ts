@@ -1,143 +1,170 @@
 /**
- * Slack Integration Service
- * Handles Slack API operations
+ * Slack Integration
+ * Complete implementation using Slack Web API
  */
 
-import { getValidAccessToken } from './oauth-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { WebClient } from '@slack/web-api';
 
-export interface SlackMessage {
+const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
+const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
+const SLACK_REDIRECT_URI = process.env.SLACK_REDIRECT_URI || 'http://localhost:3000/api/integrations/slack/callback';
+
+/**
+ * Get Slack OAuth URL
+ */
+export function getSlackAuthUrl(): string {
+  const scopes = [
+    'channels:read',
+    'channels:write',
+    'chat:write',
+    'users:read',
+    'users:read.email',
+  ].join(',');
+
+  return `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&scope=${scopes}&redirect_uri=${encodeURIComponent(SLACK_REDIRECT_URI)}`;
+}
+
+/**
+ * Exchange code for access token
+ */
+export async function getTokensFromCode(code: string): Promise<{
+  access_token: string;
+  team_id: string;
+  team_name: string;
+}> {
+  const response = await fetch('https://slack.com/api/oauth.v2.access', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: SLACK_CLIENT_ID!,
+      client_secret: SLACK_CLIENT_SECRET!,
+      code,
+      redirect_uri: SLACK_REDIRECT_URI,
+    }),
+  });
+
+  return await response.json();
+}
+
+/**
+ * Create Slack client
+ */
+function createSlackClient(accessToken: string): WebClient {
+  return new WebClient(accessToken);
+}
+
+/**
+ * Send message to channel
+ */
+export async function sendMessage(accessToken: string, options: {
   channel: string;
-  text?: string;
+  text: string;
+  attachments?: any[];
   blocks?: any[];
-  thread_ts?: string;
-  unfurl_links?: boolean;
-  unfurl_media?: boolean;
+}): Promise<any> {
+  const client = createSlackClient(accessToken);
+  
+  return await client.chat.postMessage({
+    channel: options.channel,
+    text: options.text,
+    attachments: options.attachments,
+    blocks: options.blocks,
+  });
 }
 
 /**
- * Send Slack message
+ * List channels
  */
-export async function sendSlackMessage(
-  organizationId: string,
-  integrationId: string,
-  message: SlackMessage
-): Promise<{ success: boolean; ts?: string; error?: string }> {
-  try {
-    const accessToken = await getValidAccessToken(organizationId, integrationId);
-    
-    const response = await fetch('https://slack.com/api/chat.postMessage', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(message),
-    });
-    
-    const data = await response.json();
-    
-    if (data.ok) {
-      return { success: true, ts: data.ts };
-    } else {
-      return { success: false, error: data.error || 'Failed to send message' };
-    }
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
+export async function listChannels(accessToken: string): Promise<any[]> {
+  const client = createSlackClient(accessToken);
+  const result = await client.conversations.list({
+    types: 'public_channel,private_channel',
+  });
+  
+  return result.channels || [];
 }
 
 /**
- * Get Slack channels
+ * Create channel
  */
-export async function getSlackChannels(
-  organizationId: string,
-  integrationId: string
-): Promise<Array<{ id: string; name: string; is_private: boolean }>> {
-  try {
-    const accessToken = await getValidAccessToken(organizationId, integrationId);
-    
-    const response = await fetch('https://slack.com/api/conversations.list', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-    
-    const data = await response.json();
-    
-    if (data.ok) {
-      return data.channels.map((ch: any) => ({
-        id: ch.id,
-        name: ch.name,
-        is_private: ch.is_private,
-      }));
-    } else {
-      throw new Error(data.error || 'Failed to get channels');
-    }
-  } catch (error: any) {
-    throw new Error(`Failed to get Slack channels: ${error.message}`);
-  }
+export async function createChannel(accessToken: string, name: string, isPrivate: boolean = false): Promise<any> {
+  const client = createSlackClient(accessToken);
+  
+  return await client.conversations.create({
+    name,
+    is_private: isPrivate,
+  });
 }
 
 /**
- * Send workflow notification to Slack
+ * List users
  */
-export async function sendWorkflowNotification(
-  organizationId: string,
-  workspaceId: string,
-  workflowId: string,
-  execution: any
-): Promise<void> {
-  // Get Slack integration
-  const integrations = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
-    []
-  );
+export async function listUsers(accessToken: string): Promise<any[]> {
+  const client = createSlackClient(accessToken);
+  const result = await client.users.list({});
   
-  const slackIntegration = integrations.find((i: any) => i.id === 'slack' && i.status === 'connected');
+  return result.members || [];
+}
+
+/**
+ * Send direct message
+ */
+export async function sendDirectMessage(accessToken: string, userId: string, text: string): Promise<any> {
+  const client = createSlackClient(accessToken);
   
-  if (!slackIntegration) {
-    return; // No Slack integration
-  }
+  // Open DM channel
+  const dm = await client.conversations.open({
+    users: userId,
+  });
   
-  const settings = (slackIntegration as any).settings;
-  if (!settings?.notifications?.newDeal) {
-    return; // Notifications disabled
-  }
+  // Send message
+  return await client.chat.postMessage({
+    channel: dm.channel!.id!,
+    text,
+  });
+}
+
+/**
+ * Upload file
+ */
+export async function uploadFile(accessToken: string, options: {
+  channels: string;
+  content: string;
+  filename: string;
+  title?: string;
+}): Promise<any> {
+  const client = createSlackClient(accessToken);
   
-  const channel = settings.channels?.deals || settings.channels?.general;
-  if (!channel) {
-    return; // No channel configured
-  }
+  return await client.files.upload({
+    channels: options.channels,
+    content: options.content,
+    filename: options.filename,
+    title: options.title,
+  });
+}
+
+/**
+ * Get user info
+ */
+export async function getUserInfo(accessToken: string, userId: string): Promise<any> {
+  const client = createSlackClient(accessToken);
+  const result = await client.users.info({
+    user: userId,
+  });
   
-  // Build message
-  const message: SlackMessage = {
+  return result.user;
+}
+
+/**
+ * Set channel topic
+ */
+export async function setChannelTopic(accessToken: string, channel: string, topic: string): Promise<any> {
+  const client = createSlackClient(accessToken);
+  
+  return await client.conversations.setTopic({
     channel,
-    text: `Workflow executed: ${execution.workflowId}`,
-    blocks: [
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: 'Workflow Execution',
-        },
-      },
-      {
-        type: 'section',
-        fields: [
-          {
-            type: 'mrkdwn',
-            text: `*Status:* ${execution.status}`,
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Actions:* ${execution.actionResults?.length || 0}`,
-          },
-        ],
-      },
-    ],
-  };
-  
-  await sendSlackMessage(organizationId, slackIntegration.id, message);
+    topic,
+  });
 }
-

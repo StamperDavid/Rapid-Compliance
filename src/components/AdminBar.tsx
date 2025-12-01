@@ -109,8 +109,11 @@ export default function AdminBar() {
                     onClick={async () => {
                       // Sign out from Firebase Auth
                       try {
-                        const { signOut } = await import('@/lib/auth/auth-service');
-                        await signOut();
+                        const { auth } = await import('@/lib/firebase/config');
+                        const { signOut } = await import('firebase/auth');
+                        if (auth) {
+                          await signOut(auth);
+                        }
                       } catch (error) {
                         console.error('Error signing out:', error);
                       }

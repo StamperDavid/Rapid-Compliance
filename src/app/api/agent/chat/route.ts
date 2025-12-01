@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEnsembleRequest, streamEnsembleRequest, EnsembleRequest } from '@/lib/ai/ensemble-service';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
@@ -26,14 +25,18 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(agentChatSchema, body);
 
     if (!validation.success) {
+      // Type assertion: when success is false, we have the error structure
+      const validationError = validation as { success: false; errors: any };
+      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      })) || [];
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map((e: any) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );
@@ -59,8 +62,8 @@ export async function POST(request: NextRequest) {
       'default'
     );
     
-    const useEnsemble = (agentConfig as any)?.useEnsemble !== false; // Default to true
-    const ensembleMode = (agentConfig as any)?.ensembleMode || 'best';
+    // Single model configuration (ensemble removed for MVP)
+    const selectedModel = (agentConfig as any)?.selectedModel || 'gpt-4-turbo';
     const modelConfig = (agentConfig as any)?.modelConfig || {
       temperature: 0.7,
       maxTokens: 2048,
@@ -95,71 +98,33 @@ export async function POST(request: NextRequest) {
       // Continue with base prompt if RAG fails
     }
 
-    if (stream) {
-      // Stream response (use fastest model first for streaming)
-      const responseStream = new ReadableStream({
-        async start(controller) {
-          try {
-            for await (const chunk of streamEnsembleRequest({
-              messages,
-              systemInstruction: enhancedSystemPrompt,
-              temperature: modelConfig.temperature,
-              maxTokens: modelConfig.maxTokens,
-              topP: modelConfig.topP,
-              mode: ensembleMode,
-            }, orgId)) {
-              controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(chunk)}\n\n`));
-            }
-            controller.close();
-          } catch (error: any) {
-            controller.error(error);
-          }
-        },
-      });
+    // Use single model with RAG (MVP approach - proven to work)
+    const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
+    const provider = await AIProviderFactory.createProvider(selectedModel, orgId);
+    
+    const startTime = Date.now();
+    const response = await provider.generateResponse(
+      messages,
+      enhancedSystemPrompt,
+      modelConfig
+    );
+    const processingTime = Date.now() - startTime;
 
-      return new Response(responseStream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    } else {
-      // Ensemble mode: Query multiple models and return best
-      const ensembleResponse = await sendEnsembleRequest({
-        messages,
-        systemInstruction: enhancedSystemPrompt,
-        temperature: modelConfig.temperature,
-        maxTokens: modelConfig.maxTokens,
-        topP: modelConfig.topP,
-        mode: ensembleMode,
-      }, orgId);
+    // Save conversation to customer memory
+    await instanceManager.addMessageToMemory(
+      customerId,
+      orgId,
+      message,
+      response.text
+    );
 
-      // Save conversation to customer memory
-      await instanceManager.addMessageToMemory(
-        customerId,
-        orgId,
-        message,
-        ensembleResponse.bestResponse
-      );
-
-      return NextResponse.json({
-        success: true,
-        response: ensembleResponse.bestResponse,
-        model: ensembleResponse.selectedModel,
-        confidenceScore: ensembleResponse.confidenceScore,
-        reasoning: ensembleResponse.reasoning,
-        allResponses: ensembleResponse.allResponses.map(r => ({
-          model: r.model,
-          provider: r.provider,
-          score: r.score,
-          cost: r.usage.cost,
-          responseTime: r.responseTime,
-        })),
-        totalCost: ensembleResponse.totalCost,
-        processingTime: ensembleResponse.processingTime,
-      });
-    }
+    return NextResponse.json({
+      success: true,
+      response: response.text,
+      model: selectedModel,
+      usage: response.usage,
+      processingTime,
+    });
   } catch (error: any) {
     console.error('Error in agent chat:', error);
     return NextResponse.json(

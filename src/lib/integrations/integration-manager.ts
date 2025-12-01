@@ -4,8 +4,9 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { Integration } from '@/types/integrations';
+import type { ConnectedIntegration } from '@/types/integrations';
 import { getValidAccessToken } from './oauth-service';
+import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Get integration
@@ -13,8 +14,8 @@ import { getValidAccessToken } from './oauth-service';
 export async function getIntegration(
   organizationId: string,
   integrationId: string
-): Promise<Integration | null> {
-  return await FirestoreService.get<Integration>(
+): Promise<ConnectedIntegration | null> {
+  return await FirestoreService.get<ConnectedIntegration>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId
   );
@@ -26,7 +27,7 @@ export async function getIntegration(
 export async function getAllIntegrations(
   organizationId: string,
   workspaceId?: string
-): Promise<Integration[]> {
+): Promise<ConnectedIntegration[]> {
   const { where } = await import('firebase/firestore');
   const constraints = [where('organizationId', '==', organizationId)];
   
@@ -34,7 +35,7 @@ export async function getAllIntegrations(
     constraints.push(where('workspaceId', '==', workspaceId));
   }
   
-  return await FirestoreService.getAll<Integration>(
+  return await FirestoreService.getAll<ConnectedIntegration>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     constraints
   );
@@ -46,11 +47,11 @@ export async function getAllIntegrations(
 export async function createIntegration(
   organizationId: string,
   workspaceId: string | undefined,
-  integration: Partial<Integration>
-): Promise<Integration> {
+  integration: Partial<ConnectedIntegration>
+): Promise<ConnectedIntegration> {
   const integrationId = integration.id || `integration_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  const integrationData: Integration = {
+  const integrationData: ConnectedIntegration = {
     id: integrationId,
     name: integration.name || 'Unknown',
     description: integration.description || '',
@@ -60,15 +61,28 @@ export async function createIntegration(
     organizationId,
     workspaceId,
     ...integration,
-  } as Integration;
+  } as ConnectedIntegration;
   
+  // Convert Timestamp to string if needed
+  const connectedAtString = integrationData.connectedAt
+    ? typeof integrationData.connectedAt === 'string'
+      ? integrationData.connectedAt
+      : integrationData.connectedAt.toDate().toISOString()
+    : new Date().toISOString();
+    
+  const lastSyncAtString = integrationData.lastSyncAt
+    ? typeof integrationData.lastSyncAt === 'string'
+      ? integrationData.lastSyncAt
+      : integrationData.lastSyncAt.toDate().toISOString()
+    : undefined;
+
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId,
     {
       ...integrationData,
-      connectedAt: integrationData.connectedAt?.toISOString(),
-      lastSyncAt: integrationData.lastSyncAt?.toISOString(),
+      connectedAt: connectedAtString,
+      lastSyncAt: lastSyncAtString,
     },
     false
   );
@@ -82,13 +96,19 @@ export async function createIntegration(
 export async function updateIntegration(
   organizationId: string,
   integrationId: string,
-  updates: Partial<Integration>
+  updates: Partial<ConnectedIntegration>
 ): Promise<void> {
   const existing = await getIntegration(organizationId, integrationId);
   if (!existing) {
     throw new Error('Integration not found');
   }
   
+  // Helper to convert Timestamp to string
+  const toISOString = (value: string | Timestamp | undefined): string | undefined => {
+    if (!value) return undefined;
+    return typeof value === 'string' ? value : value.toDate().toISOString();
+  };
+
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId,
@@ -96,8 +116,8 @@ export async function updateIntegration(
       ...existing,
       ...updates,
       updatedAt: new Date().toISOString(),
-      connectedAt: (updates.connectedAt || existing.connectedAt)?.toISOString(),
-      lastSyncAt: (updates.lastSyncAt || existing.lastSyncAt)?.toISOString(),
+      connectedAt: toISOString(updates.connectedAt || existing.connectedAt) || existing.connectedAt,
+      lastSyncAt: toISOString(updates.lastSyncAt || existing.lastSyncAt),
     },
     true // Update only
   );
@@ -129,8 +149,8 @@ export async function testIntegration(
     return { success: false, error: 'Integration not found' };
   }
   
-  if (integration.status !== 'connected') {
-    return { success: false, error: 'Integration not connected' };
+  if (integration.status !== 'active') {
+    return { success: false, error: 'Integration not active' };
   }
   
   try {
@@ -232,8 +252,8 @@ export async function syncIntegration(
 ): Promise<{ success: boolean; synced: number; error?: string }> {
   const integration = await getIntegration(organizationId, integrationId);
   
-  if (!integration || integration.status !== 'connected') {
-    return { success: false, synced: 0, error: 'Integration not connected' };
+  if (!integration || integration.status !== 'active') {
+    return { success: false, synced: 0, error: 'Integration not active' };
   }
   
   try {
@@ -267,7 +287,7 @@ export async function syncIntegration(
     
     // Update last sync time
     await updateIntegration(organizationId, integrationId, {
-      lastSyncAt: new Date(),
+      lastSyncAt: new Date().toISOString(),
     });
     
     return { success: true, synced };

@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GmailIntegration as GmailType } from '@/types/integrations';
+import type { ConnectedIntegration } from '@/types/integrations';
 
 interface GmailIntegrationProps {
-  integration: GmailType | null;
-  onConnect: (integration: Partial<GmailType>) => void;
+  integration: ConnectedIntegration | null;
+  onConnect: (integration: Partial<ConnectedIntegration>) => void;
   onDisconnect: () => void;
-  onUpdate: (settings: Partial<GmailType['settings']>) => void;
+  onUpdate: (settings: any) => void;
 }
 
 export default function GmailIntegration({ 
@@ -37,13 +37,10 @@ export default function GmailIntegration({
     setTimeout(() => {
       onConnect({
         id: 'gmail',
-        name: 'Gmail',
-        description: 'Sync emails and track opens/clicks',
-        icon: '📧',
-        category: 'email',
-        status: 'connected',
+        provider: 'gmail',
+        status: 'active',
         organizationId: 'demo-org',
-        email: 'user@gmail.com',
+        connectedAt: new Date().toISOString(),
         settings: {
           syncDirection: 'bidirectional',
           syncFolders: ['INBOX', 'SENT'],
@@ -51,13 +48,12 @@ export default function GmailIntegration({
           trackOpens: true,
           trackClicks: true,
         },
-        connectedAt: new Date(),
-      });
+      } as any);
       setIsConnecting(false);
     }, 2000);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',
@@ -115,9 +111,9 @@ export default function GmailIntegration({
               <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: textColor, marginBottom: '0.25rem' }}>
                 Gmail
               </h3>
-              {integration.email && (
+              {(integration as any).email && (
                 <p style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {integration.email}
+                  {(integration as any).email}
                 </p>
               )}
             </div>
@@ -145,7 +141,7 @@ export default function GmailIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.trackOpens}
+                checked={(integration as any).settings?.trackOpens}
                 onChange={(e) => onUpdate({ trackOpens: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -154,7 +150,7 @@ export default function GmailIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.trackClicks}
+                checked={(integration as any).settings?.trackClicks}
                 onChange={(e) => onUpdate({ trackClicks: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -163,7 +159,7 @@ export default function GmailIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.autoCreateContacts}
+                checked={(integration as any).settings?.autoCreateContacts}
                 onChange={(e) => onUpdate({ autoCreateContacts: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />

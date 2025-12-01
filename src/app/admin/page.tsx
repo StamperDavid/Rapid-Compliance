@@ -74,8 +74,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', color: '#fff' }}>
-        <div>Loading dashboard...</div>
+      <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚡</div>
+          <div>Loading dashboard...</div>
+        </div>
       </div>
     );
   }
@@ -85,16 +88,17 @@ export default function AdminDashboard() {
   const borderColor = '#333';
 
   return (
-    <div style={{ padding: '2rem', color: '#fff' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-          Admin Dashboard
-        </h1>
-        <p style={{ color: '#666', fontSize: '0.875rem' }}>
-          Platform overview and system health
-        </p>
-      </div>
+    <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff' }}>
+      <div style={{ padding: '2rem' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            Admin Dashboard
+          </h1>
+          <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            Platform overview and system health
+          </p>
+        </div>
 
       {/* System Health Alert */}
       {systemHealth && systemHealth.status !== 'healthy' && (
@@ -294,6 +298,7 @@ export default function AdminDashboard() {
           icon="🏥"
           tooltip="Detailed system health monitoring: service status, response times, alerts, and performance metrics."
         />
+      </div>
       </div>
     </div>
   );

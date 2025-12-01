@@ -1,12 +1,14 @@
 /**
  * Onboarding Processor Service
- * Orchestrates the complete flow: onboarding → persona → knowledge → Golden Master
+ * Orchestrates the complete flow: onboarding → persona → knowledge → Base Model
+ * NOTE: Creates Base Model (editable), NOT Golden Master!
+ * Client will save Golden Master manually after training.
  */
 
-import type { OnboardingData, GoldenMaster, KnowledgeBase, AgentPersona } from '@/types/agent-memory';
+import type { OnboardingData, BaseModel, KnowledgeBase, AgentPersona } from '@/types/agent-memory';
 import { buildPersonaFromOnboarding } from './persona-builder';
 import { processKnowledgeBase, KnowledgeProcessorOptions } from './knowledge-processor';
-import { buildGoldenMaster, saveGoldenMaster } from './golden-master-builder';
+import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
 export interface OnboardingProcessorOptions {
@@ -20,12 +22,14 @@ export interface OnboardingProcessResult {
   success: boolean;
   persona?: AgentPersona;
   knowledgeBase?: KnowledgeBase;
-  goldenMaster?: GoldenMaster;
+  baseModel?: BaseModel; // Changed from goldenMaster - this is the editable version
   error?: string;
 }
 
 /**
- * Process onboarding and create persona, knowledge base, and Golden Master
+ * Process onboarding and create persona, knowledge base, and Base Model
+ * Creates EDITABLE Base Model - NOT Golden Master!
+ * Client will save Golden Master after training.
  */
 export async function processOnboarding(
   options: OnboardingProcessorOptions
@@ -59,16 +63,16 @@ export async function processOnboarding(
       faqs: knowledgeBase.faqs.length,
     });
     
-    // Step 3: Build Golden Master
-    console.log('[Onboarding Processor] Step 3: Building Golden Master...');
-    const goldenMaster = await buildGoldenMaster({
+    // Step 3: Build Base Model (NOT Golden Master yet!)
+    console.log('[Onboarding Processor] Step 3: Building Base Model...');
+    const baseModel = await buildBaseModel({
       onboardingData,
       knowledgeBase,
       organizationId,
       userId,
       workspaceId,
     });
-    console.log('[Onboarding Processor] Golden Master built:', goldenMaster.id);
+    console.log('[Onboarding Processor] Base Model built:', baseModel.id);
     
     // Step 4: Save everything to Firestore
     console.log('[Onboarding Processor] Step 4: Saving to Firestore...');
@@ -110,16 +114,18 @@ export async function processOnboarding(
       // Continue even if indexing fails
     }
     
-    // Save Golden Master
-    await saveGoldenMaster(goldenMaster);
+    // Save Base Model (NOT Golden Master - that comes after training!)
+    await saveBaseModel(baseModel);
     
     console.log('[Onboarding Processor] ✅ Processing complete!');
+    console.log('[Onboarding Processor] Base Model created. Client can now train their agent.');
+    console.log('[Onboarding Processor] Golden Master will be created when client saves after training.');
     
     return {
       success: true,
       persona,
       knowledgeBase,
-      goldenMaster,
+      baseModel, // Changed from goldenMaster
     };
   } catch (error: any) {
     console.error('[Onboarding Processor] Error:', error);
@@ -136,6 +142,8 @@ export async function processOnboarding(
 export async function getProcessingStatus(organizationId: string): Promise<{
   hasPersona: boolean;
   hasKnowledgeBase: boolean;
+  hasBaseModel: boolean;
+  baseModelStatus?: 'draft' | 'training' | 'ready_for_golden_master';
   hasGoldenMaster: boolean;
   goldenMasterVersion?: string;
 }> {
@@ -150,7 +158,14 @@ export async function getProcessingStatus(organizationId: string): Promise<{
       'current'
     );
     
-    const { where } = await import('firebase/firestore');
+    // Check for Base Model
+    const { orderBy, limit, where } = await import('firebase/firestore');
+    const baseModels = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.BASE_MODELS}`,
+      [orderBy('createdAt', 'desc'), limit(1)]
+    );
+    
+    // Check for Golden Master
     const goldenMasters = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
       [where('isActive', '==', true)]
@@ -159,6 +174,8 @@ export async function getProcessingStatus(organizationId: string): Promise<{
     return {
       hasPersona: !!persona,
       hasKnowledgeBase: !!knowledgeBase,
+      hasBaseModel: baseModels.length > 0,
+      baseModelStatus: baseModels.length > 0 ? baseModels[0].status : undefined,
       hasGoldenMaster: goldenMasters.length > 0,
       goldenMasterVersion: goldenMasters.length > 0 ? goldenMasters[0].version : undefined,
     };
@@ -167,6 +184,7 @@ export async function getProcessingStatus(organizationId: string): Promise<{
     return {
       hasPersona: false,
       hasKnowledgeBase: false,
+      hasBaseModel: false,
       hasGoldenMaster: false,
     };
   }

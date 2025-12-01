@@ -227,42 +227,81 @@ export interface AgentInstance {
 }
 
 /**
+ * Base Model
+ * 
+ * The working draft of the AI agent created from onboarding.
+ * This is editable and used for training. NOT a Golden Master yet.
+ * Client trains and refines this until satisfied, then saves as Golden Master.
+ */
+export interface BaseModel {
+  id: string;
+  orgId: string;
+  status: 'draft' | 'training' | 'ready';
+  
+  // Core Configuration (editable - from onboarding + persona)
+  businessContext: OnboardingData;
+  agentPersona: AgentPersona;
+  behaviorConfig: BehaviorConfig;
+  
+  // Knowledge Base (editable)
+  knowledgeBase: KnowledgeBase;
+  
+  // Compiled System Prompt (regenerated when config changes)
+  systemPrompt: string;
+  
+  // Training Progress (not a Golden Master yet)
+  trainingScenarios: string[]; // IDs of completed training scenarios
+  trainingScore: number; // 0-100, average across all training
+  lastTrainingAt?: string; // ISO timestamp
+  
+  // Metadata
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  notes?: string;
+}
+
+/**
  * Golden Master
  * 
- * The perfected agent template. Never modified during customer sessions.
- * Only updated when deploying new versions after training.
+ * Versioned snapshot of a trained Base Model.
+ * Created manually by client when they're satisfied with agent performance.
+ * Never modified during customer sessions - only updated by creating new versions.
  */
 export interface GoldenMaster {
   id: string;
   version: string; // "v1", "v2", "v3", etc.
   orgId: string;
+  baseModelId: string; // Reference to the Base Model this was created from
   
-  // Core Configuration (from onboarding + persona)
+  // Core Configuration (snapshot from Base Model at time of saving)
   businessContext: OnboardingData;
   agentPersona: AgentPersona;
-  
-  // Training Data
-  trainedScenarios: string[]; // IDs of completed training scenarios
-  trainingCompletedAt: string; // ISO timestamp
-  trainingScore: number; // 0-100
-  
-  // Knowledge Base
-  knowledgeBase: KnowledgeBase;
-  
-  // Compiled System Prompt
-  systemPrompt: string; // The actual prompt sent to AI model
-  
-  // Behavioral Parameters
   behaviorConfig: BehaviorConfig;
   
-  // Status
-  isActive: boolean; // Is this the live version?
-  deployedAt?: string; // ISO timestamp
+  // Knowledge Base (snapshot)
+  knowledgeBase: KnowledgeBase;
+  
+  // Compiled System Prompt (snapshot)
+  systemPrompt: string;
+  
+  // Training Results (snapshot)
+  trainedScenarios: string[]; // IDs of completed training scenarios
+  trainingCompletedAt: string; // ISO timestamp when client finished training
+  trainingScore: number; // 0-100, final score when saved
+  
+  // Deployment Status
+  isActive: boolean; // Is this the live deployed version?
+  deployedAt?: string; // ISO timestamp when deployed to production
   
   // Metadata
-  createdBy: string; // User ID
-  createdAt: string;
+  createdBy: string; // User ID who saved this Golden Master
+  createdAt: string; // When this version was created
   notes?: string;
+  
+  // Versioning
+  previousVersion?: string; // "v2" if this is "v3"
+  changesSummary?: string; // What changed from previous version
 }
 
 export interface OnboardingData {

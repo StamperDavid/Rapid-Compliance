@@ -46,21 +46,21 @@ export default function StripeIntegration({
         description: 'Process payments and manage subscriptions',
         icon: '💳',
         category: 'payment',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         apiKey: apiKey.substring(0, 10) + '...', // Show partial key
         settings: {
           autoCreateCustomers: true,
           autoCreateInvoices: true,
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
       setApiKey('');
     }, 1500);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

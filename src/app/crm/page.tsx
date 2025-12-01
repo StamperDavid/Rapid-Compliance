@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
@@ -12,7 +12,8 @@ import { useAuth } from '@/hooks/useAuth';
 
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
-export default function CRMPage() {
+// Component that uses useSearchParams - wrapped in Suspense
+function CRMContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const [config, setConfig] = useState<any>(null);
@@ -1045,6 +1046,15 @@ export default function CRMPage() {
       )}
       </div>
     </div>
+  );
+}
+
+// Export with Suspense boundary as required by Next.js for useSearchParams
+export default function CRMPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Loading CRM...</div>}>
+      <CRMContent />
+    </Suspense>
   );
 }
 

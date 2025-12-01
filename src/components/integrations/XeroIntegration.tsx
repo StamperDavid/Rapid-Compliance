@@ -41,7 +41,7 @@ export default function XeroIntegration({
         description: 'Sync invoices, payments, and contacts',
         icon: '📊',
         category: 'accounting',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         syncSettings: {
           syncInvoices: true,
@@ -50,13 +50,13 @@ export default function XeroIntegration({
           syncItems: true,
           syncDirection: 'bidirectional',
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
     }, 2000);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',
@@ -134,7 +134,7 @@ export default function XeroIntegration({
           </div>
           {integration.connectedAt && (
             <p style={{ fontSize: '0.75rem', color: '#666' }}>
-              Connected {new Date(integration.connectedAt).toLocaleDateString()}
+              Connected {new Date(typeof integration.connectedAt === 'string' ? integration.connectedAt : (integration.connectedAt as any).toDate()).toLocaleDateString()}
             </p>
           )}
         </div>

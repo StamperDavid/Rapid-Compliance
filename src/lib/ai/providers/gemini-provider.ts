@@ -3,8 +3,8 @@
  * Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 1.0 Pro
  */
 
+import type { ModelProvider } from '@/lib/ai/model-provider';
 import type {
-  ModelProvider,
   ChatRequest,
   ChatResponse,
   ChatMessage,

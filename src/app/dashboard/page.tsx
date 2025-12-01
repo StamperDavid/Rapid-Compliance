@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
@@ -16,7 +16,8 @@ import { CustomReport } from '@/types/analytics';
 type AnalyticsView = 'overview' | 'revenue' | 'pipeline' | 'forecasting' | 'win-loss' | 'reports';
 type RevenueSubView = 'overview' | 'by-source' | 'by-product' | 'by-rep';
 
-export default function DashboardPage() {
+// Component that uses useSearchParams - wrapped in Suspense
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -1475,5 +1476,14 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Export with Suspense boundary as required by Next.js for useSearchParams
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '20px', textAlign: 'center' }}>Loading dashboard...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

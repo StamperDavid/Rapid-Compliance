@@ -33,32 +33,26 @@ export default function GoogleCalendarIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'google-calendar',
-        name: 'Google Calendar',
-        description: 'Sync events and meetings',
-        icon: '📅',
-        category: 'calendar',
-        status: 'connected',
-        organizationId: 'demo-org',
-        calendarId: 'primary',
-        settings: {
-          syncDirection: 'bidirectional',
-          syncCalendars: ['primary'],
-          autoCreateEvents: true,
-          reminderSettings: {
-            defaultReminderMinutes: 15,
-          },
-        },
-        connectedAt: new Date(),
-      });
+    try {
+      // Get current user and org from localStorage
+      const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
+      const org = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('currentOrganization') || '{}') : {};
+      
+      if (!user.uid || !org.id) {
+        console.error('User or organization not found');
+        setIsConnecting(false);
+        return;
+      }
+
+      // Redirect to REAL Google OAuth
+      window.location.href = `/api/integrations/google/auth?userId=${user.uid}&orgId=${org.id}`;
+    } catch (error) {
+      console.error('Connection failed:', error);
       setIsConnecting(false);
-    }, 2000);
+    }
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

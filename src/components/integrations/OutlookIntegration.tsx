@@ -41,7 +41,7 @@ export default function OutlookIntegration({
         description: 'Sync emails and track opens/clicks',
         icon: '📨',
         category: 'email',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         email: 'user@outlook.com',
         settings: {
@@ -51,13 +51,13 @@ export default function OutlookIntegration({
           trackOpens: true,
           trackClicks: true,
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
     }, 2000);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

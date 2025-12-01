@@ -36,13 +36,14 @@ function ensureFirestore() {
 }
 
 // Collection names following multi-tenant structure
-const COLLECTIONS = {
+export const COLLECTIONS = {
   ORGANIZATIONS: 'organizations',
   WORKSPACES: 'workspaces',
   USERS: 'users',
   SCHEMAS: 'schemas',
   RECORDS: 'records',
-  GOLDEN_MASTERS: 'goldenMasters',
+  BASE_MODELS: 'baseModels', // AI agent base configuration (editable, before Golden Master)
+  GOLDEN_MASTERS: 'goldenMasters', // Versioned snapshots of trained Base Models
   CUSTOMER_MEMORIES: 'customerMemories',
   WORKFLOWS: 'workflows',
   EMAIL_CAMPAIGNS: 'emailCampaigns',
@@ -531,7 +532,3 @@ export class LeadNurturingService {
     );
   }
 }
-
-// Export collection names for use in other files
-export { COLLECTIONS };
-

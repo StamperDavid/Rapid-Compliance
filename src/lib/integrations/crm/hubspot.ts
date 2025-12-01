@@ -21,7 +21,40 @@ export async function executeHubSpotFunction(
   
   switch (functionName) {
     case 'createHubSpotContact':
-      return await createContact(parameters, accessToken);
+      // Validate required parameters
+      if (!parameters.email) {
+        throw new Error('Email is required to create HubSpot contact');
+      }
+      
+      // Validate email is a string
+      if (typeof parameters.email !== 'string') {
+        throw new Error('email must be a string');
+      }
+      
+      // Validate optional fields
+      if (parameters.firstName && typeof parameters.firstName !== 'string') {
+        throw new Error('firstName must be a string');
+      }
+      if (parameters.lastName && typeof parameters.lastName !== 'string') {
+        throw new Error('lastName must be a string');
+      }
+      if (parameters.phone && typeof parameters.phone !== 'string') {
+        throw new Error('phone must be a string');
+      }
+      if (parameters.company && typeof parameters.company !== 'string') {
+        throw new Error('company must be a string');
+      }
+      
+      return await createContact(
+        {
+          email: parameters.email,
+          firstName: parameters.firstName,
+          lastName: parameters.lastName,
+          phone: parameters.phone,
+          company: parameters.company,
+        },
+        accessToken
+      );
       
     default:
       throw new Error(`Unknown HubSpot function: ${functionName}`);

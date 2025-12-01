@@ -91,7 +91,8 @@ export default function AdminAPIKeysPage() {
       // Load from Firestore admin settings
       const adminSettings = await FirestoreService.get('admin', 'platform-api-keys');
       if (adminSettings) {
-        setKeys(adminSettings);
+        // Type assertion: Firestore returns DocumentData, we validate and cast to PlatformAPIKeys
+        setKeys(adminSettings as PlatformAPIKeys);
       }
       // If no admin settings found, keys will remain empty (user needs to enter them)
     } catch (error) {

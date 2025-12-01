@@ -21,7 +21,40 @@ export async function executeSalesforceFunction(
   
   switch (functionName) {
     case 'createSalesforceLead':
-      return await createLead(parameters, instanceUrl, accessToken);
+      // Validate required parameters
+      const requiredFields = ['firstName', 'lastName', 'email', 'company'];
+      const missingFields = requiredFields.filter(field => !parameters[field]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields for Salesforce lead: ${missingFields.join(', ')}`);
+      }
+      
+      // Validate types
+      if (typeof parameters.firstName !== 'string' || typeof parameters.lastName !== 'string' || 
+          typeof parameters.email !== 'string' || typeof parameters.company !== 'string') {
+        throw new Error('firstName, lastName, email, and company must be strings');
+      }
+      
+      // Optional fields validation
+      if (parameters.phone && typeof parameters.phone !== 'string') {
+        throw new Error('phone must be a string');
+      }
+      if (parameters.notes && typeof parameters.notes !== 'string') {
+        throw new Error('notes must be a string');
+      }
+      
+      return await createLead(
+        {
+          firstName: parameters.firstName,
+          lastName: parameters.lastName,
+          email: parameters.email,
+          company: parameters.company,
+          phone: parameters.phone,
+          notes: parameters.notes,
+        },
+        instanceUrl,
+        accessToken
+      );
       
     default:
       throw new Error(`Unknown Salesforce function: ${functionName}`);

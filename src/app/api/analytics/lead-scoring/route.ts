@@ -25,14 +25,18 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(leadScoringSchema, body);
 
     if (!validation.success) {
+      // Type assertion: when success is false, we have the error structure
+      const validationError = validation as { success: false; errors: any };
+      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      })) || [];
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map(e => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );
@@ -57,7 +61,18 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
-        const score = calculateLeadScore(data.factors as LeadScoringFactors);
+        
+        // Transform factors: convert companySize from string to number if needed
+        const factors: LeadScoringFactors = {
+          ...data.factors,
+          companySize: data.factors.companySize 
+            ? (typeof data.factors.companySize === 'string' 
+                ? parseInt(data.factors.companySize, 10)
+                : data.factors.companySize)
+            : undefined,
+        };
+        
+        const score = calculateLeadScore(factors);
         return NextResponse.json({ success: true, score });
 
       case 'batch-score':

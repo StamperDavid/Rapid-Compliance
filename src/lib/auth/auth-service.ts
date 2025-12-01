@@ -20,8 +20,11 @@ import {
 import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
 
 // Check if Firebase is configured before using auth
+// Only warn in non-build environments
 if (!isFirebaseConfigured || !auth) {
-  console.warn('Firebase Auth is not configured. Authentication features will be disabled.');
+  if (typeof window !== 'undefined' || process.env.NODE_ENV === 'development') {
+    console.warn('Firebase Auth is not configured. Authentication features will be disabled.');
+  }
 }
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { COLLECTIONS } from '@/lib/db/firestore-service';

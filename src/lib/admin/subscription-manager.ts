@@ -4,19 +4,19 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { SubscriptionPlan, CustomerSubscription, RevenueMetrics, AdminCustomer } from '@/types/subscription';
+import type { SubscriptionPlan, CustomerSubscription, RevenueMetrics, AdminCustomer, PlanDetails } from '@/types/subscription';
 
 /**
  * Get all subscription plans
  */
-export async function getAllPlans(): Promise<SubscriptionPlan[]> {
+export async function getAllPlans(): Promise<PlanDetails[]> {
   try {
     const plans = await FirestoreService.getAll(
       'subscriptionPlans',
       []
     );
     
-    return (plans as SubscriptionPlan[]).sort((a, b) => a.displayOrder - b.displayOrder);
+    return (plans as unknown as PlanDetails[]).sort((a, b) => a.displayOrder - b.displayOrder);
   } catch (error) {
     console.error('[Subscription Manager] Error fetching plans:', error);
     return [];
@@ -26,10 +26,10 @@ export async function getAllPlans(): Promise<SubscriptionPlan[]> {
 /**
  * Create or update a subscription plan
  */
-export async function savePlan(plan: Partial<SubscriptionPlan>): Promise<void> {
+export async function savePlan(plan: Partial<PlanDetails>): Promise<void> {
   const planId = plan.id || `plan_${Date.now()}`;
   
-  const planData: SubscriptionPlan = {
+  const planData: PlanDetails = {
     id: planId,
     name: plan.name || '',
     description: plan.description || '',
@@ -114,7 +114,7 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
           openTickets: 0, // TODO: Get from support system
           totalTickets: 0,
           createdAt: (org as any).createdAt || new Date().toISOString(),
-          trialStartedAt: subscription.status === 'trial' ? subscription.createdAt : undefined,
+          trialStartedAt: subscription.status === 'trialing' ? subscription.createdAt : undefined,
           convertedAt: subscription.status === 'active' ? subscription.currentPeriodStart : undefined,
         });
       }
@@ -210,10 +210,11 @@ export async function calculateRevenueMetrics(
     // Calculate MRR
     let mrr = 0;
     for (const customer of activeSubscriptions) {
-      if (customer.subscription.billingCycle === 'monthly') {
-        mrr += customer.subscription.amount;
-      } else if (customer.subscription.billingCycle === 'yearly') {
-        mrr += customer.subscription.amount / 12;
+      const sub = customer.subscription as any;
+      if (sub.billingCycle === 'monthly') {
+        mrr += sub.amount || sub.mrr || 0;
+      } else if (sub.billingCycle === 'yearly') {
+        mrr += (sub.amount || sub.mrr || 0) / 12;
       }
     }
     
@@ -230,10 +231,10 @@ export async function calculateRevenueMetrics(
     
     // Calculate churned customers
     const churnedCustomers = customers.filter(c =>
-      c.subscription.status === 'cancelled' && 
-      c.subscription.cancelledAt &&
-      new Date(c.subscription.cancelledAt as string) >= periodStart &&
-      new Date(c.subscription.cancelledAt as string) <= periodEnd
+      c.subscription.status === 'cancelled' &&
+      c.subscription.canceledAt &&
+      new Date(c.subscription.canceledAt as string) >= periodStart &&
+      new Date(c.subscription.canceledAt as string) <= periodEnd
     ).length;
     
     // Calculate churn rate
@@ -244,8 +245,9 @@ export async function calculateRevenueMetrics(
     // Revenue by plan
     const revenueByPlan = new Map<string, { planName: string; customers: number; mrr: number }>();
     for (const customer of activeSubscriptions) {
-      const planId = customer.subscription.planId;
-      const planName = customer.subscription.planName;
+      const sub = customer.subscription as any;
+      const planId = sub.planId || sub.plan || 'unknown';
+      const planName = sub.planName || sub.plan || 'Unknown Plan';
       
       if (!revenueByPlan.has(planId)) {
         revenueByPlan.set(planId, { planName, customers: 0, mrr: 0 });
@@ -254,10 +256,10 @@ export async function calculateRevenueMetrics(
       const plan = revenueByPlan.get(planId)!;
       plan.customers += 1;
       
-      if (customer.subscription.billingCycle === 'monthly') {
-        plan.mrr += customer.subscription.amount;
+      if (sub.billingCycle === 'monthly') {
+        plan.mrr += sub.amount || sub.mrr || 0;
       } else {
-        plan.mrr += customer.subscription.amount / 12;
+        plan.mrr += (sub.amount || sub.mrr || 0) / 12;
       }
     }
     

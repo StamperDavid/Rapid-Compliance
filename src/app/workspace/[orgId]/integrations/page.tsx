@@ -56,6 +56,7 @@ export default function IntegrationsPage() {
       const integration: ConnectedIntegration = {
         id: `integration_${Date.now()}`,
         organizationId: orgId,
+        provider: providerId,
         providerId,
         providerName: INTEGRATION_PROVIDERS[providerId].name,
         category: INTEGRATION_PROVIDERS[providerId].category,
@@ -64,7 +65,7 @@ export default function IntegrationsPage() {
         status: 'active',
         usageCount: 0,
         connectedAt: new Date().toISOString(),
-        connectedBy: user?.uid || '',
+        connectedBy: user?.id || '',
       };
 
       await FirestoreService.set(

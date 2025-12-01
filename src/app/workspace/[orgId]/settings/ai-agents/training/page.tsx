@@ -1,27 +1,83 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import AdminBar from '@/components/AdminBar';
 
 export default function AgentTrainingPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  
+  const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'training' | 'progress' | 'golden'>('training');
-  const [showSuggestions, setShowSuggestions] = useState(true);
-  const [sessionTopic, setSessionTopic] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden'>('chat');
+  
+  // Base Model & Golden Master states
+  const [baseModel, setBaseModel] = useState<any>(null);
+  const [goldenMasters, setGoldenMasters] = useState<any[]>([]);
+  const [activeGoldenMaster, setActiveGoldenMaster] = useState<any>(null);
+  
+  // Training chat states
+  const [trainingTopic, setTrainingTopic] = useState('');
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [userInput, setUserInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  
+  // Feedback states
+  const [feedbackMode, setFeedbackMode] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [feedbackType, setFeedbackType] = useState<'correct' | 'incorrect' | 'could-improve'>('correct');
+  const [feedbackWhy, setFeedbackWhy] = useState('');
+  const [betterResponse, setBetterResponse] = useState('');
+  
+  // Sales criteria scoring
+  const [showScoringPanel, setShowScoringPanel] = useState(false);
+  const [salesCriteria, setSalesCriteria] = useState({
+    objectionHandling: 5,
+    productKnowledge: 5,
+    toneAndProfessionalism: 5,
+    closingSkills: 5,
+    discoveryQuestions: 5,
+    empathyAndRapport: 5
+  });
+  const [criteriaExplanations, setCriteriaExplanations] = useState({
+    objectionHandling: '',
+    productKnowledge: '',
+    toneAndProfessionalism: '',
+    closingSkills: '',
+    discoveryQuestions: '',
+    empathyAndRapport: ''
+  });
+  const [sessionNotes, setSessionNotes] = useState('');
+  
+  // Training materials states
+  const [uploadedMaterials, setUploadedMaterials] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Training history
+  const [trainingHistory, setTrainingHistory] = useState<any[]>([]);
+  const [overallScore, setOverallScore] = useState(0);
+  
+  // Custom criteria management
+  const [customCriteria, setCustomCriteria] = useState<Array<{key: string, label: string, icon: string}>>([
+    { key: 'objectionHandling', label: 'Objection Handling', icon: '🛡️' },
+    { key: 'productKnowledge', label: 'Product Knowledge', icon: '📚' },
+    { key: 'toneAndProfessionalism', label: 'Tone & Professionalism', icon: '🎭' },
+    { key: 'closingSkills', label: 'Closing Skills', icon: '🎯' },
+    { key: 'discoveryQuestions', label: 'Discovery Questions', icon: '❓' },
+    { key: 'empathyAndRapport', label: 'Empathy & Rapport', icon: '🤝' }
+  ]);
+  const [showCriteriaEditor, setShowCriteriaEditor] = useState(false);
+  
+  // Firebase check - MUST be at top level, not after conditional returns
+  const [firebaseConfigured, setFirebaseConfigured] = useState<boolean | null>(null);
+  
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState('');
-  const [knowledgeBaseReady, setKnowledgeBaseReady] = useState(false);
-
-  React.useEffect(() => {
+  useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme) {
       try {
@@ -30,1048 +86,1623 @@ export default function AgentTrainingPage() {
         console.error('Failed to load theme:', error);
       }
     }
-
-    // Check if knowledge base has been built, if not, build it automatically
-    checkAndBuildKnowledgeBase();
+    loadTrainingData();
   }, [orgId]);
+  
+  // Check Firebase configuration
+  useEffect(() => {
+    (async () => {
+      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
+      setFirebaseConfigured(isFirebaseConfigured === 'true');
+    })();
+  }, []);
 
-  const checkAndBuildKnowledgeBase = async () => {
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const loadTrainingData = async () => {
     try {
+      setLoading(true);
+      
+      // Check if Firebase is configured
+      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
+      if (!isFirebaseConfigured) {
+        console.warn('Firebase not configured, loading demo data');
+        loadDemoData();
+        setLoading(false);
+        return;
+      }
+      
+      // Load Base Model
+      const { getBaseModel } = await import('@/lib/agent/base-model-builder');
+      const model = await getBaseModel(orgId);
+      setBaseModel(model);
+      
+      // Load Golden Masters
+      const { getAllGoldenMasters, getActiveGoldenMaster } = await import('@/lib/agent/golden-master-builder');
+      const masters = await getAllGoldenMasters(orgId);
+      setGoldenMasters(masters);
+      
+      const active = await getActiveGoldenMaster(orgId);
+      setActiveGoldenMaster(active);
+      
+      // Load training materials
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { getActiveGoldenMaster } = await import('@/lib/agent/golden-master-builder');
-      const { getProcessingStatus } = await import('@/lib/agent/onboarding-processor');
-      
-      // Check if Golden Master already exists
-      const existingGM = await getActiveGoldenMaster(orgId);
-      if (existingGM) {
-        setKnowledgeBaseReady(true);
-        setGoldenMasterVersion(parseInt(existingGM.version.replace('v', '')) || 1);
-        return;
-      }
-      
-      // Check processing status
-      const status = await getProcessingStatus(orgId);
-      if (status.hasGoldenMaster) {
-        setKnowledgeBaseReady(true);
-        return;
-      }
-      
-      // Check if onboarding is complete
-      const onboardingData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/onboarding`,
-        'current'
+      const materialsSnap = await FirestoreService.getAll(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`
       );
+      setUploadedMaterials(materialsSnap || []);
       
-      if (!onboardingData || !onboardingData.completedAt) {
-        // Onboarding not complete yet
-        return;
+      // Load training history
+      const historySnap = await FirestoreService.getAll(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`
+      );
+      setTrainingHistory(historySnap || []);
+      
+      // Calculate overall score
+      if (model?.trainingScore) {
+        setOverallScore(model.trainingScore);
       }
       
-      // Onboarding complete but Golden Master not created - process it now
-      setIsAnalyzing(true);
-      setAnalysisProgress('Processing onboarding data...');
+    } catch (error) {
+      console.error('Error loading training data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartNewSession = (topic?: string) => {
+    if (topic) {
+      setTrainingTopic(topic);
+    }
+    setChatMessages([]);
+    setActiveTab('chat');
+  };
+
+  const handleSendMessage = async () => {
+    if (!userInput.trim() || !baseModel) return;
+    
+    const userMessage = {
+      id: `msg_${Date.now()}`,
+      role: 'user',
+      content: userInput.trim(),
+      timestamp: new Date().toISOString(),
+    };
+    
+    setChatMessages(prev => [...prev, userMessage]);
+    setUserInput('');
+    setIsTyping(true);
+    
+    try {
+      // Build system prompt from Base Model
+      let systemPrompt = baseModel.systemPrompt;
       
-      const { processOnboarding } = await import('@/lib/agent/onboarding-processor');
-      const userId = user?.uid || 'system';
+      // Add training context
+      systemPrompt += `\n\n## TRAINING MODE\nYou are in training mode. The topic being practiced: ${trainingTopic || 'General sales conversation'}.\nRespond naturally and professionally as you would to a real customer.\n`;
       
-      setAnalysisProgress('Building AI agent persona...');
-      const result = await processOnboarding({
-        onboardingData,
-        organizationId: orgId,
-        userId,
+      // Build conversation history
+      const conversationHistory = chatMessages.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
+      
+      conversationHistory.push({
+        role: 'user',
+        parts: [{ text: userMessage.content }]
       });
       
-      if (result.success && result.goldenMaster) {
-        setAnalysisProgress('✅ Complete! Your AI agent is ready for training.');
-        setKnowledgeBaseReady(true);
-        setGoldenMasterVersion(parseInt(result.goldenMaster.version.replace('v', '')) || 1);
-        
-        setTimeout(() => {
-          setIsAnalyzing(false);
-          alert(`✅ Your AI agent has been automatically configured!\n\n• Persona created: ${result.persona?.name || 'AI Assistant'}\n• Knowledge base processed: ${result.knowledgeBase?.documents.length || 0} documents, ${result.knowledgeBase?.urls.length || 0} URLs, ${result.knowledgeBase?.faqs.length || 0} FAQs\n• Golden Master v${result.goldenMaster?.version} created\n\nYour agent is ready for training!`);
-        }, 2000);
-      } else {
-        throw new Error(result.error || 'Failed to process onboarding');
-      }
+      // Call AI (using Gemini for training)
+      const { sendChatMessage } = await import('@/lib/ai/gemini-service');
+      // Type assertion: conversation history messages have been validated to have proper roles
+      const response = await sendChatMessage(conversationHistory as any, systemPrompt);
+      
+      const agentMessage = {
+        id: `msg_${Date.now()}_agent`,
+        role: 'agent',
+        content: response.text,
+        timestamp: new Date().toISOString(),
+        canGiveFeedback: true,
+      };
+      
+      setChatMessages(prev => [...prev, agentMessage]);
+      
+      // Auto-save session
+      await saveTrainingSession();
+      
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      alert('Failed to get agent response. Please try again.');
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleGiveFeedback = (messageId: string) => {
+    setSelectedMessageId(messageId);
+    setFeedbackMode(true);
+    setFeedbackType('correct');
+    setFeedbackWhy('');
+    setBetterResponse('');
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackWhy.trim()) {
+      alert('Please explain WHY this response is ' + feedbackType);
+      return;
+    }
+    
+    if (feedbackType !== 'correct' && !betterResponse.trim()) {
+      alert('Please provide a better response or guidance on how to improve.');
+      return;
+    }
+    
+    try {
+      // Save feedback to Firestore
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      
+      const feedbackData = {
+        orgId,
+        baseModelId: baseModel.id,
+        messageId: selectedMessageId,
+        topic: trainingTopic,
+        feedbackType,
+        why: feedbackWhy,
+        betterResponse: betterResponse || null,
+        timestamp: new Date().toISOString(),
+      };
+      
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingFeedback`,
+        `feedback_${Date.now()}`,
+        feedbackData,
+        false
+      );
+      
+      // Mark message as having feedback
+      setChatMessages(prev => prev.map(msg => 
+        msg.id === selectedMessageId 
+          ? { ...msg, hasFeedback: true, feedbackType } 
+          : msg
+      ));
+      
+      // Update Base Model's training score
+      await updateTrainingScore(feedbackType === 'correct' ? 100 : feedbackType === 'could-improve' ? 70 : 40);
+      
+      alert('✅ Feedback saved! This will help improve your AI agent.');
+      
+      // Reset feedback mode
+      setFeedbackMode(false);
+      setSelectedMessageId(null);
+      setFeedbackWhy('');
+      setBetterResponse('');
+      
     } catch (error) {
-      console.error('Error checking/processing knowledge base:', error);
-      setIsAnalyzing(false);
-      // Continue anyway - they can still train
+      console.error('Error saving feedback:', error);
+      alert('Failed to save feedback. Please try again.');
+    }
+  };
+
+  const updateTrainingScore = async (sessionScore: number) => {
+    try {
+      const { addTrainingScenario } = await import('@/lib/agent/base-model-builder');
+      
+      const scenarioId = `scenario_${Date.now()}`;
+      await addTrainingScenario(baseModel.id, scenarioId, sessionScore);
+      
+      // Reload base model to get updated score
+      const { getBaseModel } = await import('@/lib/agent/base-model-builder');
+      const updated = await getBaseModel(orgId);
+      setBaseModel(updated);
+      if (updated) {
+        setOverallScore(updated.trainingScore);
+      }
+      
+    } catch (error) {
+      console.error('Error updating training score:', error);
+    }
+  };
+
+  const submitSalesCriteriaScoring = async () => {
+    if (!trainingTopic.trim()) {
+      alert('Please select or enter a training topic first.');
+      return;
+    }
+
+    // Validate that explanations are provided for low scores (< 7)
+    const criteriaKeys = Object.keys(salesCriteria) as Array<keyof typeof salesCriteria>;
+    const missingExplanations = criteriaKeys.filter(key => 
+      salesCriteria[key] < 7 && !criteriaExplanations[key].trim()
+    );
+    
+    if (missingExplanations.length > 0) {
+      const labels: Record<string, string> = {
+        objectionHandling: 'Objection Handling',
+        productKnowledge: 'Product Knowledge',
+        toneAndProfessionalism: 'Tone & Professionalism',
+        closingSkills: 'Closing Skills',
+        discoveryQuestions: 'Discovery Questions',
+        empathyAndRapport: 'Empathy & Rapport'
+      };
+      
+      alert(`⚠️ Please explain low scores (< 7/10):\n\n${missingExplanations.map(key => `• ${labels[key]}: ${salesCriteria[key]}/10`).join('\n')}\n\nThe AI needs this context to learn and improve!`);
+      return;
+    }
+
+    // Calculate overall score from criteria (0-100 scale)
+    const criteriaScores = Object.values(salesCriteria);
+    const avgScore = Math.round((criteriaScores.reduce((sum, score) => sum + score, 0) / criteriaScores.length) * 10);
+    
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      
+      const sessionRecord = {
+        orgId,
+        baseModelId: baseModel?.id,
+        topic: trainingTopic,
+        messagesCount: chatMessages.length,
+        overallScore: avgScore,
+        criteriaScores: salesCriteria,
+        criteriaExplanations: criteriaExplanations, // Include explanations!
+        sessionNotes: sessionNotes,
+        timestamp: new Date().toISOString(),
+      };
+      
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
+        `session_${Date.now()}`,
+        sessionRecord,
+        false
+      );
+      
+      // Update training score
+      await updateTrainingScore(avgScore);
+      
+      // Add to training history
+      setTrainingHistory(prev => [
+        {
+          id: `session_${Date.now()}`,
+          topic: trainingTopic,
+          score: avgScore,
+          criteriaScores: salesCriteria,
+          criteriaExplanations: criteriaExplanations,
+          notes: sessionNotes,
+          timestamp: new Date().toISOString(),
+        },
+        ...prev
+      ]);
+      
+      alert(`✅ Training Session Scored!\n\nOverall Score: ${avgScore}/100\n\nYour detailed feedback will help the AI learn and improve!`);
+      
+      // Reset for next session
+      setTrainingTopic('');
+      setChatMessages([]);
+      setSalesCriteria({
+        objectionHandling: 5,
+        productKnowledge: 5,
+        toneAndProfessionalism: 5,
+        closingSkills: 5,
+        discoveryQuestions: 5,
+        empathyAndRapport: 5
+      });
+      setCriteriaExplanations({
+        objectionHandling: '',
+        productKnowledge: '',
+        toneAndProfessionalism: '',
+        closingSkills: '',
+        discoveryQuestions: '',
+        empathyAndRapport: ''
+      });
+      setSessionNotes('');
+      
+    } catch (error) {
+      console.error('Error saving sales criteria scoring:', error);
+      alert('Failed to save session score. Please try again.');
+    }
+  };
+
+  const saveTrainingSession = async () => {
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      
+      const sessionData = {
+        orgId,
+        baseModelId: baseModel.id,
+        topic: trainingTopic || 'General',
+        messages: chatMessages,
+        timestamp: new Date().toISOString(),
+        messageCount: chatMessages.length,
+      };
+      
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
+        `session_${Date.now()}`,
+        sessionData,
+        false
+      );
+      
+    } catch (error) {
+      console.error('Error saving training session:', error);
+    }
+  };
+
+  const handleUploadMaterial = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    setIsUploading(true);
+    
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { processDocumentContent } = await import('@/lib/agent/knowledge-processor');
+      
+      for (const file of Array.from(files)) {
+        // Read file content
+        const text = await readFileAsText(file);
+        
+        // Process content (extract knowledge)
+        const extractedContent = await processDocumentContent(text, file.type);
+        
+        // Save training material
+        const materialData = {
+          orgId,
+          filename: file.name,
+          type: file.type,
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+          extractedContent,
+          processedAt: new Date().toISOString(),
+        };
+        
+        await FirestoreService.set(
+          `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`,
+          `material_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          materialData,
+          false
+        );
+        
+        setUploadedMaterials(prev => [...prev, materialData]);
+        
+        // Add to Base Model knowledge base
+        // This will be automatically included in future training sessions
+      }
+      
+      alert(`✅ ${files.length} training material(s) uploaded successfully!\n\nThe content has been processed and will be used to train your AI agent.`);
+      
+    } catch (error) {
+      console.error('Error uploading training materials:', error);
+      alert('Failed to upload training materials. Please try again.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string || '');
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  };
+
+  const handleSaveGoldenMaster = async () => {
+    if (!baseModel) return;
+    
+    if (baseModel.status !== 'ready') {
+      alert(`⚠️ Base Model is not ready yet!\n\nCurrent status: ${baseModel.status}\nTraining score: ${overallScore}%\n\nContinue training until you reach 80%+ score across multiple scenarios.`);
+      return;
+    }
+    
+    if (overallScore < 80) {
+      alert(`⚠️ Training score too low!\n\nCurrent score: ${overallScore}%\nRequired: 80%+\n\nContinue training your agent with more scenarios and feedback until the score improves.`);
+      return;
+    }
+    
+    const notes = prompt('Optional: Add notes about this Golden Master version\n\nWhat changes or improvements were made?');
+    
+    try {
+      const { createGoldenMaster } = await import('@/lib/agent/golden-master-builder');
+      
+      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, user?.id || 'system', notes || undefined);
+      
+      alert(`✅ Golden Master ${newGoldenMaster.version} Created!\n\nYour trained AI agent has been saved as a production-ready version.\n\nNext steps:\n1. Review the Golden Master in the "Golden Master" tab\n2. Deploy it to production when ready\n3. Continue training your Base Model for future improvements`);
+      
+      // Reload data
+      await loadTrainingData();
+      setActiveTab('golden');
+      
+    } catch (error) {
+      console.error('Error saving Golden Master:', error);
+      alert('Failed to save Golden Master. Please try again.');
+    }
+  };
+
+  const loadDemoData = () => {
+    // Check if this is the platform-admin org (for dogfooding the sales agent)
+    const isPlatformAdmin = orgId === 'platform-admin';
+    
+    // Create demo Base Model
+    setBaseModel({
+      id: 'demo-base-model',
+      orgId: orgId,
+      name: isPlatformAdmin ? 'Platform Sales Agent - Base Model' : 'Demo Sales Agent',
+      businessName: isPlatformAdmin ? 'AI Sales Platform' : 'Demo Company',
+      industry: isPlatformAdmin ? 'SaaS / AI Technology' : 'General Business',
+      objectives: [
+        'Qualify leads for the CRM platform',
+        'Demonstrate AI agent capabilities',
+        'Handle objections about pricing and competitors',
+        'Close deals by showing ROI and value',
+        'Schedule demos with qualified prospects'
+      ],
+      products: [
+        {
+          name: 'Starter Plan',
+          price: '$99/month',
+          description: '1,000 CRM records, 1 AI agent, 5 users, Email support'
+        },
+        {
+          name: 'Professional Plan',
+          price: '$299/month',
+          description: '10,000 CRM records, 3 AI agents, 25 users, Priority support - MOST POPULAR'
+        },
+        {
+          name: 'Enterprise Plan',
+          price: 'Custom Pricing',
+          description: 'Unlimited records, Unlimited AI agents, Unlimited users, Dedicated support, Custom development'
+        }
+      ],
+      uniqueValue: 'Golden Master architecture for infinite scalability with zero hallucinations',
+      typicalSalesFlow: 'Qualify → Demo → ROI Discussion → Close',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    // Create demo Golden Masters
+    setGoldenMasters([
+      {
+        id: 'gm-demo-1',
+        version: 1,
+        name: 'Platform Sales Agent v1',
+        trainingScore: 85,
+        status: 'active',
+        deployedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+        scenarios: 5
+      }
+    ]);
+
+    setActiveGoldenMaster({
+      id: 'gm-demo-1',
+      version: 1,
+      name: 'Platform Sales Agent v1',
+      trainingScore: 85,
+      status: 'active'
+    });
+
+    // Demo training materials
+    setUploadedMaterials([
+      {
+        id: 'mat-1',
+        name: 'Platform Features Overview.pdf',
+        type: 'document',
+        size: '2.3 MB',
+        uploadedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+        status: 'processed',
+        keyPoints: [
+          'Golden Master Architecture',
+          'Custom CRM Builder',
+          'AI Training Center',
+          'Workflow Automation',
+          'E-commerce Integration'
+        ]
+      },
+      {
+        id: 'mat-2',
+        name: 'Pricing & ROI Calculator',
+        type: 'spreadsheet',
+        size: '1.1 MB',
+        uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        status: 'processed',
+        keyPoints: [
+          '480% average ROI',
+          'Replaces 3-5 sales reps',
+          'Break-even in 3 months',
+          'Cost comparison vs Salesforce'
+        ]
+      },
+      {
+        id: 'mat-3',
+        name: 'Case Studies - TechStart & GrowthCo',
+        type: 'document',
+        size: '3.5 MB',
+        uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        status: 'processed',
+        keyPoints: [
+          'TechStart: 12 deals in first month',
+          'GrowthCo: 620% ROI',
+          'Both broke even in < 3 weeks'
+        ]
+      },
+      {
+        id: 'mat-4',
+        name: 'Competitor Battle Cards',
+        type: 'document',
+        size: '1.8 MB',
+        uploadedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+        status: 'processed',
+        keyPoints: [
+          'vs Salesforce: AI-first vs data-first',
+          'vs HubSpot: Real AI vs chatbots',
+          'vs Pipedrive: Automation vs manual'
+        ]
+      }
+    ]);
+
+    // Demo training history
+    setTrainingHistory([
+      {
+        id: 'session-1',
+        topic: 'Pricing objection - "Too expensive"',
+        messagesCount: 12,
+        score: 88,
+        feedback: 'Excellent ROI breakdown. Could mention case studies earlier.',
+        timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
+      },
+      {
+        id: 'session-2',
+        topic: 'vs Salesforce comparison',
+        messagesCount: 15,
+        score: 92,
+        feedback: 'Perfect competitive positioning. Great use of "complement not compete" angle.',
+        timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+      },
+      {
+        id: 'session-3',
+        topic: 'Demo request - first time prospect',
+        messagesCount: 8,
+        score: 85,
+        feedback: 'Good enthusiasm. Remember to qualify budget before demo.',
+        timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)
+      },
+      {
+        id: 'session-4',
+        topic: 'Technical deep dive - Golden Master architecture',
+        messagesCount: 18,
+        score: 78,
+        feedback: 'Good technical accuracy. Simplify the explanation for non-technical buyers.',
+        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+      },
+      {
+        id: 'session-5',
+        topic: 'ROI justification for CFO',
+        messagesCount: 14,
+        score: 90,
+        feedback: 'Excellent financial focus. Great use of specific numbers and payback period.',
+        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+      },
+      {
+        id: 'session-6',
+        topic: 'Implementation timeline concerns',
+        messagesCount: 10,
+        score: 82,
+        feedback: 'Good reassurance. Mention the 2-week average more prominently.',
+        timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
+      }
+    ]);
+
+    setOverallScore(85.8);
+    
+    console.log('✅ Demo data loaded for platform sales agent');
+  };
+
+  const handleDeployGoldenMaster = async (gmId: string, version: string) => {
+    if (!confirm(`Deploy Golden Master ${version} to production?\n\nThis will make it the active version used by all customers.`)) {
+      return;
+    }
+    
+    try {
+      const { deployGoldenMaster } = await import('@/lib/agent/golden-master-builder');
+      
+      await deployGoldenMaster(orgId, gmId);
+      
+      alert(`✅ Golden Master ${version} is now LIVE!\n\nAll customer conversations will now use this version of your AI agent.`);
+      
+      await loadTrainingData();
+      
+    } catch (error) {
+      console.error('Error deploying Golden Master:', error);
+      alert('Failed to deploy Golden Master. Please try again.');
     }
   };
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
-  const [goldenMasterVersion, setGoldenMasterVersion] = useState(3);
-  const [goldenMasterScore, setGoldenMasterScore] = useState(95);
+  // Loading state
+  if (loading || firebaseConfigured === null) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+        <AdminBar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+          <p style={{ color: '#999' }}>Loading training center...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Foundation topics (mandatory before Golden Master)
-  const foundationTopics = [
-    { id: 'foundation-knowledge', title: 'Product/Service Knowledge', required: true },
-    { id: 'foundation-pricing', title: 'Pricing & Policies', required: true },
-    { id: 'foundation-escalation', title: 'When to Escalate', required: true }
-  ];
-
-  // Suggested training topics (ideas for what to practice)
-  const suggestedTopics = [
-    {
-      id: 'sug1',
-      title: 'First-Time Customer Introduction',
-      description: 'Practice discovery questions and building rapport with curious but unsure customers.',
-      customerPersona: 'First-time visitor, browsing, no clear intent yet'
-    },
-    {
-      id: 'sug2',
-      title: 'Price Objection',
-      description: 'Practice value justification when customer thinks prices are too high.',
-      customerPersona: 'Budget-conscious, comparing to competitors'
-    },
-    {
-      id: 'sug3',
-      title: 'Product Comparison Request',
-      description: 'Practice consultative selling when customer asks to compare 2-3 products.',
-      customerPersona: 'Informed shopper, knows what they want'
-    },
-    {
-      id: 'sug4',
-      title: 'Technical Specifications',
-      description: 'Practice handling detailed technical questions with accuracy.',
-      customerPersona: 'Technical buyer, detail-oriented'
-    },
-    {
-      id: 'sug5',
-      title: 'Return Policy & Guarantees',
-      description: 'Practice explaining policies clearly to risk-averse customers.',
-      customerPersona: 'Risk-averse, wants reassurance'
-    },
-    {
-      id: 'sug6',
-      title: 'Urgent Need / Time Pressure',
-      description: 'Practice handling urgency and setting realistic expectations.',
-      customerPersona: 'Time-sensitive buyer, needs fast shipping'
-    },
-    {
-      id: 'sug7',
-      title: 'Bulk Order Request',
-      description: 'Practice handling large volume orders with custom pricing.',
-      customerPersona: 'B2B buyer, looking for volume discounts'
-    }
-  ];
-
-  // Training session history
-  const [trainingHistory, setTrainingHistory] = useState([
-    { id: 1, topic: 'Product/Service Knowledge', score: 92, date: '2024-11-25 14:30', messages: 12 },
-    { id: 2, topic: 'Product/Service Knowledge', score: 88, date: '2024-11-25 15:45', messages: 15 },
-    { id: 3, topic: 'Pricing & Policies', score: 85, date: '2024-11-25 16:20', messages: 8 },
-    { id: 4, topic: 'Price Objection', score: 78, date: '2024-11-25 17:10', messages: 10 },
-    { id: 5, topic: 'When to Escalate', score: 95, date: '2024-11-25 18:00', messages: 7 },
-    { id: 6, topic: 'Product/Service Knowledge', score: 94, date: '2024-11-26 09:15', messages: 14 },
-    { id: 7, topic: 'Pricing & Policies', score: 90, date: '2024-11-26 10:30', messages: 11 },
-    { id: 8, topic: 'Price Objection', score: 82, date: '2024-11-26 11:45', messages: 13 }
-  ]);
-
-  // Calculate progress metrics
-  const getTopicStats = (topicName: string) => {
-    const sessions = trainingHistory.filter(s => s.topic === topicName);
-    if (sessions.length === 0) return null;
-    const avgScore = Math.round(sessions.reduce((sum, s) => sum + s.score, 0) / sessions.length);
-    const lastScore = sessions[sessions.length - 1].score;
-    return { sessions: sessions.length, avgScore, lastScore };
-  };
-
-  const foundationComplete = foundationTopics.every(topic => {
-    const stats = getTopicStats(topic.title);
-    return stats && stats.avgScore >= 85;
-  });
-
-  const overallAvg = trainingHistory.length > 0 
-    ? Math.round(trainingHistory.reduce((sum, s) => sum + s.score, 0) / trainingHistory.length)
-    : 0;
-
-  const canDeployGoldenMaster = foundationComplete && overallAvg >= 90 && trainingHistory.length >= 8;
-
-  // Training session
-  const [trainingLog, setTrainingLog] = useState<any[]>([]);
-  const [userInput, setUserInput] = useState('');
-  const [sessionFeedback, setSessionFeedback] = useState('');
-  const [sessionScore, setSessionScore] = useState(0);
-
-  const handleSendMessage = async () => {
-    if (!userInput.trim() || !user?.organizationId) return;
-    
-    const userMessage = userInput.trim();
-    setUserInput('');
-    
-    // Add user message to log
-    const newUserMessage = { 
-      role: 'user', 
-      message: userMessage, 
-      timestamp: new Date().toLocaleTimeString() 
-    };
-    setTrainingLog([...trainingLog, newUserMessage]);
-    
-    // Show loading state
-    setIsAnalyzing(true);
-    
-    try {
-      // Get Golden Master for training
-      const { getActiveGoldenMaster } = await import('@/lib/agent/golden-master-builder');
-      const activeGoldenMaster = await getActiveGoldenMaster(user.organizationId);
-      
-      // Build system prompt from Golden Master
-      let systemPrompt = '';
-      if (activeGoldenMaster) {
-        // Use the pre-compiled system prompt from Golden Master
-        systemPrompt = activeGoldenMaster.systemPrompt;
-        
-        // Add training mode context
-        systemPrompt += `\n\n# TRAINING MODE
-You are being trained on: ${sessionTopic || 'General sales conversation'}
-Practice responding naturally and professionally. The trainer will provide feedback.
-`;
-      } else {
-        systemPrompt = `You are a sales and customer service agent in training mode. Practice responding naturally and professionally.`;
-      }
-      
-      // Build conversation history
-      const conversationHistory = trainingLog.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.message }]
-      }));
-      
-      // Add current user message
-      conversationHistory.push({
-        role: 'user',
-        parts: [{ text: userMessage }]
-      });
-      
-      // Call Gemini API
-      const { sendChatMessage } = await import('@/lib/ai/gemini-service');
-      const response = await sendChatMessage(conversationHistory, systemPrompt);
-      
-      // Add agent response to log
-      const newAgentMessage = {
-        role: 'agent',
-        message: response.text,
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setTrainingLog(prev => [...prev, newAgentMessage]);
-      
-      // Save training conversation to Firestore
-      try {
-        const trainingData = {
-          organizationId: user.organizationId,
-          topic: sessionTopic || 'General',
-          messages: [...trainingLog, newUserMessage, newAgentMessage],
-          timestamp: new Date().toISOString(),
-          score: sessionScore || 0,
-          feedback: sessionFeedback || ''
-        };
-        
-        await FirestoreServiceTraining.set(
-          `${COLLECTIONSTraining.ORGANIZATIONS}/${user.organizationId}/trainingSessions`,
-          `session_${Date.now()}`,
-          trainingData,
-          false
-        );
-      } catch (error) {
-        console.error('Failed to save training session:', error);
-      }
-      
-    } catch (error: any) {
-      console.error('Error in training chat:', error);
-      const errorMessage = {
-        role: 'agent',
-        message: `Error: ${error.message || 'Failed to get response. Please check your Gemini API key configuration.'}`,
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setTrainingLog(prev => [...prev, errorMessage]);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleEndSession = () => {
-    if (!sessionTopic.trim()) {
-      alert('Please enter what topic you were practicing for this session.');
-      return;
-    }
-    
-    // Save to history
-    const newSession = {
-      id: trainingHistory.length + 1,
-      topic: sessionTopic,
-      score: sessionScore,
-      date: new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-      messages: trainingLog.length
-    };
-    setTrainingHistory([...trainingHistory, newSession]);
-    
-    if (sessionScore >= 80) {
-      alert(`Great training session! Score: ${sessionScore}%\n\nSession saved to training history.`);
-    } else {
-      alert(`Training session saved. Score: ${sessionScore}%\n\nKeep practicing to improve!`);
-    }
-    
-    // Reset
-    setTrainingLog([]);
-    setSessionFeedback('');
-    setSessionScore(0);
-    setSessionTopic('');
-  };
-
-  const handleDeployGoldenMaster = () => {
-    if (!canDeployGoldenMaster) {
-      alert('Not ready to deploy Golden Master:\n\n' +
-        (!foundationComplete ? '❌ Foundation topics must average 85%+\n' : '') +
-        (trainingHistory.length < 8 ? `❌ Need ${8 - trainingHistory.length} more training sessions\n` : '') +
-        (overallAvg < 90 ? `❌ Overall average: ${overallAvg}% (need 90%+)\n` : '')
-      );
-      return;
-    }
-    
-    alert(`⭐ Golden Master v${goldenMasterVersion + 1} deployed successfully!\n\nAll new customer sessions will use this improved version.`);
-    setGoldenMasterVersion(goldenMasterVersion + 1);
-    setGoldenMasterScore(overallAvg);
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <div style={{ width: sidebarOpen ? '260px' : '70px', backgroundColor: '#0a0a0a', borderRight: '1px solid #1a1a1a', transition: 'width 0.3s', display: 'flex', flexDirection: 'column' }}>
-          <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            <Link href="/crm" style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none' }}>
-              <span style={{ fontSize: '1.25rem' }}>🏠</span>
-              {sidebarOpen && <span>CRM</span>}
-            </Link>
-            <Link href={`/workspace/${orgId}/conversations`} style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none', position: 'relative' }}>
-              <span style={{ fontSize: '1.25rem' }}>💬</span>
-              {sidebarOpen && <span>Conversations</span>}
-              {/* Alert badge */}
-              <span style={{
-                position: 'absolute',
-                top: '0.75rem',
-                right: sidebarOpen ? '1rem' : '0.5rem',
-                width: '8px',
-                height: '8px',
-                backgroundColor: '#ef4444',
-                borderRadius: '50%',
-                boxShadow: '0 0 8px #ef4444'
-              }} />
-            </Link>
-            {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
-              <Link key={key} href={`/crm?view=${key}`} style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none' }}>
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
-            ))}
-          </nav>
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#999', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              {sidebarOpen ? '← Collapse' : '→'}
-            </button>
+  // Firebase not configured state
+  if (firebaseConfigured === false) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+        <AdminBar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+          <div style={{ textAlign: 'center', maxWidth: '700px', padding: '2rem' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔥</div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
+              Firebase Not Configured
+            </h1>
+            <p style={{ color: '#999', marginBottom: '1rem', lineHeight: '1.6' }}>
+              The AI Agent Training Center requires Firebase to store your training data, conversations, and agent configurations.
+            </p>
+            <p style={{ color: '#999', marginBottom: '2rem', lineHeight: '1.6' }}>
+              Please set up Firebase to use this feature. This takes about 5 minutes.
+            </p>
+            <div style={{ padding: '1.5rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', textAlign: 'left', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>Quick Setup Steps:</h2>
+              <ol style={{ color: '#999', marginLeft: '1.5rem', lineHeight: '1.8' }}>
+                <li>Create a Firebase project at <a href="https://console.firebase.google.com" target="_blank" style={{ color: primaryColor }}>console.firebase.google.com</a></li>
+                <li>Enable Firestore Database and Authentication</li>
+                <li>Copy your Firebase config from Project Settings</li>
+                <li>Create a <code style={{ backgroundColor: '#0a0a0a', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>.env.local</code> file in your project root</li>
+                <li>Add your Firebase credentials (see FIREBASE_SETUP.md)</li>
+                <li>Restart the development server</li>
+              </ol>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <a
+                href="https://console.firebase.google.com"
+                target="_blank"
+                style={{
+                  display: 'inline-block',
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: primaryColor,
+                  color: '#fff',
+                  borderRadius: '0.5rem',
+                  textDecoration: 'none',
+                  fontWeight: '600',
+                }}
+              >
+                Set Up Firebase
+              </a>
+              <a
+                href="/FIREBASE_SETUP.md"
+                target="_blank"
+                style={{
+                  display: 'inline-block',
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#1a1a1a',
+                  color: '#fff',
+                  borderRadius: '0.5rem',
+                  textDecoration: 'none',
+                  fontWeight: '600',
+                  border: '1px solid #333',
+                }}
+              >
+                View Setup Guide
+              </a>
+            </div>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem' }}>
-              <Link href={`/workspace/${orgId}/settings/ai-agents`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-                ← Back to AI Agent
-              </Link>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', marginTop: '1rem' }}>Training Center</h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>Improve your agent with targeted training scenarios</p>
+  if (!baseModel) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+        <AdminBar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+          <div style={{ textAlign: 'center', maxWidth: '600px', padding: '2rem' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
+              No Base Model Found
+            </h1>
+            <p style={{ color: '#999', marginBottom: '2rem' }}>
+              Please complete onboarding first to create your Base Model, then you can start training your AI agent.
+            </p>
+            <a
+              href={`/workspace/${orgId}/onboarding`}
+              style={{
+                display: 'inline-block',
+                padding: '0.75rem 1.5rem',
+                backgroundColor: primaryColor,
+                color: '#fff',
+                borderRadius: '0.5rem',
+                textDecoration: 'none',
+                fontWeight: '600',
+              }}
+            >
+              Go to Onboarding
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const suggestedTopics = [
+    'Product knowledge & recommendations',
+    'Price objections & value justification',
+    'Competitor comparisons',
+    'Return policy & guarantees',
+    'Technical specifications',
+    'Bulk orders & volume pricing',
+    'Urgent needs & timeframes',
+    'Escalation scenarios',
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
+      <AdminBar />
+
+      {/* Header */}
+      <div style={{ padding: '2rem', borderBottom: '1px solid #1a1a1a' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+            🎓 AI Agent Training Center
+          </h1>
+          <p style={{ color: '#999', marginBottom: '1.5rem' }}>
+            Train your Base Model through conversations, upload training materials, and save Golden Masters when ready
+          </p>
+          
+          {/* Status Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Base Model Status</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: baseModel.status === 'ready' ? '#10b981' : '#fbbf24' }}>
+                {baseModel.status === 'draft' ? '📝 Draft' : baseModel.status === 'training' ? '🔄 Training' : '✅ Ready'}
+              </div>
             </div>
-
-            {/* Knowledge Analysis Status */}
-            {isAnalyzing && (
-              <div style={{
-                marginBottom: '2rem',
-                padding: '1.5rem',
-                backgroundColor: '#1a1a1a',
-                border: `1px solid ${primaryColor}`,
-                borderRadius: '0.75rem',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-                <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
-                  Automatically Learning About Your Company...
-                </div>
-                <div style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
-                  {analysisProgress || 'Processing...'}
-                </div>
-                <div style={{
-                  width: '100%',
-                  height: '4px',
-                  backgroundColor: '#333',
-                  borderRadius: '2px',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: primaryColor,
-                    animation: 'pulse 2s ease-in-out infinite'
-                  }} />
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '1rem' }}>
-                  Scanning CRM, analyzing website, extracting FAQs, and learning brand voice...
-                </div>
+            
+            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Overall Training Score</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: overallScore >= 80 ? '#10b981' : overallScore >= 60 ? '#fbbf24' : '#ef4444' }}>
+                {overallScore}%
               </div>
-            )}
-
-            {knowledgeBaseReady && !isAnalyzing && (
-              <div style={{
-                marginBottom: '2rem',
-                padding: '1rem 1.5rem',
-                backgroundColor: '#0f4c0f',
-                border: '1px solid #4ade80',
-                borderRadius: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem'
-              }}>
-                <div style={{ fontSize: '1.5rem' }}>✅</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: '#4ade80', fontWeight: '600', fontSize: '0.875rem' }}>
-                    Agent Knowledge Base Ready
-                  </div>
-                  <div style={{ color: '#4ade80', fontSize: '0.75rem', opacity: 0.8 }}>
-                    Your agent has automatically learned about your company, products, services, and brand voice
-                  </div>
-                </div>
+            </div>
+            
+            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Training Sessions</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
+                {baseModel.trainingScenarios?.length || 0}
               </div>
-            )}
-
-            {/* Status Badge */}
-            <div style={{ 
-              marginBottom: '2rem',
-              padding: '1rem 1.5rem',
-              backgroundColor: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: '0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ fontSize: '2rem' }}>⭐</div>
-                <div>
-                  <div style={{ color: '#fff', fontWeight: '600', fontSize: '1rem' }}>Production Agent</div>
-                  <div style={{ color: '#666', fontSize: '0.875rem' }}>Golden Master v{goldenMasterVersion} (Score: {goldenMasterScore}%)</div>
-                </div>
+            </div>
+            
+            <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
+              <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Golden Masters</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
+                {goldenMasters.length}
+                {activeGoldenMaster && (
+                  <span style={{ fontSize: '0.875rem', marginLeft: '0.5rem', color: '#10b981' }}>
+                    ({activeGoldenMaster.version} active)
+                  </span>
+                )}
               </div>
-              <div style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: '#0f4c0f',
-                color: '#4ade80',
-                borderRadius: '9999px',
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ borderBottom: '1px solid #1a1a1a', backgroundColor: '#0a0a0a' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
+          {['chat', 'materials', 'history', 'golden'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              style={{
+                padding: '1rem 0',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === tab ? `2px solid ${primaryColor}` : '2px solid transparent',
+                color: activeTab === tab ? '#fff' : '#999',
+                fontWeight: activeTab === tab ? '600' : '400',
+                cursor: 'pointer',
                 fontSize: '0.875rem',
-                fontWeight: '600'
-              }}>
-                DEPLOYED
-              </div>
-            </div>
+                textTransform: 'capitalize',
+              }}
+            >
+              {tab === 'chat' ? '💬 Training Chat' : tab === 'materials' ? '📚 Training Materials' : tab === 'history' ? '📊 History' : '⭐ Golden Masters'}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #333' }}>
-              {[
-                { id: 'training', label: 'Training Environment' },
-                { id: 'progress', label: 'Progress Dashboard', badge: `${overallAvg}%` },
-                { id: 'golden', label: 'Golden Master' }
-              ].map((tab) => (
+      {/* Content */}
+      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          
+          {activeTab === 'chat' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 320px', gap: '2rem' }}>
+              {/* Column 1: Training Topics Sidebar */}
+              <div>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+                    Training Topic
+                  </label>
+                  <input
+                    type="text"
+                    value={trainingTopic}
+                    onChange={(e) => setTrainingTopic(e.target.value)}
+                    placeholder="e.g., Price Objections"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#1a1a1a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem',
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <h3 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#999', marginBottom: '0.75rem', textTransform: 'uppercase' }}>
+                    Suggested Topics
+                  </h3>
+                  {suggestedTopics.map((topic, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleStartNewSession(topic)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '0.75rem',
+                        marginBottom: '0.5rem',
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '0.5rem',
+                        color: '#fff',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      {topic}
+                    </button>
+                  ))}
+                </div>
+                
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => handleStartNewSession()}
                   style={{
-                    padding: '1rem 1.5rem',
+                    width: '100%',
+                    padding: '0.75rem',
+                    marginTop: '1rem',
                     backgroundColor: 'transparent',
-                    color: activeTab === tab.id ? primaryColor : '#999',
-                    border: 'none',
-                    borderBottom: `3px solid ${activeTab === tab.id ? primaryColor : 'transparent'}`,
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    color: '#999',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
                   }}
                 >
-                  <span>{tab.label}</span>
-                  {tab.badge && (
-                    <span style={{
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: overallAvg >= 90 ? '#4ade80' : overallAvg >= 80 ? primaryColor : '#f59e0b',
-                      color: overallAvg >= 90 || overallAvg >= 80 ? '#000' : '#000',
-                      borderRadius: '9999px',
-                      fontSize: '0.625rem',
-                      fontWeight: '700'
-                    }}>
-                      {tab.badge}
-                    </span>
-                  )}
+                  🔄 New Session
                 </button>
-              ))}
-            </div>
+              </div>
 
-            {/* Training Environment Tab */}
-            {activeTab === 'training' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
-                {/* Chat Interface */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', display: 'flex', flexDirection: 'column', height: '700px' }}>
-                  <div style={{ padding: '1.5rem', borderBottom: '1px solid #333' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                      Training Environment
-                    </h2>
-                    <p style={{ fontSize: '0.75rem', color: '#666' }}>
-                      Role-play as a customer to train your agent. Give feedback after each session.
-                    </p>
-                  </div>
-
-                  <div style={{ flex: 1, padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {trainingLog.length === 0 && (
-                      <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💬</div>
-                        <div style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Start training your agent</div>
-                        <div style={{ fontSize: '0.875rem' }}>Act as a customer and see how your agent responds</div>
-                      </div>
-                    )}
-                    {trainingLog.map((msg: any, idx: number) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                        <div style={{
-                          maxWidth: '75%',
+              {/* Chat Area */}
+              <div style={{ display: 'flex', flexDirection: 'column', height: '600px', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
+                {/* Messages */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+                  {chatMessages.length === 0 && (
+                    <div style={{ textAlign: 'center', paddingTop: '3rem' }}>
+                      <p style={{ color: '#666', marginBottom: '1rem' }}>
+                        {trainingTopic ? `Start training on: ${trainingTopic}` : 'Select a topic or enter a custom topic to begin training'}
+                      </p>
+                      <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                        Have a conversation with your AI agent, then provide feedback on its responses
+                      </p>
+                    </div>
+                  )}
+                  
+                  {chatMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      style={{
+                        marginBottom: '1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                      }}
+                    >
+                      <div
+                        style={{
+                          maxWidth: '70%',
                           padding: '0.75rem 1rem',
+                          backgroundColor: msg.role === 'user' ? primaryColor : '#1a1a1a',
+                          color: '#fff',
                           borderRadius: '0.75rem',
-                          backgroundColor: msg.role === 'user' ? primaryColor : '#0a0a0a',
-                          color: msg.role === 'user' ? '#fff' : '#ccc',
-                          border: msg.role === 'agent' ? '1px solid #222' : 'none'
-                        }}>
-                          <div style={{ fontSize: '0.75rem', color: msg.role === 'user' ? '#fff9' : '#666', marginBottom: '0.25rem' }}>
-                            {msg.role === 'user' ? 'You (Customer)' : 'Agent'} • {msg.timestamp}
-                          </div>
-                          <div style={{ fontSize: '0.875rem' }}>{msg.message}</div>
-                        </div>
+                          fontSize: '0.875rem',
+                          lineHeight: '1.5',
+                        }}
+                      >
+                        {msg.content}
                       </div>
-                    ))}
-                  </div>
+                      
+                      {msg.canGiveFeedback && msg.role === 'agent' && (
+                        <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => handleGiveFeedback(msg.id)}
+                            disabled={msg.hasFeedback}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              backgroundColor: msg.hasFeedback ? '#0a0a0a' : '#1a1a1a',
+                              border: '1px solid #333',
+                              borderRadius: '0.25rem',
+                              color: msg.hasFeedback ? '#666' : '#999',
+                              cursor: msg.hasFeedback ? 'not-allowed' : 'pointer',
+                              fontSize: '0.75rem',
+                            }}
+                          >
+                            {msg.hasFeedback ? (
+                              msg.feedbackType === 'correct' ? '✅ Good' : msg.feedbackType === 'could-improve' ? '⚠️ Could improve' : '❌ Incorrect'
+                            ) : (
+                              '💬 Give Feedback'
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {isTyping && (
+                    <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start' }}>
+                      <div style={{ padding: '0.75rem 1rem', backgroundColor: '#1a1a1a', borderRadius: '0.75rem' }}>
+                        <span style={{ color: '#999' }}>Typing...</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div ref={chatEndRef} />
+                </div>
 
-                  <div style={{ padding: '1.5rem', borderTop: '1px solid #333', display: 'flex', gap: '0.75rem' }}>
+                {/* Input */}
+                <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <input
                       type="text"
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="Act as a customer to test the agent..."
+                      placeholder="Type your message as a customer..."
                       style={{
                         flex: 1,
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
+                        backgroundColor: '#1a1a1a',
                         border: '1px solid #333',
                         borderRadius: '0.5rem',
                         color: '#fff',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
                       }}
                     />
                     <button
                       onClick={handleSendMessage}
+                      disabled={!userInput.trim() || isTyping}
                       style={{
                         padding: '0.75rem 1.5rem',
-                        backgroundColor: primaryColor,
+                        backgroundColor: !userInput.trim() || isTyping ? '#333' : primaryColor,
                         color: '#fff',
                         border: 'none',
                         borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
+                        cursor: !userInput.trim() || isTyping ? 'not-allowed' : 'pointer',
+                        fontWeight: '600',
                       }}
                     >
                       Send
                     </button>
                   </div>
                 </div>
+              </div>
+              
+              {/* Column 3: Sales Criteria Scoring Panel */}
+              <div style={{
+                backgroundColor: '#0a0a0a',
+                border: '1px solid #1a1a1a',
+                borderRadius: '0.75rem',
+                padding: '1.5rem',
+                height: 'fit-content',
+                position: 'sticky',
+                top: '2rem'
+              }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>
+                      📊 Sales Criteria Scoring
+                    </h3>
+                    <button
+                      onClick={() => setShowCriteriaEditor(!showCriteriaEditor)}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: 'transparent',
+                        border: '1px solid #333',
+                        borderRadius: '0.375rem',
+                        color: '#999',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚙️ Customize
+                    </button>
+                  </div>
+                  
+                  <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                    Rate each criterion AND explain why. The AI learns from your explanations, not just numbers.
+                  </p>
 
-                {/* Right Sidebar - Feedback & Suggestions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {/* Session Feedback */}
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Session Feedback</h3>
-                    <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1rem' }}>
-                      What did you practice?
-                    </p>
-                    
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Topic/Scenario</div>
-                      <input
-                        type="text"
-                        value={sessionTopic}
-                        onChange={(e) => setSessionTopic(e.target.value)}
-                        placeholder="e.g., Price Objection, Product Knowledge"
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
-                          borderRadius: '0.5rem',
-                          color: '#fff',
-                          fontSize: '0.875rem'
-                        }}
-                      />
+                  {/* Criteria Customization Panel */}
+                  {showCriteriaEditor && (
+                    <div style={{
+                      padding: '1rem',
+                      backgroundColor: '#1a1a1a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      marginBottom: '1.5rem'
+                    }}>
+                      <h4 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                        Customize Sales Criteria
+                      </h4>
+                      <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1rem' }}>
+                        Add, edit, or remove criteria that matter most to your sales process. Each criterion should be specific and measurable.
+                      </p>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input
+                          type="text"
+                          placeholder="e.g., Follow-up Speed"
+                          style={{
+                            flex: 1,
+                            padding: '0.5rem',
+                            backgroundColor: '#0a0a0a',
+                            border: '1px solid #333',
+                            borderRadius: '0.375rem',
+                            color: '#fff',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                        <button
+                          onClick={() => alert('Custom criteria feature coming soon! For now, use the default 6 criteria.')}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: primaryColor,
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.75rem', fontStyle: 'italic' }}>
+                        💡 Tip: Focus on 4-8 criteria max. Too many dilutes the feedback quality.
+                      </p>
                     </div>
+                  )}
 
+                  {/* Score Sliders */}
+                  <div style={{ marginBottom: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
+                    {customCriteria.map(({ key, label, icon }) => (
+                      <div key={key} style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>
+                            {icon} {label}
+                          </label>
+                          <span style={{ 
+                            fontSize: '0.875rem', 
+                            fontWeight: 'bold',
+                            color: salesCriteria[key as keyof typeof salesCriteria] >= 8 ? '#10b981' : 
+                                   salesCriteria[key as keyof typeof salesCriteria] >= 6 ? '#fbbf24' : '#ef4444'
+                          }}>
+                            {salesCriteria[key as keyof typeof salesCriteria]}/10
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          value={salesCriteria[key as keyof typeof salesCriteria]}
+                          onChange={(e) => setSalesCriteria(prev => ({ 
+                            ...prev, 
+                            [key]: parseInt(e.target.value) 
+                          }))}
+                          style={{
+                            width: '100%',
+                            height: '6px',
+                            borderRadius: '3px',
+                            background: `linear-gradient(to right, ${primaryColor} 0%, ${primaryColor} ${salesCriteria[key as keyof typeof salesCriteria] * 10}%, #1a1a1a ${salesCriteria[key as keyof typeof salesCriteria] * 10}%, #1a1a1a 100%)`,
+                            outline: 'none',
+                            cursor: 'pointer',
+                            marginBottom: '0.75rem'
+                          }}
+                        />
+                        <textarea
+                          value={criteriaExplanations[key as keyof typeof criteriaExplanations]}
+                          onChange={(e) => setCriteriaExplanations(prev => ({ 
+                            ...prev, 
+                            [key]: e.target.value 
+                          }))}
+                          placeholder={`Why this score? What did the agent do well or poorly? Be specific...`}
+                          style={{
+                            width: '100%',
+                            minHeight: '60px',
+                            padding: '0.5rem',
+                            backgroundColor: '#0a0a0a',
+                            border: '1px solid #333',
+                            borderRadius: '0.375rem',
+                            color: '#fff',
+                            fontSize: '0.75rem',
+                            resize: 'vertical',
+                            fontFamily: 'inherit'
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Overall Score */}
+                  <div style={{
+                    padding: '1rem',
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem', textTransform: 'uppercase' }}>
+                      Overall Session Score
+                    </div>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>
+                      {Math.round((Object.values(salesCriteria).reduce((sum, score) => sum + score, 0) / customCriteria.length) * 10)}/100
+                    </div>
+                  </div>
+
+                  {/* Session Notes */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#999' }}>
+                      Session Notes
+                    </label>
                     <textarea
-                      value={sessionFeedback}
-                      onChange={(e) => setSessionFeedback(e.target.value)}
-                      placeholder="e.g., 'Good product knowledge but too pushy on closing'"
-                      rows={3}
+                      value={sessionNotes}
+                      onChange={(e) => setSessionNotes(e.target.value)}
+                      placeholder="What went well? What needs improvement?"
+                      rows={4}
                       style={{
                         width: '100%',
                         padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
+                        backgroundColor: '#1a1a1a',
                         border: '1px solid #333',
                         borderRadius: '0.5rem',
                         color: '#fff',
                         fontSize: '0.875rem',
                         resize: 'vertical',
-                        marginBottom: '1rem'
+                        fontFamily: 'inherit'
                       }}
                     />
-                    
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Score (0-100%)</div>
-                      <input
-                        type="number"
-                        value={sessionScore}
-                        onChange={(e) => setSessionScore(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                        min="0"
-                        max="100"
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
-                          borderRadius: '0.5rem',
-                          color: '#fff',
-                          fontSize: '1.5rem',
-                          fontWeight: 'bold',
-                          textAlign: 'center'
-                        }}
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleEndSession}
-                      disabled={trainingLog.length === 0}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        backgroundColor: trainingLog.length === 0 ? '#222' : primaryColor,
-                        color: trainingLog.length === 0 ? '#666' : '#fff',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        cursor: trainingLog.length === 0 ? 'not-allowed' : 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                        marginBottom: '0.75rem'
-                      }}
-                    >
-                      Save Session
-                    </button>
-
-                    <button
-                      onClick={handleDeployGoldenMaster}
-                      disabled={!canDeployGoldenMaster}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        backgroundColor: canDeployGoldenMaster ? '#f59e0b' : '#222',
-                        color: canDeployGoldenMaster ? '#000' : '#666',
-                        border: canDeployGoldenMaster ? 'none' : '1px solid #333',
-                        borderRadius: '0.5rem',
-                        cursor: canDeployGoldenMaster ? 'pointer' : 'not-allowed',
-                        fontSize: '0.875rem',
-                        fontWeight: '700',
-                        textTransform: 'uppercase'
-                      }}
-                    >
-                      {canDeployGoldenMaster ? `⭐ Deploy Golden Master v${goldenMasterVersion + 1}` : `🔒 Not Ready (${overallAvg}%)`}
-                    </button>
-                    
-                    {!canDeployGoldenMaster && (
-                      <div style={{
-                        marginTop: '0.75rem',
-                        padding: '0.75rem',
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #333',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.75rem',
-                        color: '#999'
-                      }}>
-                        {!foundationComplete && <div style={{ marginBottom: '0.25rem' }}>❌ Complete foundation topics (85%+ each)</div>}
-                        {trainingHistory.length < 8 && <div style={{ marginBottom: '0.25rem' }}>❌ Need {8 - trainingHistory.length} more training sessions</div>}
-                        {overallAvg < 90 && <div>❌ Overall avg: {overallAvg}% (need 90%+)</div>}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Suggested Training Topics */}
-                  {showSuggestions && (
-                    <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>Suggested Topics</h3>
-                        <button
-                          onClick={() => setShowSuggestions(false)}
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            backgroundColor: 'transparent',
-                            color: '#666',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem'
-                          }}
-                        >
-                          Hide
-                        </button>
-                      </div>
-                      <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1rem' }}>
-                        Ideas for what to practice
-                      </p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
-                        {suggestedTopics.map((topic) => (
-                          <div 
-                            key={topic.id}
-                            style={{
-                              padding: '0.75rem',
-                              backgroundColor: '#0a0a0a',
-                              border: '1px solid #222',
-                              borderRadius: '0.5rem',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.borderColor = primaryColor}
-                            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#222'}
-                          >
-                            <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
-                              {topic.title}
-                            </div>
-                            <div style={{ fontSize: '0.625rem', color: '#999', marginBottom: '0.5rem' }}>
-                              {topic.description}
-                            </div>
-                            <div style={{ fontSize: '0.625rem', color: '#666', fontStyle: 'italic' }}>
-                              {topic.customerPersona}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!showSuggestions && (
-                    <button
-                      onClick={() => setShowSuggestions(true)}
-                      style={{
-                        padding: '0.75rem',
-                        backgroundColor: '#222',
-                        color: primaryColor,
-                        border: `1px solid ${primaryColor}`,
-                        borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
-                      }}
-                    >
-                      Show Suggested Topics
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Progress Dashboard Tab */}
-            {activeTab === 'progress' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Readiness Status */}
-                <div style={{ 
-                  backgroundColor: canDeployGoldenMaster ? '#0f4c0f' : '#1a1a1a', 
-                  border: `2px solid ${canDeployGoldenMaster ? '#4ade80' : '#333'}`, 
-                  borderRadius: '1rem', 
-                  padding: '2rem' 
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                    <div>
-                      <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
-                        {canDeployGoldenMaster ? '🟢 Ready to Deploy' : `🟡 Training in Progress`}
-                      </h2>
-                      <p style={{ fontSize: '0.875rem', color: canDeployGoldenMaster ? '#4ade80' : '#999' }}>
-                        {canDeployGoldenMaster 
-                          ? 'Agent has reached Master level performance' 
-                          : `Overall Average: ${overallAvg}% • ${trainingHistory.length} sessions completed`}
-                      </p>
-                    </div>
-                    <div style={{ 
-                      fontSize: '4rem', 
-                      fontWeight: 'bold',
-                      color: overallAvg >= 90 ? '#4ade80' : overallAvg >= 80 ? primaryColor : '#f59e0b'
-                    }}>
-                      {overallAvg}%
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                    <div style={{ backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #222' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Total Sessions</div>
-                      <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 'bold' }}>{trainingHistory.length}</div>
-                      <div style={{ fontSize: '0.75rem', color: trainingHistory.length >= 8 ? '#4ade80' : '#f59e0b' }}>
-                        {trainingHistory.length >= 8 ? '✓ Minimum met' : `Need ${8 - trainingHistory.length} more`}
-                      </div>
-                    </div>
-                    <div style={{ backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #222' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Foundation Topics</div>
-                      <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 'bold' }}>
-                        {foundationTopics.filter(t => {
-                          const stats = getTopicStats(t.title);
-                          return stats && stats.avgScore >= 85;
-                        }).length}/{foundationTopics.length}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: foundationComplete ? '#4ade80' : '#f59e0b' }}>
-                        {foundationComplete ? '✓ All complete' : 'Need 85%+ each'}
-                      </div>
-                    </div>
-                    <div style={{ backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #222' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Overall Average</div>
-                      <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 'bold' }}>{overallAvg}%</div>
-                      <div style={{ fontSize: '0.75rem', color: overallAvg >= 90 ? '#4ade80' : '#f59e0b' }}>
-                        {overallAvg >= 90 ? '⭐ Master level' : 'Need 90%+'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Foundation Topics */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
-                    Foundation Topics (Required)
-                  </h2>
-                  <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1.5rem' }}>
-                    Each topic must average 85%+ before deploying Golden Master
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {foundationTopics.map((topic) => {
-                      const stats = getTopicStats(topic.title);
-                      const isComplete = stats && stats.avgScore >= 85;
-                      
-                      return (
-                        <div key={topic.id} style={{
-                          backgroundColor: '#0a0a0a',
-                          border: `1px solid ${isComplete ? '#4ade80' : '#333'}`,
-                          borderRadius: '0.75rem',
-                          padding: '1.25rem'
-                        }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                                <div style={{ fontSize: '1.5rem' }}>{isComplete ? '✅' : '⭕'}</div>
-                                <div>
-                                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>
-                                    {topic.title}
-                                  </div>
-                                  {stats ? (
-                                    <div style={{ fontSize: '0.75rem', color: '#999' }}>
-                                      {stats.sessions} sessions • Avg: {stats.avgScore}% • Last: {stats.lastScore}%
-                                    </div>
-                                  ) : (
-                                    <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                                      Not practiced yet
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: isComplete ? '#4ade80' : '#666' }}>
-                              {stats ? `${stats.avgScore}%` : '--'}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Training History */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
-                    Training History
-                  </h2>
-                  <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1.5rem' }}>
-                    All completed training sessions
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {[...trainingHistory].reverse().map((session) => (
-                      <div key={session.id} style={{
-                        backgroundColor: '#0a0a0a',
-                        border: '1px solid #222',
-                        borderRadius: '0.5rem',
-                        padding: '1rem',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
-                            {session.topic}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                            {session.date} • {session.messages} messages
-                          </div>
-                        </div>
-                        <div style={{ 
-                          fontSize: '1.5rem', 
-                          fontWeight: 'bold',
-                          color: session.score >= 90 ? '#4ade80' : session.score >= 80 ? primaryColor : '#f59e0b'
-                        }}>
-                          {session.score}%
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Golden Master Tab */}
-            {activeTab === 'golden' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Current Golden Master */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '2px solid #f59e0b', borderRadius: '1rem', padding: '2rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <div style={{ fontSize: '3rem' }}>⭐</div>
-                    <div>
-                      <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                        Golden Master v{goldenMasterVersion}
-                      </h2>
-                      <p style={{ fontSize: '0.875rem', color: '#f59e0b' }}>Currently Active in Production</p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                    <div style={{ backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #222' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Training Score</div>
-                      <div style={{ fontSize: '1.5rem', color: '#4ade80', fontWeight: 'bold' }}>{goldenMasterScore}%</div>
-                    </div>
-                    <div style={{ backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #222' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Deployed</div>
-                      <div style={{ fontSize: '0.875rem', color: '#fff', fontWeight: '500' }}>Nov 23, 2024</div>
-                    </div>
-                    <div style={{ backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #222' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Total Uses</div>
-                      <div style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 'bold' }}>1,247</div>
-                    </div>
-                    <div style={{ backgroundColor: '#0a0a0a', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #222' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Avg Rating</div>
-                      <div style={{ fontSize: '1.5rem', color: '#fbbf24', fontWeight: 'bold' }}>4.2 ⭐</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button style={{
-                      flex: 1,
+                  {/* Submit Button */}
+                  <button
+                    onClick={submitSalesCriteriaScoring}
+                    style={{
+                      width: '100%',
                       padding: '0.75rem',
-                      backgroundColor: '#222',
+                      backgroundColor: primaryColor,
                       color: '#fff',
-                      border: '1px solid #333',
+                      border: 'none',
                       borderRadius: '0.5rem',
+                      fontWeight: '600',
                       cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}>
-                      View Analytics
-                    </button>
-                    <button style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      backgroundColor: '#222',
-                      color: '#ef4444',
-                      border: '1px solid #ef4444',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}>
-                      Rollback Version
-                    </button>
-                  </div>
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    💾 Save Session Score
+                  </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'materials' && (
+            <div>
+              <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+                    Training Materials
+                  </h2>
+                  <p style={{ color: '#999', fontSize: '0.875rem' }}>
+                    Upload sales training documents (PDFs, Word docs, text files) to enhance your agent's knowledge
+                  </p>
                 </div>
+                
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: isUploading ? '#333' : primaryColor,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                    fontWeight: '600',
+                  }}
+                >
+                  {isUploading ? 'Uploading...' : '📤 Upload Materials'}
+                </button>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={handleUploadMaterial}
+                  style={{ display: 'none' }}
+                />
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                {uploadedMaterials.length === 0 && (
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666' }}>
+                    <p>No training materials uploaded yet.</p>
+                    <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                      Upload PDFs like the NEPQ Black Book of Sales, product guides, or sales scripts
+                    </p>
+                  </div>
+                )}
+                
+                {uploadedMaterials.map((material: any, idx: number) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '1.5rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #1a1a1a',
+                      borderRadius: '0.5rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📄</div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+                      {material.filename}
+                    </h3>
+                    <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>
+                      Uploaded: {new Date(material.uploadedAt).toLocaleDateString()}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: '#666' }}>
+                      Size: {Math.round(material.size / 1024)} KB
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                {/* Version History */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Version History</h2>
+          {activeTab === 'history' && (
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+                Training History
+              </h2>
+              
+              {trainingHistory.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                  No training sessions yet. Start a conversation in the Training Chat tab.
+                </div>
+              )}
+              
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {trainingHistory.map((session: any, idx: number) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: '1.5rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #1a1a1a',
+                      borderRadius: '0.5rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>
+                        {session.topic}
+                      </h3>
+                      <span style={{ fontSize: '0.75rem', color: '#666' }}>
+                        {new Date(session.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                      {session.messageCount} messages exchanged
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {[
-                      { version: 3, score: 95, deployedAt: 'Nov 23, 2024', status: 'active', interactions: 1247, avgRating: 4.2 },
-                      { version: 2, score: 88, deployedAt: 'Nov 15, 2024', status: 'superseded', interactions: 856, avgRating: 3.8 },
-                      { version: 1, score: 82, deployedAt: 'Nov 10, 2024', status: 'superseded', interactions: 432, avgRating: 3.5 }
-                    ].map((version) => (
-                      <div key={version.version} style={{
-                        backgroundColor: '#0a0a0a',
-                        border: `1px solid ${version.status === 'active' ? '#f59e0b' : '#222'}`,
-                        borderRadius: '0.75rem',
-                        padding: '1.25rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{ fontSize: '1.5rem' }}>{version.status === 'active' ? '⭐' : '📦'}</div>
-                          <div>
-                            <div style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                              Version {version.version}
-                              {version.status === 'active' && (
-                                <span style={{
-                                  marginLeft: '0.5rem',
-                                  padding: '0.25rem 0.5rem',
-                                  backgroundColor: '#f59e0b',
-                                  color: '#000',
-                                  borderRadius: '0.25rem',
-                                  fontSize: '0.625rem',
-                                  fontWeight: '700'
-                                }}>
-                                  ACTIVE
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ color: '#666', fontSize: '0.75rem' }}>
-                              Score: {version.score}% • {version.deployedAt} • {version.interactions} uses • {version.avgRating} ⭐ avg
-                            </div>
-                          </div>
-                        </div>
-                        {version.status !== 'active' && (
-                          <button style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: '#222',
-                            color: primaryColor,
-                            border: '1px solid #333',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: '600'
-                          }}>
-                            Restore
+          {activeTab === 'golden' && (
+            <div>
+              <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+                    Golden Masters
+                  </h2>
+                  <p style={{ color: '#999', fontSize: '0.875rem' }}>
+                    Production-ready snapshots of your trained AI agent
+                  </p>
+                </div>
+                
+                <button
+                  onClick={handleSaveGoldenMaster}
+                  disabled={baseModel.status !== 'ready' || overallScore < 80}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: (baseModel.status === 'ready' && overallScore >= 80) ? '#10b981' : '#333',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: (baseModel.status === 'ready' && overallScore >= 80) ? 'pointer' : 'not-allowed',
+                    fontWeight: '600',
+                  }}
+                >
+                  💾 Save Golden Master
+                </button>
+              </div>
+              
+              {baseModel.status !== 'ready' && (
+                <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#fbbf24' }}>
+                    ⚠️ Base Model is not ready yet. Status: <strong>{baseModel.status}</strong>. Continue training to reach "ready" status.
+                  </p>
+                </div>
+              )}
+              
+              {overallScore < 80 && (
+                <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                  <p style={{ fontSize: '0.875rem', color: '#fbbf24' }}>
+                    ⚠️ Training score is below 80%. Current score: <strong>{overallScore}%</strong>. Continue training to improve.
+                  </p>
+                </div>
+              )}
+              
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {goldenMasters.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                    <p>No Golden Masters saved yet.</p>
+                    <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                      Train your Base Model to 80%+ score, then save your first Golden Master
+                    </p>
+                  </div>
+                )}
+                
+                {goldenMasters.map((gm: any) => (
+                  <div
+                    key={gm.id}
+                    style={{
+                      padding: '1.5rem',
+                      backgroundColor: '#0a0a0a',
+                      border: gm.isActive ? `2px solid ${primaryColor}` : '1px solid #1a1a1a',
+                      borderRadius: '0.5rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                          {gm.version}
+                          {gm.isActive && <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#10b981', backgroundColor: '#0a2a1a', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>LIVE</span>}
+                        </h3>
+                        <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                          Created: {new Date(gm.createdAt).toLocaleString()}
+                        </p>
+                        {gm.deployedAt && (
+                          <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                            Deployed: {new Date(gm.deployedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {!gm.isActive && (
+                          <button
+                            onClick={() => handleDeployGoldenMaster(gm.id, gm.version)}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: primaryColor,
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '0.25rem',
+                              cursor: 'pointer',
+                              fontSize: '0.875rem',
+                              fontWeight: '600',
+                            }}
+                          >
+                            🚀 Deploy
                           </button>
                         )}
                       </div>
-                    ))}
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Training Score</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#10b981' }}>{gm.trainingScore}%</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Scenarios Trained</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' }}>{gm.trainedScenarios?.length || 0}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Base Model</div>
+                        <div style={{ fontSize: '0.875rem', color: '#999' }}>{gm.baseModelId.substring(0, 12)}...</div>
+                      </div>
+                    </div>
+                    
+                    {gm.notes && (
+                      <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Notes</div>
+                        <p style={{ fontSize: '0.875rem', color: '#fff' }}>{gm.notes}</p>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+          
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      {feedbackMode && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setFeedbackMode(false)}
+        >
+          <div
+            style={{
+              width: '90%',
+              maxWidth: '600px',
+              backgroundColor: '#0a0a0a',
+              border: '1px solid #333',
+              borderRadius: '0.75rem',
+              padding: '2rem',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#fff' }}>
+              Provide Feedback on Agent Response
+            </h2>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+                How was this response?
+              </label>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                {[
+                  { value: 'correct', label: '✅ Correct', color: '#10b981' },
+                  { value: 'could-improve', label: '⚠️ Could Improve', color: '#fbbf24' },
+                  { value: 'incorrect', label: '❌ Incorrect', color: '#ef4444' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setFeedbackType(option.value as any)}
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      backgroundColor: feedbackType === option.value ? option.color : '#1a1a1a',
+                      border: feedbackType === option.value ? `2px solid ${option.color}` : '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontWeight: feedbackType === option.value ? '600' : '400',
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+                Why? (Required) *
+              </label>
+              <textarea
+                value={feedbackWhy}
+                onChange={(e) => setFeedbackWhy(e.target.value)}
+                rows={4}
+                placeholder="Explain why this response is correct/incorrect/could improve. This helps the AI learn the reasoning behind good sales techniques."
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  backgroundColor: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: '0.5rem',
+                  color: '#fff',
+                  fontSize: '0.875rem',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+            
+            {feedbackType !== 'correct' && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
+                  Better Response or Guidance *
+                </label>
+                <textarea
+                  value={betterResponse}
+                  onChange={(e) => setBetterResponse(e.target.value)}
+                  rows={4}
+                  placeholder="Show a better way to respond, or explain what should be different..."
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    color: '#fff',
+                    fontSize: '0.875rem',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setFeedbackMode(false)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: 'transparent',
+                  border: '1px solid #333',
+                  borderRadius: '0.5rem',
+                  color: '#999',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitFeedback}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: primaryColor,
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                }}
+              >
+                Submit Feedback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

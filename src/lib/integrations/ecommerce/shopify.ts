@@ -21,13 +21,47 @@ export async function executeShopifyFunction(
   
   switch (functionName) {
     case 'checkShopifyInventory':
-      return await checkInventory(parameters, shopDomain, accessToken);
+      // Validate parameters for checkInventory
+      if (!parameters.productId || typeof parameters.productId !== 'string') {
+        throw new Error('productId (string) is required for checkShopifyInventory');
+      }
+      return await checkInventory(
+        { productId: parameters.productId },
+        shopDomain,
+        accessToken
+      );
       
     case 'addToShopifyCart':
-      return await addToCart(parameters, shopDomain, accessToken);
+      // Validate parameters for addToCart
+      if (!parameters.productId || typeof parameters.productId !== 'string') {
+        throw new Error('productId (string) is required for addToShopifyCart');
+      }
+      if (!parameters.quantity || typeof parameters.quantity !== 'number') {
+        throw new Error('quantity (number) is required for addToShopifyCart');
+      }
+      if (parameters.variantId && typeof parameters.variantId !== 'string') {
+        throw new Error('variantId must be a string');
+      }
+      return await addToCart(
+        {
+          productId: parameters.productId,
+          quantity: parameters.quantity,
+          variantId: parameters.variantId,
+        },
+        shopDomain,
+        accessToken
+      );
       
     case 'getShopifyProduct':
-      return await getProduct(parameters, shopDomain, accessToken);
+      // Validate parameters for getProduct
+      if (!parameters.productId || typeof parameters.productId !== 'string') {
+        throw new Error('productId (string) is required for getShopifyProduct');
+      }
+      return await getProduct(
+        { productId: parameters.productId },
+        shopDomain,
+        accessToken
+      );
       
     default:
       throw new Error(`Unknown Shopify function: ${functionName}`);

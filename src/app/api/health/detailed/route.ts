@@ -21,8 +21,9 @@ export async function GET(request: NextRequest) {
       environment: process.env.NODE_ENV || 'development',
       services: {
         database: {
-          status: 'unknown',
+          status: 'unknown' as string,
           configured: isFirebaseConfigured,
+          error: undefined as string | undefined,
         },
         api: {
           status: 'healthy',

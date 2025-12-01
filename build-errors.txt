@@ -1,0 +1,74 @@
+﻿
+> ai-crm-platform@0.1.0 build
+> next build
+
+  Γû▓ Next.js 14.2.33
+
+   Creating an optimized production build ...
+node.exe :  ΓÜá Compiled with warnings
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( ΓÜá Compiled with warnings:Strin 
+   g) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./node_modules/require-in-the-middle/index.js
+Critical dependency: require function is used in a way in which dependencies 
+cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/require-in-the-middle/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumen
+tation.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/index.js
+./node_modules/@sentry/node/build/cjs/integrations/tracing/postgresjs.js
+./node_modules/@sentry/node/build/cjs/index.js
+./node_modules/@sentry/nextjs/build/cjs/index.server.js
+./src/components/ErrorBoundary.tsx
+
+./node_modules/require-in-the-middle/index.js
+Critical dependency: require function is used in a way in which dependencies 
+cannot be statically extracted
+
+Import trace for requested module:
+./node_modules/require-in-the-middle/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/instrumen
+tation.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/node/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/platform/index.js
+./node_modules/@opentelemetry/instrumentation/build/esm/index.js
+./node_modules/@sentry/node/build/cjs/integrations/tracing/postgresjs.js
+./node_modules/@sentry/node/build/cjs/index.js
+./node_modules/@sentry/nextjs/build/cjs/index.server.js
+./src/lib/logging/logger.ts
+./src/lib/logging/api-logger.ts
+./src/app/api/email/send/route.ts
+
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/app/admin/support/exports/page.tsx:194:53
+Type error: Property 'format' does not exist on type 'BulkOperation'.
+
+[0m [90m 192 |[39m                 [33m<[39m[33mdiv[39m[33m>[39m[0m
+[0m [90m 193 |[39m                   [33m<[39m[33mdiv[39m 
+style[33m=[39m{{ fontWeight[33m:[39m [32m'600'[39m[33m,[39m 
+marginBottom[33m:[39m [32m'0.25rem'[39m }}[33m>[39m[0m
+[0m[31m[1m>[22m[39m[90m 194 |[39m                     
+{exp[33m.[39mresourceType} [33mExport[39m ({exp[33m.[39mformat 
+[33m||[39m [32m'json'[39m})[0m
+[0m [90m     |[39m                                                     
+[31m[1m^[22m[39m[0m
+[0m [90m 195 |[39m                   
+[33m<[39m[33m/[39m[33mdiv[39m[33m>[39m[0m
+[0m [90m 196 |[39m                   [33m<[39m[33mdiv[39m 
+style[33m=[39m{{ fontSize[33m:[39m [32m'0.875rem'[39m[33m,[39m 
+color[33m:[39m [32m'#666'[39m }}[33m>[39m[0m
+[0m [90m 197 |[39m                     [33mCreated[39m[33m:[39m 
+{[36mnew[39m [33mDate[39m(exp[33m.[39mcreatedAt [36mas[39m 
+any)[33m.[39mtoLocaleString()}[0m
+Next.js build worker exited with code: 1 and signal: null

@@ -166,7 +166,7 @@ export default function OnboardingWizard() {
       const { processOnboarding } = await import('@/lib/agent/onboarding-processor');
       
       // Get current user ID
-      const userId = user?.uid || 'system';
+      const userId = user?.id || 'system';
       
       setAnalysisProgress('Processing knowledge base...');
       const result = await processOnboarding({

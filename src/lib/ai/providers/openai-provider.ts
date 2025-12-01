@@ -3,8 +3,8 @@
  * GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
  */
 
+import type { ModelProvider } from '@/lib/ai/model-provider';
 import type {
-  ModelProvider,
   ChatRequest,
   ChatResponse,
   ChatMessage,

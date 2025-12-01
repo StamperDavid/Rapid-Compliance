@@ -122,91 +122,19 @@ function calculateAuthorizeNetFee(amount: number): number {
 
 /**
  * Process Braintree payment (PayPal-owned)
+ * NOTE: Disabled - requires 'braintree' package installation
+ * To enable: npm install braintree
  */
 export async function processBraintreePayment(
   request: PaymentRequest,
   providerConfig: any
 ): Promise<PaymentResult> {
-  try {
-    const orgId = request.workspaceId.split('/')[0];
-    const braintreeKeys = await apiKeyService.getServiceKey(orgId, 'braintree');
-    
-    if (!braintreeKeys) {
-      return {
-        success: false,
-        error: 'Braintree credentials not configured',
-      };
-    }
-    
-    const { merchantId, publicKey, privateKey, environment } = braintreeKeys as any;
-    
-    if (!merchantId || !publicKey || !privateKey) {
-      return {
-        success: false,
-        error: 'Braintree API credentials missing',
-      };
-    }
-    
-    // Use Braintree SDK
-    const braintree = await import('braintree');
-    const gateway = new braintree.BraintreeGateway({
-      environment: environment === 'production' 
-        ? braintree.Environment.Production
-        : braintree.Environment.Sandbox,
-      merchantId,
-      publicKey,
-      privateKey,
-    });
-    
-    // Create transaction
-    const result = await gateway.transaction.sale({
-      amount: request.amount.toFixed(2),
-      paymentMethodNonce: request.paymentToken,
-      customer: {
-        firstName: request.customer.firstName,
-        lastName: request.customer.lastName,
-        email: request.customer.email,
-        phone: request.customer.phone,
-      },
-      options: {
-        submitForSettlement: true,
-      },
-      orderId: request.metadata?.orderId,
-    });
-    
-    if (result.success && result.transaction) {
-      const transaction = result.transaction;
-      
-      return {
-        success: true,
-        transactionId: transaction.id,
-        provider: 'braintree',
-        cardLast4: transaction.creditCard?.last4,
-        cardBrand: transaction.creditCard?.cardType,
-        processingFee: calculateBraintreeFee(request.amount),
-      };
-    } else {
-      return {
-        success: false,
-        error: result.message || 'Braintree transaction failed',
-      };
-    }
-  } catch (error: any) {
-    console.error('Braintree payment error:', error);
-    return {
-      success: false,
-      error: error.message || 'Braintree payment processing failed',
-    };
-  }
+  return {
+    success: false,
+    error: 'Braintree payment provider not installed. Install with: npm install braintree',
+  };
 }
 
-/**
- * Calculate Braintree fee
- */
-function calculateBraintreeFee(amount: number): number {
-  // Braintree: 2.9% + $0.30 (standard rate)
-  return amount * 0.029 + 0.30;
-}
 
 /**
  * Process 2Checkout payment (now Verifone)
@@ -320,76 +248,19 @@ function calculate2CheckoutFee(amount: number): number {
 
 /**
  * Process Razorpay payment (popular in India)
+ * NOTE: Disabled - requires 'razorpay' package installation
+ * To enable: npm install razorpay
  */
 export async function processRazorpayPayment(
   request: PaymentRequest,
   providerConfig: any
 ): Promise<PaymentResult> {
-  try {
-    const orgId = request.workspaceId.split('/')[0];
-    const razorpayKeys = await apiKeyService.getServiceKey(orgId, 'razorpay');
-    
-    if (!razorpayKeys) {
-      return {
-        success: false,
-        error: 'Razorpay credentials not configured',
-      };
-    }
-    
-    const { keyId, keySecret } = razorpayKeys as any;
-    
-    if (!keyId || !keySecret) {
-      return {
-        success: false,
-        error: 'Razorpay API credentials missing',
-      };
-    }
-    
-    // Use Razorpay SDK
-    const Razorpay = (await import('razorpay')).default;
-    const razorpay = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
-    });
-    
-    // Capture payment
-    const payment = await razorpay.payments.capture(
-      request.paymentToken || '',
-      Math.round(request.amount * 100), // Amount in paise (smallest currency unit)
-      request.currency.toUpperCase()
-    );
-    
-    if (payment.status === 'captured') {
-      return {
-        success: true,
-        transactionId: payment.id,
-        provider: 'razorpay',
-        cardLast4: payment.card?.last4,
-        cardBrand: payment.card?.network,
-        processingFee: calculateRazorpayFee(request.amount),
-      };
-    } else {
-      return {
-        success: false,
-        error: `Payment status: ${payment.status}`,
-      };
-    }
-  } catch (error: any) {
-    console.error('Razorpay payment error:', error);
-    return {
-      success: false,
-      error: error.message || 'Razorpay payment processing failed',
-    };
-  }
+  return {
+    success: false,
+    error: 'Razorpay payment provider not installed. Install with: npm install razorpay',
+  };
 }
 
-/**
- * Calculate Razorpay fee
- */
-function calculateRazorpayFee(amount: number): number {
-  // Razorpay: 2% (no fixed fee, varies by plan)
-  return amount * 0.02;
-}
 
 /**
  * Process Mollie payment (popular in Europe)
@@ -517,28 +388,12 @@ export const PAYMENT_PROVIDERS = [
     countries: 'US, CA, UK, EU',
   },
   {
-    id: 'braintree',
-    name: 'Braintree',
-    description: 'PayPal-owned, great mobile support',
-    fee: '2.9% + $0.30',
-    logo: '🌳',
-    countries: 'Global',
-  },
-  {
     id: '2checkout',
     name: '2Checkout',
     description: 'Multi-currency, global reach',
     fee: '3.5% + $0.35',
     logo: '✅',
     countries: 'Global',
-  },
-  {
-    id: 'razorpay',
-    name: 'Razorpay',
-    description: 'Leading payment gateway in India',
-    fee: '2% (no fixed fee)',
-    logo: '🇮🇳',
-    countries: 'India',
   },
   {
     id: 'mollie',

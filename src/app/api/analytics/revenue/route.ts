@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const validation = validateInput(revenueReportSchema, {
+    const validation = revenueReportSchema.safeParse({
       workspaceId,
       period,
       startDate,
@@ -42,14 +42,16 @@ export async function GET(request: NextRequest) {
     });
 
     if (!validation.success) {
+      const errorDetails = validation.error.errors.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      }));
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map((e: any) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );

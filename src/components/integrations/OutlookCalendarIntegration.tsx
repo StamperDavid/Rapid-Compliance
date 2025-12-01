@@ -41,7 +41,7 @@ export default function OutlookCalendarIntegration({
         description: 'Sync events and meetings',
         icon: '📅',
         category: 'calendar',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         calendarId: 'primary',
         settings: {
@@ -52,13 +52,13 @@ export default function OutlookCalendarIntegration({
             defaultReminderMinutes: 15,
           },
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
     }, 2000);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

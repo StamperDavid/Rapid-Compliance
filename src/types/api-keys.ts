@@ -181,6 +181,9 @@ export type APIServiceName =
   | 'stripe'
   | 'square'
   | 'paypal'
+  | 'authorizenet'
+  | '2checkout'
+  | 'mollie'
   | 'sendgrid'
   | 'resend'
   | 'integrations'
@@ -196,6 +199,8 @@ export type APIServiceName =
   | 'googleWorkspace'
   | 'microsoft365'
   | 'mailchimp'
-  | 'hubspot';
+  | 'hubspot'
+  | 'google-calendar'
+  | 'gmail';
 
 

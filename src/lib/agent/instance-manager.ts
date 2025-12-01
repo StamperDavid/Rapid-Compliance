@@ -295,6 +295,61 @@ ${this.summarizeRecentConversations(customerMemory)}
   }
   
   /**
+   * Add a message to customer memory (simplified version for API routes)
+   */
+  async addMessageToMemory(
+    customerId: string,
+    orgId: string,
+    userMessage: string,
+    assistantMessage: string
+  ): Promise<void> {
+    try {
+      // Load customer memory
+      const memory = await this.getCustomerMemory(customerId, orgId);
+      if (!memory) {
+        console.error(`[Instance Manager] No memory found for customer ${customerId}`);
+        return;
+      }
+
+      // Add messages to conversation history
+      const timestamp = new Date().toISOString();
+      
+      memory.conversationHistory.push({
+        messageId: this.generateMessageId(),
+        sessionId: memory.sessions[memory.sessions.length - 1]?.sessionId || 'default',
+        timestamp,
+        role: 'customer',
+        content: userMessage,
+      });
+      
+      memory.conversationHistory.push({
+        messageId: this.generateMessageId(),
+        sessionId: memory.sessions[memory.sessions.length - 1]?.sessionId || 'default',
+        timestamp,
+        role: 'agent',
+        content: assistantMessage,
+      });
+
+      // Keep only last 100 messages to prevent memory from growing too large
+      if (memory.conversationHistory.length > 100) {
+        memory.conversationHistory = memory.conversationHistory.slice(-100);
+      }
+
+      // Update last interaction
+      memory.lastInteraction = timestamp;
+      memory.updatedAt = timestamp;
+
+      // Save updated memory
+      await this.saveCustomerMemory(memory);
+      
+      console.log(`[Instance Manager] Added messages to memory for customer ${customerId}`);
+    } catch (error) {
+      console.error('[Instance Manager] Error adding message to memory:', error);
+      // Don't throw - we don't want to fail the API call if memory update fails
+    }
+  }
+
+  /**
    * Add agent note/insight
    */
   async addAgentNote(

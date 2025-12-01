@@ -22,13 +22,11 @@ async function initializeAdminAuth() {
   try {
     // Dynamically import firebase-admin (only if available)
     const admin = await import('firebase-admin');
-    const { getApps, initializeApp, cert } = admin.app;
-    const { getAuth } = admin.auth;
-
+    
     // Check if already initialized
-    const existingApps = getApps();
+    const existingApps = admin.apps;
     if (existingApps.length > 0) {
-      adminAuth = getAuth(existingApps[0]);
+      adminAuth = admin.auth(existingApps[0]);
       adminInitialized = true;
       return adminAuth;
     }
@@ -40,15 +38,15 @@ async function initializeAdminAuth() {
 
     let app;
     if (serviceAccount) {
-      app = initializeApp({
-        credential: cert(serviceAccount),
+      app = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
       });
     } else {
       // Use default credentials (for GCP deployment)
-      app = initializeApp();
+      app = admin.initializeApp();
     }
 
-    adminAuth = getAuth(app);
+    adminAuth = admin.auth(app);
     adminInitialized = true;
     return adminAuth;
   } catch (error) {

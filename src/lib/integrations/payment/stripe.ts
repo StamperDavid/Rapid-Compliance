@@ -21,10 +21,46 @@ export async function executeStripeFunction(
   
   switch (functionName) {
     case 'createStripeCheckout':
-      return await createCheckoutSession(parameters, apiKey);
+      // Validate required parameters
+      if (typeof parameters.amount !== 'number') {
+        throw new Error('amount (number) is required for createStripeCheckout');
+      }
+      if (!parameters.description || typeof parameters.description !== 'string') {
+        throw new Error('description (string) is required for createStripeCheckout');
+      }
+      if (parameters.currency && typeof parameters.currency !== 'string') {
+        throw new Error('currency must be a string');
+      }
+      if (parameters.customerEmail && typeof parameters.customerEmail !== 'string') {
+        throw new Error('customerEmail must be a string');
+      }
+      
+      return await createCheckoutSession(
+        {
+          amount: parameters.amount,
+          description: parameters.description,
+          currency: parameters.currency,
+          customerEmail: parameters.customerEmail,
+        },
+        apiKey
+      );
       
     case 'createStripePaymentLink':
-      return await createPaymentLink(parameters, apiKey);
+      // Validate required parameters
+      if (typeof parameters.amount !== 'number') {
+        throw new Error('amount (number) is required for createStripePaymentLink');
+      }
+      if (!parameters.description || typeof parameters.description !== 'string') {
+        throw new Error('description (string) is required for createStripePaymentLink');
+      }
+      
+      return await createPaymentLink(
+        {
+          amount: parameters.amount,
+          description: parameters.description,
+        },
+        apiKey
+      );
       
     default:
       throw new Error(`Unknown Stripe function: ${functionName}`);

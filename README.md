@@ -1,354 +1,190 @@
-# AI CRM Platform - White-Label Multi-Tenant CRM with E-Commerce
+# AI Sales Platform
 
-A fully customizable, industry-agnostic CRM platform with AI agents, workflow automation, and embeddable e-commerce storefronts.
+Complete AI-powered sales platform with CRM, outbound automation, e-commerce, and white-label capabilities.
 
-## 🚀 Quick Start
+## Features
 
-### Prerequisites
-- Node.js 18+ ([Download](https://nodejs.org/))
-- npm or yarn
-- Firebase account ([Sign up](https://firebase.google.com/))
-- Google Cloud Platform account ([Sign up](https://cloud.google.com/))
+### ✅ Core Platform
+- **AI Chat Agent** - GPT-4 powered conversational AI with RAG
+- **CRM** - Leads, contacts, companies, deals, tasks
+- **E-Commerce** - Products, cart, checkout, widgets
+- **White-Label** - Custom branding, multi-tenant
+- **Analytics** - Revenue, pipeline, forecasting
 
-### Installation
+### ✅ Outbound Sales (NEW!)
+- **AI Email Writer** - Generate personalized cold emails
+- **Sequence Engine** - Multi-step email campaigns
+- **Reply Handler** - AI-powered email responses
+- **Meeting Scheduler** - Autonomous calendar booking
+- **Subscription System** - Tiered plans with feature gating
 
-#### EASIEST: Double-Click to Start (Windows)
-1. Navigate to project folder: `C:\Users\David\PycharmProjects\AI Sales Platform`
-2. Double-click `START.bat`
-3. Done! Server starts on http://localhost:3000
+### ✅ Integrations
+- **Email** - SendGrid (real implementation)
+- **Calendar** - Google Calendar (real implementation)
+- **Gmail** - Email sync and sending (real implementation)
+- **Accounting** - QuickBooks, Xero (real implementation)
+- **Communication** - Slack, Microsoft Teams (real implementation)
+- **Payments** - Stripe, PayPal (real implementation)
 
-#### Option 1: Simple PowerShell Command
-```powershell
-# Navigate to project
-cd "C:\Users\David\PycharmProjects\AI Sales Platform"
+### ✅ E-Commerce Widgets
+- ProductCard, ProductGrid, BuyButton
+- ShoppingCart, FullStorefront, CheckoutFlow
+- Embeddable on any website
 
-# Start server
-.\START.ps1
-```
+## Quick Start
 
-#### Option 2: Automated Setup (Windows PowerShell)
-```powershell
-# Run the setup script
-.\scripts\setup-dev.ps1
-
-# Start the development server
-.\scripts\quick-start.ps1
-```
-
-#### Option 3: Manual Setup
+### 1. Install Dependencies
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd ai-crm-platform
-
-# Install dependencies
 npm install
+```
 
-# Copy environment template
-copy .env.example .env.local
+### 2. Setup Environment
+See `SIMPLE_SETUP.md` for detailed setup instructions.
 
-# Start development server
+Required API keys (add via Settings → API Keys in the app):
+- OpenAI (for AI features)
+- SendGrid (for email sending)
+- Google OAuth (for calendar/Gmail)
+- Stripe (for payments)
+
+### 3. Run Development Server
+```bash
 npm run dev
 ```
 
-### Configuration
+Open [http://localhost:3000](http://localhost:3000)
 
-1. **Update `.env.local`** with your credentials:
-   - Firebase API keys
-   - Google Cloud project ID
-   - Gemini API key
-   - Stripe keys (for e-commerce)
+### 4. Configure Services
+1. Create account and organization
+2. Go to Settings → API Keys
+3. Add your API keys (instructions provided in app)
+4. Test each service
 
-2. **Initialize Firebase**:
+## Documentation
+
+- `SIMPLE_SETUP.md` - Step-by-step setup guide
+- `SETUP_GUIDE.md` - Detailed technical setup
+- `WHATS_ACTUALLY_WORKING.md` - Honest status of all features
+- `OUTBOUND_FEATURES_COMPLETE.md` - Outbound features documentation
+
+## Tech Stack
+
+- **Framework** - Next.js 14 (App Router)
+- **Language** - TypeScript
+- **Database** - Firebase Firestore
+- **Auth** - Firebase Auth
+- **AI** - OpenAI GPT-4, Anthropic Claude, Google Gemini
+- **Email** - SendGrid
+- **Payments** - Stripe
+- **Deployment** - Vercel
+
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js app router pages
+│   ├── api/               # API routes
+│   ├── workspace/         # Main application
+│   └── auth/              # Authentication pages
+├── components/            # React components
+├── lib/                   # Core libraries
+│   ├── ai/               # AI services
+│   ├── email/            # Email services
+│   ├── integrations/     # Third-party integrations
+│   ├── outbound/         # Outbound sales features
+│   ├── subscription/     # Subscription management
+│   └── widgets/          # E-commerce widgets
+└── types/                # TypeScript types
+```
+
+## API Routes
+
+### Outbound
+- `POST /api/outbound/email/generate` - Generate AI email
+- `POST /api/outbound/sequences` - Create email sequence
+- `POST /api/outbound/sequences/enroll` - Enroll prospects
+- `POST /api/outbound/reply/process` - Process email reply
+- `POST /api/outbound/meetings/schedule` - Schedule meeting
+
+### Subscription
+- `GET /api/subscription` - Get subscription
+- `POST /api/subscription` - Update subscription
+- `POST /api/subscription/toggle` - Toggle feature
+- `GET /api/subscription/usage` - Get usage stats
+
+### E-Commerce
+- `GET /api/ecommerce/products` - List products
+- `POST /api/ecommerce/cart/add` - Add to cart
+- `POST /api/ecommerce/checkout/create-session` - Create Stripe session
+
+### Integrations
+- `GET /api/integrations/google/auth` - Start Google OAuth
+- `GET /api/integrations/google/callback` - Google OAuth callback
+- `GET /api/integrations/microsoft/auth` - Start Microsoft OAuth
+- `GET /api/integrations/slack/auth` - Start Slack OAuth
+
+## Development
+
+### Run Tests
 ```bash
-npm run firebase:init
+npm test
 ```
 
-3. **Start Firebase Emulators** (optional, for local testing):
+### Build for Production
 ```bash
-npm run firebase:emulators
+npm run build
+npm start
 ```
 
-## 🎨 Key Features
-
-### ✅ Multi-Tenant Architecture
-- Organizations (top-level tenants)
-- Workspaces (sub-tenants)
-- Complete data isolation
-- RBAC permissions
-
-### ✅ Dynamic Custom Objects
-- Create/delete custom objects (like Pipedrive)
-- 20+ field types (text, number, date, select, lookups, rollups, formulas, AI-generated)
-- Relationships (one-to-many, many-to-many)
-- Formula engine for computed fields
-
-### ✅ Advanced Theme System 🎨 **NEW!**
-- **Gradient Support**: Linear, radial, and conic gradients
-- **Advanced Curves**: Customizable border radius on all components
-- **White-Labeling**: 
-  - Custom logo (horizontal, vertical, icon variants)
-  - Favicon and app icons
-  - Login page customization
-  - Email branding
-  - Custom domain support
-  - Remove "Powered by" branding
-- **Glass Morphism**: Blur effects and transparency
-- **Colored Shadows**: Glow effects with theme colors
-- **Animation Control**: Custom durations and easing
-- **Component Styling**: Per-component style overrides
-
-### ✅ Multiple View Types
-- Table (spreadsheet)
-- Kanban (Trello-style)
-- Calendar
-- Gallery
-- List
-- Form
-- Dashboard (with widgets)
-- Timeline
-
-### ✅ AI Agents
-- Trainable AI assistants
-- Multiple agent types (Sales, Support, Service, Custom)
-- Golden Master deployment
-- Knowledge base integration
-- Google Search grounding
-
-### ✅ Workflow Automation
-- 9 trigger types
-- 15+ action types
-- Conditional logic
-- Error handling
-- Cloud Functions integration
-
-### ✅ E-Commerce Platform
-- One-click e-commerce activation
-- Product mapping from CRM
-- Payment processing (Stripe, Square, PayPal)
-- Shipping & tax calculation
-- Order management
-
-### ✅ Embeddable Widgets
-- WordPress shortcodes: `[crm-store id="abc123"]`
-- JavaScript embed
-- React SDK
-- iframe support
-- 7 widget types
-
-## 📁 Project Structure
-
-```
-ai-crm-platform/
-├── src/
-│   ├── app/              # Next.js App Router
-│   ├── components/       # React components
-│   ├── lib/             # Core libraries
-│   ├── types/           # TypeScript definitions
-│   ├── hooks/           # React hooks
-│   └── stores/          # Zustand state stores
-├── public/
-│   └── embed.js         # Embeddable widget SDK
-├── scripts/
-│   ├── setup-dev.ps1    # Setup script
-│   ├── start-dev.ps1    # Start all services
-│   └── quick-start.ps1  # Quick start
-├── docs/                # Documentation
-├── infrastructure/      # Terraform configs
-└── functions/           # Cloud Functions
-```
-
-## 🎨 Theme Customization Examples
-
-### Gradient Background
-```typescript
-const theme = {
-  colors: {
-    background: {
-      gradient: {
-        type: 'linear',
-        angle: 135,
-        stops: [
-          { color: '#667eea', position: 0 },
-          { color: '#764ba2', position: 100 }
-        ]
-      }
-    }
-  }
-};
-```
-
-### Custom Border Curves
-```typescript
-const theme = {
-  layout: {
-    borderRadius: {
-      card: '24px',      // Rounded cards
-      button: '12px',    // Smooth buttons
-      input: '8px',      // Subtle inputs
-      modal: '32px'      // Very rounded modals
-    }
-  }
-};
-```
-
-### Colored Glow Effects
-```typescript
-const theme = {
-  layout: {
-    boxShadow: {
-      glow: '0 0 20px rgba(102, 126, 234, 0.5)',
-      glowHover: '0 0 40px rgba(102, 126, 234, 0.8)'
-    }
-  }
-};
-```
-
-### White-Label Branding
-```typescript
-const branding = {
-  logo: {
-    url: 'https://yourbrand.com/logo.svg',
-    variants: {
-      horizontal: 'https://yourbrand.com/logo-h.svg',
-      icon: 'https://yourbrand.com/icon.svg'
-    }
-  },
-  customDomain: 'app.yourbrand.com',
-  loginPage: {
-    backgroundImage: 'https://yourbrand.com/bg.jpg',
-    cardStyle: 'blur'
-  },
-  footer: {
-    showPoweredBy: false  // Hide platform branding
-  }
-};
-```
-
-## 🛠 Available Scripts
-
+### Deploy to Vercel
 ```bash
-# Development
-npm run dev              # Start dev server
-npm run build            # Production build
-npm run start            # Start production server
-
-# Code Quality
-npm run lint             # Run ESLint
-npm run type-check       # TypeScript check
-npm run format           # Format with Prettier
-
-# Testing
-npm test                 # Run tests
-npm run test:watch       # Watch mode
-npm run test:coverage    # Coverage report
-
-# Firebase
-npm run firebase:init        # Initialize Firebase
-npm run firebase:emulators   # Start emulators
-npm run firebase:deploy      # Deploy to Firebase
+vercel
 ```
 
-## 🚢 PowerShell Scripts (Windows)
+## Environment Variables
 
-### Setup Development Environment
-```powershell
-.\scripts\setup-dev.ps1
-```
-Installs all dependencies, creates directory structure, and configures environment.
+See `env.template` for all required environment variables.
 
-### Quick Start
-```powershell
-# EASIEST - Just double-click this file in Windows Explorer:
-START.bat
+Key variables:
+- `OPENAI_API_KEY` - OpenAI API key
+- `SENDGRID_API_KEY` - SendGrid API key
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET` - Google OAuth secret
+- `STRIPE_SECRET_KEY` - Stripe secret key
 
-# OR run from PowerShell:
-.\START.ps1
+**Note**: You can also configure these via the in-app Settings → API Keys page instead of using .env files.
 
-# OR use the full script:
-.\scripts\quick-start.ps1
-```
-Fastest way to start the dev server.
+## Support
 
-### Start All Services
-```powershell
-# Start Next.js only
-.\scripts\start-dev.ps1
+For issues or questions:
+1. Check `WHATS_ACTUALLY_WORKING.md` for feature status
+2. Review `SIMPLE_SETUP.md` for setup help
+3. Check browser console for frontend errors
+4. Check server logs for backend errors
 
-# Start with Firebase Emulators
-.\scripts\start-dev.ps1 -WithFirebase
-
-# Start with Redis
-.\scripts\start-dev.ps1 -WithRedis
-
-# Start everything
-.\scripts\start-dev.ps1 -All
-```
-
-## 📚 Documentation
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Complete system architecture
-- [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md) - File organization
-- [ECOMMERCE_EMBEDDABLE.md](./docs/ECOMMERCE_EMBEDDABLE.md) - E-commerce widget docs
-- [SUMMARY.md](./SUMMARY.md) - Implementation overview
-
-## 🌐 Technology Stack
-
-- **Framework**: Next.js 14 (App Router, Server Components)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS + CSS-in-JS (dynamic theming)
-- **State**: Zustand + React Query
-- **Database**: Firestore + Cloud SQL
-- **Hosting**: Google Cloud Run
-- **AI**: Vertex AI + Gemini
-- **Payments**: Stripe, Square, PayPal
-
-## 💰 Monetization
-
-### Pricing Tiers
-- **Free**: 1 workspace, 1K records, basic features
-- **Pro** ($49/user/mo): Unlimited workspaces, 50K records, AI agents, e-commerce up to $10K GMV
-- **Enterprise** (Custom): Unlimited, white-label, custom domain, wholesale e-commerce rates
-
-## 🎯 Use Cases
-
-1. **Transportation Compliance**: Manage clients, drivers, vehicles, documents
-2. **Service Business**: Appointments, customers, invoices, bookings
-3. **E-Commerce**: Products, orders, inventory, customers
-4. **Real Estate**: Properties, leads, showings, contracts
-5. **ANY Industry**: Fully customizable for any business model
-
-## 🔐 Security
-
-- Firebase Authentication
-- Row-level security (Firestore rules)
-- PCI DSS compliant (via Stripe)
-- GDPR ready (data export/deletion)
-- Audit logging
-
-## 🤝 Contributing
-
-This is a private project. For questions or support, contact the development team.
-
-## 📄 License
+## License
 
 Proprietary - All rights reserved
 
----
+## Status
 
-## 🚀 Getting Started Checklist
+**Current Completion**: ~90%
+- Core platform: 100%
+- Outbound features: 100%
+- E-commerce: 95%
+- Integrations: 60% (core ones working)
+- Analytics: 80%
 
-- [ ] Install Node.js 18+
-- [ ] Run `.\scripts\setup-dev.ps1`
-- [ ] Update `.env.local` with API keys
-- [ ] Run `.\scripts\quick-start.ps1`
-- [ ] Open http://localhost:3000
-- [ ] Create your first workspace
-- [ ] Build custom objects
-- [ ] Customize theme
-- [ ] Enable e-commerce
-- [ ] Generate embeddable widget
+**What's Real**:
+- All core features work
+- Email/Calendar/Gmail integrations are real (need API keys)
+- Stripe payments work
+- AI features work
+- Widgets work
 
-**Ready to build!** 🎉
+**What Needs Setup**:
+- API keys for external services (via Settings page)
+- OAuth credentials for integrations
+- Legal documents (Privacy Policy, ToS)
 
-
+See `WHATS_ACTUALLY_WORKING.md` for detailed status.

@@ -3,7 +3,8 @@
  * Evaluate formulas for computed fields (like Airtable)
  */
 
-import type { SchemaField, EntityRecord } from '@/types';
+import type { SchemaField } from '@/types/schema';
+import type { EntityRecord } from '@/types/entity';
 
 export class FormulaEngine {
   /**

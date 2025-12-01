@@ -16,14 +16,14 @@ import OutlookCalendarIntegration from '@/components/integrations/OutlookCalenda
 import SlackIntegration from '@/components/integrations/SlackIntegration';
 import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
-import { Integration } from '@/types/integrations';
+import type { ConnectedIntegration } from '@/types/integrations';
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [integrations, setIntegrations] = useState<Record<string, Integration | null>>({});
+  const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
 
   React.useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -47,7 +47,7 @@ export default function IntegrationsPage() {
         );
         
         if (integrationsData) {
-          setIntegrations(integrationsData as Record<string, Integration | null>);
+          setIntegrations(integrationsData as Record<string, ConnectedIntegration | null>);
         }
       } catch (error) {
         console.error('Failed to load integrations:', error);
@@ -62,12 +62,12 @@ export default function IntegrationsPage() {
   const bgPaper = theme?.colors?.background?.paper || '#1a1a1a';
   const borderColor = theme?.colors?.border?.main || '#333333';
 
-  const handleConnect = async (integrationId: string, integration: Partial<Integration>) => {
+  const handleConnect = async (integrationId: string, integration: Partial<ConnectedIntegration>) => {
     if (!user?.organizationId) return;
     
     const updated = {
       ...integrations,
-      [integrationId]: integration as Integration,
+      [integrationId]: integration as ConnectedIntegration,
     };
     setIntegrations(updated);
     
@@ -190,7 +190,7 @@ export default function IntegrationsPage() {
     },
   ];
 
-  const connectedCount = Object.values(integrations).filter(i => i && i.status === 'connected').length;
+  const connectedCount = Object.values(integrations).filter(i => i && i.status === 'active').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>

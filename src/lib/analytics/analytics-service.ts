@@ -166,7 +166,7 @@ export async function getWinLossAnalysis(
   const bySalesRep = analyzeWinLossByRep(won, lost);
   
   // Trends
-  const trends = calculateWinLossTrends(workspaceId, startDate, endDate);
+  const trends = await calculateWinLossTrends(workspaceId, startDate, endDate);
   
   return {
     period,

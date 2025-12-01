@@ -164,7 +164,7 @@ export async function analyzeCompanyKnowledge(
     websiteUrl,
     faqPageUrl,
     socialMediaUrls,
-    result: result,
+    result: mockResult,
     analyzedAt: new Date().toISOString(),
     organizationId,
     workspaceId,
@@ -181,7 +181,7 @@ export async function analyzeCompanyKnowledge(
   });
 
   console.log('Knowledge analysis complete');
-  return result;
+  return mockResult;
 }
 
 /**

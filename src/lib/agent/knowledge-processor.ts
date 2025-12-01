@@ -259,3 +259,36 @@ function parseManualFAQs(faqsText: string): FAQ[] {
   return faqs;
 }
 
+/**
+ * Process document content for training materials
+ * Simplified version that just extracts text content
+ */
+export async function processDocumentContent(
+  content: string,
+  fileType: string
+): Promise<string> {
+  try {
+    // For now, just return the content as-is
+    // In the future, we can add more sophisticated processing
+    // like chunking, summarization, etc.
+    
+    // Basic cleanup
+    let processedContent = content.trim();
+    
+    // Remove excessive whitespace
+    processedContent = processedContent.replace(/\n{3,}/g, '\n\n');
+    processedContent = processedContent.replace(/[ \t]{2,}/g, ' ');
+    
+    // For PDFs, you might want to do additional processing
+    if (fileType.includes('pdf')) {
+      // Could add PDF-specific processing here
+      // For now, just return cleaned content
+    }
+    
+    return processedContent;
+  } catch (error) {
+    console.error('Error processing document content:', error);
+    return content; // Return original content if processing fails
+  }
+}
+

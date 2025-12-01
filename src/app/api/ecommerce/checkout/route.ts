@@ -58,14 +58,17 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(checkoutSchema, body);
 
     if (!validation.success) {
+      const validationError = validation as { success: false; errors: any };
+      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      })) || [];
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map((e: any) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );
@@ -73,8 +76,16 @@ export async function POST(request: NextRequest) {
 
     const checkoutData = validation.data;
 
-    // Process checkout
-    const order = await processCheckout(checkoutData);
+    // Verify required fields
+    if (!checkoutData.cartId || !checkoutData.workspaceId) {
+      return NextResponse.json(
+        { success: false, error: 'cartId and workspaceId are required' },
+        { status: 400 }
+      );
+    }
+
+    // Process checkout with type assertion after validation
+    const order = await processCheckout(checkoutData as any);
 
     return NextResponse.json({
       success: true,

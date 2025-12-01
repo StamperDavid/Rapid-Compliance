@@ -41,7 +41,7 @@ export default function SlackIntegration({
         description: 'Get notifications in Slack channels',
         icon: '💬',
         category: 'communication',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         teamName: 'My Team',
         settings: {
@@ -59,13 +59,13 @@ export default function SlackIntegration({
             general: '#general',
           },
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
     }, 2000);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

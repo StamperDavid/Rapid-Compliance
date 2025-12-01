@@ -5,63 +5,27 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { AdminRole, AdminUser, AdminPermissions } from '@/types/admin';
 import { ADMIN_ROLE_PERMISSIONS } from '@/types/admin';
 
-export function useAdminAuth() {
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
+// Demo mode: default super admin (created immediately, no async loading)
+const defaultAdmin: AdminUser = {
+  id: 'admin-1',
+  email: 'admin@platform.com',
+  displayName: 'Super Admin',
+  role: 'super_admin',
+  permissions: ADMIN_ROLE_PERMISSIONS.super_admin,
+  createdAt: new Date() as any,
+  updatedAt: new Date() as any,
+  status: 'active',
+  mfaEnabled: false,
+};
 
-  useEffect(() => {
-    // Load admin user from auth context
-    // In production, this would come from Firebase Auth with custom claims
-    // For now, check if user is authenticated and has admin role
-    const loadAdminUser = async () => {
-      try {
-        // Check if we're in demo mode or have Firebase configured
-        const { isFirebaseConfigured } = await import('@/lib/firebase/config');
-        
-        if (!isFirebaseConfigured()) {
-          // Demo mode: set default super admin
-          const defaultAdmin: AdminUser = {
-            id: 'admin-1',
-            email: 'admin@platform.com',
-            displayName: 'Super Admin',
-            role: 'super_admin',
-            permissions: ADMIN_ROLE_PERMISSIONS.super_admin,
-            createdAt: new Date() as any,
-            updatedAt: new Date() as any,
-            status: 'active',
-            mfaEnabled: false,
-          };
-          setAdminUser(defaultAdmin);
-        } else {
-          // Production: get from Firebase Auth with custom claims
-          // This would check the user's role from Firebase Auth
-          // For now, set default admin (will be replaced with actual auth check)
-          const defaultAdmin: AdminUser = {
-            id: 'admin-1',
-            email: 'admin@platform.com',
-            displayName: 'Super Admin',
-            role: 'super_admin',
-            permissions: ADMIN_ROLE_PERMISSIONS.super_admin,
-            createdAt: new Date() as any,
-            updatedAt: new Date() as any,
-            status: 'active',
-            mfaEnabled: false,
-          };
-          setAdminUser(defaultAdmin);
-        }
-      } catch (error) {
-        console.error('Failed to load admin user:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadAdminUser();
-  }, []);
+export function useAdminAuth() {
+  // In demo mode, we start with the admin user already set (no loading state)
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(defaultAdmin);
+  const [loading, setLoading] = useState(false); // No loading in demo mode
 
   const hasPermission = (permission: keyof AdminPermissions): boolean => {
     if (!adminUser) return false;

@@ -88,6 +88,12 @@ export default function AdminLayout({
             <NavLink href="/admin/analytics" icon="📈" tooltip="Platform-wide usage analytics: API calls, storage, feature usage">Usage Analytics</NavLink>
             <NavLink href="/admin/analytics/revenue" icon="💵" tooltip="Revenue reports, MRR, ARR, and revenue trends">Revenue</NavLink>
             <NavLink href="/admin/analytics/growth" icon="📊" tooltip="Growth metrics: new signups, churn rate, conversion rates">Growth Metrics</NavLink>
+            <NavLink href="/admin/sales-agent" icon="🤖" tooltip="Your AI sales agent performance, conversations, and training">Sales Agent</NavLink>
+          </NavSection>
+          
+          <NavSection title="Sales Agent Tools">
+            <NavLink href="/admin/sales-agent/training" icon="🎓" tooltip="Train your sales agent on objection handling, pricing, and demos">Training Center</NavLink>
+            <NavLink href="/admin/sales-agent/knowledge" icon="📚" tooltip="Manage platform knowledge base, features, and pricing information">Knowledge Base</NavLink>
           </NavSection>
 
           <NavSection title="System">

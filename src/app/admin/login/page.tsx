@@ -62,7 +62,10 @@ export default function AdminLoginPage() {
 
         // Set admin user via hook (no localStorage needed)
         setAdminUser(adminUser);
-        router.push('/admin');
+        // Wait a moment for state to update, then redirect
+        setTimeout(() => {
+          router.push('/admin');
+        }, 100);
       } else {
         setError('Please enter email and password');
       }

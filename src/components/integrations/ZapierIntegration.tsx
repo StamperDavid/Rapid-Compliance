@@ -46,7 +46,7 @@ export default function ZapierIntegration({
         description: 'Connect 5,000+ apps via Zapier',
         icon: '⚡',
         category: 'automation',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         webhookUrl,
         settings: {
@@ -55,14 +55,14 @@ export default function ZapierIntegration({
             enabled: false,
           },
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
       setWebhookUrl('');
     }, 1500);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

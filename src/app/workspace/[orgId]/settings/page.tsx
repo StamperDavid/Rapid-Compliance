@@ -81,9 +81,15 @@ export default function SettingsPage() {
       ]
     },
     {
+      title: 'Outbound Sales',
+      items: [
+        { icon: '🚀', label: 'Subscription & Features', description: 'Manage plan, outbound features, and usage limits', href: '/workspace/demo-org/settings/subscription', permission: canManageBilling },
+      ]
+    },
+    {
       title: 'Advanced',
       items: [
-        { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: '/workspace/demo-org/schemas', permission: canManageOrganization },
+        { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: '/workspace/demo-org/settings/schemas', permission: canManageOrganization },
         { icon: '⚙️', label: 'Workflows', description: 'Automation rules and workflow configuration', href: '/workspace/demo-org/settings/workflows', permission: canManageOrganization },
         { icon: '🤖', label: 'AI Agents', description: 'Configure and train AI assistants', href: '/workspace/demo-org/settings/ai-agents', permission: canManageOrganization },
       ]

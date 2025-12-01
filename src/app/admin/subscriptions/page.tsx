@@ -239,7 +239,7 @@ export default function SubscriptionsAdminPage() {
                       </label>
                       <input
                         type="number"
-                        value={value === null ? '' : value}
+                        value={value === null ? '' : (value as number | string)}
                         onChange={(e) => setEditingPlan({
                           ...editingPlan,
                           limits: {

@@ -21,10 +21,46 @@ export async function executeCalendlyFunction(
   
   switch (functionName) {
     case 'checkCalendlyAvailability':
-      return await checkAvailability(parameters, accessToken);
+      // Validate required parameters
+      if (!parameters.date || typeof parameters.date !== 'string') {
+        throw new Error('date (string) is required for checkCalendlyAvailability');
+      }
+      if (parameters.eventType && typeof parameters.eventType !== 'string') {
+        throw new Error('eventType must be a string');
+      }
+      
+      return await checkAvailability(
+        {
+          date: parameters.date,
+          eventType: parameters.eventType,
+        },
+        accessToken
+      );
       
     case 'bookCalendlyAppointment':
-      return await bookAppointment(parameters, accessToken);
+      // Validate required parameters
+      if (!parameters.datetime || typeof parameters.datetime !== 'string') {
+        throw new Error('datetime (string) is required for bookCalendlyAppointment');
+      }
+      if (!parameters.name || typeof parameters.name !== 'string') {
+        throw new Error('name (string) is required for bookCalendlyAppointment');
+      }
+      if (!parameters.email || typeof parameters.email !== 'string') {
+        throw new Error('email (string) is required for bookCalendlyAppointment');
+      }
+      if (parameters.notes && typeof parameters.notes !== 'string') {
+        throw new Error('notes must be a string');
+      }
+      
+      return await bookAppointment(
+        {
+          datetime: parameters.datetime,
+          name: parameters.name,
+          email: parameters.email,
+          notes: parameters.notes,
+        },
+        accessToken
+      );
       
     default:
       throw new Error(`Unknown Calendly function: ${functionName}`);

@@ -25,14 +25,17 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(checkoutCompleteSchema, body);
 
     if (!validation.success) {
+      const validationError = validation as { success: false; errors: any };
+      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
+        path: e.path?.join('.') || 'unknown',
+        message: e.message || 'Validation error',
+      })) || [];
+      
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.errors.errors.map(e => ({
-            path: e.path.join('.'),
-            message: e.message,
-          })),
+          details: errorDetails,
         },
         { status: 400 }
       );
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stripe = new Stripe(stripeKeys.secretKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2023-10-16',
     });
 
     // Retrieve payment intent to verify status

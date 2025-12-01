@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stripe = new Stripe(stripeKeys.secretKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2023-10-16',
     });
 
     event = stripe.webhooks.constructEvent(

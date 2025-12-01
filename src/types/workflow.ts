@@ -482,17 +482,19 @@ export interface CreateTaskAction extends BaseAction {
  */
 export interface WorkflowSettings {
   // Execution
-  timeout: number; // seconds
+  enabled?: boolean;
+  timeout?: number; // seconds
   maxConcurrentRuns?: number;
   queueStrategy?: 'parallel' | 'sequential';
   
   // Error handling
-  onError: 'stop' | 'continue' | 'retry' | 'notify';
+  onError?: 'stop' | 'continue' | 'retry' | 'notify';
+  stopOnError?: boolean;
   errorNotificationEmail?: string;
   
   // Logging
-  logLevel: 'none' | 'errors' | 'all';
-  retentionDays: number; // How long to keep execution logs
+  logLevel?: 'none' | 'errors' | 'all';
+  retentionDays?: number; // How long to keep execution logs
   
   // Rate limiting
   rateLimit?: {

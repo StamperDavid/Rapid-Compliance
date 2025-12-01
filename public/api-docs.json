@@ -1,0 +1,452 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AI Sales Platform API",
+    "version": "1.0.0",
+    "description": "Complete API documentation for the AI Sales Platform - multi-tenant CRM with AI agents, e-commerce, and workflow automation",
+    "contact": {
+      "name": "API Support",
+      "email": "api@yourplatform.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.yourplatform.com/v1",
+      "description": "Production server"
+    },
+    {
+      "url": "https://staging-api.yourplatform.com/v1",
+      "description": "Staging server"
+    },
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Development server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    },
+    {
+      "apiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/agent/chat": {
+      "post": {
+        "summary": "Send message to AI agent",
+        "description": "Send a message to an AI agent and receive a response. Supports ensemble mode with multiple models.",
+        "tags": ["AI Agents"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "summary": "List customers",
+        "description": "Retrieve paginated list of customers for your organization",
+        "tags": ["Customers"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 50, "maximum": 100 }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["active", "inactive", "lead"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create customer",
+        "description": "Create a new customer in your organization",
+        "tags": ["Customers"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Customer created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "List products",
+        "description": "Retrieve products from your e-commerce catalog",
+        "tags": ["E-Commerce"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout": {
+      "post": {
+        "summary": "Process checkout",
+        "description": "Complete e-commerce checkout with payment processing",
+        "tags": ["E-Commerce"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Checkout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflows": {
+      "get": {
+        "summary": "List workflows",
+        "description": "Get all automation workflows",
+        "tags": ["Workflows"],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Check system health and status",
+        "tags": ["System"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "System healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheck"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "ChatRequest": {
+        "type": "object",
+        "required": ["message", "agentId"],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "User message to send to agent",
+            "example": "What is your return policy?"
+          },
+          "agentId": {
+            "type": "string",
+            "description": "ID of the AI agent"
+          },
+          "customerId": {
+            "type": "string",
+            "description": "ID of the customer (for conversation history)"
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "Enable streaming response",
+            "default": false
+          }
+        }
+      },
+      "ChatResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "response": {
+            "type": "string",
+            "description": "AI agent response"
+          },
+          "model": {
+            "type": "string",
+            "description": "Model used (if ensemble mode, shows selected model)"
+          },
+          "confidenceScore": {
+            "type": "number",
+            "description": "Confidence score (0-100) for ensemble mode"
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "Why this model/answer was selected"
+          },
+          "totalCost": {
+            "type": "number",
+            "description": "API cost in USD"
+          }
+        }
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "inactive", "lead"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CustomerInput": {
+        "type": "object",
+        "required": ["firstName", "lastName", "email"],
+        "properties": {
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string" },
+          "company": { "type": "string" }
+        }
+      },
+      "CustomerList": {
+        "type": "object",
+        "properties": {
+          "customers": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Customer" }
+          },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number" },
+          "category": { "type": "string" },
+          "inStock": { "type": "boolean" }
+        }
+      },
+      "ProductList": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Product" }
+          },
+          "total": { "type": "integer" }
+        }
+      },
+      "CheckoutRequest": {
+        "type": "object",
+        "required": ["items", "customer", "paymentMethod"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": { "type": "string" },
+                "quantity": { "type": "integer" }
+              }
+            }
+          },
+          "customer": { "$ref": "#/components/schemas/CustomerInput" },
+          "paymentMethod": { "type": "string" },
+          "paymentToken": { "type": "string" }
+        }
+      },
+      "CheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "orderId": { "type": "string" },
+          "total": { "type": "number" },
+          "transactionId": { "type": "string" }
+        }
+      },
+      "HealthCheck": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["healthy", "degraded", "unhealthy"] },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "uptime": { "type": "number" },
+          "checks": {
+            "type": "object",
+            "properties": {
+              "database": { "$ref": "#/components/schemas/HealthStatus" },
+              "cache": { "$ref": "#/components/schemas/HealthStatus" },
+              "ai": { "$ref": "#/components/schemas/HealthStatus" }
+            }
+          }
+        }
+      },
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["pass", "warn", "fail"] },
+          "message": { "type": "string" },
+          "responseTime": { "type": "number" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string" },
+          "code": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Unauthorized - Invalid or missing authentication",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests - Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "AI Agents",
+      "description": "AI agent chat and configuration"
+    },
+    {
+      "name": "Customers",
+      "description": "Customer management"
+    },
+    {
+      "name": "E-Commerce",
+      "description": "Products, orders, and checkout"
+    },
+    {
+      "name": "Workflows",
+      "description": "Automation workflows"
+    },
+    {
+      "name": "System",
+      "description": "System health and monitoring"
+    }
+  ]
+}
+

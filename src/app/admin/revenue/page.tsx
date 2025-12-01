@@ -160,7 +160,7 @@ export default function RevenueAdminPage() {
               <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
                 <div className="text-sm text-gray-400 mb-2">Avg Revenue Per Customer</div>
                 <div className="text-3xl font-bold text-white">
-                  ${metrics.averageRevenuePerCustomer.toFixed(2)}
+                  ${metrics.averageRevenuePerUser.toFixed(2)}
                 </div>
               </div>
 

@@ -139,21 +139,19 @@ function initializeFirebase() {
   }
 }
 
-// Initialize Firebase on module load
-if (isFirebaseConfigured) {
+// Initialize Firebase ONLY on client-side (not during build)
+if (typeof window !== 'undefined' && isFirebaseConfigured) {
   initializeFirebase();
   
   // After Firebase is initialized, try to load admin config for future reference
-  if (typeof window !== 'undefined') {
-    // Wait a bit for Firestore to be fully ready
-    setTimeout(() => {
-      updateFirebaseConfigFromAdmin().catch(() => {
-        // Silently fail - environment variables are being used
-      });
-    }, 2000);
-  }
-} else {
-  // Firebase not configured - will run in demo mode
+  // Wait a bit for Firestore to be fully ready
+  setTimeout(() => {
+    updateFirebaseConfigFromAdmin().catch(() => {
+      // Silently fail - environment variables are being used
+    });
+  }, 2000);
+} else if (typeof window !== 'undefined' && !isFirebaseConfigured) {
+  // Firebase not configured - will run in demo mode (only warn on client-side)
   console.warn('⚠️ Firebase is not configured. Please set up platform API keys in Admin Dashboard or .env.local file.');
   console.warn('Go to /admin/system/api-keys to configure platform Firebase credentials.');
 }

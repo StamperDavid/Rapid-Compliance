@@ -266,11 +266,12 @@ export async function applyUpdateRequest(
   }
   
   // Recompile system prompt
-  updatedGM.systemPrompt = await compileSystemPrompt(
-    updatedGM.businessContext,
-    updatedGM.agentPersona,
-    updatedGM.behaviorConfig
-  );
+  updatedGM.systemPrompt = await compileSystemPrompt({
+    businessContext: updatedGM.businessContext,
+    agentPersona: updatedGM.agentPersona,
+    behaviorConfig: updatedGM.behaviorConfig,
+    knowledgeBase: updatedGM.knowledgeBase,
+  });
   
   // Save new version
   await FirestoreService.set(

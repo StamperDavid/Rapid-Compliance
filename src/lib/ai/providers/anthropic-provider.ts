@@ -3,8 +3,8 @@
  * Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Sonnet, Claude 3 Haiku
  */
 
+import type { ModelProvider } from '@/lib/ai/model-provider';
 import type {
-  ModelProvider,
   ChatRequest,
   ChatResponse,
   ChatMessage,

@@ -41,8 +41,8 @@ Sentry.init({
       
       // Remove sensitive body data
       if (event.request.data) {
-        const data = event.request.data;
-        if (typeof data === 'object') {
+        const data = event.request.data as any;
+        if (typeof data === 'object' && data !== null) {
           delete data.password;
           delete data.secretKey;
           delete data.apiKey;
@@ -61,9 +61,7 @@ Sentry.init({
   release: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
   
   // Server-side specific options
-  integrations: [
-    new Sentry.Integrations.Http({ tracing: true }),
-  ],
+  integrations: [],
 });
 
 

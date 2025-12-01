@@ -73,9 +73,9 @@ export async function sendChatMessage(
     return {
       text,
       usage: {
-        promptTokens: result.usageMetadata?.promptTokenCount || 0,
-        completionTokens: result.usageMetadata?.candidatesTokenCount || 0,
-        totalTokens: result.usageMetadata?.totalTokenCount || 0,
+        promptTokens: (result as any).usageMetadata?.promptTokenCount || 0,
+        completionTokens: (result as any).usageMetadata?.candidatesTokenCount || 0,
+        totalTokens: (result as any).usageMetadata?.totalTokenCount || 0,
       },
     };
   } catch (error: any) {

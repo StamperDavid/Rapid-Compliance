@@ -48,7 +48,7 @@ export default function PayPalIntegration({
         description: 'Accept PayPal payments',
         icon: '💳',
         category: 'payment',
-        status: 'connected',
+        status: 'active',
         organizationId: 'demo-org',
         clientId: clientId.substring(0, 10) + '...',
         clientSecret: '***',
@@ -57,7 +57,7 @@ export default function PayPalIntegration({
           autoCreateCustomers: true,
           autoCreateInvoices: true,
         },
-        connectedAt: new Date(),
+        connectedAt: new Date().toISOString(),
       });
       setIsConnecting(false);
       setClientId('');
@@ -65,7 +65,7 @@ export default function PayPalIntegration({
     }, 1500);
   };
 
-  if (!integration || integration.status !== 'connected') {
+  if (!integration || integration.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

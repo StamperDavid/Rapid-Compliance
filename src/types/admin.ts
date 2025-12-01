@@ -341,6 +341,9 @@ export interface BulkOperation {
   // Parameters
   parameters: Record<string, any>;
   
+  // Export format (for export operations)
+  format?: 'json' | 'csv' | 'xlsx';
+  
   // Results
   totalItems: number;
   processedItems: number;
