@@ -1,6 +1,7 @@
 /**
  * Model Provider Abstraction
  * Unified interface for all AI providers
+ * OpenRouter is preferred when available (one key for all models)
  */
 
 import type {
@@ -10,6 +11,7 @@ import type {
   ChatResponse,
   IntelligentResponse,
 } from '@/types/ai-models';
+import { OpenRouterProvider, getAIProvider } from './openrouter-provider';
 
 /**
  * Base interface that all providers must implement
@@ -123,4 +125,7 @@ export async function initializeProviders(): Promise<void> {
   
   console.log('[Model Providers] Initialized: OpenAI, Anthropic, Google');
 }
+
+
+
 

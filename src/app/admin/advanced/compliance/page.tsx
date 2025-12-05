@@ -30,16 +30,15 @@ export default function CompliancePage() {
         {
           id: 'comp-2',
           organizationId: 'org-2',
-          type: 'hipaa',
-          status: 'non_compliant',
+          type: 'ccpa',
+          status: 'compliant',
           requirements: [
-            { id: 'req-4', name: 'PHI Encryption', description: 'Protected Health Information encrypted', status: 'met', evidence: 'End-to-end encryption' },
-            { id: 'req-5', name: 'Access Controls', description: 'Role-based access controls', status: 'not_met', evidence: null },
-            { id: 'req-6', name: 'Audit Logging', description: 'All access logged', status: 'met', evidence: 'Audit logs enabled' },
+            { id: 'req-4', name: 'Privacy Notice', description: 'Clear privacy policy displayed', status: 'met', evidence: 'Privacy policy published' },
+            { id: 'req-5', name: 'Opt-Out Rights', description: 'Users can opt-out of data sales', status: 'met', evidence: 'Do Not Sell option available' },
+            { id: 'req-6', name: 'Data Deletion', description: 'Users can request deletion', status: 'met', evidence: 'Deletion workflow implemented' },
           ],
           lastAuditAt: new Date('2024-02-15') as any,
           nextAuditAt: new Date('2024-05-15') as any,
-          auditNotes: 'Access controls need improvement',
           updatedAt: new Date() as any,
         },
       ]);
@@ -105,7 +104,6 @@ export default function CompliancePage() {
           <option value="all">All Types</option>
           <option value="gdpr">GDPR</option>
           <option value="ccpa">CCPA</option>
-          <option value="hipaa">HIPAA</option>
           <option value="sox">SOX</option>
         </select>
       </div>
@@ -225,5 +223,9 @@ function StatCard({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
+
+
+
 
 

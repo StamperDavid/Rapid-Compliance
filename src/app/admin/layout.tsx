@@ -75,19 +75,16 @@ export default function AdminLayout({
 
           <NavSection title="Users">
             <NavLink href="/admin/users" icon="👥" tooltip="View all platform users across all organizations">All Users</NavLink>
-            <NavLink href="/admin/users/invitations" icon="✉️" tooltip="View pending user invitations and resend if needed">Invitations</NavLink>
           </NavSection>
 
           <NavSection title="Billing">
-            <NavLink href="/admin/billing" icon="💳" tooltip="View all customer subscriptions, manage plans, and handle billing issues">Subscriptions</NavLink>
-            <NavLink href="/admin/billing/payments" icon="💰" tooltip="View payment history, failed payments, and process refunds">Payments</NavLink>
-            <NavLink href="/admin/billing/invoices" icon="📄" tooltip="View and download invoices for all organizations">Invoices</NavLink>
+            <NavLink href="/admin/billing" icon="💳" tooltip="View subscriptions, payments, and invoices (all tabs on one page)">Billing</NavLink>
+            <NavLink href="/admin/subscriptions" icon="💰" tooltip="Manage customer subscriptions and plans">Subscriptions</NavLink>
           </NavSection>
 
           <NavSection title="Analytics">
             <NavLink href="/admin/analytics" icon="📈" tooltip="Platform-wide usage analytics: API calls, storage, feature usage">Usage Analytics</NavLink>
-            <NavLink href="/admin/analytics/revenue" icon="💵" tooltip="Revenue reports, MRR, ARR, and revenue trends">Revenue</NavLink>
-            <NavLink href="/admin/analytics/growth" icon="📊" tooltip="Growth metrics: new signups, churn rate, conversion rates">Growth Metrics</NavLink>
+            <NavLink href="/admin/revenue" icon="💵" tooltip="Revenue reports, MRR, ARR, and revenue trends">Revenue</NavLink>
             <NavLink href="/admin/sales-agent" icon="🤖" tooltip="Your AI sales agent performance, conversations, and training">Sales Agent</NavLink>
           </NavSection>
           
@@ -111,10 +108,7 @@ export default function AdminLayout({
           </NavSection>
 
           <NavSection title="Advanced">
-            <NavLink href="/admin/advanced/integrations" icon="🔌" tooltip="Manage platform-level integrations and third-party services">Integrations</NavLink>
-            <NavLink href="/admin/advanced/templates" icon="📝" tooltip="Manage industry templates and onboarding templates">Templates</NavLink>
             <NavLink href="/admin/advanced/compliance" icon="🛡️" tooltip="Compliance settings: GDPR, data retention, privacy policies">Compliance</NavLink>
-            <NavLink href="/admin/advanced/domains" icon="🌐" tooltip="Manage custom domains for organizations (DNS configuration)">Custom Domains</NavLink>
           </NavSection>
         </nav>
 

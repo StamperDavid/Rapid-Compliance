@@ -215,7 +215,7 @@ export const PICKLIST_VALUES = {
   lead_source: ['Website', 'Referral', 'Cold Call', 'Social Media', 'Email Campaign', 'Trade Show', 'Other'],
   lead_status: ['New', 'Contacted', 'Qualified', 'Unqualified', 'Converted'],
   lead_rating: ['Hot', 'Warm', 'Cold'],
-  industry: ['Technology', 'Healthcare', 'Finance', 'Manufacturing', 'Retail', 'Services', 'Other'],
+  industry: ['Technology', 'Finance', 'Manufacturing', 'Retail', 'Services', 'Transportation', 'Real Estate', 'Other'],
   company_status: ['Active', 'Inactive', 'Prospect'],
   contact_status: ['Active', 'Inactive'],
   deal_stage: ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'],

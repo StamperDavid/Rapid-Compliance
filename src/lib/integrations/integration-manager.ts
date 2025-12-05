@@ -300,30 +300,44 @@ export async function syncIntegration(
  * Sync Gmail
  */
 async function syncGmail(organizationId: string, integrationId: string, accessToken: string): Promise<number> {
-  // TODO: Implement Gmail sync
-  // - Fetch emails
-  // - Create contacts from senders
-  // - Link emails to CRM records
-  return 0;
+  try {
+    const gmailService = await import('./gmail-sync-service');
+    const result = await gmailService.syncGmailMessages(organizationId, accessToken);
+    console.log(`[Gmail Sync] Synced ${result.messagesSynced} emails for org ${organizationId}`);
+    return result.messagesSynced;
+  } catch (error: any) {
+    console.error('[Gmail Sync] Error:', error);
+    throw new Error(`Gmail sync failed: ${error.message}`);
+  }
 }
 
 /**
  * Sync Google Calendar
  */
 async function syncGoogleCalendar(organizationId: string, integrationId: string, accessToken: string): Promise<number> {
-  // TODO: Implement Google Calendar sync
-  // - Fetch events
-  // - Create tasks/appointments in CRM
-  return 0;
+  try {
+    const calendarService = await import('./calendar-sync-service');
+    const result = await calendarService.syncCalendarEvents(organizationId, 'google', accessToken);
+    console.log(`[Google Calendar Sync] Synced ${result.eventsSynced} events for org ${organizationId}`);
+    return result.eventsSynced;
+  } catch (error: any) {
+    console.error('[Google Calendar Sync] Error:', error);
+    throw new Error(`Google Calendar sync failed: ${error.message}`);
+  }
 }
 
 /**
  * Sync Outlook
  */
 async function syncOutlook(organizationId: string, integrationId: string, accessToken: string): Promise<number> {
-  // TODO: Implement Outlook sync
-  // - Fetch emails
-  // - Create contacts
-  return 0;
+  try {
+    const outlookService = await import('./outlook-sync-service');
+    const result = await outlookService.syncOutlookMessages(organizationId, accessToken);
+    console.log(`[Outlook Sync] Synced ${result.messagesSynced} emails for org ${organizationId}`);
+    return result.messagesSynced;
+  } catch (error: any) {
+    console.error('[Outlook Sync] Error:', error);
+    throw new Error(`Outlook sync failed: ${error.message}`);
+  }
 }
 

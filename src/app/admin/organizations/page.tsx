@@ -15,105 +15,41 @@ export default function OrganizationsPage() {
   const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'pro' | 'enterprise'>('all');
 
   useEffect(() => {
-    // Load organizations
-    // In production, this would fetch from API
-    setTimeout(() => {
-      const mockOrgs: Organization[] = [
-        {
-          id: 'org-1',
-          name: 'Acme Corporation',
-          slug: 'acme-corp',
-          plan: 'enterprise',
-          planLimits: {
-            maxWorkspaces: 10,
-            maxUsersPerWorkspace: 100,
-            maxRecordsPerWorkspace: 1000000,
-            maxAICallsPerMonth: 100000,
-            maxStorageGB: 1000,
-            maxSchemas: 50,
-            maxWorkflows: 100,
-            allowCustomDomain: true,
-            allowWhiteLabel: true,
-            allowAPIAccess: true,
-          },
-          billingEmail: 'billing@acme.com',
-          branding: {},
-          settings: {
-            defaultTimezone: 'America/New_York',
-            defaultCurrency: 'USD',
-            dateFormat: 'MM/DD/YYYY',
-            timeFormat: '12h',
-          },
-          createdAt: new Date('2023-01-15') as any,
-          updatedAt: new Date() as any,
-          createdBy: 'user-1',
-          status: 'active',
-        },
-        {
-          id: 'org-2',
-          name: 'TechStart Inc',
-          slug: 'techstart',
-          plan: 'pro',
-          planLimits: {
-            maxWorkspaces: 3,
-            maxUsersPerWorkspace: 25,
-            maxRecordsPerWorkspace: 100000,
-            maxAICallsPerMonth: 10000,
-            maxStorageGB: 100,
-            maxSchemas: 20,
-            maxWorkflows: 50,
-            allowCustomDomain: false,
-            allowWhiteLabel: false,
-            allowAPIAccess: true,
-          },
-          billingEmail: 'admin@techstart.com',
-          branding: {},
-          settings: {
-            defaultTimezone: 'America/Los_Angeles',
-            defaultCurrency: 'USD',
-            dateFormat: 'MM/DD/YYYY',
-            timeFormat: '12h',
-          },
-          createdAt: new Date('2024-02-01') as any,
-          updatedAt: new Date() as any,
-          createdBy: 'user-2',
-          status: 'trial',
-          trialEndsAt: new Date('2024-04-01') as any,
-        },
-        {
-          id: 'org-3',
-          name: 'Global Services',
-          slug: 'global-services',
-          plan: 'free',
-          planLimits: {
-            maxWorkspaces: 1,
-            maxUsersPerWorkspace: 5,
-            maxRecordsPerWorkspace: 1000,
-            maxAICallsPerMonth: 100,
-            maxStorageGB: 1,
-            maxSchemas: 5,
-            maxWorkflows: 10,
-            allowCustomDomain: false,
-            allowWhiteLabel: false,
-            allowAPIAccess: false,
-          },
-          billingEmail: 'contact@globalservices.com',
-          branding: {},
-          settings: {
-            defaultTimezone: 'UTC',
-            defaultCurrency: 'USD',
-            dateFormat: 'DD/MM/YYYY',
-            timeFormat: '24h',
-          },
-          createdAt: new Date('2024-03-10') as any,
-          updatedAt: new Date() as any,
-          createdBy: 'user-3',
-          status: 'suspended',
-        },
-      ];
-      setOrganizations(mockOrgs);
-      setLoading(false);
-    }, 500);
+    async function loadOrganizations() {
+      try {
+        setLoading(true);
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        
+        // Load all organizations from Firestore
+        const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+        
+        // Convert Firestore data to Organization type
+        const organizations = orgs.map((org: any) => ({
+          id: org.id,
+          name: org.name,
+          slug: org.slug,
+          plan: org.plan,
+          planLimits: org.planLimits,
+          billingEmail: org.billingEmail,
+          branding: org.branding || {},
+          settings: org.settings,
+          createdAt: org.createdAt,
+          updatedAt: org.updatedAt,
+          createdBy: org.createdBy,
+          status: org.status,
+          trialEndsAt: org.trialEndsAt,
+        }));
+        
+        setOrganizations(organizations);
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load organizations:', error);
+        setOrganizations([]);
+        setLoading(false);
+      }
+    }
+    
+    loadOrganizations();
   }, []);
 
   const filteredOrgs = organizations.filter(org => {
@@ -132,33 +68,13 @@ export default function OrganizationsPage() {
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Organizations
-          </h1>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>
-            Manage all customer organizations
-          </p>
-        </div>
-        {hasPermission('canCreateOrganizations') && (
-          <Tooltip content="Create a new customer organization. You'll set up their plan, billing, and initial settings.">
-            <Link
-              href="/admin/organizations/new"
-              style={{
-                padding: '0.625rem 1.25rem',
-                backgroundColor: primaryColor,
-                color: '#fff',
-                borderRadius: '0.5rem',
-                textDecoration: 'none',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}
-            >
-              + Create Organization
-            </Link>
-          </Tooltip>
-        )}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+          Organizations
+        </h1>
+        <p style={{ color: '#666', fontSize: '0.875rem' }}>
+          Manage all customer organizations
+        </p>
       </div>
 
       {/* Filters */}

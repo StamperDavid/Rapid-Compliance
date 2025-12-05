@@ -213,23 +213,6 @@ export default function AdminSalesAgentPage() {
             <div style={{ color: '#fff' }}>{goldenMaster.businessContext.uniqueValue}</div>
           </div>
         </div>
-        <Link
-          href="/admin/sales-agent/configure"
-          style={{
-            display: 'inline-block',
-            marginTop: '1rem',
-            padding: '0.5rem 1rem',
-            backgroundColor: 'transparent',
-            border: `1px solid ${borderColor}`,
-            color: '#fff',
-            borderRadius: '0.375rem',
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            fontWeight: '600'
-          }}
-        >
-          Configure Agent
-        </Link>
       </div>
     </div>
   );
@@ -325,4 +308,8 @@ function ActionCard({ title, description, href, buttonText, buttonColor, disable
     </div>
   );
 }
+
+
+
+
 

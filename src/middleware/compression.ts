@@ -57,3 +57,7 @@ function getCompressionFormat(request: NextRequest): 'br' | 'gzip' | null {
 
 export { shouldCompress, getCompressionFormat };
 
+
+
+
+

@@ -127,3 +127,7 @@ git config --global user.email "your.email@example.com"
 **Directory**: `C:\Users\David\PycharmProjects\AI Sales Platform`
 
 
+
+
+
+

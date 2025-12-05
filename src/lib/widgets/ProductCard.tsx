@@ -146,3 +146,7 @@ export function ProductCard({ product, onAddToCart, theme }: ProductCardProps) {
   );
 }
 
+
+
+
+

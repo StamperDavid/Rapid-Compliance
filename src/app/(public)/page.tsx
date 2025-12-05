@@ -8,13 +8,13 @@ export default function LandingPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-black">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg" />
+              <div className="w-8 h-8 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg" />
               <span className="text-xl font-bold text-white">AI Sales Platform</span>
             </div>
             <div className="hidden md:flex items-center gap-8">
@@ -32,7 +32,7 @@ export default function LandingPage() {
               </Link>
               <Link
                 href="/signup"
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg font-semibold hover:bg-gray-700 transition"
               >
                 Start Free Trial
               </Link>
@@ -45,15 +45,15 @@ export default function LandingPage() {
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-full mb-8">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-sm text-purple-300">AI-Powered Sales Automation</span>
+              <span className="text-sm text-gray-300">AI-Powered Sales Automation</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
               Your AI Sales Team,
               <br />
-              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-gray-300 to-gray-400 bg-clip-text text-transparent">
                 Working 24/7
               </span>
             </h1>
@@ -66,7 +66,7 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/signup"
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-lg shadow-purple-500/50"
+                className="px-8 py-4 bg-gray-800 text-white rounded-lg text-lg font-semibold hover:bg-gray-700 transition shadow-lg shadow-gray-900/50"
               >
                 Start Free Trial →
               </Link>
@@ -105,7 +105,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
@@ -129,7 +129,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -143,7 +143,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Step 1 */}
             <div className="relative">
-              <div className="absolute top-0 left-0 w-12 h-12 bg-purple-500/20 border-2 border-purple-500 rounded-full flex items-center justify-center text-2xl font-bold text-purple-400">
+              <div className="absolute top-0 left-0 w-12 h-12 bg-gray-800 border-2 border-gray-700 rounded-full flex items-center justify-center text-2xl font-bold text-gray-300">
                 1
               </div>
               <div className="pt-16 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
@@ -152,7 +152,7 @@ export default function LandingPage() {
                   Answer a few questions about your business, upload your product docs, 
                   and our AI learns everything about your offerings.
                 </p>
-                <div className="text-sm text-purple-400">
+                <div className="text-sm text-gray-400">
                   ⚡ Takes 5 minutes
                 </div>
               </div>
@@ -160,7 +160,7 @@ export default function LandingPage() {
 
             {/* Step 2 */}
             <div className="relative">
-              <div className="absolute top-0 left-0 w-12 h-12 bg-purple-500/20 border-2 border-purple-500 rounded-full flex items-center justify-center text-2xl font-bold text-purple-400">
+              <div className="absolute top-0 left-0 w-12 h-12 bg-gray-800 border-2 border-gray-700 rounded-full flex items-center justify-center text-2xl font-bold text-gray-300">
                 2
               </div>
               <div className="pt-16 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
@@ -169,7 +169,7 @@ export default function LandingPage() {
                   Role-play as a customer in our training sandbox. Give feedback. 
                   The AI improves with every session.
                 </p>
-                <div className="text-sm text-purple-400">
+                <div className="text-sm text-gray-400">
                   🎯 Real improvement
                 </div>
               </div>
@@ -177,7 +177,7 @@ export default function LandingPage() {
 
             {/* Step 3 */}
             <div className="relative">
-              <div className="absolute top-0 left-0 w-12 h-12 bg-purple-500/20 border-2 border-purple-500 rounded-full flex items-center justify-center text-2xl font-bold text-purple-400">
+              <div className="absolute top-0 left-0 w-12 h-12 bg-gray-800 border-2 border-gray-700 rounded-full flex items-center justify-center text-2xl font-bold text-gray-300">
                 3
               </div>
               <div className="pt-16 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
@@ -186,7 +186,7 @@ export default function LandingPage() {
                   Embed your AI agent on your website with one line of code. 
                   It works on WordPress, Shopify, or any site.
                 </p>
-                <div className="text-sm text-purple-400">
+                <div className="text-sm text-gray-400">
                   🚀 One-click embed
                 </div>
               </div>
@@ -196,7 +196,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -269,7 +269,7 @@ export default function LandingPage() {
       </section>
 
       {/* Demo Section */}
-      <section id="demo-section" className="py-20 px-4 sm:px-6 lg:px-8">
+      <section id="demo-section" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -299,7 +299,7 @@ export default function LandingPage() {
       </section>
 
       {/* Social Proof */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
@@ -342,7 +342,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Ready to 10x Your Sales?
@@ -352,7 +352,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/signup"
-            className="inline-block px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-lg shadow-purple-500/50"
+            className="inline-block px-12 py-4 bg-gray-800 text-white rounded-lg text-xl font-semibold hover:bg-gray-700 transition shadow-lg shadow-gray-900/50"
           >
             Start Your Free Trial →
           </Link>
@@ -407,11 +407,15 @@ export default function LandingPage() {
 
       {/* Floating Chat Widget (Placeholder) */}
       <div className="fixed bottom-6 right-6 z-50">
-        <button className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg shadow-purple-500/50 flex items-center justify-center text-white text-2xl hover:scale-110 transition animate-pulse">
+        <button className="w-16 h-16 bg-gray-800 rounded-full shadow-lg shadow-gray-900/50 flex items-center justify-center text-white text-2xl hover:scale-110 transition hover:bg-gray-700">
           💬
         </button>
       </div>
     </div>
   );
 }
+
+
+
+
 

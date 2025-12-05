@@ -32,180 +32,187 @@ export default function RevenueAdminPage() {
     }
   };
 
+  const bgPaper = '#1a1a1a';
+  const borderColor = '#333';
+
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div style={{ padding: '2rem', color: '#fff' }}>
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-1">Revenue Dashboard</h1>
-              <p className="text-gray-400">Track MRR, ARR, churn, and growth</p>
-            </div>
-            <Link
-              href="/admin"
-              className="px-4 py-2 text-gray-300 hover:text-white transition"
-            >
-              ← Back to Admin
-            </Link>
-          </div>
-        </div>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+          Revenue Dashboard
+        </h1>
+        <p style={{ color: '#666', fontSize: '0.875rem' }}>
+          Track MRR, ARR, churn, and growth
+        </p>
       </div>
 
       {/* Date Range */}
-      <div className="bg-gray-800 border-b border-gray-700 px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center gap-4">
-          <label className="text-gray-400 text-sm">From:</label>
-          <input
-            type="date"
-            value={dateRange.startDate}
-            onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-            className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-          />
-          <label className="text-gray-400 text-sm">To:</label>
-          <input
-            type="date"
-            value={dateRange.endDate}
-            onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-            className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-          />
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', padding: '1rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.5rem' }}>
+        <label style={{ color: '#999', fontSize: '0.875rem' }}>From:</label>
+        <input
+          type="date"
+          value={dateRange.startDate}
+          onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#0a0a0a',
+            border: `1px solid ${borderColor}`,
+            borderRadius: '0.5rem',
+            color: '#fff',
+            fontSize: '0.875rem'
+          }}
+        />
+        <label style={{ color: '#999', fontSize: '0.875rem' }}>To:</label>
+        <input
+          type="date"
+          value={dateRange.endDate}
+          onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#0a0a0a',
+            border: `1px solid ${borderColor}`,
+            borderRadius: '0.5rem',
+            color: '#fff',
+            fontSize: '0.875rem'
+          }}
+        />
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        {isLoading ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400">Loading metrics...</div>
-          </div>
-        ) : metrics ? (
-          <div className="space-y-8">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <div className="text-sm text-gray-400 mb-2">Monthly Recurring Revenue</div>
-                <div className="text-4xl font-bold text-white mb-1">
-                  ${metrics.mrr.toLocaleString()}
-                </div>
-                <div className={`text-sm ${metrics.mrrGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {metrics.mrrGrowth >= 0 ? '↑' : '↓'} {Math.abs(metrics.mrrGrowth).toFixed(1)}% from last period
-                </div>
+      {isLoading ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+          Loading metrics...
+        </div>
+      ) : metrics ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Key Metrics */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Monthly Recurring Revenue</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+                ${metrics.mrr.toLocaleString()}
               </div>
-
-              <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <div className="text-sm text-gray-400 mb-2">Annual Recurring Revenue</div>
-                <div className="text-4xl font-bold text-white mb-1">
-                  ${metrics.arr.toLocaleString()}
-                </div>
-                <div className={`text-sm ${metrics.arrGrowth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {metrics.arrGrowth >= 0 ? '↑' : '↓'} {Math.abs(metrics.arrGrowth).toFixed(1)}% from last period
-                </div>
-              </div>
-
-              <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <div className="text-sm text-gray-400 mb-2">Total Customers</div>
-                <div className="text-4xl font-bold text-white mb-1">
-                  {metrics.totalCustomers}
-                </div>
-                <div className="text-sm text-gray-400">
-                  +{metrics.newCustomers} new this period
-                </div>
-              </div>
-
-              <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <div className="text-sm text-gray-400 mb-2">Churn Rate</div>
-                <div className="text-4xl font-bold text-white mb-1">
-                  {metrics.churnRate.toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-400">
-                  {metrics.churnedCustomers} churned
-                </div>
+              <div style={{ fontSize: '0.875rem', color: metrics.mrrGrowth >= 0 ? '#10b981' : '#ef4444' }}>
+                {metrics.mrrGrowth >= 0 ? '↑' : '↓'} {Math.abs(metrics.mrrGrowth).toFixed(1)}% from last period
               </div>
             </div>
 
-            {/* Revenue by Plan */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Revenue by Plan</h2>
-              <div className="space-y-4">
-                {metrics.revenueByPlan.map((plan) => (
-                  <div key={plan.planId} className="flex items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-white">{plan.planName}</span>
-                        <span className="text-white">${plan.mrr.toLocaleString()} MRR</span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-purple-600 to-pink-600"
-                            style={{ width: `${plan.percentage}%` }}
-                          />
-                        </div>
-                        <span className="text-sm text-gray-400 w-16 text-right">
-                          {plan.percentage.toFixed(1)}%
-                        </span>
-                      </div>
+            <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Annual Recurring Revenue</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+                ${metrics.arr.toLocaleString()}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: metrics.arrGrowth >= 0 ? '#10b981' : '#ef4444' }}>
+                {metrics.arrGrowth >= 0 ? '↑' : '↓'} {Math.abs(metrics.arrGrowth).toFixed(1)}% from last period
+              </div>
+            </div>
+
+            <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Total Customers</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+                {metrics.totalCustomers}
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#999' }}>
+                +{metrics.newCustomers} new this period
+              </div>
+            </div>
+
+            <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Churn Rate</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+                {metrics.churnRate.toFixed(1)}%
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#999' }}>
+                {metrics.churnedCustomers} churned
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue by Plan */}
+          <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Revenue by Plan</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {metrics.revenueByPlan.map((plan) => (
+                <div key={plan.planId} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <span style={{ fontWeight: '600', color: '#fff' }}>{plan.planName}</span>
+                      <span style={{ color: '#fff' }}>${plan.mrr.toLocaleString()} MRR</span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-400">Customers</div>
-                      <div className="text-lg font-semibold text-white">{plan.customers}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{ flex: 1, height: '12px', backgroundColor: '#333', borderRadius: '999px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            height: '100%',
+                            background: 'linear-gradient(to right, #9333ea, #db2777)',
+                            width: `${plan.percentage}%`
+                          }}
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.875rem', color: '#999', width: '4rem', textAlign: 'right' }}>
+                        {plan.percentage.toFixed(1)}%
+                      </span>
                     </div>
                   </div>
-                ))}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.875rem', color: '#999' }}>Customers</div>
+                    <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff' }}>{plan.customers}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Additional Metrics */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Avg Revenue Per Customer</div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>
+                ${metrics.averageRevenuePerUser.toFixed(2)}
               </div>
             </div>
 
-            {/* Additional Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <div className="text-sm text-gray-400 mb-2">Avg Revenue Per Customer</div>
-                <div className="text-3xl font-bold text-white">
-                  ${metrics.averageRevenuePerUser.toFixed(2)}
-                </div>
-              </div>
-
-              <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <div className="text-sm text-gray-400 mb-2">Total Revenue (Period)</div>
-                <div className="text-3xl font-bold text-white">
-                  ${metrics.totalRevenue.toLocaleString()}
-                </div>
-              </div>
-
-              <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <div className="text-sm text-gray-400 mb-2">Revenue Churn Rate</div>
-                <div className="text-3xl font-bold text-white">
-                  {metrics.revenueChurnRate.toFixed(1)}%
-                </div>
+            <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Total Revenue (Period)</div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>
+                ${metrics.totalRevenue.toLocaleString()}
               </div>
             </div>
 
-            {/* Customer Growth */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Customer Growth</h2>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <div className="text-3xl font-bold text-green-400">+{metrics.newCustomers}</div>
-                  <div className="text-sm text-gray-400">New Customers</div>
-                </div>
-                <div className="text-center p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <div className="text-3xl font-bold text-blue-400">{metrics.totalCustomers}</div>
-                  <div className="text-sm text-gray-400">Total Customers</div>
-                </div>
-                <div className="text-center p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <div className="text-3xl font-bold text-red-400">-{metrics.churnedCustomers}</div>
-                  <div className="text-sm text-gray-400">Churned Customers</div>
-                </div>
+            <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
+              <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Revenue Churn Rate</div>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>
+                {metrics.revenueChurnRate.toFixed(1)}%
               </div>
             </div>
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📊</div>
-            <div className="text-xl text-gray-400">No data available</div>
+
+          {/* Customer Growth */}
+          <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Customer Growth</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+              <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#10b98133', border: '1px solid #10b98144', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>+{metrics.newCustomers}</div>
+                <div style={{ fontSize: '0.875rem', color: '#999' }}>New Customers</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#3b82f633', border: '1px solid #3b82f644', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3b82f6' }}>{metrics.totalCustomers}</div>
+                <div style={{ fontSize: '0.875rem', color: '#999' }}>Total Customers</div>
+              </div>
+              <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#ef444433', border: '1px solid #ef444444', borderRadius: '0.5rem' }}>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ef4444' }}>-{metrics.churnedCustomers}</div>
+                <div style={{ fontSize: '0.875rem', color: '#999' }}>Churned Customers</div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📊</div>
+          <div style={{ fontSize: '1.25rem', color: '#999' }}>No data available</div>
+        </div>
+      )}
     </div>
   );
 }
-

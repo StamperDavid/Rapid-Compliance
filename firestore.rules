@@ -256,11 +256,21 @@ service cloud.firestore {
         && getUserRole() == 'owner';
     }
     
+    // Organization subcollections (leads, deals, activities, etc.)
+    match /organizations/{orgId}/{subcollection}/{docId} {
+      // Allow authenticated users to read/write subcollections in their org
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
     // Default: Deny all other access
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
+
+
+
+
 
 

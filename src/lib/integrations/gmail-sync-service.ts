@@ -1,0 +1,521 @@
+/**
+ * Gmail Sync Service
+ * Bidirectional email syncing between Gmail and CRM
+ */
+
+import { gmail_v1, google } from 'googleapis';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+
+const GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.modify',
+];
+
+export interface GmailMessage {
+  id: string;
+  threadId: string;
+  labelIds: string[];
+  snippet: string;
+  internalDate: string;
+  from: string;
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  bodyHtml?: string;
+  attachments?: GmailAttachment[];
+  isRead: boolean;
+  isStarred: boolean;
+}
+
+export interface GmailAttachment {
+  filename: string;
+  mimeType: string;
+  size: number;
+  attachmentId: string;
+}
+
+export interface GmailSyncStatus {
+  organizationId: string;
+  lastSyncAt: string;
+  historyId: string;
+  messagesSynced: number;
+  errors: number;
+}
+
+/**
+ * Initialize Gmail API client
+ */
+function getGmailClient(accessToken: string): gmail_v1.Gmail {
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+  
+  return google.gmail({ version: 'v1', auth });
+}
+
+/**
+ * Sync Gmail messages to CRM
+ */
+export async function syncGmailMessages(
+  organizationId: string,
+  accessToken: string,
+  maxResults: number = 100
+): Promise<GmailSyncStatus> {
+  const gmail = getGmailClient(accessToken);
+  
+  try {
+    // Get last sync status
+    const lastSync = await getLastSyncStatus(organizationId);
+    
+    let query = 'in:inbox OR in:sent';
+    
+    // If we have a history ID, use incremental sync
+    if (lastSync?.historyId) {
+      return await incrementalSync(gmail, organizationId, lastSync.historyId);
+    }
+    
+    // Full sync (first time)
+    return await fullSync(gmail, organizationId, maxResults);
+  } catch (error) {
+    console.error('[Gmail Sync] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Full sync (initial sync)
+ */
+async function fullSync(
+  gmail: gmail_v1.Gmail,
+  organizationId: string,
+  maxResults: number
+): Promise<GmailSyncStatus> {
+  let messagesSynced = 0;
+  let errors = 0;
+  let historyId: string = '';
+  
+  try {
+    // List messages
+    const listResponse = await gmail.users.messages.list({
+      userId: 'me',
+      maxResults,
+      q: 'in:inbox OR in:sent',
+    });
+    
+    if (!listResponse.data.messages) {
+      return {
+        organizationId,
+        lastSyncAt: new Date().toISOString(),
+        historyId: listResponse.data.resultSizeEstimate?.toString() || '0',
+        messagesSynced: 0,
+        errors: 0,
+      };
+    }
+    
+    // Process messages in batches
+    const batchSize = 10;
+    for (let i = 0; i < listResponse.data.messages.length; i += batchSize) {
+      const batch = listResponse.data.messages.slice(i, i + batchSize);
+      
+      await Promise.all(
+        batch.map(async (msg) => {
+          try {
+            const fullMessage = await gmail.users.messages.get({
+              userId: 'me',
+              id: msg.id!,
+              format: 'full',
+            });
+            
+            const parsed = parseGmailMessage(fullMessage.data);
+            await saveMessageToCRM(organizationId, parsed);
+            
+            messagesSynced++;
+            
+            // Update history ID
+            if (fullMessage.data.historyId) {
+              historyId = fullMessage.data.historyId;
+            }
+          } catch (err) {
+            console.error(`[Gmail Sync] Error processing message ${msg.id}:`, err);
+            errors++;
+          }
+        })
+      );
+    }
+    
+    // Save sync status
+    const status: GmailSyncStatus = {
+      organizationId,
+      lastSyncAt: new Date().toISOString(),
+      historyId,
+      messagesSynced,
+      errors,
+    };
+    
+    await saveSyncStatus(status);
+    
+    return status;
+  } catch (error) {
+    console.error('[Gmail Sync] Full sync error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Incremental sync using Gmail history
+ */
+async function incrementalSync(
+  gmail: gmail_v1.Gmail,
+  organizationId: string,
+  startHistoryId: string
+): Promise<GmailSyncStatus> {
+  let messagesSynced = 0;
+  let errors = 0;
+  
+  try {
+    // Get history changes since last sync
+    const historyResponse = await gmail.users.history.list({
+      userId: 'me',
+      startHistoryId,
+      historyTypes: ['messageAdded', 'messageDeleted', 'labelAdded', 'labelRemoved'],
+    });
+    
+    if (!historyResponse.data.history) {
+      return {
+        organizationId,
+        lastSyncAt: new Date().toISOString(),
+        historyId: historyResponse.data.historyId || startHistoryId,
+        messagesSynced: 0,
+        errors: 0,
+      };
+    }
+    
+    // Process each history record
+    for (const record of historyResponse.data.history) {
+      // Handle new messages
+      if (record.messagesAdded) {
+        for (const msgAdded of record.messagesAdded) {
+          try {
+            const fullMessage = await gmail.users.messages.get({
+              userId: 'me',
+              id: msgAdded.message!.id!,
+              format: 'full',
+            });
+            
+            const parsed = parseGmailMessage(fullMessage.data);
+            await saveMessageToCRM(organizationId, parsed);
+            messagesSynced++;
+          } catch (err) {
+            console.error('[Gmail Sync] Error processing added message:', err);
+            errors++;
+          }
+        }
+      }
+      
+      // Handle deleted messages
+      if (record.messagesDeleted) {
+        for (const msgDeleted of record.messagesDeleted) {
+          try {
+            await deleteMessageFromCRM(organizationId, msgDeleted.message!.id!);
+          } catch (err) {
+            console.error('[Gmail Sync] Error deleting message:', err);
+            errors++;
+          }
+        }
+      }
+      
+      // Handle label changes (read/unread, starred, etc.)
+      if (record.labelsAdded || record.labelsRemoved) {
+        const messageId = record.labelsAdded?.[0]?.message?.id || record.labelsRemoved?.[0]?.message?.id;
+        if (messageId) {
+          try {
+            const fullMessage = await gmail.users.messages.get({
+              userId: 'me',
+              id: messageId,
+              format: 'metadata',
+              metadataHeaders: ['From', 'To', 'Subject'],
+            });
+            
+            await updateMessageLabels(organizationId, messageId, fullMessage.data.labelIds || []);
+          } catch (err) {
+            console.error('[Gmail Sync] Error updating labels:', err);
+            errors++;
+          }
+        }
+      }
+    }
+    
+    const status: GmailSyncStatus = {
+      organizationId,
+      lastSyncAt: new Date().toISOString(),
+      historyId: historyResponse.data.historyId || startHistoryId,
+      messagesSynced,
+      errors,
+    };
+    
+    await saveSyncStatus(status);
+    
+    return status;
+  } catch (error) {
+    console.error('[Gmail Sync] Incremental sync error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Parse Gmail message to our format
+ */
+function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
+  const headers = message.payload?.headers || [];
+  
+  const getHeader = (name: string): string => {
+    const header = headers.find(h => h.name?.toLowerCase() === name.toLowerCase());
+    return header?.value || '';
+  };
+  
+  const parseAddresses = (value: string): string[] => {
+    if (!value) return [];
+    return value.split(',').map(addr => addr.trim()).filter(Boolean);
+  };
+  
+  // Extract body
+  let body = '';
+  let bodyHtml = '';
+  
+  if (message.payload?.body?.data) {
+    body = Buffer.from(message.payload.body.data, 'base64').toString('utf-8');
+  } else if (message.payload?.parts) {
+    // Multipart message
+    for (const part of message.payload.parts) {
+      if (part.mimeType === 'text/plain' && part.body?.data) {
+        body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+      } else if (part.mimeType === 'text/html' && part.body?.data) {
+        bodyHtml = Buffer.from(part.body.data, 'base64').toString('utf-8');
+      }
+    }
+  }
+  
+  // Extract attachments
+  const attachments: GmailAttachment[] = [];
+  if (message.payload?.parts) {
+    for (const part of message.payload.parts) {
+      if (part.filename && part.body?.attachmentId) {
+        attachments.push({
+          filename: part.filename,
+          mimeType: part.mimeType || 'application/octet-stream',
+          size: part.body.size || 0,
+          attachmentId: part.body.attachmentId,
+        });
+      }
+    }
+  }
+  
+  return {
+    id: message.id!,
+    threadId: message.threadId!,
+    labelIds: message.labelIds || [],
+    snippet: message.snippet || '',
+    internalDate: message.internalDate || Date.now().toString(),
+    from: getHeader('From'),
+    to: parseAddresses(getHeader('To')),
+    cc: parseAddresses(getHeader('Cc')),
+    bcc: parseAddresses(getHeader('Bcc')),
+    subject: getHeader('Subject'),
+    body,
+    bodyHtml,
+    attachments,
+    isRead: !(message.labelIds?.includes('UNREAD') || false),
+    isStarred: message.labelIds?.includes('STARRED') || false,
+  };
+}
+
+/**
+ * Save message to CRM
+ */
+async function saveMessageToCRM(organizationId: string, message: GmailMessage): Promise<void> {
+  try {
+    // Extract email address from "Name <email@example.com>" format
+    const extractEmail = (str: string): string => {
+      const match = str.match(/<([^>]+)>/);
+      return match ? match[1] : str.trim();
+    };
+    
+    const fromEmail = extractEmail(message.from);
+    
+    // Try to match to existing contact
+    const contact = await findContactByEmail(organizationId, fromEmail);
+    
+    // Save email record
+    const emailData = {
+      id: message.id,
+      organizationId,
+      threadId: message.threadId,
+      contactId: contact?.id,
+      from: message.from,
+      fromEmail,
+      to: message.to,
+      cc: message.cc,
+      bcc: message.bcc,
+      subject: message.subject,
+      body: message.body,
+      bodyHtml: message.bodyHtml,
+      snippet: message.snippet,
+      date: new Date(parseInt(message.internalDate)),
+      isRead: message.isRead,
+      isStarred: message.isStarred,
+      hasAttachments: (message.attachments?.length || 0) > 0,
+      attachments: message.attachments,
+      source: 'gmail',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      message.id,
+      emailData
+    );
+    
+    // Update contact with last interaction
+    if (contact) {
+      await FirestoreService.update(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`,
+        contact.id,
+        {
+          lastContactDate: new Date(parseInt(message.internalDate)),
+          lastContactType: 'email',
+          updatedAt: new Date(),
+        }
+      );
+    }
+  } catch (error) {
+    console.error('[Gmail Sync] Error saving message to CRM:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete message from CRM
+ */
+async function deleteMessageFromCRM(organizationId: string, messageId: string): Promise<void> {
+  try {
+    await FirestoreService.delete(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      messageId
+    );
+  } catch (error) {
+    console.error('[Gmail Sync] Error deleting message:', error);
+  }
+}
+
+/**
+ * Update message labels in CRM
+ */
+async function updateMessageLabels(organizationId: string, messageId: string, labels: string[]): Promise<void> {
+  try {
+    await FirestoreService.update(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      messageId,
+      {
+        isRead: !labels.includes('UNREAD'),
+        isStarred: labels.includes('STARRED'),
+        updatedAt: new Date(),
+      }
+    );
+  } catch (error) {
+    console.error('[Gmail Sync] Error updating labels:', error);
+  }
+}
+
+/**
+ * Find contact by email
+ */
+async function findContactByEmail(organizationId: string, email: string): Promise<any | null> {
+  try {
+    const contacts = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
+    );
+    const contactsFiltered = contacts.filter((c: any) => c.email === email);
+    
+    return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
+  } catch (error) {
+    console.error('[Gmail Sync] Error finding contact:', error);
+    return null;
+  }
+}
+
+/**
+ * Get last sync status
+ */
+async function getLastSyncStatus(organizationId: string): Promise<GmailSyncStatus | null> {
+  try {
+    const status = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      'gmail-sync'
+    );
+    return status as GmailSyncStatus | null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Save sync status
+ */
+async function saveSyncStatus(status: GmailSyncStatus): Promise<void> {
+  try {
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${status.organizationId}/integrationStatus`,
+      'gmail-sync',
+      status
+    );
+  } catch (error) {
+    console.error('[Gmail Sync] Error saving sync status:', error);
+  }
+}
+
+/**
+ * Setup Gmail push notifications (webhook)
+ */
+export async function setupGmailPushNotifications(
+  accessToken: string,
+  topicName: string // Google Cloud Pub/Sub topic
+): Promise<void> {
+  const gmail = getGmailClient(accessToken);
+  
+  try {
+    await gmail.users.watch({
+      userId: 'me',
+      requestBody: {
+        topicName,
+        labelIds: ['INBOX', 'SENT'],
+      },
+    });
+    
+    console.log('[Gmail Sync] Push notifications enabled');
+  } catch (error) {
+    console.error('[Gmail Sync] Error setting up push notifications:', error);
+    throw error;
+  }
+}
+
+/**
+ * Stop Gmail push notifications
+ */
+export async function stopGmailPushNotifications(accessToken: string): Promise<void> {
+  const gmail = getGmailClient(accessToken);
+  
+  try {
+    await gmail.users.stop({
+      userId: 'me',
+    });
+    
+    console.log('[Gmail Sync] Push notifications disabled');
+  } catch (error) {
+    console.error('[Gmail Sync] Error stopping push notifications:', error);
+    throw error;
+  }
+}
+

@@ -47,6 +47,7 @@ class APIKeyService {
 
   /**
    * Get specific API key for a service
+   * OpenRouter is used as universal fallback for ALL AI services
    */
   async getServiceKey(organizationId: string, service: APIServiceName): Promise<any> {
     const keys = await this.getKeys(organizationId);
@@ -58,40 +59,57 @@ class APIKeyService {
         return keys.firebase;
       case 'googleCloud':
         return keys.googleCloud;
+      
+      // AI Services - OpenRouter can provide ALL of these
       case 'gemini':
-        return keys.ai?.geminiApiKey;
+        return keys.ai?.geminiApiKey || keys.ai?.openrouterApiKey || null;
       case 'openai':
-        return keys.ai?.openaiApiKey;
+        return keys.ai?.openaiApiKey || keys.ai?.openrouterApiKey || null;
       case 'anthropic':
-        return keys.ai?.anthropicApiKey;
+        return keys.ai?.anthropicApiKey || keys.ai?.openrouterApiKey || null;
+      case 'openrouter':
+        return keys.ai?.openrouterApiKey || null;
+      
+      // Payment Services
       case 'stripe':
         return keys.payments?.stripe;
       case 'square':
         return keys.payments?.square;
       case 'paypal':
         return keys.payments?.paypal;
+      
+      // Email Services
       case 'sendgrid':
         return keys.email?.sendgrid;
       case 'resend':
         return keys.email?.resend;
       case 'smtp':
         return keys.email?.smtp;
+      
+      // SMS Services
       case 'twilio':
         return keys.sms?.twilio;
       case 'vonage':
         return keys.sms?.vonage;
+      
+      // Storage Services
       case 'cloudStorage':
         return keys.storage?.cloudStorage;
       case 's3':
         return keys.storage?.s3;
+      
+      // Analytics
       case 'googleAnalytics':
         return keys.analytics?.googleAnalytics;
       case 'mixpanel':
         return keys.analytics?.mixpanel;
+      
+      // Integrations
       case 'slack':
         return keys.integrations?.slack;
       case 'zapier':
         return keys.integrations?.zapier;
+      
       default:
         return null;
     }

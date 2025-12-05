@@ -311,7 +311,41 @@ export class SequenceEngine {
     organizationId: string
   ): Promise<void> {
     console.log(`[Sequence Engine] Sending LinkedIn message to prospect ${enrollment.prospectId}`);
-    // TODO: Implement LinkedIn integration
+    
+    // Get prospect details
+    const prospect = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      enrollment.prospectId
+    );
+    
+    if (!prospect) {
+      throw new Error(`Prospect ${enrollment.prospectId} not found`);
+    }
+    
+    // Get LinkedIn integration credentials
+    const integrations = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`
+    );
+    const integration = integrations.filter((i: any) => i.service === 'linkedin');
+    
+    if (!integration || integration.length === 0) {
+      throw new Error('LinkedIn integration not configured');
+    }
+    
+    const linkedInToken = integration[0].accessToken;
+    
+    // Send LinkedIn message via RapidAPI or LinkedIn API
+    const { sendLinkedInMessage } = await import('@/lib/integrations/linkedin-messaging');
+    
+    await sendLinkedInMessage(
+      linkedInToken,
+      prospect.linkedInUrl || prospect.email,
+      step.content,
+      organizationId
+    );
+    
+    // Track step execution
+    await this.trackStepExecution(enrollment.id, step.id, organizationId, 'success');
   }
 
   /**
@@ -323,7 +357,44 @@ export class SequenceEngine {
     organizationId: string
   ): Promise<void> {
     console.log(`[Sequence Engine] Sending SMS to prospect ${enrollment.prospectId}`);
-    // TODO: Implement SMS integration
+    
+    // Get prospect details
+    const prospect = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      enrollment.prospectId
+    );
+    
+    if (!prospect || !prospect.phone) {
+      throw new Error(`Prospect ${enrollment.prospectId} has no phone number`);
+    }
+    
+    // Send SMS via Twilio
+    const { sendSMS } = await import('@/lib/sms/sms-service');
+    
+    await sendSMS({
+      to: prospect.phone,
+      message: step.content,
+      organizationId,
+    });
+    
+    // Save SMS record
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/smsMessages`,
+      `${Date.now()}-${enrollment.prospectId}`,
+      {
+        prospectId: enrollment.prospectId,
+        sequenceId: enrollment.sequenceId,
+        stepId: step.id,
+        to: prospect.phone,
+        message: step.content,
+        status: 'sent',
+        sentAt: new Date(),
+        createdAt: new Date(),
+      }
+    );
+    
+    // Track step execution
+    await this.trackStepExecution(enrollment.id, step.id, organizationId, 'success');
   }
 
   /**
@@ -335,7 +406,112 @@ export class SequenceEngine {
     organizationId: string
   ): Promise<void> {
     console.log(`[Sequence Engine] Creating task for prospect ${enrollment.prospectId}`);
-    // TODO: Create task in CRM
+    
+    // Get prospect details
+    const prospect = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      enrollment.prospectId
+    );
+    
+    if (!prospect) {
+      throw new Error(`Prospect ${enrollment.prospectId} not found`);
+    }
+    
+    // Calculate task due date
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + (step.taskDueDays || 1));
+    
+    // Create task in CRM
+    const taskId = `task-${Date.now()}-${enrollment.prospectId}`;
+    const task = {
+      id: taskId,
+      organizationId,
+      title: step.taskTitle || `Follow up with ${prospect.name}`,
+      description: step.content || `Automated task from sequence: ${enrollment.sequenceId}`,
+      type: 'follow-up',
+      status: 'pending',
+      priority: step.taskPriority || 'medium',
+      dueDate,
+      relatedTo: {
+        type: 'prospect',
+        id: enrollment.prospectId,
+        name: prospect.name,
+      },
+      sequenceId: enrollment.sequenceId,
+      stepId: step.id,
+      assignedTo: step.taskAssignee || 'unassigned',
+      createdBy: 'sequence-engine',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/tasks`,
+      taskId,
+      task
+    );
+    
+    // Track step execution
+    await this.trackStepExecution(enrollment.id, step.id, organizationId, 'success');
+  }
+  
+  /**
+   * Track step execution for analytics
+   */
+  private static async trackStepExecution(
+    enrollmentId: string,
+    stepId: string,
+    organizationId: string,
+    status: 'success' | 'failed' | 'skipped',
+    error?: string
+  ): Promise<void> {
+    try {
+      const analyticsId = `${enrollmentId}-${stepId}-${Date.now()}`;
+      
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequenceAnalytics`,
+        analyticsId,
+        {
+          enrollmentId,
+          stepId,
+          status,
+          error,
+          executedAt: new Date(),
+          createdAt: new Date(),
+        }
+      );
+      
+      // Update step statistics
+      const statsId = `step-${stepId}`;
+      const currentStats = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequenceStepStats`,
+        statsId
+      );
+      
+      const stats = currentStats || {
+        stepId,
+        totalExecutions: 0,
+        successCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+      };
+      
+      stats.totalExecutions += 1;
+      if (status === 'success') stats.successCount += 1;
+      if (status === 'failed') stats.failedCount += 1;
+      if (status === 'skipped') stats.skippedCount += 1;
+      stats.successRate = (stats.successCount / stats.totalExecutions) * 100;
+      stats.updatedAt = new Date();
+      
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequenceStepStats`,
+        statsId,
+        stats
+      );
+    } catch (error) {
+      console.error('[Sequence Engine] Error tracking step execution:', error);
+      // Don't throw - analytics failure shouldn't stop execution
+    }
   }
 
   /**

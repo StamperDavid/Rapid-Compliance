@@ -1,17 +1,44 @@
 /**
  * Gemini AI Service
  * Handles all interactions with Google's Gemini API
+ * Dynamically fetches API keys from Firestore admin settings
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-if (!process.env.GEMINI_API_KEY) {
-  console.warn('GEMINI_API_KEY not set - AI features will not work');
-}
+let cachedGenAI: GoogleGenerativeAI | null = null;
+let lastKeyFetch = 0;
+const KEY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-const genAI = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  : null;
+/**
+ * Get API key from Firestore admin settings
+ */
+async function getApiKey(): Promise<string> {
+  try {
+    // Check cache first
+    if (cachedGenAI && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
+      return 'cached';
+    }
+
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+    
+    const apiKey = adminKeys?.ai?.geminiApiKey || adminKeys?.ai?.googleApiKey;
+    
+    if (!apiKey) {
+      throw new Error('Gemini API key not configured in admin settings. Please add it at /admin/system/api-keys');
+    }
+    
+    // Update cache
+    cachedGenAI = new GoogleGenerativeAI(apiKey);
+    lastKeyFetch = Date.now();
+    
+    return apiKey;
+  } catch (error: any) {
+    console.error('Error fetching Gemini API key:', error);
+    throw new Error('Failed to fetch Gemini API key from admin settings');
+  }
+}
 
 export interface ChatMessage {
   role: 'user' | 'model' | 'system';
@@ -31,11 +58,12 @@ export interface ChatResponse {
 /**
  * Initialize a chat model
  */
-function getModel(modelName: string = 'gemini-2.0-flash-exp') {
-  if (!genAI) {
+async function getModel(modelName: string = 'gemini-2.0-flash-exp') {
+  await getApiKey(); // Ensure key is loaded
+  if (!cachedGenAI) {
     throw new Error('Gemini API key not configured');
   }
-  return genAI.getGenerativeModel({ model: modelName });
+  return cachedGenAI.getGenerativeModel({ model: modelName });
 }
 
 /**
@@ -45,12 +73,8 @@ export async function sendChatMessage(
   messages: ChatMessage[],
   systemInstruction?: string
 ): Promise<ChatResponse> {
-  if (!genAI) {
-    throw new Error('Gemini API key not configured');
-  }
-
   try {
-    const model = getModel();
+    const model = await getModel();
     
     // Convert messages to Gemini format
     const history = messages
@@ -91,12 +115,8 @@ export async function generateText(
   prompt: string,
   systemInstruction?: string
 ): Promise<ChatResponse> {
-  if (!genAI) {
-    throw new Error('Gemini API key not configured');
-  }
-
   try {
-    const model = getModel();
+    const model = await getModel();
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       systemInstruction: systemInstruction,
@@ -129,12 +149,8 @@ export async function* streamChatMessage(
   messages: ChatMessage[],
   systemInstruction?: string
 ): AsyncGenerator<string, void, unknown> {
-  if (!genAI) {
-    throw new Error('Gemini API key not configured');
-  }
-
   try {
-    const model = getModel();
+    const model = await getModel();
     
     const history = messages
       .filter(m => m.role !== 'system')

@@ -339,7 +339,6 @@ export default function OnboardingWizard() {
                     <option value="services">Professional Services</option>
                     <option value="manufacturing">Manufacturing / Wholesale</option>
                     <option value="realestate">Real Estate</option>
-                    <option value="healthcare">Healthcare / Medical</option>
                     <option value="hospitality">Hospitality / Tourism</option>
                     <option value="automotive">Automotive</option>
                     <option value="finance">Financial Services / Insurance</option>
@@ -1393,7 +1392,7 @@ export default function OnboardingWizard() {
                 <TextArea 
                   label="Industry-specific regulations" 
                   field="industryRegulations" 
-                  placeholder="e.g., HIPAA compliance (healthcare), SEC regulations (financial), FTC guidelines (advertising), Industry certifications required"
+                  placeholder="e.g., SEC regulations (financial), FTC guidelines (advertising), PCI DSS (payments), Industry certifications required"
                   rows={4}
                   helper="Any special compliance requirements for your industry"
                 />
@@ -1556,7 +1555,7 @@ export default function OnboardingWizard() {
                         Enable Enhanced Privacy & Compliance Mode
                       </div>
                       <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                        GDPR, CCPA, HIPAA compliance with data collection notices and opt-outs
+                        GDPR, CCPA, SOC 2 compliance with data collection notices and opt-outs
                       </div>
                     </div>
                   </label>

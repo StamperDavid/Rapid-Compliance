@@ -103,31 +103,13 @@ export default function UsersPage() {
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Users
-          </h1>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>
-            Manage all users across all organizations
-          </p>
-        </div>
-        {hasPermission('canCreateUsers') && (
-          <Link
-            href="/admin/users/new"
-            style={{
-              padding: '0.625rem 1.25rem',
-              backgroundColor: primaryColor,
-              color: '#fff',
-              borderRadius: '0.5rem',
-              textDecoration: 'none',
-              fontSize: '0.875rem',
-              fontWeight: '600'
-            }}
-          >
-            + Create User
-          </Link>
-        )}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+          Users
+        </h1>
+        <p style={{ color: '#666', fontSize: '0.875rem' }}>
+          Manage all users across all organizations
+        </p>
       </div>
 
       {/* Filters */}
@@ -297,5 +279,9 @@ function StatCard({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
+
+
+
 
 

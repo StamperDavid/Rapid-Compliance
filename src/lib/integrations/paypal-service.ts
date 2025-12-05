@@ -1,18 +1,39 @@
 /**
  * PayPal Integration
+ * Uses API keys from workspace settings (NOT .env)
  */
 
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
-const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
-const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox';
-const PAYPAL_BASE_URL = PAYPAL_MODE === 'live' 
-  ? 'https://api-m.paypal.com' 
-  : 'https://api-m.sandbox.paypal.com';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
 
-async function getAccessToken(): Promise<string> {
-  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+interface PayPalConfig {
+  clientId: string;
+  secret: string;
+  mode: 'sandbox' | 'live';
+}
+
+async function getPayPalConfig(organizationId: string): Promise<PayPalConfig> {
+  const keys = await apiKeyService.getKeys(organizationId);
   
-  const response = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
+  if (!keys?.payments?.paypal?.clientId || !keys?.payments?.paypal?.clientSecret) {
+    throw new Error('PayPal not configured. Please add your PayPal API keys in Settings > API Keys');
+  }
+  
+  return {
+    clientId: keys.payments.paypal.clientId,
+    secret: keys.payments.paypal.clientSecret,
+    mode: keys.payments.paypal.mode,
+  };
+}
+
+async function getAccessToken(organizationId: string): Promise<string> {
+  const config = await getPayPalConfig(organizationId);
+  const baseUrl = config.mode === 'live' 
+    ? 'https://api-m.paypal.com' 
+    : 'https://api-m.sandbox.paypal.com';
+  
+  const auth = Buffer.from(`${config.clientId}:${config.secret}`).toString('base64');
+  
+  const response = await fetch(`${baseUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
@@ -25,10 +46,18 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-export async function createOrder(amount: number, currency: string = 'USD'): Promise<any> {
-  const accessToken = await getAccessToken();
+export async function createOrder(
+  organizationId: string,
+  amount: number,
+  currency: string = 'USD'
+): Promise<any> {
+  const accessToken = await getAccessToken(organizationId);
+  const config = await getPayPalConfig(organizationId);
+  const baseUrl = config.mode === 'live' 
+    ? 'https://api-m.paypal.com' 
+    : 'https://api-m.sandbox.paypal.com';
   
-  const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders`, {
+  const response = await fetch(`${baseUrl}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -48,10 +77,17 @@ export async function createOrder(amount: number, currency: string = 'USD'): Pro
   return await response.json();
 }
 
-export async function captureOrder(orderId: string): Promise<any> {
-  const accessToken = await getAccessToken();
+export async function captureOrder(
+  organizationId: string,
+  orderId: string
+): Promise<any> {
+  const accessToken = await getAccessToken(organizationId);
+  const config = await getPayPalConfig(organizationId);
+  const baseUrl = config.mode === 'live' 
+    ? 'https://api-m.paypal.com' 
+    : 'https://api-m.sandbox.paypal.com';
   
-  const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
+  const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}/capture`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -62,10 +98,17 @@ export async function captureOrder(orderId: string): Promise<any> {
   return await response.json();
 }
 
-export async function createPayout(recipients: Array<{ email: string; amount: number }>): Promise<any> {
-  const accessToken = await getAccessToken();
+export async function createPayout(
+  organizationId: string,
+  recipients: Array<{ email: string; amount: number }>
+): Promise<any> {
+  const accessToken = await getAccessToken(organizationId);
+  const config = await getPayPalConfig(organizationId);
+  const baseUrl = config.mode === 'live' 
+    ? 'https://api-m.paypal.com' 
+    : 'https://api-m.sandbox.paypal.com';
   
-  const response = await fetch(`${PAYPAL_BASE_URL}/v1/payments/payouts`, {
+  const response = await fetch(`${baseUrl}/v1/payments/payouts`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -90,10 +133,17 @@ export async function createPayout(recipients: Array<{ email: string; amount: nu
   return await response.json();
 }
 
-export async function getOrderDetails(orderId: string): Promise<any> {
-  const accessToken = await getAccessToken();
+export async function getOrderDetails(
+  organizationId: string,
+  orderId: string
+): Promise<any> {
+  const accessToken = await getAccessToken(organizationId);
+  const config = await getPayPalConfig(organizationId);
+  const baseUrl = config.mode === 'live' 
+    ? 'https://api-m.paypal.com' 
+    : 'https://api-m.sandbox.paypal.com';
   
-  const response = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}`, {
+  const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
     },
@@ -101,4 +151,7 @@ export async function getOrderDetails(orderId: string): Promise<any> {
 
   return await response.json();
 }
+
+
+
 

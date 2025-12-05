@@ -93,13 +93,53 @@ export default function AgentTrainingPage() {
   useEffect(() => {
     (async () => {
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
-      setFirebaseConfigured(isFirebaseConfigured === 'true');
+      setFirebaseConfigured(isFirebaseConfigured);
     })();
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  // Unified AI provider caller - uses whatever API key is available
+  const callAIProvider = async (conversationHistory: any[], systemPrompt: string) => {
+    try {
+      // Get API keys from Firestore
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+      
+      // Prefer OpenRouter (supports all models)
+      if (adminKeys?.ai?.openrouterApiKey) {
+        const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+        const provider = new OpenRouterProvider({ apiKey: adminKeys.ai.openrouterApiKey });
+        
+        // Convert history to OpenRouter format
+        const messages = [
+          { role: 'system' as const, content: systemPrompt },
+          ...conversationHistory.map(msg => ({
+            role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
+            content: msg.parts[0].text
+          }))
+        ];
+        
+        const response = await provider.chat({
+          model: 'anthropic/claude-3.5-sonnet' as any, // Use Claude for best results
+          messages,
+          temperature: 0.7,
+        });
+        
+        return { text: response.content };
+      }
+      
+      // Fall back to Gemini
+      const { sendChatMessage } = await import('@/lib/ai/gemini-service');
+      return await sendChatMessage(conversationHistory as any, systemPrompt);
+      
+    } catch (error: any) {
+      console.error('Error calling AI provider:', error);
+      throw new Error(error.message || 'Failed to get AI response');
+    }
+  };
 
   const loadTrainingData = async () => {
     try {
@@ -117,6 +157,15 @@ export default function AgentTrainingPage() {
       // Load Base Model
       const { getBaseModel } = await import('@/lib/agent/base-model-builder');
       const model = await getBaseModel(orgId);
+      
+      // If no model found and this is platform-admin, use demo data for dogfooding
+      if (!model && orgId === 'platform-admin') {
+        console.log('No base model for platform-admin, loading demo data for dogfooding');
+        loadDemoData();
+        setLoading(false);
+        return;
+      }
+      
       setBaseModel(model);
       
       // Load Golden Masters
@@ -192,10 +241,8 @@ export default function AgentTrainingPage() {
         parts: [{ text: userMessage.content }]
       });
       
-      // Call AI (using Gemini for training)
-      const { sendChatMessage } = await import('@/lib/ai/gemini-service');
-      // Type assertion: conversation history messages have been validated to have proper roles
-      const response = await sendChatMessage(conversationHistory as any, systemPrompt);
+      // Call AI (using available provider - OpenRouter, Gemini, etc.)
+      const response = await callAIProvider(conversationHistory, systemPrompt);
       
       const agentMessage = {
         id: `msg_${Date.now()}_agent`,

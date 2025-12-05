@@ -196,7 +196,7 @@ We provide an AI-powered sales platform that combines a trainable AI sales agent
 ## Security & Compliance
 - SOC 2 Type II certified
 - GDPR compliant
-- HIPAA available (Enterprise)
+- SOC 2 Type II certified
 - Data encryption at rest and in transit
 - Regular security audits
 - Role-based access control
@@ -262,4 +262,8 @@ export const OUR_COMMON_QUESTIONS = [
     a: "Absolutely! 14 days free, no credit card required. You get full access to all Professional plan features. If you love it (which most people do!), you can upgrade. If not, your trial simply expires. Want me to help you get started?"
   }
 ];
+
+
+
+
 

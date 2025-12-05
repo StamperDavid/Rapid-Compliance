@@ -90,11 +90,30 @@ export default function APIKeysPage() {
 
   const services = [
     {
+      id: 'openrouter',
+      name: '⭐ OpenRouter (RECOMMENDED)',
+      icon: '🌟',
+      description: 'ONE KEY FOR EVERYTHING - Access GPT-4, Claude, Gemini, Llama, and 100+ AI models',
+      required: false,
+      placeholder: 'sk-or-v1-...',
+      setupUrl: 'https://openrouter.ai',
+      setupSteps: [
+        'Go to openrouter.ai',
+        'Sign up with Google/GitHub (takes 30 seconds)',
+        'Click "Keys" in top menu',
+        'Create a new key',
+        'Copy and paste here',
+        'Done! Now you have access to 100+ AI models',
+      ],
+      cost: 'Usually 20-30% cheaper than OpenAI direct',
+      why: '🌟 RECOMMENDED FOR SIMPLICITY: Instead of managing 3+ different API keys (OpenAI, Anthropic, Google), you get ONE key that works with everything. Simpler setup, lower cost, better reliability. This is what we use ourselves!',
+    },
+    {
       id: 'openai',
       name: 'OpenAI',
       icon: '🤖',
-      description: 'Powers AI email generation, reply handling, and chat agent',
-      required: true,
+      description: 'Direct OpenAI access for GPT-4 and other models',
+      required: false,
       placeholder: 'sk-...',
       setupUrl: 'https://platform.openai.com/api-keys',
       setupSteps: [
@@ -105,13 +124,46 @@ export default function APIKeysPage() {
         'Copy the key and paste here',
       ],
       cost: '$10-50/month depending on usage',
-      why: 'Needed for: AI email writer, reply handler, chat agent. Without this, AI features won\'t work.',
+      why: 'Needed for: AI email writer, reply handler, chat agent. Note: OpenRouter is usually cheaper and gives access to more models.',
+    },
+    {
+      id: 'anthropic',
+      name: 'Anthropic Claude',
+      icon: '🧠',
+      description: 'Direct Anthropic access for Claude models',
+      required: false,
+      placeholder: 'sk-ant-...',
+      setupUrl: 'https://console.anthropic.com',
+      setupSteps: [
+        'Go to console.anthropic.com',
+        'Create account',
+        'API Keys → Create Key',
+        'Copy and paste here',
+      ],
+      cost: 'Pay-as-you-go',
+      why: 'For direct access to Claude 3 Opus, Sonnet, and Haiku. Note: OpenRouter also provides Claude access.',
+    },
+    {
+      id: 'gemini',
+      name: 'Google Gemini',
+      icon: '✨',
+      description: 'Google AI for Gemini models',
+      required: false,
+      placeholder: 'AIza...',
+      setupUrl: 'https://aistudio.google.com',
+      setupSteps: [
+        'Go to aistudio.google.com',
+        'Get API Key',
+        'Copy and paste here',
+      ],
+      cost: 'FREE tier available',
+      why: 'For Google Gemini Pro and Ultra. Note: OpenRouter also provides Gemini access.',
     },
     {
       id: 'sendgrid',
       name: 'SendGrid',
       icon: '📧',
-      description: 'Actually sends your outbound emails (without this, emails go to spam)',
+      description: 'Email delivery service (required for sending emails)',
       required: true,
       placeholder: 'SG....',
       setupUrl: 'https://sendgrid.com',
@@ -122,8 +174,25 @@ export default function APIKeysPage() {
         'Choose "Full Access"',
         'Copy the key and paste here',
       ],
-      cost: '$20/month for 40,000 emails',
+      cost: 'FREE: 100 emails/day, $20/month: 40K emails',
       why: 'Needed for: Email sequences, outbound campaigns. You can\'t send emails from your server directly - they\'ll be marked as spam. SendGrid is the "post office" that actually delivers emails.',
+    },
+    {
+      id: 'resend',
+      name: 'Resend',
+      icon: '📨',
+      description: 'Modern email API (alternative to SendGrid)',
+      required: false,
+      placeholder: 're_...',
+      setupUrl: 'https://resend.com',
+      setupSteps: [
+        'Go to resend.com',
+        'Sign up',
+        'API Keys → Create',
+        'Copy and paste here',
+      ],
+      cost: 'FREE: 3K emails/month',
+      why: 'Alternative to SendGrid. Simpler, modern API. Great for transactional emails.',
     },
     {
       id: 'google_client_id',
@@ -192,7 +261,125 @@ export default function APIKeysPage() {
       cost: 'FREE',
       why: 'Needed for: Same as Publishable key. These are a pair.',
     },
+    {
+      id: 'paypal_client_id',
+      name: 'PayPal Client ID',
+      icon: '💳',
+      description: 'PayPal payment processing',
+      required: false,
+      placeholder: 'A...',
+      setupUrl: 'https://developer.paypal.com',
+      setupSteps: [
+        'Go to developer.paypal.com',
+        'My Apps & Credentials',
+        'Create App',
+        'Copy Client ID',
+      ],
+      cost: 'Transaction fees apply',
+      why: 'Alternative to Stripe for payments.',
+    },
+    {
+      id: 'twilio_account_sid',
+      name: 'Twilio Account SID',
+      icon: '📱',
+      description: 'SMS messaging service',
+      required: false,
+      placeholder: 'AC...',
+      setupUrl: 'https://www.twilio.com',
+      setupSteps: [
+        'Go to twilio.com/console',
+        'Find Account SID',
+        'Copy and paste here',
+      ],
+      cost: '$0.0079 per SMS',
+      why: 'For sending SMS messages to leads/customers.',
+    },
+    {
+      id: 'twilio_auth_token',
+      name: 'Twilio Auth Token',
+      icon: '🔐',
+      description: 'Goes with Twilio Account SID',
+      required: false,
+      placeholder: '...',
+      setupUrl: 'https://www.twilio.com',
+      setupSteps: [
+        'Same place as Account SID',
+        'Copy Auth Token',
+      ],
+      cost: 'FREE',
+      why: 'Needed with Account SID.',
+    },
+    {
+      id: 'slack_webhook',
+      name: 'Slack Webhook URL',
+      icon: '💬',
+      description: 'Send notifications to Slack',
+      required: false,
+      placeholder: 'https://hooks.slack.com/...',
+      setupUrl: 'https://api.slack.com',
+      setupSteps: [
+        'Go to api.slack.com/apps',
+        'Create New App',
+        'Incoming Webhooks → Activate',
+        'Copy Webhook URL',
+      ],
+      cost: 'FREE',
+      why: 'Get notified in Slack when deals close, leads come in, etc.',
+    },
+    {
+      id: 'zapier_webhook',
+      name: 'Zapier Webhook URL',
+      icon: '⚡',
+      description: 'Connect to 5000+ apps via Zapier',
+      required: false,
+      placeholder: 'https://hooks.zapier.com/...',
+      setupUrl: 'https://zapier.com',
+      setupSteps: [
+        'Create Zap in Zapier',
+        'Choose "Webhooks" trigger',
+        'Copy webhook URL',
+      ],
+      cost: 'Zapier pricing applies',
+      why: 'Integrate with any app Zapier supports.',
+    },
+    {
+      id: 'clearbit_api_key',
+      name: 'Clearbit',
+      icon: '🔍',
+      description: 'Company & contact data enrichment',
+      required: false,
+      placeholder: 'sk_...',
+      setupUrl: 'https://clearbit.com',
+      setupSteps: [
+        'Sign up at clearbit.com',
+        'Dashboard → API Keys',
+        'Copy and paste here',
+      ],
+      cost: '$99/month+',
+      why: 'Auto-enrich leads with company data, employee count, revenue, etc.',
+    },
+    {
+      id: 'hubspot_api_key',
+      name: 'HubSpot',
+      icon: '🎯',
+      description: 'HubSpot CRM integration',
+      required: false,
+      placeholder: 'pat-...',
+      setupUrl: 'https://app.hubspot.com',
+      setupSteps: [
+        'Settings → Integrations → Private Apps',
+        'Create private app',
+        'Copy access token',
+      ],
+      cost: 'FREE (HubSpot account required)',
+      why: 'Sync data with HubSpot CRM.',
+    },
   ];
+
+  // Custom API Keys state
+  const [customKeys, setCustomKeys] = useState<Array<{id: string, name: string, key: string}>>([]);
+  const [showAddCustom, setShowAddCustom] = useState(false);
+  const [newCustomKey, setNewCustomKey] = useState({name: '', key: ''});
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
@@ -211,6 +398,31 @@ export default function APIKeysPage() {
             <p style={{ color: '#999', fontSize: '0.875rem' }}>
               Connect external services to enable features. Add keys here instead of messing with .env files.
             </p>
+          </div>
+
+          {/* OpenRouter Recommendation Banner */}
+          <div style={{ backgroundColor: '#1a3a1a', border: '2px solid #10b981', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#10b981', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              ⭐ We Recommend: OpenRouter
+            </h3>
+            <div style={{ fontSize: '0.875rem', color: '#d1d5db', lineHeight: '1.7' }}>
+              <p style={{ marginBottom: '0.75rem', fontWeight: '500', color: '#fff' }}>
+                For maximum simplicity and best value, use <strong style={{ color: '#10b981' }}>OpenRouter</strong> as your AI provider.
+              </p>
+              <p style={{ marginBottom: '0.75rem' }}>
+                <strong>Why we recommend it:</strong>
+              </p>
+              <ul style={{ marginLeft: '1.5rem', marginBottom: '0.75rem', color: '#d1d5db' }}>
+                <li style={{ marginBottom: '0.5rem' }}>✅ <strong>One key</strong> gives you access to 100+ AI models (GPT-4, Claude, Gemini, Llama, and more)</li>
+                <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Simpler setup</strong> - No need to manage multiple API keys from different providers</li>
+                <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Usually cheaper</strong> - Often 20-30% less expensive than going direct to OpenAI</li>
+                <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Better reliability</strong> - Automatic failover if one provider has issues</li>
+                <li style={{ marginBottom: '0.5rem' }}>✅ <strong>Easy switching</strong> - Try different models without getting new API keys</li>
+              </ul>
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '1rem' }}>
+                📝 Get your OpenRouter key at <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: '#10b981', textDecoration: 'underline' }}>openrouter.ai</a> (takes 2 minutes)
+              </p>
+            </div>
           </div>
 
           {/* What You Need Banner */}

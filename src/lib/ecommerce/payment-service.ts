@@ -484,14 +484,25 @@ export async function refundPayment(
  */
 async function refundStripePayment(
   transactionId: string,
-  amount?: number
+  amount?: number,
+  workspaceId?: string
 ): Promise<PaymentResult> {
   try {
-    // Get Stripe API key (need to get from order's workspace)
-    // For now, assume we have it
+    // Get Stripe API key from workspace settings
+    // Note: workspaceId should be passed from the refund() caller
+    if (!workspaceId) {
+      throw new Error('Workspace ID required for Stripe refunds');
+    }
+    
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const apiKeys = await apiKeyService.getKeys(workspaceId);
+    
+    if (!apiKeys?.payments?.stripe?.secretKey) {
+      throw new Error('Stripe not configured. Please add your Stripe API key in Settings > API Keys');
+    }
+    
     const stripe = await import('stripe');
-    // TODO: Get API key from workspace
-    const stripeClient = new stripe.Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    const stripeClient = new stripe.Stripe(apiKeys.payments.stripe.secretKey, {
       apiVersion: '2023-10-16',
     });
     

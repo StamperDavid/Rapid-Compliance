@@ -320,3 +320,7 @@ export function createSafeErrorResponse(safetyResult: SafetyCheckResult): string
   return "I'm sorry, but I detected some potentially sensitive content in your message. Could you please rephrase that?";
 }
 
+
+
+
+

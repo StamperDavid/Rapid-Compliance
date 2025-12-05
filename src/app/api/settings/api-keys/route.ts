@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { handleAPIError, errors, successResponse, validateRequired } from '@/lib/api/error-handler';
 
 /**
  * GET - Load API keys for organization
@@ -52,10 +53,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[API Keys] Error loading keys:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    
+    if (error?.code === 'permission-denied') {
+      return handleAPIError(errors.forbidden('You do not have permission to view API keys'));
+    }
+    
+    return handleAPIError(error);
   }
 }
 
@@ -72,10 +75,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { orgId, service, key } = body;
 
-    if (!orgId || !service || !key) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
+    // Validate required fields
+    const validation = validateRequired(body, ['orgId', 'service', 'key']);
+    if (!validation.valid) {
+      return handleAPIError(
+        errors.badRequest('Missing required fields', { missing: validation.missing })
       );
     }
 
@@ -105,10 +109,20 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[API Keys] Error saving key:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    
+    if (error?.code === 'permission-denied') {
+      return handleAPIError(errors.forbidden('You do not have permission to save API keys'));
+    }
+    
+    if (error?.code === 'not-found') {
+      return handleAPIError(errors.notFound('Organization'));
+    }
+    
+    return handleAPIError(error);
   }
 }
+
+
+
+
 

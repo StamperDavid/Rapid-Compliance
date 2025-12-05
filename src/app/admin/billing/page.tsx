@@ -207,20 +207,20 @@ export default function BillingPage() {
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     {hasPermission('canManageSubscriptions') && (
-                      <Link
-                        href={`/admin/billing/subscriptions/${sub.id}`}
+                      <button
+                        onClick={() => alert(`Manage subscription ${sub.id} - Feature coming soon`)}
                         style={{
                           padding: '0.375rem 0.75rem',
                           backgroundColor: 'transparent',
                           border: `1px solid ${borderColor}`,
                           borderRadius: '0.375rem',
-                          color: '#fff',
-                          textDecoration: 'none',
+                          color: '#999',
+                          cursor: 'pointer',
                           fontSize: '0.75rem'
                         }}
                       >
                         Manage
-                      </Link>
+                      </button>
                     )}
                   </td>
                 </tr>
@@ -321,5 +321,9 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
     </div>
   );
 }
+
+
+
+
 
 

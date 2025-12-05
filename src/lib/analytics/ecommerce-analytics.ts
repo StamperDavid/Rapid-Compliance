@@ -225,3 +225,7 @@ function calculateRevenueByDay(orders: any[], startDate: Date, endDate: Date): a
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
+
+
+
+

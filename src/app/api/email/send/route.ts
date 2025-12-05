@@ -5,6 +5,7 @@ import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logging/logger';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
+import { handleAPIError, errors } from '@/lib/api/error-handler';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -91,11 +92,28 @@ export async function POST(request: NextRequest) {
     });
     return response;
   } catch (error: any) {
-    const response = NextResponse.json(
-      { success: false, error: error.message || 'Failed to send email' },
-      { status: 500 }
-    );
     logApiError(request, error, 500);
+    
+    // Handle specific email errors
+    if (error?.message?.includes('API key')) {
+      const response = handleAPIError(errors.missingAPIKey('SendGrid'));
+      await logApiRequest(request, response, startTime);
+      return response;
+    }
+    
+    if (error?.message?.includes('Invalid email')) {
+      const response = handleAPIError(errors.badRequest('Invalid email address', { originalError: error.message }));
+      await logApiRequest(request, response, startTime);
+      return response;
+    }
+    
+    if (error?.code === 'ECONNREFUSED') {
+      const response = handleAPIError(errors.serviceUnavailable('Email service'));
+      await logApiRequest(request, response, startTime);
+      return response;
+    }
+    
+    const response = handleAPIError(error);
     await logApiRequest(request, response, startTime);
     return response;
   }

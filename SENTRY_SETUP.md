@@ -238,3 +238,7 @@ For production, consider upgrading to:
 **Note**: Sentry will work even without configuration (it just won't send events). This allows the app to run in development without requiring Sentry setup.
 
 
+
+
+
+

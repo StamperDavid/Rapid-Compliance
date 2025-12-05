@@ -48,3 +48,7 @@ export async function GET(request: NextRequest) {
 // Allow both GET and POST (Vercel crons use GET, some systems use POST)
 export const POST = GET;
 
+
+
+
+

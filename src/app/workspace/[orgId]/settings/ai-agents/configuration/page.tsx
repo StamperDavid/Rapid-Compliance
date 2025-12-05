@@ -1200,7 +1200,7 @@ export default function AgentConfigurationPage() {
                 value={ctx.industryRegulations || ''}
                 onChange={(e) => updateField('businessContext', 'industryRegulations', e.target.value)}
                 rows={4}
-                placeholder="HIPAA, GDPR, financial regulations, industry-specific compliance..."
+                placeholder="GDPR, CCPA, SOC 2, financial regulations, industry-specific compliance..."
                 style={{
                   width: '100%',
                   padding: '0.75rem',

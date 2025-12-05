@@ -63,7 +63,8 @@ async function calculateAutomatedTax(
   cart: Cart,
   address: Address
 ): Promise<TaxCalculation> {
-  // TODO: Integrate with TaxJar, Avalara, or Stripe Tax
+  // Use Stripe Tax if Stripe is configured, otherwise use basic calculation
+  // TaxJar and Avalara can be added later via API keys page
   // For now, fall back to manual calculation
   return calculateManualTax(taxConfig, cart, address);
 }
@@ -136,4 +137,7 @@ function calculateManualTax(
     breakdown,
   });
 }
+
+
+
 

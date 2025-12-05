@@ -90,7 +90,6 @@ export type IndustryType =
   | 'sales'
   | 'ecommerce'
   | 'service'
-  | 'healthcare'
   | 'education'
   | 'real_estate'
   | 'transportation'

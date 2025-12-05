@@ -231,34 +231,55 @@ function formatResultForAI(functionName: string, result: any): string {
  * Get available functions for AI agent
  * These are passed to the AI model so it knows what it can call
  */
-export function getAvailableFunctions(organizationId: string): any[] {
-  // TODO: Get connected integrations for this org
-  // For now, return all available functions
-  
+export async function getAvailableFunctions(organizationId: string): Promise<any[]> {
   const functions: any[] = [];
   
-  for (const provider of Object.values(INTEGRATION_PROVIDERS)) {
-    for (const capability of provider.capabilities) {
-      functions.push({
-        name: capability.functionName,
-        description: capability.description,
-        parameters: {
-          type: 'object',
-          properties: capability.parameters.reduce((acc, param) => {
-            acc[param.name] = {
-              type: param.type,
-              description: param.description,
-            };
-            return acc;
-          }, {} as Record<string, any>),
-          required: capability.parameters
-            .filter(p => p.required)
-            .map(p => p.name),
-        },
-      });
+  try {
+    // Get connected integrations for this org
+    const { getAllIntegrations } = await import('./integration-manager');
+    const connectedIntegrations = await getAllIntegrations(organizationId);
+    
+    // Only return functions for ACTIVE integrations
+    const activeProviderIds = connectedIntegrations
+      .filter(i => i.status === 'active')
+      .map(i => i.providerId || i.id);
+    
+    for (const provider of Object.values(INTEGRATION_PROVIDERS)) {
+      // Skip if not connected
+      if (!activeProviderIds.includes(provider.id)) {
+        continue;
+      }
+      
+      for (const capability of provider.capabilities) {
+        functions.push({
+          name: capability.functionName,
+          description: capability.description,
+          parameters: {
+            type: 'object',
+            properties: capability.parameters.reduce((acc, param) => {
+              acc[param.name] = {
+                type: param.type,
+                description: param.description,
+              };
+              return acc;
+            }, {} as Record<string, any>),
+            required: capability.parameters
+              .filter(p => p.required)
+              .map(p => p.name),
+          },
+        });
+      }
     }
+    
+    console.log(`[Function Calling] ${functions.length} functions available for org ${organizationId}`);
+    return functions;
+  } catch (error) {
+    console.error('[Function Calling] Error getting functions:', error);
+    // Fallback: return empty array
+    return [];
   }
-  
-  return functions;
 }
+
+
+
 

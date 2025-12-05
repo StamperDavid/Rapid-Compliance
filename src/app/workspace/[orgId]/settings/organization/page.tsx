@@ -230,7 +230,6 @@ export default function OrganizationSettingsPage() {
                         <option value="retail">Retail</option>
                         <option value="services">Services</option>
                         <option value="manufacturing">Manufacturing</option>
-                        <option value="healthcare">Healthcare</option>
                         <option value="finance">Finance</option>
                         <option value="other">Other</option>
                       </select>

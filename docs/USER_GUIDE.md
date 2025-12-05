@@ -370,3 +370,7 @@ Same process as QuickBooks
 **Version:** 1.0  
 **Questions?** support@yourplatform.com
 
+
+
+
+

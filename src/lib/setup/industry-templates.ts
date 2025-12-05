@@ -211,45 +211,6 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
     aiAgentPrompt: 'You are a real estate assistant. Help clients find properties, schedule showings, and manage offers.'
   },
 
-  healthcare: {
-    id: 'healthcare',
-    name: 'Healthcare Services',
-    description: 'Medical practices and clinics',
-    icon: '🏥',
-    schemas: ['contacts', 'tasks', 'invoices'],
-    customSchemas: [
-      {
-        name: 'Patient',
-        fields: [
-          { key: 'first_name', label: 'First Name', type: 'text' },
-          { key: 'last_name', label: 'Last Name', type: 'text' },
-          { key: 'email', label: 'Email', type: 'email' },
-          { key: 'phone', label: 'Phone', type: 'phoneNumber' },
-          { key: 'date_of_birth', label: 'Date of Birth', type: 'date' },
-          { key: 'insurance', label: 'Insurance Provider', type: 'text' },
-          { key: 'status', label: 'Status', type: 'singleSelect' }
-        ]
-      },
-      {
-        name: 'Appointment',
-        fields: [
-          { key: 'patient_id', label: 'Patient', type: 'lookup' },
-          { key: 'appointment_date', label: 'Date & Time', type: 'dateTime' },
-          { key: 'duration', label: 'Duration (mins)', type: 'number' },
-          { key: 'type', label: 'Appointment Type', type: 'singleSelect' },
-          { key: 'status', label: 'Status', type: 'singleSelect' },
-          { key: 'notes', label: 'Notes', type: 'longText' }
-        ]
-      }
-    ],
-    fieldCustomizations: {
-      contacts: {
-        hide: true  // Use Patients instead
-      }
-    },
-    aiAgentPrompt: 'You are a healthcare appointment assistant. Help patients schedule appointments and answer general questions.'
-  },
-
   legal: {
     id: 'legal',
     name: 'Legal Services',

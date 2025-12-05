@@ -4,6 +4,7 @@ import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { handleAPIError, errors, successResponse } from '@/lib/api/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -126,10 +127,21 @@ export async function POST(request: NextRequest) {
       processingTime,
     });
   } catch (error: any) {
-    console.error('Error in agent chat:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process chat' },
-      { status: 500 }
-    );
+    console.error('[Agent Chat Error]', error);
+    
+    // Handle specific error cases
+    if (error?.message?.includes('API key')) {
+      return handleAPIError(errors.missingAPIKey('AI Provider'));
+    }
+    
+    if (error?.code === 'permission-denied') {
+      return handleAPIError(errors.forbidden('You do not have access to this AI agent'));
+    }
+    
+    if (error?.message?.includes('rate limit')) {
+      return handleAPIError(errors.tooManyRequests());
+    }
+    
+    return handleAPIError(error);
   }
 }

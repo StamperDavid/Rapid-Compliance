@@ -364,7 +364,7 @@ export interface BulkOperation {
 export interface ComplianceRecord {
   id: string;
   organizationId: string;
-  type: 'gdpr' | 'ccpa' | 'hipaa' | 'sox' | 'custom';
+  type: 'gdpr' | 'ccpa' | 'sox' | 'custom';
   
   // Status
   status: 'compliant' | 'non_compliant' | 'pending_review';

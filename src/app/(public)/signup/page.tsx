@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase/config';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -47,8 +50,10 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted! Current step:', step);
     
     if (step === 1) {
+      console.log('Moving to step 2');
       setStep(2);
       return;
     }
@@ -82,15 +87,72 @@ export default function SignupPage() {
 
   const createAccount = async () => {
     try {
-      // TODO: Implement account creation
       console.log('Creating account:', formData);
       
-      // For now, just redirect to login
-      alert('Account created! Please check your email to verify your account.');
-      router.push('/login');
-    } catch (error) {
+      if (!auth || !db) {
+        throw new Error('Firebase not initialized');
+      }
+
+      // Create Firebase Auth user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      
+      const user = userCredential.user;
+      console.log('User created in Auth:', user.uid);
+
+      // Generate organization ID
+      const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create organization document in Firestore
+      await setDoc(doc(db, 'organizations', orgId), {
+        name: formData.companyName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        ownerId: user.uid,
+        plan: formData.planId,
+        billingCycle: formData.billingCycle,
+        trialEndsAt: formData.startTrial 
+          ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
+          : null,
+        status: 'active',
+      });
+      console.log('Organization created:', orgId);
+
+      // Create user document in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        email: formData.email,
+        organizationId: orgId,
+        role: 'owner',
+        name: formData.companyName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      console.log('User document created');
+
+      // Success!
+      alert(`Account created successfully! Welcome to ${formData.companyName}!`);
+      
+      // Redirect to workspace dashboard
+      router.push(`/workspace/${orgId}/dashboard`);
+    } catch (error: any) {
       console.error('Failed to create account:', error);
-      alert('Failed to create account');
+      
+      // User-friendly error messages
+      let errorMessage = 'Failed to create account';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered. Try logging in instead.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please use a stronger password.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -107,7 +169,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         {/* Progress Steps */}
         <div className="mb-8">
@@ -121,7 +183,7 @@ export default function SignupPage() {
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                     step >= s.num
-                      ? 'bg-purple-600 text-white'
+                      ? 'bg-gray-800 text-white'
                       : 'bg-gray-700 text-gray-400'
                   }`}
                 >
@@ -152,7 +214,7 @@ export default function SignupPage() {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, billingCycle: formData.billingCycle === 'monthly' ? 'yearly' : 'monthly' })}
-                    className="relative w-16 h-8 bg-purple-600 rounded-full"
+                    className="relative w-16 h-8 bg-gray-700 rounded-full"
                   >
                     <div className={`absolute top-1 ${formData.billingCycle === 'yearly' ? 'left-9' : 'left-1'} w-6 h-6 bg-white rounded-full transition-all`} />
                   </button>
@@ -170,7 +232,7 @@ export default function SignupPage() {
                       onClick={() => setFormData({ ...formData, planId: id })}
                       className={`p-6 rounded-xl border-2 transition text-left ${
                         formData.planId === id
-                          ? 'border-purple-500 bg-purple-500/10'
+                          ? 'border-gray-600 bg-gray-800'
                           : 'border-gray-700 hover:border-gray-600'
                       }`}
                     >
@@ -190,7 +252,7 @@ export default function SignupPage() {
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition text-lg"
+                  className="w-full py-4 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-700 transition text-lg"
                 >
                   Continue →
                 </button>
@@ -279,7 +341,7 @@ export default function SignupPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-4 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition"
+                    className="flex-1 py-4 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-700 transition"
                   >
                     {formData.startTrial ? 'Start Free Trial' : 'Continue to Payment →'}
                   </button>
@@ -287,7 +349,7 @@ export default function SignupPage() {
 
                 <p className="text-center text-sm text-gray-400 mt-6">
                   Already have an account?{' '}
-                  <Link href="/login" className="text-purple-400 hover:text-purple-300">
+                  <Link href="/login" className="text-gray-400 hover:text-gray-300">
                     Sign in
                   </Link>
                 </p>
@@ -318,7 +380,7 @@ export default function SignupPage() {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-4 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition"
+                    className="flex-1 py-4 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-700 transition"
                   >
                     Complete Signup →
                   </button>
@@ -330,11 +392,11 @@ export default function SignupPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           By signing up, you agree to our{' '}
-          <Link href="/terms" className="text-purple-400 hover:text-purple-300">
+          <Link href="/terms" className="text-gray-400 hover:text-gray-300">
             Terms of Service
           </Link>{' '}
           and{' '}
-          <Link href="/privacy" className="text-purple-400 hover:text-purple-300">
+          <Link href="/privacy" className="text-gray-400 hover:text-gray-300">
             Privacy Policy
           </Link>
         </p>
@@ -342,4 +404,8 @@ export default function SignupPage() {
     </div>
   );
 }
+
+
+
+
 

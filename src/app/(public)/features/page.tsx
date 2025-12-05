@@ -308,7 +308,7 @@ export default function FeaturesPage() {
               { icon: '🔗', title: 'Integrations', desc: 'Slack, Stripe, Gmail, Calendar, and more' },
               { icon: '📧', title: 'Email Campaigns', desc: 'Drip campaigns and nurture sequences' },
               { icon: '📱', title: 'Mobile Ready', desc: 'Works perfectly on all devices' },
-              { icon: '🔒', title: 'Enterprise Security', desc: 'SOC 2, GDPR, HIPAA compliant' },
+              { icon: '🔒', title: 'Enterprise Security', desc: 'SOC 2, GDPR, CCPA compliant' },
               { icon: '🌍', title: 'Multi-Language', desc: 'Serve customers in any language' },
               { icon: '📞', title: 'SMS Support', desc: 'Send SMS messages automatically' },
               { icon: '🎯', title: 'Lead Scoring', desc: 'AI-powered lead qualification' },

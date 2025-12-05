@@ -203,3 +203,7 @@ firebase deploy --only firestore:rules
 **Status**: Ready for deployment ✅
 
 
+
+
+
+

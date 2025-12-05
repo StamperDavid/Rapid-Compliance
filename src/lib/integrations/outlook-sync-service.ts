@@ -1,0 +1,453 @@
+/**
+ * Outlook / Microsoft 365 Email Sync Service
+ * Bidirectional email syncing between Outlook and CRM
+ */
+
+import { Client } from '@microsoft/microsoft-graph-client';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+
+export interface OutlookMessage {
+  id: string;
+  conversationId: string;
+  subject: string;
+  bodyPreview: string;
+  body: {
+    contentType: 'text' | 'html';
+    content: string;
+  };
+  from: {
+    emailAddress: {
+      name: string;
+      address: string;
+    };
+  };
+  toRecipients: Array<{
+    emailAddress: {
+      name: string;
+      address: string;
+    };
+  }>;
+  ccRecipients?: Array<{
+    emailAddress: {
+      name: string;
+      address: string;
+    };
+  }>;
+  bccRecipients?: Array<{
+    emailAddress: {
+      name: string;
+      address: string;
+    };
+  }>;
+  sentDateTime: string;
+  receivedDateTime: string;
+  hasAttachments: boolean;
+  importance: 'low' | 'normal' | 'high';
+  isRead: boolean;
+  isDraft: boolean;
+  webLink: string;
+}
+
+export interface OutlookSyncStatus {
+  organizationId: string;
+  lastSyncAt: string;
+  deltaLink?: string;
+  messagesSynced: number;
+  errors: number;
+}
+
+/**
+ * Initialize Microsoft Graph client
+ */
+function getGraphClient(accessToken: string): Client {
+  return Client.init({
+    authProvider: (done) => {
+      done(null, accessToken);
+    },
+  });
+}
+
+/**
+ * Sync Outlook messages to CRM
+ */
+export async function syncOutlookMessages(
+  organizationId: string,
+  accessToken: string,
+  maxResults: number = 100
+): Promise<OutlookSyncStatus> {
+  const client = getGraphClient(accessToken);
+  
+  try {
+    // Get last sync status
+    const lastSync = await getLastSyncStatus(organizationId);
+    
+    // If we have a delta link, use incremental sync
+    if (lastSync?.deltaLink) {
+      return await incrementalSync(client, organizationId, lastSync.deltaLink);
+    }
+    
+    // Full sync (first time)
+    return await fullSync(client, organizationId, maxResults);
+  } catch (error) {
+    console.error('[Outlook Sync] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Full sync (initial sync)
+ */
+async function fullSync(
+  client: Client,
+  organizationId: string,
+  maxResults: number
+): Promise<OutlookSyncStatus> {
+  let messagesSynced = 0;
+  let errors = 0;
+  let deltaLink: string | undefined;
+  
+  try {
+    // Get messages from inbox and sent items
+    const response = await client
+      .api('/me/messages/delta')
+      .select('id,conversationId,subject,bodyPreview,body,from,toRecipients,ccRecipients,bccRecipients,sentDateTime,receivedDateTime,hasAttachments,importance,isRead,isDraft,webLink')
+      .top(maxResults)
+      .get();
+    
+    for (const message of response.value) {
+      try {
+        await saveMessageToCRM(organizationId, message);
+        messagesSynced++;
+      } catch (err) {
+        console.error(`[Outlook Sync] Error processing message ${message.id}:`, err);
+        errors++;
+      }
+    }
+    
+    // Get delta link for future incremental syncs
+    deltaLink = response['@odata.deltaLink'];
+    
+    const status: OutlookSyncStatus = {
+      organizationId,
+      lastSyncAt: new Date().toISOString(),
+      deltaLink,
+      messagesSynced,
+      errors,
+    };
+    
+    await saveSyncStatus(status);
+    
+    return status;
+  } catch (error) {
+    console.error('[Outlook Sync] Full sync error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Incremental sync using delta link
+ */
+async function incrementalSync(
+  client: Client,
+  organizationId: string,
+  startDeltaLink: string
+): Promise<OutlookSyncStatus> {
+  let messagesSynced = 0;
+  let errors = 0;
+  let deltaLink: string = startDeltaLink;
+  
+  try {
+    // Use delta link to get changes
+    const response = await client
+      .api(deltaLink)
+      .get();
+    
+    for (const message of response.value) {
+      try {
+        if (message['@removed']) {
+          // Message was deleted
+          await deleteMessageFromCRM(organizationId, message.id);
+        } else {
+          // Message was added or updated
+          await saveMessageToCRM(organizationId, message);
+          messagesSynced++;
+        }
+      } catch (err) {
+        console.error(`[Outlook Sync] Error processing message ${message.id}:`, err);
+        errors++;
+      }
+    }
+    
+    // Update delta link
+    if (response['@odata.deltaLink']) {
+      deltaLink = response['@odata.deltaLink'];
+    }
+    
+    const status: OutlookSyncStatus = {
+      organizationId,
+      lastSyncAt: new Date().toISOString(),
+      deltaLink,
+      messagesSynced,
+      errors,
+    };
+    
+    await saveSyncStatus(status);
+    
+    return status;
+  } catch (error) {
+    console.error('[Outlook Sync] Incremental sync error:', error);
+    // If delta link is invalid, fall back to full sync
+    if ((error as any).statusCode === 410) {
+      console.log('[Outlook Sync] Delta link invalid, performing full sync');
+      return await fullSync(client, organizationId, 100);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Save message to CRM
+ */
+async function saveMessageToCRM(organizationId: string, message: OutlookMessage): Promise<void> {
+  try {
+    const fromEmail = message.from.emailAddress.address;
+    
+    // Try to match to existing contact
+    const contact = await findContactByEmail(organizationId, fromEmail);
+    
+    // Save email record
+    const emailData = {
+      id: message.id,
+      organizationId,
+      conversationId: message.conversationId,
+      contactId: contact?.id,
+      from: `${message.from.emailAddress.name} <${message.from.emailAddress.address}>`,
+      fromEmail,
+      to: message.toRecipients.map(r => r.emailAddress.address),
+      cc: message.ccRecipients?.map(r => r.emailAddress.address),
+      bcc: message.bccRecipients?.map(r => r.emailAddress.address),
+      subject: message.subject,
+      body: message.body.content,
+      bodyType: message.body.contentType,
+      snippet: message.bodyPreview,
+      sentDate: new Date(message.sentDateTime),
+      receivedDate: new Date(message.receivedDateTime),
+      isRead: message.isRead,
+      isDraft: message.isDraft,
+      importance: message.importance,
+      hasAttachments: message.hasAttachments,
+      webLink: message.webLink,
+      source: 'outlook',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      message.id,
+      emailData
+    );
+    
+    // Update contact with last interaction
+    if (contact) {
+      await FirestoreService.update(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`,
+        contact.id,
+        {
+          lastContactDate: new Date(message.receivedDateTime),
+          lastContactType: 'email',
+          updatedAt: new Date(),
+        }
+      );
+    }
+  } catch (error) {
+    console.error('[Outlook Sync] Error saving message to CRM:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete message from CRM
+ */
+async function deleteMessageFromCRM(organizationId: string, messageId: string): Promise<void> {
+  try {
+    await FirestoreService.delete(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
+      messageId
+    );
+  } catch (error) {
+    console.error('[Outlook Sync] Error deleting message:', error);
+  }
+}
+
+/**
+ * Send email via Outlook
+ */
+export async function sendOutlookEmail(
+  accessToken: string,
+  emailData: {
+    to: string[];
+    cc?: string[];
+    bcc?: string[];
+    subject: string;
+    body: string;
+    bodyType?: 'text' | 'html';
+    importance?: 'low' | 'normal' | 'high';
+  }
+): Promise<string> {
+  const client = getGraphClient(accessToken);
+  
+  try {
+    const message = {
+      subject: emailData.subject,
+      body: {
+        contentType: emailData.bodyType || 'html',
+        content: emailData.body,
+      },
+      toRecipients: emailData.to.map(email => ({
+        emailAddress: { address: email },
+      })),
+      ccRecipients: emailData.cc?.map(email => ({
+        emailAddress: { address: email },
+      })),
+      bccRecipients: emailData.bcc?.map(email => ({
+        emailAddress: { address: email },
+      })),
+      importance: emailData.importance || 'normal',
+    };
+    
+    const response = await client
+      .api('/me/sendMail')
+      .post({
+        message,
+        saveToSentItems: true,
+      });
+    
+    return response.id || 'sent';
+  } catch (error) {
+    console.error('[Outlook Sync] Error sending email:', error);
+    throw error;
+  }
+}
+
+/**
+ * Find contact by email
+ */
+async function findContactByEmail(organizationId: string, email: string): Promise<any | null> {
+  try {
+    const contacts = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
+    );
+    const contactsFiltered = contacts.filter((c: any) => c.email === email);
+    
+    return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
+  } catch (error) {
+    console.error('[Outlook Sync] Error finding contact:', error);
+    return null;
+  }
+}
+
+/**
+ * Get last sync status
+ */
+async function getLastSyncStatus(organizationId: string): Promise<OutlookSyncStatus | null> {
+  try {
+    const status = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      'outlook-sync'
+    );
+    return status as OutlookSyncStatus | null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Save sync status
+ */
+async function saveSyncStatus(status: OutlookSyncStatus): Promise<void> {
+  try {
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${status.organizationId}/integrationStatus`,
+      'outlook-sync',
+      status
+    );
+  } catch (error) {
+    console.error('[Outlook Sync] Error saving sync status:', error);
+  }
+}
+
+/**
+ * Setup Outlook push notifications (webhook)
+ */
+export async function setupOutlookPushNotifications(
+  accessToken: string,
+  notificationUrl: string
+): Promise<string> {
+  const client = getGraphClient(accessToken);
+  
+  try {
+    const subscription = {
+      changeType: 'created,updated,deleted',
+      notificationUrl,
+      resource: '/me/messages',
+      expirationDateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days
+      clientState: `outlook-webhook-${Date.now()}`,
+    };
+    
+    const response = await client
+      .api('/subscriptions')
+      .post(subscription);
+    
+    console.log('[Outlook Sync] Push notifications enabled');
+    return response.id;
+  } catch (error) {
+    console.error('[Outlook Sync] Error setting up push notifications:', error);
+    throw error;
+  }
+}
+
+/**
+ * Stop Outlook push notifications
+ */
+export async function stopOutlookPushNotifications(
+  accessToken: string,
+  subscriptionId: string
+): Promise<void> {
+  const client = getGraphClient(accessToken);
+  
+  try {
+    await client
+      .api(`/subscriptions/${subscriptionId}`)
+      .delete();
+    
+    console.log('[Outlook Sync] Push notifications disabled');
+  } catch (error) {
+    console.error('[Outlook Sync] Error stopping push notifications:', error);
+    throw error;
+  }
+}
+
+/**
+ * Renew Outlook subscription (before it expires)
+ */
+export async function renewOutlookSubscription(
+  accessToken: string,
+  subscriptionId: string
+): Promise<void> {
+  const client = getGraphClient(accessToken);
+  
+  try {
+    await client
+      .api(`/subscriptions/${subscriptionId}`)
+      .patch({
+        expirationDateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+    
+    console.log('[Outlook Sync] Subscription renewed');
+  } catch (error) {
+    console.error('[Outlook Sync] Error renewing subscription:', error);
+    throw error;
+  }
+}
+

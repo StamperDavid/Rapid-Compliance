@@ -26,10 +26,12 @@ export interface APIKeysConfig {
   };
   
   // AI Services
+  // NOTE: OpenRouter can be used for ALL AI models (GPT-4, Claude, Gemini, etc.)
   ai: {
-    geminiApiKey?: string;
-    openaiApiKey?: string;
-    anthropicApiKey?: string;
+    openrouterApiKey?: string;  // RECOMMENDED: One key for all AI models
+    openaiApiKey?: string;      // Direct OpenAI access
+    anthropicApiKey?: string;   // Direct Claude access
+    geminiApiKey?: string;      // Direct Gemini access
     vertexAIProjectId?: string;
     vertexAILocation?: string;
   };
@@ -112,6 +114,15 @@ export interface APIKeysConfig {
     };
   };
   
+  // Prospect Research & Enrichment
+  enrichment?: {
+    clearbitApiKey?: string;
+    crunchbaseApiKey?: string;
+    builtWithApiKey?: string;
+    newsApiKey?: string;
+    rapidApiKey?: string; // For LinkedIn and other APIs
+  };
+  
   // Other Integrations
   integrations: {
     slack?: {
@@ -175,9 +186,10 @@ export interface APIKeyValidationResult {
 export type APIServiceName = 
   | 'firebase'
   | 'googleCloud'
-  | 'gemini'
+  | 'openrouter'    // Universal AI provider (RECOMMENDED - one key for all AI)
   | 'openai'
   | 'anthropic'
+  | 'gemini'
   | 'stripe'
   | 'square'
   | 'paypal'
@@ -201,6 +213,11 @@ export type APIServiceName =
   | 'mailchimp'
   | 'hubspot'
   | 'google-calendar'
-  | 'gmail';
+  | 'gmail'
+  | 'clearbit'
+  | 'crunchbase'
+  | 'builtwith'
+  | 'newsapi'
+  | 'rapidapi';
 
 

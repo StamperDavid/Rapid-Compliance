@@ -49,6 +49,13 @@ export interface SequenceStep {
   type: 'email' | 'linkedin_message' | 'sms' | 'call_task' | 'manual_task';
   subject?: string; // For emails
   body: string;
+  content?: string; // Alias for body (for backward compatibility)
+  
+  // Task-specific fields
+  taskDueDays?: number;
+  taskTitle?: string;
+  taskPriority?: 'low' | 'medium' | 'high' | 'urgent';
+  taskAssignee?: string;
   
   // Conditions (only send if...)
   conditions?: StepCondition[];
@@ -201,4 +208,7 @@ export interface StepAction {
 export type SequenceStatus = 'active' | 'paused' | 'draft' | 'archived';
 export type EnrollmentStatus = 'active' | 'completed' | 'paused' | 'removed' | 'bounced' | 'unsubscribed';
 export type StepActionStatus = 'scheduled' | 'sent' | 'delivered' | 'opened' | 'clicked' | 'replied' | 'bounced' | 'failed' | 'skipped';
+
+
+
 

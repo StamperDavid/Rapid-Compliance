@@ -242,3 +242,7 @@ logger.info(`User ${userId} sent ${emailCount} emails in campaign ${campaignId}`
 **Note**: The logger works without Cloud Logging configured (uses console fallback). This allows the app to run in development without requiring GCP setup.
 
 
+
+
+
+

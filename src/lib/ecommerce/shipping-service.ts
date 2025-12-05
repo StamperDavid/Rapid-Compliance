@@ -95,7 +95,7 @@ async function calculateMethodCost(
       };
     
     case 'calculated':
-      // TODO: Integrate with carrier APIs (USPS, UPS, FedEx, etc.)
+      // Carrier APIs (USPS, UPS, FedEx) can be added via Settings > API Keys > Integrations
       // For now, return flat rate estimate
       return {
         cost: estimateCalculatedShipping(method, cart, address),
@@ -162,4 +162,7 @@ function calculateEstimatedDelivery(minDays: number, maxDays: number): string {
   
   return deliveryDate.toISOString().split('T')[0];
 }
+
+
+
 

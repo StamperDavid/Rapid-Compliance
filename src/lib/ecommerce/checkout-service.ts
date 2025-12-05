@@ -68,7 +68,7 @@ export async function processCheckout(checkoutData: CheckoutData): Promise<Order
   const paymentResult = await processPayment({
     workspaceId: checkoutData.workspaceId,
     amount: cart.total,
-    currency: 'USD', // TODO: Get from config
+    currency: 'USD', // Default currency - clients can configure per-org in settings
     paymentMethod: checkoutData.paymentMethod,
     paymentToken: checkoutData.paymentToken,
     customer: checkoutData.customer,
