@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { usePermission, useAuth } from '@/hooks/useAuth';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import RevenueChart from '@/components/analytics/RevenueChart';
 import PipelineChart from '@/components/analytics/PipelineChart';
@@ -21,9 +22,9 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const { theme, loading: themeLoading } = useOrgTheme(); // Load organization-specific theme
   const [dateRange, setDateRange] = useState('30d');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
   const [analyticsView, setAnalyticsView] = useState<AnalyticsView>('overview');
   const [revenueSubView, setRevenueSubView] = useState<RevenueSubView>('overview');
   const [forecastPeriod, setForecastPeriod] = useState<'month' | 'quarter' | 'year'>('quarter');
@@ -33,16 +34,8 @@ function DashboardContent() {
   const canViewReports = usePermission('canViewReports');
   const canCreateRecords = usePermission('canCreateRecords');
 
-  // Load theme and check URL params
+  // Check URL params
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
 
     // Check URL params for analytics view
     const viewParam = searchParams.get('view') as AnalyticsView | null;

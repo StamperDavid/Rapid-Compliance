@@ -9,12 +9,14 @@ import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
 import { useAuth } from '@/hooks/useAuth';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
 // Component that uses useSearchParams - wrapped in Suspense
 function CRMContent() {
   const { user } = useAuth();
+  const { theme, loading: themeLoading } = useOrgTheme(); // Load organization-specific theme
   const searchParams = useSearchParams();
   const [config, setConfig] = useState<any>(null);
   const [activeView, setActiveView] = useState<ViewType>('leads');
@@ -36,23 +38,10 @@ function CRMContent() {
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [theme, setTheme] = useState<any>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
-
-  // Load theme
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-  }, []);
 
   // Show toast notification
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {

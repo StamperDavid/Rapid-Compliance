@@ -508,6 +508,113 @@ A: "$45k-65k for MVP, $100k-150k for polished v1.0"
 
 ## 📝 Changelog
 
+### December 5, 2025 (Final) - E-COMMERCE AUTO-INHERITS CRM THEME
+**🛒 SMART UPDATE: Storefront Automatically Uses CRM Theme**
+- ✅ **Removed duplicate theme tab** from storefront settings
+- ✅ **Storefront now auto-inherits** organization's CRM theme
+- ✅ **No duplicate configuration** - clients set theme once, it applies everywhere
+- ✅ **Preview updated** to show CRM theme colors, fonts, border radius
+- ✅ **Added info banner** explaining automatic theme sync with link to theme editor
+
+**How It Works:**
+1. Client configures theme at `/workspace/[orgId]/settings/theme`
+2. Theme automatically applies to:
+   - CRM workspace (/crm, /dashboard)
+   - E-commerce storefront embeds
+   - All white-label pages
+3. **One place to configure, everywhere consistent!**
+
+**Before:**
+- Storefront had separate theme settings (duplicate work!)
+- Client had to configure colors twice (annoying!)
+
+**After:**
+- Storefront uses `useOrgTheme()` hook
+- Automatically gets CRM theme colors, fonts, branding
+- Client configures once, done!
+
+### December 5, 2025 (Very Late) - FIXED ALL HARDCODED COLORS
+**🎨 FINAL FIX: Removed ALL Hardcoded Purple/Pink Colors**
+- ✅ **Fixed features page** - all purple/pink/blue badges now use theme colors
+- ✅ **Fixed pricing page** - all purple gradients now use theme colors
+- ✅ **Homepage already correct** - uses theme colors throughout
+- ✅ **All public pages now 100% themeable** from website editor
+- ✅ **Updated default theme** - accent color is green (for checkmarks/success)
+- ✅ **Consistent theme across ALL pages** - no more mismatched colors!
+
+**What Was Wrong:**
+- Features page had hardcoded: `purple-500`, `pink-400`, `blue-400`, `yellow-400`
+- Pricing page had hardcoded: `purple-600`, `purple-700`, `pink-600`
+- These IGNORED the website editor theme completely
+
+**What's Fixed:**
+- All badges use `theme.primaryColor` with opacity
+- All checkmarks/icons use `theme.primaryColor`, `theme.secondaryColor`, `theme.accentColor`
+- All buttons use `theme.primaryColor`
+- All gradients use `theme.primaryColor` to `theme.secondaryColor`
+- **100% consistent** - change theme editor, ALL pages update!
+
+### December 5, 2025 (Late Evening) - MULTI-TENANT ORGANIZATION THEMES
+**🎨 CRITICAL FIX: Organization-Specific Themes**
+- ✅ **Created `useOrgTheme` hook** - Loads theme from Firestore per organization
+- ✅ **Updated CRM page** to use organization's theme (not localStorage)
+- ✅ **Updated Dashboard page** to use organization's theme
+- ✅ **Each client gets their own theme** - stored at `organizations/{orgId}/settings/theme`
+- ✅ **White-label ready** - Each organization can have custom:
+  - Colors (primary, secondary, accent, etc.)
+  - Typography (fonts, sizes, weights)
+  - Layout (border radius, spacing, shadows)
+  - Branding (company name, logo, favicon)
+- ✅ **Theme editor already exists** at `/workspace/[orgId]/settings/theme`
+- ✅ **Automatic CSS variables** applied based on org theme
+
+**How It Works:**
+1. User logs in to their organization
+2. `useOrgTheme` hook loads theme from `organizations/{orgId}/settings/theme`
+3. CSS variables applied automatically to entire workspace
+4. Logo, favicon, company name all customized per org
+5. Perfect for multi-tenant SaaS white-labeling
+
+**Before vs After:**
+- **BEFORE:** All orgs shared same theme from localStorage (WRONG for multi-tenant!)
+- **AFTER:** Each org has their own theme from Firestore (CORRECT!)
+
+### December 5, 2025 (Evening) - ALL PUBLIC PAGES COMPLETE + THEME SYSTEM
+**Massive Public Website Overhaul:**
+- ✅ **Created 7 missing pages:** About, Contact, Blog, Privacy, Terms, Security, Docs
+- ✅ **Built unified theme system** (`useWebsiteTheme` hook + `PublicLayout` component)
+- ✅ **All pages now use consistent theme** from website editor
+- ✅ Updated homepage, features, and pricing pages to use new layout
+- ✅ **Theme is editable** from website editor (colors, fonts apply to ALL public pages)
+- ✅ **No more theme inconsistencies** - all pages have same nav, footer, chat widget
+- 📊 **Public pages now complete:** /, /features, /pricing, /about, /contact, /blog, /privacy, /terms, /security, /docs
+
+**How It Works:**
+- Website Editor (`/admin/website-editor`) saves theme to Firestore at `platform/website/theme`
+- All public pages use `PublicLayout` component which loads theme via `useWebsiteTheme` hook
+- Colors, fonts, buttons automatically update across all pages when theme is changed in editor
+- Shared navigation, footer, and chat widget on all public pages
+
+**What's Still Just UI (Brutal Honesty):**
+- Website Editor saves section data to Firestore (untested with real Firebase)
+- Public pages DON'T YET render sections from editor - they use hardcoded content
+- Theme system works but needs Firebase to persist
+- Blog posts are placeholder data (not from CMS)
+- Contact form doesn't actually send emails yet
+
+### December 5, 2025 - WEBSITE EDITOR ADDED
+**New Feature: Public Website Editor**
+- Created `/admin/website-editor` page with full drag-and-drop section builder
+- Edit homepage, features, pricing, about, and any public-facing pages
+- Live preview panel shows changes in real-time
+- Add/remove/reorder sections (hero, features, pricing, testimonials, CTA, content, FAQ)
+- Customize colors, text, buttons for each section
+- Added "Website Editor" quick action button to admin dashboard (first position)
+- Saves to Firestore at `platform/website/pages`
+- **Note:** This is separate from the existing Storefront Editor (e-commerce embeds)
+  - Website Editor = Public marketing pages (homepage, about, etc.)
+  - Storefront Editor = E-commerce store settings and embed codes
+
 ### December 4, 2025 (Late Evening) - DAY 1 PREPARATION COMPLETE
 **Created Complete Day 1 Onboarding System:**
 - Created `📍 START HERE - DAY 1.md` - Visual overview and motivation

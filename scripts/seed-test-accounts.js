@@ -23,7 +23,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@auraflow.test',
     password: 'Testing123!',
-    companyName: 'AuraFlow Analytics (testing)',
+    companyName: 'AuraFlow Analytics (TEST)',
     planId: 'starter',
     industry: 'B2B Software as a Service (SaaS)',
     onboarding: {
@@ -72,7 +72,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@greenthumb.test',
     password: 'Testing123!',
-    companyName: 'GreenThumb Landscaping (testing)',
+    companyName: 'GreenThumb Landscaping (TEST)',
     planId: 'starter',
     industry: 'Home Services (Landscaping & Lawn Care)',
     onboarding: {
@@ -112,7 +112,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@adventuregear.test',
     password: 'Testing123!',
-    companyName: 'The Adventure Gear Shop (testing)',
+    companyName: 'The Adventure Gear Shop (TEST)',
     planId: 'professional',
     industry: 'E-commerce (Outdoor Apparel and Gear)',
     onboarding: {
@@ -146,7 +146,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@summitwm.test',
     password: 'Testing123!',
-    companyName: 'Summit Wealth Management (testing)',
+    companyName: 'Summit Wealth Management (TEST)',
     planId: 'professional',
     industry: 'Financial Services (Investment Advisory)',
     onboarding: {
@@ -175,7 +175,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@pixelperfect.test',
     password: 'Testing123!',
-    companyName: 'PixelPerfect Design Co. (testing)',
+    companyName: 'PixelPerfect Design Co. (TEST)',
     planId: 'starter',
     industry: 'Creative Services (Web Design & Branding)',
     onboarding: {
@@ -196,32 +196,9 @@ const TEST_ACCOUNTS = [
     }
   },
   {
-    email: 'admin@balancept.test',
-    password: 'Testing123!',
-    companyName: 'Balance Physical Therapy (testing)',
-    planId: 'starter',
-    industry: 'Health & Wellness (Physical Therapy)',
-    onboarding: {
-      businessBasics: {
-        businessName: 'Balance Physical Therapy',
-        industry: 'Health & Wellness (Outpatient Physical Therapy Clinic)',
-        website: 'https://www.balancept.com',
-        faqPageUrl: 'https://www.balancept.com/insurance-and-billing',
-        socialMediaUrls: ['https://www.facebook.com/BalancePhysicalTherapy'],
-        companySize: '20 employees (PTs, PTAs, Admin)'
-      },
-      agentPersonality: {
-        tone: 'Caring, Professional, Reassuring, Empathetic',
-        formalityLevel: 'High (Medical context requires formality)',
-        useOfHumor: 'Low (Never use humor in relation to pain or illness)',
-        empathyLevel: 'High (Acknowledge and validate the patient\'s pain/frustration)'
-      }
-    }
-  },
-  {
     email: 'admin@codemaster.test',
     password: 'Testing123!',
-    companyName: 'CodeMaster Academy (testing)',
+    companyName: 'CodeMaster Academy (TEST)',
     planId: 'professional',
     industry: 'E-Learning/EdTech (Coding Bootcamp)',
     onboarding: {
@@ -244,7 +221,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@midwestplastics.test',
     password: 'Testing123!',
-    companyName: 'Midwest Plastics Supply (testing)',
+    companyName: 'Midwest Plastics Supply (TEST)',
     planId: 'professional',
     industry: 'B2B Manufacturing/Wholesale',
     onboarding: {
@@ -267,7 +244,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@metroproperty.test',
     password: 'Testing123!',
-    companyName: 'Metro Property Group (testing)',
+    companyName: 'Metro Property Group (TEST)',
     planId: 'starter',
     industry: 'Residential Real Estate Brokerage',
     onboarding: {
@@ -290,7 +267,7 @@ const TEST_ACCOUNTS = [
   {
     email: 'admin@executiveedge.test',
     password: 'Testing123!',
-    companyName: 'Executive Edge Coaching (testing)',
+    companyName: 'Executive Edge Coaching (TEST)',
     planId: 'professional',
     industry: 'B2B Executive Coaching',
     onboarding: {

@@ -2,41 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
+import PublicLayout from '@/components/PublicLayout';
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 
 export default function FeaturesPage() {
+  const { theme } = useWebsiteTheme();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg" />
-              <span className="text-xl font-bold text-white">AI Sales Platform</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/features" className="text-white font-semibold">
-                Features
-              </Link>
-              <Link href="/pricing" className="text-gray-300 hover:text-white transition">
-                Pricing
-              </Link>
-              <Link href="/docs" className="text-gray-300 hover:text-white transition">
-                Docs
-              </Link>
-              <Link href="/login" className="text-gray-300 hover:text-white transition">
-                Login
-              </Link>
-              <Link
-                href="/signup"
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
-              >
-                Start Free Trial
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <PublicLayout>
 
       {/* Hero */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
@@ -44,7 +17,7 @@ export default function FeaturesPage() {
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
             Everything You Need to
             <br />
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <span style={{ color: theme.primaryColor }}>
               Sell More, Faster
             </span>
           </h1>
@@ -61,8 +34,8 @@ export default function FeaturesPage() {
           {/* Feature 1: Trainable AI Agent */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
-                <span className="text-sm text-purple-300">🔥 Flagship Feature</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ backgroundColor: `${theme.primaryColor}20`, borderWidth: '1px', borderStyle: 'solid', borderColor: `${theme.primaryColor}40` }}>
+                <span className="text-sm" style={{ color: theme.primaryColor }}>🔥 Flagship Feature</span>
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">
                 Train Your Own AI Sales Agent
@@ -88,7 +61,11 @@ export default function FeaturesPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/signup" className="inline-block px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition">
+              <Link
+                href="/signup"
+                className="inline-block px-8 py-3 rounded-lg font-semibold transition"
+                style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
+              >
                 Try It Free →
               </Link>
             </div>
@@ -109,8 +86,8 @@ export default function FeaturesPage() {
               </div>
             </div>
             <div className="order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
-                <span className="text-sm text-purple-300">🧠 Smart Memory</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ backgroundColor: `${theme.primaryColor}20`, borderWidth: '1px', borderStyle: 'solid', borderColor: `${theme.primaryColor}40` }}>
+                <span className="text-sm" style={{ color: theme.primaryColor }}>🧠 Smart Memory</span>
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">
                 Never Forget a Customer
@@ -129,7 +106,7 @@ export default function FeaturesPage() {
                   'Automatic notes and insights'
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3">
-                    <svg className="w-6 h-6 text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: theme.secondaryColor }}>
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="text-gray-300">{item}</span>
@@ -142,8 +119,8 @@ export default function FeaturesPage() {
           {/* Feature 3: Built-in CRM */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
-                <span className="text-sm text-purple-300">📊 Powerful CRM</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ backgroundColor: `${theme.primaryColor}20`, borderWidth: '1px', borderStyle: 'solid', borderColor: `${theme.primaryColor}40` }}>
+                <span className="text-sm" style={{ color: theme.primaryColor }}>📊 Powerful CRM</span>
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">
                 CRM That Actually Fits Your Business
@@ -162,7 +139,7 @@ export default function FeaturesPage() {
                   'Workflow automation built-in'
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3">
-                    <svg className="w-6 h-6 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: theme.accentColor }}>
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="text-gray-300">{item}</span>
@@ -187,8 +164,8 @@ export default function FeaturesPage() {
               </div>
             </div>
             <div className="order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
-                <span className="text-sm text-purple-300">🛒 E-Commerce</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ backgroundColor: `${theme.primaryColor}20`, borderWidth: '1px', borderStyle: 'solid', borderColor: `${theme.primaryColor}40` }}>
+                <span className="text-sm" style={{ color: theme.primaryColor }}>🛒 E-Commerce</span>
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">
                 Sell Products Directly
@@ -206,7 +183,7 @@ export default function FeaturesPage() {
                   'Embed anywhere with shortcodes'
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3">
-                    <svg className="w-6 h-6 text-pink-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: theme.secondaryColor }}>
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="text-gray-300">{item}</span>
@@ -219,8 +196,8 @@ export default function FeaturesPage() {
           {/* Feature 5: Workflow Automation */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
-                <span className="text-sm text-purple-300">⚡ Automation</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ backgroundColor: `${theme.primaryColor}20`, borderWidth: '1px', borderStyle: 'solid', borderColor: `${theme.primaryColor}40` }}>
+                <span className="text-sm" style={{ color: theme.primaryColor }}>⚡ Automation</span>
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">
                 Automate Your Entire Sales Process
@@ -238,7 +215,7 @@ export default function FeaturesPage() {
                   'Custom triggers and conditions'
                 ].map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3">
-                    <svg className="w-6 h-6 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: theme.accentColor }}>
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <span className="text-gray-300">{item}</span>
@@ -263,8 +240,8 @@ export default function FeaturesPage() {
               </div>
             </div>
             <div className="order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-full mb-6">
-                <span className="text-sm text-purple-300">📈 Analytics</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ backgroundColor: `${theme.primaryColor}20`, borderWidth: '1px', borderStyle: 'solid', borderColor: `${theme.primaryColor}40` }}>
+                <span className="text-sm" style={{ color: theme.primaryColor }}>📈 Analytics</span>
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">
                 Know What's Working
@@ -335,20 +312,15 @@ export default function FeaturesPage() {
           </p>
           <Link
             href="/signup"
-            className="inline-block px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-lg shadow-purple-500/50"
+            className="inline-block px-12 py-4 rounded-lg text-xl font-semibold transition shadow-lg"
+            style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
           >
             Get Started Free →
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/10">
-        <div className="max-w-7xl mx-auto text-center text-gray-400">
-          <p>© 2024 AI Sales Platform. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
+    </PublicLayout>
   );
 }
 

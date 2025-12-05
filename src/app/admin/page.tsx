@@ -271,6 +271,20 @@ export default function AdminDashboard() {
       {/* Quick Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
         <QuickActionCard
+          title="Demo Accounts"
+          description="Quick login to demo accounts"
+          href="/admin/demo-accounts"
+          icon="🎭"
+          tooltip="Quick access to all demo accounts. Click any demo to automatically log in (opens in new tab). Perfect for presentations and testing."
+        />
+        <QuickActionCard
+          title="Website Editor"
+          description="Edit public website pages"
+          href="/admin/website-editor"
+          icon="🌐"
+          tooltip="Edit your public-facing website: homepage, features, pricing, and other marketing pages. Drag-and-drop sections with live preview."
+        />
+        <QuickActionCard
           title="Organizations"
           description="Manage all organizations"
           href="/admin/organizations"

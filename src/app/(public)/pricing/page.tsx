@@ -2,9 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import PublicLayout from '@/components/PublicLayout';
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const { theme } = useWebsiteTheme();
 
   const plans = [
     {
@@ -88,38 +91,7 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg" />
-              <span className="text-xl font-bold text-white">AI Sales Platform</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/features" className="text-gray-300 hover:text-white transition">
-                Features
-              </Link>
-              <Link href="/pricing" className="text-white font-semibold">
-                Pricing
-              </Link>
-              <Link href="/docs" className="text-gray-300 hover:text-white transition">
-                Docs
-              </Link>
-              <Link href="/login" className="text-gray-300 hover:text-white transition">
-                Login
-              </Link>
-              <Link
-                href="/signup"
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition"
-              >
-                Start Free Trial
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <PublicLayout>
 
       {/* Hero */}
       <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
@@ -138,7 +110,8 @@ export default function PricingPage() {
             </span>
             <button
               onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-              className="relative w-16 h-8 bg-purple-600 rounded-full transition"
+              className="relative w-16 h-8 rounded-full transition"
+              style={{ backgroundColor: theme.primaryColor }}
             >
               <div className={`absolute top-1 ${billingCycle === 'yearly' ? 'left-9' : 'left-1'} w-6 h-6 bg-white rounded-full transition-all`} />
             </button>
@@ -159,9 +132,10 @@ export default function PricingPage() {
                 key={index}
                 className={`relative p-8 rounded-2xl ${
                   plan.popular
-                    ? 'bg-gradient-to-br from-purple-600 to-pink-600 shadow-2xl shadow-purple-500/50 scale-105'
+                    ? 'shadow-2xl scale-105'
                     : 'bg-white/5 backdrop-blur-sm border border-white/10'
                 }`}
+                style={plan.popular ? { background: `linear-gradient(to bottom right, ${theme.primaryColor}, ${theme.secondaryColor})`, boxShadow: `0 25px 50px -12px ${theme.primaryColor}80` } : {}}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-yellow-400 text-slate-900 text-sm font-bold rounded-full">
@@ -198,11 +172,12 @@ export default function PricingPage() {
 
                 <Link
                   href={plan.monthlyPrice !== null ? '/signup' : '/contact'}
-                  className={`block w-full py-3 rounded-lg font-semibold text-center transition mb-8 ${
+                  className="block w-full py-3 rounded-lg font-semibold text-center transition mb-8"
+                  style={
                     plan.popular
-                      ? 'bg-white text-purple-600 hover:bg-gray-100'
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
-                  }`}
+                      ? { backgroundColor: '#ffffff', color: theme.primaryColor }
+                      : { backgroundColor: theme.primaryColor, color: '#ffffff' }
+                  }
                 >
                   {plan.cta}
                 </Link>
@@ -211,11 +186,10 @@ export default function PricingPage() {
                   {plan.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <svg
-                        className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
-                          plan.popular ? 'text-white' : 'text-purple-400'
-                        }`}
+                        className="w-5 h-5 mt-0.5 flex-shrink-0"
                         fill="currentColor"
                         viewBox="0 0 20 20"
+                        style={{ color: plan.popular ? '#ffffff' : theme.primaryColor }}
                       >
                         <path
                           fillRule="evenodd"
@@ -292,20 +266,15 @@ export default function PricingPage() {
           </p>
           <Link
             href="/signup"
-            className="inline-block px-12 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg text-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition shadow-lg shadow-purple-500/50"
+            className="inline-block px-12 py-4 rounded-lg text-xl font-semibold transition shadow-lg"
+            style={{ backgroundColor: theme.primaryColor, color: '#ffffff', boxShadow: `0 10px 40px ${theme.primaryColor}80` }}
           >
             Start Your Free Trial →
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/10">
-        <div className="max-w-7xl mx-auto text-center text-gray-400">
-          <p>© 2024 AI Sales Platform. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
+    </PublicLayout>
   );
 }
 

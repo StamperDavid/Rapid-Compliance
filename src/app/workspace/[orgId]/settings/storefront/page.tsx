@@ -4,21 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 interface StorefrontConfig {
   enabled: boolean;
   businessType: 'products' | 'services' | 'both';
   storeName: string;
   storeUrl: string;
-  theme: {
-    primaryColor: string;
-    secondaryColor: string;
-    accentColor: string;
-    backgroundColor: string;
-    textColor: string;
-    buttonRadius: string;
-    fontFamily: string;
-  };
+  // Theme is now inherited from CRM theme - no need to configure separately
   productSchema: string;
   serviceSchema: string;
   checkoutSettings: {
@@ -44,15 +37,6 @@ const DEFAULT_CONFIG: StorefrontConfig = {
   businessType: 'products',
   storeName: 'My Store',
   storeUrl: 'mystore',
-  theme: {
-    primaryColor: '#6366f1',
-    secondaryColor: '#8b5cf6',
-    accentColor: '#ec4899',
-    backgroundColor: '#ffffff',
-    textColor: '#111827',
-    buttonRadius: '0.5rem',
-    fontFamily: 'Inter, sans-serif',
-  },
   productSchema: 'products',
   serviceSchema: 'services',
   checkoutSettings: {
@@ -75,8 +59,9 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 
 export default function StorefrontSettingsPage() {
   const { user } = useAuth();
+  const { theme: crmTheme } = useOrgTheme(); // Get CRM theme automatically
   const [config, setConfig] = useState<StorefrontConfig>(DEFAULT_CONFIG);
-  const [activeTab, setActiveTab] = useState<'setup' | 'theme' | 'widgets'>('setup');
+  const [activeTab, setActiveTab] = useState<'setup' | 'widgets'>('setup'); // Removed 'theme' tab
   const [showPreview, setShowPreview] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -222,17 +207,20 @@ export default function StorefrontSettingsPage() {
               ⚙️ Setup
             </button>
             <button
-              onClick={() => setActiveTab('theme')}
-              style={{ padding: '0.75rem 1.5rem', backgroundColor: activeTab === 'theme' ? '#1a1a1a' : 'transparent', color: activeTab === 'theme' ? '#6366f1' : '#999', border: 'none', borderBottom: activeTab === 'theme' ? '2px solid #6366f1' : '2px solid transparent', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', transition: 'all 0.2s' }}
-            >
-              🎨 Theme
-            </button>
-            <button
               onClick={() => setActiveTab('widgets')}
               style={{ padding: '0.75rem 1.5rem', backgroundColor: activeTab === 'widgets' ? '#1a1a1a' : 'transparent', color: activeTab === 'widgets' ? '#6366f1' : '#999', border: 'none', borderBottom: activeTab === 'widgets' ? '2px solid #6366f1' : '2px solid transparent', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', transition: 'all 0.2s' }}
             >
               📦 Embed Codes
             </button>
+          </div>
+          
+          {/* Theme Info Banner */}
+          <div style={{ backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem', padding: '1rem', marginBottom: '2rem', display: 'flex', gap: '0.75rem', alignItems: 'start' }}>
+            <span style={{ fontSize: '1.25rem' }}>✨</span>
+            <div style={{ fontSize: '0.875rem', color: '#86efac', lineHeight: '1.5' }}>
+              <strong>Automatic Theme Sync:</strong> Your storefront automatically uses your CRM theme colors and branding. 
+              To change colors, logo, or fonts, go to <Link href="/workspace/demo-org/settings/theme" style={{ color: '#6ee7b7', textDecoration: 'underline' }}>Theme Settings</Link>.
+            </div>
           </div>
 
           {/* Setup Tab */}
@@ -760,9 +748,9 @@ export default function StorefrontSettingsPage() {
               </button>
             </div>
 
-            {/* Preview Frame */}
+            {/* Preview Frame - Using CRM Theme */}
             <div style={{ 
-              backgroundColor: config.theme.backgroundColor, 
+              backgroundColor: '#ffffff', 
               border: '2px solid #333', 
               borderRadius: '0.75rem', 
               padding: '2rem',
@@ -772,13 +760,13 @@ export default function StorefrontSettingsPage() {
                 <h1 style={{ 
                   fontSize: '2rem', 
                   fontWeight: 'bold', 
-                  color: config.theme.textColor,
-                  fontFamily: config.theme.fontFamily,
+                  color: '#111827',
+                  fontFamily: crmTheme.typography.fontFamily.heading,
                   marginBottom: '0.5rem'
                 }}>
                   {config.storeName}
                 </h1>
-                <p style={{ fontSize: '1rem', color: config.theme.textColor, opacity: 0.7 }}>
+                <p style={{ fontSize: '1rem', color: '#6b7280' }}>
                   {config.businessType === 'products' ? 'Browse our products' : config.businessType === 'services' ? 'Book our services' : 'Products & Services'}
                 </p>
               </div>
@@ -787,17 +775,16 @@ export default function StorefrontSettingsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} style={{ 
-                    backgroundColor: config.theme.backgroundColor === '#ffffff' ? '#f9fafb' : 'rgba(255,255,255,0.05)',
-                    border: '1px solid',
-                    borderColor: config.theme.backgroundColor === '#ffffff' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
-                    borderRadius: '0.75rem',
+                    backgroundColor: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: crmTheme.layout.borderRadius.card,
                     padding: '1rem',
-                    fontFamily: config.theme.fontFamily
+                    fontFamily: crmTheme.typography.fontFamily.body
                   }}>
                     <div style={{ 
                       width: '100%', 
                       height: '120px', 
-                      backgroundColor: config.theme.backgroundColor === '#ffffff' ? '#e5e7eb' : 'rgba(255,255,255,0.1)',
+                      backgroundColor: '#e5e7eb',
                       borderRadius: '0.5rem',
                       marginBottom: '0.75rem',
                       display: 'flex',
@@ -807,26 +794,26 @@ export default function StorefrontSettingsPage() {
                     }}>
                       {config.businessType === 'services' ? '💼' : '📦'}
                     </div>
-                    <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: config.theme.textColor, marginBottom: '0.25rem' }}>
+                    <h4 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827', marginBottom: '0.25rem' }}>
                       {config.businessType === 'services' ? `Service ${i}` : `Product ${i}`}
                     </h4>
-                    <p style={{ fontSize: '0.75rem', color: config.theme.textColor, opacity: 0.6, marginBottom: '0.75rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.75rem' }}>
                       Sample description
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: config.theme.primaryColor }}>
+                      <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: crmTheme.colors.primary.main }}>
                         ${(i * 25).toFixed(2)}
                       </span>
                       <button style={{
                         padding: '0.5rem 1rem',
-                        backgroundColor: config.theme.primaryColor,
+                        backgroundColor: crmTheme.colors.primary.main,
                         color: '#ffffff',
                         border: 'none',
-                        borderRadius: config.theme.buttonRadius,
+                        borderRadius: crmTheme.layout.borderRadius.button,
                         fontSize: '0.75rem',
                         fontWeight: '600',
                         cursor: 'pointer',
-                        fontFamily: config.theme.fontFamily
+                        fontFamily: crmTheme.typography.fontFamily.body
                       }}>
                         {config.businessType === 'services' ? 'Book Now' : 'Add to Cart'}
                       </button>
@@ -839,27 +826,27 @@ export default function StorefrontSettingsPage() {
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                 <button style={{
                   padding: '0.75rem 1.5rem',
-                  backgroundColor: config.theme.primaryColor,
+                  backgroundColor: crmTheme.colors.primary.main,
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: config.theme.buttonRadius,
+                  borderRadius: crmTheme.layout.borderRadius.button,
                   fontSize: '0.875rem',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  fontFamily: config.theme.fontFamily
+                  fontFamily: crmTheme.typography.fontFamily.body
                 }}>
                   Primary Button
                 </button>
                 <button style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: 'transparent',
-                  color: config.theme.primaryColor,
-                  border: `2px solid ${config.theme.primaryColor}`,
-                  borderRadius: config.theme.buttonRadius,
+                  color: crmTheme.colors.primary.main,
+                  border: `2px solid ${crmTheme.colors.primary.main}`,
+                  borderRadius: crmTheme.layout.borderRadius.button,
                   fontSize: '0.875rem',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  fontFamily: config.theme.fontFamily
+                  fontFamily: crmTheme.typography.fontFamily.body
                 }}>
                   Outline Button
                 </button>

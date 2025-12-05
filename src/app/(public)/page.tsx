@@ -2,44 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import PublicLayout from '@/components/PublicLayout';
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 
 export default function LandingPage() {
-  const router = useRouter();
+  const { theme } = useWebsiteTheme();
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg" />
-              <span className="text-xl font-bold text-white">AI Sales Platform</span>
-            </div>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/features" className="text-gray-300 hover:text-white transition">
-                Features
-              </Link>
-              <Link href="/pricing" className="text-gray-300 hover:text-white transition">
-                Pricing
-              </Link>
-              <Link href="/docs" className="text-gray-300 hover:text-white transition">
-                Docs
-              </Link>
-              <Link href="/login" className="text-gray-300 hover:text-white transition">
-                Login
-              </Link>
-              <Link
-                href="/signup"
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg font-semibold hover:bg-gray-700 transition"
-              >
-                Start Free Trial
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <PublicLayout>
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
@@ -66,7 +36,8 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/signup"
-                className="px-8 py-4 bg-gray-800 text-white rounded-lg text-lg font-semibold hover:bg-gray-700 transition shadow-lg shadow-gray-900/50"
+                className="px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
+                style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
               >
                 Start Free Trial →
               </Link>
@@ -352,7 +323,8 @@ export default function LandingPage() {
           </p>
           <Link
             href="/signup"
-            className="inline-block px-12 py-4 bg-gray-800 text-white rounded-lg text-xl font-semibold hover:bg-gray-700 transition shadow-lg shadow-gray-900/50"
+            className="inline-block px-12 py-4 rounded-lg text-xl font-semibold transition shadow-lg"
+            style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
           >
             Start Your Free Trial →
           </Link>
@@ -362,56 +334,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/10">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h3 className="font-semibold text-white mb-4">Product</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/features" className="hover:text-white transition">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition">Pricing</Link></li>
-                <li><Link href="/docs" className="hover:text-white transition">Documentation</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-white mb-4">Company</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/about" className="hover:text-white transition">About</Link></li>
-                <li><Link href="/blog" className="hover:text-white transition">Blog</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-white mb-4">Legal</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/privacy" className="hover:text-white transition">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
-                <li><Link href="/security" className="hover:text-white transition">Security</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-white mb-4">Connect</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition">Twitter</a></li>
-                <li><a href="#" className="hover:text-white transition">LinkedIn</a></li>
-                <li><a href="#" className="hover:text-white transition">GitHub</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-8 text-center text-gray-400">
-            <p>© 2024 AI Sales Platform. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Floating Chat Widget (Placeholder) */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button className="w-16 h-16 bg-gray-800 rounded-full shadow-lg shadow-gray-900/50 flex items-center justify-center text-white text-2xl hover:scale-110 transition hover:bg-gray-700">
-          💬
-        </button>
-      </div>
-    </div>
+    </PublicLayout>
   );
 }
 
