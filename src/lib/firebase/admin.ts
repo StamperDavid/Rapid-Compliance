@@ -44,11 +44,26 @@ function initializeAdmin() {
 
   // For production - use service account
   try {
-    let serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-      : undefined;
+    let serviceAccount: admin.ServiceAccount | undefined;
+    
+    // Option 1: Full JSON in single env var
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      console.log('🔑 Using FIREBASE_SERVICE_ACCOUNT_KEY env var');
+    }
+    
+    // Option 2: Individual env vars (preferred for Vercel)
+    if (!serviceAccount && process.env.FIREBASE_ADMIN_PROJECT_ID && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+      serviceAccount = {
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        // Vercel escapes newlines, so we need to unescape them
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      };
+      console.log('🔑 Using individual Firebase Admin env vars');
+    }
 
-    // Try to load from file if env var not set
+    // Option 3: Try to load from file (local development)
     if (!serviceAccount) {
       try {
         const fs = require('fs');
@@ -69,6 +84,7 @@ function initializeAdmin() {
       });
     } else {
       // Use application default credentials (for GCP)
+      console.warn('⚠️ No Firebase credentials found, using default credentials');
       adminApp = admin.initializeApp();
     }
 
@@ -79,6 +95,7 @@ function initializeAdmin() {
       adminApp = admin.app();
       return adminApp;
     }
+    console.error('❌ Firebase Admin initialization failed:', error.message);
     throw error;
   }
 }
