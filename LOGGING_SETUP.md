@@ -246,3 +246,8 @@ logger.info(`User ${userId} sent ${emailCount} emails in campaign ${campaignId}`
 
 
 
+
+
+
+
+

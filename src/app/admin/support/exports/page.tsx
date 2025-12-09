@@ -191,7 +191,7 @@ export default function DataExportsPage() {
               >
                 <div>
                   <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-                    {exp.resourceType} Export ({exp.format || 'json'})
+                    {exp.resourceType} Export ({(exp as any).format || 'json'})
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#666' }}>
                     Created: {new Date(exp.createdAt as any).toLocaleString()}

@@ -310,3 +310,8 @@ export function analyzeHiringSignals(jobs: LinkedInJob[]): {
 }
 
 
+
+
+
+
+

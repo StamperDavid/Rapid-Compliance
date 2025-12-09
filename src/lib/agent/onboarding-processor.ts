@@ -37,15 +37,10 @@ export async function processOnboarding(
   try {
     const { onboardingData, organizationId, userId, workspaceId } = options;
     
-    console.log('[Onboarding Processor] Starting processing...');
-    
     // Step 1: Build persona from onboarding data
-    console.log('[Onboarding Processor] Step 1: Building persona...');
     const persona = buildPersonaFromOnboarding(onboardingData);
-    console.log('[Onboarding Processor] Persona built:', persona.name);
     
     // Step 2: Process knowledge base
-    console.log('[Onboarding Processor] Step 2: Processing knowledge base...');
     const knowledgeOptions: KnowledgeProcessorOptions = {
       organizationId,
       uploadedFiles: onboardingData.uploadedDocs || [],
@@ -57,14 +52,8 @@ export async function processOnboarding(
     };
     
     const knowledgeBase = await processKnowledgeBase(knowledgeOptions);
-    console.log('[Onboarding Processor] Knowledge base processed:', {
-      documents: knowledgeBase.documents.length,
-      urls: knowledgeBase.urls.length,
-      faqs: knowledgeBase.faqs.length,
-    });
     
     // Step 3: Build Base Model (NOT Golden Master yet!)
-    console.log('[Onboarding Processor] Step 3: Building Base Model...');
     const baseModel = await buildBaseModel({
       onboardingData,
       knowledgeBase,
@@ -72,10 +61,8 @@ export async function processOnboarding(
       userId,
       workspaceId,
     });
-    console.log('[Onboarding Processor] Base Model built:', baseModel.id);
     
     // Step 4: Save everything to Firestore
-    console.log('[Onboarding Processor] Step 4: Saving to Firestore...');
     
     // Save persona
     await FirestoreService.set(
@@ -104,22 +91,15 @@ export async function processOnboarding(
     );
     
     // Index knowledge base (generate embeddings for vector search)
-    console.log('[Onboarding Processor] Step 5: Indexing knowledge base...');
     try {
       const { indexKnowledgeBase } = await import('@/lib/agent/vector-search');
       await indexKnowledgeBase(organizationId);
-      console.log('[Onboarding Processor] Knowledge base indexed');
     } catch (error) {
-      console.warn('[Onboarding Processor] Failed to index knowledge base:', error);
-      // Continue even if indexing fails
+      // Continue even if indexing fails - not critical for onboarding
     }
     
     // Save Base Model (NOT Golden Master - that comes after training!)
     await saveBaseModel(baseModel);
-    
-    console.log('[Onboarding Processor] ✅ Processing complete!');
-    console.log('[Onboarding Processor] Base Model created. Client can now train their agent.');
-    console.log('[Onboarding Processor] Golden Master will be created when client saves after training.');
     
     return {
       success: true,
@@ -180,7 +160,6 @@ export async function getProcessingStatus(organizationId: string): Promise<{
       goldenMasterVersion: goldenMasters.length > 0 ? goldenMasters[0].version : undefined,
     };
   } catch (error) {
-    console.error('Error getting processing status:', error);
     return {
       hasPersona: false,
       hasKnowledgeBase: false,

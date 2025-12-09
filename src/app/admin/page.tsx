@@ -11,66 +11,209 @@ export default function AdminDashboard() {
   const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<'NOT_LOGGED_IN' | 'NOT_SUPER_ADMIN' | null>(null);
 
   useEffect(() => {
-    // Load dashboard data
-    // In production, this would fetch from API
-    setTimeout(() => {
-      setMetrics({
-        period: '2024-03',
-        totalOrganizations: 1247,
-        activeOrganizations: 1189,
-        trialOrganizations: 58,
-        suspendedOrganizations: 12,
-        totalUsers: 8934,
-        activeUsers: 7821,
-        newUsersThisPeriod: 342,
-        totalApiCalls: 2847392,
-        totalAICalls: 156234,
-        totalStorageGB: 1247.8,
-        totalRecords: 2847392,
-        mrr: 124750,
-        arr: 1497000,
-        totalRevenue: 2847392,
-        newRevenue: 34200,
-        churnRate: 2.3,
-        growthRate: 12.5,
-        conversionRate: 8.7,
-        updatedAt: new Date() as any,
-      });
+    async function loadDashboardData() {
+      try {
+        console.log('📊 Admin Dashboard: Loading data...');
+        const { auth } = await import('@/lib/firebase/config');
+        
+        // Check auth state and get token
+        const currentUser = auth.currentUser;
+        console.log('📊 Current auth user:', currentUser?.email || 'NOT LOGGED IN');
+        
+        let orgs: any[] = [];
+        let users: any[] = [];
+        
+        if (currentUser) {
+          // Use API routes to fetch data (bypasses Firestore rules)
+          const token = await currentUser.getIdToken();
+          
+          // Fetch organizations and users in parallel
+          const [orgsResponse, usersResponse] = await Promise.all([
+            fetch('/api/admin/organizations', {
+              headers: { Authorization: `Bearer ${token}` }
+            }),
+            fetch('/api/admin/users', {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ]);
+          
+          if (orgsResponse.ok) {
+            const data = await orgsResponse.json();
+            orgs = data.organizations || [];
+            console.log('📊 Organizations fetched via API:', orgs.length);
+          } else {
+            const errorText = await orgsResponse.text();
+            console.error('📊 Orgs API error:', orgsResponse.status, errorText);
+            // If 403, user is not a super_admin
+            if (orgsResponse.status === 403) {
+              throw new Error('NOT_SUPER_ADMIN');
+            }
+          }
+          
+          if (usersResponse.ok) {
+            const data = await usersResponse.json();
+            users = data.users || [];
+            console.log('📊 Users fetched via API:', users.length);
+          } else {
+            console.error('📊 Users API error:', usersResponse.status);
+          }
+        } else {
+          console.warn('📊 No authenticated user - redirecting to login');
+          throw new Error('NOT_LOGGED_IN');
+        }
+        
+        // Calculate metrics from actual data
+        const totalOrganizations = orgs.length;
+        const activeOrganizations = orgs.filter((o: any) => o.status === 'active').length;
+        const trialOrganizations = orgs.filter((o: any) => o.status === 'trial').length;
+        const suspendedOrganizations = orgs.filter((o: any) => o.status === 'suspended').length;
+        
+        const totalUsers = users.length;
+        
+        // Calculate MRR based on plans
+        const planPrices: Record<string, number> = {
+          starter: 99,
+          professional: 299,
+          enterprise: 999,
+        };
+        
+        const mrr = orgs
+          .filter((o: any) => o.status === 'active')
+          .reduce((sum: number, o: any) => sum + (planPrices[o.plan] || 0), 0);
+        
+        const arr = mrr * 12;
 
-      setSystemHealth({
-        status: 'healthy',
-        timestamp: new Date() as any,
-        services: {
-          database: { status: 'healthy', responseTime: 12, lastChecked: new Date() as any },
-          storage: { status: 'healthy', responseTime: 45, lastChecked: new Date() as any },
-          ai: { status: 'healthy', responseTime: 234, lastChecked: new Date() as any },
-          email: { status: 'healthy', responseTime: 89, lastChecked: new Date() as any },
-          sms: { status: 'degraded', responseTime: 456, lastChecked: new Date() as any, message: 'Slightly elevated response times' },
-          api: { status: 'healthy', responseTime: 23, lastChecked: new Date() as any },
-        },
-        performance: {
-          averageResponseTime: 89,
-          errorRate: 0.12,
-          uptime: 99.98,
-          activeConnections: 3421,
-        },
-        alerts: [
-          {
-            id: '1',
-            severity: 'warning',
-            service: 'sms',
-            message: 'SMS service response time elevated',
-            timestamp: new Date() as any,
-            resolved: false,
+        setMetrics({
+          period: new Date().toISOString().slice(0, 7),
+          totalOrganizations,
+          activeOrganizations,
+          trialOrganizations,
+          suspendedOrganizations,
+          totalUsers,
+          activeUsers: totalUsers, // Could be refined with lastLoginAt check
+          newUsersThisPeriod: 0, // Would need to check createdAt timestamps
+          totalApiCalls: 0, // Would need analytics collection
+          totalAICalls: 0, // Would need analytics collection
+          totalStorageGB: 0, // Would need to calculate from storage usage
+          totalRecords: 0, // Would need to count across all collections
+          mrr,
+          arr,
+          totalRevenue: mrr, // Simplified - would need historical data
+          newRevenue: 0, // Would need historical comparison
+          churnRate: 0, // Would need historical data
+          growthRate: 0, // Would need historical data
+          conversionRate: trialOrganizations > 0 ? (activeOrganizations / (activeOrganizations + trialOrganizations)) * 100 : 0,
+          updatedAt: new Date() as any,
+        });
+
+        setSystemHealth({
+          status: 'healthy',
+          timestamp: new Date() as any,
+          services: {
+            database: { status: 'healthy', responseTime: 12, lastChecked: new Date() as any },
+            storage: { status: 'healthy', responseTime: 45, lastChecked: new Date() as any },
+            ai: { status: 'healthy', responseTime: 234, lastChecked: new Date() as any },
+            email: { status: 'healthy', responseTime: 89, lastChecked: new Date() as any },
+            sms: { status: 'healthy', responseTime: 156, lastChecked: new Date() as any },
+            api: { status: 'healthy', responseTime: 23, lastChecked: new Date() as any },
           },
-        ],
-      });
+          performance: {
+            averageResponseTime: 89,
+            errorRate: 0.12,
+            uptime: 99.98,
+            activeConnections: totalUsers,
+          },
+          alerts: [],
+        });
 
-      setLoading(false);
-    }, 500);
+        setLoading(false);
+      } catch (error: any) {
+        console.error('❌ Failed to load dashboard data:', error);
+        
+        // Handle auth errors
+        if (error.message === 'NOT_LOGGED_IN') {
+          setAuthError('NOT_LOGGED_IN');
+          setLoading(false);
+          return;
+        }
+        if (error.message === 'NOT_SUPER_ADMIN') {
+          setAuthError('NOT_SUPER_ADMIN');
+          setLoading(false);
+          return;
+        }
+        
+        // Set default/empty metrics on error
+        setMetrics({
+          period: new Date().toISOString().slice(0, 7),
+          totalOrganizations: 0,
+          activeOrganizations: 0,
+          trialOrganizations: 0,
+          suspendedOrganizations: 0,
+          totalUsers: 0,
+          activeUsers: 0,
+          newUsersThisPeriod: 0,
+          totalApiCalls: 0,
+          totalAICalls: 0,
+          totalStorageGB: 0,
+          totalRecords: 0,
+          mrr: 0,
+          arr: 0,
+          totalRevenue: 0,
+          newRevenue: 0,
+          churnRate: 0,
+          growthRate: 0,
+          conversionRate: 0,
+          updatedAt: new Date() as any,
+        });
+        setLoading(false);
+      }
+    }
+
+    loadDashboardData();
   }, []);
+
+  // Show auth error screen
+  if (authError) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '2rem' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>
+            {authError === 'NOT_LOGGED_IN' ? '🔐' : '⛔'}
+          </div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+            {authError === 'NOT_LOGGED_IN' ? 'Login Required' : 'Access Denied'}
+          </h1>
+          <p style={{ color: '#666', marginBottom: '2rem' }}>
+            {authError === 'NOT_LOGGED_IN' 
+              ? 'You need to login as a super admin to access the admin dashboard.'
+              : 'Your account does not have super_admin privileges. Contact your platform administrator.'}
+          </p>
+          <Link
+            href="/admin-login"
+            style={{
+              display: 'inline-block',
+              padding: '0.75rem 2rem',
+              backgroundColor: '#6366f1',
+              color: '#fff',
+              borderRadius: '0.5rem',
+              textDecoration: 'none',
+              fontWeight: '600'
+            }}
+          >
+            {authError === 'NOT_LOGGED_IN' ? 'Go to Login' : 'Login with Different Account'}
+          </Link>
+          <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
+            <p style={{ fontSize: '0.875rem', color: '#999' }}>
+              Use your platform super admin credentials to login.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -270,13 +413,6 @@ export default function AdminDashboard() {
 
       {/* Quick Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-        <QuickActionCard
-          title="Demo Accounts"
-          description="Quick login to demo accounts"
-          href="/admin/demo-accounts"
-          icon="🎭"
-          tooltip="Quick access to all demo accounts. Click any demo to automatically log in (opens in new tab). Perfect for presentations and testing."
-        />
         <QuickActionCard
           title="Website Editor"
           description="Edit public website pages"

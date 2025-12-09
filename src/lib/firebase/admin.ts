@@ -44,9 +44,24 @@ function initializeAdmin() {
 
   // For production - use service account
   try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+    let serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
       ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
       : undefined;
+
+    // Try to load from file if env var not set
+    if (!serviceAccount) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
+        if (fs.existsSync(keyPath)) {
+          serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+          console.log('🔑 Loaded serviceAccountKey.json');
+        }
+      } catch (e) {
+        console.warn('Could not load serviceAccountKey.json');
+      }
+    }
 
     if (serviceAccount) {
       adminApp = admin.initializeApp({
@@ -84,4 +99,9 @@ export const adminStorage = adminApp ? admin.storage(adminApp) : admin.storage()
 
 export { admin };
 export default adminApp;
+
+
+
+
+
 

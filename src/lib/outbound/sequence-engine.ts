@@ -22,7 +22,7 @@ export class SequenceEngine {
     sequenceId: string,
     organizationId: string
   ): Promise<ProspectEnrollment> {
-    console.log(`[Sequence Engine] Enrolling prospect ${prospectId} in sequence ${sequenceId}`);
+    
 
     // Load sequence
     const sequence = await this.getSequence(sequenceId, organizationId);
@@ -67,7 +67,7 @@ export class SequenceEngine {
       activeProspects: 1,
     });
 
-    console.log(`[Sequence Engine] Prospect ${prospectId} enrolled successfully`);
+    
 
     return enrollment;
   }
@@ -81,7 +81,7 @@ export class SequenceEngine {
     organizationId: string,
     reason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced'
   ): Promise<void> {
-    console.log(`[Sequence Engine] Unenrolling prospect ${prospectId} from sequence ${sequenceId}. Reason: ${reason}`);
+    
 
     const enrollment = await this.getEnrollment(prospectId, sequenceId, organizationId);
     if (!enrollment) {
@@ -140,7 +140,7 @@ export class SequenceEngine {
 
     // Check step conditions
     if (!(await this.checkStepConditions(enrollment, currentStep))) {
-      console.log(`[Sequence Engine] Skipping step ${currentStep.order} for enrollment ${enrollmentId} - conditions not met`);
+      
       await this.skipStep(enrollment, currentStep, organizationId);
       return;
     }
@@ -158,7 +158,7 @@ export class SequenceEngine {
     sequence: OutboundSequence,
     organizationId: string
   ): Promise<void> {
-    console.log(`[Sequence Engine] Executing step ${step.order} for prospect ${enrollment.prospectId}`);
+    
 
     try {
       // Create step action
@@ -225,7 +225,7 @@ export class SequenceEngine {
         totalSent: 1,
       });
 
-      console.log(`[Sequence Engine] Step ${step.order} executed successfully`);
+      
     } catch (error: any) {
       console.error(`[Sequence Engine] Error executing step:`, error);
 
@@ -255,7 +255,7 @@ export class SequenceEngine {
     step: SequenceStep,
     organizationId: string
   ): Promise<void> {
-    console.log(`[Sequence Engine] Sending email to prospect ${enrollment.prospectId}`);
+    
 
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
@@ -299,7 +299,7 @@ export class SequenceEngine {
       throw new Error(result.error || 'Failed to send email');
     }
 
-    console.log(`[Sequence Engine] Email sent successfully to ${prospect.email}`);
+    
   }
 
   /**
@@ -310,7 +310,7 @@ export class SequenceEngine {
     step: SequenceStep,
     organizationId: string
   ): Promise<void> {
-    console.log(`[Sequence Engine] Sending LinkedIn message to prospect ${enrollment.prospectId}`);
+    
     
     // Get prospect details
     const prospect = await FirestoreService.get(
@@ -356,7 +356,7 @@ export class SequenceEngine {
     step: SequenceStep,
     organizationId: string
   ): Promise<void> {
-    console.log(`[Sequence Engine] Sending SMS to prospect ${enrollment.prospectId}`);
+    
     
     // Get prospect details
     const prospect = await FirestoreService.get(
@@ -405,7 +405,7 @@ export class SequenceEngine {
     step: SequenceStep,
     organizationId: string
   ): Promise<void> {
-    console.log(`[Sequence Engine] Creating task for prospect ${enrollment.prospectId}`);
+    
     
     // Get prospect details
     const prospect = await FirestoreService.get(
@@ -741,7 +741,7 @@ export class SequenceEngine {
     step: SequenceStep
   ): Promise<void> {
     // In production, this would add to a job queue
-    console.log(`[Sequence Engine] Scheduled step ${step.order} for ${enrollment.nextStepAt}`);
+    
   }
 }
 

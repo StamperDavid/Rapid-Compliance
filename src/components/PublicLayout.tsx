@@ -34,7 +34,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <Link href="/contact" className="text-gray-300 hover:text-white transition">
                 Contact
               </Link>
-              <Link href="/crm" className="text-gray-300 hover:text-white transition">
+              <Link href="/login" className="text-gray-300 hover:text-white transition">
                 Login
               </Link>
               <Link
@@ -109,4 +109,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
     </div>
   );
 }
+
+
+
+
+
 

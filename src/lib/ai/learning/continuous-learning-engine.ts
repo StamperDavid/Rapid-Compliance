@@ -261,6 +261,7 @@ export async function evaluateAndDeployModel(
 ): Promise<{
   deployed: boolean;
   reason: string;
+  testId?: string;
 }> {
   const config = await getLearningConfig(organizationId);
   
@@ -268,10 +269,140 @@ export async function evaluateAndDeployModel(
     return { deployed: false, reason: 'Auto-deployment disabled' };
   }
   
-  // TODO: Implement A/B testing and performance comparison
-  // For now, return manual approval required
-  return { deployed: false, reason: 'Awaiting human approval' };
+  // Import A/B testing service
+  const { createABTest, getActiveABTest } = await import('./ab-testing-service');
+  
+  // Check if there's already an active test
+  const existingTest = await getActiveABTest(organizationId);
+  if (existingTest && existingTest.status === 'running') {
+    return {
+      deployed: false,
+      reason: `A/B test already running (${existingTest.id}). Wait for completion.`,
+      testId: existingTest.id,
+    };
+  }
+  
+  // Get organization's current model
+  const orgConfig = await FirestoreService.get(
+    COLLECTIONS.ORGANIZATIONS,
+    organizationId
+  ) as any;
+  
+  const currentModel = orgConfig?.preferredModel || 'gpt-4';
+  
+  // Start A/B test
+  const test = await createABTest({
+    organizationId,
+    controlModel: currentModel,
+    treatmentModel: fineTunedModelId,
+    trafficSplit: 50, // 50/50 split
+    minSampleSize: config.minImprovementForDeploy > 0 ? 100 : 50,
+    confidenceThreshold: 95,
+  });
+  
+  console.log(`[Continuous Learning] Started A/B test: ${test.id}`);
+  console.log(`[Continuous Learning] Control: ${currentModel}, Treatment: ${fineTunedModelId}`);
+  
+  return {
+    deployed: false,
+    reason: `A/B test started. Fine-tuned model will be evaluated against base model. Test ID: ${test.id}`,
+    testId: test.id,
+  };
 }
+
+/**
+ * Process completed fine-tuning job and start A/B testing
+ */
+export async function processCompletedFineTuningJob(
+  organizationId: string,
+  jobId: string
+): Promise<{
+  success: boolean;
+  message: string;
+  testId?: string;
+}> {
+  // Get the job
+  const job = await FirestoreService.get(
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    jobId
+  ) as any;
+  
+  if (!job) {
+    return { success: false, message: 'Job not found' };
+  }
+  
+  if (job.status !== 'completed' || !job.fineTunedModelId) {
+    return { success: false, message: `Job not ready: status=${job.status}` };
+  }
+  
+  // Start A/B testing
+  const result = await evaluateAndDeployModel(organizationId, job.fineTunedModelId);
+  
+  // Update job with test info
+  await FirestoreService.update(
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+    jobId,
+    {
+      abTestId: result.testId,
+      abTestStartedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  );
+  
+  return {
+    success: true,
+    message: result.reason,
+    testId: result.testId,
+  };
+}
+
+/**
+ * Check A/B test results and auto-deploy if winner
+ */
+export async function checkAndDeployWinner(
+  organizationId: string
+): Promise<{
+  deployed: boolean;
+  model?: string;
+  reason: string;
+}> {
+  const { getActiveABTest, completeABTestAndDeploy } = await import('./ab-testing-service');
+  
+  const test = await getActiveABTest(organizationId);
+  
+  if (!test) {
+    return { deployed: false, reason: 'No active A/B test' };
+  }
+  
+  if (test.status === 'running') {
+    const progress = Math.min(
+      test.metrics.controlConversations / test.minSampleSize,
+      test.metrics.treatmentConversations / test.minSampleSize
+    ) * 100;
+    
+    return {
+      deployed: false,
+      reason: `Test still running (${progress.toFixed(0)}% complete). Need ${test.minSampleSize} conversations each.`,
+    };
+  }
+  
+  // Get config to check auto-deploy setting
+  const config = await getLearningConfig(organizationId);
+  const autoDeploy = config?.autoDeployFineTunedModels ?? false;
+  
+  const result = await completeABTestAndDeploy(organizationId, test.id, autoDeploy);
+  
+  return {
+    deployed: result.deployed,
+    model: result.model,
+    reason: result.reason,
+  };
+}
+
+
+
+
+
 
 
 

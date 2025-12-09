@@ -5,8 +5,7 @@ import { useState, useEffect } from 'react';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import { FirestoreService } from '@/lib/firebase/firestore-service';
-import { COLLECTIONS } from '@/lib/firebase/constants';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -29,14 +28,14 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
+    // LEGACY BACKUP (DO NOT USE): const savedTheme = localStorage.getItem('appTheme');
+    // LEGACY BACKUP (DO NOT USE): if (savedTheme) {
+    // LEGACY BACKUP (DO NOT USE):   try {
+    // LEGACY BACKUP (DO NOT USE):     setTheme(JSON.parse(savedTheme));
+    // LEGACY BACKUP (DO NOT USE):   } catch (error) {
+    // LEGACY BACKUP (DO NOT USE):     console.error('Failed to load theme:', error);
+    // LEGACY BACKUP (DO NOT USE):   }
+    // LEGACY BACKUP (DO NOT USE): }
   }, []);
 
   useEffect(() => {
@@ -45,9 +44,9 @@ export default function ProfilePage() {
         ...prev,
         displayName: user.displayName || '',
         email: user.email || '',
-        phone: user.phone || '',
-        title: user.title || '',
-        department: user.department || '',
+        phone: (user as any).phone || '',
+        title: (user as any).title || '',
+        department: (user as any).department || '',
       }));
     }
   }, [user]);

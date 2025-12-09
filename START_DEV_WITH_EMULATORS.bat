@@ -48,3 +48,8 @@ echo Starting Next.js development server...
 echo.
 npm run dev
 
+
+
+
+
+

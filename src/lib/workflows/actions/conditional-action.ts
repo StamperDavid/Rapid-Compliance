@@ -96,34 +96,79 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
       fieldValue = getNestedValue(triggerData, condition.field);
       break;
     case 'entity':
-      // TODO: Query entity
-      fieldValue = null;
+      // Query entity from trigger data context
+      // The entity data should be populated in triggerData.entity or triggerData.entities
+      const entityData = triggerData?.entity || triggerData?.record || triggerData;
+      fieldValue = getNestedValue(entityData, condition.field);
       break;
     case 'variable':
-      // TODO: Get from workflow variables
-      fieldValue = null;
+      // Get from workflow variables stored in triggerData._variables
+      const variables = triggerData?._variables || triggerData?.variables || {};
+      fieldValue = getNestedValue(variables, condition.field);
       break;
     case 'date':
-      fieldValue = new Date();
+      // Handle date comparisons
+      if (condition.field === 'now') {
+        fieldValue = new Date();
+      } else if (condition.field === 'today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        fieldValue = today;
+      } else {
+        fieldValue = new Date(getNestedValue(triggerData, condition.field));
+      }
       break;
     default:
       fieldValue = null;
   }
   
-  // Compare
+  // Compare based on operator
   switch (condition.operator) {
     case 'equals':
+      // Handle date comparison
+      if (fieldValue instanceof Date && condition.value) {
+        const compareDate = new Date(condition.value as string);
+        return fieldValue.getTime() === compareDate.getTime();
+      }
       return fieldValue === condition.value;
     case 'not_equals':
       return fieldValue !== condition.value;
     case 'contains':
-      return String(fieldValue).includes(String(condition.value));
+      return String(fieldValue || '').toLowerCase().includes(String(condition.value || '').toLowerCase());
+    case 'not_contains':
+      return !String(fieldValue || '').toLowerCase().includes(String(condition.value || '').toLowerCase());
     case 'greater_than':
+      if (fieldValue instanceof Date && condition.value) {
+        return fieldValue.getTime() > new Date(condition.value as string).getTime();
+      }
       return Number(fieldValue) > Number(condition.value);
     case 'less_than':
+      if (fieldValue instanceof Date && condition.value) {
+        return fieldValue.getTime() < new Date(condition.value as string).getTime();
+      }
       return Number(fieldValue) < Number(condition.value);
+    case 'greater_than_or_equals':
+      return Number(fieldValue) >= Number(condition.value);
+    case 'less_than_or_equals':
+      return Number(fieldValue) <= Number(condition.value);
     case 'exists':
-      return fieldValue !== undefined && fieldValue !== null;
+      return fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
+    case 'not_exists':
+      return fieldValue === undefined || fieldValue === null || fieldValue === '';
+    case 'starts_with':
+      return String(fieldValue || '').toLowerCase().startsWith(String(condition.value || '').toLowerCase());
+    case 'ends_with':
+      return String(fieldValue || '').toLowerCase().endsWith(String(condition.value || '').toLowerCase());
+    case 'in':
+      const inArray = Array.isArray(condition.value) ? condition.value : String(condition.value).split(',');
+      return inArray.includes(fieldValue);
+    case 'not_in':
+      const notInArray = Array.isArray(condition.value) ? condition.value : String(condition.value).split(',');
+      return !notInArray.includes(fieldValue);
+    case 'is_empty':
+      return !fieldValue || (Array.isArray(fieldValue) && fieldValue.length === 0);
+    case 'is_not_empty':
+      return fieldValue && (!Array.isArray(fieldValue) || fieldValue.length > 0);
     default:
       return false;
   }

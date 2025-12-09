@@ -5,11 +5,21 @@
  */
 
 const admin = require('firebase-admin');
+const path = require('path');
+const fs = require('fs');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
-  // Check if we have a service account key
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  // Try to load service account from local file
+  const serviceAccountPath = path.join(__dirname, '..', 'serviceAccountKey.json');
+  
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = require(serviceAccountPath);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log('✅ Using local serviceAccountKey.json');
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
@@ -194,4 +204,9 @@ seedDemoAccounts()
     console.error('\n❌ Failed:', error);
     process.exit(1);
   });
+
+
+
+
+
 

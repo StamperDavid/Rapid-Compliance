@@ -9,8 +9,8 @@
  */
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, doc, setDoc, collection, Timestamp } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, doc, setDoc, collection, Timestamp, connectFirestoreEmulator } from 'firebase/firestore';
 import { MOCK_TEST_ORGANIZATIONS } from '../src/lib/test-data/mock-organizations';
 import type { CompleteTestOrganization } from '../src/lib/test-data/mock-organizations';
 
@@ -25,10 +25,14 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Connect to emulators
-auth.useEmulator('http://localhost:9099');
-// @ts-ignore
-db._settings = { host: 'localhost:8080', ssl: false };
+// Connect to emulators (Firebase v9+ modular SDK)
+try {
+  connectAuthEmulator(auth, 'http://localhost:9099');
+  connectFirestoreEmulator(db, 'localhost', 8080);
+} catch (error) {
+  // Emulators already connected or not available
+  console.log('Emulators not connected:', error);
+}
 
 interface SeedResult {
   orgId: string;

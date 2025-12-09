@@ -21,3 +21,8 @@ REM Start Next.js dev server
 echo Starting Next.js development server...
 npm run dev
 
+
+
+
+
+

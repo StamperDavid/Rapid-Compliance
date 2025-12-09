@@ -387,25 +387,30 @@ export class SchemaService {
 
 /**
  * Record-specific operations (dynamic entities)
+ * Path: organizations/{orgId}/workspaces/{workspaceId}/entities/{entityName}/records
  */
 export class RecordService {
+  private static getCollectionPath(orgId: string, workspaceId: string, entityName: string): string {
+    return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${entityName}/${COLLECTIONS.RECORDS}`;
+  }
+
   static async get(orgId: string, workspaceId: string, entityName: string, recordId: string) {
     return FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${entityName}`,
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
       recordId
     );
   }
 
   static async getAll(orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[] = []) {
     return FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${entityName}`,
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
       filters
     );
   }
 
   static async set(orgId: string, workspaceId: string, entityName: string, recordId: string, data: any) {
     return FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${entityName}`,
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
       recordId,
       data,
       false
@@ -414,7 +419,7 @@ export class RecordService {
 
   static async update(orgId: string, workspaceId: string, entityName: string, recordId: string, data: any) {
     return FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${entityName}`,
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
       recordId,
       data
     );
@@ -422,14 +427,14 @@ export class RecordService {
 
   static async delete(orgId: string, workspaceId: string, entityName: string, recordId: string) {
     return FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${entityName}`,
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
       recordId
     );
   }
 
   static subscribe(orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[], callback: (data: any[]) => void) {
     return FirestoreService.subscribeToCollection(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/${entityName}`,
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
       filters,
       callback
     );

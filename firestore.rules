@@ -7,6 +7,13 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    // Helper function to check if user is a platform super admin
+    function isSuperAdmin() {
+      return isAuthenticated() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
+    }
+    
     // Helper function to get user's organization ID
     function getUserOrgId() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
@@ -24,16 +31,19 @@ service cloud.firestore {
     
     // Helper function to check if user is admin or owner
     function isAdminOrOwner() {
-      return getUserRole() in ['admin', 'owner'];
+      return getUserRole() in ['admin', 'owner', 'super_admin'];
     }
     
     // Helper function to check if user is manager or above
     function isManagerOrAbove() {
-      return getUserRole() in ['admin', 'owner', 'manager'];
+      return getUserRole() in ['admin', 'owner', 'manager', 'super_admin'];
     }
     
     // Users collection
     match /users/{userId} {
+      // Super admins have FULL access to ALL users (IT support)
+      allow read, write: if isSuperAdmin();
+      
       // Users can read their own profile
       allow read: if isAuthenticated() && request.auth.uid == userId;
       
@@ -53,22 +63,27 @@ service cloud.firestore {
     
     // Organizations collection
     match /organizations/{orgId} {
+      // Platform super admins have FULL access to ALL organizations
+      allow read, write: if isSuperAdmin();
+      
       // Users can read their own organization
       allow read: if isAuthenticated() && belongsToOrg(orgId);
       
-      // Only owners can update organization
+      // Only owners can update their own organization
       allow update: if isAuthenticated() 
         && belongsToOrg(orgId)
         && getUserRole() == 'owner';
       
-      // Only platform admins can create/delete organizations
-      // (This would be handled server-side in production)
+      // Only platform admins can create organizations
       allow create: if isAuthenticated() && isAdminOrOwner();
-      allow delete: if false; // Never allow deletion via client
+      allow delete: if false; // Never allow deletion via client (use super_admin write rule above)
     }
     
     // Workspaces collection
     match /workspaces/{workspaceId} {
+      // Super admins have FULL access (IT support)
+      allow read, write: if isSuperAdmin();
+      
       // Users can read workspaces in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -86,6 +101,9 @@ service cloud.firestore {
     
     // Schemas collection
     match /schemas/{schemaId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read schemas in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -103,6 +121,9 @@ service cloud.firestore {
     
     // Records collection (entity records)
     match /records/{recordId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read records in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -119,6 +140,9 @@ service cloud.firestore {
     
     // Workflows collection
     match /workflows/{workflowId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read workflows in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -136,6 +160,9 @@ service cloud.firestore {
     
     // Email campaigns collection
     match /emailCampaigns/{campaignId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read campaigns in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -153,6 +180,9 @@ service cloud.firestore {
     
     // Nurture sequences collection
     match /nurtureSequences/{sequenceId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read sequences in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -170,6 +200,9 @@ service cloud.firestore {
     
     // API keys collection (client-specific)
     match /apiKeys/{keyId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can only read their own organization's API keys
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId)
@@ -183,14 +216,20 @@ service cloud.firestore {
     
     // Platform API keys (admin-only)
     match /admin/{document=**} {
-      // Only platform admins can access
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Platform admins can also access
       allow read, write: if isAuthenticated() 
         && getUserRole() == 'admin'
-        && getUserOrgId() == 'platform'; // Special platform organization
+        && getUserOrgId() == 'platform';
     }
     
     // Golden Masters collection (AI agent configs)
     match /goldenMasters/{masterId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read Golden Masters in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -208,6 +247,9 @@ service cloud.firestore {
     
     // Customer Memories collection (AI agent memories)
     match /customerMemories/{memoryId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read memories in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -224,6 +266,9 @@ service cloud.firestore {
     
     // Themes collection
     match /themes/{themeId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read themes in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -241,6 +286,9 @@ service cloud.firestore {
     
     // Integrations collection
     match /integrations/{integrationId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
       // Users can read integrations in their organization
       allow read: if isAuthenticated() 
         && belongsToOrg(resource.data.organizationId);
@@ -258,8 +306,48 @@ service cloud.firestore {
     
     // Organization subcollections (leads, deals, activities, etc.)
     match /organizations/{orgId}/{subcollection}/{docId} {
+      // Super admins have FULL access (IT support)
+      allow read, write: if isSuperAdmin();
+      
       // Allow authenticated users to read/write subcollections in their org
       allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Nested subcollections (records within workspaces, etc.)
+    match /organizations/{orgId}/workspaces/{workspaceId}/{subcollection}/{docId} {
+      // Super admins have FULL access (IT support)
+      allow read, write: if isSuperAdmin();
+      
+      // Allow authenticated users to read/write in their org
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Deep nested collections (records within entity types)
+    match /organizations/{orgId}/workspaces/{workspaceId}/records/{entityName}/{recordId} {
+      // Super admins have FULL access (IT support)
+      allow read, write: if isSuperAdmin();
+      
+      // Allow authenticated users to read/write in their org
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Chat sessions
+    match /chatSessions/{sessionId} {
+      // Super admins have FULL access (IT support)
+      allow read, write: if isSuperAdmin();
+      
+      // Allow authenticated users to read/write their org's sessions
+      allow read, write: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+    }
+    
+    // Chat messages within sessions
+    match /chatSessions/{sessionId}/messages/{messageId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Allow if user belongs to the session's org
+      allow read, write: if isAuthenticated() 
+        && belongsToOrg(get(/databases/$(database)/documents/chatSessions/$(sessionId)).data.organizationId);
     }
     
     // Default: Deny all other access

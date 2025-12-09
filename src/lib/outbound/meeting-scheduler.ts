@@ -92,7 +92,7 @@ export async function findAvailableSlots(
   endDate: Date,
   timezone: string = 'America/New_York'
 ): Promise<MeetingSlot[]> {
-  console.log(`[Meeting Scheduler] Finding ${duration}min slots from ${startDate} to ${endDate}`);
+  
 
   const slots: MeetingSlot[] = [];
 
@@ -160,7 +160,7 @@ export async function scheduleMeeting(
   hostUserId: string,
   organizationId: string
 ): Promise<ScheduledMeeting> {
-  console.log(`[Meeting Scheduler] Scheduling ${request.duration}min ${request.meetingType} with ${request.prospectEmail}`);
+  
 
   try {
     // Find available slots
@@ -239,7 +239,7 @@ export async function scheduleMeeting(
     // Send calendar invite
     await sendCalendarInvite(meeting);
 
-    console.log(`[Meeting Scheduler] Meeting scheduled: ${meetingId} at ${meeting.startTime}`);
+    
 
     return meeting;
   } catch (error) {
@@ -256,7 +256,7 @@ export async function rescheduleMeeting(
   newStartTime: Date,
   organizationId: string
 ): Promise<ScheduledMeeting> {
-  console.log(`[Meeting Scheduler] Rescheduling meeting ${meetingId} to ${newStartTime}`);
+  
 
   // Get existing meeting
   const meeting = await getMeetingById(meetingId, organizationId);
@@ -291,7 +291,7 @@ export async function cancelMeeting(
   organizationId: string,
   reason?: string
 ): Promise<void> {
-  console.log(`[Meeting Scheduler] Cancelling meeting ${meetingId}`);
+  
 
   const meeting = await getMeetingById(meetingId, organizationId);
   if (!meeting) {
@@ -314,7 +314,7 @@ export async function cancelMeeting(
  * Extract meeting time from natural language
  */
 export async function extractMeetingTime(text: string): Promise<Date | null> {
-  console.log(`[Meeting Scheduler] Extracting time from: "${text}"`);
+  
 
   try {
     // Use AI to parse natural language date/time
@@ -371,11 +371,45 @@ function getMeetingDescription(type: string): string {
 }
 
 async function getHostDetails(userId: string): Promise<{ name: string; email: string }> {
-  // TODO: Get from user database
-  return {
-    name: 'Sales Team',
-    email: 'sales@company.com',
-  };
+  try {
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    
+    // Get user from Firestore
+    const user = await FirestoreService.get(COLLECTIONS.USERS, userId) as any;
+    
+    if (user) {
+      return {
+        name: user.name || user.displayName || 'Sales Team',
+        email: user.email || 'sales@company.com',
+      };
+    }
+    
+    // Fallback: Try to get from Firebase Auth
+    const admin = await import('firebase-admin');
+    if (admin.apps.length > 0) {
+      try {
+        const authUser = await admin.auth().getUser(userId);
+        return {
+          name: authUser.displayName || 'Sales Team',
+          email: authUser.email || 'sales@company.com',
+        };
+      } catch {
+        // User not found in Auth
+      }
+    }
+    
+    // Default fallback
+    return {
+      name: 'Sales Team',
+      email: 'sales@company.com',
+    };
+  } catch (error) {
+    console.error('[Meeting Scheduler] Error getting host details:', error);
+    return {
+      name: 'Sales Team',
+      email: 'sales@company.com',
+    };
+  }
 }
 
 async function getUserMeetings(
@@ -438,7 +472,7 @@ async function createCalendarEvent(meeting: ScheduledMeeting): Promise<{ id: str
   
   if (!tokens) {
     // Fallback if no calendar connected
-    console.log('[Meeting Scheduler] No calendar connected, creating meeting in database only');
+    
     return {
       id: `cal_${meeting.id}`,
       link: `https://meet.google.com/${meeting.id}`,
@@ -477,7 +511,7 @@ async function createCalendarEvent(meeting: ScheduledMeeting): Promise<{ id: str
       }
     );
 
-    console.log('[Meeting Scheduler] Calendar event created:', event.id);
+    
 
     return {
       id: event.id,
@@ -515,7 +549,7 @@ async function updateCalendarEvent(meeting: ScheduledMeeting): Promise<void> {
       }
     );
 
-    console.log('[Meeting Scheduler] Calendar event updated');
+    
   } catch (error) {
     console.error('[Meeting Scheduler] Error updating calendar event:', error);
   }
@@ -530,7 +564,7 @@ async function cancelCalendarEvent(calendarEventId: string, userId?: string): Pr
   try {
     const { deleteEvent } = await import('@/lib/integrations/google-calendar-service');
     await deleteEvent(tokens, 'primary', calendarEventId);
-    console.log('[Meeting Scheduler] Calendar event cancelled');
+    
   } catch (error) {
     console.error('[Meeting Scheduler] Error cancelling calendar event:', error);
   }
@@ -575,7 +609,90 @@ async function sendMeetingUpdate(
   updateType: 'rescheduled' | 'cancelled',
   reason?: string
 ): Promise<void> {
-  // TODO: Send update email
-  console.log(`[Meeting Scheduler] Sending ${updateType} email`);
+  try {
+    const { sendEmail } = await import('@/lib/integrations/sendgrid-service');
+    
+    // Get organization settings for email templates
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const orgSettings = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${meeting.organizationId}/settings`,
+      'email'
+    ) as any;
+    
+    const companyName = orgSettings?.companyName || 'Our Team';
+    const replyTo = orgSettings?.replyToEmail || meeting.host.email;
+    
+    // Build email content based on update type
+    let subject: string;
+    let htmlContent: string;
+    
+    const meetingDate = new Date(meeting.startTime).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const meetingTime = new Date(meeting.startTime).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    });
+    
+    if (updateType === 'rescheduled') {
+      subject = `Meeting Rescheduled: ${meeting.title}`;
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Meeting Rescheduled</h2>
+          <p>Hi ${meeting.attendees[0]?.name || 'there'},</p>
+          <p>Your meeting "<strong>${meeting.title}</strong>" has been rescheduled.</p>
+          
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>New Date:</strong> ${meetingDate}</p>
+            <p><strong>New Time:</strong> ${meetingTime}</p>
+            ${meeting.meetingLink ? `<p><strong>Meeting Link:</strong> <a href="${meeting.meetingLink}">${meeting.meetingLink}</a></p>` : ''}
+          </div>
+          
+          ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+          
+          <p>If this new time doesn't work for you, please let us know and we'll find another slot.</p>
+          
+          <p>Best regards,<br>${meeting.host.name}<br>${companyName}</p>
+        </div>
+      `;
+    } else {
+      subject = `Meeting Cancelled: ${meeting.title}`;
+      htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Meeting Cancelled</h2>
+          <p>Hi ${meeting.attendees[0]?.name || 'there'},</p>
+          <p>Unfortunately, your meeting "<strong>${meeting.title}</strong>" scheduled for ${meetingDate} at ${meetingTime} has been cancelled.</p>
+          
+          ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+          
+          <p>If you'd like to reschedule, please reply to this email or use our booking link.</p>
+          
+          <p>We apologize for any inconvenience.</p>
+          
+          <p>Best regards,<br>${meeting.host.name}<br>${companyName}</p>
+        </div>
+      `;
+    }
+    
+    // Send to all attendees
+    for (const attendee of meeting.attendees) {
+      await sendEmail({
+        to: attendee.email,
+        subject,
+        html: htmlContent,
+        from: meeting.host.email,
+        replyTo,
+      });
+    }
+    
+    console.log(`[Meeting Scheduler] Sent ${updateType} emails to ${meeting.attendees.length} attendees`);
+  } catch (error) {
+    console.error('[Meeting Scheduler] Error sending update email:', error);
+    // Don't throw - email failure shouldn't block the main operation
+  }
 }
 

@@ -1,18 +1,37 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
+interface SubscriptionData {
+  plan: string;
+  status: string;
+  currentPeriodEnd: string;
+  trialEnd: string | null;
+  usage: {
+    records: number;
+    aiConversations: number;
+    emails: number;
+  };
+}
+
 export default function BillingSettingsPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const router = useRouter();
+  const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [upgrading, setUpgrading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('professional');
 
-  React.useEffect(() => {
+  useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme) {
       try {
@@ -21,37 +40,141 @@ export default function BillingSettingsPage() {
         console.error('Failed to load theme:', error);
       }
     }
-  }, []);
+
+    // Load organization billing data
+    loadBillingData();
+  }, [orgId]);
+
+  const loadBillingData = async () => {
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+      
+      if (org) {
+        setSubscription({
+          plan: org.planId || org.plan || 'starter',
+          status: org.subscriptionStatus || 'trialing',
+          currentPeriodEnd: org.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          trialEnd: org.trialEndsAt || org.trialEnd || null,
+          usage: org.usage || { records: 0, aiConversations: 0, emails: 0 },
+        });
+        setSelectedPlan(org.planId || org.plan || 'starter');
+      }
+    } catch (error) {
+      console.error('Failed to load billing data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpgrade = async (planId: string) => {
+    if (planId === 'enterprise') {
+      // Contact sales for enterprise
+      window.location.href = '/contact?plan=enterprise';
+      return;
+    }
+
+    setUpgrading(true);
+    try {
+      const response = await fetch('/api/billing/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          planId,
+          email: user?.email,
+          name: user?.displayName,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.clientSecret) {
+        // Redirect to Stripe checkout or open payment modal
+        // For now, just show success
+        alert('Upgrade initiated! Complete payment to activate your new plan.');
+        loadBillingData();
+      } else if (data.success) {
+        alert('Plan updated successfully!');
+        loadBillingData();
+      } else {
+        throw new Error(data.error || 'Failed to upgrade plan');
+      }
+    } catch (error: any) {
+      console.error('Upgrade error:', error);
+      alert(error.message || 'Failed to upgrade plan. Please try again.');
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      const response = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: orgId }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Failed to open billing portal');
+      }
+    } catch (error: any) {
+      console.error('Billing portal error:', error);
+      alert('Billing portal is not available. Please contact support.');
+    }
+  };
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   const plans = [
     {
-      id: 'starter',
-      name: 'Starter',
+      id: 'agent-only',
+      name: 'Agent Only',
       price: '$29',
       period: 'month',
+      limits: { records: 500, aiConversations: 100, emails: 500 },
       features: [
-        'Up to 1,000 contacts',
-        '1 user',
-        'Basic CRM features',
-        'Email support',
-        '1GB storage'
+        'AI Chat Widget',
+        'Up to 500 contacts',
+        '100 AI conversations/month',
+        'Basic analytics',
+        'Email support'
+      ]
+    },
+    {
+      id: 'starter',
+      name: 'Starter',
+      price: '$49',
+      period: 'month',
+      limits: { records: 2500, aiConversations: 500, emails: 2500 },
+      features: [
+        'Everything in Agent Only',
+        'Up to 2,500 contacts',
+        '500 AI conversations/month',
+        'Email sequences',
+        'CRM features',
+        'Priority support'
       ]
     },
     {
       id: 'professional',
       name: 'Professional',
-      price: '$99',
+      price: '$149',
       period: 'month',
+      limits: { records: 25000, aiConversations: 2500, emails: 25000 },
       features: [
-        'Up to 10,000 contacts',
-        '5 users',
-        'Advanced CRM + AI features',
-        'Priority support',
+        'Everything in Starter',
+        'Up to 25,000 contacts',
+        '2,500 AI conversations/month',
+        'Advanced AI features',
         'Custom schemas',
-        '10GB storage',
-        'API access'
+        'API access',
+        'Team collaboration'
       ],
       popular: true
     },
@@ -60,18 +183,35 @@ export default function BillingSettingsPage() {
       name: 'Enterprise',
       price: 'Custom',
       period: '',
+      limits: { records: -1, aiConversations: -1, emails: -1 },
       features: [
+        'Everything in Professional',
         'Unlimited contacts',
-        'Unlimited users',
-        'Full platform access',
-        '24/7 dedicated support',
-        'Custom integrations',
-        'Unlimited storage',
+        'Unlimited AI conversations',
         'White-label options',
+        'Dedicated support',
+        'Custom integrations',
         'SLA guarantee'
       ]
     }
   ];
+
+  const currentPlan = plans.find(p => p.id === subscription?.plan) || plans[0];
+  const isTrialing = subscription?.status === 'trialing';
+  const trialDaysLeft = subscription?.trialEnd
+    ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: '#666' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+          <p>Loading billing information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
@@ -89,7 +229,7 @@ export default function BillingSettingsPage() {
         }}>
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             <Link
-              href="/crm"
+              href={`/workspace/${orgId}/dashboard`}
               style={{
                 width: '100%',
                 padding: '0.875rem 1.25rem',
@@ -105,31 +245,8 @@ export default function BillingSettingsPage() {
               }}
             >
               <span style={{ fontSize: '1.25rem' }}>🏠</span>
-              {sidebarOpen && <span>Back to CRM</span>}
+              {sidebarOpen && <span>Dashboard</span>}
             </Link>
-
-            {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
-              <Link
-                key={key}
-                href={`/crm?view=${key}`}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  backgroundColor: 'transparent',
-                  color: '#999',
-                  borderLeft: '3px solid transparent',
-                  fontSize: '0.875rem',
-                  fontWeight: '400',
-                  textDecoration: 'none'
-                }}
-              >
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
-            ))}
           </nav>
 
           <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
@@ -156,7 +273,7 @@ export default function BillingSettingsPage() {
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
-              <Link href="/workspace/demo-org/settings" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+              <Link href={`/workspace/${orgId}/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
                 ← Back to Settings
               </Link>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Billing & Plans</h1>
@@ -165,39 +282,130 @@ export default function BillingSettingsPage() {
               </p>
             </div>
 
+            {/* Trial Banner */}
+            {isTrialing && trialDaysLeft > 0 && (
+              <div style={{
+                backgroundColor: '#0f3460',
+                border: '1px solid #1e4976',
+                borderRadius: '0.75rem',
+                padding: '1.5rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
+                    🎉 You're on a free trial!
+                  </div>
+                  <div style={{ color: '#93c5fd', fontSize: '0.875rem' }}>
+                    {trialDaysLeft} days left on your {currentPlan.name} trial
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleUpgrade(subscription?.plan || 'professional')}
+                  disabled={upgrading}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#fff',
+                    color: '#0f3460',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  {upgrading ? 'Processing...' : 'Upgrade Now'}
+                </button>
+              </div>
+            )}
+
             {/* Current Plan */}
             <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>Current Plan</h2>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                 <div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>Professional Plan</div>
-                  <div style={{ color: '#999', marginTop: '0.25rem' }}>$99/month • Renews on Dec 15, 2025</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
+                    {currentPlan.name} Plan
+                    {isTrialing && (
+                      <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', fontWeight: '600', backgroundColor: '#fbbf24', color: '#000', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>
+                        TRIAL
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ color: '#999', marginTop: '0.25rem' }}>
+                    {currentPlan.price}/{currentPlan.period || 'custom'} • 
+                    {subscription?.currentPeriodEnd && ` Renews on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`}
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Usage this month</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: primaryColor }}>3,247 / 10,000 contacts</div>
-                </div>
+                <button
+                  onClick={handleManageBilling}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#222',
+                    color: '#fff',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  Manage Billing
+                </button>
               </div>
               
               {/* Usage Bars */}
               <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#ccc', marginBottom: '0.5rem' }}>
-                    <span>Storage</span>
-                    <span>4.2 GB / 10 GB</span>
+                    <span>Contacts</span>
+                    <span>
+                      {subscription?.usage?.records?.toLocaleString() || 0} / 
+                      {currentPlan.limits.records === -1 ? ' Unlimited' : ` ${currentPlan.limits.records.toLocaleString()}`}
+                    </span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: '42%', height: '100%', backgroundColor: primaryColor }}></div>
+                    <div style={{ 
+                      width: currentPlan.limits.records === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.records || 0) / currentPlan.limits.records) * 100)}%`, 
+                      height: '100%', 
+                      backgroundColor: primaryColor 
+                    }}></div>
                   </div>
                 </div>
                 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#ccc', marginBottom: '0.5rem' }}>
-                    <span>API Calls</span>
-                    <span>12,450 / 50,000</span>
+                    <span>AI Conversations</span>
+                    <span>
+                      {subscription?.usage?.aiConversations?.toLocaleString() || 0} / 
+                      {currentPlan.limits.aiConversations === -1 ? ' Unlimited' : ` ${currentPlan.limits.aiConversations.toLocaleString()}`}
+                    </span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: '25%', height: '100%', backgroundColor: primaryColor }}></div>
+                    <div style={{ 
+                      width: currentPlan.limits.aiConversations === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.aiConversations || 0) / currentPlan.limits.aiConversations) * 100)}%`, 
+                      height: '100%', 
+                      backgroundColor: '#4ade80' 
+                    }}></div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#ccc', marginBottom: '0.5rem' }}>
+                    <span>Emails Sent</span>
+                    <span>
+                      {subscription?.usage?.emails?.toLocaleString() || 0} / 
+                      {currentPlan.limits.emails === -1 ? ' Unlimited' : ` ${currentPlan.limits.emails.toLocaleString()}`}
+                    </span>
+                  </div>
+                  <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: currentPlan.limits.emails === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.emails || 0) / currentPlan.limits.emails) * 100)}%`, 
+                      height: '100%', 
+                      backgroundColor: '#fbbf24' 
+                    }}></div>
                   </div>
                 </div>
               </div>
@@ -206,115 +414,101 @@ export default function BillingSettingsPage() {
             {/* Available Plans */}
             <div style={{ marginBottom: '2rem' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Available Plans</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {plans.map(plan => (
-                  <div
-                    key={plan.id}
-                    style={{
-                      backgroundColor: '#1a1a1a',
-                      border: selectedPlan === plan.id ? `2px solid ${primaryColor}` : '1px solid #333',
-                      borderRadius: '1rem',
-                      padding: '2rem',
-                      position: 'relative'
-                    }}
-                  >
-                    {plan.popular && (
-                      <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', backgroundColor: primaryColor, color: '#fff', padding: '0.25rem 1rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' }}>
-                        CURRENT PLAN
-                      </div>
-                    )}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>{plan.name}</h3>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                        <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>{plan.price}</span>
-                        {plan.period && <span style={{ color: '#999', fontSize: '0.875rem' }}>/{plan.period}</span>}
-                      </div>
-                    </div>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: '1.5rem' }}>
-                      {plan.features.map((feature, idx) => (
-                        <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ccc', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
-                          <span style={{ color: primaryColor }}>✓</span>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      onClick={() => setSelectedPlan(plan.id)}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
+                {plans.map(plan => {
+                  const isCurrent = plan.id === subscription?.plan;
+                  const isUpgrade = plans.findIndex(p => p.id === plan.id) > plans.findIndex(p => p.id === subscription?.plan);
+                  
+                  return (
+                    <div
+                      key={plan.id}
                       style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        backgroundColor: selectedPlan === plan.id ? '#222' : primaryColor,
-                        color: '#fff',
-                        border: selectedPlan === plan.id ? '1px solid #333' : 'none',
-                        borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
+                        backgroundColor: '#1a1a1a',
+                        border: isCurrent ? `2px solid ${primaryColor}` : '1px solid #333',
+                        borderRadius: '1rem',
+                        padding: '1.5rem',
+                        position: 'relative'
                       }}
                     >
-                      {selectedPlan === plan.id ? 'Current Plan' : plan.id === 'enterprise' ? 'Contact Sales' : 'Upgrade'}
-                    </button>
-                  </div>
-                ))}
+                      {plan.popular && (
+                        <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', backgroundColor: primaryColor, color: '#fff', padding: '0.25rem 1rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' }}>
+                          MOST POPULAR
+                        </div>
+                      )}
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>{plan.name}</h3>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+                          <span style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>{plan.price}</span>
+                          {plan.period && <span style={{ color: '#999', fontSize: '0.875rem' }}>/{plan.period}</span>}
+                        </div>
+                      </div>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: '1.5rem' }}>
+                        {plan.features.slice(0, 5).map((feature, idx) => (
+                          <li key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ccc', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+                            <span style={{ color: primaryColor }}>✓</span>
+                            {feature}
+                          </li>
+                        ))}
+                        {plan.features.length > 5 && (
+                          <li style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                            + {plan.features.length - 5} more features
+                          </li>
+                        )}
+                      </ul>
+                      <button
+                        onClick={() => !isCurrent && handleUpgrade(plan.id)}
+                        disabled={isCurrent || upgrading}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          backgroundColor: isCurrent ? '#222' : isUpgrade ? primaryColor : '#333',
+                          color: '#fff',
+                          border: isCurrent ? '1px solid #333' : 'none',
+                          borderRadius: '0.5rem',
+                          cursor: isCurrent ? 'default' : 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          opacity: upgrading ? 0.5 : 1
+                        }}
+                      >
+                        {isCurrent ? 'Current Plan' : plan.id === 'enterprise' ? 'Contact Sales' : isUpgrade ? 'Upgrade' : 'Downgrade'}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Payment Method */}
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Payment Method</h2>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ fontSize: '2rem' }}>💳</div>
-                  <div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>Visa ending in 4242</div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>Expires 12/2026</div>
-                  </div>
-                </div>
-                <button style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-                  Update
-                </button>
-              </div>
-            </div>
-
-            {/* Billing History */}
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Billing History</h2>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #333' }}>
-                      <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Date</th>
-                      <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Description</th>
-                      <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Amount</th>
-                      <th style={{ textAlign: 'center', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Status</th>
-                      <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.875rem', fontWeight: '600', color: '#999' }}>Invoice</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { date: 'Nov 15, 2025', description: 'Professional Plan', amount: '$99.00', status: 'Paid' },
-                      { date: 'Oct 15, 2025', description: 'Professional Plan', amount: '$99.00', status: 'Paid' },
-                      { date: 'Sep 15, 2025', description: 'Professional Plan', amount: '$99.00', status: 'Paid' }
-                    ].map((invoice, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #222' }}>
-                        <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#ccc' }}>{invoice.date}</td>
-                        <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#ccc' }}>{invoice.description}</td>
-                        <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#fff', textAlign: 'right', fontWeight: '600' }}>{invoice.amount}</td>
-                        <td style={{ padding: '1rem 0.75rem', textAlign: 'center' }}>
-                          <span style={{ display: 'inline-block', padding: '0.25rem 0.75rem', backgroundColor: '#0f4c0f', color: '#4ade80', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '600' }}>
-                            {invoice.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: '1rem 0.75rem', textAlign: 'right' }}>
-                          <button style={{ color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', textDecoration: 'underline' }}>
-                            Download
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {/* Need Help */}
+            <div style={{
+              backgroundColor: '#1a1a1a',
+              border: '1px solid #333',
+              borderRadius: '1rem',
+              padding: '2rem',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>💬</div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
+                Need help choosing a plan?
+              </h3>
+              <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+                Our team is here to help you find the perfect plan for your business
+              </p>
+              <Link
+                href="/contact"
+                style={{
+                  display: 'inline-block',
+                  padding: '0.75rem 2rem',
+                  backgroundColor: primaryColor,
+                  color: '#fff',
+                  borderRadius: '0.5rem',
+                  textDecoration: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}
+              >
+                Contact Sales
+              </Link>
             </div>
           </div>
         </div>
@@ -322,12 +516,3 @@ export default function BillingSettingsPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-

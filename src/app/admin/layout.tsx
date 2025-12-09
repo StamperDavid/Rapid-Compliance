@@ -13,11 +13,11 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { adminUser, loading } = useAdminAuth();
-
+  
   useEffect(() => {
     if (!loading && !adminUser) {
       // Redirect to admin login if not authenticated
-      router.push('/admin/login');
+      router.push('/admin-login');
     }
   }, [adminUser, loading, router]);
 

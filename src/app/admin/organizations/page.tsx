@@ -10,6 +10,7 @@ export default function OrganizationsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<'NOT_LOGGED_IN' | 'NOT_SUPER_ADMIN' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'trial' | 'suspended'>('all');
   const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'pro' | 'enterprise'>('all');
@@ -18,12 +19,41 @@ export default function OrganizationsPage() {
     async function loadOrganizations() {
       try {
         setLoading(true);
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        console.log('🔍 Loading organizations...');
+        const { auth } = await import('@/lib/firebase/config');
         
-        // Load all organizations from Firestore
-        const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+        const currentUser = auth.currentUser;
+        let orgs: any[] = [];
         
-        // Convert Firestore data to Organization type
+        if (!currentUser) {
+          console.warn('🔍 No authenticated user');
+          setAuthError('NOT_LOGGED_IN');
+          setLoading(false);
+          return;
+        }
+        
+        // Use API route to fetch data (bypasses Firestore rules)
+        const token = await currentUser.getIdToken();
+        
+        const response = await fetch('/api/admin/organizations', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          orgs = data.organizations || [];
+          console.log('🔍 Organizations loaded via API:', orgs.length);
+        } else if (response.status === 403) {
+          console.error('🔍 Not authorized as super_admin');
+          setAuthError('NOT_SUPER_ADMIN');
+          setLoading(false);
+          return;
+        } else {
+          const errorText = await response.text();
+          console.error('🔍 API error:', response.status, errorText);
+        }
+        
+        // Convert to Organization type
         const organizations = orgs.map((org: any) => ({
           id: org.id,
           name: org.name,
@@ -53,9 +83,9 @@ export default function OrganizationsPage() {
   }, []);
 
   const filteredOrgs = organizations.filter(org => {
-    const matchesSearch = org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.billingEmail.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (org.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (org.slug || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (org.billingEmail || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || org.status === filterStatus;
     const matchesPlan = filterPlan === 'all' || org.plan === filterPlan;
     return matchesSearch && matchesStatus && matchesPlan;
@@ -64,6 +94,46 @@ export default function OrganizationsPage() {
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
   const primaryColor = '#6366f1';
+
+  // Show auth error screen
+  if (authError) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '2rem' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>
+            {authError === 'NOT_LOGGED_IN' ? '🔐' : '⛔'}
+          </div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+            {authError === 'NOT_LOGGED_IN' ? 'Login Required' : 'Access Denied'}
+          </h1>
+          <p style={{ color: '#666', marginBottom: '2rem' }}>
+            {authError === 'NOT_LOGGED_IN' 
+              ? 'You need to login as a super admin to view organizations.'
+              : 'Your account does not have super_admin privileges.'}
+          </p>
+          <Link
+            href="/admin-login"
+            style={{
+              display: 'inline-block',
+              padding: '0.75rem 2rem',
+              backgroundColor: '#6366f1',
+              color: '#fff',
+              borderRadius: '0.5rem',
+              textDecoration: 'none',
+              fontWeight: '600'
+            }}
+          >
+            Go to Login
+          </Link>
+          <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', border: '1px solid #333' }}>
+            <p style={{ fontSize: '0.875rem', color: '#999' }}>
+              Use your platform super admin credentials to login.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>

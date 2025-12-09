@@ -85,3 +85,8 @@ else → error "No AI key configured"
 **No .env file needed. Ever.** ✅
 
 
+
+
+
+
+

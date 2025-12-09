@@ -44,3 +44,7 @@ next-env.d.ts
 # OS
 Thumbs.db
 
+
+serviceAccountKey.json
+.env.local.backup
+firebase-debug.log

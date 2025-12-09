@@ -546,8 +546,8 @@ export default function StorefrontSettingsPage() {
             </div>
           )}
 
-          {/* Theme Tab */}
-          {activeTab === 'theme' && (
+          {/* Theme Tab Removed - Storefront now inherits CRM theme automatically */}
+          {false && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>Storefront Colors</h3>

@@ -43,7 +43,8 @@ export async function sendUnifiedChatMessage(
   const { model, messages, systemInstruction, temperature, maxTokens, topP } = request;
   
   // Determine provider from model name
-  if (model.startsWith('gpt-')) {
+  if (model.startsWith('gpt-') || model.startsWith('ft:gpt-')) {
+    // Fine-tuned models start with ft:gpt-
     return await sendOpenAIMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
   } else if (model.startsWith('claude-')) {
     return await sendAnthropicMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
@@ -51,6 +52,68 @@ export async function sendUnifiedChatMessage(
     // Default to Gemini
     return await sendGeminiMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
   }
+}
+
+/**
+ * Send chat message with A/B testing support
+ * Automatically routes to the correct model based on active A/B tests
+ */
+export async function sendChatWithABTesting(
+  request: UnifiedChatRequest,
+  organizationId: string,
+  conversationId: string
+): Promise<UnifiedChatResponse & {
+  isTestGroup: boolean;
+  testId?: string;
+  actualModel: string;
+}> {
+  // Get model for this conversation (may be different due to A/B test)
+  const { getModelForConversation, recordConversationResult } = await import('./learning/ab-testing-service');
+  
+  const modelAssignment = await getModelForConversation(organizationId, conversationId);
+  
+  // Use the assigned model instead of requested model
+  const actualModel = modelAssignment.model;
+  const modifiedRequest = { ...request, model: actualModel };
+  
+  // Send the message
+  const response = await sendUnifiedChatMessage(modifiedRequest, organizationId);
+  
+  // If this conversation is part of an A/B test, we'll record the result later
+  // when we get feedback (rating, conversion, etc.)
+  
+  return {
+    ...response,
+    isTestGroup: modelAssignment.isTestGroup,
+    testId: modelAssignment.testId,
+    actualModel,
+  };
+}
+
+/**
+ * Record A/B test result for a conversation
+ * Call this when you get feedback (rating, conversion, etc.)
+ */
+export async function recordABTestResult(params: {
+  organizationId: string;
+  testId: string;
+  isTestGroup: boolean;
+  converted?: boolean;
+  rating?: number;
+  confidence: number;
+  tokensUsed: number;
+}): Promise<void> {
+  const { recordConversationResult } = await import('./learning/ab-testing-service');
+  
+  await recordConversationResult({
+    organizationId: params.organizationId,
+    testId: params.testId,
+    isTestGroup: params.isTestGroup,
+    converted: params.converted || false,
+    rating: params.rating,
+    confidence: params.confidence,
+    tokensUsed: params.tokensUsed,
+  });
 }
 
 /**

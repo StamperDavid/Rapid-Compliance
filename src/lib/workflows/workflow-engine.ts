@@ -183,6 +183,9 @@ async function executeAction(
   const { executeHTTPAction } = await import('./actions/http-action');
   const { executeDelayAction } = await import('./actions/delay-action');
   const { executeConditionalAction } = await import('./actions/conditional-action');
+  const { executeAIAgentAction } = await import('./actions/ai-agent-action');
+  const { executeSlackAction } = await import('./actions/slack-action');
+  const { executeLoopAction } = await import('./actions/loop-action');
   
   switch (action.type) {
     case 'send_email':
@@ -206,28 +209,32 @@ async function executeAction(
       return executeConditionalAction(action as any, triggerData, workflow, organizationId);
     
     case 'send_slack':
-      // TODO: Implement Slack action
-      throw new Error('Slack action not yet implemented');
+      return executeSlackAction(action as any, triggerData, organizationId);
     
     case 'loop':
-      // TODO: Implement loop action
-      throw new Error('Loop action not yet implemented');
+      return executeLoopAction(action as any, triggerData, workflow, organizationId);
     
     case 'ai_agent':
-      // TODO: Implement AI agent action
-      throw new Error('AI agent action not yet implemented');
+      return executeAIAgentAction(action as any, triggerData, organizationId);
     
     case 'cloud_function':
-      // TODO: Implement Cloud Function action
-      throw new Error('Cloud Function action not yet implemented');
+      // Cloud functions are called via HTTP action with the function URL
+      console.warn('[Workflow Engine] Cloud function actions should use http_request with function URL');
+      throw new Error('Cloud Function action: Use http_request with your function URL instead');
     
     case 'create_task':
-      // TODO: Implement create task action
-      throw new Error('Create task action not yet implemented');
+      // Create task is handled as entity action
+      return executeEntityAction({
+        ...action,
+        type: 'create_entity',
+        config: {
+          ...((action as any).config || {}),
+          entityType: 'tasks',
+        }
+      } as any, triggerData, organizationId);
     
     default:
       throw new Error(`Unknown action type: ${(action as any).type}`);
-  }
 }
 
 /**

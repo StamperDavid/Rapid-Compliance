@@ -29,12 +29,22 @@ export async function executeCreateEntityAction(
         value = getNestedValue(triggerData, mapping.sourceField || '');
         break;
       case 'variable':
-        // TODO: Get from workflow variables
-        value = getNestedValue(triggerData, mapping.sourceField || '');
+        // Get from workflow variables stored in triggerData._variables
+        const variables = triggerData?._variables || triggerData?.variables || {};
+        value = getNestedValue(variables, mapping.sourceField || '');
+        // Fallback to trigger data if not found in variables
+        if (value === undefined) {
+          value = getNestedValue(triggerData, mapping.sourceField || '');
+        }
         break;
       case 'ai':
-        // TODO: Generate using AI
-        value = '[AI Generated]';
+        // Generate using AI
+        value = await generateWithAI({
+          organizationId,
+          field: mapping.targetField,
+          prompt: mapping.aiPrompt || `Generate a value for field "${mapping.targetField}"`,
+          context: triggerData,
+        });
         break;
       default:
         value = null;
@@ -107,8 +117,16 @@ export async function executeUpdateEntityAction(
   } else if (action.targetRecord === 'specific' && action.entityId) {
     recordIds = [action.entityId];
   } else if (action.targetRecord === 'query' && action.query) {
-    // TODO: Query entities
-    throw new Error('Query-based update not yet implemented');
+    // Query entities matching the criteria
+    const queryResults = await queryEntities({
+      entityPath,
+      query: action.query,
+      triggerData,
+    });
+    recordIds = queryResults.map((r: any) => r.id);
+    if (recordIds.length === 0) {
+      throw new Error('No records found matching query');
+    }
   }
   
   // Build update data from field mappings
@@ -187,8 +205,17 @@ export async function executeDeleteEntityAction(
   } else if (action.targetRecord === 'specific' && action.entityId) {
     recordIds = [action.entityId];
   } else if (action.targetRecord === 'query' && action.query) {
-    // TODO: Query entities
-    throw new Error('Query-based delete not yet implemented');
+    // Query entities matching the criteria
+    const queryResults = await queryEntities({
+      entityPath,
+      query: action.query,
+      triggerData,
+    });
+    recordIds = queryResults.map((r: any) => r.id);
+    if (recordIds.length === 0) {
+      console.log('[Entity Action] No records found matching query for delete');
+      return { recordIds: [], success: true, message: 'No records matched query' };
+    }
   }
   
   // Delete records
@@ -280,5 +307,105 @@ function resolveVariables(config: any, triggerData: any): any {
  */
 function getNestedValue(obj: any, path: string): any {
   return path.split('.').reduce((current, key) => current?.[key], obj);
+}
+
+/**
+ * Generate value using AI
+ */
+async function generateWithAI(params: {
+  organizationId: string;
+  field: string;
+  prompt: string;
+  context: any;
+}): Promise<string> {
+  const { organizationId, field, prompt, context } = params;
+  
+  try {
+    const { sendUnifiedChatMessage } = await import('@/lib/ai/unified-ai-service');
+    
+    // Build context-aware prompt
+    const fullPrompt = `You are helping generate data for a workflow automation.
+
+Field to generate: ${field}
+Instructions: ${prompt}
+
+Context data:
+${JSON.stringify(context, null, 2).slice(0, 2000)}
+
+Generate ONLY the value for this field. Do not include any explanation or formatting - just the raw value.`;
+
+    const response = await sendUnifiedChatMessage({
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: fullPrompt }],
+      temperature: 0.7,
+      maxTokens: 500,
+    });
+    
+    return response.text.trim();
+  } catch (error) {
+    console.error('[Entity Action] AI generation failed:', error);
+    return `[AI Error: ${error}]`;
+  }
+}
+
+/**
+ * Query entities based on criteria
+ */
+async function queryEntities(params: {
+  entityPath: string;
+  query: any;
+  triggerData: any;
+}): Promise<any[]> {
+  const { entityPath, query, triggerData } = params;
+  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
+  
+  // Build Firestore query from criteria
+  const filters: any[] = [];
+  
+  if (query.filters && Array.isArray(query.filters)) {
+    for (const filter of query.filters) {
+      let value = filter.value;
+      
+      // Resolve dynamic values
+      if (typeof value === 'string' && value.startsWith('{{') && value.endsWith('}}')) {
+        const path = value.slice(2, -2).trim();
+        value = getNestedValue(triggerData, path);
+      }
+      
+      filters.push({
+        field: filter.field,
+        operator: mapOperator(filter.operator),
+        value,
+      });
+    }
+  }
+  
+  // Get matching records
+  const results = await FS.getAll(entityPath, filters);
+  
+  // Apply limit if specified
+  if (query.limit && typeof query.limit === 'number') {
+    return results.slice(0, query.limit);
+  }
+  
+  return results;
+}
+
+/**
+ * Map query operator to Firestore operator
+ */
+function mapOperator(op: string): string {
+  const operatorMap: Record<string, string> = {
+    'equals': '==',
+    'not_equals': '!=',
+    'greater_than': '>',
+    'less_than': '<',
+    'greater_than_or_equals': '>=',
+    'less_than_or_equals': '<=',
+    'contains': 'array-contains',
+    'in': 'in',
+    'not_in': 'not-in',
+  };
+  return operatorMap[op] || '==';
 }
 

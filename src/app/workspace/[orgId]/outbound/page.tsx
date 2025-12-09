@@ -11,14 +11,8 @@ export default function OutboundHomePage() {
   const [theme, setTheme] = React.useState<any>(null);
 
   React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
+    // LEGACY BACKUP (DO NOT USE): const savedTheme = localStorage.getItem('appTheme');
+    // TODO: Load theme from Firestore
   }, []);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
@@ -37,8 +31,8 @@ export default function OutboundHomePage() {
       title: 'Email Sequences',
       description: 'Automated multi-step email campaigns with smart triggers',
       href: `/workspace/${orgId}/outbound/sequences`,
-      status: 'Coming Soon',
-      color: '#f59e0b',
+      status: 'Available',
+      color: '#10b981',
     },
     {
       icon: '🤖',
@@ -226,6 +220,11 @@ export default function OutboundHomePage() {
     </div>
   );
 }
+
+
+
+
+
 
 
 
