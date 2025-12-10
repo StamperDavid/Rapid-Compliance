@@ -11,10 +11,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting - stricter for public endpoint
-    const rateLimitResponse = await rateLimitMiddleware(request, '/api/chat/public', {
-      maxRequests: 30,  // 30 requests
-      windowMs: 60000,  // per minute
-    });
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/chat/public');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
