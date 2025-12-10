@@ -1731,6 +1731,8 @@ The following fixes were made to resolve Vercel build errors. **Track these for 
 | `4d2dd80` | `src/app/workspace/[orgId]/outbound/sequences/page.tsx` | `user.uid` doesn't exist on `AppUser` type | Changed to `user.id` |
 | `24fbd47` | `src/app/workspace/[orgId]/outbound/sequences/page.tsx` | `emailsSent`/`emailsReplied` don't exist on `SequenceAnalytics` | Changed to `totalSent`/`totalReplied` |
 | `c5d8c65` | `src/app/workspace/[orgId]/settings/storefront/page.tsx` | `theme` property doesn't exist on `StorefrontConfig` | Added `theme` interface and default values |
+| `9d1078a` | `src/app/workspace/[orgId]/settings/storefront/page.tsx` | `buttonRadius` missing from theme | Added `buttonRadius` property |
+| `3611e84` | `src/components/integrations/GoogleCalendarIntegration.tsx` | `user.uid` doesn't exist on type `{}` | Added type annotations `{ uid?: string }` and `{ id?: string }` |
 
 ### Environment Variables Required for Production
 
