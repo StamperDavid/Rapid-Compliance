@@ -4,6 +4,7 @@
  */
 
 import { BaseAction } from '@/types/workflow';
+import { ModelName } from '@/types/ai-models';
 
 export interface AIAgentActionConfig extends BaseAction {
   type: 'ai_agent';
@@ -94,7 +95,7 @@ export async function executeAIAgentAction(
   }
 
   // Create provider and generate response
-  const provider = await AIProviderFactory.createProvider(selectedModel, organizationId);
+  const provider = await AIProviderFactory.createProvider(selectedModel as ModelName, organizationId);
   
   const response = await provider.generateResponse(
     messages,
