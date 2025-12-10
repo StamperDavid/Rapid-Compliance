@@ -37,8 +37,8 @@ export default function GoogleCalendarIntegration({
       // Get current user and org from localStorage
       // LEGACY BACKUP (DO NOT USE): const user = JSON.parse(localStorage.getItem('user') || '{}');
       // LEGACY BACKUP (DO NOT USE): const org = JSON.parse(localStorage.getItem('currentOrganization') || '{}');
-      const user = typeof window !== 'undefined' ? {} : {}; // TODO: Get from auth context
-      const org = typeof window !== 'undefined' ? {} : {}; // TODO: Get from route params
+      const user: { uid?: string } = typeof window !== 'undefined' ? {} : {}; // TODO: Get from auth context
+      const org: { id?: string } = typeof window !== 'undefined' ? {} : {}; // TODO: Get from route params
       
       if (!user.uid || !org.id) {
         console.error('User or organization not found');
