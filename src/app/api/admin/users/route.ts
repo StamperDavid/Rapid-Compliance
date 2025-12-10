@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
   const authResult = await verifyAdminRequest(request);
   
   if (!authResult.success) {
-    return createErrorResponse(authResult.error, authResult.status);
+    const { error, status } = authResult;
+    return createErrorResponse(error, status);
   }
   
   try {
@@ -89,7 +90,8 @@ export async function PATCH(request: NextRequest) {
   const authResult = await verifyAdminRequest(request);
   
   if (!authResult.success) {
-    return createErrorResponse(authResult.error, authResult.status);
+    const { error, status } = authResult;
+    return createErrorResponse(error, status);
   }
   
   try {
