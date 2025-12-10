@@ -13,13 +13,21 @@ export interface AdminUser {
   organizationId: string;
 }
 
-export type AuthResult = {
+export type AuthSuccess = {
   success: true;
   user: AdminUser;
-} | {
+};
+
+export type AuthError = {
   success: false;
   error: string;
   status: 401 | 403;
+};
+
+export type AuthResult = AuthSuccess | AuthError;
+
+export function isAuthError(result: AuthResult): result is AuthError {
+  return result.success === false;
 }
 
 /**

@@ -3,7 +3,8 @@ import { adminDb } from '@/lib/firebase/admin';
 import { 
   verifyAdminRequest, 
   createErrorResponse, 
-  createSuccessResponse 
+  createSuccessResponse,
+  isAuthError
 } from '@/lib/api/admin-auth';
 
 interface OrganizationData {
@@ -29,9 +30,8 @@ export async function GET(request: NextRequest) {
   // Verify admin authentication
   const authResult = await verifyAdminRequest(request);
   
-  if (!authResult.success) {
-    const { error, status } = authResult;
-    return createErrorResponse(error, status);
+  if (isAuthError(authResult)) {
+    return createErrorResponse(authResult.error, authResult.status);
   }
   
   try {
@@ -87,9 +87,8 @@ export async function POST(request: NextRequest) {
   // Verify admin authentication
   const authResult = await verifyAdminRequest(request);
   
-  if (!authResult.success) {
-    const { error, status } = authResult;
-    return createErrorResponse(error, status);
+  if (isAuthError(authResult)) {
+    return createErrorResponse(authResult.error, authResult.status);
   }
   
   try {
