@@ -1729,6 +1729,7 @@ The following fixes were made to resolve Vercel build errors. **Track these for 
 | `ced54b5` | `src/app/api/learning/ab-test/route.ts` | Importing `next-auth` which isn't installed | Removed unused import |
 | `8d56f3c` | `src/types/outbound-sequence.ts` | `OutboundSequence` type missing `settings` property | Added `SequenceSettings` interface and optional `settings` field |
 | `4d2dd80` | `src/app/workspace/[orgId]/outbound/sequences/page.tsx` | `user.uid` doesn't exist on `AppUser` type | Changed to `user.id` |
+| `24fbd47` | `src/app/workspace/[orgId]/outbound/sequences/page.tsx` | `emailsSent`/`emailsReplied` don't exist on `SequenceAnalytics` | Changed to `totalSent`/`totalReplied` |
 
 ### Environment Variables Required for Production
 
