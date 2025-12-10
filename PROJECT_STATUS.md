@@ -1730,6 +1730,7 @@ The following fixes were made to resolve Vercel build errors. **Track these for 
 | `8d56f3c` | `src/types/outbound-sequence.ts` | `OutboundSequence` type missing `settings` property | Added `SequenceSettings` interface and optional `settings` field |
 | `4d2dd80` | `src/app/workspace/[orgId]/outbound/sequences/page.tsx` | `user.uid` doesn't exist on `AppUser` type | Changed to `user.id` |
 | `24fbd47` | `src/app/workspace/[orgId]/outbound/sequences/page.tsx` | `emailsSent`/`emailsReplied` don't exist on `SequenceAnalytics` | Changed to `totalSent`/`totalReplied` |
+| `c5d8c65` | `src/app/workspace/[orgId]/settings/storefront/page.tsx` | `theme` property doesn't exist on `StorefrontConfig` | Added `theme` interface and default values |
 
 ### Environment Variables Required for Production
 
