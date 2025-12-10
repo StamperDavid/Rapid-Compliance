@@ -3,6 +3,20 @@
  * Multi-step email sequences with automation
  */
 
+export interface SequenceSettings {
+  stopOnReply?: boolean;
+  stopOnBounce?: boolean;
+  stopOnBounc?: boolean; // Typo variant for backward compatibility
+  stopOnUnsubscribe?: boolean;
+  sendingWindow?: {
+    enabled: boolean;
+    timezone: string;
+    days: number[]; // 0-6, where 0 is Sunday
+    startHour: number;
+    endHour: number;
+  };
+}
+
 export interface OutboundSequence {
   id: string;
   organizationId: string;
@@ -18,21 +32,24 @@ export interface OutboundSequence {
   
   // Enrollment
   enrollmentCriteria?: EnrollmentCriteria;
-  autoEnroll: boolean; // Auto-enroll new prospects
+  autoEnroll?: boolean; // Auto-enroll new prospects
   
-  // Behavior
-  stopOnResponse: boolean; // Pause sequence if prospect replies
-  stopOnConversion: boolean; // Stop if prospect converts (meeting booked, deal created)
-  stopOnUnsubscribe: boolean; // Remove if they unsubscribe
-  stopOnBounce: boolean; // Remove if email bounces
+  // Behavior (individual flags - legacy)
+  stopOnResponse?: boolean; // Pause sequence if prospect replies
+  stopOnConversion?: boolean; // Stop if prospect converts (meeting booked, deal created)
+  stopOnUnsubscribe?: boolean; // Remove if they unsubscribe
+  stopOnBounce?: boolean; // Remove if email bounces
+  
+  // Settings (grouped settings - preferred)
+  settings?: SequenceSettings;
   
   // Analytics
-  analytics: SequenceAnalytics;
+  analytics?: SequenceAnalytics;
   
   // Metadata
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
 }
 
 export interface SequenceStep {
