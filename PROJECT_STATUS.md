@@ -1734,6 +1734,7 @@ The following fixes were made to resolve Vercel build errors. **Track these for 
 | `9d1078a` | `src/app/workspace/[orgId]/settings/storefront/page.tsx` | `buttonRadius` missing from theme | Added `buttonRadius` property |
 | `3611e84` | `src/components/integrations/GoogleCalendarIntegration.tsx` | `user.uid` doesn't exist on type `{}` | Added type annotations `{ uid?: string }` and `{ id?: string }` |
 | `eda9487` | `src/lib/agent/chat-session-service.ts` | `handoffReason` doesn't exist on ChatMessage metadata | Added `handoffReason?: string` to interface |
+| `606ebe6` | `src/lib/workflows/actions/*.ts` | Can't extend union type `WorkflowAction` | Changed to extend `BaseAction` in ai-agent, loop, slack actions |
 
 ### Environment Variables Required for Production
 
