@@ -11,7 +11,18 @@ interface StorefrontConfig {
   businessType: 'products' | 'services' | 'both';
   storeName: string;
   storeUrl: string;
-  // Theme is now inherited from CRM theme - no need to configure separately
+  // Theme - kept for backwards compatibility with disabled UI section
+  theme?: {
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+    backgroundColor: string;
+    textColor: string;
+    fontFamily: string;
+    headerStyle: string;
+    productCardStyle: string;
+    borderRadius: string;
+  };
   productSchema: string;
   serviceSchema: string;
   checkoutSettings: {
@@ -37,6 +48,17 @@ const DEFAULT_CONFIG: StorefrontConfig = {
   businessType: 'products',
   storeName: 'My Store',
   storeUrl: 'mystore',
+  theme: {
+    primaryColor: '#3b82f6',
+    secondaryColor: '#6366f1',
+    accentColor: '#22c55e',
+    backgroundColor: '#000000',
+    textColor: '#ffffff',
+    fontFamily: 'Inter',
+    headerStyle: 'modern',
+    productCardStyle: 'card',
+    borderRadius: '0.5rem',
+  },
   productSchema: 'products',
   serviceSchema: 'services',
   checkoutSettings: {
