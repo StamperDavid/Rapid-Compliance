@@ -302,8 +302,8 @@ export default function EmailSequencesPage() {
                       <div>
                         <div style={{ fontSize: '0.75rem', color: '#666' }}>Reply Rate</div>
                         <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>
-                          {seq.analytics.emailsSent > 0
-                            ? `${Math.round((seq.analytics.emailsReplied / seq.analytics.emailsSent) * 100)}%`
+                          {seq.analytics?.totalSent && seq.analytics.totalSent > 0
+                            ? `${Math.round((seq.analytics.totalReplied / seq.analytics.totalSent) * 100)}%`
                             : '0%'
                           }
                         </div>
