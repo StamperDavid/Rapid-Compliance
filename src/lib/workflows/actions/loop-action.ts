@@ -70,9 +70,6 @@ export async function executeLoopAction(
     results: [],
   };
 
-  // Import action executor
-  const { executeWorkflowActions } = await import('./action-executor');
-
   // Process items
   for (let i = 0; i < itemsToProcess.length; i += batchSize) {
     const batch = itemsToProcess.slice(i, i + batchSize);
