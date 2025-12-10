@@ -97,7 +97,7 @@ export default function EmailSequencesPage() {
           replyRate: 0,
           conversionRate: 0,
         },
-        createdBy: user.uid,
+        createdBy: user.id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
