@@ -202,6 +202,10 @@ export type ConditionOperator =
   | 'is_false'
   | 'in_list'
   | 'not_in_list'
+  | 'in'
+  | 'not_in'
+  | 'exists'
+  | 'not_exists'
   | 'between'
   | 'exists'
   | 'not_exists';
