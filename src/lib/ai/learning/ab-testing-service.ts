@@ -471,3 +471,4 @@ function calculateStatisticalSignificance(
   return Math.min(z / 1.96 * 95, 100);
 }
 
+

@@ -235,6 +235,7 @@ async function executeAction(
     
     default:
       throw new Error(`Unknown action type: ${(action as any).type}`);
+  }
 }
 
 /**
