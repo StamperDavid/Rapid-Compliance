@@ -45,6 +45,7 @@ export interface ChatMessage {
     tokens?: number;
     confidence?: number;
     sources?: string[];
+    handoffReason?: string;
   };
 }
 
