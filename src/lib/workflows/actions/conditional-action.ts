@@ -147,9 +147,9 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
         return fieldValue.getTime() < new Date(condition.value as string).getTime();
       }
       return Number(fieldValue) < Number(condition.value);
-    case 'greater_than_or_equals':
+    case 'greater_than_or_equal':
       return Number(fieldValue) >= Number(condition.value);
-    case 'less_than_or_equals':
+    case 'less_than_or_equal':
       return Number(fieldValue) <= Number(condition.value);
     case 'exists':
       return fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
