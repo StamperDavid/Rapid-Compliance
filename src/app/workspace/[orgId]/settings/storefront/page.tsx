@@ -22,6 +22,7 @@ interface StorefrontConfig {
     headerStyle: string;
     productCardStyle: string;
     borderRadius: string;
+    buttonRadius: string;
   };
   productSchema: string;
   serviceSchema: string;
@@ -58,6 +59,7 @@ const DEFAULT_CONFIG: StorefrontConfig = {
     headerStyle: 'modern',
     productCardStyle: 'card',
     borderRadius: '0.5rem',
+    buttonRadius: '0.375rem',
   },
   productSchema: 'products',
   serviceSchema: 'services',
