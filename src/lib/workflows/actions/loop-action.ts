@@ -3,9 +3,9 @@
  * Iterates over arrays and executes actions for each item
  */
 
-import { WorkflowAction, Workflow } from '@/types/workflow';
+import { BaseAction, WorkflowAction, Workflow } from '@/types/workflow';
 
-export interface LoopActionConfig extends WorkflowAction {
+export interface LoopActionConfig extends BaseAction {
   type: 'loop';
   config: {
     arrayField: string;           // Dot-notation path to array in triggerData

@@ -3,9 +3,9 @@
  * Triggers AI agent to process data and optionally respond
  */
 
-import { WorkflowAction, Workflow } from '@/types/workflow';
+import { BaseAction } from '@/types/workflow';
 
-export interface AIAgentActionConfig extends WorkflowAction {
+export interface AIAgentActionConfig extends BaseAction {
   type: 'ai_agent';
   config: {
     prompt: string;             // Prompt template with {{variable}} placeholders

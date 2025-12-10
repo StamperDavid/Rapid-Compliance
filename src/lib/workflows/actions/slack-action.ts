@@ -3,9 +3,9 @@
  * Sends messages to Slack channels or users
  */
 
-import { WorkflowAction } from '@/types/workflow';
+import { BaseAction } from '@/types/workflow';
 
-export interface SlackActionConfig extends WorkflowAction {
+export interface SlackActionConfig extends BaseAction {
   type: 'send_slack';
   config: {
     channelId?: string;         // Slack channel ID (e.g., C01234567)
