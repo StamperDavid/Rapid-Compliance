@@ -1736,6 +1736,8 @@ The following fixes were made to resolve Vercel build errors. **Track these for 
 | `eda9487` | `src/lib/agent/chat-session-service.ts` | `handoffReason` doesn't exist on ChatMessage metadata | Added `handoffReason?: string` to interface |
 | `606ebe6` | `src/lib/workflows/actions/*.ts` | Can't extend union type `WorkflowAction` | Changed to extend `BaseAction` in ai-agent, loop, slack actions |
 | `e223bdd` | `src/lib/workflows/actions/ai-agent-action.ts` | `selectedModel` not assignable to `ModelName` | Added import and cast `as ModelName` |
+| `270f753` | `src/types/workflow.ts` | Missing condition operators | Added `in`, `not_in`, `exists`, `not_exists` to ConditionOperator |
+| `91b9b5b` | `DEPLOYMENT_ENVIRONMENTS.md` | N/A | Created 3-environment deployment guide |
 
 ### Environment Variables Required for Production
 
