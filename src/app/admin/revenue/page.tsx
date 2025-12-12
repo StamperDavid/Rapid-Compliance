@@ -24,9 +24,28 @@ export default function RevenueAdminPage() {
         dateRange.startDate,
         dateRange.endDate
       );
+      
+      // Ensure all numeric fields have default values to prevent .toFixed() crashes
+      if (metricsData) {
+        metricsData.mrr = metricsData.mrr ?? 0;
+        metricsData.arr = metricsData.arr ?? 0;
+        metricsData.mrrGrowth = metricsData.mrrGrowth ?? 0;
+        metricsData.arrGrowth = metricsData.arrGrowth ?? 0;
+        metricsData.totalCustomers = metricsData.totalCustomers ?? 0;
+        metricsData.newCustomers = metricsData.newCustomers ?? 0;
+        metricsData.churnedCustomers = metricsData.churnedCustomers ?? 0;
+        metricsData.churnRate = metricsData.churnRate ?? 0;
+        metricsData.revenueChurnRate = metricsData.revenueChurnRate ?? 0;
+        metricsData.totalRevenue = metricsData.totalRevenue ?? 0;
+        metricsData.averageRevenuePerCustomer = metricsData.averageRevenuePerCustomer ?? 0;
+        metricsData.revenueByPlan = metricsData.revenueByPlan ?? [];
+      }
+      
       setMetrics(metricsData);
     } catch (error) {
       console.error('Failed to load metrics:', error);
+      // Set empty metrics instead of null to show "No data" state
+      setMetrics(null);
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +170,7 @@ export default function RevenueAdminPage() {
                         />
                       </div>
                       <span style={{ fontSize: '0.875rem', color: '#999', width: '4rem', textAlign: 'right' }}>
-                        {plan.percentage.toFixed(1)}%
+                        {(plan.percentage ?? 0).toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -169,7 +188,7 @@ export default function RevenueAdminPage() {
             <div style={{ padding: '1.5rem', backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem' }}>
               <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Avg Revenue Per Customer</div>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>
-                ${metrics.averageRevenuePerUser.toFixed(2)}
+                ${(metrics.averageRevenuePerUser ?? metrics.averageRevenuePerCustomer ?? 0).toFixed(2)}
               </div>
             </div>
 

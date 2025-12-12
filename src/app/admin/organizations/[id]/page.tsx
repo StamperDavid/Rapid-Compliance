@@ -5,7 +5,29 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import Tooltip from '@/components/Tooltip';
-import type { Organization } from '@/types/organization';
+import type { Organization, PlanLimits } from '@/types/organization';
+
+// Default plan limits for organizations missing this data
+const DEFAULT_PLAN_LIMITS: PlanLimits = {
+  maxWorkspaces: 1,
+  maxUsersPerWorkspace: 5,
+  maxRecordsPerWorkspace: 1000,
+  maxAICallsPerMonth: 100,
+  maxStorageGB: 1,
+  maxSchemas: 5,
+  maxWorkflows: 10,
+  allowCustomDomain: false,
+  allowWhiteLabel: false,
+  allowAPIAccess: false,
+};
+
+// Default settings for organizations missing this data
+const DEFAULT_SETTINGS = {
+  defaultTimezone: 'UTC',
+  defaultCurrency: 'USD',
+  dateFormat: 'MM/DD/YYYY',
+  timeFormat: '12h' as const,
+};
 
 // Organization data loaded from Firestore
 
@@ -25,8 +47,15 @@ export default function OrganizationDetailPage() {
         setLoading(true);
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
-        setOrganization(org as Organization | null);
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId) as Organization | null;
+        
+        // Ensure organization has required nested objects with defaults
+        if (org) {
+          org.planLimits = org.planLimits || DEFAULT_PLAN_LIMITS;
+          org.settings = org.settings || DEFAULT_SETTINGS;
+        }
+        
+        setOrganization(org);
         setLoading(false);
       } catch (error) {
         console.error('Failed to load organization:', error);

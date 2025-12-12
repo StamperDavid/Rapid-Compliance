@@ -1,12 +1,17 @@
 'use client';
 
+import React from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
+  
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [theme, setTheme] = React.useState<any>(null);
   
@@ -36,42 +41,42 @@ export default function SettingsPage() {
     {
       title: 'Core Configuration',
       items: [
-        { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: '/workspace/demo-org/settings/api-keys', permission: canManageAPIKeys },
-        { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, and billing', href: '/workspace/demo-org/settings/billing', permission: canManageBilling },
+        { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: `/workspace/${orgId}/settings/api-keys`, permission: canManageAPIKeys },
+        { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, and billing', href: `/workspace/${orgId}/settings/billing`, permission: canManageBilling },
       ]
     },
     {
       title: 'E-Commerce',
       items: [
-        { icon: '🛒', label: 'Online Storefront', description: 'Enable store, choose products/services/both, customize theme, generate embed codes', href: '/workspace/demo-org/settings/storefront', permission: canManageOrganization },
+        { icon: '🛒', label: 'Online Storefront', description: 'Enable store, choose products/services/both, customize theme, generate embed codes', href: `/workspace/${orgId}/settings/storefront`, permission: canManageOrganization },
       ]
     },
     {
       title: 'Email & SMS',
       items: [
-        { icon: '📧', label: 'Email Templates', description: 'Customize email notifications and branding', href: '/workspace/demo-org/settings/email-templates', permission: canManageTheme },
-        { icon: '📱', label: 'SMS Messages', description: 'Configure automated text messages with custom triggers', href: '/workspace/demo-org/settings/sms-messages', permission: canManageTheme },
+        { icon: '📧', label: 'Email Templates', description: 'Customize email notifications and branding', href: `/workspace/${orgId}/settings/email-templates`, permission: canManageTheme },
+        { icon: '📱', label: 'SMS Messages', description: 'Configure automated text messages with custom triggers', href: `/workspace/${orgId}/settings/sms-messages`, permission: canManageTheme },
       ]
     },
     {
       title: 'Customization',
       items: [
-        { icon: '🎨', label: 'CRM Theme & Branding', description: 'White-label your CRM platform with custom colors and logo', href: '/workspace/demo-org/settings/theme', permission: canManageTheme },
+        { icon: '🎨', label: 'CRM Theme & Branding', description: 'White-label your CRM platform with custom colors and logo', href: `/workspace/${orgId}/settings/theme`, permission: canManageTheme },
       ]
     },
     {
       title: 'Users & Access',
       items: [
-        { icon: '👥', label: 'Team Members', description: 'Invite users, manage roles and permissions', href: '/workspace/demo-org/settings/users', permission: canViewAllUsers },
-        { icon: '🔐', label: 'Security', description: 'Two-factor auth, IP restrictions, audit logs', href: '/workspace/demo-org/settings/security', permission: canManageOrganization },
+        { icon: '👥', label: 'Team Members', description: 'Invite users, manage roles and permissions', href: `/workspace/${orgId}/settings/users`, permission: canViewAllUsers },
+        { icon: '🔐', label: 'Security', description: 'Two-factor auth, IP restrictions, audit logs', href: `/workspace/${orgId}/settings/security`, permission: canManageOrganization },
       ]
     },
     {
       title: 'Integrations',
       items: [
-        { icon: '📊', label: 'Accounting Software', description: 'Sync invoices, payments, and customers to QuickBooks, Xero, FreshBooks, Wave', href: '/workspace/demo-org/settings/accounting', permission: canManageIntegrations },
-        { icon: '🔌', label: 'Business Apps', description: 'Connect Slack, Zapier, and other third-party apps', href: '/workspace/demo-org/settings/integrations', permission: canManageIntegrations },
-        { icon: '🌐', label: 'Webhooks', description: 'Configure webhooks for real-time event notifications', href: '/workspace/demo-org/settings/webhooks', permission: canManageIntegrations },
+        { icon: '📊', label: 'Accounting Software', description: 'Sync invoices, payments, and customers to QuickBooks, Xero, FreshBooks, Wave', href: `/workspace/${orgId}/settings/accounting`, permission: canManageIntegrations },
+        { icon: '🔌', label: 'Business Apps', description: 'Connect Slack, Zapier, and other third-party apps', href: `/workspace/${orgId}/settings/integrations`, permission: canManageIntegrations },
+        { icon: '🌐', label: 'Webhooks', description: 'Configure webhooks for real-time event notifications', href: `/workspace/${orgId}/settings/webhooks`, permission: canManageIntegrations },
       ]
     },
     {
@@ -83,15 +88,15 @@ export default function SettingsPage() {
     {
       title: 'Outbound Sales',
       items: [
-        { icon: '🚀', label: 'Subscription & Features', description: 'Manage plan, outbound features, and usage limits', href: '/workspace/demo-org/settings/subscription', permission: canManageBilling },
+        { icon: '🚀', label: 'Subscription & Features', description: 'Manage plan, outbound features, and usage limits', href: `/workspace/${orgId}/settings/subscription`, permission: canManageBilling },
       ]
     },
     {
       title: 'Advanced',
       items: [
-        { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: '/workspace/demo-org/schemas', permission: canManageOrganization },
-        { icon: '⚙️', label: 'Workflows', description: 'Automation rules and workflow configuration', href: '/workspace/demo-org/settings/workflows', permission: canManageOrganization },
-        { icon: '🤖', label: 'AI Agents', description: 'Configure and train AI assistants', href: '/workspace/demo-org/settings/ai-agents', permission: canManageOrganization },
+        { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: `/workspace/${orgId}/schemas`, permission: canManageOrganization },
+        { icon: '⚙️', label: 'Workflows', description: 'Automation rules and workflow configuration', href: `/workspace/${orgId}/settings/workflows`, permission: canManageOrganization },
+        { icon: '🤖', label: 'AI Agents', description: 'Configure and train AI assistants', href: `/workspace/${orgId}/settings/ai-agents`, permission: canManageOrganization },
       ]
     }
   ];
@@ -201,7 +206,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 {canManageOrganization && (
-                  <Link href="/workspace/demo-org/settings/organization" style={{ padding: '0.625rem 1.25rem', backgroundColor: '#222', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}>
+                  <Link href={`/workspace/${orgId}/settings/organization`} style={{ padding: '0.625rem 1.25rem', backgroundColor: '#222', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}>
                     Edit Details
                   </Link>
                 )}
@@ -261,7 +266,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
-// Import React at top
-import React from 'react';
-

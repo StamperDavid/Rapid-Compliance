@@ -3,13 +3,20 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
+import { useParams } from 'next/navigation';
 
 export default function AdminBar() {
   const { user, loading } = useAuth();
+  const params = useParams();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [theme, setTheme] = useState<any>(null);
   
   const canAccessSettings = usePermission('canAccessSettings');
+  
+  // Get orgId from URL params, user object, or localStorage
+  const orgId = (params?.orgId as string) || user?.organizationId || 
+    (typeof window !== 'undefined' ? localStorage.getItem('currentOrgId') : null) || 
+    'default';
   
   useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
@@ -57,7 +64,7 @@ export default function AdminBar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, justifyContent: 'center' }}>
           {shouldShowSettings && (
             <Link 
-              href="/workspace/demo-org/settings"
+              href={`/workspace/${orgId}/settings`}
               style={{ padding: '0.5rem 1rem', color: '#999', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', borderRadius: '0.375rem', transition: 'all 0.2s' }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}

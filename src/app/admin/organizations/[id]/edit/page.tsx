@@ -6,100 +6,13 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import type { Organization } from '@/types/organization';
 
-// This is the same mock data
-const getMockOrganizations = (): Organization[] => [
-  {
-    id: 'org-1',
-    name: 'Acme Corporation',
-    slug: 'acme-corp',
-    plan: 'enterprise',
-    planLimits: {
-      maxWorkspaces: 10,
-      maxUsersPerWorkspace: 100,
-      maxRecordsPerWorkspace: 1000000,
-      maxAICallsPerMonth: 100000,
-      maxStorageGB: 1000,
-      maxSchemas: 50,
-      maxWorkflows: 100,
-      allowCustomDomain: true,
-      allowWhiteLabel: true,
-      allowAPIAccess: true,
-    },
-    billingEmail: 'billing@acme.com',
-    branding: {},
-    settings: {
-      defaultTimezone: 'America/New_York',
-      defaultCurrency: 'USD',
-      dateFormat: 'MM/DD/YYYY',
-      timeFormat: '12h',
-    },
-    createdAt: new Date('2023-01-15') as any,
-    updatedAt: new Date() as any,
-    createdBy: 'user-1',
-    status: 'active',
-  },
-  {
-    id: 'org-2',
-    name: 'TechStart Inc',
-    slug: 'techstart',
-    plan: 'pro',
-    planLimits: {
-      maxWorkspaces: 3,
-      maxUsersPerWorkspace: 25,
-      maxRecordsPerWorkspace: 100000,
-      maxAICallsPerMonth: 10000,
-      maxStorageGB: 100,
-      maxSchemas: 20,
-      maxWorkflows: 50,
-      allowCustomDomain: false,
-      allowWhiteLabel: false,
-      allowAPIAccess: true,
-    },
-    billingEmail: 'admin@techstart.com',
-    branding: {},
-    settings: {
-      defaultTimezone: 'America/Los_Angeles',
-      defaultCurrency: 'USD',
-      dateFormat: 'MM/DD/YYYY',
-      timeFormat: '12h',
-    },
-    createdAt: new Date('2024-02-01') as any,
-    updatedAt: new Date() as any,
-    createdBy: 'user-2',
-    status: 'trial',
-    trialEndsAt: new Date('2024-04-01') as any,
-  },
-  {
-    id: 'org-3',
-    name: 'Global Services',
-    slug: 'global-services',
-    plan: 'free',
-    planLimits: {
-      maxWorkspaces: 1,
-      maxUsersPerWorkspace: 5,
-      maxRecordsPerWorkspace: 1000,
-      maxAICallsPerMonth: 100,
-      maxStorageGB: 1,
-      maxSchemas: 5,
-      maxWorkflows: 10,
-      allowCustomDomain: false,
-      allowWhiteLabel: false,
-      allowAPIAccess: false,
-    },
-    billingEmail: 'contact@globalservices.com',
-    branding: {},
-    settings: {
-      defaultTimezone: 'UTC',
-      defaultCurrency: 'USD',
-      dateFormat: 'DD/MM/YYYY',
-      timeFormat: '24h',
-    },
-    createdAt: new Date('2024-03-10') as any,
-    updatedAt: new Date() as any,
-    createdBy: 'user-3',
-    status: 'suspended',
-  },
-];
+// Default settings for organizations missing this data
+const DEFAULT_SETTINGS = {
+  defaultTimezone: 'UTC',
+  defaultCurrency: 'USD',
+  dateFormat: 'MM/DD/YYYY',
+  timeFormat: '12h' as const,
+};
 
 export default function EditOrganizationPage() {
   const params = useParams();
@@ -131,39 +44,68 @@ export default function EditOrganizationPage() {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      const orgs = getMockOrganizations();
-      const org = orgs.find(o => o.id === orgId);
-      if (org) {
-        setOrganization(org);
-        setFormData({
-          name: org.name,
-          slug: org.slug,
-          plan: org.plan,
-          status: org.status,
-          billingEmail: org.billingEmail,
-          defaultTimezone: org.settings.defaultTimezone,
-          defaultCurrency: org.settings.defaultCurrency,
-          dateFormat: org.settings.dateFormat,
-          timeFormat: org.settings.timeFormat,
-        });
+    async function loadOrganization() {
+      try {
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId) as Organization | null;
+        
+        if (org) {
+          // Ensure settings has defaults
+          const settings = org.settings || DEFAULT_SETTINGS;
+          
+          setOrganization(org);
+          setFormData({
+            name: org.name || '',
+            slug: org.slug || '',
+            plan: org.plan || 'free',
+            status: org.status || 'active',
+            billingEmail: org.billingEmail || '',
+            defaultTimezone: settings.defaultTimezone || 'UTC',
+            defaultCurrency: settings.defaultCurrency || 'USD',
+            dateFormat: settings.dateFormat || 'MM/DD/YYYY',
+            timeFormat: settings.timeFormat || '12h',
+          });
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load organization:', error);
+        setLoading(false);
       }
-      setLoading(false);
-    }, 300);
+    }
+    
+    loadOrganization();
   }, [orgId, hasPermission, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      
+      // Update organization in Firestore
+      await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, orgId, {
+        name: formData.name,
+        slug: formData.slug,
+        plan: formData.plan,
+        status: formData.status,
+        billingEmail: formData.billingEmail,
+        settings: {
+          defaultTimezone: formData.defaultTimezone,
+          defaultCurrency: formData.defaultCurrency,
+          dateFormat: formData.dateFormat,
+          timeFormat: formData.timeFormat,
+        },
+        updatedAt: new Date(),
+      });
+      
       setSaving(false);
-      // In production, this would make an API call
-      alert('Organization updated successfully!\n\n(This is mock data - no actual changes were saved)');
       router.push(`/admin/organizations/${orgId}`);
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to save organization:', error);
+      setSaving(false);
+      alert('Failed to save organization. Please try again.');
+    }
   };
 
   const bgPaper = '#1a1a1a';
@@ -388,18 +330,6 @@ export default function EditOrganizationPage() {
             </button>
           </div>
 
-          {/* Warning */}
-          <div style={{
-            backgroundColor: '#7f1d1d',
-            border: '1px solid #991b1b',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-            fontSize: '0.875rem',
-            color: '#fecaca'
-          }}>
-            <strong>Note:</strong> This is currently using mock data. Changes will not be persisted.
-            API integration is required for actual data persistence.
-          </div>
         </div>
       </form>
     </div>
