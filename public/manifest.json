@@ -1,7 +1,7 @@
 {
-  "name": "AI Sales Platform",
-  "short_name": "AI Sales",
-  "description": "AI-powered CRM and sales platform",
+  "name": "SalesVelocity.ai",
+  "short_name": "SalesVelocity",
+  "description": "AI-powered sales automation - Accelerate Your Growth",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
@@ -50,6 +50,8 @@
     }
   }
 }
+
+
 
 
 

@@ -230,7 +230,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 export const defaultOnboardingSteps: OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to AI Sales Platform! 🎉',
+    title: 'Welcome to SalesVelocity.ai! 🎉',
     description: "Let's get you set up in just a few minutes.",
     component: (
       <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -396,6 +396,8 @@ export const defaultOnboardingSteps: OnboardingStep[] = [
     ),
   },
 ];
+
+
 
 
 

@@ -1,20 +1,102 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface ElementStyles {
+  // Layout
+  width?: string;
+  height?: string;
+  minHeight?: string;
+  maxWidth?: string;
+  padding?: string;
+  paddingTop?: string;
+  paddingRight?: string;
+  paddingBottom?: string;
+  paddingLeft?: string;
+  margin?: string;
+  marginTop?: string;
+  marginRight?: string;
+  marginBottom?: string;
+  marginLeft?: string;
+  // Flexbox
+  display?: string;
+  flexDirection?: string;
+  justifyContent?: string;
+  alignItems?: string;
+  gap?: string;
+  flexWrap?: string;
+  // Typography
+  fontSize?: string;
+  fontWeight?: string;
+  fontFamily?: string;
+  lineHeight?: string;
+  letterSpacing?: string;
+  textAlign?: string;
+  textTransform?: string;
+  textDecoration?: string;
+  // Colors
+  color?: string;
+  backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundSize?: string;
+  backgroundPosition?: string;
+  backgroundOverlay?: string;
+  // Border
+  border?: string;
+  borderWidth?: string;
+  borderStyle?: string;
+  borderColor?: string;
+  borderRadius?: string;
+  borderTop?: string;
+  borderRight?: string;
+  borderBottom?: string;
+  borderLeft?: string;
+  // Grid
+  gridTemplateColumns?: string;
+  gridTemplateRows?: string;
+  gridColumn?: string;
+  gridRow?: string;
+  // Effects
+  boxShadow?: string;
+  opacity?: string;
+  transform?: string;
+  transition?: string;
+  // Position
+  position?: string;
+  top?: string;
+  right?: string;
+  bottom?: string;
+  left?: string;
+  zIndex?: string;
+}
+
+interface ResponsiveStyles {
+  desktop: ElementStyles;
+  tablet?: ElementStyles;
+  mobile?: ElementStyles;
+}
+
+interface WidgetElement {
+  id: string;
+  type: string;
+  content?: any;
+  children?: WidgetElement[];
+  styles: ResponsiveStyles;
+  settings?: Record<string, any>;
+}
+
 interface PageSection {
   id: string;
-  type: 'hero' | 'features' | 'pricing' | 'testimonials' | 'cta' | 'content' | 'faq';
-  title?: string;
-  subtitle?: string;
-  content?: string;
-  buttonText?: string;
-  buttonLink?: string;
-  items?: any[];
-  backgroundColor?: string;
-  textColor?: string;
+  type: 'section';
+  name: string;
+  children: WidgetElement[];
+  styles: ResponsiveStyles;
   visible: boolean;
 }
 
@@ -23,667 +105,2344 @@ interface WebsitePage {
   name: string;
   slug: string;
   sections: PageSection[];
-  published: boolean;
+  isPublished: boolean;
+  isInNav: boolean;
+  navOrder: number;
+  // SEO
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+  noIndex?: boolean;
+  // Page Settings
+  pageType?: 'content' | 'auth' | 'system';
+  template?: string;
 }
 
-const DEFAULT_PAGES: WebsitePage[] = [
-  {
-    id: 'home',
-    name: 'Homepage',
-    slug: '/',
-    published: true,
-    sections: [
-      {
-        id: 'hero-1',
-        type: 'hero',
-        title: 'AI-Powered Sales Platform',
-        subtitle: 'Transform your sales process with intelligent automation',
-        buttonText: 'Get Started Free',
-        buttonLink: '/signup',
-        backgroundColor: '#000000',
-        textColor: '#ffffff',
-        visible: true,
-      },
-      {
-        id: 'features-1',
-        type: 'features',
-        title: 'Powerful Features',
-        subtitle: 'Everything you need to close more deals',
-        backgroundColor: '#0a0a0a',
-        textColor: '#ffffff',
-        visible: true,
-        items: [
-          { icon: '🤖', title: 'AI Chat Agent', description: 'Intelligent conversations that convert' },
-          { icon: '📊', title: 'CRM & Pipeline', description: 'Track leads and deals effortlessly' },
-          { icon: '⚡', title: 'Automation', description: 'Workflows that run on autopilot' },
-          { icon: '📧', title: 'Email Campaigns', description: 'Reach customers at scale' },
-        ],
-      },
-      {
-        id: 'cta-1',
-        type: 'cta',
-        title: 'Ready to 10x your sales?',
-        subtitle: 'Join thousands of teams using our platform',
-        buttonText: 'Start Free Trial',
-        buttonLink: '/signup',
-        backgroundColor: '#6366f1',
-        textColor: '#ffffff',
-        visible: true,
-      },
-    ],
-  },
-  {
-    id: 'features',
-    name: 'Features',
-    slug: '/features',
-    published: true,
-    sections: [
-      {
-        id: 'hero-2',
-        type: 'hero',
-        title: 'Features that Drive Results',
-        subtitle: 'Comprehensive tools for modern sales teams',
-        backgroundColor: '#000000',
-        textColor: '#ffffff',
-        visible: true,
-      },
-    ],
-  },
-  {
-    id: 'pricing',
-    name: 'Pricing',
-    slug: '/pricing',
-    published: true,
-    sections: [
-      {
-        id: 'pricing-1',
-        type: 'pricing',
-        title: 'Simple, Transparent Pricing',
-        subtitle: 'Choose the plan that fits your needs',
-        backgroundColor: '#0a0a0a',
-        textColor: '#ffffff',
-        visible: true,
-        items: [
-          {
-            name: 'Starter',
-            price: '$29',
-            period: '/month',
-            features: ['Up to 1,000 contacts', 'Basic CRM', 'Email support', '1 user'],
-            highlighted: false,
-          },
-          {
-            name: 'Professional',
-            price: '$99',
-            period: '/month',
-            features: ['Up to 10,000 contacts', 'Full CRM + AI', 'Priority support', 'Up to 5 users', 'Integrations'],
-            highlighted: true,
-          },
-          {
-            name: 'Enterprise',
-            price: '$299',
-            period: '/month',
-            features: ['Unlimited contacts', 'Advanced AI', '24/7 support', 'Unlimited users', 'Custom integrations', 'White-label'],
-            highlighted: false,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'about',
-    name: 'About Us',
-    slug: '/about',
-    published: true,
-    sections: [
-      {
-        id: 'content-1',
-        type: 'content',
-        title: 'About Our Company',
-        content: 'We are building the future of sales automation...',
-        backgroundColor: '#000000',
-        textColor: '#ffffff',
-        visible: true,
-      },
-    ],
-  },
+interface GlobalBranding {
+  logoUrl: string;
+  logoHeight: number;
+  companyName: string;
+  tagline: string;
+  faviconUrl: string;
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    surface: string;
+    text: string;
+    textMuted: string;
+    border: string;
+    success: string;
+    warning: string;
+    error: string;
+  };
+  fonts: {
+    heading: string;
+    body: string;
+  };
+  borderRadius: string;
+}
+
+interface WebsiteConfig {
+  branding: GlobalBranding;
+  pages: WebsitePage[];
+  navigation: {
+    style: 'default' | 'centered' | 'minimal';
+    showLogin: boolean;
+    showSignup: boolean;
+    ctaText: string;
+    ctaLink: string;
+    sticky: boolean;
+    transparent: boolean;
+  };
+  footer: {
+    columns: { title: string; links: { label: string; href: string }[] }[];
+    socialLinks: { platform: string; url: string }[];
+    copyrightText: string;
+    showPoweredBy: boolean;
+  };
+}
+
+// ============================================================================
+// WIDGET DEFINITIONS
+// ============================================================================
+
+interface WidgetDefinition {
+  type: string;
+  name: string;
+  icon: string;
+  category: 'layout' | 'basic' | 'media' | 'content' | 'forms' | 'social' | 'advanced';
+  defaultContent?: any;
+  defaultStyles: ElementStyles;
+  defaultSettings?: Record<string, any>;
+}
+
+const WIDGET_CATEGORIES = [
+  { id: 'layout', name: 'Layout', icon: '📐' },
+  { id: 'basic', name: 'Basic', icon: '📝' },
+  { id: 'media', name: 'Media', icon: '🖼️' },
+  { id: 'content', name: 'Content', icon: '📄' },
+  { id: 'forms', name: 'Forms', icon: '📋' },
+  { id: 'social', name: 'Social', icon: '🌐' },
+  { id: 'advanced', name: 'Advanced', icon: '⚙️' },
 ];
 
-export default function WebsiteEditorPage() {
-  const { adminUser } = useAdminAuth();
-  const [pages, setPages] = useState<WebsitePage[]>(DEFAULT_PAGES);
-  const [selectedPageId, setSelectedPageId] = useState<string>('home');
-  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+const WIDGETS: WidgetDefinition[] = [
+  // Layout
+  { type: 'section', name: 'Section', icon: '▭', category: 'layout', defaultStyles: { padding: '60px 20px', backgroundColor: '#000000' } },
+  { type: 'container', name: 'Container', icon: '☐', category: 'layout', defaultStyles: { maxWidth: '1200px', margin: '0 auto', padding: '0 20px' } },
+  { type: 'row', name: 'Row', icon: '⬜⬜', category: 'layout', defaultStyles: { display: 'flex', flexWrap: 'wrap', gap: '20px' } },
+  { type: 'column', name: 'Column', icon: '▯', category: 'layout', defaultStyles: { flex: '1', minWidth: '250px' } as any },
+  { type: 'spacer', name: 'Spacer', icon: '↕️', category: 'layout', defaultStyles: { height: '40px' }, defaultSettings: { height: 40 } },
+  { type: 'divider', name: 'Divider', icon: '—', category: 'layout', defaultStyles: { borderBottom: '1px solid rgba(255,255,255,0.1)', margin: '20px 0' } },
+  
+  // Basic
+  { type: 'heading', name: 'Heading', icon: 'H', category: 'basic', defaultContent: 'Heading Text', defaultStyles: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' }, defaultSettings: { tag: 'h2' } },
+  { type: 'text', name: 'Text', icon: 'T', category: 'basic', defaultContent: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.', defaultStyles: { fontSize: '1rem', lineHeight: '1.6', color: 'rgba(255,255,255,0.8)' } },
+  { type: 'button', name: 'Button', icon: '🔘', category: 'basic', defaultContent: 'Click Me', defaultStyles: { padding: '12px 24px', backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '8px', fontWeight: '600', display: 'inline-block', textAlign: 'center' }, defaultSettings: { href: '#', target: '_self' } },
+  { type: 'link', name: 'Link', icon: '🔗', category: 'basic', defaultContent: 'Learn More →', defaultStyles: { color: '#6366f1', textDecoration: 'none' }, defaultSettings: { href: '#' } },
+  { type: 'list', name: 'List', icon: '☰', category: 'basic', defaultContent: ['Item 1', 'Item 2', 'Item 3'], defaultStyles: { color: 'rgba(255,255,255,0.8)' }, defaultSettings: { style: 'bullet' } },
+  { type: 'icon', name: 'Icon', icon: '★', category: 'basic', defaultContent: '⚡', defaultStyles: { fontSize: '2rem' } },
+  
+  // Media
+  { type: 'image', name: 'Image', icon: '🖼️', category: 'media', defaultStyles: { maxWidth: '100%', borderRadius: '8px' }, defaultSettings: { src: 'https://placehold.co/800x400', alt: 'Image' } },
+  { type: 'video', name: 'Video', icon: '🎬', category: 'media', defaultStyles: { width: '100%', borderRadius: '8px' }, defaultSettings: { src: '', type: 'youtube', autoplay: false } },
+  { type: 'gallery', name: 'Gallery', icon: '🖼️🖼️', category: 'media', defaultStyles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }, defaultSettings: { images: [] } },
+  { type: 'icon-box', name: 'Icon Box', icon: '📦', category: 'media', defaultContent: { icon: '🚀', title: 'Feature Title', text: 'Feature description goes here' }, defaultStyles: { textAlign: 'center', padding: '20px' } },
+  { type: 'logo', name: 'Logo', icon: '🏷️', category: 'media', defaultStyles: { height: '40px' }, defaultSettings: { useSiteLogo: true } },
+  
+  // Content
+  { type: 'hero', name: 'Hero', icon: '🎯', category: 'content', defaultContent: { title: 'Hero Title', subtitle: 'Hero subtitle text goes here', buttonText: 'Get Started', buttonLink: '/signup' }, defaultStyles: { textAlign: 'center', padding: '100px 20px' } },
+  { type: 'feature-grid', name: 'Feature Grid', icon: '⊞', category: 'content', defaultContent: { items: [{ icon: '⚡', title: 'Fast', desc: 'Lightning fast' }, { icon: '🔒', title: 'Secure', desc: 'Enterprise security' }, { icon: '🎯', title: 'Accurate', desc: 'Precision results' }] }, defaultStyles: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px' } },
+  { type: 'pricing-table', name: 'Pricing Table', icon: '💰', category: 'content', defaultContent: { plans: [{ name: 'Starter', price: '$29', features: ['Feature 1', 'Feature 2'] }, { name: 'Pro', price: '$99', features: ['All Starter', 'Feature 3'], highlighted: true }] }, defaultStyles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' } },
+  { type: 'testimonial', name: 'Testimonial', icon: '💬', category: 'content', defaultContent: { quote: 'This product changed our business!', author: 'John Doe', role: 'CEO', company: 'Acme Inc', avatar: '' }, defaultStyles: { padding: '30px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px' } },
+  { type: 'testimonial-slider', name: 'Testimonial Slider', icon: '💬◀▶', category: 'content', defaultContent: { testimonials: [] }, defaultStyles: {} },
+  { type: 'faq', name: 'FAQ', icon: '❓', category: 'content', defaultContent: { items: [{ q: 'Question 1?', a: 'Answer 1' }, { q: 'Question 2?', a: 'Answer 2' }] }, defaultStyles: {} },
+  { type: 'accordion', name: 'Accordion', icon: '▼', category: 'content', defaultContent: { items: [{ title: 'Section 1', content: 'Content 1' }] }, defaultStyles: {} },
+  { type: 'tabs', name: 'Tabs', icon: '📑', category: 'content', defaultContent: { tabs: [{ title: 'Tab 1', content: 'Content 1' }] }, defaultStyles: {} },
+  { type: 'counter', name: 'Counter', icon: '🔢', category: 'content', defaultContent: { number: 1000, suffix: '+', label: 'Happy Customers' }, defaultStyles: { textAlign: 'center' } },
+  { type: 'progress-bar', name: 'Progress Bar', icon: '▰▰▱', category: 'content', defaultContent: { label: 'Progress', value: 75 }, defaultStyles: {} },
+  { type: 'cta', name: 'CTA Block', icon: '📢', category: 'content', defaultContent: { title: 'Ready to get started?', subtitle: 'Join thousands of happy customers', buttonText: 'Start Free Trial', buttonLink: '/signup' }, defaultStyles: { textAlign: 'center', padding: '60px 20px', backgroundColor: '#6366f1', borderRadius: '12px' } },
+  { type: 'stats', name: 'Stats', icon: '📊', category: 'content', defaultContent: { items: [{ value: '10K+', label: 'Users' }, { value: '99%', label: 'Uptime' }, { value: '24/7', label: 'Support' }] }, defaultStyles: { display: 'flex', justifyContent: 'space-around', textAlign: 'center' } },
+  
+  // Forms
+  { type: 'form', name: 'Form', icon: '📝', category: 'forms', defaultContent: { fields: [{ type: 'text', label: 'Name', placeholder: 'Your name' }, { type: 'email', label: 'Email', placeholder: 'you@example.com' }], submitText: 'Submit' }, defaultStyles: { maxWidth: '500px' } },
+  { type: 'input', name: 'Input Field', icon: '▭', category: 'forms', defaultStyles: { width: '100%', padding: '12px', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#fff' }, defaultSettings: { type: 'text', placeholder: 'Enter text...' } },
+  { type: 'textarea', name: 'Text Area', icon: '▭▭', category: 'forms', defaultStyles: { width: '100%', padding: '12px', minHeight: '120px', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#fff' }, defaultSettings: { placeholder: 'Enter message...' } },
+  { type: 'select', name: 'Select', icon: '▾', category: 'forms', defaultStyles: { width: '100%', padding: '12px' }, defaultSettings: { options: ['Option 1', 'Option 2'] } },
+  { type: 'checkbox', name: 'Checkbox', icon: '☑', category: 'forms', defaultContent: 'I agree to the terms', defaultStyles: {} },
+  { type: 'newsletter', name: 'Newsletter', icon: '📧', category: 'forms', defaultContent: { placeholder: 'Enter your email', buttonText: 'Subscribe' }, defaultStyles: { display: 'flex', gap: '10px' } },
+  
+  // Social
+  { type: 'social-icons', name: 'Social Icons', icon: '🌐', category: 'social', defaultContent: { links: [{ platform: 'twitter', url: '#' }, { platform: 'linkedin', url: '#' }] }, defaultStyles: { display: 'flex', gap: '15px' } },
+  { type: 'share-buttons', name: 'Share Buttons', icon: '📤', category: 'social', defaultStyles: { display: 'flex', gap: '10px' } },
+  { type: 'twitter-embed', name: 'Twitter Embed', icon: '𝕏', category: 'social', defaultSettings: { tweetUrl: '' }, defaultStyles: {} },
+  
+  // Advanced
+  { type: 'html', name: 'Custom HTML', icon: '</>', category: 'advanced', defaultContent: '<div>Custom HTML here</div>', defaultStyles: {} },
+  { type: 'code', name: 'Code Block', icon: '{ }', category: 'advanced', defaultContent: 'const hello = "world";', defaultStyles: { backgroundColor: '#1a1a2e', padding: '20px', borderRadius: '8px', fontFamily: 'monospace' }, defaultSettings: { language: 'javascript' } },
+  { type: 'map', name: 'Map', icon: '🗺️', category: 'advanced', defaultSettings: { address: '', lat: 0, lng: 0 }, defaultStyles: { height: '300px', borderRadius: '8px' } },
+  { type: 'countdown', name: 'Countdown', icon: '⏱️', category: 'advanced', defaultSettings: { targetDate: '' }, defaultStyles: { display: 'flex', justifyContent: 'center', gap: '20px' } },
+  { type: 'alert', name: 'Alert/Notice', icon: '⚠️', category: 'advanced', defaultContent: 'Important notice here', defaultStyles: { padding: '15px 20px', backgroundColor: 'rgba(99, 102, 241, 0.2)', border: '1px solid #6366f1', borderRadius: '8px' }, defaultSettings: { type: 'info' } },
+  { type: 'modal-trigger', name: 'Modal Trigger', icon: '🪟', category: 'advanced', defaultContent: 'Open Modal', defaultStyles: {}, defaultSettings: { modalId: '' } },
+];
 
-  const selectedPage = pages.find(p => p.id === selectedPageId);
-  const selectedSection = selectedPage?.sections.find(s => s.id === selectedSectionId);
+// ============================================================================
+// DEFAULT CONFIG
+// ============================================================================
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // Save to Firestore
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
-        'platform/website',
-        'pages',
-        { pages, updatedAt: new Date().toISOString() },
-        false
-      );
-    } catch (error) {
-      console.error('Failed to save:', error);
-    } finally {
-      setTimeout(() => setIsSaving(false), 1000);
+const DEFAULT_BRANDING: GlobalBranding = {
+  logoUrl: '/logo.png',
+  logoHeight: 48,
+  companyName: 'SalesVelocity.ai',
+  tagline: 'Accelerate Your Growth',
+  faviconUrl: '/favicon.ico',
+  colors: {
+    primary: '#6366f1',
+    secondary: '#8b5cf6',
+    accent: '#10b981',
+    background: '#000000',
+    surface: '#0a0a0a',
+    text: '#ffffff',
+    textMuted: 'rgba(255,255,255,0.6)',
+    border: 'rgba(255,255,255,0.1)',
+    success: '#10b981',
+    warning: '#f59e0b',
+    error: '#ef4444',
+  },
+  fonts: {
+    heading: 'Inter',
+    body: 'Inter',
+  },
+  borderRadius: '8px',
+};
+
+const DEFAULT_CONFIG: WebsiteConfig = {
+  branding: DEFAULT_BRANDING,
+  pages: [
+    {
+      id: 'home',
+      name: 'Home',
+      slug: '/',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 0,
+      sections: [
+        {
+          id: 'home-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '120px 20px 80px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'hero-badge', type: 'text', content: '🟢 AI-Powered Sales Automation', styles: { desktop: { fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', marginBottom: '1.5rem' } } },
+            { id: 'hero-h1', type: 'heading', content: 'Your AI Sales Team, Working 24/7', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', color: '#ffffff', marginBottom: '1.5rem', lineHeight: '1.1' } }, settings: { tag: 'h1' } },
+            { id: 'hero-p', type: 'text', content: 'Train a custom AI sales agent on your business in minutes. Deploy it on your website. Watch it qualify leads, answer questions, and close deals while you sleep.', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.8)', maxWidth: '700px', margin: '0 auto 2rem' } } },
+            { id: 'hero-btn', type: 'button', content: 'Start Free Trial →', styles: { desktop: { padding: '16px 32px', backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '8px', fontWeight: '600', fontSize: '1.125rem' } }, settings: { href: '/signup' } },
+          ],
+        },
+        {
+          id: 'home-stats',
+          type: 'section',
+          name: 'Stats',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#0a0a0a' } },
+          children: [
+            { id: 'stats-grid', type: 'stats', content: { items: [{ value: '10x', label: 'More Qualified Leads' }, { value: '24/7', label: 'Always Available' }, { value: '5min', label: 'Setup Time' }, { value: '90%', label: 'Customer Satisfaction' }] }, styles: { desktop: {} } },
+          ],
+        },
+        {
+          id: 'home-features',
+          type: 'section',
+          name: 'Features',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'feat-h2', type: 'heading', content: 'Everything You Need to Sell More', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '3rem' } }, settings: { tag: 'h2' } },
+            { id: 'feat-grid', type: 'feature-grid', content: { items: [
+              { icon: '🤖', title: 'Trainable AI Agent', desc: 'Custom-trained on YOUR business, products, and sales process' },
+              { icon: '🧠', title: 'Customer Memory', desc: 'Remembers every conversation, preference, and interaction' },
+              { icon: '💬', title: 'Lead Qualification', desc: 'Automatically scores and qualifies leads using AI' },
+              { icon: '📊', title: 'Built-in CRM', desc: 'Manage contacts, deals, and pipeline in one place' },
+              { icon: '⚡', title: 'Workflow Automation', desc: 'Auto-follow-ups, email sequences, task creation' },
+              { icon: '🛒', title: 'E-Commerce Ready', desc: 'Take payments, manage inventory, process orders' },
+            ] }, styles: { desktop: {} } },
+          ],
+        },
+        {
+          id: 'home-cta',
+          type: 'section',
+          name: 'CTA',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: '#6366f1', textAlign: 'center' } },
+          children: [
+            { id: 'cta-h2', type: 'heading', content: 'Ready to 10x Your Sales?', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' } }, settings: { tag: 'h2' } },
+            { id: 'cta-p', type: 'text', content: 'Join hundreds of businesses using AI to close more deals', styles: { desktop: { fontSize: '1.125rem', opacity: '0.9', marginBottom: '2rem' } } },
+            { id: 'cta-btn', type: 'button', content: 'Start Your Free Trial →', styles: { desktop: { padding: '16px 32px', backgroundColor: '#ffffff', color: '#000000', borderRadius: '8px', fontWeight: '600' } }, settings: { href: '/signup' } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'features',
+      name: 'Features',
+      slug: '/features',
+      isPublished: true,
+      isInNav: true,
+      navOrder: 1,
+      metaTitle: 'Features - SalesVelocity.ai',
+      metaDescription: 'A complete AI-powered sales platform with CRM, automation, and e-commerce built in.',
+      sections: [
+        {
+          id: 'features-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 60px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'f-h1', type: 'heading', content: 'Everything You Need to Sell More, Faster', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'f-p', type: 'text', content: 'A complete AI-powered sales platform with CRM, automation, and e-commerce built in', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)', maxWidth: '700px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'features-ai-agent',
+          type: 'section',
+          name: 'AI Agent Feature',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'f1-badge', type: 'text', content: '🔥 Flagship Feature', styles: { desktop: { fontSize: '0.875rem', color: '#6366f1', marginBottom: '1rem' } } },
+            { id: 'f1-h2', type: 'heading', content: 'Train Your Own AI Sales Agent', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'f1-p', type: 'text', content: 'Not a generic chatbot. A custom AI agent trained specifically on YOUR business, products, and sales process. It learns your brand voice, handles objections your way, and gets smarter with every conversation.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '600px' } } },
+            { id: 'f1-list', type: 'feature-grid', content: { items: [
+              { icon: '📄', title: 'Upload Knowledge', desc: 'Product docs, pricing sheets, FAQs' },
+              { icon: '🎯', title: 'Train in Sandbox', desc: 'Practice real scenarios before going live' },
+              { icon: '📈', title: 'Continuous Learning', desc: 'Gets smarter from real conversations' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' } } },
+          ],
+        },
+        {
+          id: 'features-crm',
+          type: 'section',
+          name: 'CRM Feature',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: '#0a0a0a' } },
+          children: [
+            { id: 'f2-badge', type: 'text', content: '📊 Powerful CRM', styles: { desktop: { fontSize: '0.875rem', color: '#6366f1', marginBottom: '1rem' } } },
+            { id: 'f2-h2', type: 'heading', content: 'CRM That Actually Fits Your Business', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'f2-p', type: 'text', content: 'Create custom objects for anything - not just leads and deals. Track shipments, appointments, inventory, or whatever your business needs. Fully customizable with 20+ field types.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '600px' } } },
+            { id: 'f2-list', type: 'feature-grid', content: { items: [
+              { icon: '🎨', title: 'Custom Objects', desc: 'For your industry' },
+              { icon: '🔗', title: 'Relationships', desc: 'Link data together' },
+              { icon: '📐', title: 'Formula Fields', desc: 'Like Excel, but smarter' },
+              { icon: '📋', title: 'Multiple Views', desc: 'Kanban, Calendar, Table' },
+              { icon: '⚡', title: 'Workflows', desc: 'Automation built-in' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' } } },
+          ],
+        },
+        {
+          id: 'features-ecommerce',
+          type: 'section',
+          name: 'E-Commerce Feature',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'f3-badge', type: 'text', content: '🛒 E-Commerce', styles: { desktop: { fontSize: '0.875rem', color: '#6366f1', marginBottom: '1rem' } } },
+            { id: 'f3-h2', type: 'heading', content: 'Sell Products Directly', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'f3-p', type: 'text', content: 'Turn on e-commerce with one click. Your AI agent can show products, answer questions, and complete purchases - all in the same conversation.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '600px' } } },
+            { id: 'f3-list', type: 'feature-grid', content: { items: [
+              { icon: '🛍️', title: 'In-Chat Cart', desc: 'Shopping in conversation' },
+              { icon: '💳', title: 'Payments', desc: 'Stripe, PayPal built-in' },
+              { icon: '📦', title: 'Inventory', desc: 'Track stock levels' },
+              { icon: '🚚', title: 'Orders', desc: 'Fulfillment tracking' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' } } },
+          ],
+        },
+        {
+          id: 'features-grid',
+          type: 'section',
+          name: 'All Features Grid',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: 'rgba(0,0,0,0.3)' } },
+          children: [
+            { id: 'fg-h2', type: 'heading', content: 'Plus Everything Else You\'d Expect', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '3rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'fg-grid', type: 'feature-grid', content: { items: [
+              { icon: '🎨', title: 'White-Labeling', desc: 'Your brand, your colors, your domain' },
+              { icon: '🔗', title: 'Integrations', desc: 'Slack, Stripe, Gmail, Calendar, and more' },
+              { icon: '📧', title: 'Email Campaigns', desc: 'Drip campaigns and nurture sequences' },
+              { icon: '📱', title: 'Mobile Ready', desc: 'Works perfectly on all devices' },
+              { icon: '🔒', title: 'Enterprise Security', desc: 'SOC 2, GDPR, CCPA compliant' },
+              { icon: '🌍', title: 'Multi-Language', desc: 'Serve customers in any language' },
+              { icon: '📞', title: 'SMS Support', desc: 'Send SMS messages automatically' },
+              { icon: '🎯', title: 'Lead Scoring', desc: 'AI-powered lead qualification' },
+              { icon: '⏱️', title: '99.9% Uptime', desc: 'Always available when you need it' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', maxWidth: '1000px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'features-cta',
+          type: 'section',
+          name: 'CTA',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'fc-h2', type: 'heading', content: 'Start Your 14-Day Free Trial', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'fc-p', type: 'text', content: 'No credit card required. Full access to all features.', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem' } } },
+            { id: 'fc-btn', type: 'button', content: 'Get Started Free →', styles: { desktop: { padding: '16px 48px', backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '8px', fontWeight: '600', fontSize: '1.125rem' } }, settings: { href: '/signup' } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'pricing',
+      name: 'Pricing',
+      slug: '/pricing',
+      isPublished: true,
+      isInNav: true,
+      navOrder: 2,
+      metaTitle: 'Pricing - SalesVelocity.ai',
+      metaDescription: 'Simple, transparent pricing. Start with a 14-day free trial. No credit card required.',
+      sections: [
+        {
+          id: 'pricing-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 40px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'pr-h1', type: 'heading', content: 'Simple, Transparent Pricing', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'pr-p', type: 'text', content: 'Start with a 14-day free trial. No credit card required. Cancel anytime.', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)', maxWidth: '600px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'pricing-table',
+          type: 'section',
+          name: 'Pricing Plans',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px 80px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'pr-plans', type: 'pricing-table', content: { plans: [
+              { name: 'Agent Only', price: '$29', period: '/month', features: ['1 trainable AI sales agent', 'Unlimited conversations', 'Website widget embed', '3 free integrations', 'Lead capture & export', 'Email support'], highlighted: false },
+              { name: 'Starter', price: '$49', period: '/month', features: ['Everything in Agent Only, plus:', 'Built-in CRM (1,000 records)', 'Lead management', 'Deal pipeline', 'Basic workflow automation', 'Unlimited integrations'], highlighted: false },
+              { name: 'Professional', price: '$149', period: '/month', features: ['Everything in Starter, plus:', '3 AI sales agents', 'Advanced CRM (10,000 records)', 'E-commerce platform', 'Payment processing', 'Custom domain & white-label', 'API access'], highlighted: true },
+              { name: 'Enterprise', price: 'Custom', period: '', features: ['Unlimited AI agents', 'Unlimited CRM records', 'Dedicated support', 'Custom training', 'White-label options', 'Custom integrations', 'SLA guarantee'], highlighted: false },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' } } },
+          ],
+        },
+        {
+          id: 'pricing-faq',
+          type: 'section',
+          name: 'FAQ',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: 'rgba(0,0,0,0.2)' } },
+          children: [
+            { id: 'faq-h2', type: 'heading', content: 'Frequently Asked Questions', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', textAlign: 'center', marginBottom: '3rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'pr-faq', type: 'faq', content: { items: [
+              { q: 'How does the 14-day free trial work?', a: "Sign up with your email, no credit card required. You'll get full access to all Professional plan features for 14 days." },
+              { q: 'What counts as a "conversation"?', a: 'A conversation is a complete interaction between your AI agent and a visitor. Multiple messages within one chat session = 1 conversation.' },
+              { q: 'Can I change plans later?', a: 'Absolutely! Upgrade or downgrade anytime. We prorate the difference on upgrades.' },
+              { q: 'What if I exceed my conversation limit?', a: "Your agent keeps working! We'll notify you at 80% and bill $0.05 per additional conversation, or you can upgrade." },
+              { q: 'Do you offer discounts for nonprofits?', a: 'Yes! We offer 50% off for registered nonprofits and early-stage startups. Contact us with proof.' },
+              { q: 'What payment methods do you accept?', a: 'All major credit cards via Stripe. Enterprise customers can arrange invoicing.' },
+            ] }, styles: { desktop: { maxWidth: '800px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'pricing-cta',
+          type: 'section',
+          name: 'CTA',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'cta-h2', type: 'heading', content: 'Ready to Get Started?', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'cta-p', type: 'text', content: 'Join hundreds of businesses using AI to close more deals', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem' } } },
+            { id: 'cta-btn', type: 'button', content: 'Start Your Free Trial →', styles: { desktop: { padding: '16px 48px', backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '8px', fontWeight: '600', fontSize: '1.125rem' } }, settings: { href: '/signup' } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'about',
+      name: 'About',
+      slug: '/about',
+      isPublished: true,
+      isInNav: true,
+      navOrder: 3,
+      metaTitle: 'About Us - SalesVelocity.ai',
+      metaDescription: 'Building the future of AI-powered sales automation.',
+      sections: [
+        {
+          id: 'about-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 60px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'ab-h1', type: 'heading', content: 'About Us', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'ab-p', type: 'text', content: 'Building the future of AI-powered sales automation', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)' } } },
+          ],
+        },
+        {
+          id: 'about-mission',
+          type: 'section',
+          name: 'Mission',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'ab-h2', type: 'heading', content: 'Our Mission', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'ab-text1', type: 'text', content: 'We believe every business deserves access to world-class sales automation, regardless of size or budget. SalesVelocity.ai democratizes cutting-edge technology, making it accessible to startups and enterprises alike.', styles: { desktop: { fontSize: '1.125rem', lineHeight: '1.8', color: 'rgba(255,255,255,0.8)', marginBottom: '1rem' } } },
+            { id: 'ab-text2', type: 'text', content: 'By combining artificial intelligence with proven sales methodologies, we\'re helping businesses close more deals, nurture better relationships, and grow faster.', styles: { desktop: { fontSize: '1.125rem', lineHeight: '1.8', color: 'rgba(255,255,255,0.8)' } } },
+          ],
+        },
+        {
+          id: 'about-story',
+          type: 'section',
+          name: 'Our Story',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#0a0a0a' } },
+          children: [
+            { id: 'ab-h3', type: 'heading', content: 'Our Story', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'ab-story1', type: 'text', content: 'Founded in 2024, SalesVelocity.ai emerged from a simple observation: most businesses struggle with lead qualification, follow-ups, and sales process consistency. Traditional CRMs require too much manual work. AI chatbots are too generic.', styles: { desktop: { fontSize: '1.125rem', lineHeight: '1.8', color: 'rgba(255,255,255,0.8)', marginBottom: '1rem' } } },
+            { id: 'ab-story2', type: 'text', content: 'We built something different - an AI sales agent that learns YOUR business, speaks in YOUR voice, and follows YOUR process. It\'s like hiring your best sales rep and cloning them to work 24/7.', styles: { desktop: { fontSize: '1.125rem', lineHeight: '1.8', color: 'rgba(255,255,255,0.8)' } } },
+          ],
+        },
+        {
+          id: 'about-values',
+          type: 'section',
+          name: 'Our Values',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'ab-h4', type: 'heading', content: 'Our Values', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'ab-values', type: 'feature-grid', content: { items: [
+              { icon: '🚀', title: 'Innovation First', desc: 'We push boundaries with AI technology while keeping the user experience simple.' },
+              { icon: '🤝', title: 'Customer Success', desc: 'Your growth is our success. We\'re invested in helping you close more deals.' },
+              { icon: '🔒', title: 'Privacy & Security', desc: 'Your data is yours. Enterprise-grade security, never sell your information.' },
+              { icon: '💡', title: 'Transparency', desc: 'No hidden fees, no dark patterns. What you see is what you get.' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', maxWidth: '800px' } } },
+          ],
+        },
+        {
+          id: 'about-cta',
+          type: 'section',
+          name: 'CTA',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#0a0a0a' } },
+          children: [
+            { id: 'ab-cta-h', type: 'heading', content: 'Join Us', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'ab-cta-p', type: 'text', content: 'We\'re always looking for talented people who are passionate about AI, sales, and helping businesses grow.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '1.5rem' } } },
+            { id: 'ab-cta-btn', type: 'button', content: 'Get in Touch →', styles: { desktop: { padding: '16px 32px', backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '8px', fontWeight: '600' } }, settings: { href: '/contact' } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'contact',
+      name: 'Contact',
+      slug: '/contact',
+      isPublished: true,
+      isInNav: true,
+      navOrder: 4,
+      metaTitle: 'Contact Us - SalesVelocity.ai',
+      metaDescription: 'Have questions? We\'d love to hear from you. Get in touch with our team.',
+      sections: [
+        {
+          id: 'contact-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 60px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'ct-h1', type: 'heading', content: 'Get in Touch', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'ct-p', type: 'text', content: 'Have questions? We\'d love to hear from you.', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)' } } },
+          ],
+        },
+        {
+          id: 'contact-info',
+          type: 'section',
+          name: 'Contact Methods',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'ct-grid', type: 'feature-grid', content: { items: [
+              { icon: '📧', title: 'Email Us', desc: 'support@salesvelocity.ai - We respond within 24 hours' },
+              { icon: '💬', title: 'Live Chat', desc: 'Available 9am-6pm EST - Click the chat widget' },
+              { icon: '📚', title: 'Documentation', desc: 'Check our comprehensive guides at /docs' },
+              { icon: '🎯', title: 'Sales Inquiries', desc: 'sales@salesvelocity.ai - For enterprise plans' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', maxWidth: '800px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'contact-form-note',
+          type: 'section',
+          name: 'Form Note',
+          visible: true,
+          styles: { desktop: { padding: '40px 20px', backgroundColor: '#0a0a0a', textAlign: 'center' } },
+          children: [
+            { id: 'ct-form-h', type: 'heading', content: 'Send Us a Message', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'ct-form-p', type: 'text', content: 'Fill out the contact form on this page and we\'ll get back to you as soon as possible.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.7)' } } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'blog',
+      name: 'Blog',
+      slug: '/blog',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 10,
+      metaTitle: 'Blog - SalesVelocity.ai',
+      metaDescription: 'Insights, guides, and news about AI-powered sales automation.',
+      sections: [
+        {
+          id: 'blog-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 60px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'bl-h1', type: 'heading', content: 'Blog', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'bl-p', type: 'text', content: 'Insights, guides, and news about AI-powered sales', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)' } } },
+          ],
+        },
+        {
+          id: 'blog-posts',
+          type: 'section',
+          name: 'Blog Posts',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'bl-posts', type: 'feature-grid', content: { items: [
+              { icon: '🤖', title: 'How AI is Transforming Sales in 2024', desc: 'Discover the latest trends in AI-powered sales automation.' },
+              { icon: '📚', title: '10 Best Practices for Training Your AI Agent', desc: 'Learn how to get the most out of your AI sales agent.' },
+              { icon: '📈', title: 'Case Study: 300% Conversion Increase', desc: 'How one company tripled their lead conversion rate.' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', maxWidth: '1000px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'blog-subscribe',
+          type: 'section',
+          name: 'Subscribe',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#0a0a0a', textAlign: 'center' } },
+          children: [
+            { id: 'bl-sub-h', type: 'heading', content: 'More Posts Coming Soon', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'bl-sub-p', type: 'text', content: 'Subscribe to our newsletter to get notified when we publish new articles.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.7)' } } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'docs',
+      name: 'Documentation',
+      slug: '/docs',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 11,
+      metaTitle: 'Documentation - SalesVelocity.ai',
+      metaDescription: 'Everything you need to know about using SalesVelocity.ai.',
+      sections: [
+        {
+          id: 'docs-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 60px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'dc-h1', type: 'heading', content: 'Documentation', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'dc-p', type: 'text', content: 'Everything you need to know about using SalesVelocity.ai', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem' } } },
+          ],
+        },
+        {
+          id: 'docs-quick',
+          type: 'section',
+          name: 'Quick Links',
+          visible: true,
+          styles: { desktop: { padding: '40px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'dc-quick', type: 'feature-grid', content: { items: [
+              { icon: '📖', title: 'Guides', desc: 'Step-by-step tutorials' },
+              { icon: '🎥', title: 'Video Tutorials', desc: 'Watch and learn' },
+              { icon: '💻', title: 'API Reference', desc: 'Developer documentation' },
+              { icon: '💬', title: 'Support', desc: 'Get help from our team' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', maxWidth: '900px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'docs-categories',
+          type: 'section',
+          name: 'Categories',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#0a0a0a' } },
+          children: [
+            { id: 'dc-cats', type: 'feature-grid', content: { items: [
+              { icon: '🚀', title: 'Getting Started', desc: 'Quick Start Guide, Account Setup, Training Your First Agent' },
+              { icon: '📊', title: 'CRM & Sales', desc: 'Managing Leads, Deal Pipeline, Workflow Automation' },
+              { icon: '🤖', title: 'AI Configuration', desc: 'Agent Personality, Knowledge Base, Advanced Prompting' },
+              { icon: '🔗', title: 'Integrations', desc: 'Stripe, Google Calendar, Slack, API Documentation' },
+              { icon: '📈', title: 'Analytics', desc: 'Dashboard Overview, Custom Reports, Conversion Tracking' },
+              { icon: '⚡', title: 'Advanced Topics', desc: 'White-Label, Custom Schemas, Multi-Tenant Setup' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', maxWidth: '1000px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'docs-help',
+          type: 'section',
+          name: 'Help',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'dc-help-h', type: 'heading', content: 'Can\'t Find What You\'re Looking For?', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'dc-help-p', type: 'text', content: 'Our support team is here to help. Get in touch and we\'ll respond within 24 hours.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.7)', marginBottom: '1.5rem' } } },
+            { id: 'dc-help-btn', type: 'button', content: 'Contact Support →', styles: { desktop: { padding: '16px 32px', backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '8px', fontWeight: '600' } }, settings: { href: '/contact' } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'privacy',
+      name: 'Privacy Policy',
+      slug: '/privacy',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 20,
+      metaTitle: 'Privacy Policy - SalesVelocity.ai',
+      metaDescription: 'How we collect, use, and protect your personal information.',
+      sections: [
+        {
+          id: 'priv-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 40px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'pv-h1', type: 'heading', content: 'Privacy Policy', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'pv-date', type: 'text', content: 'Last updated: December 2024', styles: { desktop: { fontSize: '1rem', color: 'rgba(255,255,255,0.5)' } } },
+          ],
+        },
+        {
+          id: 'priv-content',
+          type: 'section',
+          name: 'Content',
+          visible: true,
+          styles: { desktop: { padding: '40px 20px 80px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'pv-intro', type: 'text', content: 'At SalesVelocity.ai, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '800px', lineHeight: '1.8' } } },
+            { id: 'pv-h2-1', type: 'heading', content: 'Information We Collect', styles: { desktop: { fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'pv-p1', type: 'text', content: 'We collect information you provide directly, including account details, business information, and content you upload to train your AI agents. We also automatically collect usage data, device information, and cookies.', styles: { desktop: { fontSize: '1rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem', maxWidth: '800px', lineHeight: '1.8' } } },
+            { id: 'pv-h2-2', type: 'heading', content: 'How We Use Your Information', styles: { desktop: { fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'pv-p2', type: 'text', content: 'We use your information to provide and improve our services, personalize your experience, communicate with you, and ensure platform security. We never sell your personal data to third parties.', styles: { desktop: { fontSize: '1rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem', maxWidth: '800px', lineHeight: '1.8' } } },
+            { id: 'pv-contact', type: 'text', content: 'Questions? Contact us at privacy@salesvelocity.ai', styles: { desktop: { fontSize: '1rem', color: '#6366f1' } } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'terms',
+      name: 'Terms of Service',
+      slug: '/terms',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 21,
+      metaTitle: 'Terms of Service - SalesVelocity.ai',
+      metaDescription: 'Terms and conditions for using the SalesVelocity.ai platform.',
+      sections: [
+        {
+          id: 'terms-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 40px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'tm-h1', type: 'heading', content: 'Terms of Service', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'tm-date', type: 'text', content: 'Last updated: December 2024', styles: { desktop: { fontSize: '1rem', color: 'rgba(255,255,255,0.5)' } } },
+          ],
+        },
+        {
+          id: 'terms-content',
+          type: 'section',
+          name: 'Content',
+          visible: true,
+          styles: { desktop: { padding: '40px 20px 80px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'tm-intro', type: 'text', content: 'Welcome to SalesVelocity.ai. By accessing or using our platform, you agree to be bound by these Terms of Service. Please read them carefully.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.8)', marginBottom: '2rem', maxWidth: '800px', lineHeight: '1.8' } } },
+            { id: 'tm-h2-1', type: 'heading', content: 'Account Terms', styles: { desktop: { fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'tm-p1', type: 'text', content: 'You must be 18 years or older to use this service. You are responsible for maintaining the security of your account and password. You may not use the service for any illegal or unauthorized purpose.', styles: { desktop: { fontSize: '1rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem', maxWidth: '800px', lineHeight: '1.8' } } },
+            { id: 'tm-h2-2', type: 'heading', content: 'Acceptable Use', styles: { desktop: { fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'tm-p2', type: 'text', content: 'You agree not to misuse our services, interfere with other users, attempt unauthorized access, or use the platform to send spam or malicious content.', styles: { desktop: { fontSize: '1rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem', maxWidth: '800px', lineHeight: '1.8' } } },
+            { id: 'tm-contact', type: 'text', content: 'Questions? Contact us at legal@salesvelocity.ai', styles: { desktop: { fontSize: '1rem', color: '#6366f1' } } },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'security',
+      name: 'Security',
+      slug: '/security',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 22,
+      pageType: 'content',
+      metaTitle: 'Security & Compliance - SalesVelocity.ai',
+      metaDescription: 'Enterprise-grade security to protect your data. SOC 2, GDPR, and CCPA compliant.',
+      sections: [
+        {
+          id: 'sec-hero',
+          type: 'section',
+          name: 'Hero',
+          visible: true,
+          styles: { desktop: { padding: '140px 20px 60px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'sc-h1', type: 'heading', content: 'Security & Compliance', styles: { desktop: { fontSize: '3.5rem', fontWeight: 'bold', marginBottom: '1.5rem', color: '#ffffff' } }, settings: { tag: 'h1' } },
+            { id: 'sc-p', type: 'text', content: 'Enterprise-grade security to protect your data', styles: { desktop: { fontSize: '1.25rem', color: 'rgba(255,255,255,0.7)' } } },
+          ],
+        },
+        {
+          id: 'sec-features',
+          type: 'section',
+          name: 'Security Features',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000' } },
+          children: [
+            { id: 'sc-grid', type: 'feature-grid', content: { items: [
+              { icon: '🔒', title: 'Data Encryption', desc: 'All data encrypted in transit (TLS 1.3) and at rest (AES-256)' },
+              { icon: '🏢', title: 'SOC 2 Compliant', desc: 'Infrastructure meets SOC 2 Type II compliance standards' },
+              { icon: '🛡️', title: 'GDPR Ready', desc: 'Fully compliant with GDPR, CCPA, and other privacy regulations' },
+              { icon: '🔐', title: 'Access Controls', desc: 'MFA, role-based permissions, and IP whitelisting' },
+              { icon: '🔍', title: 'Regular Audits', desc: 'Quarterly security audits by certified third-party firms' },
+              { icon: '💾', title: 'Automated Backups', desc: 'Daily backups with 30-day retention and point-in-time recovery' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', maxWidth: '900px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'sec-stack',
+          type: 'section',
+          name: 'Security Stack',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#0a0a0a' } },
+          children: [
+            { id: 'sc-stack-h', type: 'heading', content: 'Our Security Stack', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'sc-stack-grid', type: 'feature-grid', content: { items: [
+              { icon: '☁️', title: 'Infrastructure', desc: 'Google Cloud Platform, Firebase Security Rules, DDoS Protection, WAF' },
+              { icon: '💻', title: 'Application', desc: 'Rate Limiting, Input Validation, XSS Protection, CSRF Tokens' },
+              { icon: '👁️', title: 'Monitoring', desc: '24/7 Security Monitoring, Intrusion Detection, Audit Logging' },
+            ] }, styles: { desktop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', maxWidth: '1000px', margin: '0 auto' } } },
+          ],
+        },
+        {
+          id: 'sec-report',
+          type: 'section',
+          name: 'Report Issue',
+          visible: true,
+          styles: { desktop: { padding: '60px 20px', backgroundColor: '#000000', textAlign: 'center' } },
+          children: [
+            { id: 'sc-rep-h', type: 'heading', content: 'Report a Security Issue', styles: { desktop: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'sc-rep-p', type: 'text', content: 'We take security seriously. If you discover a vulnerability, please report it responsibly.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.7)', marginBottom: '1.5rem' } } },
+            { id: 'sc-rep-btn', type: 'button', content: 'Report Vulnerability →', styles: { desktop: { padding: '16px 32px', backgroundColor: '#6366f1', color: '#ffffff', borderRadius: '8px', fontWeight: '600' } }, settings: { href: 'mailto:security@salesvelocity.ai' } },
+          ],
+        },
+      ],
+    },
+    // Auth Pages
+    {
+      id: 'login',
+      name: 'Login',
+      slug: '/login',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 30,
+      pageType: 'auth',
+      metaTitle: 'Login - SalesVelocity.ai',
+      metaDescription: 'Sign in to your SalesVelocity.ai account',
+      sections: [],
+    },
+    {
+      id: 'signup',
+      name: 'Sign Up',
+      slug: '/signup',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 31,
+      pageType: 'auth',
+      metaTitle: 'Sign Up - SalesVelocity.ai',
+      metaDescription: 'Create your SalesVelocity.ai account and start your free trial',
+      sections: [],
+    },
+    {
+      id: 'forgot-password',
+      name: 'Forgot Password',
+      slug: '/forgot-password',
+      isPublished: true,
+      isInNav: false,
+      navOrder: 32,
+      pageType: 'auth',
+      metaTitle: 'Reset Password - SalesVelocity.ai',
+      metaDescription: 'Reset your SalesVelocity.ai password',
+      sections: [],
+    },
+  ],
+  navigation: {
+    style: 'default',
+    showLogin: true,
+    showSignup: true,
+    ctaText: 'Start Free Trial',
+    ctaLink: '/signup',
+    sticky: true,
+    transparent: false,
+  },
+  footer: {
+    columns: [
+      { title: 'Product', links: [{ label: 'Features', href: '/features' }, { label: 'Pricing', href: '/pricing' }, { label: 'Documentation', href: '/docs' }] },
+      { title: 'Company', links: [{ label: 'About', href: '/about' }, { label: 'Blog', href: '/blog' }, { label: 'Contact', href: '/contact' }] },
+      { title: 'Legal', links: [{ label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }, { label: 'Security', href: '/security' }] },
+    ],
+    socialLinks: [
+      { platform: 'Twitter', url: 'https://twitter.com' },
+      { platform: 'LinkedIn', url: 'https://linkedin.com' },
+    ],
+    copyrightText: '© {year} {company}. All rights reserved.',
+    showPoweredBy: false,
+  },
+};
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+const generateId = () => `el-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+const createWidget = (type: string): WidgetElement => {
+  const def = WIDGETS.find(w => w.type === type);
+  return {
+    id: generateId(),
+    type,
+    content: def?.defaultContent,
+    styles: { desktop: { ...def?.defaultStyles } },
+    settings: { ...def?.defaultSettings },
+    children: ['section', 'container', 'row', 'column'].includes(type) ? [] : undefined,
+  };
+};
+
+// ============================================================================
+// STYLE EDITOR COMPONENT
+// ============================================================================
+
+function StyleEditor({ 
+  styles, 
+  onChange, 
+  breakpoint 
+}: { 
+  styles: ResponsiveStyles; 
+  onChange: (styles: ResponsiveStyles) => void;
+  breakpoint: 'desktop' | 'tablet' | 'mobile';
+}) {
+  const currentStyles = styles[breakpoint] || styles.desktop || {};
+  
+  const updateStyle = (key: string, value: string) => {
+    onChange({
+      ...styles,
+      [breakpoint]: { ...currentStyles, [key]: value },
+    });
+  };
+
+  const styleGroups = [
+    {
+      name: 'Spacing',
+      fields: [
+        { key: 'padding', label: 'Padding', type: 'text', placeholder: '20px' },
+        { key: 'margin', label: 'Margin', type: 'text', placeholder: '0' },
+        { key: 'gap', label: 'Gap', type: 'text', placeholder: '20px' },
+      ],
+    },
+    {
+      name: 'Size',
+      fields: [
+        { key: 'width', label: 'Width', type: 'text', placeholder: 'auto' },
+        { key: 'height', label: 'Height', type: 'text', placeholder: 'auto' },
+        { key: 'maxWidth', label: 'Max Width', type: 'text', placeholder: 'none' },
+        { key: 'minHeight', label: 'Min Height', type: 'text', placeholder: 'auto' },
+      ],
+    },
+    {
+      name: 'Typography',
+      fields: [
+        { key: 'fontSize', label: 'Font Size', type: 'text', placeholder: '1rem' },
+        { key: 'fontWeight', label: 'Font Weight', type: 'select', options: ['normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900'] },
+        { key: 'lineHeight', label: 'Line Height', type: 'text', placeholder: '1.5' },
+        { key: 'textAlign', label: 'Text Align', type: 'select', options: ['left', 'center', 'right', 'justify'] },
+      ],
+    },
+    {
+      name: 'Colors',
+      fields: [
+        { key: 'color', label: 'Text Color', type: 'color' },
+        { key: 'backgroundColor', label: 'Background', type: 'color' },
+      ],
+    },
+    {
+      name: 'Border',
+      fields: [
+        { key: 'borderRadius', label: 'Border Radius', type: 'text', placeholder: '0' },
+        { key: 'border', label: 'Border', type: 'text', placeholder: '1px solid #333' },
+      ],
+    },
+    {
+      name: 'Layout',
+      fields: [
+        { key: 'display', label: 'Display', type: 'select', options: ['block', 'flex', 'grid', 'inline', 'inline-block', 'none'] },
+        { key: 'flexDirection', label: 'Flex Direction', type: 'select', options: ['row', 'column', 'row-reverse', 'column-reverse'] },
+        { key: 'justifyContent', label: 'Justify', type: 'select', options: ['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly'] },
+        { key: 'alignItems', label: 'Align', type: 'select', options: ['flex-start', 'center', 'flex-end', 'stretch', 'baseline'] },
+      ],
+    },
+    {
+      name: 'Effects',
+      fields: [
+        { key: 'boxShadow', label: 'Box Shadow', type: 'text', placeholder: 'none' },
+        { key: 'opacity', label: 'Opacity', type: 'text', placeholder: '1' },
+      ],
+    },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {styleGroups.map(group => (
+        <div key={group.name}>
+          <div style={{ fontSize: '0.7rem', fontWeight: '600', color: '#666', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{group.name}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {group.fields.map(field => (
+              <div key={field.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <label style={{ width: '80px', fontSize: '0.75rem', color: '#999' }}>{field.label}</label>
+                {field.type === 'color' ? (
+                  <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
+                    <input
+                      type="color"
+                      value={(currentStyles as any)[field.key] || '#ffffff'}
+                      onChange={(e) => updateStyle(field.key, e.target.value)}
+                      style={{ width: '32px', height: '28px', border: '1px solid #333', borderRadius: '4px', cursor: 'pointer' }}
+                    />
+                    <input
+                      type="text"
+                      value={(currentStyles as any)[field.key] || ''}
+                      onChange={(e) => updateStyle(field.key, e.target.value)}
+                      placeholder="transparent"
+                      style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
+                    />
+                  </div>
+                ) : field.type === 'select' ? (
+                  <select
+                    value={(currentStyles as any)[field.key] || ''}
+                    onChange={(e) => updateStyle(field.key, e.target.value)}
+                    style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
+                  >
+                    <option value="">-</option>
+                    {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={(currentStyles as any)[field.key] || ''}
+                    onChange={(e) => updateStyle(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// WIDGET RENDERER
+// ============================================================================
+
+function WidgetRenderer({ 
+  element, 
+  isSelected,
+  onSelect,
+  onUpdate,
+  onDelete,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  branding,
+  breakpoint,
+}: {
+  element: WidgetElement;
+  isSelected: boolean;
+  onSelect: () => void;
+  onUpdate: (updates: Partial<WidgetElement>) => void;
+  onDelete: () => void;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  branding: GlobalBranding;
+  breakpoint: 'desktop' | 'tablet' | 'mobile';
+}) {
+  const styles = { ...element.styles.desktop, ...element.styles[breakpoint] };
+  const [isEditing, setIsEditing] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleContentChange = () => {
+    if (contentRef.current) {
+      onUpdate({ content: contentRef.current.innerText });
     }
   };
 
-  const updateSection = (updates: Partial<PageSection>) => {
-    if (!selectedPageId || !selectedSectionId) return;
-    
-    setPages(pages.map(page => 
-      page.id === selectedPageId
-        ? {
-            ...page,
-            sections: page.sections.map(section =>
-              section.id === selectedSectionId
-                ? { ...section, ...updates }
-                : section
-            ),
-          }
-        : page
-    ));
+  const baseStyle: React.CSSProperties = {
+    ...styles as React.CSSProperties,
+    position: 'relative',
+    outline: isSelected ? '2px solid #6366f1' : '1px dashed transparent',
+    cursor: 'pointer',
+    transition: 'outline 0.15s',
   };
 
-  const addSection = (type: PageSection['type']) => {
-    if (!selectedPageId) return;
-    
-    const newSection: PageSection = {
-      id: `${type}-${Date.now()}`,
-      type,
-      title: `New ${type} Section`,
-      subtitle: 'Edit this section',
-      backgroundColor: '#0a0a0a',
-      textColor: '#ffffff',
-      visible: true,
-    };
-
-    setPages(pages.map(page =>
-      page.id === selectedPageId
-        ? { ...page, sections: [...page.sections, newSection] }
-        : page
-    ));
-  };
-
-  const deleteSection = (sectionId: string) => {
-    if (!selectedPageId || !confirm('Delete this section?')) return;
-    
-    setPages(pages.map(page =>
-      page.id === selectedPageId
-        ? { ...page, sections: page.sections.filter(s => s.id !== sectionId) }
-        : page
-    ));
-    setSelectedSectionId(null);
-  };
-
-  const moveSectionUp = (sectionId: string) => {
-    if (!selectedPageId) return;
-    
-    setPages(pages.map(page => {
-      if (page.id !== selectedPageId) return page;
-      
-      const sections = [...page.sections];
-      const index = sections.findIndex(s => s.id === sectionId);
-      if (index > 0) {
-        [sections[index], sections[index - 1]] = [sections[index - 1], sections[index]];
-      }
-      return { ...page, sections };
-    }));
-  };
-
-  const moveSectionDown = (sectionId: string) => {
-    if (!selectedPageId) return;
-    
-    setPages(pages.map(page => {
-      if (page.id !== selectedPageId) return page;
-      
-      const sections = [...page.sections];
-      const index = sections.findIndex(s => s.id === sectionId);
-      if (index < sections.length - 1) {
-        [sections[index], sections[index + 1]] = [sections[index + 1], sections[index]];
-      }
-      return { ...page, sections };
-    }));
-  };
-
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000', color: '#fff' }}>
-      {/* Header */}
-      <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '1rem 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <Link href="/admin" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
-              ← Back to Admin Dashboard
-            </Link>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', margin: 0 }}>🌐 Website Editor</h1>
-            <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.25rem' }}>
-              Edit your public-facing website pages
-            </p>
+  const renderContent = () => {
+    switch (element.type) {
+      case 'heading':
+        const HeadingTag = (element.settings?.tag || 'h2') as keyof JSX.IntrinsicElements;
+        return (
+          <div
+            ref={contentRef}
+            contentEditable={isEditing}
+            suppressContentEditableWarning
+            onBlur={handleContentChange}
+            onDoubleClick={() => setIsEditing(true)}
+            style={{ outline: 'none' }}
+          >
+            {element.content || 'Heading'}
           </div>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <button
-              onClick={() => setShowPreview(!showPreview)}
-              style={{ padding: '0.75rem 1.25rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}
-            >
-              {showPreview ? '👁️ Hide Preview' : '👁️ Show Preview'}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', opacity: isSaving ? 0.5 : 1 }}
-            >
-              {isSaving ? 'Saving...' : '💾 Publish Changes'}
-            </button>
-          </div>
-        </div>
-      </div>
+        );
 
-      <div style={{ display: 'flex', height: 'calc(100vh - 88px)' }}>
-        {/* Sidebar - Page List */}
-        <div style={{ width: '250px', backgroundColor: '#0a0a0a', borderRight: '1px solid #1a1a1a', overflowY: 'auto' }}>
-          <div style={{ padding: '1.5rem 1rem' }}>
-            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', marginBottom: '1rem' }}>Pages</h3>
-            {pages.map(page => (
-              <button
-                key={page.id}
-                onClick={() => setSelectedPageId(page.id)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  marginBottom: '0.5rem',
-                  backgroundColor: selectedPageId === page.id ? '#1a1a1a' : 'transparent',
-                  border: selectedPageId === page.id ? '1px solid #6366f1' : '1px solid transparent',
-                  borderRadius: '0.5rem',
-                  color: selectedPageId === page.id ? '#6366f1' : '#fff',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>{page.name}</span>
-                  <span style={{ fontSize: '0.75rem', color: page.published ? '#10b981' : '#666' }}>
-                    {page.published ? '🟢' : '⚪'}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>{page.slug}</div>
-              </button>
+      case 'text':
+        return (
+          <div
+            ref={contentRef}
+            contentEditable={isEditing}
+            suppressContentEditableWarning
+            onBlur={handleContentChange}
+            onDoubleClick={() => setIsEditing(true)}
+            style={{ outline: 'none' }}
+          >
+            {element.content || 'Text content'}
+          </div>
+        );
+
+      case 'button':
+        return (
+          <span style={{ cursor: 'pointer' }}>{element.content || 'Button'}</span>
+        );
+
+      case 'image':
+        return (
+          <img 
+            src={element.settings?.src || 'https://placehold.co/800x400'} 
+            alt={element.settings?.alt || ''} 
+            style={{ maxWidth: '100%', display: 'block' }}
+          />
+        );
+
+      case 'icon':
+        return <span>{element.content || '⚡'}</span>;
+
+      case 'spacer':
+        return <div style={{ height: element.settings?.height || 40 }} />;
+
+      case 'divider':
+        return <hr style={{ border: 'none', borderBottom: styles.borderBottom || '1px solid rgba(255,255,255,0.1)', margin: 0 }} />;
+
+      case 'icon-box':
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{element.content?.icon || '🚀'}</div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>{element.content?.title || 'Title'}</h3>
+            <p style={{ opacity: 0.7 }}>{element.content?.text || 'Description'}</p>
+          </div>
+        );
+
+      case 'hero':
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>{element.content?.title || 'Hero Title'}</h1>
+            <p style={{ fontSize: '1.25rem', opacity: 0.8, marginBottom: '2rem' }}>{element.content?.subtitle || 'Subtitle'}</p>
+            <span style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: branding.colors.primary, color: '#fff', borderRadius: '8px', fontWeight: '600' }}>
+              {element.content?.buttonText || 'Get Started'}
+            </span>
+          </div>
+        );
+
+      case 'feature-grid':
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '30px' }}>
+            {(element.content?.items || []).map((item: any, i: number) => (
+              <div key={i} style={{ textAlign: 'center', padding: '20px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{item.icon}</div>
+                <h3 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>{item.title}</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.875rem' }}>{item.desc}</p>
+              </div>
             ))}
           </div>
-        </div>
+        );
 
-        {/* Main Content - Sections */}
-        <div style={{ flex: showPreview ? '0 0 35%' : '1', borderRight: '1px solid #1a1a1a', overflowY: 'auto', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Sections</h2>
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={() => {
-                  const menu = document.getElementById('add-section-menu');
-                  if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-                }}
-                style={{ padding: '0.5rem 1rem', backgroundColor: '#6366f1', color: '#fff', border: 'none', borderRadius: '0.375rem', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer' }}
-              >
-                + Add Section
-              </button>
-              <div
-                id="add-section-menu"
-                style={{ display: 'none', position: 'absolute', right: 0, marginTop: '0.5rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', minWidth: '200px', zIndex: 10 }}
-              >
-                {['hero', 'features', 'pricing', 'testimonials', 'cta', 'content', 'faq'].map(type => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      addSection(type as PageSection['type']);
-                      const menu = document.getElementById('add-section-menu');
-                      if (menu) menu.style.display = 'none';
-                    }}
-                    style={{ width: '100%', padding: '0.75rem 1rem', backgroundColor: 'transparent', border: 'none', color: '#fff', textAlign: 'left', cursor: 'pointer', fontSize: '0.875rem', borderBottom: '1px solid #333' }}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </button>
-                ))}
+      case 'testimonial':
+        return (
+          <div>
+            <p style={{ fontSize: '1.125rem', fontStyle: 'italic', marginBottom: '1rem' }}>"{element.content?.quote}"</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '40px', height: '40px', backgroundColor: '#333', borderRadius: '50%' }} />
+              <div>
+                <div style={{ fontWeight: '600' }}>{element.content?.author}</div>
+                <div style={{ fontSize: '0.875rem', opacity: 0.6 }}>{element.content?.role}, {element.content?.company}</div>
               </div>
             </div>
           </div>
+        );
 
-          {/* Sections List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {selectedPage?.sections.map((section, index) => (
-              <div
-                key={section.id}
-                onClick={() => setSelectedSectionId(section.id)}
-                style={{
-                  padding: '1rem',
-                  backgroundColor: selectedSectionId === section.id ? '#1a1a1a' : '#0a0a0a',
-                  border: selectedSectionId === section.id ? '1px solid #6366f1' : '1px solid #1a1a1a',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  opacity: section.visible ? 1 : 0.5,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                  <div>
-                    <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                      {section.type}
-                    </div>
-                    <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{section.title || 'Untitled Section'}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); moveSectionUp(section.id); }}
-                      disabled={index === 0}
-                      style={{ padding: '0.25rem 0.5rem', backgroundColor: 'transparent', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff', cursor: index === 0 ? 'not-allowed' : 'pointer', opacity: index === 0 ? 0.3 : 1 }}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); moveSectionDown(section.id); }}
-                      disabled={index === (selectedPage?.sections.length || 0) - 1}
-                      style={{ padding: '0.25rem 0.5rem', backgroundColor: 'transparent', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff', cursor: index === (selectedPage?.sections.length || 0) - 1 ? 'not-allowed' : 'pointer', opacity: index === (selectedPage?.sections.length || 0) - 1 ? 0.3 : 1 }}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); deleteSection(section.id); }}
-                      style={{ padding: '0.25rem 0.5rem', backgroundColor: 'transparent', border: '1px solid #991b1b', borderRadius: '0.25rem', color: '#ef4444', cursor: 'pointer' }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-                {section.subtitle && (
-                  <div style={{ fontSize: '0.75rem', color: '#666' }}>{section.subtitle}</div>
-                )}
+      case 'cta':
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{element.content?.title || 'CTA Title'}</h2>
+            <p style={{ opacity: 0.8, marginBottom: '1.5rem' }}>{element.content?.subtitle || 'Subtitle'}</p>
+            <span style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: '#fff', color: '#000', borderRadius: '8px', fontWeight: '600' }}>
+              {element.content?.buttonText || 'Get Started'}
+            </span>
+          </div>
+        );
+
+      case 'stats':
+        return (
+          <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+            {(element.content?.items || []).map((item: any, i: number) => (
+              <div key={i}>
+                <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{item.value}</div>
+                <div style={{ opacity: 0.6 }}>{item.label}</div>
               </div>
             ))}
           </div>
+        );
+
+      case 'counter':
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', fontWeight: 'bold' }}>{element.content?.number}{element.content?.suffix}</div>
+            <div style={{ opacity: 0.6 }}>{element.content?.label}</div>
+          </div>
+        );
+
+      case 'newsletter':
+        return (
+          <div style={{ display: 'flex', gap: '10px', maxWidth: '400px' }}>
+            <input type="email" placeholder={element.content?.placeholder || 'Enter email'} style={{ flex: 1, padding: '12px', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#fff' }} />
+            <button style={{ padding: '12px 20px', backgroundColor: branding.colors.primary, color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>{element.content?.buttonText || 'Subscribe'}</button>
+          </div>
+        );
+
+      case 'social-icons':
+        return (
+          <div style={{ display: 'flex', gap: '15px' }}>
+            {(element.content?.links || []).map((link: any, i: number) => (
+              <span key={i} style={{ fontSize: '1.5rem', opacity: 0.7 }}>
+                {link.platform === 'twitter' ? '𝕏' : link.platform === 'linkedin' ? 'in' : link.platform === 'facebook' ? 'f' : '🌐'}
+              </span>
+            ))}
+          </div>
+        );
+
+      case 'faq':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {(element.content?.items || []).map((item: any, i: number) => (
+              <div key={i} style={{ padding: '1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>{item.q}</div>
+                <div style={{ opacity: 0.7 }}>{item.a}</div>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'alert':
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span>ℹ️</span>
+            <span>{element.content || 'Alert message'}</span>
+          </div>
+        );
+
+      case 'section':
+      case 'container':
+      case 'row':
+      case 'column':
+        return element.children?.length ? (
+          element.children.map((child) => (
+            <WidgetRenderer
+              key={child.id}
+              element={child}
+              isSelected={false}
+              onSelect={() => {}}
+              onUpdate={() => {}}
+              onDelete={() => {}}
+              onDragStart={() => {}}
+              onDragOver={() => {}}
+              onDrop={() => {}}
+              branding={branding}
+              breakpoint={breakpoint}
+            />
+          ))
+        ) : (
+          <div style={{ padding: '40px', textAlign: 'center', border: '2px dashed rgba(255,255,255,0.2)', borderRadius: '8px', color: 'rgba(255,255,255,0.4)' }}>
+            Drop widgets here
+          </div>
+        );
+
+      default:
+        return <div style={{ padding: '20px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>{element.type} widget</div>;
+    }
+  };
+
+  return (
+    <div
+      style={baseStyle}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      {isSelected && (
+        <div style={{ position: 'absolute', top: '-24px', left: '0', display: 'flex', gap: '4px', zIndex: 10 }}>
+          <span style={{ padding: '2px 8px', backgroundColor: '#6366f1', color: '#fff', fontSize: '0.625rem', borderRadius: '4px 4px 0 0' }}>
+            {element.type}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            style={{ padding: '2px 6px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '0.625rem', cursor: 'pointer' }}
+          >
+            ×
+          </button>
         </div>
+      )}
+      {renderContent()}
+    </div>
+  );
+}
 
-        {/* Section Editor */}
-        <div style={{ flex: showPreview ? '0 0 30%' : '1', borderRight: showPreview ? '1px solid #1a1a1a' : 'none', overflowY: 'auto', padding: '1.5rem' }}>
-          {selectedSection ? (
-            <>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem' }}>Edit Section</h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {/* Visibility Toggle */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', backgroundColor: '#0a0a0a', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSection.visible}
-                    onChange={(e) => updateSection({ visible: e.target.checked })}
-                    style={{ width: '1.25rem', height: '1.25rem' }}
-                  />
-                  <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Visible on Page</span>
-                </label>
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
-                {/* Title */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedSection.title || ''}
-                    onChange={(e) => updateSection({ title: e.target.value })}
-                    placeholder="Section title"
-                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#0a0a0a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-                  />
+export default function WebsiteEditorPage() {
+  const { adminUser } = useAdminAuth();
+  
+  // State
+  const [config, setConfig] = useState<WebsiteConfig>(DEFAULT_CONFIG);
+  const [selectedPageId, setSelectedPageId] = useState<string>('home');
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [leftPanel, setLeftPanel] = useState<'widgets' | 'pages' | 'branding'>('widgets');
+  const [rightPanel, setRightPanel] = useState<'style' | 'settings'>('style');
+  const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [widgetFilter, setWidgetFilter] = useState<string>('');
+  const [expandedCategory, setExpandedCategory] = useState<string>('basic');
+  const [history, setHistory] = useState<WebsiteConfig[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const selectedPage = config.pages.find(p => p.id === selectedPageId);
+  
+  // Find selected element recursively
+  const findElement = (elements: WidgetElement[], id: string): WidgetElement | null => {
+    for (const el of elements) {
+      if (el.id === id) return el;
+      if (el.children) {
+        const found = findElement(el.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const findElementInSections = (sections: PageSection[], id: string): WidgetElement | null => {
+    for (const section of sections) {
+      if (section.id === id) return section as any;
+      const found = findElement(section.children, id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const selectedElement = selectedPage ? findElementInSections(selectedPage.sections, selectedElementId || '') : null;
+
+  // Load config - smart merge: prefer defaults for pages with more content
+  useEffect(() => {
+const load = async () => {
+      // Always start with DEFAULT_CONFIG which has the real website content
+      // Firestore is only used for saving edits
+      setConfig(DEFAULT_CONFIG);
+    };
+    load();
+  }, []);
+
+  // Save config
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set('platform/website', 'editor-config', {
+        ...config,
+        updatedAt: new Date().toISOString(),
+      }, false);
+      
+      // Also save branding to theme for PublicLayout
+      await FirestoreService.set('platform/website', 'config', {
+        branding: config.branding,
+        navigation: config.navigation,
+        footer: config.footer,
+      }, false);
+      
+      setHasChanges(false);
+      alert('Published successfully!');
+    } catch (e) {
+      console.error('Failed to save:', e);
+      alert('Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Update helpers
+  const updateConfig = (updates: Partial<WebsiteConfig>) => {
+    setConfig(prev => ({ ...prev, ...updates }));
+    setHasChanges(true);
+  };
+
+  const addSection = () => {
+    if (!selectedPage) return;
+    const newSection: PageSection = {
+      id: generateId(),
+      type: 'section',
+      name: 'New Section',
+      children: [],
+      styles: { desktop: { padding: '80px 20px', backgroundColor: '#0a0a0a' } },
+      visible: true,
+    };
+    updateConfig({
+      pages: config.pages.map(p => 
+        p.id === selectedPageId 
+          ? { ...p, sections: [...p.sections, newSection] }
+          : p
+      ),
+    });
+    setSelectedElementId(newSection.id);
+  };
+
+  const addWidgetToSection = (widgetType: string, sectionId: string) => {
+    const widget = createWidget(widgetType);
+    updateConfig({
+      pages: config.pages.map(p => 
+        p.id === selectedPageId
+          ? {
+              ...p,
+              sections: p.sections.map(s => 
+                s.id === sectionId
+                  ? { ...s, children: [...s.children, widget] }
+                  : s
+              ),
+            }
+          : p
+      ),
+    });
+    setSelectedElementId(widget.id);
+  };
+
+  const deleteElement = (elementId: string) => {
+    updateConfig({
+      pages: config.pages.map(p => 
+        p.id === selectedPageId
+          ? {
+              ...p,
+              sections: p.sections.filter(s => s.id !== elementId).map(s => ({
+                ...s,
+                type: 'section' as const,
+                children: s.children.filter(c => c.id !== elementId),
+              })),
+            }
+          : p
+      ),
+    });
+    setSelectedElementId(null);
+  };
+
+  const updateElement = (elementId: string, updates: Partial<WidgetElement>) => {
+    updateConfig({
+      pages: config.pages.map(p => 
+        p.id === selectedPageId
+          ? {
+              ...p,
+              sections: p.sections.map(s => 
+                s.id === elementId
+                  ? { ...s, ...updates, type: 'section' as const }
+                  : {
+                      ...s,
+                      type: 'section' as const,
+                      children: s.children.map(c => 
+                        c.id === elementId ? { ...c, ...updates } : c
+                      ),
+                    }
+              ),
+            }
+          : p
+      ),
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent, widgetType: string) => {
+    setDraggedWidget(widgetType);
+    e.dataTransfer.setData('widgetType', widgetType);
+  };
+
+  const handleDrop = (e: React.DragEvent, sectionId: string) => {
+    e.preventDefault();
+    const widgetType = e.dataTransfer.getData('widgetType');
+    if (widgetType && sectionId) {
+      addWidgetToSection(widgetType, sectionId);
+    }
+    setDraggedWidget(null);
+  };
+
+  const previewWidth = breakpoint === 'desktop' ? '100%' : breakpoint === 'tablet' ? '768px' : '375px';
+
+  const filteredWidgets = WIDGETS.filter(w => 
+    widgetFilter ? w.name.toLowerCase().includes(widgetFilter.toLowerCase()) : true
+  );
+
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#000', color: '#fff', overflow: 'hidden' }}>
+      {/* Top Bar */}
+      <div style={{ height: '50px', backgroundColor: '#0a0a0a', borderBottom: '1px solid #222', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <Link href="/admin" style={{ color: '#666', textDecoration: 'none' }}>← Back</Link>
+          <span style={{ fontWeight: '600' }}>Website Editor</span>
+          {hasChanges && <span style={{ fontSize: '0.75rem', color: '#f59e0b' }}>• Unsaved</span>}
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {/* Breakpoint Toggle */}
+          <div style={{ display: 'flex', backgroundColor: '#1a1a1a', borderRadius: '6px', padding: '2px' }}>
+            {(['desktop', 'tablet', 'mobile'] as const).map(bp => (
+              <button
+                key={bp}
+                onClick={() => setBreakpoint(bp)}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: breakpoint === bp ? '#333' : 'transparent',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: breakpoint === bp ? '#fff' : '#666',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {bp === 'desktop' ? '🖥️' : bp === 'tablet' ? '📱' : '📱'}
+              </button>
+            ))}
+          </div>
+          
+          <a href="/" target="_blank" style={{ padding: '6px 12px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', textDecoration: 'none', fontSize: '0.75rem' }}>
+            Preview ↗
+          </a>
+          
+          <button
+            onClick={() => {
+              if (confirm('Reset this page to defaults? This will restore the original content for the currently selected page.')) {
+                const defaultPage = DEFAULT_CONFIG.pages.find(p => p.id === selectedPageId);
+                if (defaultPage) {
+                  updateConfig({
+                    pages: config.pages.map(p => p.id === selectedPageId ? defaultPage : p),
+                  });
+                }
+              }
+            }}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'transparent',
+              border: '1px solid #444',
+              borderRadius: '6px',
+              color: '#888',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+            }}
+          >
+            Reset Page
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !hasChanges}
+            style={{
+              padding: '6px 16px',
+              backgroundColor: hasChanges ? '#6366f1' : '#333',
+              border: 'none',
+              borderRadius: '6px',
+              color: '#fff',
+              cursor: hasChanges ? 'pointer' : 'not-allowed',
+              fontSize: '0.75rem',
+              fontWeight: '600',
+            }}
+          >
+            {isSaving ? 'Saving...' : 'Publish'}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Layout */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Left Panel - Widgets/Pages/Branding */}
+        <div style={{ width: '280px', backgroundColor: '#0a0a0a', borderRight: '1px solid #222', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+          {/* Panel Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #222' }}>
+            {(['widgets', 'pages', 'branding'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setLeftPanel(tab)}
+                style={{
+                  flex: 1,
+                  padding: '12px 8px',
+                  backgroundColor: leftPanel === tab ? '#111' : 'transparent',
+                  border: 'none',
+                  borderBottom: leftPanel === tab ? '2px solid #6366f1' : '2px solid transparent',
+                  color: leftPanel === tab ? '#fff' : '#666',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  fontWeight: '500',
+                }}
+              >
+                {tab === 'widgets' ? '🧩' : tab === 'pages' ? '📄' : '🎨'}
+                <div style={{ marginTop: '2px' }}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Panel Content */}
+          <div style={{ flex: 1, overflow: 'auto', padding: '0.75rem' }}>
+            {leftPanel === 'widgets' && (
+              <>
+                {/* Search */}
+                <input
+                  type="text"
+                  placeholder="Search widgets..."
+                  value={widgetFilter}
+                  onChange={(e) => setWidgetFilter(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', marginBottom: '0.75rem' }}
+                />
+                
+                {/* Widget Categories */}
+                {WIDGET_CATEGORIES.map(cat => {
+                  const catWidgets = filteredWidgets.filter(w => w.category === cat.id);
+                  if (catWidgets.length === 0) return null;
+                  
+                  return (
+                    <div key={cat.id} style={{ marginBottom: '0.5rem' }}>
+                      <button
+                        onClick={() => setExpandedCategory(expandedCategory === cat.id ? '' : cat.id)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          backgroundColor: '#111',
+                          border: '1px solid #222',
+                          borderRadius: '6px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        <span>{cat.icon} {cat.name}</span>
+                        <span style={{ color: '#666' }}>{expandedCategory === cat.id ? '▼' : '▶'}</span>
+                      </button>
+                      
+                      {expandedCategory === cat.id && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', marginTop: '6px', padding: '6px' }}>
+                          {catWidgets.map(widget => (
+                            <div
+                              key={widget.type}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, widget.type)}
+                              style={{
+                                padding: '10px 8px',
+                                backgroundColor: '#1a1a1a',
+                                border: '1px solid #333',
+                                borderRadius: '6px',
+                                cursor: 'grab',
+                                textAlign: 'center',
+                                fontSize: '0.75rem',
+                                transition: 'all 0.15s',
+                              }}
+                              onMouseOver={(e) => (e.currentTarget.style.borderColor = '#6366f1')}
+                              onMouseOut={(e) => (e.currentTarget.style.borderColor = '#333')}
+                            >
+                              <div style={{ fontSize: '1.25rem', marginBottom: '4px' }}>{widget.icon}</div>
+                              <div style={{ color: '#ccc' }}>{widget.name}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+{leftPanel === 'pages' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <button
+                  onClick={() => {
+                    const name = prompt('Page name:');
+                    if (name) {
+                      const slug = '/' + name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                      const newPage: WebsitePage = {
+                        id: generateId(),
+                        name,
+                        slug,
+                        sections: [],
+                        isPublished: false,
+                        isInNav: true,
+                        navOrder: config.pages.length,
+                        pageType: 'content',
+                        metaTitle: `${name} - ${config.branding.companyName}`,
+                        metaDescription: '',
+                      };
+                      updateConfig({ pages: [...config.pages, newPage] });
+                      setSelectedPageId(newPage.id);
+                    }
+                  }}
+                  style={{ padding: '10px', backgroundColor: '#6366f1', border: 'none', borderRadius: '6px', color: '#fff', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem' }}
+                >
+                  + Add Page
+                </button>
+
+                {/* Page List */}
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {config.pages.map(page => (
+                    <div
+                      key={page.id}
+                      onClick={() => setSelectedPageId(page.id)}
+                      style={{
+                        padding: '10px',
+                        marginBottom: '4px',
+                        backgroundColor: selectedPageId === page.id ? '#1a1a1a' : 'transparent',
+                        border: selectedPageId === page.id ? '1px solid #6366f1' : '1px solid #222',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: '500', fontSize: '0.875rem' }}>{page.name}</span>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          {page.pageType === 'auth' && <span style={{ fontSize: '0.5rem', padding: '2px 4px', backgroundColor: '#4338ca', borderRadius: '2px' }}>AUTH</span>}
+                          <span style={{ fontSize: '0.5rem', padding: '2px 4px', backgroundColor: page.isPublished ? '#065f46' : '#7c2d12', borderRadius: '2px' }}>
+                            {page.isPublished ? 'LIVE' : 'DRAFT'}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '2px' }}>{page.slug}</div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Subtitle */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                    Subtitle
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedSection.subtitle || ''}
-                    onChange={(e) => updateSection({ subtitle: e.target.value })}
-                    placeholder="Section subtitle"
-                    style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#0a0a0a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-                  />
-                </div>
+                {/* Selected Page Settings */}
+                {selectedPage && (
+                  <div style={{ borderTop: '1px solid #222', paddingTop: '1rem' }}>
+                    <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: '600', color: '#888', textTransform: 'uppercase' }}>Page Settings</h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {/* Page Name */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#666', marginBottom: '0.25rem' }}>Page Name</label>
+                        <input
+                          type="text"
+                          value={selectedPage.name}
+                          onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, name: e.target.value } : p) })}
+                          style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
+                        />
+                      </div>
 
-                {/* Content (for content sections) */}
-                {selectedSection.type === 'content' && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                      Content
-                    </label>
-                    <textarea
-                      value={selectedSection.content || ''}
-                      onChange={(e) => updateSection({ content: e.target.value })}
-                      placeholder="Section content..."
-                      rows={6}
-                      style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#0a0a0a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical' }}
-                    />
+                      {/* URL Slug */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#666', marginBottom: '0.25rem' }}>URL Slug</label>
+                        <input
+                          type="text"
+                          value={selectedPage.slug}
+                          onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, slug: e.target.value } : p) })}
+                          style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
+                        />
+                      </div>
+
+                      {/* Toggles */}
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedPage.isPublished}
+                            onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, isPublished: e.target.checked } : p) })}
+                          />
+                          Published
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedPage.isInNav}
+                            onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, isInNav: e.target.checked } : p) })}
+                          />
+                          In Nav
+                        </label>
+                      </div>
+
+                      {/* SEO Section */}
+                      <div style={{ borderTop: '1px solid #222', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                        <h5 style={{ margin: '0 0 0.5rem', fontSize: '0.7rem', fontWeight: '600', color: '#888', textTransform: 'uppercase' }}>SEO</h5>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.65rem', color: '#666', marginBottom: '0.2rem' }}>Meta Title</label>
+                            <input
+                              type="text"
+                              value={selectedPage.metaTitle || ''}
+                              onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, metaTitle: e.target.value } : p) })}
+                              placeholder={`${selectedPage.name} - ${config.branding.companyName}`}
+                              style={{ width: '100%', padding: '5px 7px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.65rem', color: '#666', marginBottom: '0.2rem' }}>Meta Description</label>
+                            <textarea
+                              value={selectedPage.metaDescription || ''}
+                              onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, metaDescription: e.target.value } : p) })}
+                              placeholder="Page description for search engines..."
+                              rows={2}
+                              style={{ width: '100%', padding: '5px 7px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', resize: 'vertical' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.65rem', color: '#666', marginBottom: '0.2rem' }}>Keywords</label>
+                            <input
+                              type="text"
+                              value={selectedPage.metaKeywords || ''}
+                              onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, metaKeywords: e.target.value } : p) })}
+                              placeholder="keyword1, keyword2, keyword3"
+                              style={{ width: '100%', padding: '5px 7px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.65rem', color: '#666', marginBottom: '0.2rem' }}>OG Image URL</label>
+                            <input
+                              type="text"
+                              value={selectedPage.ogImage || ''}
+                              onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, ogImage: e.target.value } : p) })}
+                              placeholder="https://..."
+                              style={{ width: '100%', padding: '5px 7px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
+                            />
+                          </div>
+
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.7rem', cursor: 'pointer', color: '#999' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedPage.noIndex || false}
+                              onChange={(e) => updateConfig({ pages: config.pages.map(p => p.id === selectedPage.id ? { ...p, noIndex: e.target.checked } : p) })}
+                            />
+                            No Index (hide from search engines)
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Delete Page */}
+                      {selectedPage.id !== 'home' && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete "${selectedPage.name}" page?`)) {
+                              updateConfig({ pages: config.pages.filter(p => p.id !== selectedPage.id) });
+                              setSelectedPageId('home');
+                            }
+                          }}
+                          style={{ padding: '8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.75rem', marginTop: '0.5rem' }}
+                        >
+                          🗑️ Delete Page
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
+              </div>
+            )}
 
-                {/* Button (for hero/cta sections) */}
-                {(selectedSection.type === 'hero' || selectedSection.type === 'cta') && (
-                  <>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                        Button Text
-                      </label>
+            {leftPanel === 'branding' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Logo */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Logo</label>
+                  <div style={{ backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
+                    {config.branding.logoUrl && (
+                      <img src={config.branding.logoUrl} alt="Logo" style={{ maxHeight: '60px', marginBottom: '0.5rem' }} />
+                    )}
+                    <label style={{ display: 'block', padding: '8px', backgroundColor: '#6366f1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>
+                      Upload Logo
                       <input
-                        type="text"
-                        value={selectedSection.buttonText || ''}
-                        onChange={(e) => updateSection({ buttonText: e.target.value })}
-                        placeholder="Get Started"
-                        style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#0a0a0a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              updateConfig({
+                                branding: { ...config.branding, logoUrl: reader.result as string },
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
                       />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                        Button Link
-                      </label>
-                      <input
-                        type="text"
-                        value={selectedSection.buttonLink || ''}
-                        onChange={(e) => updateSection({ buttonLink: e.target.value })}
-                        placeholder="/signup"
-                        style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#0a0a0a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-                      />
-                    </div>
-                  </>
-                )}
+                    </label>
+                  </div>
+                </div>
+
+                {/* Company Name */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Company Name</label>
+                  <input
+                    type="text"
+                    value={config.branding.companyName}
+                    onChange={(e) => updateConfig({ branding: { ...config.branding, companyName: e.target.value } })}
+                    style={{ width: '100%', padding: '8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }}
+                  />
+                </div>
 
                 {/* Colors */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                    Background Color
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input
-                      type="color"
-                      value={selectedSection.backgroundColor || '#0a0a0a'}
-                      onChange={(e) => updateSection({ backgroundColor: e.target.value })}
-                      style={{ width: '60px', height: '40px', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer' }}
-                    />
-                    <input
-                      type="text"
-                      value={selectedSection.backgroundColor || '#0a0a0a'}
-                      onChange={(e) => updateSection({ backgroundColor: e.target.value })}
-                      style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: '#0a0a0a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem', fontFamily: 'monospace' }}
-                    />
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Colors</label>
+                  {Object.entries(config.branding.colors).slice(0, 6).map(([key, value]) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <input
+                        type="color"
+                        value={value}
+                        onChange={(e) => updateConfig({
+                          branding: { ...config.branding, colors: { ...config.branding.colors, [key]: e.target.value } },
+                        })}
+                        style={{ width: '32px', height: '28px', border: '1px solid #333', borderRadius: '4px', cursor: 'pointer' }}
+                      />
+                      <span style={{ flex: 1, fontSize: '0.75rem', color: '#999', textTransform: 'capitalize' }}>{key}</span>
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => updateConfig({
+                          branding: { ...config.branding, colors: { ...config.branding.colors, [key]: e.target.value } },
+                        })}
+                        style={{ width: '80px', padding: '4px 6px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.625rem', fontFamily: 'monospace' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Canvas */}
+        <div style={{ flex: 1, backgroundColor: '#1a1a1a', overflow: 'auto', display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <div
+            style={{
+              width: previewWidth,
+              maxWidth: '100%',
+              backgroundColor: config.branding.colors.background,
+              minHeight: '100%',
+              boxShadow: '0 0 60px rgba(0,0,0,0.5)',
+            }}
+            onClick={() => setSelectedElementId(null)}
+          >
+            {/* Page Sections */}
+            {selectedPage?.sections.length === 0 ? (
+              <div
+                style={{
+                  padding: '100px 40px',
+                  textAlign: 'center',
+                  border: '2px dashed rgba(255,255,255,0.2)',
+                  margin: '20px',
+                  borderRadius: '12px',
+                  color: 'rgba(255,255,255,0.4)',
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  addSection();
+                }}
+              >
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
+                <div style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Empty Page</div>
+                <div style={{ fontSize: '0.875rem', marginBottom: '1.5rem' }}>Drag widgets here or click below to add a section</div>
+                <button
+                  onClick={addSection}
+                  style={{ padding: '12px 24px', backgroundColor: '#6366f1', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  + Add Section
+                </button>
+              </div>
+            ) : (
+              selectedPage?.sections.map(section => (
+                <div
+                  key={section.id}
+                  style={{
+                    ...section.styles.desktop as React.CSSProperties,
+                    ...section.styles[breakpoint] as React.CSSProperties,
+                    position: 'relative',
+                    outline: selectedElementId === section.id ? '2px solid #6366f1' : '1px dashed transparent',
+                    minHeight: '100px',
+                  }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedElementId(section.id); }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDrop(e, section.id)}
+                >
+                  {/* Section Label */}
+                  <div style={{ position: 'absolute', top: '-20px', left: '10px', fontSize: '0.625rem', color: '#666', backgroundColor: '#0a0a0a', padding: '2px 8px', borderRadius: '4px' }}>
+                    Section: {section.name}
+                  </div>
+                  
+                  {section.children.length === 0 ? (
+                    <div style={{ padding: '60px', textAlign: 'center', border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '8px', color: 'rgba(255,255,255,0.3)' }}>
+                      <div style={{ marginBottom: '0.5rem' }}>🧩</div>
+                      <div>Drag widgets here</div>
+                    </div>
+                  ) : (
+                    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                      {section.children.map(child => (
+                        <WidgetRenderer
+                          key={child.id}
+                          element={child}
+                          isSelected={selectedElementId === child.id}
+                          onSelect={() => setSelectedElementId(child.id)}
+                          onUpdate={(updates) => updateElement(child.id, updates)}
+                          onDelete={() => deleteElement(child.id)}
+                          onDragStart={() => {}}
+                          onDragOver={() => {}}
+                          onDrop={() => {}}
+                          branding={config.branding}
+                          breakpoint={breakpoint}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            
+            {/* Add Section Button */}
+            {selectedPage && selectedPage.sections.length > 0 && (
+              <div style={{ padding: '20px', textAlign: 'center' }}>
+                <button
+                  onClick={addSection}
+                  style={{ padding: '10px 20px', backgroundColor: 'transparent', border: '2px dashed rgba(255,255,255,0.2)', borderRadius: '8px', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '0.875rem' }}
+                >
+                  + Add Section
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel - Content & Style Editor */}
+        <div style={{ width: '320px', backgroundColor: '#0a0a0a', borderLeft: '1px solid #222', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+          {selectedElement ? (
+            <>
+              {/* Element Header */}
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid #222', backgroundColor: '#111' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Editing Element</div>
+                    <div style={{ fontWeight: '600', fontSize: '1rem', textTransform: 'capitalize' }}>{selectedElement.type.replace(/-/g, ' ')}</div>
+                  </div>
+                  <button
+                    onClick={() => deleteElement(selectedElement.id)}
+                    style={{ padding: '6px 10px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                {/* ===== CONTENT SECTION (Always First) ===== */}
+                <div style={{ borderBottom: '1px solid #222' }}>
+                  <div style={{ padding: '12px 16px', backgroundColor: '#0f0f0f', borderBottom: '1px solid #1a1a1a' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📝 Content</span>
+                  </div>
+                  <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    
+                    {/* Simple String Content (text, heading, button) */}
+                    {typeof selectedElement.content === 'string' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>
+                          {selectedElement.type === 'heading' ? 'Heading Text' : selectedElement.type === 'button' ? 'Button Text' : 'Text Content'}
+                        </label>
+                        <textarea
+                          value={selectedElement.content}
+                          onChange={(e) => updateElement(selectedElement.id, { content: e.target.value })}
+                          rows={selectedElement.type === 'text' ? 4 : 2}
+                          placeholder="Enter your content here..."
+                          style={{ width: '100%', padding: '10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical', lineHeight: '1.5' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Button Link */}
+                    {selectedElement.type === 'button' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Link URL</label>
+                        <input
+                          type="text"
+                          value={selectedElement.settings?.href || ''}
+                          onChange={(e) => updateElement(selectedElement.id, { settings: { ...selectedElement.settings, href: e.target.value } })}
+                          placeholder="/signup or https://..."
+                          style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Image Element */}
+                    {selectedElement.type === 'image' && (
+                      <>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Image URL</label>
+                          <input
+                            type="text"
+                            value={typeof selectedElement.content === 'string' ? selectedElement.content : ''}
+                            onChange={(e) => updateElement(selectedElement.id, { content: e.target.value })}
+                            placeholder="https://example.com/image.jpg"
+                            style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Alt Text</label>
+                          <input
+                            type="text"
+                            value={selectedElement.settings?.alt || ''}
+                            onChange={(e) => updateElement(selectedElement.id, { settings: { ...selectedElement.settings, alt: e.target.value } })}
+                            placeholder="Image description for accessibility"
+                            style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Video Element */}
+                    {selectedElement.type === 'video' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Video URL (YouTube/Vimeo)</label>
+                        <input
+                          type="text"
+                          value={typeof selectedElement.content === 'string' ? selectedElement.content : ''}
+                          onChange={(e) => updateElement(selectedElement.id, { content: e.target.value })}
+                          placeholder="https://youtube.com/watch?v=..."
+                          style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Icon Element */}
+                    {selectedElement.type === 'icon' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Icon (emoji or icon code)</label>
+                        <input
+                          type="text"
+                          value={typeof selectedElement.content === 'string' ? selectedElement.content : ''}
+                          onChange={(e) => updateElement(selectedElement.id, { content: e.target.value })}
+                          placeholder="🚀 or icon name"
+                          style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '1rem', textAlign: 'center' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* No content message for layout elements */}
+                    {(['container', 'columns', 'grid', 'row', 'column', 'section', 'spacer', 'divider'].includes(selectedElement.type)) && (
+                      <div style={{ padding: '1rem', backgroundColor: '#111', borderRadius: '6px', textAlign: 'center', color: '#666', fontSize: '0.8rem' }}>
+                        <div style={{ marginBottom: '0.5rem' }}>📦</div>
+                        This is a layout element. Drag widgets inside it or adjust its style below.
+                      </div>
+                    )}
+
+                    {/* Hero/CTA Content */}
+                    {(selectedElement.type === 'hero' || selectedElement.type === 'cta') && typeof selectedElement.content === 'object' && (
+                      <>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Title</label>
+                          <input type="text" value={selectedElement.content?.title || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, title: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Subtitle</label>
+                          <textarea value={selectedElement.content?.subtitle || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, subtitle: e.target.value } })} rows={3} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Button Text</label>
+                          <input type="text" value={selectedElement.content?.buttonText || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, buttonText: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Button Link</label>
+                          <input type="text" value={selectedElement.content?.buttonLink || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, buttonLink: e.target.value } })} placeholder="/signup" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Testimonial Content */}
+                    {selectedElement.type === 'testimonial' && typeof selectedElement.content === 'object' && (
+                      <>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Quote</label>
+                          <textarea value={selectedElement.content?.quote || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, quote: e.target.value } })} rows={3} placeholder="What the customer said..." style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Author</label>
+                            <input type="text" value={selectedElement.content?.author || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, author: e.target.value } })} placeholder="John Doe" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Role</label>
+                            <input type="text" value={selectedElement.content?.role || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, role: e.target.value } })} placeholder="CEO" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Company</label>
+                          <input type="text" value={selectedElement.content?.company || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, company: e.target.value } })} placeholder="Acme Inc" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Icon Box Content */}
+                    {selectedElement.type === 'icon-box' && typeof selectedElement.content === 'object' && (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: '8px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Icon</label>
+                            <input type="text" value={selectedElement.content?.icon || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, icon: e.target.value } })} style={{ width: '100%', padding: '8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '1.25rem', textAlign: 'center' }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Title</label>
+                            <input type="text" value={selectedElement.content?.title || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, title: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Description</label>
+                          <textarea value={selectedElement.content?.text || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, text: e.target.value } })} rows={3} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Counter Content */}
+                    {selectedElement.type === 'counter' && typeof selectedElement.content === 'object' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '8px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Number</label>
+                          <input type="text" value={selectedElement.content?.number || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, number: e.target.value } })} placeholder="1000" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Suffix</label>
+                          <input type="text" value={selectedElement.content?.suffix || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, suffix: e.target.value } })} placeholder="+" style={{ width: '100%', padding: '8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', textAlign: 'center' }} />
+                        </div>
+                        <div style={{ gridColumn: '1/-1' }}>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Label</label>
+                          <input type="text" value={selectedElement.content?.label || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, label: e.target.value } })} placeholder="Happy Customers" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Feature Grid Items */}
+                    {selectedElement.type === 'feature-grid' && selectedElement.content?.items && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Features ({selectedElement.content.items.length})</label>
+                        {selectedElement.content.items.map((item: any, idx: number) => (
+                          <div key={idx} style={{ padding: '10px', backgroundColor: '#111', borderRadius: '6px', marginBottom: '6px' }}>
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                              <input type="text" value={item.icon || ''} placeholder="🚀" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], icon: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '40px', padding: '6px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '1rem', textAlign: 'center' }} />
+                              <input type="text" value={item.title || ''} placeholder="Feature Title" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], title: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <button onClick={() => { const items = selectedElement.content.items.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                            </div>
+                            <input type="text" value={item.desc || ''} placeholder="Feature description" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], desc: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }} />
+                          </div>
+                        ))}
+                        <button onClick={() => { const items = [...(selectedElement.content.items || []), { icon: '⚡', title: 'New Feature', desc: 'Description' }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Feature</button>
+                      </div>
+                    )}
+
+                    {/* Stats Items */}
+                    {selectedElement.type === 'stats' && selectedElement.content?.items && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Stats ({selectedElement.content.items.length})</label>
+                        {selectedElement.content.items.map((item: any, idx: number) => (
+                          <div key={idx} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                            <input type="text" value={item.value || ''} placeholder="100+" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], value: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '70px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                            <input type="text" value={item.label || ''} placeholder="Label" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], label: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                            <button onClick={() => { const items = selectedElement.content.items.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                          </div>
+                        ))}
+                        <button onClick={() => { const items = [...(selectedElement.content.items || []), { value: '100+', label: 'New Stat' }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Stat</button>
+                      </div>
+                    )}
+
+                    {/* FAQ Items */}
+                    {selectedElement.type === 'faq' && selectedElement.content?.items && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>FAQ Items ({selectedElement.content.items.length})</label>
+                        {selectedElement.content.items.map((item: any, idx: number) => (
+                          <div key={idx} style={{ padding: '10px', backgroundColor: '#111', borderRadius: '6px', marginBottom: '6px' }}>
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                              <input type="text" value={item.q || ''} placeholder="Question?" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], q: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <button onClick={() => { const items = selectedElement.content.items.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                            </div>
+                            <textarea value={item.a || ''} placeholder="Answer..." onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], a: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} rows={2} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', resize: 'vertical' }} />
+                          </div>
+                        ))}
+                        <button onClick={() => { const items = [...(selectedElement.content.items || []), { q: 'New Question?', a: 'Answer here' }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add FAQ</button>
+                      </div>
+                    )}
+
+                    {/* Pricing Table */}
+                    {selectedElement.type === 'pricing-table' && selectedElement.content?.plans && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Pricing Plans ({selectedElement.content.plans.length})</label>
+                        {selectedElement.content.plans.map((plan: any, idx: number) => (
+                          <div key={idx} style={{ padding: '10px', backgroundColor: '#111', borderRadius: '6px', marginBottom: '6px', border: plan.highlighted ? '1px solid #6366f1' : '1px solid #222' }}>
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                              <input type="text" value={plan.name || ''} placeholder="Plan Name" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], name: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <button onClick={() => { const plans = selectedElement.content.plans.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
+                              <input type="text" value={plan.price || ''} placeholder="$99" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], price: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ width: '70px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <input type="text" value={plan.period || ''} placeholder="/mo" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], period: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ width: '60px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#888', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={plan.highlighted || false} onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], highlighted: e.target.checked }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} />
+                                Featured
+                              </label>
+                            </div>
+                            <textarea value={(plan.features || []).join('\n')} placeholder="Feature 1&#10;Feature 2" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], features: e.target.value.split('\n') }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} rows={3} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', resize: 'vertical' }} />
+                          </div>
+                        ))}
+                        <button onClick={() => { const plans = [...(selectedElement.content.plans || []), { name: 'New Plan', price: '$0', period: '/mo', features: ['Feature 1'], highlighted: false }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Plan</button>
+                      </div>
+                    )}
+
+                    {/* Newsletter Content */}
+                    {selectedElement.type === 'newsletter' && typeof selectedElement.content === 'object' && (
+                      <>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Placeholder Text</label>
+                          <input type="text" value={selectedElement.content?.placeholder || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, placeholder: e.target.value } })} placeholder="Enter your email" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Button Text</label>
+                          <input type="text" value={selectedElement.content?.buttonText || ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, buttonText: e.target.value } })} placeholder="Subscribe" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                    Text Color
-                  </label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input
-                      type="color"
-                      value={selectedSection.textColor || '#ffffff'}
-                      onChange={(e) => updateSection({ textColor: e.target.value })}
-                      style={{ width: '60px', height: '40px', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer' }}
-                    />
-                    <input
-                      type="text"
-                      value={selectedSection.textColor || '#ffffff'}
-                      onChange={(e) => updateSection({ textColor: e.target.value })}
-                      style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: '#0a0a0a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem', fontFamily: 'monospace' }}
+                {/* ===== STYLE SECTION ===== */}
+                <div style={{ borderBottom: '1px solid #222' }}>
+                  <div style={{ padding: '12px 16px', backgroundColor: '#0f0f0f', borderBottom: '1px solid #1a1a1a' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🎨 Style</span>
+                    <span style={{ fontSize: '0.65rem', color: '#666', marginLeft: '8px' }}>({breakpoint})</span>
+                  </div>
+                  <div style={{ padding: '12px 16px' }}>
+                    <StyleEditor
+                      styles={selectedElement.styles}
+                      onChange={(styles) => updateElement(selectedElement.id, { styles })}
+                      breakpoint={breakpoint}
                     />
                   </div>
                 </div>
               </div>
             </>
           ) : (
-            <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#666' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👈</div>
-              <p>Select a section to edit</p>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', textAlign: 'center', padding: '2rem' }}>
+              <div>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎯</div>
+                <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Click any element on the canvas</div>
+                <div style={{ fontSize: '0.75rem', color: '#555' }}>to edit its content and style</div>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Live Preview */}
-        {showPreview && (
-          <div style={{ flex: '0 0 35%', backgroundColor: '#f9fafb', overflowY: 'auto' }}>
-            <div style={{ padding: '1rem', backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb', position: 'sticky', top: 0, zIndex: 10 }}>
-              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111' }}>Live Preview</div>
-              <div style={{ fontSize: '0.75rem', color: '#666' }}>{selectedPage?.name}</div>
-            </div>
-            
-            {selectedPage?.sections.filter(s => s.visible).map(section => (
-              <div
-                key={section.id}
-                style={{
-                  padding: '4rem 2rem',
-                  backgroundColor: section.backgroundColor || '#0a0a0a',
-                  color: section.textColor || '#ffffff',
-                  borderBottom: '2px solid #e5e7eb',
-                }}
-              >
-                {section.type === 'hero' && (
-                  <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
-                    <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                      {section.title || 'Hero Title'}
-                    </h1>
-                    <p style={{ fontSize: '1.25rem', opacity: 0.8, marginBottom: '2rem' }}>
-                      {section.subtitle || 'Hero subtitle goes here'}
-                    </p>
-                    {section.buttonText && (
-                      <button style={{ padding: '1rem 2rem', backgroundColor: '#6366f1', color: '#fff', border: 'none', borderRadius: '0.5rem', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>
-                        {section.buttonText}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {section.type === 'features' && (
-                  <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                      <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
-                        {section.title || 'Features'}
-                      </h2>
-                      <p style={{ fontSize: '1.125rem', opacity: 0.8 }}>
-                        {section.subtitle || 'Subtitle'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-                      {section.items?.map((item, i) => (
-                        <div key={i} style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{item.icon}</div>
-                          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>{item.title}</h3>
-                          <p style={{ opacity: 0.7 }}>{item.description}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {section.type === 'pricing' && (
-                  <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                      <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
-                        {section.title || 'Pricing'}
-                      </h2>
-                      <p style={{ fontSize: '1.125rem', opacity: 0.8 }}>
-                        {section.subtitle || 'Subtitle'}
-                      </p>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                      {section.items?.map((plan, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            padding: '2rem',
-                            backgroundColor: plan.highlighted ? '#6366f1' : 'rgba(255,255,255,0.05)',
-                            border: plan.highlighted ? '2px solid #818cf8' : '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '1rem',
-                          }}
-                        >
-                          <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{plan.name}</h3>
-                          <div style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{plan.price}</div>
-                          <div style={{ opacity: 0.7, marginBottom: '2rem' }}>{plan.period}</div>
-                          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                            {plan.features?.map((feature: string, j: number) => (
-                              <li key={j} style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                                ✓ {feature}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {section.type === 'cta' && (
-                  <div style={{ textAlign: 'center', maxWidth: '800px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                      {section.title || 'Call to Action'}
-                    </h2>
-                    <p style={{ fontSize: '1.125rem', opacity: 0.8, marginBottom: '2rem' }}>
-                      {section.subtitle || 'Subtitle'}
-                    </p>
-                    {section.buttonText && (
-                      <button style={{ padding: '1rem 2rem', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '0.5rem', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>
-                        {section.buttonText}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {section.type === 'content' && (
-                  <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                      {section.title || 'Content Section'}
-                    </h2>
-                    <p style={{ fontSize: '1.125rem', lineHeight: '1.8', opacity: 0.9 }}>
-                      {section.content || 'Content goes here...'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-
