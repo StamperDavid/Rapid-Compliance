@@ -57,6 +57,9 @@ export default function CompliancePage() {
     );
   }
 
+  // Note: Currently showing demo compliance data. In production, this would be connected
+  // to a real compliance tracking system like Vanta, Drata, or custom compliance auditing.
+  
   const filteredRecords = filterType === 'all' 
     ? records 
     : records.filter(r => r.type === filterType);

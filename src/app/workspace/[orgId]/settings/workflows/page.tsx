@@ -110,6 +110,31 @@ export default function WorkflowsPage() {
               </button>
             </div>
 
+            {/* Explanation Box */}
+            <div style={{ backgroundColor: '#1a1a3a', border: '1px solid #3333aa', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>⚡</span> What are Workflows?
+              </h3>
+              <p style={{ color: '#a0a0c0', fontSize: '0.875rem', lineHeight: '1.6', marginBottom: '1rem' }}>
+                Workflows automate repetitive tasks in your CRM. When a trigger event occurs (like a new contact being created or a deal stage changing), 
+                the workflow automatically performs actions like sending emails, updating records, or notifying your team.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6366f1', marginBottom: '0.25rem' }}>Common Triggers</div>
+                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Contact created, Deal won, Invoice overdue, Task completed</div>
+                </div>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#10b981', marginBottom: '0.25rem' }}>Common Actions</div>
+                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Send email, Create task, Update field, Notify team via Slack</div>
+                </div>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#f59e0b', marginBottom: '0.25rem' }}>Getting Started</div>
+                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Click "Create Workflow" to build your first automation</div>
+                </div>
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
               {workflowsList.map(workflow => (
                 <div key={workflow.id} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
