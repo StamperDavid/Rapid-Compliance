@@ -521,3 +521,4 @@ firebase deploy --only storage
 - **Always run `npm run build` before pushing** - catches TypeScript errors
 - **Dev Firebase is disposable** - break it, reset it, experiment freely
 - **Prod Firebase is protected** - only deploy after testing in dev
+

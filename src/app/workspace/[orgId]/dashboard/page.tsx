@@ -92,9 +92,18 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-black text-white p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-gray-400">Welcome back! Here's an overview of your workspace.</p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+            <p className="text-gray-400">Welcome back! Here's an overview of your workspace.</p>
+          </div>
+          <button
+            onClick={() => alert('Feedback form coming soon!')}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium"
+          >
+            <span>💬</span>
+            Feedback / Requests
+          </button>
         </div>
 
         {/* Stats Grid */}
@@ -182,6 +191,7 @@ export default function DashboardPage() {
     </div>
   );
 }
+
 
 
 
