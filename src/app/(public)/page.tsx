@@ -298,51 +298,78 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Step 1 */}
             <div className="relative">
-              <div className="absolute top-0 left-0 w-12 h-12 bg-gray-800 border-2 border-gray-700 rounded-full flex items-center justify-center text-2xl font-bold text-gray-300">
-                1
+              <div 
+                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg"
+                style={{ backgroundColor: theme.primaryColor }}
+              >
+                🎓
               </div>
-              <div className="pt-16 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
+              <div className="pt-20 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:border-white/20 transition">
+                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: theme.primaryColor }}>
+                  Step 1
+                </div>
                 <h3 className="text-2xl font-bold text-white mb-4">Train Your Agent</h3>
                 <p className="text-gray-300 mb-4">
                   Answer a few questions about your business, upload your product docs, 
                   and our AI learns everything about your offerings.
                 </p>
-                <div className="text-sm text-gray-400">
-                  ⚡ Takes 5 minutes
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Takes 15-30 minutes
                 </div>
               </div>
             </div>
 
             {/* Step 2 */}
             <div className="relative">
-              <div className="absolute top-0 left-0 w-12 h-12 bg-gray-800 border-2 border-gray-700 rounded-full flex items-center justify-center text-2xl font-bold text-gray-300">
-                2
+              <div 
+                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg"
+                style={{ backgroundColor: theme.primaryColor }}
+              >
+                🎯
               </div>
-              <div className="pt-16 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
+              <div className="pt-20 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:border-white/20 transition">
+                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: theme.primaryColor }}>
+                  Step 2
+                </div>
                 <h3 className="text-2xl font-bold text-white mb-4">Practice & Perfect</h3>
                 <p className="text-gray-300 mb-4">
                   Role-play as a customer in our training sandbox. Give feedback. 
                   The AI improves with every session.
                 </p>
-                <div className="text-sm text-gray-400">
-                  🎯 Real improvement
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Improve accuracy to 95%+
                 </div>
               </div>
             </div>
 
             {/* Step 3 */}
             <div className="relative">
-              <div className="absolute top-0 left-0 w-12 h-12 bg-gray-800 border-2 border-gray-700 rounded-full flex items-center justify-center text-2xl font-bold text-gray-300">
-                3
+              <div 
+                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg"
+                style={{ backgroundColor: theme.primaryColor }}
+              >
+                🚀
               </div>
-              <div className="pt-16 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl">
+              <div className="pt-20 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:border-white/20 transition">
+                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: theme.primaryColor }}>
+                  Step 3
+                </div>
                 <h3 className="text-2xl font-bold text-white mb-4">Deploy Everywhere</h3>
                 <p className="text-gray-300 mb-4">
                   Embed your AI agent on your website with one line of code. 
                   It works on WordPress, Shopify, or any site.
                 </p>
-                <div className="text-sm text-gray-400">
-                  🚀 One-click embed
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Works on any website
                 </div>
               </div>
             </div>

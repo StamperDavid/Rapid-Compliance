@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
@@ -22,6 +23,8 @@ interface TeamMember {
 
 export default function TeamMembersPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -30,6 +33,8 @@ export default function TeamMembersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [activePermissionTab, setActivePermissionTab] = useState<'preset' | 'custom'>('preset');
+  const [loading, setLoading] = useState(true);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   const [inviteData, setInviteData] = useState({
     email: '',
@@ -38,7 +43,8 @@ export default function TeamMembersPage() {
     department: ''
   });
 
-  React.useEffect(() => {
+  // Load theme
+  useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme) {
       try {
@@ -49,14 +55,59 @@ export default function TeamMembersPage() {
     }
   }, []);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  // Load team members from Firestore
+  useEffect(() => {
+    async function loadTeamMembers() {
+      try {
+        setLoading(true);
+        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        
+        // Query users who belong to this organization
+        const users = await FirestoreService.query(
+          COLLECTIONS.USERS,
+          [{ field: 'organizationId', operator: '==', value: orgId }]
+        );
+        
+        // Map to TeamMember format
+        const members: TeamMember[] = users.map((u: any, index: number) => ({
+          id: index + 1,
+          name: u.displayName || u.email?.split('@')[0] || 'Unknown',
+          email: u.email || '',
+          role: u.role || 'employee',
+          title: u.title || '',
+          department: u.department || '',
+          status: u.status || 'active',
+          joinedDate: u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
+          customPermissions: u.customPermissions
+        }));
+        
+        setTeamMembers(members);
+      } catch (error) {
+        console.error('Failed to load team members:', error);
+        // Show current user as fallback
+        if (user) {
+          setTeamMembers([{
+            id: 1,
+            name: user.displayName || user.email?.split('@')[0] || 'You',
+            email: user.email || '',
+            role: (user.role as UserRole) || 'admin',
+            title: '',
+            department: '',
+            status: 'active',
+            joinedDate: 'Current User'
+          }]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    if (orgId) {
+      loadTeamMembers();
+    }
+  }, [orgId, user]);
 
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'admin', title: 'Sales Director', department: 'Sales', status: 'active', joinedDate: 'Jan 15, 2024' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'manager', title: 'Account Manager', department: 'Sales', status: 'active', joinedDate: 'Feb 20, 2024' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'employee', title: 'Sales Rep', department: 'Sales', status: 'active', joinedDate: 'Mar 10, 2024' },
-    { id: 4, name: 'Alice Williams', email: 'alice@example.com', role: 'employee', title: 'Support Specialist', department: 'Support', status: 'invited', joinedDate: 'Nov 20, 2025' }
-  ]);
+  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   const roles: { value: UserRole; label: string; description: string }[] = [
     { value: 'owner', label: 'Owner', description: 'Full system access and billing control' },

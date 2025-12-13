@@ -72,6 +72,18 @@ export default function AdminBar() {
               ⚙️ Settings
             </Link>
           )}
+          <button
+            onClick={() => {
+              // Open feedback modal or external form
+              const feedbackUrl = 'mailto:feedback@salesvelocity.ai?subject=Feature Request / Feedback';
+              window.open(feedbackUrl, '_blank');
+            }}
+            style={{ padding: '0.5rem 1rem', color: '#999', fontSize: '0.875rem', fontWeight: '500', backgroundColor: 'transparent', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            💡 Feedback
+          </button>
         </div>
 
         {/* Right: User Menu */}
