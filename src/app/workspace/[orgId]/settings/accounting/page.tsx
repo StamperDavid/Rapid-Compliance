@@ -162,7 +162,7 @@ export default function AccountingPage() {
       {/* Header */}
       <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '2rem' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
-          <Link href="/workspace/demo-org/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
+          <Link href={`/workspace/${orgId}/settings`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
             ← Back to Settings
           </Link>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fff', margin: 0, marginBottom: '0.5rem' }}>Accounting Software Integration</h1>

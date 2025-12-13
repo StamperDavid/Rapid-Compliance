@@ -1,9 +1,193 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
+function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content: "Hi there! 👋 I'm the AI sales agent for SalesVelocity.ai. I can answer questions about our platform, help you understand pricing, or show you how our AI agents work. What would you like to know?",
+      timestamp: new Date(),
+    }
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const suggestedQuestions = [
+    "What does this platform do?",
+    "How much does it cost?",
+    "How long does setup take?",
+    "Can I see a demo?",
+  ];
+
+  const sendMessage = async (messageText?: string) => {
+    const text = messageText || input.trim();
+    if (!text || isTyping) return;
+
+    const userMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsTyping(true);
+
+    try {
+      const response = await fetch('/api/chat/public', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          orgId: 'platform',
+          customerId: `demo_${Date.now()}`,
+        }),
+      });
+
+      const data = await response.json();
+      
+      const assistantMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        role: 'assistant',
+        content: data.response || "I'd be happy to help! Our platform lets you create custom AI sales agents trained on your business. They can chat with visitors 24/7, qualify leads, answer questions, and even close deals. Would you like to start a free trial?",
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      // Provide a helpful fallback response
+      const fallbackMessage: ChatMessage = {
+        id: `msg_${Date.now()}`,
+        role: 'assistant',
+        content: "Great question! SalesVelocity.ai lets you create custom AI sales agents trained specifically on your business. They work 24/7 on your website to qualify leads, answer questions, and close deals. Our setup takes less than an hour, and you can start with a 14-day free trial. Want me to tell you more about any specific feature?",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, fallbackMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  return (
+    <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 max-w-2xl mx-auto">
+      {/* Chat Header */}
+      <div 
+        className="px-6 py-4 flex items-center gap-4"
+        style={{ backgroundColor: primaryColor }}
+      >
+        <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+          <span className="text-2xl">🤖</span>
+        </div>
+        <div>
+          <h3 className="text-white font-semibold text-lg">SalesVelocity AI Agent</h3>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+            <span className="text-white/80 text-sm">Online now</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="h-80 overflow-y-auto p-4 space-y-4 bg-slate-800">
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                msg.role === 'user'
+                  ? 'bg-indigo-600 text-white rounded-br-md'
+                  : 'bg-slate-700 text-gray-100 rounded-bl-md'
+              }`}
+            >
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+            </div>
+          </div>
+        ))}
+        
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-slate-700 px-4 py-3 rounded-2xl rounded-bl-md">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Suggested Questions */}
+      {messages.length <= 2 && (
+        <div className="px-4 py-3 bg-slate-800 border-t border-slate-700">
+          <p className="text-xs text-gray-400 mb-2">Try asking:</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => sendMessage(q)}
+                className="px-3 py-1.5 text-xs bg-slate-700 text-gray-300 rounded-full hover:bg-slate-600 transition"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="p-4 bg-slate-900 border-t border-slate-700">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder="Type your message..."
+            className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+            disabled={isTyping}
+          />
+          <button
+            onClick={() => sendMessage()}
+            disabled={!input.trim() || isTyping}
+            className="px-4 py-3 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: primaryColor, color: '#fff' }}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const { theme } = useWebsiteTheme();
@@ -56,7 +240,7 @@ export default function LandingPage() {
                 <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                <span>No credit card required</span>
+                <span>No charge until trial ends</span>
               </div>
               <div className="flex items-center gap-2">
                 <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
@@ -88,7 +272,7 @@ export default function LandingPage() {
               <div className="text-gray-400">Always Available</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-white mb-2">5min</div>
+              <div className="text-4xl font-bold text-white mb-2">&lt;1hr</div>
               <div className="text-gray-400">Setup Time</div>
             </div>
             <div className="text-center">
@@ -107,7 +291,7 @@ export default function LandingPage() {
               Three Steps to Your AI Sales Team
             </h2>
             <p className="text-xl text-gray-300">
-              Get up and running in minutes, not weeks
+              Get up and running in hours, not weeks
             </p>
           </div>
 
@@ -242,29 +426,29 @@ export default function LandingPage() {
       {/* Demo Section */}
       <section id="demo-section" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               See It In Action
             </h2>
-            <p className="text-xl text-gray-300">
-              This very website is powered by our AI sales agent. Try it!
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              This is a live AI sales agent. Go ahead - ask it anything about our platform. 
+              This is exactly what your customers will experience on your website.
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-8">
-              <div className="text-center text-gray-400 mb-4">
-                👇 Our AI sales agent will appear here 👇
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-12 text-center">
-                <div className="text-6xl mb-4">🤖</div>
-                <p className="text-gray-300">
-                  AI Widget will be embedded here
-                  <br />
-                  <span className="text-sm text-gray-500">(Coming in next commit)</span>
-                </p>
-              </div>
-            </div>
+          <LiveChatDemo primaryColor={theme.primaryColor} />
+
+          <div className="mt-12 text-center">
+            <p className="text-gray-400 mb-4">
+              Impressed? Your AI agent can be even smarter - trained specifically on YOUR business.
+            </p>
+            <Link
+              href="/signup"
+              className="inline-block px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
+              style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
+            >
+              Create Your Own AI Agent →
+            </Link>
           </div>
         </div>
       </section>
@@ -329,7 +513,7 @@ export default function LandingPage() {
             Start Your Free Trial →
           </Link>
           <div className="mt-6 text-sm text-gray-400">
-            No credit card required • 14-day free trial • Cancel anytime
+            14-day free trial • No charge until trial ends • Cancel anytime
           </div>
         </div>
       </section>

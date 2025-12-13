@@ -58,7 +58,7 @@ export default function SmsMessagesPage() {
         }}>
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             <Link
-              href="/workspace/demo-org/settings"
+              href={`/workspace/${orgId}/settings`}
               style={{
                 width: '100%',
                 padding: '0.875rem 1.25rem',

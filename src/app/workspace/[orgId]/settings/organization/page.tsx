@@ -189,7 +189,7 @@ export default function OrganizationSettingsPage() {
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
-              <Link href="/workspace/demo-org/settings" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+              <Link href={`/workspace/${orgId}/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
                 ← Back to Settings
               </Link>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Organization Settings</h1>
@@ -438,7 +438,7 @@ export default function OrganizationSettingsPage() {
               {/* Actions */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingTop: '2rem', borderTop: '1px solid #333' }}>
                 <Link
-                  href="/workspace/demo-org/settings"
+                  href={`/workspace/${orgId}/settings`}
                   style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}
                 >
                   Cancel

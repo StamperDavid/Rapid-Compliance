@@ -45,7 +45,7 @@ function FallbackContent() {
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
-            Start with a 14-day free trial. No credit card required.
+            Start with a 14-day free trial. No charge until your trial ends.
           </p>
         </div>
       </section>

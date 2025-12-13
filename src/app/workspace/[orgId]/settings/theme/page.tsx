@@ -304,7 +304,7 @@ export default function ThemeEditorPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/workspace/demo-org/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+              <Link href={`/workspace/${orgId}/settings`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
                 ← Back to Settings
               </Link>
               <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>

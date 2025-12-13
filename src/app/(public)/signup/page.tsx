@@ -135,8 +135,8 @@ export default function SignupPage() {
       // Success!
       alert(`Account created successfully! Welcome to ${formData.companyName}!`);
       
-      // Redirect to workspace dashboard
-      router.push(`/workspace/${orgId}/dashboard`);
+      // Redirect to onboarding (not dashboard - users must complete onboarding first)
+      router.push(`/workspace/${orgId}/onboarding`);
     } catch (error: any) {
       console.error('Failed to create account:', error);
       
@@ -318,17 +318,12 @@ export default function SignupPage() {
                     />
                   </div>
 
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.startTrial}
-                      onChange={(e) => setFormData({ ...formData, startTrial: e.target.checked })}
-                      className="w-5 h-5"
-                    />
-                    <span className="text-gray-300">
-                      Start with 14-day free trial (no credit card required)
-                    </span>
-                  </label>
+                  {/* Credit card is now required - trial checkbox removed */}
+                  <div className="p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                    <p className="text-gray-300 text-sm">
+                      💳 Credit card required to start your 14-day free trial. You won't be charged until your trial ends.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-4">

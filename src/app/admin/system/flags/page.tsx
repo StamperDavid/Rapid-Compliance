@@ -54,7 +54,7 @@ export default function FeatureFlagsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Feature Flags
+            Feature Controls
           </h1>
           <p style={{ color: '#666', fontSize: '0.875rem' }}>
             Manage feature rollouts and A/B testing
@@ -90,7 +90,7 @@ export default function FeatureFlagsPage() {
       {/* Flags List */}
       {loading ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-          Loading feature flags...
+          Loading feature controls...
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

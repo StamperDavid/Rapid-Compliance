@@ -203,8 +203,8 @@ export async function calculateRevenueMetrics(
   try {
     // Get all active subscriptions
     const customers = await getAllCustomers();
-    const activeSubscriptions = customers.filter(c => 
-      c.subscription.status === 'active' || c.subscription.status === 'trial'
+    const activeSubscriptions = customers.filter(c =>
+      c.subscription && (c.subscription.status === 'active' || c.subscription.status === 'trial')
     );
     
     // Calculate MRR
@@ -231,6 +231,7 @@ export async function calculateRevenueMetrics(
     
     // Calculate churned customers
     const churnedCustomers = customers.filter(c =>
+      c.subscription &&
       c.subscription.status === 'cancelled' &&
       c.subscription.canceledAt &&
       new Date(c.subscription.canceledAt as string) >= periodStart &&

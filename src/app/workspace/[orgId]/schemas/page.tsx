@@ -128,7 +128,7 @@ export default function SchemaBuilderPage() {
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Link href="/workspace/demo-org/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+              <Link href={`/workspace/${orgId}/settings`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
                 ← Back to Settings
               </Link>
               <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>
@@ -194,7 +194,7 @@ export default function SchemaBuilderPage() {
 
               <div style={{ paddingTop: '1rem', borderTop: '1px solid #1a1a1a', display: 'flex', gap: '0.5rem' }}>
                 <Link
-                  href={`/workspace/demo-org/entities/${schema.name.toLowerCase()}`}
+                  href={`/workspace/${orgId}/entities/${schema.name.toLowerCase()}`}
                   style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#6366f1', borderRadius: '0.5rem', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid #333', fontWeight: '500' }}
                 >
                   View Data

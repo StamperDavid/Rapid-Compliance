@@ -276,7 +276,7 @@ export default function IntegrationsPage() {
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
               <Link 
-                href="/workspace/demo-org/settings" 
+                href={`/workspace/${orgId}/settings`} 
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 
