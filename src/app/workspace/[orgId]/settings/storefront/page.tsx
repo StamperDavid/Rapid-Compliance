@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -83,6 +84,8 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 
 export default function StorefrontSettingsPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const { theme: crmTheme } = useOrgTheme(); // Get CRM theme automatically
   const [config, setConfig] = useState<StorefrontConfig>(DEFAULT_CONFIG);
   const [activeTab, setActiveTab] = useState<'setup' | 'widgets'>('setup'); // Removed 'theme' tab

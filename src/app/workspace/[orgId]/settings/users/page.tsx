@@ -61,15 +61,16 @@ export default function TeamMembersPage() {
       try {
         setLoading(true);
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const { where } = await import('firebase/firestore');
         
         // Query users who belong to this organization
-        const users = await FirestoreService.query(
+        const users = await FirestoreService.getAll(
           COLLECTIONS.USERS,
-          [{ field: 'organizationId', operator: '==', value: orgId }]
+          [where('organizationId', '==', orgId)]
         );
         
         // Map to TeamMember format
-        const members: TeamMember[] = users.map((u: any, index: number) => ({
+        const members: TeamMember[] = (users || []).map((u: any, index: number) => ({
           id: index + 1,
           name: u.displayName || u.email?.split('@')[0] || 'Unknown',
           email: u.email || '',

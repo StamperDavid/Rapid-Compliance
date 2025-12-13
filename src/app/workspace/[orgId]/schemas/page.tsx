@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
@@ -36,6 +37,9 @@ const FIELD_TYPES = [
 ];
 
 export default function SchemaBuilderPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
+
   // Convert STANDARD_SCHEMAS to the format we need
   const standardSchemasArray: Schema[] = Object.values(STANDARD_SCHEMAS).map(schema => ({
     id: schema.id,

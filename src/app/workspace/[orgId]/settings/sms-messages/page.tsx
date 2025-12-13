@@ -2,12 +2,15 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSMS } from '@/lib/sms/sms-service';
 
 export default function SmsMessagesPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [theme, setTheme] = useState<any>(null);
   const [smsTemplates, setSmsTemplates] = useState<any[]>([]);

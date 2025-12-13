@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -80,6 +81,8 @@ const PLATFORMS = [
 
 export default function AccountingPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [config, setConfig] = useState<AccountingConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
