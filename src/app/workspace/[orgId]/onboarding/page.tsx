@@ -111,10 +111,52 @@ export default function OnboardingWizard() {
     conversationFlowLogic: '',
     responseLengthLimit: 0,
     industryTemplate: '',
-    knowledgePriority: [] as any[]
+    knowledgePriority: [] as any[],
+    
+    // Step 17: Idle Timeout (Organization Level)
+    idleTimeoutMinutes: 30,
+    
+    // Step 18: Objection Handling Strategies
+    priceObjectionStrategy: '',
+    competitorObjectionStrategy: '',
+    timingObjectionStrategy: '',
+    authorityObjectionStrategy: '',
+    needObjectionStrategy: '',
+    
+    // Step 19: Customer Sentiment Handling
+    angryCustomerApproach: '',
+    confusedCustomerApproach: '',
+    readyToBuySignals: '',
+    disengagementSignals: '',
+    frustratedCustomerApproach: '',
+    
+    // Step 20: Discovery Question Frameworks
+    budgetQualificationQuestions: '',
+    timelineQuestions: '',
+    authorityQuestions: '',
+    needIdentificationQuestions: '',
+    painPointQuestions: '',
+    
+    // Step 21: Closing Techniques
+    assumptiveCloseConditions: '',
+    urgencyCreationTactics: '',
+    trialCloseTriggers: '',
+    softCloseApproaches: '',
+    
+    // Step 22: Rules & Restrictions
+    prohibitedBehaviors: '',
+    behavioralBoundaries: '',
+    mustAlwaysMention: '',
+    neverMention: '',
+    
+    // Step 23: Training Metrics Selection
+    selectedTrainingMetrics: [] as string[],
+    
+    // Step 24: Sales Materials Upload
+    uploadedSalesMaterials: [] as File[],
   });
 
-  const totalSteps = 16;
+  const totalSteps = 24;
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -1599,6 +1641,664 @@ export default function OnboardingWizard() {
                   </div>
                   <div style={{ color: '#ccc', fontSize: '0.875rem' }}>
                     The configurations from Steps 1-15 are sufficient for 95% of users. You can always come back and configure advanced settings later from the Agent Persona page.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 17: Idle Timeout */}
+          {currentStep === 17 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  Idle Timeout Settings
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Organization-wide setting for all agents
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                    Idle Timeout (Minutes)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.idleTimeoutMinutes}
+                    onChange={(e) => updateField('idleTimeoutMinutes', parseInt(e.target.value) || 30)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '1rem'
+                    }}
+                  />
+                  <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    How long to wait before ending an inactive conversation (default: 30 minutes)
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 18: Objection Handling Strategies */}
+          {currentStep === 18 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  🛡️ Objection Handling Strategies
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Define how your agent should handle common objections
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <TextArea 
+                  label="Price Objection Strategy" 
+                  field="priceObjectionStrategy" 
+                  placeholder='e.g., "When customer says too expensive, emphasize ROI and break down cost per use. Offer payment plans if applicable. Compare to competitor pricing showing value gap."'
+                  rows={3}
+                  helper="How should the agent respond when customers say it's too expensive?"
+                />
+                
+                <TextArea 
+                  label="Competitor Objection Strategy" 
+                  field="competitorObjectionStrategy" 
+                  placeholder='e.g., "Acknowledge competitor strengths, then highlight our unique differentiators: 24/7 support, lifetime warranty, and free installation."'
+                  rows={3}
+                  helper="How to respond when customers mention competitors?"
+                />
+                
+                <TextArea 
+                  label="Timing Objection Strategy" 
+                  field="timingObjectionStrategy" 
+                  placeholder='e.g., "Respect their timeline but create soft urgency around limited inventory or upcoming price increases. Offer to follow up at their preferred time."'
+                  rows={3}
+                  helper="How to handle 'not ready to buy now' objections?"
+                />
+                
+                <TextArea 
+                  label="Authority Objection Strategy" 
+                  field="authorityObjectionStrategy" 
+                  placeholder='e.g., "Ask who the decision maker is and what criteria they care about. Offer to send materials they can share. Request permission to follow up."'
+                  rows={3}
+                  helper="How to respond when they need approval from someone else?"
+                />
+                
+                <TextArea 
+                  label="Need Objection Strategy" 
+                  field="needObjectionStrategy" 
+                  placeholder='e.g., "Ask deeper questions to uncover hidden needs. Share case studies of similar customers who didn\'t think they needed it but saw great results."'
+                  rows={3}
+                  helper="What to do when customer doesn't see the need?"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 19: Customer Sentiment Handling */}
+          {currentStep === 19 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  🤝 Customer Sentiment Handling
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Define how your agent should adapt to different customer emotions
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <TextArea 
+                  label="Angry Customer Approach" 
+                  field="angryCustomerApproach" 
+                  placeholder='e.g., "Apologize first, empathize with frustration, take ownership of the issue, and immediately offer 2-3 concrete solutions. Escalate if anger persists."'
+                  rows={3}
+                  helper="How should the agent handle frustrated or angry customers?"
+                />
+                
+                <TextArea 
+                  label="Confused Customer Approach" 
+                  field="confusedCustomerApproach" 
+                  placeholder='e.g., "Simplify language, use analogies, break complex concepts into steps. Ask if they want a quick overview or detailed explanation."'
+                  rows={3}
+                  helper="How to help customers who don't understand?"
+                />
+                
+                <TextArea 
+                  label="Ready-to-Buy Signals" 
+                  field="readyToBuySignals" 
+                  placeholder='e.g., "Asks about payment options, shipping timeline, availability. Uses present tense (when I get this, not if). Asks detailed post-purchase questions."'
+                  rows={3}
+                  helper="What signals indicate the customer is ready to purchase?"
+                />
+                
+                <TextArea 
+                  label="Disengagement Signals" 
+                  field="disengagementSignals" 
+                  placeholder='e.g., "One-word responses, long delays, stops asking questions, says need to think about it without follow-up questions."'
+                  rows={3}
+                  helper="What signals show the customer is losing interest?"
+                />
+                
+                <TextArea 
+                  label="Frustrated Customer Approach" 
+                  field="frustratedCustomerApproach" 
+                  placeholder='e.g., "Acknowledge their frustration, validate their feelings, offer to simplify or speed up the process. Provide direct answers without fluff."'
+                  rows={3}
+                  helper="How to handle mildly frustrated customers (before they become angry)?"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 20: Discovery Question Frameworks */}
+          {currentStep === 20 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  ❓ Discovery Question Frameworks
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Define the strategic questions your agent should ask to understand customer needs
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <TextArea 
+                  label="Budget Qualification Questions" 
+                  field="budgetQualificationQuestions" 
+                  placeholder='e.g., "What budget range are you working with? Are you looking for premium or value options? Is this a personal purchase or business expense?"'
+                  rows={3}
+                  helper="Questions to understand their budget without being pushy"
+                />
+                
+                <TextArea 
+                  label="Timeline Questions" 
+                  field="timelineQuestions" 
+                  placeholder='e.g., "When do you need this by? Is this urgent or are you planning ahead? What happens if we miss that deadline?"'
+                  rows={3}
+                  helper="Questions to understand their urgency and timing"
+                />
+                
+                <TextArea 
+                  label="Authority Questions" 
+                  field="authorityQuestions" 
+                  placeholder='e.g., "Are you the decision maker or will others be involved? What factors will they care about most? Who has final approval?"'
+                  rows={3}
+                  helper="Questions to identify if they can make the purchase decision"
+                />
+                
+                <TextArea 
+                  label="Need Identification Questions" 
+                  field="needIdentificationQuestions" 
+                  placeholder='e.g., "What problem are you trying to solve? What have you tried before? What would the ideal solution look like for you?"'
+                  rows={3}
+                  helper="Questions to uncover their true needs and pain points"
+                />
+                
+                <TextArea 
+                  label="Pain Point Questions" 
+                  field="painPointQuestions" 
+                  placeholder='e.g., "What\'s the biggest challenge you\'re facing right now? What happens if this problem isn\'t solved? How much is this costing you?"'
+                  rows={3}
+                  helper="Questions to understand the severity and impact of their problem"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 21: Closing Techniques */}
+          {currentStep === 21 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  🎯 Closing Techniques
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Define when and how your agent should move toward closing the sale
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <TextArea 
+                  label="Assumptive Close Conditions" 
+                  field="assumptiveCloseConditions" 
+                  placeholder='e.g., "Use assumptive close when customer asks about shipping timeline, payment options, or availability. Phrases: Would you like this shipped to your business or home address? Let me get this ordered for you today."'
+                  rows={3}
+                  helper="When and how to use assumptive closing language"
+                />
+                
+                <TextArea 
+                  label="Urgency Creation Tactics" 
+                  field="urgencyCreationTactics" 
+                  placeholder='e.g., "Mention limited inventory (if true), upcoming price increases, seasonal demand, or time-sensitive promotions. Always be honest - never fabricate urgency."'
+                  rows={3}
+                  helper="How to create genuine urgency without being pushy"
+                />
+                
+                <TextArea 
+                  label="Trial Close Triggers" 
+                  field="trialCloseTriggers" 
+                  placeholder='e.g., "After answering 3+ questions positively, ask: How does that sound so far? or On a scale of 1-10, how close is this to what you need?"'
+                  rows={3}
+                  helper="When to test readiness to buy with trial closes"
+                />
+                
+                <TextArea 
+                  label="Soft Close Approaches" 
+                  field="softCloseApproaches" 
+                  placeholder='e.g., "For hesitant customers: Would you like me to reserve one while you think it over? or What would need to happen for this to be a yes?"'
+                  rows={3}
+                  helper="Gentle closing techniques for uncertain customers"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 22: Rules & Restrictions */}
+          {currentStep === 22 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  ⚖️ Agent Rules & Restrictions
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Define clear behavioral boundaries for your agent
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <TextArea 
+                  label="Prohibited Behaviors" 
+                  field="prohibitedBehaviors" 
+                  placeholder='e.g., "Never discuss sports, politics, or religion. Don\'t make medical claims. Don\'t negotiate below minimum price. Don\'t share competitor pricing specifics."'
+                  rows={3}
+                  helper="Things the agent should NEVER do or discuss"
+                />
+                
+                <TextArea 
+                  label="Behavioral Boundaries" 
+                  field="behavioralBoundaries" 
+                  placeholder='e.g., "Remain professional at all times. Don\'t use slang or emojis excessively. Don\'t be overly familiar with first-time customers. Escalate sensitive topics immediately."'
+                  rows={3}
+                  helper="General guidelines for appropriate behavior"
+                />
+                
+                <TextArea 
+                  label="Must Always Mention" 
+                  field="mustAlwaysMention" 
+                  placeholder='e.g., "Free shipping on orders over $50. 30-day money-back guarantee. 24/7 customer support available."'
+                  rows={3}
+                  helper="Key points the agent should consistently bring up"
+                />
+                
+                <TextArea 
+                  label="Never Mention" 
+                  field="neverMention" 
+                  placeholder='e.g., "Past product recalls. Discontinued product lines. Internal company issues. Specific competitor weaknesses."'
+                  rows={3}
+                  helper="Topics the agent should avoid bringing up"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Step 23: Training Metrics Selection */}
+          {currentStep === 23 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  📊 Training Metrics Selection
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Choose 5-6 metrics you want to focus on when training your agent
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#0a2a1a', border: '1px solid #0a4a2a', borderRadius: '0.5rem' }}>
+                <div style={{ color: '#10b981', fontSize: '0.875rem' }}>
+                  💡 These metrics will appear in your Training Center. Focus on what matters most to your sales process.
+                </div>
+              </div>
+
+              {/* Training Metrics by Category */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Core Sales Skills */}
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                    Core Sales Skills
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                    {[
+                      { id: 'objection-handling', label: 'Objection Handling', icon: '🛡️' },
+                      { id: 'product-knowledge', label: 'Product Knowledge', icon: '📚' },
+                      { id: 'tone-professionalism', label: 'Tone & Professionalism', icon: '🎭' },
+                      { id: 'closing-skills', label: 'Closing Skills', icon: '🎯' },
+                      { id: 'discovery-questions', label: 'Discovery Questions', icon: '❓' },
+                      { id: 'empathy-rapport', label: 'Empathy & Rapport', icon: '🤝' },
+                    ].map((metric) => (
+                      <label
+                        key={metric.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '1rem',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedTrainingMetrics.includes(metric.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateField('selectedTrainingMetrics', [...formData.selectedTrainingMetrics, metric.id]);
+                            } else {
+                              updateField('selectedTrainingMetrics', formData.selectedTrainingMetrics.filter((m: string) => m !== metric.id));
+                            }
+                          }}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
+                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Advanced Techniques */}
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                    Advanced Techniques
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                    {[
+                      { id: 'response-speed', label: 'Response Speed', icon: '⚡' },
+                      { id: 'active-listening', label: 'Active Listening', icon: '🧠' },
+                      { id: 'value-communication', label: 'Value Communication', icon: '💰' },
+                      { id: 'urgency-creation', label: 'Urgency Creation', icon: '🔥' },
+                      { id: 'storytelling', label: 'Storytelling', icon: '🎪' },
+                      { id: 'problem-identification', label: 'Problem Identification', icon: '🤔' },
+                    ].map((metric) => (
+                      <label
+                        key={metric.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '1rem',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedTrainingMetrics.includes(metric.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateField('selectedTrainingMetrics', [...formData.selectedTrainingMetrics, metric.id]);
+                            } else {
+                              updateField('selectedTrainingMetrics', formData.selectedTrainingMetrics.filter((m: string) => m !== metric.id));
+                            }
+                          }}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
+                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Customer Management */}
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                    Customer Management
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                    {[
+                      { id: 'difficult-customer-handling', label: 'Difficult Customer Handling', icon: '😡' },
+                      { id: 'needs-assessment', label: 'Needs Assessment', icon: '📊' },
+                      { id: 'qualification-accuracy', label: 'Qualification Accuracy', icon: '🔍' },
+                      { id: 'follow-up-effectiveness', label: 'Follow-Up Effectiveness', icon: '🚀' },
+                      { id: 'customer-satisfaction', label: 'Customer Satisfaction', icon: '😊' },
+                      { id: 'solution-matching', label: 'Solution Matching', icon: '🧩' },
+                    ].map((metric) => (
+                      <label
+                        key={metric.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '1rem',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedTrainingMetrics.includes(metric.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateField('selectedTrainingMetrics', [...formData.selectedTrainingMetrics, metric.id]);
+                            } else {
+                              updateField('selectedTrainingMetrics', formData.selectedTrainingMetrics.filter((m: string) => m !== metric.id));
+                            }
+                          }}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
+                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Strategic */}
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
+                    Strategic
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                    {[
+                      { id: 'competitive-positioning', label: 'Competitive Positioning', icon: '🏆' },
+                      { id: 'upsell-crosssell', label: 'Upsell/Cross-sell', icon: '📈' },
+                    ].map((metric) => (
+                      <label
+                        key={metric.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '1rem',
+                          backgroundColor: formData.selectedTrainingMetrics.includes(metric.id) ? '#1a1a3a' : '#0a0a0a',
+                          border: formData.selectedTrainingMetrics.includes(metric.id) ? `2px solid ${primaryColor}` : '1px solid #333',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedTrainingMetrics.includes(metric.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateField('selectedTrainingMetrics', [...formData.selectedTrainingMetrics, metric.id]);
+                            } else {
+                              updateField('selectedTrainingMetrics', formData.selectedTrainingMetrics.filter((m: string) => m !== metric.id));
+                            }
+                          }}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
+                        <span style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Selection Counter */}
+                <div style={{ 
+                  padding: '1rem', 
+                  backgroundColor: formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? '#0a2a1a' : '#2a2a0a',
+                  border: `1px solid ${formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? '#0a4a2a' : '#4a4a0a'}`,
+                  borderRadius: '0.5rem',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ 
+                    color: formData.selectedTrainingMetrics.length >= 5 && formData.selectedTrainingMetrics.length <= 6 ? '#10b981' : '#fbbf24',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}>
+                    {formData.selectedTrainingMetrics.length} / 5-6 metrics selected
+                    {formData.selectedTrainingMetrics.length < 5 && ' (Select at least 5)'}
+                    {formData.selectedTrainingMetrics.length > 6 && ' (We recommend focusing on 5-6)'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 24: Sales Materials Upload */}
+          {currentStep === 24 && (
+            <div>
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                  📚 Sales Materials Upload (Optional)
+                </div>
+                <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                  Upload sales training books, playbooks, or methodologies for AI to extract techniques
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div style={{ padding: '1.5rem', backgroundColor: '#0a2a1a', border: '1px solid #0a4a2a', borderRadius: '0.75rem' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#10b981', marginBottom: '0.75rem' }}>
+                    🚀 Pro Tip: Upload Proven Sales Methodologies
+                  </div>
+                  <div style={{ color: '#10b981', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: '1.6' }}>
+                    Upload books like:
+                    <ul style={{ marginTop: '0.5rem', marginLeft: '1.5rem' }}>
+                      <li>NEPQ Black Book of Questions by Jeremy Miner</li>
+                      <li>SPIN Selling by Neil Rackham</li>
+                      <li>The Challenger Sale by Matthew Dixon</li>
+                      <li>Your internal sales playbooks and scripts</li>
+                    </ul>
+                  </div>
+                  <div style={{ color: '#10b981', fontSize: '0.75rem', fontStyle: 'italic' }}>
+                    Our AI will extract proven strategies and automatically apply them to your agent's persona.
+                  </div>
+                </div>
+
+                {/* File Upload Area */}
+                <div>
+                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                    Upload Sales Materials (PDF, DOCX)
+                  </label>
+                  <div style={{
+                    border: '2px dashed #333',
+                    borderRadius: '0.75rem',
+                    padding: '2rem',
+                    textAlign: 'center',
+                    backgroundColor: '#0a0a0a',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        updateField('uploadedSalesMaterials', [...formData.uploadedSalesMaterials, ...files]);
+                      }}
+                      style={{ display: 'none' }}
+                      id="sales-materials-upload"
+                    />
+                    <label htmlFor="sales-materials-upload" style={{ cursor: 'pointer' }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📤</div>
+                      <div style={{ color: '#fff', fontWeight: '600', marginBottom: '0.5rem' }}>
+                        Click to upload or drag and drop
+                      </div>
+                      <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                        PDF, DOC, DOCX up to 50MB each
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Uploaded Files List */}
+                  {formData.uploadedSalesMaterials.length > 0 && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <div style={{ color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                        Uploaded Files ({formData.uploadedSalesMaterials.length})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {formData.uploadedSalesMaterials.map((file: File, idx: number) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '0.75rem',
+                              backgroundColor: '#1a1a1a',
+                              border: '1px solid #333',
+                              borderRadius: '0.5rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <span style={{ fontSize: '1.5rem' }}>📄</span>
+                              <div>
+                                <div style={{ color: '#fff', fontSize: '0.875rem', fontWeight: '500' }}>
+                                  {file.name}
+                                </div>
+                                <div style={{ color: '#666', fontSize: '0.75rem' }}>
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                updateField('uploadedSalesMaterials', formData.uploadedSalesMaterials.filter((_: any, i: number) => i !== idx));
+                              }}
+                              style={{
+                                padding: '0.5rem',
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                fontSize: '1.25rem'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Skip Option */}
+                <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', textAlign: 'center' }}>
+                  <div style={{ color: '#999', fontSize: '0.875rem' }}>
+                    Don't have materials to upload? No problem! Your agent will still work great with the information you've already provided. You can always add materials later.
                   </div>
                 </div>
               </div>

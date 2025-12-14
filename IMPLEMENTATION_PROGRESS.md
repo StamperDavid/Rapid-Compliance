@@ -1,135 +1,101 @@
-# 🚀 IMPLEMENTATION PROGRESS - OPTION 1
+# Comprehensive Persona & Training System - Implementation Plan
 
-**Started:** December 8, 2025  
-**Status:** IN PROGRESS  
-**Completed:** 1/10 phases
+## Phase 1: Type Definitions ✅ COMPLETE
 
----
+### Files Created/Modified:
+1. **src/types/agent-memory.ts** - Updated with:
+   - Comprehensive `OnboardingData` interface (25 steps)
+   - Expanded `AgentPersona` interface (50+ fields)
+   - New `SalesMethodology` interface for uploaded materials
+   
+2. **src/types/training-metrics.ts** - NEW file with:
+   - 20 available training metrics
+   - 8 scenario types for coverage tracking
+   - Training session structures
+   - Training requirements tracking
 
-## ✅ COMPLETED
+### Key Additions:
 
-### Phase 1.1: Wire CRM Entity Pages ✅ DONE
-**Time:** ~30 minutes  
-**Files Changed:**
-- ✅ Created `src/hooks/useRecords.ts` (172 lines)
-- ✅ Updated `src/app/workspace/[orgId]/entities/[entityName]/page.tsx`
+**OnboardingData now includes:**
+- 5 new sales methodology sections (Steps 19-23)
+- Training metrics selection (Step 24)
+- Sales materials upload (Step 25)
+- Total: 25 onboarding steps
 
-**Impact:**
-- Replaced hardcoded mock data with Firestore queries
-- Data now persists across page refreshes
-- Multi-tenant isolation works
-- Real-time updates implemented
+**AgentPersona now includes:**
+- Objection handling strategies (5 sub-fields)
+- Customer sentiment handling (5 sub-fields)
+- Discovery frameworks (5 sub-fields)
+- Closing techniques (4 sub-fields)
+- Product knowledge (6 sub-fields)
+- Communication style (7 sub-fields)
+- Value communication (6 sub-fields)
+- Competitive positioning (3 sub-fields)
+- Proactive behavior (4 sub-fields)
+- Rules & boundaries (5 sub-fields)
+- Training adjustments tracking
+- Applied methodologies from uploaded books
 
----
-
-## 🔄 IN PROGRESS
-
-### Phase 2: Hybrid Storage (localStorage + Firestore)
-**Status:** Creating backup strategy  
-**Files Created:**
-- ✅ `src/lib/storage/hybrid-storage.ts` (NEW - 215 lines)
-
-**Strategy:**
-- Keep localStorage as fast cache/backup
-- Firestore as source of truth (syncs across devices)
-- Offline-capable
-- Migration path from localStorage → Firestore
-
-### Phase 3: Wire Conversations to Real Chat Sessions
-**Status:** Creating chat session service  
-**Files Created:**
-- ✅ `src/lib/agent/chat-session-service.ts` (NEW - 350+ lines)
-
-**Features:**
-- Real-time session monitoring
-- Active sessions tracking
-- Session history with filters
-- Agent takeover functionality
-- Message subscriptions
-- Sentiment analysis
-- Training flags
-- Session metrics
-
-**Next Steps:**
-1. Update conversations page to use ChatSessionService
-2. Replace all mock data arrays
-3. Wire "Take Over" button to real functionality
-4. Test real-time updates
+**Total: 50+ adjustable persona fields**
 
 ---
 
-## ⏭️ UPCOMING
+## Phase 2: Next Steps
 
-### Phase 4: Complete Email Sequences (10-15 hours)
-**Priority:** HIGH  
-**Status:** Pending
+### 2.1 Onboarding Form Expansion ✅ COMPLETE
+- [x] Add Steps 17-24 (new sales methodology sections)
+- [x] Add Step 23 (training metrics selection with 20 options)
+- [x] Add Step 24 (sales materials upload)
+- [ ] Update onboarding processor to handle new fields
 
-**Tasks:**
-- Wire outbound page to sequence engine
-- Implement scheduler cron jobs
-- Complete meeting scheduler
-- Test email delivery
+### 2.2 Document Processing for Sales Books
+- [ ] Extend knowledge-processor.ts to handle PDFs
+- [ ] Create sales-methodology-extractor.ts
+- [ ] Prompt engineering for methodology extraction
+- [ ] Map extracted knowledge to persona fields
 
-### Phase 5: Add Pagination (6-10 hours)
-**Priority:** HIGH  
-**Status:** Pending
+### 2.3 Base Model Builder Updates
+- [ ] Update buildSystemPrompt() to use all 50+ persona fields
+- [ ] Ensure all new onboarding data populates persona
+- [ ] Add methodology integration logic
 
-**Tasks:**
-- Create pagination component
-- Update all data tables
-- Implement cursor-based pagination
-- Test with large datasets
+### 2.4 Training Center Redesign
+- [ ] Two-panel layout (chat left, metrics right)
+- [ ] Dynamic metrics based on client selection
+- [ ] Scenario type tagging
+- [ ] Explanation text boxes (required)
+- [ ] Scenario coverage tracking UI
 
----
+### 2.5 Golden Master Requirements
+- [ ] Training requirements validator
+- [ ] Scenario coverage calculator
+- [ ] Deployment blocker until requirements met
+- [ ] Progress indicators
 
-## 📊 OVERALL PROGRESS
+### 2.6 Deployment Controls
+- [ ] Lock embed/short code until GM saved
+- [ ] Placeholder preview boxes
+- [ ] Training explanation messaging
 
-| Phase | Status | Time Estimate | Time Spent |
-|-------|--------|--------------|------------|
-| 1. Wire CRM | ✅ Done | 15-20h | 0.5h |
-| 2. Hybrid Storage | 🔄 In Progress | 8-12h | 1h |
-| 3. Wire Conversations | 🔄 In Progress | 10-15h | 1h |
-| 4. Email Sequences | ⏭️ Next | 10-15h | 0h |
-| 5. Pagination | ⏭️ Next | 6-10h | 0h |
-| 6. Complete Workflows | ⏭️ Pending | 8-12h | 0h |
-| 7. Loading States | ⏭️ Pending | 6-8h | 0h |
-| 8. Cleanup | ⏭️ Pending | 4-6h | 0h |
-| 9. Testing | ⏭️ Pending | 15-20h | 0h |
-| 10. Bug Fixes | ⏭️ Pending | TBD | 0h |
-| **TOTAL** | **2%** | **94-136h** | **2.5h** |
-
----
-
-## 🎯 NEXT MILESTONES
-
-### Milestone 1: CRM Fully Functional (Target: Today)
-- [x] Wire entity pages to Firestore
-- [ ] Create hybrid storage service
-- [ ] Test with real data
-- [ ] Verify multi-tenant isolation
-
-### Milestone 2: Conversations Live (Target: Next)
-- [ ] Create chat session service
-- [ ] Update conversations page
-- [ ] Test real-time monitoring
-- [ ] Implement agent takeover
-
-### Milestone 3: Email Sequences Working
-- [ ] Wire UI to backend engine
-- [ ] Implement scheduler
-- [ ] Test end-to-end
-
-### Milestone 4: Production Ready
-- [ ] All features tested
-- [ ] Zero critical bugs
-- [ ] Performance optimized
-- [ ] Security hardened
+### 2.7 Live Operations
+- [ ] Conversation takeover functionality
+- [ ] Sentiment analysis display
+- [ ] Train-from-conversation feature
+- [ ] Golden Master version management
+- [ ] Delete & reset functionality
 
 ---
 
-**Updated:** December 8, 2025 at 3:00 AM
+## Implementation Order:
 
+**Week 1-2:** Onboarding expansion + Base Model updates
+**Week 3:** Training Center redesign
+**Week 4:** Document processing for sales books
+**Week 5:** Golden Master requirements + deployment controls
+**Week 6:** Live operations + testing
 
+---
 
-
-
+## Current Status:
+✅ Phase 1: Type definitions complete
+⏳ Phase 2: Ready to begin onboarding form expansion
