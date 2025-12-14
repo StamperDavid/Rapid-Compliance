@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar';
 
 interface SubscriptionData {
   plan: string;
@@ -27,6 +28,7 @@ export default function BillingSettingsPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState('professional');
 
   useEffect(() => {

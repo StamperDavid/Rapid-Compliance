@@ -103,18 +103,18 @@ export default function AgentPersonaPage() {
   });
 
   return (
-        <div style={{ padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem' }}>
-              <Link href={`/workspace/${orgId}/settings/ai-agents`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-                ← Back to AI Agent
-              </Link>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', marginTop: '1rem' }}>Agent Persona</h1>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>Configure your AI agent's knowledge base and personality</p>
-            </div>
+    <div style={{ padding: '2rem', overflowY: 'auto' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <Link href={`/workspace/${orgId}/settings/ai-agents`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+            ← Back to AI Agent
+          </Link>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', marginTop: '1rem' }}>Agent Persona</h1>
+          <p style={{ color: '#666', fontSize: '0.875rem' }}>Configure your AI agent's knowledge base and personality</p>
+        </div>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #333' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #333' }}>
               {[
                 { id: 'model', label: 'AI Model', icon: '🤖' },
                 { id: 'knowledge', label: 'Knowledge Base', icon: '📚' },
@@ -779,8 +779,8 @@ export default function AgentPersonaPage() {
                 </button>
               </div>
             )}
-          </div>
-        </div>
+      </div>
+    </div>
   );
 }
 

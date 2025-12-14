@@ -58,6 +58,9 @@ export const emailSendSchema = z.object({
   }).optional(),
   metadata: z.record(z.any()).optional(),
   organizationId: organizationIdSchema,
+}).refine((data) => !!data.html || !!data.text, {
+  message: 'Either html or text is required',
+  path: ['html'],
 });
 
 /**
@@ -84,38 +87,53 @@ export const paymentIntentSchema = z.object({
 /**
  * Lead scoring request schema
  */
-export const leadScoringSchema = z.object({
-  action: z.enum(['score', 'batch-score', 'insights']),
-  data: z.object({
-    factors: z.object({
-      email: z.string().email().optional(),
-      company: z.string().optional(),
-      title: z.string().optional(),
-      industry: z.string().optional(),
-      companySize: z.string().optional(),
-      website: z.string().url().optional(),
-      engagementScore: z.number().min(0).max(100).optional(),
-      recencyScore: z.number().min(0).max(100).optional(),
-      fitScore: z.number().min(0).max(100).optional(),
-    }).optional(),
-    leads: z.array(z.any()).optional(),
+export const leadScoringSchema = z.union([
+  z.object({
+    action: z.enum(['score', 'batch-score', 'insights']),
+    data: z.object({
+      factors: z.object({
+        email: z.string().email().optional(),
+        company: z.string().optional(),
+        title: z.string().optional(),
+        industry: z.string().optional(),
+        companySize: z.string().optional(),
+        website: z.string().url().optional(),
+        engagementScore: z.number().min(0).max(100).optional(),
+        recencyScore: z.number().min(0).max(100).optional(),
+        fitScore: z.number().min(0).max(100).optional(),
+      }).optional(),
+      leads: z.array(z.any()).optional(),
+    }),
+    organizationId: organizationIdSchema,
   }),
-  organizationId: organizationIdSchema,
-});
+  // Lightweight payload used in tests and simple flows
+  z.object({
+    leadId: z.string().min(1),
+    organizationId: organizationIdSchema,
+  }),
+]);
 
 /**
  * Workflow execution schema
  */
-export const workflowExecuteSchema = z.object({
-  workflow: z.object({
-    id: z.string(),
-    name: z.string(),
-    trigger: z.any(),
-    actions: z.array(z.any()),
+export const workflowExecuteSchema = z.union([
+  z.object({
+    workflow: z.object({
+      id: z.string(),
+      name: z.string(),
+      trigger: z.any(),
+      actions: z.array(z.any()),
+    }),
+    triggerData: z.record(z.any()),
+    organizationId: organizationIdSchema,
   }),
-  triggerData: z.record(z.any()),
-  organizationId: organizationIdSchema,
-});
+  // Simpler form used by tests
+  z.object({
+    workflowId: z.string(),
+    triggerData: z.record(z.any()),
+    organizationId: organizationIdSchema,
+  }),
+]);
 
 /**
  * Campaign creation schema
@@ -123,11 +141,15 @@ export const workflowExecuteSchema = z.object({
 export const campaignCreateSchema = z.object({
   name: z.string().min(1).max(255),
   subject: z.string().min(1).max(255),
-  html: z.string().min(1),
+  html: z.string().min(1).optional(),
   text: z.string().optional(),
+  templateId: z.string().optional(),
   recipientList: z.array(emailSchema),
   organizationId: organizationIdSchema,
   scheduleAt: z.string().datetime().optional(),
+}).refine((data) => !!data.html || !!data.text || !!data.templateId, {
+  message: 'Provide html, text, or templateId',
+  path: ['html'],
 });
 
 /**

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar';
 import QuickBooksIntegration from '@/components/integrations/QuickBooksIntegration';
 import XeroIntegration from '@/components/integrations/XeroIntegration';
 import StripeIntegration from '@/components/integrations/StripeIntegration';
@@ -17,6 +18,7 @@ import SlackIntegration from '@/components/integrations/SlackIntegration';
 import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
@@ -25,6 +27,7 @@ export default function IntegrationsPage() {
   const { theme } = useOrgTheme();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   React.useEffect(() => {
 

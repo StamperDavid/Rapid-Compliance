@@ -183,7 +183,7 @@ export async function sendEnsembleRequest(
 /**
  * Smart model selection based on conversation context
  */
-function selectSmartModels(messages: UnifiedChatMessage[]): string[] {
+export function selectSmartModels(messages: UnifiedChatMessage[]): string[] {
   const lastMessage = messages[messages.length - 1]?.content || '';
   const conversationLength = messages.length;
   
@@ -248,7 +248,7 @@ function analyzeResponse(
 /**
  * Calculate coherence score (0-100)
  */
-function calculateCoherence(text: string): number {
+export function calculateCoherence(text: string): number {
   let score = 50; // Base score
   
   // Check for complete sentences
@@ -277,7 +277,7 @@ function calculateCoherence(text: string): number {
 /**
  * Calculate relevance score (0-100)
  */
-function calculateRelevance(response: string, question: string): number {
+export function calculateRelevance(response: string, question: string): number {
   let score = 50; // Base score
   
   // Extract key words from question
@@ -303,7 +303,7 @@ function calculateRelevance(response: string, question: string): number {
 /**
  * Calculate specificity score (0-100)
  */
-function calculateSpecificity(text: string): number {
+export function calculateSpecificity(text: string): number {
   let score = 50; // Base score
   
   // Check for numbers/data
@@ -329,7 +329,7 @@ function calculateSpecificity(text: string): number {
 /**
  * Calculate confidence score (0-100)
  */
-function calculateConfidence(text: string): number {
+export function calculateConfidence(text: string): number {
   let score = 70; // Base score
   
   // Check for uncertainty markers
@@ -390,27 +390,35 @@ function calculateScore(
 /**
  * Select best response from all responses
  */
-function selectBestResponse(responses: EnsembleModelResponse[]): {
+export function selectBestResponse(responses: EnsembleModelResponse[]): {
   response: string;
   model: string;
   reasoning: string;
   confidence: number;
+  score?: number;
 } {
   // Sort by score
   const sorted = [...responses].sort((a, b) => b.score - a.score);
   const best = sorted[0];
+  const metrics = {
+    coherence: best.metrics?.coherence ?? 0,
+    relevance: best.metrics?.relevance ?? 0,
+    specificity: best.metrics?.specificity ?? 0,
+    confidence: best.metrics?.confidence ?? 0,
+  };
   
   const reasoning = `Selected ${best.model} (score: ${best.score.toFixed(1)}/100). ` +
-    `Coherence: ${best.metrics.coherence.toFixed(0)}, ` +
-    `Relevance: ${best.metrics.relevance.toFixed(0)}, ` +
-    `Specificity: ${best.metrics.specificity.toFixed(0)}, ` +
-    `Confidence: ${best.metrics.confidence.toFixed(0)}`;
+    `Coherence: ${metrics.coherence.toFixed(0)}, ` +
+    `Relevance: ${metrics.relevance.toFixed(0)}, ` +
+    `Specificity: ${metrics.specificity.toFixed(0)}, ` +
+    `Confidence: ${metrics.confidence.toFixed(0)}`;
   
   return {
     response: best.response,
     model: best.model,
     reasoning,
     confidence: best.score,
+    score: best.score,
   };
 }
 

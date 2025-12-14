@@ -1734,7 +1734,7 @@ export default function OnboardingWizard() {
                 <TextArea 
                   label="Need Objection Strategy" 
                   field="needObjectionStrategy" 
-                  placeholder='e.g., "Ask deeper questions to uncover hidden needs. Share case studies of similar customers who didn\'t think they needed it but saw great results."'
+                  placeholder='e.g., "Ask deeper questions to uncover hidden needs. Share case studies of similar customers who didn&apos;t think they needed it but saw great results."'
                   rows={3}
                   helper="What to do when customer doesn't see the need?"
                 />
@@ -1846,7 +1846,7 @@ export default function OnboardingWizard() {
                 <TextArea 
                   label="Pain Point Questions" 
                   field="painPointQuestions" 
-                  placeholder='e.g., "What\'s the biggest challenge you\'re facing right now? What happens if this problem isn\'t solved? How much is this costing you?"'
+                  placeholder='e.g., "What&apos;s the biggest challenge you&apos;re facing right now? What happens if this problem isn&apos;t solved? How much is this costing you?"'
                   rows={3}
                   helper="Questions to understand the severity and impact of their problem"
                 />
@@ -1918,7 +1918,7 @@ export default function OnboardingWizard() {
                 <TextArea 
                   label="Prohibited Behaviors" 
                   field="prohibitedBehaviors" 
-                  placeholder='e.g., "Never discuss sports, politics, or religion. Don\'t make medical claims. Don\'t negotiate below minimum price. Don\'t share competitor pricing specifics."'
+                  placeholder='e.g., "Never discuss sports, politics, or religion. Don&apos;t make medical claims. Don&apos;t negotiate below minimum price. Don&apos;t share competitor pricing specifics."'
                   rows={3}
                   helper="Things the agent should NEVER do or discuss"
                 />
@@ -1926,7 +1926,7 @@ export default function OnboardingWizard() {
                 <TextArea 
                   label="Behavioral Boundaries" 
                   field="behavioralBoundaries" 
-                  placeholder='e.g., "Remain professional at all times. Don\'t use slang or emojis excessively. Don\'t be overly familiar with first-time customers. Escalate sensitive topics immediately."'
+                  placeholder='e.g., "Remain professional at all times. Don&apos;t use slang or emojis excessively. Don&apos;t be overly familiar with first-time customers. Escalate sensitive topics immediately."'
                   rows={3}
                   helper="General guidelines for appropriate behavior"
                 />

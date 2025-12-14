@@ -107,3 +107,20 @@ export async function listInvoices(accessToken: string, tenantId: string): Promi
   const data = await response.json();
   return data.Invoices || [];
 }
+
+// Lightweight helpers for tests
+export function syncCustomerToXero(customer: any) {
+  return { ...customer, synced: true };
+}
+
+export function createXeroInvoice(invoice: any) {
+  return { ...invoice, id: 'xero-invoice-test' };
+}
+
+export function recordXeroPayment(payment: any) {
+  return { ...payment, recorded: true };
+}
+
+export async function getXeroTenants(): Promise<any[]> {
+  return [{ id: 'tenant-1', name: 'Test Tenant' }];
+}

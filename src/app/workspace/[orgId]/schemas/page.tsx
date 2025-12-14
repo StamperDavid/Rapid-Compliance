@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 interface Field {

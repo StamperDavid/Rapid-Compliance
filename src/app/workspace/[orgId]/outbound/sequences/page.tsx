@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';

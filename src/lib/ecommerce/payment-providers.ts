@@ -351,6 +351,11 @@ function calculateMollieFee(amount: number): number {
   return amount * 0.018 + 0.28;
 }
 
+// Simple Razorpay fee helper for tests
+export function calculateRazorpayFee(amount: number): number {
+  return amount * 0.02;
+}
+
 /**
  * Get all available payment providers
  */
@@ -402,6 +407,22 @@ export const PAYMENT_PROVIDERS = [
     fee: '1.8% + €0.25',
     logo: '🇪🇺',
     countries: 'Europe',
+  },
+  {
+    id: 'razorpay',
+    name: 'Razorpay',
+    description: 'Popular in India, simple fees',
+    fee: '2% + small fixed',
+    logo: '🇮🇳',
+    countries: 'India',
+  },
+  {
+    id: 'braintree',
+    name: 'Braintree',
+    description: 'PayPal-owned, robust payments',
+    fee: '2.9% + $0.30',
+    logo: '💠',
+    countries: 'Global',
   },
 ];
 

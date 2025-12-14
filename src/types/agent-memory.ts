@@ -430,6 +430,9 @@ export interface OnboardingData {
   completedAt?: string;
   completedBy?: string;
   version?: string; // Onboarding form version
+  
+  // Allow additional properties from form data
+  [key: string]: any;
 }
 
 /**

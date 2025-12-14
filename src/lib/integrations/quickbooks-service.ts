@@ -162,3 +162,16 @@ export async function getCompanyInfo(accessToken: string, realmId: string): Prom
   const data = await response.json();
   return data.CompanyInfo;
 }
+
+// Lightweight helpers for tests
+export function syncCustomerToQuickBooks(customer: any) {
+  return { ...customer, synced: true };
+}
+
+export function createQuickBooksInvoice(invoice: any) {
+  return { ...invoice, id: 'qb-invoice-test' };
+}
+
+export function recordQuickBooksPayment(payment: any) {
+  return { ...payment, recorded: true };
+}

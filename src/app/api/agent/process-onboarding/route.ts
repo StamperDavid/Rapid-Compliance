@@ -3,6 +3,7 @@ import { processOnboarding } from '@/lib/agent/onboarding-processor';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { validateInput } from '@/lib/validation/schemas';
 import { z } from 'zod';
+import { OnboardingData } from '@/types/agent-memory';
 
 const processOnboardingSchema = z.object({
   organizationId: z.string(),
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Process onboarding
     const result = await processOnboarding({
-      onboardingData,
+      onboardingData: onboardingData as OnboardingData,
       organizationId,
       userId: user.uid,
     });

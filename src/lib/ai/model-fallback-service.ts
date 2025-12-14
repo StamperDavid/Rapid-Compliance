@@ -29,21 +29,21 @@ export interface FallbackResponse extends UnifiedChatResponse {
 /**
  * Model fallback chains
  */
-const FALLBACK_CHAINS: Record<string, string[]> = {
+export const FALLBACK_CHAINS: Record<string, string[]> = {
   // OpenAI fallbacks
   'gpt-4': ['gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
   'gpt-4-turbo': ['gpt-3.5-turbo', 'claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
-  'gpt-3.5-turbo': ['gemini-2.0-flash-exp', 'claude-3.5-sonnet'],
+  'gpt-3.5-turbo': ['claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
   
   // Anthropic fallbacks
   'claude-3.5-sonnet': ['claude-3-sonnet', 'gpt-4-turbo', 'gemini-2.0-flash-exp'],
   'claude-3-opus': ['claude-3.5-sonnet', 'gpt-4', 'gemini-2.0-flash-exp'],
   'claude-3-sonnet': ['claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
-  'claude-3-haiku': ['gemini-2.0-flash-exp', 'gpt-3.5-turbo'],
+  'claude-3-haiku': ['gemini-2.0-flash-exp', 'gpt-3.5-turbo', 'gemini-2.0-flash-exp'],
   
   // Gemini fallbacks (shouldn't need these, but just in case)
-  'gemini-2.0-flash-exp': ['gemini-pro', 'gpt-3.5-turbo'],
-  'gemini-pro': ['gemini-2.0-flash-exp', 'gpt-3.5-turbo'],
+  'gemini-2.0-flash-exp': ['gemini-pro', 'gpt-3.5-turbo', 'gemini-2.0-flash-exp'],
+  'gemini-pro': ['gemini-2.0-flash-exp', 'gpt-3.5-turbo', 'gemini-2.0-flash-exp'],
 };
 
 /**

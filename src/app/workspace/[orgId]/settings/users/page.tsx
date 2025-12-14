@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar';
 import type { RolePermissions, UserRole } from '@/types/permissions';
 import { ROLE_PERMISSIONS } from '@/types/permissions';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 interface TeamMember {
   id: number;
@@ -27,6 +29,7 @@ export default function TeamMembersPage() {
   const { theme } = useOrgTheme();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inviteRole, setInviteRole] = useState('member');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
