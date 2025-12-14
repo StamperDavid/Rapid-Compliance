@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
@@ -12,7 +12,7 @@ export default function OrganizationSettingsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     companyName: 'Demo Organization',
@@ -33,15 +33,6 @@ export default function OrganizationSettingsPage() {
   });
 
   React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-    
     // Load organization data from Firestore
     const loadOrganizationData = async () => {
       if (!user?.organizationId) return;

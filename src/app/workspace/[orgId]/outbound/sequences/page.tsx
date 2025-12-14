@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';

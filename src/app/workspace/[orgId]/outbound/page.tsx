@@ -3,17 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 export default function OutboundHomePage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  const [theme, setTheme] = React.useState<any>(null);
-
-  React.useEffect(() => {
-    // LEGACY BACKUP (DO NOT USE): const savedTheme = localStorage.getItem('appTheme');
-    // TODO: Load theme from Firestore
-  }, []);
+  const { theme } = useOrgTheme();
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
@@ -69,10 +64,7 @@ export default function OutboundHomePage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-      
-      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+      <div style={{ padding: '2rem', overflowY: 'auto' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '3rem' }}>
@@ -217,7 +209,6 @@ export default function OutboundHomePage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
 

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
@@ -11,8 +11,7 @@ export default function AgentPersonaPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'knowledge' | 'personality' | 'capabilities' | 'model'>('knowledge');
   
   // Model selection state (ensemble removed for MVP - use proven single model + RAG)
@@ -77,16 +76,6 @@ export default function AgentPersonaPage() {
     }
   };
 
-  React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-  }, []);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
@@ -114,46 +103,7 @@ export default function AgentPersonaPage() {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <div style={{ width: sidebarOpen ? '260px' : '70px', backgroundColor: '#0a0a0a', borderRight: '1px solid #1a1a1a', transition: 'width 0.3s', display: 'flex', flexDirection: 'column' }}>
-          <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            <Link href="/crm" style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none' }}>
-              <span style={{ fontSize: '1.25rem' }}>🏠</span>
-              {sidebarOpen && <span>CRM</span>}
-            </Link>
-            <Link href={`/workspace/${orgId}/conversations`} style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none', position: 'relative' }}>
-              <span style={{ fontSize: '1.25rem' }}>💬</span>
-              {sidebarOpen && <span>Conversations</span>}
-              {/* Alert badge */}
-              <span style={{
-                position: 'absolute',
-                top: '0.75rem',
-                right: sidebarOpen ? '1rem' : '0.5rem',
-                width: '8px',
-                height: '8px',
-                backgroundColor: '#ef4444',
-                borderRadius: '50%',
-                boxShadow: '0 0 8px #ef4444'
-              }} />
-            </Link>
-            {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
-              <Link key={key} href={`/crm?view=${key}`} style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none' }}>
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
-            ))}
-          </nav>
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#999', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              {sidebarOpen ? '← Collapse' : '→'}
-            </button>
-          </div>
-        </div>
-
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+        <div style={{ padding: '2rem', overflowY: 'auto' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div style={{ marginBottom: '2rem' }}>
               <Link href={`/workspace/${orgId}/settings/ai-agents`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
@@ -831,8 +781,6 @@ export default function AgentPersonaPage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
   );
 }
 

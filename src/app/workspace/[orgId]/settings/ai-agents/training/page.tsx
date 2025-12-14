@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 export default function AgentTrainingPage() {
   const { user } = useAuth();
@@ -11,7 +11,7 @@ export default function AgentTrainingPage() {
   const orgId = params.orgId as string;
   
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden'>('chat');
   
   // Base Model & Golden Master states
@@ -78,14 +78,6 @@ export default function AgentTrainingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
     loadTrainingData();
   }, [orgId]);
   
@@ -772,21 +764,16 @@ export default function AgentTrainingPage() {
   // Loading state
   if (loading || firebaseConfigured === null) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <p style={{ color: '#999' }}>Loading training center...</p>
         </div>
-      </div>
     );
   }
 
   // Firebase not configured state
   if (firebaseConfigured === false) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <div style={{ textAlign: 'center', maxWidth: '700px', padding: '2rem' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔥</div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
@@ -844,15 +831,12 @@ export default function AgentTrainingPage() {
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
   if (!baseModel) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <div style={{ textAlign: 'center', maxWidth: '600px', padding: '2rem' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
               No Base Model Found
@@ -876,7 +860,6 @@ export default function AgentTrainingPage() {
             </a>
           </div>
         </div>
-      </div>
     );
   }
 
@@ -892,9 +875,7 @@ export default function AgentTrainingPage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
       {/* Header */}
       <div style={{ padding: '2rem', borderBottom: '1px solid #1a1a1a' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>

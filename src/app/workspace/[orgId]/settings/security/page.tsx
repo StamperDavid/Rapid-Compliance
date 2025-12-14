@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
@@ -12,21 +12,11 @@ export default function SecuritySettingsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [ipWhitelistEnabled, setIpWhitelistEnabled] = useState(false);
   const [auditLogRetention, setAuditLogRetention] = useState('90');
 
-  React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-  }, []);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 

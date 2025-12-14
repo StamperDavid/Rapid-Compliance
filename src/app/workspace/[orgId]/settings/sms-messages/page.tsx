@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSMS } from '@/lib/sms/sms-service';
 
@@ -12,7 +12,7 @@ export default function SmsMessagesPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [smsTemplates, setSmsTemplates] = useState<any[]>([]);
   const [selectedSmsTemplate, setSelectedSmsTemplate] = useState<string | null>(null);
   const [showCustomTrigger, setShowCustomTrigger] = useState(false);
@@ -21,16 +21,6 @@ export default function SmsMessagesPage() {
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testSMSResult, setTestSMSResult] = useState<{ success: boolean; message?: string } | null>(null);
 
-  React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-  }, []);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 

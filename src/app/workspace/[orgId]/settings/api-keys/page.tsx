@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 interface APIKey {
   service: string;
@@ -15,22 +15,14 @@ interface APIKey {
 export default function APIKeysPage() {
   const params = useParams();
   const orgId = params.orgId as string;
+  const { theme } = useOrgTheme();
   
-  const [theme, setTheme] = useState<any>(null);
   const [keys, setKeys] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
     loadKeys();
   }, []);
 

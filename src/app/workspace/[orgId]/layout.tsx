@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
@@ -21,13 +21,13 @@ export default function WorkspaceLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const brandName = theme?.branding?.companyName || 'AI CRM';
+  const logoUrl = theme?.branding?.logoUrl;
 
-  // Navigation items
+  // Minimal navigation - just core CRM + Conversations
   const navItems = [
     { href: `/workspace/${orgId}/dashboard`, icon: '📊', label: 'Dashboard' },
     { href: `/workspace/${orgId}/conversations`, icon: '💬', label: 'Conversations' },
-    { href: `/workspace/${orgId}/analytics`, icon: '📈', label: 'Analytics' },
-    { href: `/workspace/${orgId}/outbound`, icon: '📤', label: 'Outbound' },
   ];
 
   // Check if current path matches
@@ -43,7 +43,7 @@ export default function WorkspaceLayout({
       <AdminBar />
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Left Sidebar */}
+        {/* Left Sidebar - Minimal */}
         <div style={{ 
           width: sidebarOpen ? '260px' : '70px',
           backgroundColor: '#0a0a0a',
@@ -80,7 +80,7 @@ export default function WorkspaceLayout({
             {/* Divider */}
             <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '1rem 0' }} />
 
-            {/* CRM Entities */}
+            {/* CRM Section Label */}
             <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem' }}>
               {sidebarOpen && (
                 <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -89,6 +89,7 @@ export default function WorkspaceLayout({
               )}
             </div>
 
+            {/* CRM Entities */}
             {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
               <Link
                 key={key}
@@ -111,98 +112,6 @@ export default function WorkspaceLayout({
                 {sidebarOpen && <span>{schema.pluralName}</span>}
               </Link>
             ))}
-
-            {/* Divider */}
-            <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '1rem 0' }} />
-
-            {/* Settings & Config */}
-            <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem' }}>
-              {sidebarOpen && (
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Configuration
-                </span>
-              )}
-            </div>
-
-            <Link
-              href={`/workspace/${orgId}/settings`}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: pathname?.includes('/settings') ? '#1a1a1a' : 'transparent',
-                color: pathname?.includes('/settings') ? primaryColor : '#999',
-                borderLeft: pathname?.includes('/settings') ? `3px solid ${primaryColor}` : '3px solid transparent',
-                fontSize: '0.875rem',
-                fontWeight: pathname?.includes('/settings') ? '600' : '400',
-                textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>⚙️</span>
-              {sidebarOpen && <span>Settings</span>}
-            </Link>
-
-            <Link
-              href={`/workspace/${orgId}/settings/ai-agents`}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: pathname?.includes('/ai-agents') ? '#1a1a1a' : 'transparent',
-                color: pathname?.includes('/ai-agents') ? primaryColor : '#999',
-                borderLeft: pathname?.includes('/ai-agents') ? `3px solid ${primaryColor}` : '3px solid transparent',
-                fontSize: '0.875rem',
-                fontWeight: pathname?.includes('/ai-agents') ? '600' : '400',
-                textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>🤖</span>
-              {sidebarOpen && <span>AI Agent</span>}
-            </Link>
-
-            <Link
-              href={`/workspace/${orgId}/schemas`}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: pathname?.includes('/schemas') ? '#1a1a1a' : 'transparent',
-                color: pathname?.includes('/schemas') ? primaryColor : '#999',
-                borderLeft: pathname?.includes('/schemas') ? `3px solid ${primaryColor}` : '3px solid transparent',
-                fontSize: '0.875rem',
-                fontWeight: pathname?.includes('/schemas') ? '600' : '400',
-                textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>📋</span>
-              {sidebarOpen && <span>Schemas</span>}
-            </Link>
-
-            <Link
-              href={`/workspace/${orgId}/integrations`}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: pathname === `/workspace/${orgId}/integrations` ? '#1a1a1a' : 'transparent',
-                color: pathname === `/workspace/${orgId}/integrations` ? primaryColor : '#999',
-                borderLeft: pathname === `/workspace/${orgId}/integrations` ? `3px solid ${primaryColor}` : '3px solid transparent',
-                fontSize: '0.875rem',
-                fontWeight: pathname === `/workspace/${orgId}/integrations` ? '600' : '400',
-                textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>🔌</span>
-              {sidebarOpen && <span>Integrations</span>}
-            </Link>
           </nav>
 
           {/* Sidebar Toggle */}
@@ -226,7 +135,7 @@ export default function WorkspaceLayout({
         </div>
 
         {/* Main Content */}
-        <main style={{ flex: 1, overflowY: 'auto' }}>
+        <main style={{ flex: 1, overflowY: 'auto', backgroundColor: '#000' }}>
           {children}
         </main>
       </div>

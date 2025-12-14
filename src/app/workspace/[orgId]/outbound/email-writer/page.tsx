@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 export default function EmailWriterPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [prospect, setProspect] = useState({
     name: '',
     company: '',
@@ -27,16 +27,6 @@ export default function EmailWriterPage() {
   const [generatedEmail, setGeneratedEmail] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-  }, []);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 

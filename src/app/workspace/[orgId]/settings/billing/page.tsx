@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 interface SubscriptionData {
   plan: string;
@@ -24,22 +23,13 @@ export default function BillingSettingsPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('professional');
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
 
     // Load organization billing data
     loadBillingData();
