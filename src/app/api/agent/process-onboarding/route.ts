@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const { organizationId, onboardingData } = validation.data;
 
-    // MULTI-TENANT SECURITY: Verify user has permission to configure this organization
+    // Import Admin SDK services for multi-tenant security check
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { COLLECTIONS } = await import('@/lib/db/firestore-service');
     
