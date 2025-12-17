@@ -123,6 +123,7 @@ export async function processOnboarding(
 
 /**
  * Get processing status for an organization
+ * SERVER-SIDE ONLY - Uses Admin SDK
  */
 export async function getProcessingStatus(organizationId: string): Promise<{
   hasPersona: boolean;
@@ -133,36 +134,42 @@ export async function getProcessingStatus(organizationId: string): Promise<{
   goldenMasterVersion?: string;
 }> {
   try {
-    const persona = await FirestoreService.get(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    
+    const persona = await AdminFirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentPersona`,
       'current'
     );
     
-    const knowledgeBase = await FirestoreService.get(
+    const knowledgeBase = await AdminFirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
       'current'
     );
     
     // Check for Base Model
-    const { orderBy, limit, where } = await import('firebase/firestore');
-    const baseModels = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.BASE_MODELS}`,
-      [orderBy('createdAt', 'desc'), limit(1)]
+    const baseModels = await AdminFirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.BASE_MODELS}`
+    );
+    
+    // Sort and get latest base model
+    const sortedBaseModels = baseModels.sort((a: any, b: any) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     
     // Check for Golden Master
-    const goldenMasters = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
-      [where('isActive', '==', true)]
+    const goldenMasters = await AdminFirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`
     );
+    
+    const activeGoldenMaster = goldenMasters.find((gm: any) => gm.isActive);
     
     return {
       hasPersona: !!persona,
       hasKnowledgeBase: !!knowledgeBase,
-      hasBaseModel: baseModels.length > 0,
-      baseModelStatus: baseModels.length > 0 ? baseModels[0].status : undefined,
-      hasGoldenMaster: goldenMasters.length > 0,
-      goldenMasterVersion: goldenMasters.length > 0 ? goldenMasters[0].version : undefined,
+      hasBaseModel: sortedBaseModels.length > 0,
+      baseModelStatus: sortedBaseModels.length > 0 ? sortedBaseModels[0].status : undefined,
+      hasGoldenMaster: !!activeGoldenMaster,
+      goldenMasterVersion: activeGoldenMaster?.version,
     };
   } catch (error) {
     return {
