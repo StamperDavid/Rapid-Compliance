@@ -42,7 +42,7 @@ function initializeAdmin() {
     }
   }
 
-  // For production - use service account
+  // For production/development - use service account
   try {
     let serviceAccount: admin.ServiceAccount | undefined;
     
@@ -69,12 +69,15 @@ function initializeAdmin() {
         const fs = require('fs');
         const path = require('path');
         const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
+        console.log('🔍 Looking for serviceAccountKey.json at:', keyPath);
         if (fs.existsSync(keyPath)) {
           serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-          console.log('🔑 Loaded serviceAccountKey.json');
+          console.log('🔑 Loaded serviceAccountKey.json successfully');
+        } else {
+          console.warn('⚠️ serviceAccountKey.json not found at:', keyPath);
         }
-      } catch (e) {
-        console.warn('Could not load serviceAccountKey.json');
+      } catch (e: any) {
+        console.warn('⚠️ Could not load serviceAccountKey.json:', e.message);
       }
     }
 

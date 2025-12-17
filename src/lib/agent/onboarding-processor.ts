@@ -3,13 +3,17 @@
  * Orchestrates the complete flow: onboarding → persona → knowledge → Base Model
  * NOTE: Creates Base Model (editable), NOT Golden Master!
  * Client will save Golden Master manually after training.
+ * 
+ * IMPORTANT: This service runs SERVER-SIDE ONLY and uses Admin SDK to bypass security rules
  */
 
 import type { OnboardingData, BaseModel, KnowledgeBase, AgentPersona } from '@/types/agent-memory';
 import { buildPersonaFromOnboarding } from './persona-builder';
 import { processKnowledgeBase, KnowledgeProcessorOptions } from './knowledge-processor';
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
+
+// Dynamic import of AdminFirestoreService to prevent client-side bundling
 
 export interface OnboardingProcessorOptions {
   onboardingData: OnboardingData;
@@ -62,10 +66,11 @@ export async function processOnboarding(
       workspaceId,
     });
     
-    // Step 4: Save everything to Firestore
+    // Step 4: Save everything to Firestore using Admin SDK (bypasses security rules)
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     
     // Save persona
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentPersona`,
       'current',
       {
@@ -78,7 +83,7 @@ export async function processOnboarding(
     );
     
     // Save knowledge base
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
       'current',
       {

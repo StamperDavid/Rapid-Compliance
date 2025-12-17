@@ -225,6 +225,26 @@ service cloud.firestore {
         && getUserOrgId() == 'platform';
     }
     
+    // Base Models collection (training models)
+    match /baseModels/{modelId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Users can read base models for their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.orgId);
+      
+      // Managers and above can create/update
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.orgId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.orgId)
+        && getUserRole() == 'owner';
+    }
+    
     // Golden Masters collection (AI agent configs)
     match /goldenMasters/{masterId} {
       // Super admins have FULL access
@@ -311,6 +331,30 @@ service cloud.firestore {
       
       // Allow authenticated users to read/write subcollections in their org
       allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Base Models subcollection (within organizations)
+    match /organizations/{orgId}/baseModels/{modelId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Admins can create/update base models
+      allow read, write: if isAuthenticated() && isAdminOrOwner();
+      
+      // Users in org can read
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Golden Masters subcollection (within organizations)
+    match /organizations/{orgId}/goldenMasters/{masterId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Admins can create/update golden masters
+      allow read, write: if isAuthenticated() && isAdminOrOwner();
+      
+      // Users in org can read
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
     }
     
     // Nested subcollections (records within workspaces, etc.)

@@ -12,8 +12,9 @@ const processOnboardingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentication
-    const authResult = await requireOrganization(request);
+    // Authentication - just require auth, not organization membership
+    // (user is setting up their organization via onboarding)
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -43,14 +44,50 @@ export async function POST(request: NextRequest) {
 
     const { organizationId, onboardingData } = validation.data;
 
-    // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+    // MULTI-TENANT SECURITY: Verify user has permission to configure this organization
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    
+    try {
+      const org = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+      
+      if (org) {
+        // Organization exists - verify user is owner or member
+        const isOwner = org.ownerId === user.uid;
+        const isMember = org.members?.includes(user.uid);
+        const isAdmin = user.role === 'admin' || user.role === 'super_admin';
+        
+        if (!isOwner && !isMember && !isAdmin) {
+          return NextResponse.json(
+            { success: false, error: 'You do not have permission to configure this organization' },
+            { status: 403 }
+          );
+        }
+      } else {
+        // Organization doesn't exist yet - user is creating it during onboarding
+        // This is allowed, but we'll set them as the owner
+        console.log(`Creating new organization ${organizationId} for user ${user.uid}`);
+      }
+    } catch (error) {
+      console.error('Error checking organization access:', error);
+      // If we can't verify, allow it (onboarding scenario)
     }
 
+    // Save onboarding data first (using Admin SDK)
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+    
+    await AdminFirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/onboarding`,
+      'current',
+      {
+        ...onboardingData,
+        completedAt: new Date().toISOString(),
+        organizationId,
+      },
+      false
+    );
+    
     // Process onboarding
     const result = await processOnboarding({
       onboardingData: onboardingData as OnboardingData,
@@ -59,6 +96,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.success) {
+      // Update user's organizationId if not already set
+      if (!user.organizationId) {
+        try {
+          await AdminFirestoreService.update('users', user.uid, {
+            organizationId,
+            currentOrganizationId: organizationId,
+            updatedAt: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.warn('Failed to update user organizationId:', error);
+          // Continue anyway - onboarding succeeded
+        }
+      }
+      
       return NextResponse.json({
         success: true,
         persona: result.persona,

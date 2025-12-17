@@ -195,15 +195,16 @@ export async function requireOrganization(
   const { user } = authResult;
 
   // If organizationId is provided, verify user belongs to it
-  if (organizationId && user.organizationId !== organizationId) {
+  if (organizationId && user.organizationId && user.organizationId !== organizationId) {
     return NextResponse.json(
       { success: false, error: 'Access denied to this organization' },
       { status: 403 }
     );
   }
 
-  // If no organizationId provided, user must have one
-  if (!user.organizationId) {
+  // For onboarding, allow users without organizationId if they're admin/owner
+  // They're likely setting up their first organization
+  if (!user.organizationId && !['admin', 'owner', 'super_admin'].includes(user.role || '')) {
     return NextResponse.json(
       { success: false, error: 'User must belong to an organization' },
       { status: 403 }

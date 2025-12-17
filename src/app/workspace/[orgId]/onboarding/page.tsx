@@ -1,8 +1,66 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+
+// Move components OUTSIDE to prevent re-creation on every render
+function TextInputField({ label, field, placeholder, required, formData, updateField }: any) {
+  return (
+    <div>
+      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+        {label} {required && '*'}
+      </label>
+      <input
+        type="text"
+        value={formData[field] || ''}
+        onChange={(e) => updateField(field, e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#0a0a0a',
+          border: '1px solid #333',
+          borderRadius: '0.5rem',
+          color: '#fff',
+          fontSize: '1rem'
+        }}
+      />
+    </div>
+  );
+}
+
+function TextAreaField({ label, field, placeholder, rows = 4, helper, required, formData, updateField }: any) {
+  return (
+    <div>
+      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+        {label} {required && '*'}
+      </label>
+      <textarea
+        value={formData[field] || ''}
+        onChange={(e) => updateField(field, e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#0a0a0a',
+          border: '1px solid #333',
+          borderRadius: '0.5rem',
+          color: '#fff',
+          fontSize: '1rem',
+          resize: 'vertical',
+          fontFamily: 'inherit'
+        }}
+      />
+      {helper && (
+        <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+          {helper}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function OnboardingWizard() {
   const params = useParams();
@@ -158,9 +216,9 @@ export default function OnboardingWizard() {
 
   const totalSteps = 24;
 
-  const updateField = (field: string, value: any) => {
+  const updateField = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -190,32 +248,33 @@ export default function OnboardingWizard() {
     };
 
     try {
-      // Save onboarding data to Firestore
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/onboarding`,
-        'current',
-        {
-          ...onboardingData,
-          completedAt: new Date().toISOString(),
-          organizationId: orgId,
-        },
-        false
-      );
-
-      // Process onboarding: persona → knowledge → Golden Master
-      setAnalysisProgress('Building AI agent persona...');
-      const { processOnboarding } = await import('@/lib/agent/onboarding-processor');
+      // Get Firebase auth token
+      const { getCurrentUser } = await import('@/lib/auth/auth-service');
+      const currentUser = getCurrentUser();
       
-      // Get current user ID
-      const userId = user?.id || 'system';
+      if (!currentUser) {
+        throw new Error('You must be logged in to complete onboarding');
+      }
+      
+      const token = await currentUser.getIdToken();
+      
+      // Process onboarding via API (server will save everything using Admin SDK)
+      setAnalysisProgress('Building AI agent persona...');
       
       setAnalysisProgress('Processing knowledge base...');
-      const result = await processOnboarding({
-        onboardingData,
-        organizationId: orgId,
-        userId,
+      const response = await fetch('/api/agent/process-onboarding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          organizationId: orgId,
+          onboardingData,
+        }),
       });
+
+      const result = await response.json();
 
       if (result.success) {
         setAnalysisProgress('✅ Complete! Your AI agent is ready for training.');
@@ -235,64 +294,6 @@ export default function OnboardingWizard() {
   };
 
   const primaryColor = '#6366f1';
-
-  // Helper to render text input
-  const TextInput = ({ label, field, placeholder, required = false }: any) => {
-    return (
-      <div>
-        <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-          {label} {required && '*'}
-        </label>
-        <input
-          type="text"
-          value={formData[field as keyof typeof formData] as string}
-          onChange={(e) => updateField(field, e.target.value)}
-          placeholder={placeholder}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#0a0a0a',
-            border: '1px solid #333',
-            borderRadius: '0.5rem',
-            color: '#fff',
-            fontSize: '1rem'
-          }}
-        />
-      </div>
-    );
-  };
-
-  // Helper to render textarea
-  const TextArea = ({ label, field, placeholder, rows = 4, helper = '', required = false }: any) => {
-    return (
-      <div>
-        <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-          {label} {required && '*'}
-        </label>
-        <textarea
-          value={formData[field as keyof typeof formData] as string}
-          onChange={(e) => updateField(field, e.target.value)}
-          placeholder={placeholder}
-          rows={rows}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#0a0a0a',
-            border: '1px solid #333',
-            borderRadius: '0.5rem',
-            color: '#fff',
-            fontSize: '1rem',
-            resize: 'vertical'
-          }}
-        />
-        {helper && (
-          <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-            {helper}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div style={{ 
@@ -357,7 +358,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextInput label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
+                <TextInputField formData={formData} updateField={updateField} label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
 
                 <div>
                   <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
@@ -393,12 +394,12 @@ export default function OnboardingWizard() {
                   </select>
                 </div>
 
-                <TextInput label="Website URL" field="website" placeholder="https://yourwebsite.com" />
+                <TextInputField label="Website URL" field="website" placeholder="https://yourwebsite.com" formData={formData} updateField={updateField} />
                 <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
                   We'll automatically analyze your website to learn about your company, products, and services
                 </div>
 
-                <TextInput label="FAQ Page URL (optional)" field="faqPageUrl" placeholder="https://yourwebsite.com/faq" />
+                <TextInputField label="FAQ Page URL (optional)" field="faqPageUrl" placeholder="https://yourwebsite.com/faq" formData={formData} updateField={updateField} />
                 <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
                   Help your agent learn common questions and answers
                 </div>
@@ -511,7 +512,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="What problem does your business solve for customers?" 
                   field="problemSolved" 
                   placeholder="e.g., We help outdoor enthusiasts find reliable, affordable gear so they can enjoy nature without breaking the bank"
@@ -519,7 +520,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="What makes you different from competitors?" 
                   field="uniqueValue" 
                   placeholder="e.g., We offer lifetime warranties, free repairs, and expert guides with every purchase. Our gear is tested in extreme conditions."
@@ -527,7 +528,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Why do customers choose to buy from you?" 
                   field="whyBuy" 
                   placeholder="e.g., Quality products, expert advice, excellent customer service, fast shipping, satisfaction guarantee"
@@ -535,7 +536,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="What are common reasons customers DON'T buy?" 
                   field="whyNotBuy" 
                   placeholder="e.g., Price concerns, shipping time, not sure which product is right for them, prefer to see in-store first"
@@ -616,7 +617,7 @@ export default function OnboardingWizard() {
                   </select>
                 </div>
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Who is your ideal customer?" 
                   field="targetCustomer" 
                   placeholder="e.g., Outdoor enthusiasts aged 25-45, active lifestyle, values quality over price, environmentally conscious"
@@ -624,7 +625,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Customer demographics & buying patterns" 
                   field="customerDemographics" 
                   placeholder="e.g., 60% male, 40% female. Most purchase during fall/spring. Average order $250. Repeat customer rate 45%."
@@ -648,7 +649,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Your top products/services (list 3-5)" 
                   field="topProducts" 
                   placeholder="1. Premium Backpack ($199) - 50L capacity, waterproof, lifetime warranty&#10;2. Camping Tent ($349) - 4-person, easy setup, all-weather&#10;3. Hiking Boots ($159) - Gore-Tex, ankle support, trail-tested"
@@ -657,7 +658,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="How do your products/services compare to competitors?" 
                   field="productComparison" 
                   placeholder="e.g., Our backpacks cost 20% more than budget brands but last 3x longer. Compared to premium brands, we're 30% cheaper with same quality. We're the only brand offering lifetime repairs."
@@ -665,7 +666,7 @@ export default function OnboardingWizard() {
                   helper="Competitive advantages your agent can use in conversations"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Seasonal offerings or promotions" 
                   field="seasonalOfferings" 
                   placeholder="e.g., Winter sale (Nov-Jan) - 25% off winter gear. Summer clearance (Aug-Sep) - Last season models 40% off. Black Friday - Sitewide 30% off."
@@ -673,7 +674,7 @@ export default function OnboardingWizard() {
                   helper="Help your agent know when to mention special offers"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Who should NOT buy from you? (Qualification criteria)" 
                   field="whoShouldNotBuy" 
                   placeholder="e.g., Casual users looking for cheapest option, people needing immediate delivery (same-day), international customers (we only ship USA), resellers (B2C only)"
@@ -723,7 +724,7 @@ export default function OnboardingWizard() {
                   </select>
                 </div>
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Discount policy - when can agent offer discounts?" 
                   field="discountPolicy" 
                   placeholder="e.g., First-time buyers: 10% off. Orders over $500: 15% off. Abandoned cart: Send 20% coupon after 24hrs. Never discount below 30% margin."
@@ -732,7 +733,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Volume/bulk discount structure" 
                   field="volumeDiscounts" 
                   placeholder="e.g., 10-25 units: 10% off. 26-50 units: 15% off. 51+ units: 20% off + free shipping. Wholesale inquiries: escalate to sales manager."
@@ -740,7 +741,7 @@ export default function OnboardingWizard() {
                   helper="If applicable - how pricing changes with quantity"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="First-time buyer incentive" 
                   field="firstTimeBuyerIncentive" 
                   placeholder="e.g., 15% off first purchase with code WELCOME15. Free shipping on first order. Free gear guide ebook with first purchase."
@@ -748,7 +749,7 @@ export default function OnboardingWizard() {
                   helper="Special offers for new customers"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Financing or payment plan options" 
                   field="financingOptions" 
                   placeholder="e.g., Affirm available for orders $200+. Pay in 4 with Klarna. Net 30 for approved business accounts. No credit check financing through Bread."
@@ -772,7 +773,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Geographic coverage - where do you serve/ship?" 
                   field="geographicCoverage" 
                   placeholder="e.g., Shipping: All 50 US states. Free shipping over $100. International: Canada only ($25 flat rate). AK/HI: Additional $15 shipping."
@@ -781,7 +782,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Delivery/service timeframes" 
                   field="deliveryTimeframes" 
                   placeholder="e.g., Standard shipping: 5-7 business days. Expedited: 2-3 business days. Services: First available appointment within 2 weeks. Custom orders: 3-4 week lead time."
@@ -790,7 +791,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Inventory constraints or stock issues" 
                   field="inventoryConstraints" 
                   placeholder="e.g., Popular items may backorder during peak season. Check real-time stock before promising availability. Made-to-order items non-refundable."
@@ -798,7 +799,7 @@ export default function OnboardingWizard() {
                   helper="Help your agent manage customer expectations"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Capacity limitations (for service businesses)" 
                   field="capacityLimitations" 
                   placeholder="e.g., Book 2 weeks in advance. Max 4 projects simultaneously. Emergency service: 24hr response, 2x rate. Weekend work by request only."
@@ -822,7 +823,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Return/refund policy" 
                   field="returnPolicy" 
                   placeholder="e.g., 30-day money-back guarantee. Items must be unused with tags. Free return shipping. Refund within 5-7 business days. Custom/clearance items final sale."
@@ -831,7 +832,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Warranty terms" 
                   field="warrantyTerms" 
                   placeholder="e.g., Lifetime warranty on manufacturing defects. Normal wear excluded. Free repairs for life. Warranty transferable to new owner. Submit claim through website."
@@ -839,7 +840,7 @@ export default function OnboardingWizard() {
                   helper="Product guarantees and coverage details"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Cancellation policy" 
                   field="cancellationPolicy" 
                   placeholder="e.g., Cancel before shipping: Full refund. After shipping: Subject to return policy. Services: Cancel 48hrs before appointment for full refund. Same-day cancellation: 50% fee."
@@ -847,7 +848,7 @@ export default function OnboardingWizard() {
                   helper="Order or appointment cancellation terms"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Satisfaction guarantee" 
                   field="satisfactionGuarantee" 
                   placeholder="e.g., 100% satisfaction guaranteed or money back. If not happy, we'll make it right - exchange, credit, or refund. No questions asked within 30 days."
@@ -930,7 +931,7 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Success metrics - how do you measure agent performance?" 
                   field="successMetrics" 
                   placeholder="e.g., Conversion rate >3%, Average order value >$200, Customer satisfaction >4.5/5, Response time <30 seconds, Escalation rate <10%"
@@ -938,7 +939,7 @@ export default function OnboardingWizard() {
                   helper="How will you know if your agent is successful?"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="When should the agent hand off to a human?" 
                   field="escalationRules" 
                   placeholder="e.g., Custom orders over $5,000, Technical issues requiring diagnostics, Angry/abusive customers, Refund requests over $500, Legal questions, Wholesale inquiries"
@@ -963,7 +964,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Describe your typical sales flow (step-by-step)" 
                   field="typicalSalesFlow" 
                   placeholder="e.g., 1) Greet and identify need 2) Ask qualification questions 3) Recommend 2-3 products 4) Answer questions about features/shipping 5) Handle price objections 6) Explain warranty 7) Create urgency with limited stock 8) Close with discount code for first-time buyers"
@@ -972,7 +973,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Lead qualification criteria - how do you know they're a good fit?" 
                   field="qualificationCriteria" 
                   placeholder="e.g., Budget: $200+ for outdoor gear. Timeline: Ready to buy within 30 days. Use case: Active outdoor activities. Geography: USA only. Decision maker: Yes."
@@ -980,7 +981,7 @@ export default function OnboardingWizard() {
                   helper="What makes someone a qualified lead vs tire-kicker?"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Discovery questions your agent should ask" 
                   field="discoveryQuestions" 
                   placeholder="e.g., What activities will you use this for? How often do you [activity]? What's your experience level? What's your budget range? When do you need this by? Have you used similar products before?"
@@ -989,7 +990,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Your closing strategy - how do you ask for the sale?" 
                   field="closingStrategy" 
                   placeholder="e.g., Always ask for the sale after answering questions. Use assumptive close: 'Shall I add this to your cart?' Create urgency with stock levels. Offer first-time discount. Provide clear next steps. Follow up abandoned carts in 24hrs."
@@ -1014,7 +1015,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Common customer objections and how to handle them" 
                   field="commonObjections" 
                   placeholder="e.g., 'I need to think about it' → Ask what specific concerns they have. 'I'll shop around' → Explain our price match guarantee. 'Not sure this will work' → Offer 30-day trial with free returns."
@@ -1023,7 +1024,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Price objections - 'It's too expensive'" 
                   field="priceObjections" 
                   placeholder="e.g., Explain value vs cost (lasts 10 years). Compare to daily coffee cost. Highlight lifetime warranty saves money long-term. Offer payment plan. Show budget option. Emphasize we're 30% cheaper than premium brands with same quality."
@@ -1032,7 +1033,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Time/urgency objections - 'I'll come back later'" 
                   field="timeObjections" 
                   placeholder="e.g., Mention current sale ends Friday. Low stock on popular items. Price going up next month. Hold item for 24hrs. Send follow-up email with additional 10% off."
@@ -1040,7 +1041,7 @@ export default function OnboardingWizard() {
                   helper="How to create urgency without being pushy"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Competitor objections - 'I found it cheaper elsewhere'" 
                   field="competitorObjections" 
                   placeholder="e.g., Price match guarantee - we'll beat any verified price by 5%. Explain total cost of ownership (our warranty vs theirs). Show hidden fees competitors charge. Emphasize our customer service and free lifetime repairs."
@@ -1064,7 +1065,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="What support issues can your agent handle?" 
                   field="supportScope" 
                   placeholder="e.g., Order status/tracking, Product questions, Returns/exchanges, Size/fit guidance, Account issues, Shipping changes, Payment questions, Product care instructions"
@@ -1073,7 +1074,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Technical support capabilities" 
                   field="technicalSupport" 
                   placeholder="e.g., Basic troubleshooting from manual. Setup instructions. Common issues and fixes. Escalate hardware failures. Can walk through product assembly. Cannot diagnose complex technical problems."
@@ -1081,7 +1082,7 @@ export default function OnboardingWizard() {
                   helper="What technical help can your agent provide?"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Order tracking and status updates" 
                   field="orderTracking" 
                   placeholder="e.g., Check order status in real-time. Provide tracking numbers. Explain shipping delays. Update shipping address before shipment. Cannot cancel after processing (escalate to support)."
@@ -1089,7 +1090,7 @@ export default function OnboardingWizard() {
                   helper="How agent handles order inquiries"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Complaint resolution process" 
                   field="complaintResolution" 
                   placeholder="e.g., Listen empathetically. Apologize for issue. Offer immediate solution (refund/replacement/discount). Escalate if >$200 issue or customer very angry. Log complaint for review. Follow up in 48hrs."
@@ -1114,7 +1115,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextInput label="Agent Name (optional)" field="agentName" placeholder="e.g., Alex, Sam, or leave blank" />
+                <TextInputField formData={formData} updateField={updateField} label="Agent Name (optional)" field="agentName" placeholder="e.g., Alex, Sam, or leave blank" />
                 <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem' }}>
                   Give your agent a human name or leave blank for generic greeting
                 </div>
@@ -1145,7 +1146,7 @@ export default function OnboardingWizard() {
                   </select>
                 </div>
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Opening greeting" 
                   field="greeting" 
                   placeholder="e.g., Hi! I'm here to help you find the perfect outdoor gear. What are you looking for today?"
@@ -1154,7 +1155,7 @@ export default function OnboardingWizard() {
                   required
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Closing message (after sale or end of conversation)" 
                   field="closingMessage" 
                   placeholder="e.g., Thanks for choosing us! You'll get a confirmation email shortly. Feel free to reach out if you have any questions. Happy adventuring!"
@@ -1380,7 +1381,7 @@ export default function OnboardingWizard() {
                   </div>
                 </div>
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="FAQs or additional knowledge (paste here)" 
                   field="faqs" 
                   placeholder="Paste frequently asked questions, policies, or any other information your agent should know..."
@@ -1404,7 +1405,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Required disclosures (legal/regulatory)" 
                   field="requiredDisclosures" 
                   placeholder="e.g., 'I am an AI assistant, not a human representative' OR 'These statements have not been evaluated by the FDA' OR 'Past performance does not guarantee future results'"
@@ -1431,7 +1432,7 @@ export default function OnboardingWizard() {
                   </label>
                 </div>
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Industry-specific regulations" 
                   field="industryRegulations" 
                   placeholder="e.g., SEC regulations (financial), FTC guidelines (advertising), PCI DSS (payments), Industry certifications required"
@@ -1439,7 +1440,7 @@ export default function OnboardingWizard() {
                   helper="Any special compliance requirements for your industry"
                 />
 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Prohibited topics (what agent should NOT discuss)" 
                   field="prohibitedTopics" 
                   placeholder="e.g., Medical advice, Legal advice, Political opinions, Personal opinions on competitors, Guarantees we can't fulfill, Off-label use of products"
@@ -1549,7 +1550,7 @@ export default function OnboardingWizard() {
                   </label>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <TextArea 
+                    <TextAreaField formData={formData} updateField={updateField} 
                       label="Conversation Flow Logic" 
                       field="conversationFlowLogic" 
                       placeholder="e.g., First ask about budget, then use case, then timeline. If budget > $1000, mention premium line first. If timeline urgent, skip detailed discovery and recommend top 3 products immediately."
@@ -1699,7 +1700,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Price Objection Strategy" 
                   field="priceObjectionStrategy" 
                   placeholder='e.g., "When customer says too expensive, emphasize ROI and break down cost per use. Offer payment plans if applicable. Compare to competitor pricing showing value gap."'
@@ -1707,7 +1708,7 @@ export default function OnboardingWizard() {
                   helper="How should the agent respond when customers say it's too expensive?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Competitor Objection Strategy" 
                   field="competitorObjectionStrategy" 
                   placeholder='e.g., "Acknowledge competitor strengths, then highlight our unique differentiators: 24/7 support, lifetime warranty, and free installation."'
@@ -1715,7 +1716,7 @@ export default function OnboardingWizard() {
                   helper="How to respond when customers mention competitors?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Timing Objection Strategy" 
                   field="timingObjectionStrategy" 
                   placeholder='e.g., "Respect their timeline but create soft urgency around limited inventory or upcoming price increases. Offer to follow up at their preferred time."'
@@ -1723,7 +1724,7 @@ export default function OnboardingWizard() {
                   helper="How to handle 'not ready to buy now' objections?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Authority Objection Strategy" 
                   field="authorityObjectionStrategy" 
                   placeholder='e.g., "Ask who the decision maker is and what criteria they care about. Offer to send materials they can share. Request permission to follow up."'
@@ -1731,7 +1732,7 @@ export default function OnboardingWizard() {
                   helper="How to respond when they need approval from someone else?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Need Objection Strategy" 
                   field="needObjectionStrategy" 
                   placeholder='e.g., "Ask deeper questions to uncover hidden needs. Share case studies of similar customers who didn&apos;t think they needed it but saw great results."'
@@ -1755,7 +1756,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Angry Customer Approach" 
                   field="angryCustomerApproach" 
                   placeholder='e.g., "Apologize first, empathize with frustration, take ownership of the issue, and immediately offer 2-3 concrete solutions. Escalate if anger persists."'
@@ -1763,7 +1764,7 @@ export default function OnboardingWizard() {
                   helper="How should the agent handle frustrated or angry customers?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Confused Customer Approach" 
                   field="confusedCustomerApproach" 
                   placeholder='e.g., "Simplify language, use analogies, break complex concepts into steps. Ask if they want a quick overview or detailed explanation."'
@@ -1771,7 +1772,7 @@ export default function OnboardingWizard() {
                   helper="How to help customers who don't understand?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Ready-to-Buy Signals" 
                   field="readyToBuySignals" 
                   placeholder='e.g., "Asks about payment options, shipping timeline, availability. Uses present tense (when I get this, not if). Asks detailed post-purchase questions."'
@@ -1779,7 +1780,7 @@ export default function OnboardingWizard() {
                   helper="What signals indicate the customer is ready to purchase?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Disengagement Signals" 
                   field="disengagementSignals" 
                   placeholder='e.g., "One-word responses, long delays, stops asking questions, says need to think about it without follow-up questions."'
@@ -1787,7 +1788,7 @@ export default function OnboardingWizard() {
                   helper="What signals show the customer is losing interest?"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Frustrated Customer Approach" 
                   field="frustratedCustomerApproach" 
                   placeholder='e.g., "Acknowledge their frustration, validate their feelings, offer to simplify or speed up the process. Provide direct answers without fluff."'
@@ -1811,7 +1812,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Budget Qualification Questions" 
                   field="budgetQualificationQuestions" 
                   placeholder='e.g., "What budget range are you working with? Are you looking for premium or value options? Is this a personal purchase or business expense?"'
@@ -1819,7 +1820,7 @@ export default function OnboardingWizard() {
                   helper="Questions to understand their budget without being pushy"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Timeline Questions" 
                   field="timelineQuestions" 
                   placeholder='e.g., "When do you need this by? Is this urgent or are you planning ahead? What happens if we miss that deadline?"'
@@ -1827,7 +1828,7 @@ export default function OnboardingWizard() {
                   helper="Questions to understand their urgency and timing"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Authority Questions" 
                   field="authorityQuestions" 
                   placeholder='e.g., "Are you the decision maker or will others be involved? What factors will they care about most? Who has final approval?"'
@@ -1835,7 +1836,7 @@ export default function OnboardingWizard() {
                   helper="Questions to identify if they can make the purchase decision"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Need Identification Questions" 
                   field="needIdentificationQuestions" 
                   placeholder='e.g., "What problem are you trying to solve? What have you tried before? What would the ideal solution look like for you?"'
@@ -1843,7 +1844,7 @@ export default function OnboardingWizard() {
                   helper="Questions to uncover their true needs and pain points"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Pain Point Questions" 
                   field="painPointQuestions" 
                   placeholder='e.g., "What&apos;s the biggest challenge you&apos;re facing right now? What happens if this problem isn&apos;t solved? How much is this costing you?"'
@@ -1867,7 +1868,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Assumptive Close Conditions" 
                   field="assumptiveCloseConditions" 
                   placeholder='e.g., "Use assumptive close when customer asks about shipping timeline, payment options, or availability. Phrases: Would you like this shipped to your business or home address? Let me get this ordered for you today."'
@@ -1875,7 +1876,7 @@ export default function OnboardingWizard() {
                   helper="When and how to use assumptive closing language"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Urgency Creation Tactics" 
                   field="urgencyCreationTactics" 
                   placeholder='e.g., "Mention limited inventory (if true), upcoming price increases, seasonal demand, or time-sensitive promotions. Always be honest - never fabricate urgency."'
@@ -1883,7 +1884,7 @@ export default function OnboardingWizard() {
                   helper="How to create genuine urgency without being pushy"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Trial Close Triggers" 
                   field="trialCloseTriggers" 
                   placeholder='e.g., "After answering 3+ questions positively, ask: How does that sound so far? or On a scale of 1-10, how close is this to what you need?"'
@@ -1891,7 +1892,7 @@ export default function OnboardingWizard() {
                   helper="When to test readiness to buy with trial closes"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Soft Close Approaches" 
                   field="softCloseApproaches" 
                   placeholder='e.g., "For hesitant customers: Would you like me to reserve one while you think it over? or What would need to happen for this to be a yes?"'
@@ -1915,7 +1916,7 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Prohibited Behaviors" 
                   field="prohibitedBehaviors" 
                   placeholder='e.g., "Never discuss sports, politics, or religion. Don&apos;t make medical claims. Don&apos;t negotiate below minimum price. Don&apos;t share competitor pricing specifics."'
@@ -1923,7 +1924,7 @@ export default function OnboardingWizard() {
                   helper="Things the agent should NEVER do or discuss"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Behavioral Boundaries" 
                   field="behavioralBoundaries" 
                   placeholder='e.g., "Remain professional at all times. Don&apos;t use slang or emojis excessively. Don&apos;t be overly familiar with first-time customers. Escalate sensitive topics immediately."'
@@ -1931,7 +1932,7 @@ export default function OnboardingWizard() {
                   helper="General guidelines for appropriate behavior"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Must Always Mention" 
                   field="mustAlwaysMention" 
                   placeholder='e.g., "Free shipping on orders over $50. 30-day money-back guarantee. 24/7 customer support available."'
@@ -1939,7 +1940,7 @@ export default function OnboardingWizard() {
                   helper="Key points the agent should consistently bring up"
                 />
                 
-                <TextArea 
+                <TextAreaField formData={formData} updateField={updateField} 
                   label="Never Mention" 
                   field="neverMention" 
                   placeholder='e.g., "Past product recalls. Discontinued product lines. Internal company issues. Specific competitor weaknesses."'
