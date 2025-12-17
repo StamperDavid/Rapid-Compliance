@@ -5,6 +5,7 @@ import { validateInput } from '@/lib/validation/schemas';
 import { z } from 'zod';
 import { OnboardingData } from '@/types/agent-memory';
 
+// Schema for onboarding request validation
 const processOnboardingSchema = z.object({
   organizationId: z.string(),
   onboardingData: z.record(z.any()),
