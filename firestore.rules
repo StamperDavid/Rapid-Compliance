@@ -219,10 +219,8 @@ service cloud.firestore {
       // Super admins have FULL access
       allow read, write: if isSuperAdmin();
       
-      // Platform admins can also access
-      allow read, write: if isAuthenticated() 
-        && getUserRole() == 'admin'
-        && getUserOrgId() == 'platform';
+      // Platform admins can also access (any admin role can read)
+      allow read, write: if isAuthenticated() && isAdminOrOwner();
     }
     
     // Base Models collection (training models)

@@ -22,8 +22,8 @@ async function getApiKey(): Promise<string> {
 
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
-    
-    const apiKey = adminKeys?.ai?.geminiApiKey || adminKeys?.ai?.googleApiKey;
+
+    const apiKey = adminKeys?.gemini?.apiKey || adminKeys?.google?.apiKey;
     
     if (!apiKey) {
       throw new Error('Gemini API key not configured in admin settings. Please add it at /admin/system/api-keys');

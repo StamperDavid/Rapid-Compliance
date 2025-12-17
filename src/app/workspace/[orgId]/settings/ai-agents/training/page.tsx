@@ -101,9 +101,9 @@ export default function AgentTrainingPage() {
       const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
       
       // Prefer OpenRouter (supports all models)
-      if (adminKeys?.ai?.openrouterApiKey) {
+      if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
-        const provider = new OpenRouterProvider({ apiKey: adminKeys.ai.openrouterApiKey });
+        const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
         
         // Convert history to OpenRouter format
         const messages = [

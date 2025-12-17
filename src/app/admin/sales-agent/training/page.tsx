@@ -100,9 +100,9 @@ export default function AdminSalesAgentTrainingPage() {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
       const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
       
-      if (adminKeys?.ai?.openrouterApiKey) {
+      if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
-        const provider = new OpenRouterProvider({ apiKey: adminKeys.ai.openrouterApiKey });
+        const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
         
         const messages = [
           { role: 'system' as const, content: systemPrompt },
@@ -1079,6 +1079,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
     </div>
   );
 }
+
 
 
 
