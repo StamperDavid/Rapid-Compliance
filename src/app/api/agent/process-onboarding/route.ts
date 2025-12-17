@@ -74,9 +74,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Save onboarding data first (using Admin SDK)
-    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
     await AdminFirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/onboarding`,
       'current',
