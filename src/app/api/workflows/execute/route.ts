@@ -41,21 +41,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { organizationId, workflow, triggerData } = validation.data;
+    const data = validation.data;
 
     // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
+    if (user.organizationId !== data.organizationId) {
       return NextResponse.json(
         { success: false, error: 'Access denied to this organization' },
         { status: 403 }
       );
     }
 
+    // Handle both workflow object and workflowId variants
+    let workflow: Workflow;
+    if ('workflow' in data) {
+      workflow = data.workflow as Workflow;
+    } else if ('workflowId' in data) {
+      // Load workflow from database using workflowId
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+      const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+      
+      const loadedWorkflow = await AdminFirestoreService.get(
+        COLLECTIONS.WORKFLOWS,
+        data.workflowId
+      );
+      
+      if (!loadedWorkflow) {
+        return NextResponse.json(
+          { success: false, error: 'Workflow not found' },
+          { status: 404 }
+        );
+      }
+      
+      workflow = loadedWorkflow as Workflow;
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request: workflow or workflowId required' },
+        { status: 400 }
+      );
+    }
+
     // Execute workflow
-    const execution = await executeWorkflow(workflow as Workflow, {
-      ...triggerData,
+    const execution = await executeWorkflow(workflow, {
+      ...data.triggerData,
       userId: user.uid,
-      organizationId,
+      organizationId: data.organizationId,
     });
 
     return NextResponse.json({
