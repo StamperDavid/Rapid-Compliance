@@ -25,11 +25,12 @@ export async function GET() {
     };
 
     // Try to import and check adminDb
-    const { adminDb, adminApp } = await import('@/lib/firebase/admin');
+    const { adminDb, adminAuth, adminStorage } = await import('@/lib/firebase/admin');
     
     diagnostics.adminStatus = {
-      adminApp: adminApp ? 'INITIALIZED' : 'NULL',
       adminDb: adminDb ? 'INITIALIZED' : 'NULL',
+      adminAuth: adminAuth ? 'INITIALIZED' : 'NULL',
+      adminStorage: adminStorage ? 'INITIALIZED' : 'NULL',
     };
 
     // If adminDb exists, try a test read
