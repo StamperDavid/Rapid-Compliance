@@ -3,6 +3,10 @@ import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+// Force Node.js runtime (required for Firebase Admin SDK)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
  * Public Chat API
  * This endpoint is designed for embedded chat widgets on customer websites.

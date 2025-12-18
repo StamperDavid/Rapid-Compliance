@@ -8,19 +8,39 @@ import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage';
 
-// Firebase config (production values)
+// Firebase config from environment variables
+// Loads from .env.local (local overrides) and .env.development/.env.production (defaults)
 const firebaseConfig = {
-  apiKey: 'AIzaSyAuoM61E76vsHrKIXvZuMdhJMwsxEFn1PA',
-  authDomain: 'ai-sales-platform-4f5e4.firebaseapp.com',
-  projectId: 'ai-sales-platform-4f5e4',
-  storageBucket: 'ai-sales-platform-4f5e4.firebasestorage.app',
-  messagingSenderId: '97257356518',
-  appId: '1:97257356518:web:4e51eeb7e1a95e52018f27',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 };
+
+// Check if Firebase is properly configured
+const isFirebaseConfigured = !!(
+  firebaseConfig.apiKey && 
+  firebaseConfig.authDomain && 
+  firebaseConfig.projectId
+);
+
+// Log configuration status (only in server-side)
+if (typeof window === 'undefined') {
+  console.log('[Firebase Config] Checking configuration...');
+  console.log('[Firebase Config] Project ID:', firebaseConfig.projectId || 'MISSING');
+  console.log('[Firebase Config] Auth Domain:', firebaseConfig.authDomain || 'MISSING');
+  console.log('[Firebase Config] Is Configured:', isFirebaseConfigured);
+  
+  if (!isFirebaseConfigured) {
+    console.error('[Firebase Config] ❌ Firebase is not properly configured!');
+    console.error('[Firebase Config] Missing environment variables. Check Vercel settings.');
+  }
+}
 
 // Check if using emulator
 const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
-let isFirebaseConfigured = true;
 
 // Initialize Firebase (singleton pattern)
 let app: FirebaseApp | null = null;
@@ -65,8 +85,8 @@ function initializeFirebase() {
   }
 }
 
-// Initialize Firebase on client-side
-if (typeof window !== 'undefined' && (isFirebaseConfigured || useEmulator)) {
+// Initialize Firebase on client and server
+if (isFirebaseConfigured || useEmulator) {
   initializeFirebase();
 }
 
