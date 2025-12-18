@@ -16,13 +16,26 @@ export async function GET() {
 
   try {
     // Check environment variables
+    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
     diagnostics.envVars = {
       FIREBASE_ADMIN_PROJECT_ID: process.env.FIREBASE_ADMIN_PROJECT_ID ? 'SET' : 'MISSING',
       FIREBASE_ADMIN_CLIENT_EMAIL: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'SET' : 'MISSING',
-      FIREBASE_ADMIN_PRIVATE_KEY: process.env.FIREBASE_ADMIN_PRIVATE_KEY 
-        ? `SET (length: ${process.env.FIREBASE_ADMIN_PRIVATE_KEY.length})` 
+      FIREBASE_ADMIN_PRIVATE_KEY: privateKey
+        ? `SET (length: ${privateKey.length})` 
         : 'MISSING',
     };
+
+    // Diagnose private key format issues
+    if (privateKey) {
+      diagnostics.privateKeyDiagnostics = {
+        hasBackslashN: privateKey.includes('\\n'),
+        hasActualNewlines: privateKey.includes('\n'),
+        startsWithBegin: privateKey.trim().startsWith('-----BEGIN'),
+        endsWithEnd: privateKey.trim().endsWith('-----'),
+        firstChars: privateKey.substring(0, 50),
+        lastChars: privateKey.substring(privateKey.length - 50),
+      };
+    }
 
     // Try to import and check adminDb
     const { adminDb, adminAuth, adminStorage } = await import('@/lib/firebase/admin');
