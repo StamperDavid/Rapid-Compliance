@@ -579,7 +579,7 @@ ${this.summarizeRecentConversations(customerMemory)}
             .get();
           
           if (doc.exists) {
-            return { id: doc.id, ...doc.data() } as CustomerMemory;
+            return { id: doc.id, ...doc.data() } as unknown as CustomerMemory;
           }
           return null;
         }
