@@ -54,11 +54,21 @@ function initializeAdmin() {
     
     // Option 2: Individual env vars (preferred for Vercel)
     if (!serviceAccount && process.env.FIREBASE_ADMIN_PROJECT_ID && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+      // Clean up private key: remove surrounding quotes and replace \n with actual newlines
+      let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+      
+      // Remove surrounding quotes if present (common when copying from JSON)
+      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+        privateKey = privateKey.slice(1, -1);
+      }
+      
+      // Replace escaped newlines with actual newlines
+      privateKey = privateKey.replace(/\\n/g, '\n');
+      
       serviceAccount = {
         projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
         clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-        // Vercel escapes newlines, so we need to unescape them
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        privateKey: privateKey,
       };
       console.log('🔑 Using individual Firebase Admin env vars');
     }
