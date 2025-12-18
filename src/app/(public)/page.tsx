@@ -26,7 +26,10 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesEndRef.current?.parentElement;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -61,28 +64,35 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          orgId: 'platform',
+          orgId: 'platform-admin',
           customerId: `demo_${Date.now()}`,
         }),
       });
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch (err) {
+        data = {};
+      }
 
-      const data = await response.json();
-      
+      const responseText = response.ok
+        ? data.response
+        : data.error || "I'm having trouble connecting to the AI right now.";
+
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: data.response || "I'd be happy to help! Our platform lets you create custom AI sales agents trained on your business. They can chat with visitors 24/7, qualify leads, answer questions, and even close deals. Would you like to start a free trial?",
+        content: responseText || "I'm having trouble connecting to the AI right now.",
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Chat error:', error);
-      // Provide a helpful fallback response
       const fallbackMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: "Great question! SalesVelocity.ai lets you create custom AI sales agents trained specifically on your business. They work 24/7 on your website to qualify leads, answer questions, and close deals. Our setup takes less than an hour, and you can start with a 14-day free trial. Want me to tell you more about any specific feature?",
+        content: "I'm temporarily unavailable right now. Please try again shortly.",
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, fallbackMessage]);
@@ -191,6 +201,10 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
 
 export default function LandingPage() {
   const { theme } = useWebsiteTheme();
+  // Keep the landing page at the top on initial load to avoid unintended jumps.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
 
   return (
     <PublicLayout>

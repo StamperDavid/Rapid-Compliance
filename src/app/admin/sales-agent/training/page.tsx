@@ -491,6 +491,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
     const notes = prompt('Optional: Add notes about this Golden Master version');
     
     const newVersion = goldenMasters.length + 1;
+    const now = new Date();
     const newGM = {
       id: `gm-platform-${newVersion}`,
       version: newVersion,
@@ -498,30 +499,73 @@ Would you like me to walk you through a specific feature, or would you prefer to
       trainingScore: overallScore,
       status: 'ready',
       isActive: false,
-      trainedScenarios: trainingHistory.map(h => h.topic),
+      trainedScenarios: trainingHistory.map((h: any) => h.topic),
       baseModelId: baseModel.id,
       notes: notes || undefined,
-      createdAt: new Date()
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      // Spread the base model fields at top level for instance manager
+      ...baseModel
     };
     
-    setGoldenMasters(prev => [...prev, newGM]);
-    
-    alert(`✅ Golden Master v${newVersion} Created!\n\nYour trained AI agent has been saved.`);
-    setActiveTab('golden');
+    try {
+      // Save to Firestore
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+        newGM.id,
+        newGM,
+        false
+      );
+
+      setGoldenMasters(prev => [...prev, newGM]);
+      alert(`✅ Golden Master v${newVersion} Created and saved to Firestore!\n\nYour trained AI agent is ready to deploy.`);
+      setActiveTab('golden');
+    } catch (error: any) {
+      console.error('Error saving golden master:', error);
+      alert(`❌ Error saving Golden Master: ${error.message}`);
+    }
   };
 
-  const handleDeployGoldenMaster = (gmId: string, version: number) => {
+  const handleDeployGoldenMaster = async (gmId: string, version: number) => {
     if (!confirm(`Deploy Golden Master v${version} to production?`)) return;
-    
-    setGoldenMasters(prev => prev.map(gm => ({
-      ...gm,
-      isActive: gm.id === gmId,
-      deployedAt: gm.id === gmId ? new Date() : gm.deployedAt
-    })));
-    
-    setActiveGoldenMaster(goldenMasters.find(gm => gm.id === gmId));
-    
-    alert(`✅ Golden Master v${version} is now LIVE!`);
+
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const now = new Date();
+
+      // Update all golden masters - set only this one as active
+      const updatePromises = goldenMasters.map(async (gm) => {
+        const isThisOne = gm.id === gmId;
+        await FirestoreService.set(
+          `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
+          gm.id,
+          {
+            ...gm,
+            isActive: isThisOne,
+            deployedAt: isThisOne ? now.toISOString() : gm.deployedAt,
+            updatedAt: now.toISOString()
+          },
+          true // merge
+        );
+      });
+
+      await Promise.all(updatePromises);
+
+      // Update local state
+      setGoldenMasters(prev => prev.map(gm => ({
+        ...gm,
+        isActive: gm.id === gmId,
+        deployedAt: gm.id === gmId ? now.toISOString() : gm.deployedAt
+      })));
+
+      setActiveGoldenMaster(goldenMasters.find(gm => gm.id === gmId));
+
+      alert(`✅ Golden Master v${version} is now LIVE in Firestore!`);
+    } catch (error: any) {
+      console.error('Error deploying golden master:', error);
+      alert(`❌ Error deploying: ${error.message}`);
+    }
   };
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
@@ -1079,6 +1123,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
     </div>
   );
 }
+
 
 
 

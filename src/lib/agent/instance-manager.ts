@@ -74,7 +74,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       goldenMasterId: goldenMaster.id,
       goldenMasterVersion: goldenMaster.version,
       systemPrompt,
-      knowledgeBase: goldenMaster.knowledgeBase.documents.map(d => d.id),
+      knowledgeBase: goldenMaster.knowledgeBase?.documents?.map(d => d.id) || [],
       customerMemory,
       status: 'active',
       spawnedAt: new Date().toISOString(),
@@ -96,7 +96,44 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    * Compile system prompt by combining Golden Master config with customer context
    */
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
-    const { businessContext, agentPersona, behaviorConfig } = goldenMaster;
+    // Handle both nested and flat structures for backwards compatibility
+    const businessContext = goldenMaster.businessContext || {
+      businessName: (goldenMaster as any).businessName || 'Your Business',
+      industry: (goldenMaster as any).industry || 'General',
+      problemSolved: (goldenMaster as any).problemSolved || '',
+      uniqueValue: (goldenMaster as any).uniqueValue || '',
+      topProducts: (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') || '',
+      pricingStrategy: (goldenMaster as any).pricingStrategy || '',
+      discountPolicy: (goldenMaster as any).discountPolicy || '',
+      returnPolicy: (goldenMaster as any).returnPolicy || '',
+      warrantyTerms: (goldenMaster as any).warrantyTerms || '',
+      geographicCoverage: (goldenMaster as any).geographicCoverage || '',
+      deliveryTimeframes: (goldenMaster as any).deliveryTimeframes || '',
+      typicalSalesFlow: (goldenMaster as any).typicalSalesFlow || '',
+      discoveryQuestions: (goldenMaster as any).discoveryQuestions || '',
+      commonObjections: (goldenMaster as any).commonObjections || '',
+      priceObjections: (goldenMaster as any).priceObjections || '',
+      timeObjections: (goldenMaster as any).timeObjections || '',
+      competitorObjections: (goldenMaster as any).competitorObjections || '',
+      requiredDisclosures: (goldenMaster as any).requiredDisclosures || '',
+      prohibitedTopics: (goldenMaster as any).prohibitedTopics || ''
+    };
+    
+    const agentPersona = goldenMaster.agentPersona || {
+      name: (goldenMaster as any).name || 'AI Assistant',
+      tone: (goldenMaster as any).tone || 'Professional and helpful',
+      greeting: (goldenMaster as any).greeting || 'Hello! How can I help you today?',
+      closingMessage: (goldenMaster as any).closingMessage || 'Thanks for chatting!',
+      objectives: (goldenMaster as any).objectives || [],
+      escalationRules: (goldenMaster as any).escalationRules || []
+    };
+    
+    const behaviorConfig = goldenMaster.behaviorConfig || {
+      closingAggressiveness: (goldenMaster as any).closingAggressiveness || 5,
+      questionFrequency: (goldenMaster as any).questionFrequency || 'moderate',
+      responseLength: (goldenMaster as any).responseLength || 'medium',
+      proactiveLevel: (goldenMaster as any).proactiveLevel || 5
+    };
     
     // Include training learnings in system prompt (from Golden Master)
     const trainingNotes = goldenMaster.trainedScenarios || [];
@@ -490,21 +527,67 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async getActiveGoldenMaster(orgId: string): Promise<GoldenMaster | null> {
     try {
+      console.log(`[Instance Manager] Fetching Golden Masters for org: ${orgId}`);
+      
+      // Prefer admin SDK to bypass security rules
+      try {
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          const snap = await adminDb
+            .collection('organizations')
+            .doc(orgId)
+            .collection('goldenMasters')
+            .get();
+          
+          const goldenMasters = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          console.log(`[Instance Manager] Found ${goldenMasters.length} Golden Masters (admin SDK)`);
+          
+          const active = goldenMasters.find((gm: any) => gm.isActive === true);
+          console.log(`[Instance Manager] Active Golden Master: ${active ? active.id : 'NONE'}`);
+          return active as GoldenMaster | null;
+        }
+      } catch (adminError) {
+        console.warn('[Instance Manager] Admin SDK failed, falling back to client SDK:', adminError);
+      }
+      
+      // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const goldenMasters = await FirestoreService.getAll(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
         []
       );
+      console.log(`[Instance Manager] Found ${goldenMasters.length} Golden Masters (client SDK)`);
       const active = goldenMasters.find((gm: any) => gm.isActive === true);
       return active as GoldenMaster | null;
     } catch (error) {
-      console.error('Error fetching Golden Master:', error);
+      console.error('[Instance Manager] Error fetching Golden Master:', error);
       return null;
     }
   }
   
   private async getCustomerMemory(customerId: string, orgId: string): Promise<CustomerMemory | null> {
     try {
+      // Prefer admin SDK
+      try {
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          const doc = await adminDb
+            .collection('organizations')
+            .doc(orgId)
+            .collection('customerMemories')
+            .doc(customerId)
+            .get();
+          
+          if (doc.exists) {
+            return { id: doc.id, ...doc.data() } as CustomerMemory;
+          }
+          return null;
+        }
+      } catch (adminError) {
+        console.warn('[Instance Manager] Admin SDK failed for customer memory, using client SDK');
+      }
+      
+      // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       return await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
@@ -569,6 +652,23 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async saveCustomerMemory(memory: CustomerMemory): Promise<void> {
     try {
+      // Prefer admin SDK
+      try {
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          await adminDb
+            .collection('organizations')
+            .doc(memory.orgId)
+            .collection('customerMemories')
+            .doc(memory.customerId)
+            .set(memory, { merge: true });
+          return;
+        }
+      } catch (adminError) {
+        console.warn('[Instance Manager] Admin SDK failed for saving memory, using client SDK');
+      }
+      
+      // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${memory.orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,

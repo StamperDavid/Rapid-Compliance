@@ -187,6 +187,78 @@ class APIKeyService {
   // Private helper methods
 
   private async fetchKeysFromFirestore(organizationId: string): Promise<APIKeysConfig | null> {
+    // Special case: 'platform' and 'platform-admin' orgs use global platform API keys
+    if (organizationId === 'platform' || organizationId === 'platform-admin') {
+      try {
+        // Prefer admin SDK to bypass security rules
+        const { adminDb } = await import('@/lib/firebase/admin');
+        let platformKeys: any = null;
+        
+        if (adminDb) {
+          const doc = await adminDb.collection('admin').doc('platform-api-keys').get();
+          if (doc.exists) {
+            platformKeys = doc.data();
+          }
+        } else {
+          // Fallback to client SDK
+          const { FirestoreService } = await import('@/lib/db/firestore-service');
+          platformKeys = await FirestoreService.get('admin', 'platform-api-keys');
+        }
+        
+        if (platformKeys) {
+          console.log('[API Key Service] Platform keys found:', Object.keys(platformKeys));
+          // Convert platform keys format to APIKeysConfig format
+          return {
+            id: 'keys-platform',
+            organizationId: 'platform',
+            firebase: platformKeys.firebase || {},
+            googleCloud: platformKeys.googleCloud || {},
+            ai: platformKeys.openrouter || platformKeys.openai || platformKeys.anthropic || platformKeys.gemini ? {
+              openrouterApiKey: platformKeys.openrouter?.apiKey,
+              openaiApiKey: platformKeys.openai?.apiKey,
+              anthropicApiKey: platformKeys.anthropic?.apiKey,
+              geminiApiKey: platformKeys.gemini?.apiKey,
+            } : {},
+            payments: platformKeys.stripe || {},
+            email: platformKeys.sendgrid || platformKeys.resend || {},
+            sms: platformKeys.twilio || {},
+            storage: {},
+            analytics: {},
+            integrations: {},
+            createdAt: platformKeys.createdAt ? new Date(platformKeys.createdAt) : new Date(),
+            updatedAt: platformKeys.updatedAt ? new Date(platformKeys.updatedAt) : new Date(),
+            updatedBy: platformKeys.updatedBy || 'system',
+            isEncrypted: false,
+          } as APIKeysConfig;
+        }
+      } catch (error) {
+        console.error('[API Key Service] Error fetching platform API keys:', error);
+      }
+    }
+
+    try {
+      // Prefer admin SDK (bypasses client-side security rules) when available
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const snap = await adminDb
+          .collection('organizations')
+          .doc(organizationId)
+          .collection('apiKeys')
+          .doc(organizationId)
+          .get();
+        if (snap.exists) {
+          const keysData = snap.data() as any;
+          return {
+            ...keysData,
+            createdAt: keysData.createdAt ? new Date(keysData.createdAt) : new Date(),
+            updatedAt: keysData.updatedAt ? new Date(keysData.updatedAt) : new Date(),
+          } as APIKeysConfig;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching API keys via admin SDK:', error);
+    }
+
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const keysData = await FirestoreService.get(
@@ -198,7 +270,6 @@ class APIKeyService {
         return null;
       }
 
-      // Convert Firestore data back to APIKeysConfig format
       return {
         ...keysData,
         createdAt: keysData.createdAt ? new Date(keysData.createdAt) : new Date(),

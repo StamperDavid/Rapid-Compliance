@@ -38,8 +38,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify organization exists and has chat enabled
-    const organization = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+    // Note: The 'platform-admin' organization is for the landing page demo
+    // It uses the trained golden master from /admin/sales-agent/training
+    // and spawns ephemeral agents the same way as regular organizations
+
+    // Verify organization exists and has chat enabled (prefer Admin SDK, fallback to client SDK)
+    let organization: any = null;
+    let chatConfig: any = null;
+    try {
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const orgSnap = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc(orgId).get();
+        if (orgSnap.exists) {
+          organization = { id: orgSnap.id, ...orgSnap.data() };
+        }
+        const chatSnap = await adminDb
+          .collection(COLLECTIONS.ORGANIZATIONS)
+          .doc(orgId)
+          .collection('settings')
+          .doc('chatWidget')
+          .get();
+        if (chatSnap.exists) {
+          chatConfig = chatSnap.data();
+        }
+      }
+    } catch (e) {
+      // Ignore and fallback
+    }
+
+    if (!organization) {
+      organization = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+    }
     if (!organization) {
       return NextResponse.json(
         { success: false, error: 'Invalid organization' },
@@ -47,11 +76,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if chat widget is enabled for this org
-    const chatConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
-      'chatWidget'
-    );
+    if (!chatConfig) {
+      chatConfig = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
+        'chatWidget'
+      );
+    }
 
     // Default to enabled if no config exists
     if (chatConfig && chatConfig.enabled === false) {
@@ -80,13 +110,32 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Get agent configuration
-    const agentConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
-      'default'
-    );
+    // Get agent configuration (prefer Admin SDK)
+    let agentConfig: any = null;
+    try {
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const cfgSnap = await adminDb
+          .collection(COLLECTIONS.ORGANIZATIONS)
+          .doc(orgId)
+          .collection('agentConfig')
+          .doc('default')
+          .get();
+        if (cfgSnap.exists) {
+          agentConfig = cfgSnap.data();
+        }
+      }
+    } catch (e) {
+      // Ignore and fallback
+    }
+    if (!agentConfig) {
+      agentConfig = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+        'default'
+      );
+    }
     
-    const selectedModel = (agentConfig as any)?.selectedModel || 'gpt-4-turbo';
+    const selectedModel = (agentConfig as any)?.selectedModel || 'openrouter/anthropic/claude-3.5-sonnet';
     const modelConfig = (agentConfig as any)?.modelConfig || {
       temperature: 0.7,
       maxTokens: 2048,
