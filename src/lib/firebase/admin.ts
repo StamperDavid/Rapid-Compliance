@@ -106,16 +106,22 @@ function initializeAdmin() {
 // Initialize on import (server-side only)
 if (typeof window === 'undefined') {
   try {
+    console.log('[Firebase Admin] Initializing...');
+    console.log('[Firebase Admin] FIREBASE_ADMIN_PROJECT_ID:', process.env.FIREBASE_ADMIN_PROJECT_ID ? 'SET' : 'MISSING');
+    console.log('[Firebase Admin] FIREBASE_ADMIN_CLIENT_EMAIL:', process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'SET' : 'MISSING');
+    console.log('[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY:', process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 'SET (length: ' + process.env.FIREBASE_ADMIN_PRIVATE_KEY.length + ')' : 'MISSING');
     initializeAdmin();
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin:', error);
+    console.log('[Firebase Admin] ✅ Initialization complete. adminApp:', adminApp ? 'INITIALIZED' : 'NULL');
+  } catch (error: any) {
+    console.error('[Firebase Admin] ❌ Initialization failed:', error.message);
+    console.error('[Firebase Admin] Error stack:', error.stack);
   }
 }
 
-// Export admin services
-export const adminAuth = adminApp ? admin.auth(adminApp) : admin.auth();
-export const adminDb = adminApp ? admin.firestore(adminApp) : admin.firestore();
-export const adminStorage = adminApp ? admin.storage(adminApp) : admin.storage();
+// Export admin services - only if properly initialized
+export const adminAuth = adminApp ? admin.auth(adminApp) : null;
+export const adminDb = adminApp ? admin.firestore(adminApp) : null;
+export const adminStorage = adminApp ? admin.storage(adminApp) : null;
 
 export { admin };
 export default adminApp;
