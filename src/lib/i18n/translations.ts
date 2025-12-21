@@ -41,8 +41,8 @@ export const en: Translations = {
   agents: {
     title: 'AI Agents',
     create: 'Create Agent',
-    ensembleMode: 'Ensemble Mode',
-    ensembleDescription: 'Query multiple AI models for best quality',
+    goldenMaster: 'Golden Master',
+    goldenMasterDescription: 'Versioned AI agent with customer memory',
     knowledge: 'Knowledge Base',
     uploadKnowledge: 'Upload Knowledge',
     testAgent: 'Test Agent',
@@ -102,8 +102,8 @@ export const es: Translations = {
   agents: {
     title: 'Agentes IA',
     create: 'Crear Agente',
-    ensembleMode: 'Modo Conjunto',
-    ensembleDescription: 'Consultar múltiples modelos de IA para mejor calidad',
+    goldenMaster: 'Maestro Dorado',
+    goldenMasterDescription: 'Agente IA versionado con memoria del cliente',
     knowledge: 'Base de Conocimientos',
     uploadKnowledge: 'Cargar Conocimiento',
     testAgent: 'Probar Agente',
@@ -163,8 +163,8 @@ export const fr: Translations = {
   agents: {
     title: 'Agents IA',
     create: 'Créer un Agent',
-    ensembleMode: 'Mode Ensemble',
-    ensembleDescription: 'Interroger plusieurs modèles IA pour une meilleure qualité',
+    goldenMaster: 'Maître Doré',
+    goldenMasterDescription: 'Agent IA versionné avec mémoire client',
     knowledge: 'Base de Connaissances',
     uploadKnowledge: 'Télécharger Connaissances',
     testAgent: 'Tester Agent',

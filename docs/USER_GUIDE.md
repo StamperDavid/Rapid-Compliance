@@ -35,10 +35,11 @@ Complete guide to using the platform effectively.
 - Add URLs to crawl
 - Add FAQs manually
 
-#### **Step 4: Select AI Mode** ⭐
-- **Ensemble Mode (Recommended):** Best quality, queries 3-5 models
-- **Smart Auto-Select:** Balanced quality & cost
-- **Single Model:** Manual control
+#### **Step 4: Select AI Model**
+- **OpenAI GPT-4:** Best for reasoning and complex tasks
+- **Anthropic Claude:** Excellent for creative and nuanced responses
+- **Google Gemini:** Fast and cost-effective
+- **OpenRouter:** Access to multiple models through one API
 
 #### **Step 5: Test Your Agent**
 - Click "Test" button
@@ -51,22 +52,24 @@ Complete guide to using the platform effectively.
 
 ## 💬 **AI Agents**
 
-### **Ensemble Mode** (Our Secret Weapon)
+### **Golden Master System** (Our Secret Weapon)
 
 **What it does:**
-Queries 3-5 AI models in parallel and returns the best answer.
+Trains a versioned AI agent specific to your business with persistent customer memory.
 
 **Why it's better:**
-- 90-95% quality vs industry standard 70-90%
-- Automatically picks the best response
-- Fact-checked across multiple models
+- Customers never repeat themselves across sessions
+- Agent remembers preferences, budget, and conversation history
+- Versioned deployments allow rollback if needed
+- Training Center for continuous improvement
 
-**When to use:**
-- Customer-facing conversations
-- High-value interactions
-- When quality matters most
+**Key Features:**
+- **Base Model:** Editable agent configuration
+- **Training Center:** Interactive scenario-based training
+- **Golden Master:** Production-ready versioned snapshot
+- **Customer Memory:** Persistent relationship tracking
 
-**Cost:** ~$0.003 per conversation (3x standard, but 50,000% ROI)
+**Result:** Higher conversion rates through personalized, context-aware conversations
 
 ---
 
@@ -324,9 +327,10 @@ Same process as QuickBooks
 ### **For Better AI Responses:**
 1. Upload clear, well-written knowledge
 2. Test frequently
-3. Use Ensemble mode for quality
+3. Train your agent with real scenarios
 4. Review conversation logs
 5. Iterate based on feedback
+6. Deploy new Golden Master versions as you improve
 
 ### **For Higher Conversion:**
 1. Set up abandoned cart workflow

@@ -170,11 +170,11 @@ export interface IntelligentResponse {
   // Model info
   model: ModelName;
   provider: AIProvider;
-  
-  // Alternative responses (if using ensemble)
-  alternatives?: Array<{
-    model: ModelName;
-    response: string;
+
+  // Metadata
+  metadata?: {
+    temperature?: number;
+    maxTokens?: number;
     confidence: number;
   }>;
   
@@ -249,7 +249,6 @@ export type ModelSelectionStrategy =
   | 'cheapest' // Prioritize cost
   | 'best-quality' // Prioritize accuracy
   | 'balanced' // Balance speed/cost/quality
-  | 'ensemble' // Use multiple models
   | 'adaptive'; // Learn which model works best
 
 /**
@@ -266,12 +265,9 @@ export interface OrganizationModelConfig {
   
   // Strategy
   selectionStrategy: ModelSelectionStrategy;
-  
-  // Ensemble settings (if using ensemble)
-  ensembleConfig?: {
-    models: ModelName[];
-    votingStrategy: 'majority' | 'weighted' | 'confidence';
-    minAgreement: number; // 0-100, minimum % of models that must agree
+
+  // Model fallback configuration
+  fallbackModels?: ModelName[]; // Models to try if primary fails
   };
   
   // Fine-tuned models

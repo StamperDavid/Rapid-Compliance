@@ -1,35 +1,37 @@
 # AI Sales Platform
 
-Complete AI-powered sales platform with CRM, outbound automation, e-commerce, and white-label capabilities.
+AI-powered sales platform with intelligent agent system, customer memory persistence, and real-time conversation management.
 
-## Features
+## Core Innovation: Golden Master + Customer Memory
 
-### ✅ Core Platform
-- **AI Chat Agent** - GPT-4 powered conversational AI with RAG
-- **CRM** - Leads, contacts, companies, deals, tasks
-- **E-Commerce** - Products, cart, checkout, widgets
-- **White-Label** - Custom branding, multi-tenant
-- **Analytics** - Revenue, pipeline, forecasting
+Unlike traditional chatbots that forget between sessions, this platform uses a sophisticated architecture:
 
-### ✅ Outbound Sales (NEW!)
-- **AI Email Writer** - Generate personalized cold emails
-- **Sequence Engine** - Multi-step email campaigns
-- **Reply Handler** - AI-powered email responses
-- **Meeting Scheduler** - Autonomous calendar booking
-- **Subscription System** - Tiered plans with feature gating
+- **Golden Master**: Versioned AI agent configuration trained for your business
+- **Customer Memory**: Persistent conversation history and learned preferences across all sessions
+- **Instance Spawning**: Ephemeral agent instances that load customer context on-demand
+- **Omnichannel Continuity**: Customers recognized across web chat, email, and future platforms
 
-### ✅ Integrations
-- **Email** - SendGrid (real implementation)
-- **Calendar** - Google Calendar (real implementation)
-- **Gmail** - Email sync and sending (real implementation)
-- **Accounting** - QuickBooks, Xero (real implementation)
-- **Communication** - Slack, Microsoft Teams (real implementation)
-- **Payments** - Stripe, PayPal (real implementation)
+## Key Features
 
-### ✅ E-Commerce Widgets
-- ProductCard, ProductGrid, BuyButton
-- ShoppingCart, FullStorefront, CheckoutFlow
-- Embeddable on any website
+### ✅ AI Agent System
+- **Training Center** - Interactive agent training with scenario-based learning
+- **Golden Master Versioning** - Save and deploy trained agent configurations
+- **Real-Time Chat** - Live customer conversations with sentiment analysis
+- **Customer Memory** - Persistent relationship tracking across sessions
+- **RAG (Retrieval Augmented Generation)** - Context-aware responses from knowledge base
+
+### ✅ Conversation Management
+- **Live Monitoring** - Real-time view of active customer conversations
+- **Human Takeover** - Seamless agent-to-human handoff
+- **Session Analytics** - Conversation metrics and performance tracking
+- **Training Feedback** - Flag conversations for agent improvement
+
+### ✅ Business Operations
+- **CRM Dashboard** - Leads, deals, pipeline tracking
+- **Meeting Scheduler** - Automated calendar booking
+- **Email Integration** - SendGrid for transactional emails
+- **Payment Processing** - Stripe integration
+- **Multi-tenant** - Organization and workspace isolation
 
 ## Quick Start
 
@@ -39,13 +41,25 @@ npm install
 ```
 
 ### 2. Setup Environment
-See `SIMPLE_SETUP.md` for detailed setup instructions.
 
-Required API keys (add via Settings → API Keys in the app):
-- OpenAI (for AI features)
-- SendGrid (for email sending)
-- Google OAuth (for calendar/Gmail)
-- Stripe (for payments)
+**Option A: Quick Start (Recommended)**
+```bash
+# Copy environment template
+cp env.template .env.local
+
+# Add Firebase configuration to .env.local
+# (Get from Firebase Console > Project Settings > General)
+```
+
+**Option B: Use In-App Configuration**
+All API keys can be added through the UI at Settings → API Keys after first login.
+
+Required services:
+- **Firebase** - Database and auth (required)
+- **OpenAI/Anthropic/OpenRouter** - AI models (at least one required)
+- **SendGrid** - Email sending (optional)
+- **Stripe** - Payments (optional)
+- **Google OAuth** - Calendar/Gmail (optional)
 
 ### 3. Run Development Server
 ```bash
@@ -62,10 +76,11 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Documentation
 
-- `SIMPLE_SETUP.md` - Step-by-step setup guide
-- `SETUP_GUIDE.md` - Detailed technical setup
-- `WHATS_ACTUALLY_WORKING.md` - Honest status of all features
-- `OUTBOUND_FEATURES_COMPLETE.md` - Outbound features documentation
+- **[HOW_TO_RUN.md](./HOW_TO_RUN.md)** - Quick start guide
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture and design
+- **[API_KEY_ARCHITECTURE.md](./API_KEY_ARCHITECTURE.md)** - API key management
+- **[INSTALL_FIRST.md](./INSTALL_FIRST.md)** - First-time installation
+- **[docs/](./docs/)** - Additional technical documentation
 
 ## Tech Stack
 
@@ -73,55 +88,50 @@ Open [http://localhost:3000](http://localhost:3000)
 - **Language** - TypeScript
 - **Database** - Firebase Firestore
 - **Auth** - Firebase Auth
-- **AI** - OpenAI GPT-4, Anthropic Claude, Google Gemini
+- **AI Providers** - OpenAI, Anthropic, Google Gemini, OpenRouter
 - **Email** - SendGrid
 - **Payments** - Stripe
 - **Deployment** - Vercel
+- **Real-time** - Firestore subscriptions
 
 ## Project Structure
 
 ```
 src/
 ├── app/                    # Next.js app router pages
-│   ├── api/               # API routes
+│   ├── api/               # API routes (81 endpoints)
 │   ├── workspace/         # Main application
 │   └── auth/              # Authentication pages
 ├── components/            # React components
 ├── lib/                   # Core libraries
-│   ├── ai/               # AI services
+│   ├── agent/            # AI agent system (Golden Master, Instance Manager)
+│   ├── ai/               # AI provider integrations
+│   ├── db/               # Firestore service layer
+│   ├── auth/             # Authentication middleware
 │   ├── email/            # Email services
-│   ├── integrations/     # Third-party integrations
-│   ├── outbound/         # Outbound sales features
-│   ├── subscription/     # Subscription management
-│   └── widgets/          # E-commerce widgets
-└── types/                # TypeScript types
+│   └── integrations/     # Third-party integrations
+└── types/                # TypeScript types (agent-memory.ts, etc.)
 ```
 
-## API Routes
+## Key API Routes
 
-### Outbound
-- `POST /api/outbound/email/generate` - Generate AI email
-- `POST /api/outbound/sequences` - Create email sequence
-- `POST /api/outbound/sequences/enroll` - Enroll prospects
-- `POST /api/outbound/reply/process` - Process email reply
-- `POST /api/outbound/meetings/schedule` - Schedule meeting
+### AI Agent
+- `POST /api/chat/public` - Public chat endpoint (for embedded widgets)
+- `POST /api/agent/chat` - Authenticated agent chat
+- `POST /api/agent/process-onboarding` - Process onboarding data
+- `POST /api/training/deploy-golden-master` - Deploy trained agent
 
-### Subscription
-- `GET /api/subscription` - Get subscription
-- `POST /api/subscription` - Update subscription
-- `POST /api/subscription/toggle` - Toggle feature
-- `GET /api/subscription/usage` - Get usage stats
-
-### E-Commerce
-- `GET /api/ecommerce/products` - List products
-- `POST /api/ecommerce/cart/add` - Add to cart
-- `POST /api/ecommerce/checkout/create-session` - Create Stripe session
+### Conversation Management
+- Real-time via Firestore subscriptions (no polling)
+- Session management in `ChatSessionService`
 
 ### Integrations
-- `GET /api/integrations/google/auth` - Start Google OAuth
-- `GET /api/integrations/google/callback` - Google OAuth callback
-- `GET /api/integrations/microsoft/auth` - Start Microsoft OAuth
-- `GET /api/integrations/slack/auth` - Start Slack OAuth
+- `GET /api/integrations/google/auth` - Google OAuth
+- `GET /api/integrations/slack/auth` - Slack OAuth
+- `POST /api/email/send` - Send email via SendGrid
+- `POST /api/outbound/meetings/schedule` - Schedule meeting
+
+**Total**: 81 API routes (see `src/app/api/` for complete list)
 
 ## Development
 
@@ -154,37 +164,47 @@ Key variables:
 
 **Note**: You can also configure these via the in-app Settings → API Keys page instead of using .env files.
 
-## Support
+## Architecture Highlights
 
-For issues or questions:
-1. Check `WHATS_ACTUALLY_WORKING.md` for feature status
-2. Review `SIMPLE_SETUP.md` for setup help
-3. Check browser console for frontend errors
-4. Check server logs for backend errors
+### Golden Master System
+- **Base Model**: Editable agent configuration created from onboarding
+- **Training**: Interactive scenario-based training with feedback
+- **Golden Master**: Versioned snapshot of trained agent (v1, v2, v3...)
+- **Deployment**: Activate specific version for production use
+
+### Customer Memory
+- **Persistent Identity**: Track customers across sessions
+- **Conversation History**: Complete message logs
+- **Learned Preferences**: Budget, communication style, interests
+- **Agent Notes**: AI-generated insights about customer
+- **Context Flags**: Active cart, support tickets, VIP status
+
+### Instance Lifecycle
+1. Customer arrives → Spawn ephemeral instance from Golden Master
+2. Load customer memory (if returning customer)
+3. Compile system prompt with business context + customer history
+4. Handle conversation with real-time memory updates
+5. Session ends → Save state, terminate instance
+
+## Current Status
+
+**Functional** (65-70% complete):
+- ✅ AI agent training and deployment
+- ✅ Real-time conversation monitoring
+- ✅ Customer memory persistence
+- ✅ Firebase/Firestore integration
+- ✅ Multi-provider AI support (OpenAI, Anthropic, Gemini, OpenRouter)
+- ✅ RAG (knowledge base integration)
+- ✅ Authentication & authorization
+- ✅ 81 API routes with rate limiting
+
+**Needs Work**:
+- ⚠️ Customer validation (zero production users)
+- ⚠️ E-commerce features (partially implemented)
+- ⚠️ Some integrations (OAuth flows exist, need testing)
+- ⚠️ Analytics dashboards (some mock data remains)
+- ⚠️ Test coverage (minimal)
 
 ## License
 
 Proprietary - All rights reserved
-
-## Status
-
-**Current Completion**: ~90%
-- Core platform: 100%
-- Outbound features: 100%
-- E-commerce: 95%
-- Integrations: 60% (core ones working)
-- Analytics: 80%
-
-**What's Real**:
-- All core features work
-- Email/Calendar/Gmail integrations are real (need API keys)
-- Stripe payments work
-- AI features work
-- Widgets work
-
-**What Needs Setup**:
-- API keys for external services (via Settings page)
-- OAuth credentials for integrations
-- Legal documents (Privacy Policy, ToS)
-
-See `WHATS_ACTUALLY_WORKING.md` for detailed status.
