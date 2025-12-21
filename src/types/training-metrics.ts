@@ -320,3 +320,7 @@ export interface TrainingRequirements {
   coverageRequirementMet: boolean;
   allRequirementsMet: boolean;
 }
+
+
+
+

@@ -245,3 +245,7 @@ export default function FAQPage() {
     </PublicLayout>
   );
 }
+
+
+
+

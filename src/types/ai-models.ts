@@ -3,7 +3,7 @@
  * Unified types for multiple AI providers
  */
 
-export type AIProvider = 'openai' | 'anthropic' | 'google';
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'openrouter';
 
 export type ModelName =
   // OpenAI
@@ -18,7 +18,9 @@ export type ModelName =
   // Google
   | 'gemini-1.5-pro'
   | 'gemini-1.5-flash'
-  | 'gemini-1.0-pro';
+  | 'gemini-1.0-pro'
+  // OpenRouter (allow any upstream identifier)
+  | `openrouter/${string}`;
 
 export interface ModelCapabilities {
   provider: AIProvider;
@@ -479,6 +481,10 @@ export const MODEL_CAPABILITIES: Record<ModelName, ModelCapabilities> = {
     isDeprecated: false,
   },
 };
+
+
+
+
 
 
 

@@ -286,6 +286,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
  * Check if user has specific permission
  */
 export function hasPermission(role: UserRole, permission: keyof RolePermissions): boolean {
+  // Handle undefined or invalid roles
+  if (!role || !ROLE_PERMISSIONS[role]) {
+    return false;
+  }
   return ROLE_PERMISSIONS[role][permission];
 }
 
