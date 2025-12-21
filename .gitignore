@@ -46,5 +46,10 @@ Thumbs.db
 
 
 serviceAccountKey.json
+serviceAccountKey-*.json
+*-firebase-adminsdk-*.json
 .env.local.backup
+.env.development
+.env.production
+.env.example
 firebase-debug.log
