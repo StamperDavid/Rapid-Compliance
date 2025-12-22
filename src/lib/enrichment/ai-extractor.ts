@@ -274,3 +274,4 @@ export function calculateConfidence(data: Partial<CompanyEnrichmentData>): numbe
   
   return Math.min(100, score);
 }
+

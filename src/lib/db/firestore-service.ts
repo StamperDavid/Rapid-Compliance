@@ -90,6 +90,7 @@ export class FirestoreService {
 
   /**
    * Get all documents from a collection
+   * WARNING: This fetches ALL documents. Use getAllPaginated() for large collections.
    */
   static async getAll<T = DocumentData>(
     collectionPath: string,
@@ -111,6 +112,61 @@ export class FirestoreService {
     } catch (error) {
       console.error(`Error getting all documents from ${collectionPath}:`, error);
       return []; // Return empty array instead of throwing
+    }
+  }
+
+  /**
+   * Get documents with pagination
+   */
+  static async getAllPaginated<T = DocumentData>(
+    collectionPath: string,
+    constraints: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ): Promise<{
+    data: T[];
+    lastDoc: QueryDocumentSnapshot | null;
+    hasMore: boolean;
+  }> {
+    if (!db) {
+      console.warn('Firestore is not initialized. Cannot get documents.');
+      return { data: [], lastDoc: null, hasMore: false };
+    }
+
+    try {
+      // Add limit to constraints
+      const paginatedConstraints = [
+        ...constraints,
+        limit(pageSize + 1), // Fetch one extra to check if there are more
+      ];
+
+      // Add startAfter if we have a lastDoc
+      if (lastDoc) {
+        paginatedConstraints.push(startAfter(lastDoc));
+      }
+
+      const q = query(collection(db, collectionPath), ...paginatedConstraints);
+      const querySnapshot = await getDocs(q);
+      
+      const docs = querySnapshot.docs;
+      const hasMore = docs.length > pageSize;
+      
+      // Remove the extra document if we have more
+      const data = (hasMore ? docs.slice(0, pageSize) : docs).map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as T[];
+      
+      const newLastDoc = hasMore ? docs[pageSize - 1] : (docs.length > 0 ? docs[docs.length - 1] : null);
+
+      return {
+        data,
+        lastDoc: newLastDoc,
+        hasMore,
+      };
+    } catch (error) {
+      console.error(`Error getting paginated documents from ${collectionPath}:`, error);
+      return { data: [], lastDoc: null, hasMore: false };
     }
   }
 

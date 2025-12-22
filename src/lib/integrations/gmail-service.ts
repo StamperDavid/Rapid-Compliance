@@ -249,6 +249,46 @@ export function getEmailBody(message: any): { text: string; html: string } {
 }
 
 /**
+ * Send email via Gmail (wrapper for sequence engine)
+ */
+export async function sendEmailViaGmail(options: {
+  to: string;
+  from: string;
+  subject: string;
+  body: string;
+  organizationId: string;
+  metadata?: Record<string, string>;
+}): Promise<void> {
+  // Get Gmail tokens from organization's integrations
+  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  
+  const integrations = await FirestoreService.getAll(
+    `${COLLECTIONS.ORGANIZATIONS}/${options.organizationId}/integrations`,
+    []
+  );
+  
+  const gmailIntegration = integrations.find((i: any) => i.service === 'gmail' || i.providerId === 'google');
+  
+  if (!gmailIntegration || !gmailIntegration.accessToken) {
+    throw new Error('Gmail not connected. Please connect your Google account first.');
+  }
+
+  const tokens = {
+    access_token: gmailIntegration.accessToken,
+    refresh_token: gmailIntegration.refreshToken,
+  };
+
+  // Send the email
+  const result = await sendGmailEmail(tokens, {
+    to: options.to,
+    subject: options.subject,
+    body: options.body,
+  });
+
+  console.log(`[Gmail] Email sent successfully: ${result.id}`);
+}
+
+/**
  * Sync emails to CRM
  */
 export async function syncEmailsToCRM(
@@ -303,6 +343,7 @@ export async function syncEmailsToCRM(
     throw error;
   }
 }
+
 
 
 

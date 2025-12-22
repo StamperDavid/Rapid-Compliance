@@ -255,8 +255,6 @@ export class SequenceEngine {
     step: SequenceStep,
     organizationId: string
   ): Promise<void> {
-    
-
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
     // Get prospect email from CRM
@@ -269,37 +267,72 @@ export class SequenceEngine {
       throw new Error('Prospect email not found');
     }
 
-    // Get SendGrid API key from org settings
-    const { getAPIKey } = await import('@/lib/config/api-keys');
-    const sendgridKey = await getAPIKey(organizationId, 'sendgrid');
-    
-    if (!sendgridKey) {
-      throw new Error('SendGrid not configured for this organization');
+    // Get organization settings to determine email provider
+    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+    const emailProvider = org?.emailProvider || 'gmail'; // Default to Gmail
+    const fromEmail = org?.fromEmail || process.env.FROM_EMAIL;
+
+    if (!fromEmail) {
+      throw new Error('FROM_EMAIL not configured for this organization');
     }
 
-    // Send email via SendGrid
-    const { sendEmail } = await import('@/lib/email/sendgrid-service');
-    const result = await sendEmail({
-      to: prospect.email,
-      subject: step.subject || 'Follow-up',
-      html: step.body,
-      tracking: {
-        trackOpens: true,
-        trackClicks: true,
-      },
-      metadata: {
-        enrollmentId: enrollment.id,
-        stepId: step.id,
+    // Try Gmail API first (free, integrated)
+    try {
+      const { sendEmailViaGmail } = await import('@/lib/integrations/gmail-service');
+      
+      await sendEmailViaGmail({
+        to: prospect.email,
+        from: fromEmail,
+        subject: step.subject || 'Follow-up',
+        body: step.body,
         organizationId,
-        prospectId: enrollment.prospectId,
-      },
-    }, sendgridKey);
+        metadata: {
+          enrollmentId: enrollment.id,
+          stepId: step.id,
+          prospectId: enrollment.prospectId,
+        },
+      });
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to send email');
+      console.log(`[Sequence Engine] Email sent via Gmail to ${prospect.email}`);
+      return;
+    } catch (gmailError: any) {
+      console.warn('[Sequence Engine] Gmail send failed, trying fallback:', gmailError.message);
+      
+      // Fallback to SendGrid if Gmail fails
+      if (emailProvider === 'sendgrid') {
+        const { getAPIKey } = await import('@/lib/config/api-keys');
+        const sendgridKey = await getAPIKey(organizationId, 'sendgrid');
+        
+        if (!sendgridKey) {
+          throw new Error('Gmail failed and SendGrid not configured. Cannot send email.');
+        }
+
+        const { sendEmail } = await import('@/lib/email/sendgrid-service');
+        const result = await sendEmail({
+          to: prospect.email,
+          subject: step.subject || 'Follow-up',
+          html: step.body,
+          tracking: {
+            trackOpens: true,
+            trackClicks: true,
+          },
+          metadata: {
+            enrollmentId: enrollment.id,
+            stepId: step.id,
+            organizationId,
+            prospectId: enrollment.prospectId,
+          },
+        }, sendgridKey);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to send email via SendGrid');
+        }
+
+        console.log(`[Sequence Engine] Email sent via SendGrid to ${prospect.email}`);
+      } else {
+        throw gmailError;
+      }
     }
-
-    
   }
 
   /**

@@ -11,8 +11,8 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { OutboundSequence } from '@/types/outbound-sequence';
 
 /**
- * GET /api/outbound/sequences?orgId=xxx
- * List all sequences for an organization
+ * GET /api/outbound/sequences?orgId=xxx&page=1&limit=50
+ * List sequences for an organization with pagination
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
+    const pageSize = parseInt(searchParams.get('limit') || '50');
+    const cursor = searchParams.get('cursor'); // For pagination
 
     if (!orgId) {
       return NextResponse.json(
@@ -35,15 +37,21 @@ export async function GET(request: NextRequest) {
     const featureCheck = await requireFeature(request, orgId, 'emailSequences');
     if (featureCheck) return featureCheck;
 
-    // Get all sequences
-    const sequences = await FirestoreService.getAll(
+    // Get sequences with pagination
+    const { orderBy } = await import('firebase/firestore');
+    const result = await FirestoreService.getAllPaginated(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
-      []
+      [orderBy('createdAt', 'desc')],
+      Math.min(pageSize, 100) // Max 100 per page
     );
 
     return NextResponse.json({
       success: true,
-      sequences,
+      sequences: result.data,
+      pagination: {
+        hasMore: result.hasMore,
+        pageSize: result.data.length,
+      },
     });
   } catch (error: any) {
     console.error('[Sequences API] Error listing sequences:', error);

@@ -298,3 +298,4 @@ export async function scrapeCareersPage(baseUrl: string): Promise<{
   
   return { isHiring: false, jobCount: 0, jobs: [] };
 }
+

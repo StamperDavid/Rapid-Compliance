@@ -64,12 +64,22 @@ export async function processSequences(): Promise<{
 }
 
 /**
- * Get all organizations
+ * Get all organizations with active sequences
  */
 async function getAllOrganizations(): Promise<string[]> {
-  // TODO: Query Firestore for all organization IDs
-  // For now, return empty array - this will be populated in production
-  return [];
+  try {
+    // Get all organizations that have sequences
+    const orgs = await FirestoreService.getAll(
+      COLLECTIONS.ORGANIZATIONS,
+      []
+    );
+    
+    // Return org IDs
+    return orgs.map((org: any) => org.id);
+  } catch (error) {
+    console.error('[Sequence Scheduler] Error getting organizations:', error);
+    return [];
+  }
 }
 
 /**
