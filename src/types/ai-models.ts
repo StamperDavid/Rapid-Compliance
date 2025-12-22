@@ -176,7 +176,7 @@ export interface IntelligentResponse {
     temperature?: number;
     maxTokens?: number;
     confidence: number;
-  }>;
+  };
   
   // Corrections (if self-corrected)
   corrections?: Array<{
