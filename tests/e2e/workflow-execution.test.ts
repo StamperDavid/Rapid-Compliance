@@ -3,9 +3,9 @@
  * Test automated workflow triggers and actions
  */
 
-const isJest = !!process.env.JEST_WORKER_ID;
+const isJestWorkflow = !!process.env.JEST_WORKER_ID;
 
-if (isJest) {
+if (isJestWorkflow) {
   describe.skip('Playwright e2e (skipped in Jest)', () => {
     it('skipped', () => {});
   });

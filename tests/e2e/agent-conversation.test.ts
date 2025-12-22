@@ -3,9 +3,9 @@
  * Full conversation flow testing
  */
 
-const isJest = !!process.env.JEST_WORKER_ID;
+const isJestAgent = !!process.env.JEST_WORKER_ID;
 
-if (isJest) {
+if (isJestAgent) {
   describe.skip('Playwright e2e (skipped in Jest)', () => {
     it('skipped', () => {});
   });

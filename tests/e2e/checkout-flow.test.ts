@@ -3,9 +3,9 @@
  * Complete purchase flow testing
  */
 
-const isJest = !!process.env.JEST_WORKER_ID;
+const isJestCheckout = !!process.env.JEST_WORKER_ID;
 
-if (isJest) {
+if (isJestCheckout) {
   describe.skip('Playwright e2e (skipped in Jest)', () => {
     it('skipped', () => {});
   });
