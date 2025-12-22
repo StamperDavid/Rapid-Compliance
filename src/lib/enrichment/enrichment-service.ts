@@ -488,7 +488,13 @@ function countDataPoints(data: CompanyEnrichmentData): number {
  */
 async function logEnrichmentCost(organizationId: string, log: EnrichmentCostLog): Promise<void> {
   try {
-    await FirestoreService.create(`${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`, log);
+    const logId = `cost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
+      logId,
+      log,
+      false
+    );
   } catch (error) {
     console.error('[Enrichment] Error logging cost:', error);
   }

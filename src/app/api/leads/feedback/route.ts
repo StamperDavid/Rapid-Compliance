@@ -19,14 +19,17 @@ export async function POST(request: NextRequest) {
     }
     
     // Store feedback in Firestore
-    await FirestoreService.create(
+    const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/lead-feedback`,
+      feedbackId,
       {
         leadDomain,
         isGoodLead,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
-        createdAt: new Date(),
-      }
+        timestamp: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      },
+      false
     );
     
     console.log(`[Lead Feedback] Saved feedback for ${leadDomain}: ${isGoodLead ? 'Good' : 'Bad'}`);
