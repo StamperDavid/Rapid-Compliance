@@ -265,10 +265,6 @@ export interface OrganizationModelConfig {
   
   // Strategy
   selectionStrategy: ModelSelectionStrategy;
-
-  // Model fallback configuration
-  fallbackModels?: ModelName[]; // Models to try if primary fails
-  };
   
   // Fine-tuned models
   fineTunedModels: Array<{
