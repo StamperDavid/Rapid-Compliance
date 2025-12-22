@@ -365,13 +365,21 @@ async function useBackupSources(
     return createErrorResponse(
       `Could not enrich ${companyName} - website unreachable and no backup data available`,
       startTime,
-      costs
+      {
+        searchAPICalls: costs.searchCalls,
+        scrapingCalls: costs.scrapeCalls,
+        aiTokensUsed: costs.aiTokens || 0
+      }
     );
   } catch (error: any) {
     return createErrorResponse(
       `Backup sources failed: ${error.message}`,
       startTime,
-      costs
+      {
+        searchAPICalls: costs.searchCalls,
+        scrapingCalls: costs.scrapeCalls,
+        aiTokensUsed: costs.aiTokens || 0
+      }
     );
   }
 }
