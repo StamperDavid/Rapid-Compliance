@@ -95,7 +95,7 @@ export async function validateEnrichmentData(
       emailValid,
       phoneValid,
       dataConsistent: consistencyChecks.errors.length === 0,
-      sourcesReliable: data.dataSource !== 'fallback',
+      sourcesReliable: data.dataSource === 'hybrid' || data.dataSource === 'search-api',
     },
   };
 }
