@@ -26,12 +26,13 @@ export async function getCachedEnrichment(
 ): Promise<CompanyEnrichmentData | null> {
   try {
     // Query for cached data
-    const results = await FirestoreService.query<CachedEnrichment>(
+    const { where, limit } = await import('firebase/firestore');
+    const results = await FirestoreService.getAll<CachedEnrichment>(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-cache`,
       [
-        { field: 'domain', operator: '==', value: domain }
-      ],
-      1 // limit 1
+        where('domain', '==', domain),
+        limit(1)
+      ]
     );
     
     if (results.length === 0) {
@@ -140,14 +141,11 @@ export async function getCacheStats(organizationId: string): Promise<{
       : 0;
     
     // Get total enrichment requests from logs
-    const logs = await FirestoreService.query(
+    const { where } = await import('firebase/firestore');
+    const logs = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
       [
-        { 
-          field: 'timestamp', 
-          operator: '>=', 
-          value: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-        }
+        where('timestamp', '>=', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
       ]
     );
     
