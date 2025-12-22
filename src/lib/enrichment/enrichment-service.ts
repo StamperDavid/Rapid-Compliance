@@ -528,10 +528,11 @@ export async function getEnrichmentAnalytics(
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     
-    const logs = await FirestoreService.query<EnrichmentCostLog>(
+    const { where } = await import('firebase/firestore');
+    const logs = await FirestoreService.getAll<EnrichmentCostLog>(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
       [
-        { field: 'timestamp', operator: '>=', value: cutoffDate }
+        where('timestamp', '>=', cutoffDate)
       ]
     );
     
