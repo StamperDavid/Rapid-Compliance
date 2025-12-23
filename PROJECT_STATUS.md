@@ -393,46 +393,61 @@ Don't let the brutal honesty overshadow the good work:
 
 ---
 
-## 📝 PHASE 4 PLAN: BETA TESTING & LAUNCH
+## 🎯 Roadmap to v1.0 Production (6-8 Weeks)
 
-### Goal: Get to v1.0 Production with Real Users
+### Where We Are Now:
+- ✅ **Week 0 DONE:** Build fixed, deployable to Vercel
+- 🎯 **Currently on:** Week 1-2 (Critical Fixes)
 
-**Week 1: Deploy & Setup (Dec 23-29)**
-- ✅ Fix Vercel build (DONE)
-- [ ] Deploy to production Vercel environment
-- [ ] Set up proper Firebase security rules
-- [ ] Create 5-10 beta tester accounts
-- [ ] Document known issues/limitations
-- [ ] Set up basic monitoring (Sentry already configured)
+---
 
-**Week 2-3: Beta Testing (Dec 30 - Jan 12)**
-- [ ] Recruit 5-10 beta users (ideally sales teams)
-- [ ] Onboard beta users with real data
-- [ ] Monitor usage & collect feedback
-- [ ] Fix critical bugs as they appear
-- [ ] Track: Most-used features, error rates, performance issues
+### **Week 1-2: Critical Fixes** (Current Sprint)
+- [ ] Add pagination to leads/deals/orders APIs
+- [ ] Write real tests for core flows (auth, CRM, sequences)
+- [x] ~~Complete email sequence webhook handling~~ ✅ DONE
+- [x] ~~Fix the 3 analytics TODOs~~ ✅ DONE
+- [ ] Add proper error handling & logging
 
-**Week 4: Polish & Launch Prep (Jan 13-19)**
-- [ ] Address top beta feedback
-- [ ] Add pagination to critical APIs (leads/deals)
-- [ ] Extend rate limiting to more routes
-- [ ] Write basic user documentation
-- [ ] Create demo video/walkthrough
-- [ ] Prepare launch materials
+**Status:** 2/5 complete (webhooks ✅, analytics ✅)
 
-**Week 5-6: Production Launch (Jan 20 - Feb 2)**
-- [ ] Final bug fixes
-- [ ] v1.0 Release
-- [ ] Marketing/launch
-- [ ] Monitor closely for first week
-- [ ] Rapid response to issues
+---
 
-### Success Metrics for Beta:
-- [ ] 5+ beta users actively using the platform
-- [ ] Core workflows tested (lead import, email sequences, AI agent)
-- [ ] No critical bugs blocking usage
-- [ ] <10% error rate on API calls
-- [ ] Positive feedback from at least 3 beta users
+### **Week 3-4: Feature Completion**
+- [x] ~~Complete OAuth sync implementations (Gmail, Outlook)~~ ✅ DONE
+- [x] ~~Finish workflow action executors~~ ✅ DONE
+- [x] ~~Complete SMS webhook handling~~ ✅ DONE
+- [ ] Test e-commerce checkout end-to-end
+- [ ] Add rate limiting to all routes
+
+**Status:** 3/5 complete (OAuth ✅, workflows ✅, SMS ✅)
+
+---
+
+### **Week 5-6: Testing & Polish**
+- [ ] Write integration tests for major flows
+- [ ] Load testing with 1000+ records
+- [ ] Security audit
+- [ ] Performance optimization
+- [ ] Documentation
+
+**Status:** Phase 3 code exists, needs validation
+
+---
+
+### **Week 7-8: Beta Testing**
+- [ ] 5-10 real users
+- [ ] Fix bugs they find
+- [ ] Gather feedback
+- [ ] Final polish
+
+**Status:** Not started
+
+---
+
+### **Next Immediate Tasks (Week 1-2):**
+1. **Pagination** - Add to leads/deals/orders APIs (critical for scale)
+2. **Error Handling** - Replace console.log with proper logging
+3. **Tests** - Write real tests for auth, CRM, sequences
 
 ---
 
