@@ -27,12 +27,20 @@ export async function GET(request: NextRequest) {
     // Exchange code for tokens
     const tokens = await getTokensFromCode(code);
 
-    // Save integration to Firestore (in organization's integrations subcollection)
+    // Save integration using Admin SDK (server-side, bypasses security rules)
+    const { adminDb } = await import('@/lib/firebase/admin');
+    
+    if (!adminDb) {
+      throw new Error('Firebase Admin not initialized');
+    }
+
     const integrationId = `google_${Date.now()}`;
-    await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.INTEGRATIONS}`,
-      integrationId,
-      {
+    await adminDb
+      .collection('organizations')
+      .doc(orgId)
+      .collection('integrations')
+      .doc(integrationId)
+      .set({
         id: integrationId,
         userId,
         service: 'gmail',
@@ -43,9 +51,7 @@ export async function GET(request: NextRequest) {
         expiryDate: tokens.expiry_date,
         connectedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
-      false
-    );
+      });
 
     console.log('[Google OAuth] Gmail integration saved for org:', orgId);
 
