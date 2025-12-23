@@ -13,8 +13,9 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
 
   if (!code || !state) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return NextResponse.redirect(`${baseUrl}/admin/settings/integrations?error=oauth_failed`);
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?error=oauth_failed`);
   }
 
   try {
@@ -48,13 +49,15 @@ export async function GET(request: NextRequest) {
 
     console.log('[Google OAuth] Gmail integration saved for org:', orgId);
 
-    // Redirect to admin integrations page
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return NextResponse.redirect(`${baseUrl}/admin/settings/integrations?success=gmail`);
+    // Redirect to admin integrations page (use current domain)
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?success=gmail`);
   } catch (error: any) {
     console.error('[Google OAuth] Error:', error);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return NextResponse.redirect(`${baseUrl}/admin/settings/integrations?error=oauth_failed`);
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?error=oauth_failed`);
   }
 }
 
