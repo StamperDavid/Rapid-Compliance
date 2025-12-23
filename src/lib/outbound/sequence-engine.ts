@@ -701,7 +701,7 @@ export class SequenceEngine {
       return enrollments.length > 0 ? enrollments[0] : null;
     } catch (error) {
       console.error('[SequenceEngine] Error getting enrollment:', error);
-      return null;
+    return null;
     }
   }
 

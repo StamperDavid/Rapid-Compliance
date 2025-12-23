@@ -174,12 +174,12 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
     };
   } catch (error: any) {
     logger.error('Outbound sync failed', error, { route: '/email/sync/outbound' });
-    return {
+  return {
       success: false,
-      synced: 0,
+    synced: 0,
       errors: 1,
-      lastSyncAt: new Date(),
-    };
+    lastSyncAt: new Date(),
+  };
   }
 }
 
@@ -320,12 +320,12 @@ export async function getSyncStatus(organizationId: string, provider: 'gmail' | 
     ) as GmailSyncStatus | OutlookSyncStatus | null;
 
     if (!lastSyncResult) {
-      return {
+  return {
         isActive: syncConfig?.isActive || false,
-        syncedCount: 0,
-        errorCount: 0,
-      };
-    }
+    syncedCount: 0,
+    errorCount: 0,
+  };
+}
 
     return {
       isActive: syncConfig?.isActive || false,

@@ -13,7 +13,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 /**
  * GET - Load API keys for organization
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/settings/api-keys');
     if (rateLimitResponse) return rateLimitResponse;
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const orgId = searchParams.get('orgId');
 
     if (!orgId) {
-      return errors.badRequest('Organization ID required');
+      return handleAPIError(errors.badRequest('Organization ID required'));
     }
 
     // Load keys from Firestore
@@ -54,12 +54,12 @@ export async function GET(request: NextRequest) {
       keys: maskedKeys,
     });
   } catch (error: any) {
-    console.error('[API Keys] Error loading keys:', error);
-    
+    logger.error('API keys loading error', error, { route: '/api/settings/api-keys' });
+
     if (error?.code === 'permission-denied') {
       return handleAPIError(errors.forbidden('You do not have permission to view API keys'));
     }
-    
+
     return handleAPIError(error);
   }
 }
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST - Save API key
  */
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -110,16 +110,16 @@ export async function POST(request: NextRequest) {
       message: `${service} API key saved successfully`,
     });
   } catch (error: any) {
-    console.error('[API Keys] Error saving key:', error);
-    
+    logger.error('API keys saving error', error, { route: '/api/settings/api-keys' });
+
     if (error?.code === 'permission-denied') {
       return handleAPIError(errors.forbidden('You do not have permission to save API keys'));
     }
-    
+
     if (error?.code === 'not-found') {
       return handleAPIError(errors.notFound('Organization'));
     }
-    
+
     return handleAPIError(error);
   }
 }

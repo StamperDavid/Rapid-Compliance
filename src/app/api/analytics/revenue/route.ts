@@ -4,6 +4,7 @@ import { where, Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { withCache } from '@/lib/cache/analytics-cache';
 
 /**
  * GET /api/analytics/revenue - Get revenue analytics
@@ -25,26 +26,78 @@ export async function GET(request: NextRequest) {
       return errors.badRequest('orgId is required');
     }
 
-    // Calculate date range based on period
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (period) {
-      case '7d':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case '30d':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case '90d':
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case 'all':
-        startDate = new Date('2020-01-01'); // Far enough back
-        break;
-      default:
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    }
+    // Use caching for analytics queries
+    const analytics = await withCache(
+      orgId,
+      'revenue',
+      async () => calculateRevenueAnalytics(orgId, period),
+      { period }
+    );
+
+    logger.info('Revenue analytics retrieved', { 
+      route: '/api/analytics/revenue',
+      orgId, 
+      period,
+      totalRevenue: analytics.totalRevenue,
+      cached: analytics._cached || false,
+    });
+
+    return NextResponse.json(analytics);
+  } catch (error: any) {
+    logger.error('Revenue analytics error', error, { route: '/api/analytics/revenue' });
+    return errors.internal('Failed to generate revenue analytics', error);
+  }
+}
+
+/**
+ * Calculate revenue analytics (extracted for caching)
+ */
+async function calculateRevenueAnalytics(orgId: string, period: string) {
+  // Calculate date range based on period
+  const now = new Date();
+  let startDate: Date;
+  
+  switch (period) {
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case 'all':
+      startDate = new Date('2020-01-01'); // Far enough back
+      break;
+    default:
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+/**
+ * Calculate revenue analytics (extracted for caching)
+ */
+async function calculateRevenueAnalytics(orgId: string, period: string) {
+  // Calculate date range based on period
+  const now = new Date();
+  let startDate: Date;
+  
+  switch (period) {
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case 'all':
+      startDate = new Date('2020-01-01'); // Far enough back
+      break;
+    default:
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
 
     // Get deals from Firestore
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
@@ -188,19 +241,18 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
-    return NextResponse.json({
+    return {
       success: true,
-      analytics: {
-        totalRevenue,
-        dealsCount,
-        avgDealSize,
-        mrr,
-        growth,
-        bySource,
-        byProduct,
-        byRep,
-      },
-    });
+      totalRevenue,
+      dealsCount,
+      avgDealSize,
+      mrr,
+      growth,
+      bySource,
+      byProduct,
+      byRep,
+    };
+}
   } catch (error: any) {
     logger.error('Error getting revenue analytics', error, { route: '/api/analytics/revenue', orgId: request.nextUrl.searchParams.get('orgId') });
     return errors.database('Failed to get revenue analytics', error);

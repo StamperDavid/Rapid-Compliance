@@ -858,11 +858,11 @@ function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
       .map(r => r.reason);
     
     return {
-      competitor,
-      wins: data.wins,
-      losses: data.losses,
-      winRate: (data.wins + data.losses) > 0 ? (data.wins / (data.wins + data.losses)) * 100 : 0,
-      averageDealSize: data.losses > 0 ? data.totalValue / data.losses : 0,
+    competitor,
+    wins: data.wins,
+    losses: data.losses,
+    winRate: (data.wins + data.losses) > 0 ? (data.wins / (data.wins + data.losses)) * 100 : 0,
+    averageDealSize: data.losses > 0 ? data.totalValue / data.losses : 0,
       commonReasons,
     };
   });
