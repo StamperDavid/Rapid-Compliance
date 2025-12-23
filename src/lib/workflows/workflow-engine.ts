@@ -26,7 +26,7 @@ export interface WorkflowExecution {
 
 /**
  * Execute workflow
- * MOCK: Simulates workflow execution, will use Cloud Functions in real implementation
+ * Executes workflows with real action implementations
  */
 export async function executeWorkflow(
   workflow: Workflow,
@@ -44,7 +44,7 @@ export async function executeWorkflow(
   };
 
   try {
-    // MOCK: Check conditions
+    // Check conditions before executing
     if (workflow.conditions && workflow.conditions.length > 0) {
       const conditionsMet = await evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator || 'and');
       if (!conditionsMet) {
@@ -54,7 +54,7 @@ export async function executeWorkflow(
       }
     }
 
-    // MOCK: Execute actions sequentially
+    // Execute actions sequentially
     for (const action of workflow.actions) {
       try {
         const result = await executeAction(action, triggerData, workflow);
@@ -162,8 +162,7 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
 }
 
 /**
- * Execute workflow action
- * REAL: Executes actions using real services
+ * Execute workflow action using real service implementations
  */
 async function executeAction(
   action: WorkflowAction,

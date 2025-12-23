@@ -1,8 +1,13 @@
 /**
  * Email Sync Service
  * Handles two-way email synchronization with Gmail/Outlook
- * MOCK IMPLEMENTATION - Ready for backend integration
+ * Integrates with gmail-sync-service.ts and outlook-sync-service.ts
  */
+
+import { syncGmailMessages, GmailSyncStatus, setupGmailPushNotifications, stopGmailPushNotifications } from '@/lib/integrations/gmail-sync-service';
+import { syncOutlookMessages, OutlookSyncStatus } from '@/lib/integrations/outlook-sync-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
 
 export interface EmailSyncConfig {
   provider: 'gmail' | 'outlook';
@@ -11,6 +16,8 @@ export interface EmailSyncConfig {
   autoCreateContacts: boolean;
   organizationId: string;
   workspaceId?: string;
+  accessToken: string;
+  refreshToken?: string;
 }
 
 export interface SyncedEmail {
@@ -44,114 +51,250 @@ export interface SyncResult {
 }
 
 /**
- * Sync emails from email provider
- * MOCK: Returns mock synced emails, will use Gmail/Outlook API in real implementation
+ * Sync emails from email provider using real Gmail/Outlook sync services
  */
 export async function syncEmails(config: EmailSyncConfig): Promise<SyncResult> {
-  // MOCK: Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  logger.info('Starting email sync', { 
+    route: '/email/sync', 
+    provider: config.provider,
+    organizationId: config.organizationId 
+  });
 
-  // MOCK: In real implementation, this would:
-  // 1. Authenticate with Gmail/Outlook API using OAuth tokens
-  // 2. Fetch emails from specified folders
-  // 3. Filter by last sync timestamp
-  // 4. Parse emails and extract data
-  // 5. Create/update records in database
-  // 6. Auto-create contacts if enabled
-  // 7. Return sync result
-
-  const mockSyncedEmails: SyncedEmail[] = [
-    {
-      id: `email_${Date.now()}_1`,
-      messageId: `msg_${Date.now()}_1`,
-      from: 'customer@example.com',
-      to: ['sales@company.com'],
-      subject: 'Inquiry about your services',
-      body: 'I would like to learn more about...',
-      receivedAt: new Date(),
-      sentAt: new Date(Date.now() - 3600000),
-      folder: 'INBOX',
-      syncedAt: new Date(),
-    },
-  ];
-
-  // Store synced emails in Firestore
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
-  for (const email of mockSyncedEmails) {
-    await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${config.organizationId}/syncedEmails`,
-      email.id,
-      {
-        ...email,
-        receivedAt: email.receivedAt.toISOString(),
-        sentAt: email.sentAt.toISOString(),
-        syncedAt: email.syncedAt.toISOString(),
-      },
-      false
-    ).catch((error) => {
-      console.error('Failed to save synced email to Firestore:', error);
-      // Don't fail the sync if storage fails
+  try {
+    if (config.provider === 'gmail') {
+      return await syncGmailEmails(config);
+    } else if (config.provider === 'outlook') {
+      return await syncOutlookEmails(config);
+    } else {
+      throw new Error(`Unsupported email provider: ${config.provider}`);
+    }
+  } catch (error: any) {
+    logger.error('Email sync failed', error, { 
+      route: '/email/sync', 
+      provider: config.provider 
     });
+    
+    return {
+      success: false,
+      synced: 0,
+      errors: 1,
+      lastSyncAt: new Date(),
+    };
   }
+}
+
+/**
+ * Sync Gmail emails using gmail-sync-service
+ */
+async function syncGmailEmails(config: EmailSyncConfig): Promise<SyncResult> {
+  const result = await syncGmailMessages(
+    config.organizationId,
+    config.accessToken,
+    100 // maxResults
+  );
 
   return {
-    success: true,
-    synced: mockSyncedEmails.length,
-    errors: 0,
-    lastSyncAt: new Date(),
+    success: result.errors === 0,
+    synced: result.messagesSynced,
+    errors: result.errors,
+    lastSyncAt: new Date(result.lastSyncAt),
+  };
+}
+
+/**
+ * Sync Outlook emails using outlook-sync-service
+ */
+async function syncOutlookEmails(config: EmailSyncConfig): Promise<SyncResult> {
+  const result = await syncOutlookMessages(
+    config.organizationId,
+    config.accessToken,
+    100 // maxResults
+  );
+
+  return {
+    success: result.errors === 0,
+    synced: result.messagesSynced,
+    errors: result.errors,
+    lastSyncAt: new Date(result.lastSyncAt),
   };
 }
 
 /**
  * Sync outbound emails to email provider
- * MOCK: Will sync sent emails from CRM to email provider
+ * NOTE: Gmail/Outlook automatically track sent emails via API
  */
 export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncResult> {
-  // MOCK: In real implementation, this would:
-  // 1. Fetch sent emails from CRM database
-  // 2. Check if already synced
-  // 3. Send to email provider's "Sent" folder via API
-  // 4. Mark as synced in database
+  logger.info('Syncing outbound emails', { 
+    route: '/email/sync/outbound', 
+    provider: config.provider 
+  });
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Gmail and Outlook automatically track sent emails when using their APIs
+  // Emails sent via gmail-service.ts or outlook-service.ts are already in "Sent" folder
+  
+  // We just need to ensure our local CRM records are marked as synced
+  try {
+    const { where } = await import('firebase/firestore');
+    
+    // Get unsent emails from CRM
+    const unsentEmails = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${config.organizationId}/emails`,
+      [
+        where('source', '==', 'crm'),
+        where('synced', '!=', true),
+      ]
+    );
 
-  return {
-    success: true,
-    synced: 0,
-    errors: 0,
-    lastSyncAt: new Date(),
-  };
+    let synced = 0;
+    let errors = 0;
+
+    for (const email of unsentEmails) {
+      try {
+        // Mark as synced (emails are already sent via API)
+        await FirestoreService.update(
+          `${COLLECTIONS.ORGANIZATIONS}/${config.organizationId}/emails`,
+          email.id,
+          {
+            synced: true,
+            syncedAt: new Date().toISOString(),
+          }
+        );
+        synced++;
+      } catch (error) {
+        logger.error('Failed to mark email as synced', error, { emailId: email.id });
+        errors++;
+      }
+    }
+
+    return {
+      success: errors === 0,
+      synced,
+      errors,
+      lastSyncAt: new Date(),
+    };
+  } catch (error: any) {
+    logger.error('Outbound sync failed', error, { route: '/email/sync/outbound' });
+    return {
+      success: false,
+      synced: 0,
+      errors: 1,
+      lastSyncAt: new Date(),
+    };
+  }
 }
 
 /**
- * Start continuous email sync
- * MOCK: Will set up webhook/polling in real implementation
+ * Start continuous email sync using webhooks/push notifications
  */
 export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
-  // MOCK: In real implementation, this would:
-  // 1. Set up webhook with email provider (Gmail push notifications, Outlook webhooks)
-  // 2. Or set up polling interval
-  // 3. Store sync configuration in database
-  // 4. Start background worker/Cloud Function
+  logger.info('Starting continuous email sync', { 
+    route: '/email/sync/start', 
+    provider: config.provider,
+    organizationId: config.organizationId 
+  });
 
-  console.log('Email sync started (mock)', config);
+  try {
+    // Store sync configuration
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${config.organizationId}/integrationStatus`,
+      `${config.provider}-sync-config`,
+      {
+        ...config,
+        isActive: true,
+        startedAt: new Date().toISOString(),
+        lastSyncAt: null,
+        updatedAt: new Date().toISOString(),
+      }
+    );
+
+    // Set up push notifications for Gmail
+    if (config.provider === 'gmail') {
+      // Gmail uses Google Cloud Pub/Sub for push notifications
+      // Topic name format: projects/{project-id}/topics/gmail-push
+      const topicName = process.env.GOOGLE_PUBSUB_TOPIC || 
+                       `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/gmail-push`;
+      
+      await setupGmailPushNotifications(config.accessToken, topicName);
+      
+      logger.info('Gmail push notifications enabled', { 
+        route: '/email/sync/start',
+        organizationId: config.organizationId 
+      });
+    } else if (config.provider === 'outlook') {
+      // Outlook uses Microsoft Graph webhooks (subscriptions)
+      // This would be implemented in outlook-sync-service.ts
+      logger.info('Outlook webhooks would be set up here', { 
+        route: '/email/sync/start',
+        organizationId: config.organizationId 
+      });
+      
+      // TODO: Implement Outlook webhook subscription
+      // await setupOutlookWebhook(config.accessToken, config.organizationId);
+    }
+
+  } catch (error: any) {
+    logger.error('Failed to start email sync', error, { 
+      route: '/email/sync/start',
+      provider: config.provider 
+    });
+    throw error;
+  }
 }
 
 /**
- * Stop email sync
+ * Stop email sync and remove webhooks
  */
-export async function stopEmailSync(organizationId: string): Promise<void> {
-  // MOCK: In real implementation, this would:
-  // 1. Remove webhook subscriptions
-  // 2. Stop polling
-  // 3. Update database
+export async function stopEmailSync(organizationId: string, provider: 'gmail' | 'outlook'): Promise<void> {
+  logger.info('Stopping email sync', { 
+    route: '/email/sync/stop', 
+    provider,
+    organizationId 
+  });
 
-  console.log('Email sync stopped (mock)', organizationId);
+  try {
+    // Get sync configuration
+    const syncConfig = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${provider}-sync-config`
+    );
+
+    if (!syncConfig) {
+      logger.warn('No sync config found', { organizationId, provider });
+      return;
+    }
+
+    // Stop push notifications
+    if (provider === 'gmail') {
+      await stopGmailPushNotifications(syncConfig.accessToken);
+      logger.info('Gmail push notifications stopped', { organizationId });
+    } else if (provider === 'outlook') {
+      // TODO: Implement Outlook webhook removal
+      // await stopOutlookWebhook(syncConfig.accessToken);
+      logger.info('Outlook webhooks would be stopped here', { organizationId });
+    }
+
+    // Update sync configuration
+    await FirestoreService.update(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${provider}-sync-config`,
+      {
+        isActive: false,
+        stoppedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    );
+
+  } catch (error: any) {
+    logger.error('Failed to stop email sync', error, { 
+      route: '/email/sync/stop',
+      provider 
+    });
+    throw error;
+  }
 }
 
 /**
- * Get sync status
+ * Get sync status for organization
  */
 export interface SyncStatus {
   isActive: boolean;
@@ -162,14 +305,42 @@ export interface SyncStatus {
   lastError?: string;
 }
 
-export async function getSyncStatus(organizationId: string): Promise<SyncStatus> {
-  // MOCK: In real implementation, this would query database
-  return {
-    isActive: false,
-    syncedCount: 0,
-    errorCount: 0,
-  };
+export async function getSyncStatus(organizationId: string, provider: 'gmail' | 'outlook'): Promise<SyncStatus> {
+  try {
+    // Get sync configuration
+    const syncConfig = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${provider}-sync-config`
+    );
+
+    // Get last sync result
+    const lastSyncResult = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
+      `${provider}-sync`
+    ) as GmailSyncStatus | OutlookSyncStatus | null;
+
+    if (!lastSyncResult) {
+      return {
+        isActive: syncConfig?.isActive || false,
+        syncedCount: 0,
+        errorCount: 0,
+      };
+    }
+
+    return {
+      isActive: syncConfig?.isActive || false,
+      lastSyncAt: new Date(lastSyncResult.lastSyncAt),
+      nextSyncAt: undefined, // Push-based sync, no scheduled next sync
+      syncedCount: lastSyncResult.messagesSynced,
+      errorCount: lastSyncResult.errors,
+    };
+  } catch (error: any) {
+    logger.error('Failed to get sync status', error, { organizationId, provider });
+    return {
+      isActive: false,
+      syncedCount: 0,
+      errorCount: 0,
+      lastError: error.message,
+    };
+  }
 }
-
-
-
