@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
       orgId, 
       period,
       totalRevenue: analytics.totalRevenue,
-      cached: analytics._cached || false,
     });
 
     return NextResponse.json(analytics);
