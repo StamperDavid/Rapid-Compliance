@@ -144,20 +144,19 @@ if (typeof setInterval !== 'undefined') {
 export async function rateLimitMiddleware(
   request: NextRequest,
   endpoint?: string
-): Promise<Response | null> {
+): Promise<NextResponse | null> {
   const result = await checkRateLimit(request, endpoint);
   
   if (!result.allowed) {
-    return new Response(
-      JSON.stringify({
+    return NextResponse.json(
+      {
         success: false,
         error: 'Rate limit exceeded',
         retryAfter: Math.ceil((result.resetAt - Date.now()) / 1000),
-      }),
+      },
       {
         status: 429,
         headers: {
-          'Content-Type': 'application/json',
           'X-RateLimit-Limit': endpointLimits[endpoint || new URL(request.url).pathname]?.maxRequests.toString() || '100',
           'X-RateLimit-Remaining': result.remaining.toString(),
           'X-RateLimit-Reset': new Date(result.resetAt).toISOString(),
