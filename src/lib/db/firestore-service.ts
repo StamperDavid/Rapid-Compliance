@@ -464,6 +464,27 @@ export class RecordService {
     );
   }
 
+  /**
+   * Get records with pagination
+   * @param pageSize - Number of records per page (default 50, max 100)
+   * @param lastDoc - Document snapshot to start after (for cursor pagination)
+   */
+  static async getAllPaginated(
+    orgId: string,
+    workspaceId: string,
+    entityName: string,
+    filters: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ) {
+    return FirestoreService.getAllPaginated(
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      filters,
+      Math.min(pageSize, 100), // Enforce max page size
+      lastDoc
+    );
+  }
+
   static async set(orgId: string, workspaceId: string, entityName: string, recordId: string, data: any) {
     return FirestoreService.set(
       RecordService.getCollectionPath(orgId, workspaceId, entityName),
@@ -514,6 +535,24 @@ export class WorkflowService {
     );
   }
 
+  /**
+   * Get workflows with pagination
+   */
+  static async getAllPaginated(
+    orgId: string,
+    workspaceId: string,
+    constraints: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ) {
+    return FirestoreService.getAllPaginated(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+      constraints,
+      Math.min(pageSize, 100),
+      lastDoc
+    );
+  }
+
   static async set(orgId: string, workspaceId: string, workflowId: string, data: any) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
@@ -538,6 +577,23 @@ export class EmailCampaignService {
   static async getAll(orgId: string) {
     return FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`
+    );
+  }
+
+  /**
+   * Get campaigns with pagination
+   */
+  static async getAllPaginated(
+    orgId: string,
+    constraints: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ) {
+    return FirestoreService.getAllPaginated(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      constraints,
+      Math.min(pageSize, 100),
+      lastDoc
     );
   }
 

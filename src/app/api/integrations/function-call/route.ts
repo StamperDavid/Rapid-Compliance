@@ -7,9 +7,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { executeFunctionCall } from '@/lib/integrations/function-calling';
 import type { FunctionCallRequest } from '@/types/integrations';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/function-call');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -28,10 +34,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!integrationId || !functionName || !parameters) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return errors.badRequest('Missing required fields');
     }
 
     // Build function call request

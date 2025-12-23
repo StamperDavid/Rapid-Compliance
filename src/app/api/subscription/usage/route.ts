@@ -7,9 +7,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/subscription/usage');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -21,26 +27,17 @@ export async function GET(request: NextRequest) {
     const feature = searchParams.get('feature');
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     if (!feature) {
-      return NextResponse.json(
-        { success: false, error: 'Feature name required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Feature name required');
     }
 
     // Check usage limits
     const validFeatures = ['aiEmailWriter', 'prospectFinder', 'linkedin', 'sms', 'email'];
     if (!validFeatures.includes(feature)) {
-      return NextResponse.json(
-        { success: false, error: `Invalid feature. Must be one of: ${validFeatures.join(', ')}` },
-        { status: 400 }
-      );
+      return errors.badRequest(`Invalid feature. Must be one of: ${validFeatures.join(', ')}`);
     }
 
     const usage = await FeatureGate.checkLimit(
@@ -55,11 +52,8 @@ export async function GET(request: NextRequest) {
       ...usage,
     });
   } catch (error: any) {
-    console.error('[Subscription API] Error checking usage:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to check usage' },
-      { status: 500 }
-    );
+    logger.error('Error checking usage', error, { route: '/api/subscription/usage' });
+    return errors.database('Failed to check usage', error);
   }
 }
 

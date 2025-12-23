@@ -11,21 +11,24 @@ import {
 } from '@/lib/ai/learning/continuous-learning-engine';
 import { getTrainingDataStats, getTrainingExamples, approveTrainingExample, rejectTrainingExample } from '@/lib/ai/fine-tuning/data-collector';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET - Get training data statistics and pending examples
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/learning/fine-tune');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const action = searchParams.get('action') || 'stats';
     
     if (!organizationId) {
-      return NextResponse.json(
-        { error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
     
     switch (action) {
@@ -207,11 +210,8 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error: any) {
-    console.error('[Fine-Tune API] POST error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to process request' },
-      { status: 500 }
-    );
+    logger.error('Fine-tune POST error', error, { route: '/api/learning/fine-tune' });
+    return errors.database('Failed to process request', error);
   }
 }
 
@@ -247,11 +247,8 @@ export async function PUT(request: NextRequest) {
       message: 'Learning configuration updated',
     });
   } catch (error: any) {
-    console.error('[Fine-Tune API] PUT error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to update config' },
-      { status: 500 }
-    );
+    logger.error('Fine-tune PUT error', error, { route: '/api/learning/fine-tune' });
+    return errors.database('Failed to update config', error);
   }
 }
 

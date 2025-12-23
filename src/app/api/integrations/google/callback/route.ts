@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -53,14 +54,14 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date().toISOString(),
       });
 
-    console.log('[Google OAuth] Gmail integration saved for org:', orgId);
+    logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', orgId });
 
     // Redirect to admin integrations page (use current domain)
     const protocol = request.headers.get('x-forwarded-proto') || 'http';
     const host = request.headers.get('host') || 'localhost:3000';
     return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?success=gmail`);
   } catch (error: any) {
-    console.error('[Google OAuth] Error:', error);
+    logger.error('Google OAuth callback error', error, { route: '/api/integrations/google/callback' });
     const protocol = request.headers.get('x-forwarded-proto') || 'http';
     const host = request.headers.get('host') || 'localhost:3000';
     return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?error=oauth_failed`);

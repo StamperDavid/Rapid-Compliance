@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeScheduledWorkflows } from '@/lib/workflows/triggers/schedule-trigger';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 /**
  * Schedule trigger endpoint
@@ -17,11 +19,8 @@ export async function POST(request: NextRequest) {
       message: 'Scheduled workflows executed',
     });
   } catch (error: any) {
-    console.error('Error executing scheduled workflows:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to execute scheduled workflows' },
-      { status: 500 }
-    );
+    logger.error('Error executing scheduled workflows', error, { route: '/api/workflows/triggers/schedule' });
+    return errors.internal('Failed to execute scheduled workflows', error);
   }
 }
 

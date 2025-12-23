@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/analytics/win-loss - Get win/loss analysis
@@ -10,15 +13,15 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/win-loss');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     const period = searchParams.get('period') || '90d';
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'orgId is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('orgId is required');
     }
 
     // Calculate date range based on period
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
     try {
       allDeals = await FirestoreService.getAll(dealsPath, []);
     } catch (e) {
-      console.log('No deals collection yet');
+      logger.debug('No deals collection yet', { orgId });
     }
 
     // Filter closed deals in period
@@ -210,10 +213,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error getting win/loss analytics:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get win/loss analytics' },
-      { status: 500 }
-    );
+    logger.error('Error getting win/loss analytics', error, { route: '/api/analytics/win-loss' });
+    return errors.database('Failed to get win/loss analytics', error);
   }
 }

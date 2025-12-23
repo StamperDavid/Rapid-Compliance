@@ -8,9 +8,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/sequences/enroll');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -64,11 +70,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[Sequences API] Error enrolling prospects:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to enroll prospects' },
-      { status: 500 }
-    );
+    logger.error('Error enrolling prospects in sequence', error, { route: '/api/outbound/sequences/enroll' });
+    return errors.database('Failed to enroll prospects', error);
   }
 }
 

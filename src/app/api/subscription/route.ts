@@ -7,6 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/subscription?orgId=xxx
@@ -14,6 +17,9 @@ import { requireAuth } from '@/lib/auth/api-auth';
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/subscription');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -24,10 +30,7 @@ export async function GET(request: NextRequest) {
     const orgId = searchParams.get('orgId');
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     // Get subscription
@@ -38,11 +41,8 @@ export async function GET(request: NextRequest) {
       subscription,
     });
   } catch (error: any) {
-    console.error('[Subscription API] Error getting subscription:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get subscription' },
-      { status: 500 }
-    );
+    logger.error('Error getting subscription', error, { route: '/api/subscription' });
+    return errors.database('Failed to get subscription', error);
   }
 }
 
@@ -62,26 +62,17 @@ export async function POST(request: NextRequest) {
     const { orgId, plan, billingCycle } = body;
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     if (!plan) {
-      return NextResponse.json(
-        { success: false, error: 'Plan required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Plan required');
     }
 
     // Validate plan
     const validPlans = ['starter', 'professional', 'enterprise', 'custom'];
     if (!validPlans.includes(plan)) {
-      return NextResponse.json(
-        { success: false, error: `Invalid plan. Must be one of: ${validPlans.join(', ')}` },
-        { status: 400 }
-      );
+      return errors.badRequest(`Invalid plan. Must be one of: ${validPlans.join(', ')}`);
     }
 
     // Update subscription
@@ -97,11 +88,8 @@ export async function POST(request: NextRequest) {
       subscription,
     });
   } catch (error: any) {
-    console.error('[Subscription API] Error updating subscription:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update subscription' },
-      { status: 500 }
-    );
+    logger.error('Error updating subscription', error, { route: '/api/subscription' });
+    return errors.database('Failed to update subscription', error);
   }
 }
 

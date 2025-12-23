@@ -7,6 +7,9 @@ import {
   testIntegration,
   syncIntegration,
 } from '@/lib/integrations/integration-manager';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/integrations/[integrationId] - Get integration
@@ -16,6 +19,9 @@ export async function GET(
   { params }: { params: { integrationId: string } }
 ) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -25,10 +31,7 @@ export async function GET(
     const integration = await getIntegration(user.organizationId, params.integrationId);
 
     if (!integration) {
-      return NextResponse.json(
-        { success: false, error: 'Integration not found' },
-        { status: 404 }
-      );
+      return errors.notFound('Integration not found');
     }
 
     return NextResponse.json({
@@ -36,11 +39,8 @@ export async function GET(
       integration,
     });
   } catch (error: any) {
-    console.error('Error getting integration:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get integration' },
-      { status: 500 }
-    );
+    logger.error('Error fetching integration', error, { route: '/api/integrations' });
+    return errors.database('Failed to fetch integration', error);
   }
 }
 
@@ -67,11 +67,8 @@ export async function PATCH(
       message: 'Integration updated',
     });
   } catch (error: any) {
-    console.error('Error updating integration:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update integration' },
-      { status: 500 }
-    );
+    logger.error('Error updating integration', error, { route: '/api/integrations' });
+    return errors.database('Failed to update integration', error);
   }
 }
 
@@ -96,11 +93,8 @@ export async function DELETE(
       message: 'Integration deleted',
     });
   } catch (error: any) {
-    console.error('Error deleting integration:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete integration' },
-      { status: 500 }
-    );
+    logger.error('Error deleting integration', error, { route: '/api/integrations' });
+    return errors.database('Failed to delete integration', error);
   }
 }
 

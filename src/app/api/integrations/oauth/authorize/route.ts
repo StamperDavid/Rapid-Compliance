@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { generateAuthUrl } from '@/lib/integrations/oauth-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/integrations/oauth/authorize - Generate OAuth authorization URL
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/oauth/authorize');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -18,10 +24,7 @@ export async function GET(request: NextRequest) {
     const provider = searchParams.get('provider') as 'google' | 'microsoft' | 'slack';
 
     if (!integrationId || !provider) {
-      return NextResponse.json(
-        { success: false, error: 'integrationId and provider required' },
-        { status: 400 }
-      );
+      return errors.badRequest('integrationId and provider required');
     }
 
     const { user } = authResult;
@@ -34,11 +37,8 @@ export async function GET(request: NextRequest) {
       authUrl,
     });
   } catch (error: any) {
-    console.error('Error generating auth URL:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to generate authorization URL' },
-      { status: 500 }
-    );
+    logger.error('Error generating auth URL', error, { route: '/api/integrations/oauth/authorize' });
+    return errors.externalService('OAuth service', error);
   }
 }
 

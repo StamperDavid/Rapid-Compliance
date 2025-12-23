@@ -9,6 +9,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { processSequences } from '@/lib/outbound/sequence-scheduler';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,18 +19,15 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET;
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return errors.unauthorized();
     }
 
-    console.log('[Cron] Processing sequences...');
+    logger.info('Processing sequences (cron)', { route: '/api/cron/process-sequences' });
 
     // Process all due sequences
     const result = await processSequences();
 
-    console.log(`[Cron] Completed: ${result.processed} processed, ${result.errors} errors`);
+    logger.info('Cron completed', { route: '/api/cron/process-sequences', processed: result.processed, errors: result.errors });
 
     return NextResponse.json({
       success: true,
@@ -37,11 +36,8 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('[Cron] Fatal error processing sequences:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('Fatal error processing sequences (cron)', error, { route: '/api/cron/process-sequences' });
+    return errors.internal('Failed to process sequences', error);
   }
 }
 

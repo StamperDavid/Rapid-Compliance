@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 // Force Node.js runtime (required for Firebase Admin SDK)
 export const runtime = 'nodejs';
@@ -25,21 +27,12 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!customerId || !orgId || !message) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing required fields: customerId, orgId, message' 
-        },
-        { status: 400 }
-      );
+      return errors.badRequest('Missing required fields: customerId, orgId, message');
     }
 
     // Validate message length
     if (message.length > 2000) {
-      return NextResponse.json(
-        { success: false, error: 'Message too long. Maximum 2000 characters.' },
-        { status: 400 }
-      );
+      return errors.badRequest('Message too long. Maximum 2000 characters.');
     }
 
     // Note: The 'platform-admin' organization is for the landing page demo
@@ -169,7 +162,7 @@ export async function POST(request: NextRequest) {
       const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
-      console.warn('RAG enhancement failed, using base prompt:', error);
+      logger.warn('RAG enhancement failed, using base prompt', { route: '/api/chat/public', error });
     }
 
     // Generate response using AI
@@ -208,7 +201,7 @@ export async function POST(request: NextRequest) {
         false
       );
     } catch (error) {
-      console.warn('Failed to track chat message:', error);
+      logger.warn('Failed to track chat message', { route: '/api/chat/public', error });
       // Don't fail the request if analytics tracking fails
     }
 

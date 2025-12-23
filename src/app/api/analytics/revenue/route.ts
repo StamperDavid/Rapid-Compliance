@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, Timestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/analytics/revenue - Get revenue analytics
@@ -11,15 +14,15 @@ import { where, Timestamp } from 'firebase/firestore';
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/revenue');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     const period = searchParams.get('period') || '30d';
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'orgId is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('orgId is required');
     }
 
     // Calculate date range based on period
@@ -50,7 +53,7 @@ export async function GET(request: NextRequest) {
     try {
       allDeals = await FirestoreService.getAll(dealsPath, []);
     } catch (e) {
-      console.log('No deals collection yet');
+      logger.debug('No deals collection yet', { orgId });
     }
 
     // Filter by date and status
@@ -69,7 +72,7 @@ export async function GET(request: NextRequest) {
     try {
       allOrders = await FirestoreService.getAll(ordersPath, []);
     } catch (e) {
-      console.log('No orders collection yet');
+      logger.debug('No orders collection yet', { orgId });
     }
 
     const completedOrders = allOrders.filter(order => {
@@ -199,10 +202,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error getting revenue analytics:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get revenue analytics' },
-      { status: 500 }
-    );
+    logger.error('Error getting revenue analytics', error, { route: '/api/analytics/revenue', orgId: request.nextUrl.searchParams.get('orgId') });
+    return errors.database('Failed to get revenue analytics', error);
   }
 }

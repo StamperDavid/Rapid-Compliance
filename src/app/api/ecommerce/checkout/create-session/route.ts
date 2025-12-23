@@ -7,9 +7,15 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import Stripe from 'stripe';
 import { getAPIKey } from '@/lib/config/api-keys';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/checkout/create-session');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -19,19 +25,13 @@ export async function POST(request: NextRequest) {
     const { orgId, customerInfo } = body;
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     // Get Stripe API key
     const stripeKey = await getAPIKey(orgId, 'stripe_secret');
     if (!stripeKey) {
-      return NextResponse.json(
-        { success: false, error: 'Stripe not configured' },
-        { status: 400 }
-      );
+      return errors.badRequest('Stripe not configured');
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
@@ -43,10 +43,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!cart || !cart.items || cart.items.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Cart is empty' },
-        { status: 400 }
-      );
+      return errors.badRequest('Cart is empty');
     }
 
     // Create line items
@@ -82,11 +79,8 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
     });
   } catch (error: any) {
-    console.error('[Checkout] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('Checkout session creation error', error, { route: '/api/ecommerce/checkout/create-session' });
+    return errors.externalService('Stripe', error);
   }
 }
 

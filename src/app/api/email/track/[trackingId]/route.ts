@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { recordEmailOpen } from '@/lib/email/email-service';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Email Tracking Pixel
@@ -70,7 +71,7 @@ export async function GET(
       },
       false
     ).catch((error) => {
-      console.error('Error recording email open event:', error);
+      logger.error('Error recording email open', error, { route: '/api/email/track' });
       // Silently fail - don't break email tracking
     });
 

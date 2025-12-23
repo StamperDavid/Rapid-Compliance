@@ -8,6 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AVAILABLE_ADDONS } from '@/types/subscription';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * POST /api/subscription/addon
@@ -15,6 +18,9 @@ import { AVAILABLE_ADDONS } from '@/types/subscription';
  */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/subscription/addon');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -25,17 +31,11 @@ export async function POST(request: NextRequest) {
     const { orgId, addOnId } = body;
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     if (!addOnId) {
-      return NextResponse.json(
-        { success: false, error: 'Add-on ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Add-on ID required');
     }
 
     // Validate add-on exists
@@ -58,11 +58,8 @@ export async function POST(request: NextRequest) {
       subscription,
     });
   } catch (error: any) {
-    console.error('[Subscription API] Error adding add-on:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to add add-on' },
-      { status: 500 }
-    );
+    logger.error('Error adding addon', error, { route: '/api/subscription/addon' });
+    return errors.database('Failed to add addon', error);
   }
 }
 
@@ -77,11 +74,8 @@ export async function GET(request: NextRequest) {
       addOns: AVAILABLE_ADDONS,
     });
   } catch (error: any) {
-    console.error('[Subscription API] Error listing add-ons:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to list add-ons' },
-      { status: 500 }
-    );
+    logger.error('Error listing addons', error, { route: '/api/subscription/addon' });
+    return errors.database('Failed to list addons', error);
   }
 }
 

@@ -9,6 +9,8 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { OutboundSequence } from '@/types/outbound-sequence';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 /**
  * GET /api/outbound/sequences?orgId=xxx&page=1&limit=50
@@ -54,11 +56,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[Sequences API] Error listing sequences:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to list sequences' },
-      { status: 500 }
-    );
+    logger.error('Error listing sequences', error, { route: '/api/outbound/sequences' });
+    return errors.database('Failed to list sequences', error);
   }
 }
 
@@ -77,24 +76,15 @@ export async function POST(request: NextRequest) {
     const { orgId, name, description, steps, autoEnroll = false } = body;
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID is required');
     }
 
     if (!name) {
-      return NextResponse.json(
-        { success: false, error: 'Sequence name is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Sequence name is required');
     }
 
     if (!steps || !Array.isArray(steps) || steps.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'At least one step is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('At least one step is required');
     }
 
     // Check feature access
@@ -175,11 +165,8 @@ export async function POST(request: NextRequest) {
       sequence,
     });
   } catch (error: any) {
-    console.error('[Sequences API] Error creating sequence:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create sequence' },
-      { status: 500 }
-    );
+    logger.error('Error creating sequence', error, { route: '/api/outbound/sequences' });
+    return errors.database('Failed to create sequence', error);
   }
 }
 

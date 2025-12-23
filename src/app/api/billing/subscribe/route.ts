@@ -3,6 +3,8 @@ import { createCustomer, createSubscription } from '@/lib/billing/stripe-service
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { subscriptionCreateSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,10 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is owner or admin
     if (user.role !== 'owner' && user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Only owners and admins can create subscriptions' },
-        { status: 403 }
-      );
+      return errors.forbidden('Only owners and admins can create subscriptions');
     }
 
     // Parse and validate input
@@ -38,25 +37,22 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, email, name, planId, trialDays } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied to this organization');
     }
+
+    logger.info('Creating subscription', {
+      route: '/api/billing/subscribe',
+      organizationId,
+      planId,
+      email,
+    });
 
     // Create Stripe customer
     const customer = await createCustomer(email, name, {
@@ -84,6 +80,12 @@ export async function POST(request: NextRequest) {
         : null,
     });
 
+    logger.info('Subscription created successfully', {
+      route: '/api/billing/subscribe',
+      subscriptionId: subscription.id,
+      customerId: customer.id,
+    });
+
     return NextResponse.json({
       success: true,
       customerId: customer.id,
@@ -96,10 +98,9 @@ export async function POST(request: NextRequest) {
           : undefined,
     });
   } catch (error: any) {
-    console.error('Error creating subscription:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create subscription' },
-      { status: 500 }
-    );
+    logger.error('Error creating subscription', error, {
+      route: '/api/billing/subscribe',
+    });
+    return errors.externalService('Stripe', error);
   }
 }

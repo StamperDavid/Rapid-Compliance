@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { testIntegration } from '@/lib/integrations/integration-manager';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * POST /api/integrations/[integrationId]/test - Test integration connection
@@ -10,6 +13,9 @@ export async function POST(
   { params }: { params: { integrationId: string } }
 ) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/test');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -23,11 +29,8 @@ export async function POST(
       error: result.error,
     });
   } catch (error: any) {
-    console.error('Error testing integration:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to test integration' },
-      { status: 500 }
-    );
+    logger.error('Error testing integration', error, { route: '/api/integrations/test' });
+    return errors.externalService('Integration', error);
   }
 }
 

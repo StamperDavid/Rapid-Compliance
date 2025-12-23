@@ -3,6 +3,8 @@ import { enrichLead } from '@/lib/analytics/lead-nurturing';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { leadEnrichSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,34 +32,21 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, leadId, sources } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied to this organization');
     }
 
     const enrichment = await enrichLead(leadId, organizationId, sources || {});
 
     return NextResponse.json({ success: true, enrichment });
   } catch (error: any) {
-    console.error('Lead enrichment error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to enrich lead' },
-      { status: 500 }
-    );
+    logger.error('Lead enrichment error', error, { route: '/api/leads/enrich' });
+    return errors.externalService('Enrichment service', error);
   }
 }

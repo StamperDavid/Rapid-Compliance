@@ -5,25 +5,28 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { enrichCompany } from '@/lib/enrichment/enrichment-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/leads/research');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await request.json();
     const { query, organizationId } = body;
     
     if (!query || !organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing query or organizationId' },
-        { status: 400 }
-      );
+      return errors.badRequest('Missing query or organizationId');
     }
     
-    console.log('[Lead Research] Query:', query);
+    logger.info('Lead research query received', { route: '/api/leads/research', query, organizationId });
     
     // Parse the natural language query
     const parsedQuery = await parseSearchQuery(query);
     
-    console.log('[Lead Research] Parsed:', parsedQuery);
+    logger.debug('Lead research query parsed', { route: '/api/leads/research', parsedQuery });
     
     // For now, we'll do a simple implementation
     // In the future, this can use AI to understand complex queries
@@ -76,11 +79,8 @@ export async function POST(request: NextRequest) {
       savings: (leads.length * 0.75) - totalCost,
     });
   } catch (error: any) {
-    console.error('[Lead Research] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('Lead research error', error, { route: '/api/leads/research' });
+    return errors.externalService('Lead research service', error);
   }
 }
 
@@ -155,4 +155,5 @@ async function parseSearchQuery(query: string): Promise<{
     techStack,
   };
 }
+
 

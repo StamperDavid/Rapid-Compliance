@@ -7,9 +7,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/subscription/toggle');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -20,24 +26,15 @@ export async function POST(request: NextRequest) {
     const { orgId, feature, enabled } = body;
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     if (!feature) {
-      return NextResponse.json(
-        { success: false, error: 'Feature name required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Feature name required');
     }
 
     if (typeof enabled !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'Enabled must be a boolean' },
-        { status: 400 }
-      );
+      return errors.badRequest('Enabled must be a boolean');
     }
 
     // Toggle feature
@@ -52,11 +49,8 @@ export async function POST(request: NextRequest) {
       subscription,
     });
   } catch (error: any) {
-    console.error('[Subscription API] Error toggling feature:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to toggle feature' },
-      { status: 500 }
-    );
+    logger.error('Error toggling feature', error, { route: '/api/subscription/toggle' });
+    return errors.database('Failed to toggle feature', error);
   }
 }
 

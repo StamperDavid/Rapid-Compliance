@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error storing tracked link:', error);
+    logger.error('Error storing tracked link', error, { route: '/api/email/track/link' });
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

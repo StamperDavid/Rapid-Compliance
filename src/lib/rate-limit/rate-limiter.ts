@@ -19,14 +19,34 @@ const defaultConfig: RateLimitConfig = {
   windowMs: 60 * 1000, // 1 minute
 };
 
-// Per-endpoint rate limits
+// Per-endpoint rate limits (specific limits for high-traffic/sensitive endpoints)
 const endpointLimits: Record<string, RateLimitConfig> = {
+  // Email/SMS (expensive operations)
   '/api/email/send': { maxRequests: 50, windowMs: 60 * 1000 }, // 50 emails per minute
   '/api/sms/send': { maxRequests: 20, windowMs: 60 * 1000 }, // 20 SMS per minute
-  '/api/workflows/execute': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/email/campaigns': { maxRequests: 30, windowMs: 60 * 1000 },
+  
+  // Payment endpoints (fraud prevention)
   '/api/checkout/create-payment-intent': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/checkout/create-session': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/billing/subscribe': { maxRequests: 20, windowMs: 60 * 1000 },
+  
+  // AI/Heavy compute
   '/api/agent/chat': { maxRequests: 100, windowMs: 60 * 1000 },
+  '/api/leads/research': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/leads/enrich': { maxRequests: 50, windowMs: 60 * 1000 },
+  
+  // Workflow execution
+  '/api/workflows/execute': { maxRequests: 200, windowMs: 60 * 1000 },
+  
+  // Search/Analytics (read-heavy)
   '/api/search': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/analytics/revenue': { maxRequests: 100, windowMs: 60 * 1000 },
+  '/api/analytics/pipeline': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // Auth endpoints (brute force prevention)
+  '/api/auth/login': { maxRequests: 5, windowMs: 60 * 1000 }, // 5 login attempts per minute
+  '/api/auth/register': { maxRequests: 3, windowMs: 60 * 1000 },
 };
 
 /**

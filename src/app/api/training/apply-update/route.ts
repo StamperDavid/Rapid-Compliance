@@ -7,9 +7,15 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { applyUpdateRequest } from '@/lib/training/golden-master-updater';
 import type { GoldenMasterUpdateRequest } from '@/types/training';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/training/apply-update');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -22,10 +28,7 @@ export async function POST(request: NextRequest) {
     const { updateRequestId, organizationId, approved, reviewNotes } = body;
 
     if (!updateRequestId || !organizationId || approved === undefined) {
-      return NextResponse.json(
-        { success: false, error: 'Update request ID, organization ID, and approval status required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Update request ID, organization ID, and approval status required');
     }
 
     // Verify access
@@ -100,11 +103,8 @@ export async function POST(request: NextRequest) {
       newGoldenMaster,
     });
   } catch (error: any) {
-    console.error('Error applying update:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to apply update' },
-      { status: 500 }
-    );
+    logger.error('Error applying update', error, { route: '/api/training/apply-update' });
+    return errors.database('Failed to apply update', error);
   }
 }
 

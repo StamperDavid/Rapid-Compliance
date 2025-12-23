@@ -5,17 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/leads/feedback');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await request.json();
     const { organizationId, leadDomain, isGoodLead, timestamp } = body;
     
     if (!organizationId || !leadDomain || typeof isGoodLead !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return errors.badRequest('Missing required fields');
     }
     
     // Store feedback in Firestore
@@ -32,15 +35,13 @@ export async function POST(request: NextRequest) {
       false
     );
     
-    console.log(`[Lead Feedback] Saved feedback for ${leadDomain}: ${isGoodLead ? 'Good' : 'Bad'}`);
+    logger.info('Lead feedback saved', { route: '/api/leads/feedback', leadDomain, isGoodLead });
     
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('[Lead Feedback] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('Lead feedback error', error, { route: '/api/leads/feedback' });
+    return errors.database('Failed to save feedback', error);
   }
 }
+
 

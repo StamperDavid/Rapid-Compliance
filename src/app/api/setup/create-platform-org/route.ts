@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 /**
  * Create platform-admin organization
@@ -67,16 +69,11 @@ export async function POST() {
     });
 
   } catch (error: any) {
-    console.error('[Setup] Error creating platform-admin org:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Failed to create organization'
-      },
-      { status: 500 }
-    );
+    logger.error('Error creating platform-admin org', error, { route: '/api/setup/create-platform-org' });
+    return errors.database('Failed to create platform organization', error);
   }
 }
+
 
 
 

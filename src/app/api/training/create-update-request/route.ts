@@ -8,9 +8,15 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { aggregateSuggestions, filterByConfidence } from '@/lib/training/feedback-processor';
 import { createUpdateRequest } from '@/lib/training/golden-master-updater';
 import type { TrainingSession } from '@/types/training';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/training/create-update-request');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -23,10 +29,7 @@ export async function POST(request: NextRequest) {
     const { sessionIds, organizationId, goldenMasterId, minConfidence } = body;
 
     if (!sessionIds || !Array.isArray(sessionIds) || !organizationId || !goldenMasterId) {
-      return NextResponse.json(
-        { success: false, error: 'Session IDs, organization ID, and Golden Master ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Session IDs, organization ID, and Golden Master ID required');
     }
 
     // Verify access
@@ -86,11 +89,8 @@ export async function POST(request: NextRequest) {
       updateRequest,
     });
   } catch (error: any) {
-    console.error('Error creating update request:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create update request' },
-      { status: 500 }
-    );
+    logger.error('Error creating update request', error, { route: '/api/training/create-update-request' });
+    return errors.database('Failed to create update request', error);
   }
 }
 

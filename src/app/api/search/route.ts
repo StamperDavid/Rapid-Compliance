@@ -3,6 +3,8 @@ import { searchWorkspace } from '@/lib/search/search-service';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { searchQuerySchema, validateInput, organizationIdSchema } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,24 +42,14 @@ export async function GET(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { orgId: validatedOrgId } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== validatedOrgId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied to this organization');
     }
 
     const results = await searchWorkspace(validatedOrgId, workspaceId!, query!, { limit });
@@ -69,10 +61,7 @@ export async function GET(request: NextRequest) {
       count: results.length,
     });
   } catch (error: any) {
-    console.error('Error in search:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to search' },
-      { status: 500 }
-    );
+    logger.error('Search error', error, { route: '/api/search' });
+    return errors.database('Failed to search workspace', error);
   }
 }

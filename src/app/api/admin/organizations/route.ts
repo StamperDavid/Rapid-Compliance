@@ -6,6 +6,7 @@ import {
   createSuccessResponse,
   isAuthError
 } from '@/lib/api/admin-auth';
+import { logger } from '@/lib/logger/logger';
 
 interface OrganizationData {
   id: string;
@@ -23,8 +24,12 @@ interface OrganizationData {
 
 /**
  * GET /api/admin/organizations
- * Fetches all organizations for super_admin users
+ * Fetches organizations for super_admin users with pagination
  * Uses Admin SDK to bypass client-side Firestore rules
+ * 
+ * Query params:
+ * - limit: page size (default 50, max 100)
+ * - startAfter: cursor for pagination (timestamp)
  */
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -35,13 +40,28 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    // Fetch all organizations using Admin SDK
-    const orgsSnapshot = await adminDb
-      .collection('organizations')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const { searchParams } = new URL(request.url);
+    const pageSize = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
-    const organizations: OrganizationData[] = orgsSnapshot.docs.map(doc => {
+    // Build query with pagination
+    let query = adminDb
+      .collection('organizations')
+      .orderBy('createdAt', 'desc');
+    
+    // Add cursor if provided
+    if (startAfter) {
+      const cursorDate = new Date(startAfter);
+      query = query.startAfter(cursorDate);
+    }
+    
+    // Fetch one extra to check if there are more results
+    const orgsSnapshot = await query.limit(pageSize + 1).get();
+    
+    const hasMore = orgsSnapshot.docs.length > pageSize;
+    const docs = hasMore ? orgsSnapshot.docs.slice(0, pageSize) : orgsSnapshot.docs;
+    
+    const organizations: OrganizationData[] = docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -58,18 +78,30 @@ export async function GET(request: NextRequest) {
       };
     });
     
-    console.log(
-      `📊 [Admin API] ${authResult.user.email} fetched ${organizations.length} organizations`
-    );
+    // Get cursor for next page (last org's createdAt)
+    const nextCursor = hasMore && organizations.length > 0 
+      ? organizations[organizations.length - 1].createdAt 
+      : null;
+    
+    logger.info('Admin fetched organizations', {
+      route: '/api/admin/organizations',
+      admin: authResult.user.email,
+      count: organizations.length,
+      hasMore
+    });
     
     return createSuccessResponse({ 
       organizations,
-      count: organizations.length,
+      pagination: {
+        count: organizations.length,
+        hasMore,
+        nextCursor,
+      },
       fetchedAt: new Date().toISOString()
     });
     
   } catch (error: any) {
-    console.error('❌ [Admin API] Organizations fetch error:', error);
+    logger.error('Admin organizations fetch error', error, { route: '/api/admin/organizations' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development' 
         ? `Failed to fetch organizations: ${error.message}`
@@ -118,9 +150,12 @@ export async function POST(request: NextRequest) {
     
     await adminDb.collection('organizations').doc(orgId).set(orgData);
     
-    console.log(
-      `📊 [Admin API] ${authResult.user.email} created organization: ${orgId} (${body.name})`
-    );
+    logger.info('Admin created organization', {
+      route: '/api/admin/organizations',
+      admin: authResult.user.email,
+      orgId,
+      name: body.name
+    });
     
     return createSuccessResponse({
       id: orgId,
@@ -130,7 +165,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('❌ [Admin API] Organization create error:', error);
+    logger.error('Admin organization create error', error, { route: '/api/admin/organizations' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
         ? `Failed to create organization: ${error.message}`

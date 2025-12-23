@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleWebhook } from '@/lib/billing/stripe-service';
 import Stripe from 'stripe';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 /**
  * Stripe Webhook Handler
@@ -12,10 +14,7 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get('stripe-signature');
 
   if (!signature) {
-    return NextResponse.json(
-      { success: false, error: 'No signature provided' },
-      { status: 400 }
-    );
+    return errors.badRequest('No signature provided');
   }
 
   // Get webhook secret from platform API keys (admin settings)
@@ -33,11 +32,8 @@ export async function POST(request: NextRequest) {
   }
 
   if (!webhookSecret) {
-    console.error('Stripe webhook secret not configured');
-    return NextResponse.json(
-      { success: false, error: 'Webhook secret not configured' },
-      { status: 500 }
-    );
+    logger.error('Stripe webhook secret not configured', undefined, { route: '/api/billing/webhook' });
+    return errors.internal('Webhook secret not configured');
   }
 
   let event: Stripe.Event;
@@ -59,21 +55,15 @@ export async function POST(request: NextRequest) {
       webhookSecret
     );
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
-    return NextResponse.json(
-      { success: false, error: `Webhook Error: ${err.message}` },
-      { status: 400 }
-    );
+    logger.error('Webhook signature verification failed', err, { route: '/api/billing/webhook' });
+    return errors.badRequest(`Webhook Error: ${err.message}`);
   }
 
   try {
     await handleWebhook(event);
     return NextResponse.json({ success: true, received: true });
   } catch (error: any) {
-    console.error('Error handling webhook:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to handle webhook' },
-      { status: 500 }
-    );
+    logger.error('Error handling webhook', error, { route: '/api/billing/webhook' });
+    return errors.internal('Webhook handler failed', error);
   }
 }

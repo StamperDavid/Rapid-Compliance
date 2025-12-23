@@ -10,6 +10,8 @@ import {
   handleEmailClick,
 } from '@/lib/outbound/sequence-scheduler';
 import { parseSendGridWebhook, SendGridWebhookEvent } from '@/lib/email/sendgrid-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,13 +19,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     if (!Array.isArray(body)) {
-      return NextResponse.json(
-        { error: 'Invalid webhook format' },
-        { status: 400 }
-      );
+      return errors.badRequest('Invalid webhook format');
     }
 
-    console.log(`[Email Webhook] Received ${body.length} events from SendGrid`);
+    logger.info('Email webhook received', { route: '/api/webhooks/email', eventCount: body.length });
 
     // Parse SendGrid events
     const events = parseSendGridWebhook(body);
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
 
-    console.log(`[Email Webhook] Processed: ${successful} successful, ${failed} failed`);
+    logger.info('Email webhook processed', { route: '/api/webhooks/email', successful, failed });
 
     return NextResponse.json({
       success: true,
@@ -44,11 +43,8 @@ export async function POST(request: NextRequest) {
       failed,
     });
   } catch (error: any) {
-    console.error('[Email Webhook] Error processing webhook:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('Email webhook processing error', error, { route: '/api/webhooks/email' });
+    return errors.internal('Failed to process webhook', error);
   }
 }
 
@@ -56,7 +52,7 @@ export async function POST(request: NextRequest) {
  * Process a single SendGrid event
  */
 async function processEvent(event: SendGridWebhookEvent): Promise<void> {
-  console.log(`[Email Webhook] Processing ${event.event} event for ${event.email}`);
+  logger.debug('Processing email event', { route: '/api/webhooks/email', event: event.event, email: event.email });
 
   // Extract metadata from custom args
   const enrollmentId = event.enrollmentId;
@@ -64,14 +60,14 @@ async function processEvent(event: SendGridWebhookEvent): Promise<void> {
   const organizationId = event.organizationId;
 
   if (!enrollmentId || !stepId || !organizationId) {
-    console.warn('[Email Webhook] Event missing required metadata:', event);
+    logger.warn('Event missing metadata', { route: '/api/webhooks/email', event });
     return;
   }
 
   // Handle different event types
   switch (event.event) {
     case 'delivered':
-      console.log(`[Email Webhook] Email delivered to ${event.email}`);
+      logger.info('Email delivered', { route: '/api/webhooks/email', email: event.email });
       // Could track delivery if needed
       break;
 
@@ -95,7 +91,7 @@ async function processEvent(event: SendGridWebhookEvent): Promise<void> {
       break;
 
     default:
-      console.log(`[Email Webhook] Unhandled event type: ${event.event}`);
+      logger.debug('Unhandled event type', { route: '/api/webhooks/email', eventType: event.event });
   }
 }
 

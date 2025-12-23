@@ -6,6 +6,7 @@ import {
   createSuccessResponse,
   isAuthError
 } from '@/lib/api/admin-auth';
+import { logger } from '@/lib/logger/logger';
 
 interface UserData {
   id: string;
@@ -20,8 +21,13 @@ interface UserData {
 
 /**
  * GET /api/admin/users
- * Fetches all users for super_admin
+ * Fetches users for super_admin with pagination
  * Uses Admin SDK to bypass client-side Firestore rules
+ * 
+ * Query params:
+ * - organizationId: filter by org (optional)
+ * - limit: page size (default 50, max 100)
+ * - startAfter: cursor for pagination (timestamp)
  */
 export async function GET(request: NextRequest) {
   // Verify admin authentication
@@ -32,10 +38,11 @@ export async function GET(request: NextRequest) {
   }
   
   try {
-    // Parse query params for filtering
+    // Parse query params for filtering and pagination
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
-    const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500);
+    const pageSize = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
     // Build query
     let query = adminDb.collection('users').orderBy('createdAt', 'desc');
@@ -44,9 +51,19 @@ export async function GET(request: NextRequest) {
       query = query.where('organizationId', '==', organizationId);
     }
     
-    const usersSnapshot = await query.limit(limit).get();
+    // Add cursor if provided
+    if (startAfter) {
+      const cursorDate = new Date(startAfter);
+      query = query.startAfter(cursorDate);
+    }
     
-    const users: UserData[] = usersSnapshot.docs.map(doc => {
+    // Fetch one extra to check if there are more results
+    const usersSnapshot = await query.limit(pageSize + 1).get();
+    
+    const hasMore = usersSnapshot.docs.length > pageSize;
+    const docs = hasMore ? usersSnapshot.docs.slice(0, pageSize) : usersSnapshot.docs;
+    
+    const users: UserData[] = docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -60,18 +77,30 @@ export async function GET(request: NextRequest) {
       };
     });
     
-    console.log(
-      `📊 [Admin API] ${authResult.user.email} fetched ${users.length} users`
-    );
+    // Get cursor for next page (last user's createdAt)
+    const nextCursor = hasMore && users.length > 0 
+      ? users[users.length - 1].createdAt 
+      : null;
+    
+    logger.info('Admin fetched users', { 
+      route: '/api/admin/users',
+      admin: authResult.user.email, 
+      count: users.length, 
+      hasMore 
+    });
     
     return createSuccessResponse({ 
       users,
-      count: users.length,
+      pagination: {
+        count: users.length,
+        hasMore,
+        nextCursor,
+      },
       fetchedAt: new Date().toISOString()
     });
     
   } catch (error: any) {
-    console.error('❌ [Admin API] Users fetch error:', error);
+    logger.error('Admin users fetch error', error, { route: '/api/admin/users' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
         ? `Failed to fetch users: ${error.message}`
@@ -119,9 +148,12 @@ export async function PATCH(request: NextRequest) {
     
     await adminDb.collection('users').doc(body.userId).update(updates);
     
-    console.log(
-      `📊 [Admin API] ${authResult.user.email} updated user ${body.userId}: ${Object.keys(updates).join(', ')}`
-    );
+    logger.info('Admin updated user', {
+      route: '/api/admin/users',
+      admin: authResult.user.email,
+      userId: body.userId,
+      fields: Object.keys(updates)
+    });
     
     return createSuccessResponse({ 
       success: true,
@@ -130,7 +162,7 @@ export async function PATCH(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('❌ [Admin API] User update error:', error);
+    logger.error('Admin user update error', error, { route: '/api/admin/users' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
         ? `Failed to update user: ${error.message}`

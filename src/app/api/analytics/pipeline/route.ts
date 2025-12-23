@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/analytics/pipeline - Get pipeline analytics
@@ -10,15 +13,15 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/pipeline');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     const period = searchParams.get('period') || '30d';
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'orgId is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('orgId is required');
     }
 
     // Get all deals from Firestore
@@ -28,7 +31,7 @@ export async function GET(request: NextRequest) {
     try {
       allDeals = await FirestoreService.getAll(dealsPath, []);
     } catch (e) {
-      console.log('No deals collection yet');
+      logger.debug('No deals collection yet', { orgId });
     }
 
     // Define open statuses (deals still in pipeline)
@@ -164,10 +167,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error getting pipeline analytics:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get pipeline analytics' },
-      { status: 500 }
-    );
+    logger.error('Error getting pipeline analytics', error, { route: '/api/analytics/pipeline' });
+    return errors.database('Failed to get pipeline analytics', error);
   }
 }

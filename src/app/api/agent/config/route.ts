@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET: Load agent configuration
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/agent/config');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     // Get agent configuration
@@ -41,11 +44,8 @@ export async function GET(request: NextRequest) {
       ...(agentConfig as any),
     });
   } catch (error: any) {
-    console.error('Error loading agent config:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to load configuration' },
-      { status: 500 }
-    );
+    logger.error('Error loading agent config', error, { route: '/api/agent/config' });
+    return errors.database('Failed to load configuration', error);
   }
 }
 
@@ -54,14 +54,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/agent/config');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await request.json();
     const { orgId, selectedModel, modelConfig } = body;
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
 
     // Save agent configuration (single model - ensemble removed for MVP)
@@ -85,11 +85,8 @@ export async function POST(request: NextRequest) {
       message: 'AI configuration saved successfully',
     });
   } catch (error: any) {
-    console.error('Error saving agent config:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to save configuration' },
-      { status: 500 }
-    );
+    logger.error('Error saving agent config', error, { route: '/api/agent/config' });
+    return errors.database('Failed to save configuration', error);
   }
 }
 

@@ -4,6 +4,9 @@ import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { validateInput } from '@/lib/validation/schemas';
 import { z } from 'zod';
 import { OnboardingData } from '@/types/agent-memory';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 // Schema for onboarding request validation
 const processOnboardingSchema = z.object({
@@ -13,6 +16,9 @@ const processOnboardingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/agent/process-onboarding');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication - just require auth, not organization membership
     // (user is setting up their organization via onboarding)
     const authResult = await requireAuth(request);
@@ -33,14 +39,7 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, onboardingData } = validation.data;
@@ -103,7 +102,7 @@ export async function POST(request: NextRequest) {
             updatedAt: new Date().toISOString(),
           });
         } catch (error) {
-          console.warn('Failed to update user organizationId:', error);
+          logger.warn('Failed to update user organizationId', { route: '/api/agent/process-onboarding', error });
           // Continue anyway - onboarding succeeded
         }
       }
@@ -121,11 +120,8 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error('Error processing onboarding:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process onboarding' },
-      { status: 500 }
-    );
+    logger.error('Onboarding processing error', error, { route: '/api/agent/process-onboarding' });
+    return errors.internal('Failed to process onboarding', error);
   }
 }
 

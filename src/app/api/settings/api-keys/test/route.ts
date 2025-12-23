@@ -6,9 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/settings/api-keys/test');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -19,10 +25,7 @@ export async function GET(request: NextRequest) {
     const service = searchParams.get('service');
 
     if (!orgId || !service) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required parameters' },
-        { status: 400 }
-      );
+      return errors.badRequest('Missing required parameters');
     }
 
     // Load API keys
@@ -32,10 +35,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (!apiKeys || !apiKeys[service]) {
-      return NextResponse.json(
-        { success: false, error: 'API key not found' },
-        { status: 404 }
-      );
+      return errors.notFound('API key not found');
     }
 
     const apiKey = apiKeys[service];
@@ -63,11 +63,8 @@ export async function GET(request: NextRequest) {
         });
     }
   } catch (error: any) {
-    console.error('[API Keys Test] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('API key test error', error, { route: '/api/settings/api-keys/test' });
+    return errors.externalService('API service', error);
   }
 }
 
