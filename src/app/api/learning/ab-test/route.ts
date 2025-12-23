@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       message: `A/B test started: ${controlModel} vs ${treatmentModel}`,
     });
   } catch (error: any) {
-    console.error('[A/B Test API] POST error:', error);
+    logger.error('A/B test creation error', error, { route: '/api/learning/ab-test' });
     return NextResponse.json(
       { error: error.message || 'Failed to create A/B test' },
       { status: 500 }

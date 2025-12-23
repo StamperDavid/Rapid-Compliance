@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error getting cart:', error);
+    logger.error('Error getting cart', error, { route: '/api/ecommerce/cart' });
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to get cart' },
       { status: 500 }

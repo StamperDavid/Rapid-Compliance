@@ -3,6 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { withCache } from '@/lib/cache/analytics-cache';
 
 /**
  * GET /api/analytics/pipeline - Get pipeline analytics
@@ -24,15 +25,41 @@ export async function GET(request: NextRequest) {
       return errors.badRequest('orgId is required');
     }
 
-    // Get all deals from Firestore
-    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
-    let allDeals: any[] = [];
-    
-    try {
-      allDeals = await FirestoreService.getAll(dealsPath, []);
-    } catch (e) {
-      logger.debug('No deals collection yet', { orgId });
-    }
+    // Use caching for analytics queries (TTL: 10 minutes)
+    const analytics = await withCache(
+      orgId,
+      'pipeline',
+      async () => calculatePipelineAnalytics(orgId, period),
+      { period }
+    );
+
+    logger.info('Pipeline analytics retrieved', {
+      route: '/api/analytics/pipeline',
+      orgId,
+      period,
+      dealsCount: analytics.dealsCount,
+    });
+
+    return NextResponse.json(analytics);
+  } catch (error: any) {
+    logger.error('Error getting pipeline analytics', error, { route: '/api/analytics/pipeline' });
+    return errors.database('Failed to get pipeline analytics', error);
+  }
+}
+
+/**
+ * Calculate pipeline analytics (extracted for caching)
+ */
+async function calculatePipelineAnalytics(orgId: string, period: string) {
+  // Get all deals from Firestore
+  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
+  let allDeals: any[] = [];
+  
+  try {
+    allDeals = await FirestoreService.getAll(dealsPath, []);
+  } catch (e) {
+    logger.debug('No deals collection yet', { orgId });
+  }
 
     // Define open statuses (deals still in pipeline)
     const openStatuses = ['open', 'new', 'qualified', 'proposal', 'negotiation', 'pending', 'in_progress'];
@@ -150,24 +177,18 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    return {
       success: true,
-      analytics: {
-        totalValue,
-        dealsCount,
-        avgDealSize,
-        winRate: Math.round(winRate * 10) / 10,
-        avgSalesCycle,
-        byStage,
-        conversionRates,
-        velocity: {
-          avgDaysToClose: avgSalesCycle,
-          totalDeals: wonDeals.length,
-        },
+      totalValue,
+      dealsCount,
+      avgDealSize,
+      winRate: Math.round(winRate * 10) / 10,
+      avgSalesCycle,
+      byStage,
+      conversionRates,
+      velocity: {
+        avgDaysToClose: avgSalesCycle,
+        totalDeals: wonDeals.length,
       },
-    });
-  } catch (error: any) {
-    logger.error('Error getting pipeline analytics', error, { route: '/api/analytics/pipeline' });
-    return errors.database('Failed to get pipeline analytics', error);
-  }
+    };
 }

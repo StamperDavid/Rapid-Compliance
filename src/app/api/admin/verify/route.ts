@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Admin verify error:', error);
+    logger.error('Admin verify error', error, { route: '/api/admin/verify' });
     return createErrorResponse('Verification failed', 500);
   }
 }

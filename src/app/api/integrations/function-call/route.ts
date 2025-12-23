@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('Error executing function call:', error);
+    logger.error('Error executing function call', error, { route: '/api/integrations/function-call' });
     return NextResponse.json(
       {
         success: false,

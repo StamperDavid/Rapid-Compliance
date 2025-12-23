@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('[Public Chat Error]', error);
+    logger.error('Public chat error', error, { route: '/api/chat/public' });
     
     // Handle API key issues
     if (error?.message?.includes('API key')) {

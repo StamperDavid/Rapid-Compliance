@@ -78,7 +78,7 @@ export async function GET(
     // Redirect to OAuth provider
     return NextResponse.redirect(authUrl);
   } catch (error: any) {
-    console.error('OAuth initiation error:', error);
+    logger.error('OAuth initiation error', error, { route: '/api/integrations/oauth' });
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to initiate OAuth' },
       { status: 500 }

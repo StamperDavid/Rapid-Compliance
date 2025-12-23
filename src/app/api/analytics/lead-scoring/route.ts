@@ -3,6 +3,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { withCache } from '@/lib/cache/analytics-cache';
 
 /**
  * GET /api/analytics/lead-scoring - Get lead scoring analytics
@@ -24,36 +25,62 @@ export async function GET(request: NextRequest) {
       return errors.badRequest('orgId is required');
     }
 
-    // Calculate date range based on period
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (period) {
-      case '7d':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case '30d':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case '90d':
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case 'all':
-        startDate = new Date('2020-01-01');
-        break;
-      default:
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    }
+    // Use caching for analytics queries (TTL: 10 minutes)
+    const analytics = await withCache(
+      orgId,
+      'lead-scoring',
+      async () => calculateLeadScoringAnalytics(orgId, period),
+      { period }
+    );
 
-    // Get leads from Firestore
-    const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/leads`;
-    let allLeads: any[] = [];
-    
-    try {
-      allLeads = await FirestoreService.getAll(leadsPath, []);
-    } catch (e) {
-      logger.debug('No leads collection yet', { orgId });
-    }
+    logger.info('Lead scoring analytics retrieved', {
+      route: '/api/analytics/lead-scoring',
+      orgId,
+      period,
+      leadsCount: analytics.totalLeads,
+    });
+
+    return NextResponse.json(analytics);
+  } catch (error: any) {
+    logger.error('Error getting lead scoring analytics', error, { route: '/api/analytics/lead-scoring' });
+    return errors.database('Failed to get lead scoring analytics', error);
+  }
+}
+
+/**
+ * Calculate lead scoring analytics (extracted for caching)
+ */
+async function calculateLeadScoringAnalytics(orgId: string, period: string) {
+  // Calculate date range based on period
+  const now = new Date();
+  let startDate: Date;
+  
+  switch (period) {
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case 'all':
+      startDate = new Date('2020-01-01');
+      break;
+    default:
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  // Get leads from Firestore
+  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/leads`;
+  let allLeads: any[] = [];
+  
+  try {
+    allLeads = await FirestoreService.getAll(leadsPath, []);
+  } catch (e) {
+    logger.debug('No leads collection yet', { orgId });
+  }
 
     // Filter by date
     const leadsInPeriod = allLeads.filter(lead => {
@@ -161,22 +188,16 @@ export async function GET(request: NextRequest) {
       ? Math.round(convertedLeads.reduce((sum, l) => sum + (l.score || 0), 0) / convertedLeads.length)
       : 0;
 
-    return NextResponse.json({
+    return {
       success: true,
-      analytics: {
-        totalLeads: scoredLeads.length,
-        leadsInPeriod: leadsInPeriod.length,
-        avgScore,
-        distribution,
-        topLeads,
-        bySource,
-        conversionRate: Math.round(conversionRate * 10) / 10,
-        avgScoreConverted,
-        convertedLeads: convertedLeads.length,
-      },
-    });
-  } catch (error: any) {
-    logger.error('Error getting lead scoring analytics', error, { route: '/api/analytics/lead-scoring' });
-    return errors.database('Failed to get lead scoring analytics', error);
-  }
+      totalLeads: scoredLeads.length,
+      leadsInPeriod: leadsInPeriod.length,
+      avgScore,
+      distribution,
+      topLeads,
+      bySource,
+      conversionRate: Math.round(conversionRate * 10) / 10,
+      avgScoreConverted,
+      convertedLeads: convertedLeads.length,
+    };
 }

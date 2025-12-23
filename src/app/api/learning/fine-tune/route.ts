@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
         );
     }
   } catch (error: any) {
-    console.error('[Fine-Tune API] GET error:', error);
+    logger.error('Fine-tune API error', error, { route: '/api/learning/fine-tune' });
     return NextResponse.json(
       { error: error.message || 'Failed to get training data' },
       { status: 500 }

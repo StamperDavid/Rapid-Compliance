@@ -66,10 +66,10 @@ export async function POST(request: NextRequest) {
       } else {
         // Organization doesn't exist yet - user is creating it during onboarding
         // This is allowed, but we'll set them as the owner
-        console.log(`Creating new organization ${organizationId} for user ${user.uid}`);
+        logger.debug('Creating new organization during onboarding', { organizationId, userId: user.uid, route: '/api/agent/process-onboarding' });
       }
     } catch (error) {
-      console.error('Error checking organization access:', error);
+      logger.error('Error checking organization access', error, { route: '/api/agent/process-onboarding' });
       // If we can't verify, allow it (onboarding scenario)
     }
 

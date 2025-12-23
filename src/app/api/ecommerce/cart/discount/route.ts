@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error applying discount:', error);
+    logger.error('Error applying discount', error, { route: '/api/ecommerce/cart/discount' });
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to apply discount code' },
       { status: 500 }
