@@ -25,32 +25,30 @@ export async function GET(request: NextRequest) {
     // Exchange code for tokens
     const tokens = await getTokensFromCode(code);
 
-    // Save integration to Firestore
-    const integrationId = `google_calendar_${userId}`;
+    // Save integration to Firestore (in organization's integrations subcollection)
+    const integrationId = `google_${Date.now()}`;
     await FirestoreService.set(
-      COLLECTIONS.INTEGRATIONS,
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.INTEGRATIONS}`,
       integrationId,
       {
         id: integrationId,
         userId,
-        organizationId: orgId,
-        provider: 'google',
-        type: 'calendar',
-        status: 'active',
-        credentials: {
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expiry_date: tokens.expiry_date,
-        },
-        createdAt: new Date().toISOString(),
+        service: 'gmail',
+        providerId: 'google',
+        status: 'connected',
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiryDate: tokens.expiry_date,
+        connectedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
       false
     );
 
-    console.log('[Google OAuth] Calendar integration saved for user:', userId);
+    console.log('[Google OAuth] Gmail integration saved for org:', orgId);
 
-    return NextResponse.redirect(`/workspace/${orgId}/integrations?success=google_calendar`);
+    // Redirect to admin integrations page
+    return NextResponse.redirect(`/admin/settings/integrations?success=gmail`);
   } catch (error: any) {
     console.error('[Google OAuth] Error:', error);
     return NextResponse.redirect('/integrations?error=oauth_failed');
