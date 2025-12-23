@@ -110,9 +110,10 @@ async function getActiveEnrollments(orgId: string): Promise<ProspectEnrollment[]
 export async function handleEmailBounce(
   enrollmentId: string,
   stepId: string,
-  organizationId: string
+  organizationId: string,
+  reason?: string
 ): Promise<void> {
-  console.log(`[Sequence Scheduler] Handling bounce for enrollment ${enrollmentId}`);
+  console.log(`[Sequence Scheduler] Handling bounce for enrollment ${enrollmentId}, reason: ${reason || 'unknown'}`);
 
   // Get enrollment
   const enrollment = await FirestoreService.get(
@@ -127,7 +128,14 @@ export async function handleEmailBounce(
   if (action) {
     action.status = 'bounced';
     action.bouncedAt = new Date().toISOString();
+    action.bounceReason = reason || 'unknown';
     action.updatedAt = new Date().toISOString();
+  }
+
+  // Determine unenroll reason based on bounce type
+  let unenrollReason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced' = 'bounced';
+  if (reason === 'spam_report' || reason === 'unsubscribed') {
+    unenrollReason = 'unsubscribed';
   }
 
   // Unenroll from sequence
@@ -135,7 +143,7 @@ export async function handleEmailBounce(
     enrollment.prospectId,
     enrollment.sequenceId,
     organizationId,
-    'bounced'
+    unenrollReason
   );
 }
 

@@ -207,6 +207,7 @@ export interface StepAction {
   clickedAt?: string;
   repliedAt?: string;
   bouncedAt?: string;
+  bounceReason?: string; // Reason for bounce (hard bounce, spam report, unsubscribed, etc.)
   
   // Content
   subject?: string;

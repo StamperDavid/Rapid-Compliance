@@ -404,25 +404,35 @@ export class SequenceEngine {
     // Send SMS via Twilio
     const { sendSMS } = await import('@/lib/sms/sms-service');
     
-    await sendSMS({
+    const result = await sendSMS({
       to: prospect.phone,
       message: step.content,
       organizationId,
     });
     
-    // Save SMS record
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to send SMS');
+    }
+    
+    // Save SMS record with Twilio message ID for webhook tracking
+    const smsRecordId = result.messageId || `${Date.now()}-${enrollment.prospectId}`;
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/smsMessages`,
-      `${Date.now()}-${enrollment.prospectId}`,
+      smsRecordId,
       {
+        id: smsRecordId,
+        messageId: result.messageId, // Twilio SID for webhook matching
         prospectId: enrollment.prospectId,
         sequenceId: enrollment.sequenceId,
+        enrollmentId: enrollment.id,
         stepId: step.id,
         to: prospect.phone,
         message: step.content,
         status: 'sent',
-        sentAt: new Date(),
-        createdAt: new Date(),
+        sentAt: new Date().toISOString(),
+        provider: result.provider || 'twilio',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
     );
     
@@ -676,8 +686,23 @@ export class SequenceEngine {
     sequenceId: string,
     organizationId: string
   ): Promise<ProspectEnrollment | null> {
-    // TODO: Query by prospectId and sequenceId
-    return null;
+    try {
+      const { where, limit } = await import('firebase/firestore');
+      
+      const enrollments = await FirestoreService.getAll<ProspectEnrollment>(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+        [
+          where('prospectId', '==', prospectId),
+          where('sequenceId', '==', sequenceId),
+          limit(1)
+        ]
+      );
+      
+      return enrollments.length > 0 ? enrollments[0] : null;
+    } catch (error) {
+      console.error('[SequenceEngine] Error getting enrollment:', error);
+      return null;
+    }
   }
 
   /**

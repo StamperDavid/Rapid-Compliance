@@ -8,6 +8,7 @@ import {
   handleEmailBounce,
   handleEmailOpen,
   handleEmailClick,
+  handleEmailReply,
 } from '@/lib/outbound/sequence-scheduler';
 import { parseSendGridWebhook, SendGridWebhookEvent } from '@/lib/email/sendgrid-service';
 import { logger } from '@/lib/logger/logger';
@@ -68,26 +69,39 @@ async function processEvent(event: SendGridWebhookEvent): Promise<void> {
   switch (event.event) {
     case 'delivered':
       logger.info('Email delivered', { route: '/api/webhooks/email', email: event.email });
-      // Could track delivery if needed
+      // Track delivery status if needed for analytics
       break;
 
     case 'open':
       await handleEmailOpen(enrollmentId, stepId, organizationId);
+      logger.info('Email opened', { route: '/api/webhooks/email', enrollmentId });
       break;
 
     case 'click':
       await handleEmailClick(enrollmentId, stepId, organizationId);
+      logger.info('Email clicked', { route: '/api/webhooks/email', enrollmentId, url: event.url });
       break;
 
     case 'bounce':
     case 'dropped':
-      await handleEmailBounce(enrollmentId, stepId, organizationId);
+      const bounceReason = event.reason || event.type || 'Unknown';
+      logger.warn('Email bounced', { 
+        route: '/api/webhooks/email', 
+        enrollmentId, 
+        reason: bounceReason,
+        bounceType: event.type 
+      });
+      await handleEmailBounce(enrollmentId, stepId, organizationId, bounceReason);
       break;
 
     case 'spamreport':
+      logger.warn('Spam report', { route: '/api/webhooks/email', enrollmentId, email: event.email });
+      await handleEmailBounce(enrollmentId, stepId, organizationId, 'spam_report');
+      break;
+
     case 'unsubscribe':
-      // Handle unsubscribe
-      await handleEmailBounce(enrollmentId, stepId, organizationId);
+      logger.info('Unsubscribe request', { route: '/api/webhooks/email', enrollmentId, email: event.email });
+      await handleEmailBounce(enrollmentId, stepId, organizationId, 'unsubscribed');
       break;
 
     default:

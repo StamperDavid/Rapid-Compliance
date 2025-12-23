@@ -327,7 +327,6 @@ export async function sendSMSFromTemplate(
 
 /**
  * Get SMS delivery status
- * MOCK: Will query Twilio API or database in real implementation
  */
 export interface SMSDeliveryStatus {
   messageId: string;
@@ -368,18 +367,49 @@ export async function getSMSDeliveryStatus(
 }
 
 /**
- * Handle Twilio webhook
- * MOCK: Will process delivery status updates in real implementation
+ * Query Twilio API for real-time delivery status
  */
-export async function handleTwilioWebhook(webhookData: any): Promise<void> {
-  // MOCK: In real implementation, this would:
-  // 1. Verify webhook signature
-  // 2. Parse webhook payload
-  // 3. Update SMS record in database
-  // 4. Trigger workflows if configured
-  // 5. Send notifications
+export async function queryTwilioStatus(
+  messageId: string,
+  organizationId: string
+): Promise<SMSDeliveryStatus | null> {
+  try {
+    // Get Twilio credentials
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const keys = await apiKeyService.getKeys(organizationId);
+    const twilioConfig = keys?.sms?.twilio;
 
-  console.log('Twilio webhook received (mock)', webhookData);
+    if (!twilioConfig?.accountSid || !twilioConfig?.authToken) {
+      throw new Error('Twilio credentials not configured');
+    }
+
+    // Query Twilio API
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioConfig.accountSid}/Messages/${messageId}.json`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Basic ${btoa(`${twilioConfig.accountSid}:${twilioConfig.authToken}`)}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Twilio API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      messageId: data.sid,
+      status: data.status,
+      sentAt: data.date_sent ? new Date(data.date_sent) : undefined,
+      deliveredAt: data.date_updated && data.status === 'delivered' ? new Date(data.date_updated) : undefined,
+      errorCode: data.error_code?.toString(),
+      errorMessage: data.error_message,
+    };
+  } catch (error) {
+    console.error('[SMS Service] Error querying Twilio status:', error);
+    return null;
+  }
 }
 
 

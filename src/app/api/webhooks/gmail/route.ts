@@ -176,7 +176,26 @@ async function processNewEmail(
       case 'unenroll':
         // Remove from sequences
         logger.info('Unenrolling prospect', { route: '/api/webhooks/gmail' });
-        // TODO: Implement unenroll logic
+        await unenrollProspectFromSequences(
+          organizationId, 
+          headers.from, 
+          classification.intent === 'unsubscribe' ? 'unsubscribed' : 'replied'
+        );
+        await saveForReview(organizationId, email, classification);
+        break;
+      
+      case 'mark_as_converted':
+        // Mark prospect as converted
+        logger.info('Marking prospect as converted', { route: '/api/webhooks/gmail' });
+        await unenrollProspectFromSequences(organizationId, headers.from, 'converted');
+        await saveForReview(organizationId, email, classification);
+        break;
+      
+      case 'pause_sequence':
+        // Pause but don't remove from sequence
+        logger.info('Pausing sequences for prospect', { route: '/api/webhooks/gmail' });
+        await pauseProspectSequences(organizationId, headers.from);
+        await saveForReview(organizationId, email, classification);
         break;
 
       default:
@@ -185,6 +204,109 @@ async function processNewEmail(
     }
   } catch (error) {
     logger.error('Error processing Gmail email', error, { route: '/api/webhooks/gmail' });
+  }
+}
+
+/**
+ * Unenroll prospect from all active sequences
+ */
+async function unenrollProspectFromSequences(
+  organizationId: string,
+  prospectEmail: string,
+  reason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced'
+): Promise<void> {
+  try {
+    // Find prospect by email
+    const { where } = await import('firebase/firestore');
+    const prospects = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      [where('email', '==', prospectEmail)]
+    );
+
+    if (prospects.length === 0) {
+      logger.debug('No prospect found for email', { route: '/api/webhooks/gmail', email: prospectEmail });
+      return;
+    }
+
+    const prospectId = prospects[0].id;
+
+    // Find all active enrollments for this prospect
+    const enrollments = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+      [
+        where('prospectId', '==', prospectId),
+        where('status', '==', 'active'),
+      ]
+    );
+
+    // Unenroll from each sequence
+    const { SequenceEngine } = await import('@/lib/outbound/sequence-engine');
+    for (const enrollment of enrollments) {
+      await SequenceEngine['unenrollProspect'](
+        prospectId,
+        enrollment.sequenceId,
+        organizationId,
+        reason
+      );
+      logger.info('Unenrolled prospect from sequence', { 
+        route: '/api/webhooks/gmail', 
+        prospectId, 
+        sequenceId: enrollment.sequenceId,
+        reason 
+      });
+    }
+  } catch (error) {
+    logger.error('Error unenrolling prospect', error, { route: '/api/webhooks/gmail' });
+  }
+}
+
+/**
+ * Pause prospect sequences (don't unenroll)
+ */
+async function pauseProspectSequences(
+  organizationId: string,
+  prospectEmail: string
+): Promise<void> {
+  try {
+    const { where } = await import('firebase/firestore');
+    const prospects = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      [where('email', '==', prospectEmail)]
+    );
+
+    if (prospects.length === 0) return;
+
+    const prospectId = prospects[0].id;
+
+    // Find all active enrollments
+    const enrollments = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+      [
+        where('prospectId', '==', prospectId),
+        where('status', '==', 'active'),
+      ]
+    );
+
+    // Pause each enrollment
+    for (const enrollment of enrollments) {
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+        enrollment.id,
+        {
+          ...enrollment,
+          status: 'paused',
+          pausedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        false
+      );
+      logger.info('Paused enrollment', { 
+        route: '/api/webhooks/gmail', 
+        enrollmentId: enrollment.id 
+      });
+    }
+  } catch (error) {
+    logger.error('Error pausing sequences', error, { route: '/api/webhooks/gmail' });
   }
 }
 
