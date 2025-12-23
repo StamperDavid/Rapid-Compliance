@@ -74,31 +74,6 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-/**
- * Calculate revenue analytics (extracted for caching)
- */
-async function calculateRevenueAnalytics(orgId: string, period: string) {
-  // Calculate date range based on period
-  const now = new Date();
-  let startDate: Date;
-  
-  switch (period) {
-    case '7d':
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      break;
-    case '30d':
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      break;
-    case '90d':
-      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      break;
-    case 'all':
-      startDate = new Date('2020-01-01'); // Far enough back
-      break;
-    default:
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  }
-
     // Get deals from Firestore
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
     let allDeals: any[] = [];
@@ -252,9 +227,4 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       byProduct,
       byRep,
     };
-}
-  } catch (error: any) {
-    logger.error('Error getting revenue analytics', error, { route: '/api/analytics/revenue', orgId: request.nextUrl.searchParams.get('orgId') });
-    return errors.database('Failed to get revenue analytics', error);
-  }
 }
