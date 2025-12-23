@@ -1,5 +1,15 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
+import { TextEncoder, TextDecoder } from 'util'
+
+// Node test environment polyfills
+if (!global.TextEncoder) {
+  global.TextEncoder = TextEncoder
+}
+if (!global.TextDecoder) {
+  // @ts-ignore
+  global.TextDecoder = TextDecoder
+}
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({

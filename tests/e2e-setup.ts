@@ -126,7 +126,7 @@ export async function setupTestOrganization() {
       db,
       auth,
     };
-  } catch (error: any) {
+  } catch (error) {
     // If user already exists, just get their info
     if (error.code === 'auth/email-already-exists') {
       const user = await auth.getUserByEmail(TEST_CONFIG.testOrg.email);
@@ -184,7 +184,7 @@ export async function cleanupTestOrganization() {
     }
 
     console.log('✅ Test organization cleaned up');
-  } catch (error: any) {
+  } catch (error) {
     console.error('⚠️ Cleanup error:', error.message);
   }
 }
