@@ -84,8 +84,22 @@ export async function getTokensFromCode(code: string): Promise<{
   refresh_token?: string;
   expiry_date?: number;
 }> {
+  // Verify environment variables are set
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    console.error('[Google OAuth] Missing environment variables');
+    console.error('GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID ? 'SET' : 'MISSING');
+    console.error('GOOGLE_CLIENT_SECRET:', GOOGLE_CLIENT_SECRET ? 'SET' : 'MISSING');
+    throw new Error('Google OAuth credentials not configured');
+  }
+
   const oauth2Client = createOAuth2Client();
+  
+  console.log('[Google OAuth] Exchanging code for tokens...');
+  console.log('[Google OAuth] Redirect URI:', GOOGLE_REDIRECT_URI);
+  
   const { tokens } = await oauth2Client.getToken(code);
+  
+  console.log('[Google OAuth] Tokens received successfully');
   
   return {
     access_token: tokens.access_token!,
