@@ -25,10 +25,15 @@ export async function GET(request: NextRequest) {
   const { google } = await import('googleapis');
   const { OAuth2Client } = await import('google-auth-library');
   
+  // Use current domain for redirect (works in dev, preview, and production)
+  const protocol = request.headers.get('x-forwarded-proto') || 'http';
+  const host = request.headers.get('host') || 'localhost:3000';
+  const redirectUri = `${protocol}://${host}/api/integrations/google/callback`;
+  
   const oauth2Client = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/integrations/google/callback'
+    redirectUri
   );
   
   const authUrl = oauth2Client.generateAuthUrl({
