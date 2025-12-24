@@ -24,18 +24,18 @@ export async function POST(request: NextRequest) {
     const userId = user.uid;
     const organizationId = user.organizationId;
 
-    // Check if Teams is configured
-    const teamsKeys = await apiKeyService.getServiceKey(organizationId!, 'teams');
+    // Check if Microsoft 365 (Teams) is configured
+    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId!, 'microsoft365');
     
-    if (!teamsKeys || !(teamsKeys as any).clientId) {
+    if (!microsoft365Keys || !(microsoft365Keys as any).clientId) {
       return NextResponse.json({
         success: false,
-        error: 'Microsoft Teams not configured. Please add Teams Client ID and Secret in API Keys settings.',
+        error: 'Microsoft Teams not configured. Please add Microsoft 365 Client ID and Secret in API Keys settings.',
         configured: false,
       });
     }
 
-    const { clientId, redirectUri } = teamsKeys as any;
+    const { clientId, redirectUri } = microsoft365Keys as any;
     const baseRedirectUri = redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
     
     // Microsoft Teams uses Azure AD OAuth

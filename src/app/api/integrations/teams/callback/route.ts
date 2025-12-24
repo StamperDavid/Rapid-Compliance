@@ -34,13 +34,13 @@ export async function GET(request: NextRequest) {
 
     const organizationId = state;
 
-    // Get Teams config
-    const teamsKeys = await apiKeyService.getServiceKey(organizationId, 'teams');
-    if (!teamsKeys) {
-      throw new Error('Teams not configured');
+    // Get Microsoft 365 (Teams) config
+    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId, 'microsoft365');
+    if (!microsoft365Keys) {
+      throw new Error('Microsoft 365 (Teams) not configured');
     }
 
-    const { clientId, clientSecret, redirectUri } = teamsKeys as any;
+    const { clientId, clientSecret, redirectUri } = microsoft365Keys as any;
     const baseRedirectUri = redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
 
     // Exchange code for access token
