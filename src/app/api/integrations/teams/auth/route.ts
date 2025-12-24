@@ -20,7 +20,9 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const { userId, organizationId } = authResult;
+    const { user } = authResult;
+    const userId = user.uid;
+    const organizationId = user.organizationId;
 
     // Check if Teams is configured
     const teamsKeys = await apiKeyService.getServiceKey(organizationId!, 'teams');
