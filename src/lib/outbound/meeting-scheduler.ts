@@ -3,6 +3,8 @@
  * Autonomously books meetings with prospects
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface MeetingRequest {
   prospectEmail: string;
   prospectName: string;

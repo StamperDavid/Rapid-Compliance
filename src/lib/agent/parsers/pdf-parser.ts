@@ -3,6 +3,8 @@
  * Extracts text content from PDF files
  */
 
+import { logger } from '@/lib/logger/logger';
+
 // Dynamic import for pdf-parse (works in both Node.js and browser)
 let pdfParse: any;
 async function getPdfParse() {

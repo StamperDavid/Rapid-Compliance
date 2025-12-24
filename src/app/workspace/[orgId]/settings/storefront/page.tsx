@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface StorefrontConfig {
   enabled: boolean;
@@ -109,7 +110,7 @@ export default function StorefrontSettingsPage() {
           setConfig(configData as StorefrontConfig);
         }
       } catch (error) {
-        logger.error('Failed to load storefront config:', error, { file: 'page.tsx' });
+        logger.error('Failed to load storefront config', error as Error);
       }
     };
     
@@ -132,7 +133,7 @@ export default function StorefrontSettingsPage() {
         false
       );
     } catch (error) {
-      logger.error('Failed to save storefront config:', error, { file: 'page.tsx' });
+      logger.error('Failed to save storefront config', error as Error);
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }
@@ -162,7 +163,6 @@ export default function StorefrontSettingsPage() {
 <script src="https://yourplatform.com/embed.js" async></script>
 <div data-crm-widget="${widgetId}" data-type="full_store"></div>`,
     react: `import { CRMStoreWidget } from '@your-platform/react-widgets'
-import { logger } from '@/lib/logger/logger';;
 
 <CRMStoreWidget 
   widgetId="${widgetId}"

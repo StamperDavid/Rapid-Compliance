@@ -9,6 +9,8 @@
  * - Configurable TTL per query type
  */
 
+import { logger } from '@/lib/logger/logger';
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;

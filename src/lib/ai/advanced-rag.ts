@@ -3,6 +3,8 @@
  * Semantic search + reranking for superior knowledge retrieval
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface RAGRequest {
   query: string;
   knowledgeBaseId: string;

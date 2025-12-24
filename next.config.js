@@ -37,15 +37,20 @@ const nextConfig = {
         os: false,
         child_process: false,
         http2: false,
+        dns: false,
+        dgram: false,
+        module: false,
         'node:events': false,
         'node:process': false,
         'node:stream': false,
         'node:util': false,
       };
       
-      // Exclude firebase-admin from client bundle
+      // Exclude firebase-admin and playwright from client bundle
       config.externals = config.externals || [];
       config.externals.push('firebase-admin');
+      config.externals.push('playwright');
+      config.externals.push('playwright-core');
     }
     return config;
   },

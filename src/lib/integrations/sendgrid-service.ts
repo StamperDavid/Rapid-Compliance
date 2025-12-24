@@ -3,6 +3,8 @@
  * Handles email sending via SendGrid API
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface SendEmailOptions {
   to: string | string[];
   subject: string;

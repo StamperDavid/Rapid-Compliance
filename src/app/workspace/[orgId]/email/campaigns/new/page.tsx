@@ -27,6 +27,7 @@ export default function NewCampaignPage() {
       
       await createCampaign({
         ...campaign,
+        scheduledFor: campaign.scheduledFor ? new Date(campaign.scheduledFor) : new Date(),
         organizationId: orgId,
         createdBy: 'current-user', // TODO: Get from auth
       });

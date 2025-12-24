@@ -3,6 +3,8 @@
  * Handles "Add to Home Screen" functionality
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;

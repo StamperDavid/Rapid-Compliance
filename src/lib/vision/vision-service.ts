@@ -4,6 +4,8 @@
  * Uses GPT-4 Vision and Gemini Pro Vision
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface VisionAnalysisRequest {
   imageUrl?: string;
   imageBase64?: string;

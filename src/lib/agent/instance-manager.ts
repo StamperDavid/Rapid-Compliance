@@ -557,10 +557,16 @@ ${this.summarizeRecentConversations(customerMemory)}
             .get();
           
           const goldenMasters = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          logger.info('Instance Manager Found goldenMasters.length} Golden Masters (admin SDK)', { file: 'instance-manager.ts' });
+          logger.info('Instance Manager Found Golden Masters (admin SDK)', { 
+            count: goldenMasters.length, 
+            file: 'instance-manager.ts' 
+          });
           
           const active = goldenMasters.find((gm: any) => gm.isActive === true);
-          logger.info('Instance Manager Active Golden Master: active ? active.id : 'NONE'}', { file: 'instance-manager.ts' });
+          logger.info('Instance Manager Active Golden Master', { 
+            activeId: active ? active.id : 'NONE',
+            file: 'instance-manager.ts' 
+          });
           return active as GoldenMaster | null;
         }
       } catch (adminError) {

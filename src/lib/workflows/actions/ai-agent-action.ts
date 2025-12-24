@@ -5,6 +5,7 @@
 
 import { BaseAction } from '@/types/workflow';
 import { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 export interface AIAgentActionConfig extends BaseAction {
   type: 'ai_agent';

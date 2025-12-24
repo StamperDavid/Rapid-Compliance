@@ -64,30 +64,35 @@ export default function CheckoutPage() {
     try {
       setProcessing(true);
       
-      const sessionId = localStorage.getItem('cartSessionId')!;
+      const cartId = localStorage.getItem('cartSessionId')!;
       const order = await processCheckout({
-        sessionId,
+        cartId,
         workspaceId: 'default',
-        customerInfo: {
-          name: formData.name,
+        customer: {
           email: formData.email,
-          address: {
-            line1: formData.address,
-            city: formData.city,
-            state: formData.state,
-            postal_code: formData.zip,
-            country: formData.country,
-          },
+          firstName: formData.name.split(' ')[0] || '',
+          lastName: formData.name.split(' ').slice(1).join(' ') || '',
         },
-        paymentMethod: {
-          type: 'card',
-          card: {
-            number: formData.cardNumber,
-            exp_month: parseInt(formData.cardExpiry.split('/')[0]),
-            exp_year: parseInt('20' + formData.cardExpiry.split('/')[1]),
-            cvc: formData.cardCvc,
-          },
+        billingAddress: {
+          firstName: formData.name.split(' ')[0] || '',
+          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          address1: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          country: formData.country,
         },
+        shippingAddress: {
+          firstName: formData.name.split(' ')[0] || '',
+          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          address1: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          country: formData.country,
+        },
+        paymentMethod: 'card', // In production, create Stripe PaymentMethod first
+        paymentToken: formData.cardNumber, // In production, use Stripe token
       });
       
       // Clear cart and redirect to success

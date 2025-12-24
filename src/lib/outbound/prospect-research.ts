@@ -3,6 +3,8 @@
  * Researches companies and prospects to enable personalized outreach
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface ProspectResearch {
   companyInfo: CompanyInfo;
   recentNews: NewsItem[];

@@ -4,6 +4,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { where } from 'firebase/firestore';
 import type { SubscriptionPlan, CustomerSubscription, RevenueMetrics, AdminCustomer, PlanDetails } from '@/types/subscription'
 import { logger } from '@/lib/logger/logger';;
 
@@ -163,7 +164,7 @@ async function getOrganizationUsage(organizationId: string): Promise<{
     // Count users - get all members with access to this organization
     const usersSnapshot = await FirestoreService.getAll(
       COLLECTIONS.USERS,
-      [{ field: 'organizationId', operator: '==', value: organizationId }]
+      [where('organizationId', '==', organizationId)]
     );
     const users = usersSnapshot.length;
     
@@ -172,15 +173,15 @@ async function getOrganizationUsage(organizationId: string): Promise<{
     try {
       const [leads, deals, contacts] = await Promise.all([
         FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.LEADS}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/default/entities/leads/records`,
           []
         ),
         FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.DEALS}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/default/entities/deals/records`,
           []
         ),
         FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.CONTACTS}`,
+          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/default/entities/contacts/records`,
           []
         ),
       ]);
@@ -194,7 +195,7 @@ async function getOrganizationUsage(organizationId: string): Promise<{
     let conversations = 0;
     try {
       const instances = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.AGENT_INSTANCES}`,
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentInstances`,
         []
       );
       conversations = instances.length;

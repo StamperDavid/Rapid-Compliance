@@ -4,6 +4,8 @@
  * REAL IMPLEMENTATION with database integration
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface TrackingPixel {
   messageId: string;
   pixelUrl: string;

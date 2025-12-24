@@ -3,6 +3,7 @@
  * Processes knowledge base and automatically indexes it
  */
 
+import { logger } from '@/lib/logger/logger';
 import { processKnowledgeBase, KnowledgeProcessorOptions } from './knowledge-processor';
 import { indexKnowledgeBase } from './vector-search';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';

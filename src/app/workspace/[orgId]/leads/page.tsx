@@ -80,7 +80,7 @@ export default function LeadsPage() {
                   <td className="p-4 font-medium">{lead.name || lead.firstName + ' ' + lead.lastName}</td>
                   <td className="p-4 text-gray-400">{lead.company || lead.companyName}</td>
                   <td className="p-4 text-gray-400">{lead.email}</td>
-                  <td className="p-4 text-gray-400">{lead.phone || lead.phoneNumber}</td>
+                  <td className="p-4 text-gray-400">{lead.phone || 'N/A'}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded text-xs ${(lead.score || 0) >= 80 ? 'bg-green-900 text-green-300' : (lead.score || 0) >= 60 ? 'bg-yellow-900 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>
                       {lead.score || 50}

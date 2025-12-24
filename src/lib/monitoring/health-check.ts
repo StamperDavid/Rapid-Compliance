@@ -3,6 +3,8 @@
  * System health monitoring and alerting
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;

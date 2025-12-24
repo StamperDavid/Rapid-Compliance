@@ -3,6 +3,8 @@
  * High-performance caching layer for frequently accessed data
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface CacheOptions {
   ttl?: number; // Time to live in seconds
   prefix?: string; // Key prefix for namespacing

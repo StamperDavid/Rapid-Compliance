@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           route: '/api/webhooks/voice',
           callId: call.id,
           status: callStatus,
-          duration,
+          duration: duration ? parseInt(duration) : 0,
         });
 
         break;

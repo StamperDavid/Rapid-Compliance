@@ -3,6 +3,8 @@
  * AI-powered system to read and respond to prospect email replies
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface EmailReply {
   from: string;
   to: string;

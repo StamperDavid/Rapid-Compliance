@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens } from '@/lib/integrations/oauth-service';
 import { logger } from '@/lib/logger/logger';
-import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/integrations/oauth/callback/[provider] - OAuth callback handler

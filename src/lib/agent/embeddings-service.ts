@@ -3,6 +3,8 @@
  * Generates vector embeddings using Vertex AI Embeddings API
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface Embedding {
   values: number[];
   text: string;

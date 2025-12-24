@@ -5,6 +5,8 @@
  * REAL IMPLEMENTATION - Uses web scraping and AI extraction
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface KnowledgeAnalysisResult {
   companyInfo: {
     name: string;

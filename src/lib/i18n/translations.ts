@@ -3,6 +3,8 @@
  * Multi-language support for global reach
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export type Locale = 'en' | 'es' | 'fr' | 'de' | 'ja' | 'zh' | 'pt' | 'it' | 'ru' | 'ar';
 
 export interface Translations {

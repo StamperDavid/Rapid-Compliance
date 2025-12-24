@@ -114,7 +114,11 @@ export async function handleEmailBounce(
   organizationId: string,
   reason?: string
 ): Promise<void> {
-  logger.info('Sequence Scheduler Handling bounce for enrollment enrollmentId}, reason: reason || 'unknown'}', { file: 'sequence-scheduler.ts' });
+  logger.info('Sequence Scheduler Handling bounce for enrollment', { 
+    enrollmentId, 
+    reason: reason || 'unknown',
+    file: 'sequence-scheduler.ts' 
+  });
 
   // Get enrollment
   const enrollment = await FirestoreService.get(
