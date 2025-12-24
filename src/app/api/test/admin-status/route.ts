@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -7,7 +8,13 @@ export const dynamic = 'force-dynamic';
 /**
  * Diagnostic endpoint to check Firebase Admin SDK status
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Rate limiting (strict - test endpoint should be disabled in production)
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/test/admin-status');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const diagnostics: any = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
@@ -78,6 +85,7 @@ export async function GET() {
     return NextResponse.json(diagnostics, { status: 500 });
   }
 }
+
 
 
 

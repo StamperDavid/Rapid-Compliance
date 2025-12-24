@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executeScheduledWorkflows } from '@/lib/workflows/triggers/schedule-trigger';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Schedule trigger endpoint
@@ -9,6 +10,12 @@ import { errors } from '@/lib/middleware/error-handler';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (strict - internal only)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/workflows/triggers/schedule');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Verify this is called by Cloud Scheduler (check headers/auth)
     // In production, verify Cloud Scheduler authentication
     

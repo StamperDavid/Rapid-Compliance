@@ -7,6 +7,7 @@ import {
   isAuthError
 } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 interface UserData {
   id: string;
@@ -30,6 +31,12 @@ interface UserData {
  * - startAfter: cursor for pagination (timestamp)
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/users');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   // Verify admin authentication
   const authResult = await verifyAdminRequest(request);
   

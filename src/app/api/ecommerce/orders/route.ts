@@ -5,6 +5,7 @@ import { where, orderBy } from 'firebase/firestore';
 import type { Order } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/ecommerce/orders - List orders with pagination
@@ -17,6 +18,12 @@ import { errors } from '@/lib/middleware/error-handler';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/orders');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
       return authResult;

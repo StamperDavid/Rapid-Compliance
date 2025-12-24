@@ -11,8 +11,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processSequences } from '@/lib/outbound/sequence-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Rate limiting (strict - internal cron only)
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/cron/process-sequences');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization');

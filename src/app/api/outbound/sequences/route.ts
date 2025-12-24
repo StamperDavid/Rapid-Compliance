@@ -11,6 +11,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { OutboundSequence } from '@/types/outbound-sequence';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/outbound/sequences?orgId=xxx&page=1&limit=50
@@ -18,6 +19,12 @@ import { errors } from '@/lib/middleware/error-handler';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/sequences');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSlackAuthUrl } from '@/lib/integrations/slack-service';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/slack/auth');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get('userId');
   const orgId = searchParams.get('orgId');

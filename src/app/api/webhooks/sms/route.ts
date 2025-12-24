@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 // Twilio status mappings
 const TWILIO_STATUS_MAP = {
@@ -21,6 +22,12 @@ const TWILIO_STATUS_MAP = {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (higher limit for webhooks)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/webhooks/sms');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Twilio sends form-encoded data
     const formData = await request.formData();
     

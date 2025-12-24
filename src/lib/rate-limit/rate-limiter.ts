@@ -30,6 +30,12 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   '/api/checkout/create-payment-intent': { maxRequests: 30, windowMs: 60 * 1000 },
   '/api/checkout/create-session': { maxRequests: 30, windowMs: 60 * 1000 },
   '/api/billing/subscribe': { maxRequests: 20, windowMs: 60 * 1000 },
+  '/api/billing/webhook': { maxRequests: 500, windowMs: 60 * 1000 }, // Higher for Stripe webhooks
+  
+  // Admin endpoints (strict - privilege escalation risk)
+  '/api/admin/users': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/admin/organizations': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/admin/verify': { maxRequests: 10, windowMs: 60 * 1000 }, // Brute force protection
   
   // AI/Heavy compute
   '/api/agent/chat': { maxRequests: 100, windowMs: 60 * 1000 },
@@ -38,11 +44,51 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   
   // Workflow execution
   '/api/workflows/execute': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/workflows/triggers/schedule': { maxRequests: 10, windowMs: 60 * 1000 }, // Internal cron only
+  '/api/workflows/webhooks': { maxRequests: 500, windowMs: 60 * 1000 }, // Higher for external webhooks
   
   // Search/Analytics (read-heavy)
   '/api/search': { maxRequests: 200, windowMs: 60 * 1000 },
   '/api/analytics/revenue': { maxRequests: 100, windowMs: 60 * 1000 },
   '/api/analytics/pipeline': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // E-commerce
+  '/api/ecommerce/orders': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // Outbound sequences
+  '/api/outbound/sequences': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // OAuth integrations (moderate limits)
+  '/api/integrations/google/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/microsoft/auth': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/microsoft/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/slack/auth': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/slack/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/quickbooks/auth': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/quickbooks/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  
+  // Webhooks (high limits - legitimate traffic)
+  '/api/webhooks/email': { maxRequests: 500, windowMs: 60 * 1000 },
+  '/api/webhooks/gmail': { maxRequests: 500, windowMs: 60 * 1000 },
+  '/api/webhooks/sms': { maxRequests: 500, windowMs: 60 * 1000 },
+  
+  // Tracking pixels (very high limit - email clients)
+  '/api/email/track': { maxRequests: 1000, windowMs: 60 * 1000 },
+  '/api/email/track/link': { maxRequests: 500, windowMs: 60 * 1000 },
+  
+  // Setup (strict - should be called rarely)
+  '/api/setup/create-platform-org': { maxRequests: 5, windowMs: 60 * 1000 },
+  
+  // Health checks (high limit - monitoring)
+  '/api/health': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/health/detailed': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // Test endpoints (strict - should be disabled in prod)
+  '/api/test/admin-status': { maxRequests: 10, windowMs: 60 * 1000 },
+  '/api/test/outbound': { maxRequests: 10, windowMs: 60 * 1000 },
+  
+  // Cron jobs (very strict - internal only)
+  '/api/cron/process-sequences': { maxRequests: 10, windowMs: 60 * 1000 },
   
   // Auth endpoints (brute force prevention)
   '/api/auth/login': { maxRequests: 5, windowMs: 60 * 1000 }, // 5 login attempts per minute

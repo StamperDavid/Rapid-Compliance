@@ -4,12 +4,19 @@ import Stripe from 'stripe';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Stripe Webhook Handler
  * Note: Webhooks don't use standard auth - they use Stripe signature verification
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting (higher limit for webhooks but still prevent spam)
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/billing/webhook');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 

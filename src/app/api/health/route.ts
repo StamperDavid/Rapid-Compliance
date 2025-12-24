@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Health Check Endpoint
  * Public endpoint to check system health
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting (high limit for health checks)
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/health');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const health = {
     status: 'healthy',
     timestamp: new Date().toISOString(),

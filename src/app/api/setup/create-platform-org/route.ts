@@ -1,14 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Create platform-admin organization
  * Call this once to set up the organization for the landing page
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (strict - this is a setup route)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/setup/create-platform-org');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const orgId = 'platform-admin';
     const now = new Date();
 

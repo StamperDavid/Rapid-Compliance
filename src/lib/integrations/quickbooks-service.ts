@@ -1,16 +1,39 @@
 /**
  * QuickBooks Integration
  * Real integration using QuickBooks API
+ * 
+ * CONFIGURATION REQUIRED:
+ * Set these environment variables to enable QuickBooks integration:
+ * - QUICKBOOKS_CLIENT_ID
+ * - QUICKBOOKS_CLIENT_SECRET
+ * - QUICKBOOKS_REDIRECT_URI (optional, defaults to localhost)
+ * 
+ * Get credentials from: https://developer.intuit.com/app/developer/qbo/docs/get-started
  */
+
+import { logger } from '@/lib/logger/logger';
 
 const QB_CLIENT_ID = process.env.QUICKBOOKS_CLIENT_ID;
 const QB_CLIENT_SECRET = process.env.QUICKBOOKS_CLIENT_SECRET;
 const QB_REDIRECT_URI = process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:3000/api/integrations/quickbooks/callback';
 
 /**
+ * Check if QuickBooks is configured
+ */
+export function isQuickBooksConfigured(): boolean {
+  return !!(QB_CLIENT_ID && QB_CLIENT_SECRET);
+}
+
+/**
  * Get QuickBooks OAuth URL
+ * Throws error if not configured
  */
 export function getQuickBooksAuthUrl(): string {
+  if (!isQuickBooksConfigured()) {
+    logger.warn('QuickBooks integration not configured - missing credentials');
+    throw new Error('QuickBooks integration not configured. Please set QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET environment variables.');
+  }
+
   const scopes = ['com.intuit.quickbooks.accounting'].join(' ');
   const state = Math.random().toString(36).substring(7);
 
@@ -25,6 +48,10 @@ export async function getTokensFromCode(code: string): Promise<{
   refresh_token: string;
   realmId: string;
 }> {
+  if (!isQuickBooksConfigured()) {
+    throw new Error('QuickBooks not configured');
+  }
+
   const credentials = Buffer.from(`${QB_CLIENT_ID}:${QB_CLIENT_SECRET}`).toString('base64');
 
   const response = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
@@ -40,7 +67,19 @@ export async function getTokensFromCode(code: string): Promise<{
     }),
   });
 
-  return await response.json();
+  if (!response.ok) {
+    const error = await response.text();
+    logger.error('QuickBooks: Token exchange failed', undefined, {
+      status: response.status,
+      error,
+    });
+    throw new Error(`QuickBooks OAuth failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  logger.info('QuickBooks: Successfully obtained tokens');
+  
+  return data;
 }
 
 /**

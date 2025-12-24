@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleWebhook } from '@/lib/workflows/triggers/webhook-trigger';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Webhook receiver endpoint
@@ -12,6 +13,12 @@ export async function POST(
   { params }: { params: { workflowId: string } }
 ) {
   try {
+    // Rate limiting (higher limit for webhooks)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/workflows/webhooks');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const workflowId = params.workflowId;
     const method = request.method;
     const headers = Object.fromEntries(request.headers.entries());

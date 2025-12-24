@@ -10,9 +10,16 @@ import { classifyReply, sendReplyEmail } from '@/lib/outbound/reply-handler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (higher limit for webhooks)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/webhooks/gmail');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Gmail sends push notifications as JSON
     const body = await request.json();
     

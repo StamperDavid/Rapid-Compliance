@@ -7,8 +7,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/google/callback');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');

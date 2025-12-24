@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { requireAuth, requireRole } from '@/lib/auth/api-auth';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Detailed Health Check Endpoint
@@ -8,6 +9,12 @@ import { requireAuth, requireRole } from '@/lib/auth/api-auth';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/health/detailed');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Require admin role for detailed health
     const authResult = await requireRole(request, ['admin', 'owner']);
     if (authResult instanceof NextResponse) {

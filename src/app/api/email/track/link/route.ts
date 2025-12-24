@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Store tracked link mapping
@@ -8,6 +9,12 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (higher limit for tracking)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/email/track/link');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const body = await request.json();
     const { linkId, messageId, originalUrl, organizationId } = body;
 

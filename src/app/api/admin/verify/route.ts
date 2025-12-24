@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * POST /api/admin/verify
@@ -10,6 +11,12 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/verify');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Get the auth token from the request headers
     const authHeader = request.headers.get('Authorization');
     

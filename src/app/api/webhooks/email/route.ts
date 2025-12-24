@@ -13,9 +13,16 @@ import {
 import { parseSendGridWebhook, SendGridWebhookEvent } from '@/lib/email/sendgrid-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (high limit for webhooks)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/webhooks/email');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // SendGrid sends an array of events
     const body = await request.json();
     
