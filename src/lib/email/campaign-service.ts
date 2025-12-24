@@ -257,7 +257,7 @@ export async function sendCampaign(
     logger.info('Campaign sent', {
       organizationId,
       campaignId,
-      recipientCount: result.sent,
+      success: result.success,
     });
 
     return result;
