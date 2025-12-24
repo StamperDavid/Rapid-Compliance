@@ -79,6 +79,9 @@ export interface SchemaField {
   hidden: boolean;
   width?: number; // Column width in table view
   
+  // Lookup/Reference
+  lookupEntity?: string; // For lookup fields, the entity name to lookup
+  
   // Conditional display
   conditionalDisplay?: ConditionalLogic;
   
