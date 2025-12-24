@@ -4,7 +4,8 @@
  * Uses Google News API and NewsAPI.org
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface NewsArticle {
   title: string;
@@ -35,7 +36,7 @@ export async function getCompanyNews(
       return await getNewsFromGoogleNews(companyName, maxResults);
     }
   } catch (error) {
-    console.error('[News] Error fetching news:', error);
+    logger.error('[News] Error fetching news:', error, { file: 'news-service.ts' });
     return [];
   }
 }
@@ -62,7 +63,7 @@ async function getNewsFromNewsAPI(
     );
 
     if (!response.ok) {
-      console.error(`[NewsAPI] API error: ${response.status}`);
+      logger.error('[NewsAPI] API error: ${response.status}', new Error('[NewsAPI] API error: ${response.status}'), { file: 'news-service.ts' });
       return [];
     }
 
@@ -82,7 +83,7 @@ async function getNewsFromNewsAPI(
       author: article.author,
     }));
   } catch (error) {
-    console.error('[NewsAPI] Error:', error);
+    logger.error('[NewsAPI] Error:', error, { file: 'news-service.ts' });
     return [];
   }
 }
@@ -133,7 +134,7 @@ async function getNewsFromGoogleNews(
     
     return articles;
   } catch (error) {
-    console.error('[Google News] Error:', error);
+    logger.error('[Google News] Error:', error, { file: 'news-service.ts' });
     return [];
   }
 }
@@ -175,7 +176,7 @@ async function getNewsApiKey(organizationId: string): Promise<string | null> {
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.newsApiKey || null;
   } catch (error) {
-    console.error('[News] Error getting API key:', error);
+    logger.error('[News] Error getting API key:', error, { file: 'news-service.ts' });
     return null;
   }
 }

@@ -261,7 +261,7 @@ export class I18n {
     for (const k of keys) {
       value = value?.[k];
       if (value === undefined) {
-        console.warn(`Missing translation: ${key} for locale ${this.locale}`);
+        logger.warn('Missing translation: ${key} for locale ${this.locale}', { file: 'translations.ts' });
         return key;
       }
     }

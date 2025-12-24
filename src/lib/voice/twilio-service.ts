@@ -3,7 +3,8 @@
  * Voice agents - AI that speaks and listens via phone calls
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface VoiceConfig {
   accountSid: string;
@@ -56,7 +57,7 @@ export async function initiateCall(
       status: call.status as any,
     };
   } catch (error: any) {
-    console.error('[Twilio] Call initiation error:', error);
+    logger.error('[Twilio] Call initiation error:', error, { file: 'twilio-service.ts' });
     throw new Error(`Failed to initiate call: ${error.message}`);
   }
 }
@@ -120,7 +121,7 @@ export async function speechToText(
     const data = await response.json();
     return data.text;
   } catch (error: any) {
-    console.error('[Speech-to-Text] Error:', error);
+    logger.error('[Speech-to-Text] Error:', error, { file: 'twilio-service.ts' });
     throw new Error(`Speech-to-text failed: ${error.message}`);
   }
 }
@@ -149,7 +150,7 @@ export async function sendSMS(
       status: msg.status,
     };
   } catch (error: any) {
-    console.error('[Twilio] SMS error:', error);
+    logger.error('[Twilio] SMS error:', error, { file: 'twilio-service.ts' });
     throw new Error(`Failed to send SMS: ${error.message}`);
   }
 }
@@ -176,7 +177,7 @@ export async function getCallDetails(
       duration: parseInt(call.duration || '0'),
     };
   } catch (error: any) {
-    console.error('[Twilio] Get call error:', error);
+    logger.error('[Twilio] Get call error:', error, { file: 'twilio-service.ts' });
     throw new Error(`Failed to get call details: ${error.message}`);
   }
 }
@@ -201,7 +202,7 @@ export async function getCallRecording(
     
     return `https://api.twilio.com${recordings[0].uri.replace('.json', '.mp3')}`;
   } catch (error: any) {
-    console.error('[Twilio] Get recording error:', error);
+    logger.error('[Twilio] Get recording error:', error, { file: 'twilio-service.ts' });
     return null;
   }
 }

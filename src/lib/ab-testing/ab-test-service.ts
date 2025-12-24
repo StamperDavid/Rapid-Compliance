@@ -3,7 +3,8 @@
  * Data-driven optimization through variant testing
  */
 
-import { cacheService, CacheTTL } from '../cache/redis-service';
+import { cacheService, CacheTTL } from '../cache/redis-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface ABTest {
   id: string;
@@ -248,7 +249,7 @@ async function checkForWinner(test: ABTest): Promise<void> {
       true
     );
     
-    console.log(`[A/B Test] Winner declared for ${test.name}: ${winner.name} (${confidence.toFixed(1)}% confidence)`);
+    logger.info('A/B Test Winner declared for test.name}: winner.name} (confidence.toFixed(1)}% confidence)', { file: 'ab-test-service.ts' });
   }
 }
 

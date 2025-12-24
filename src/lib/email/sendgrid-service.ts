@@ -3,7 +3,8 @@
  * REAL email sending, tracking, and webhook handling
  */
 
-import sgMail from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail'
+import { logger } from '@/lib/logger/logger';;
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
 const FROM_NAME = process.env.FROM_NAME || 'AI Sales Platform';
@@ -44,7 +45,7 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
   const SENDGRID_API_KEY = apiKey || process.env.SENDGRID_API_KEY;
   
   if (!SENDGRID_API_KEY) {
-    console.error('[SendGrid] API key not configured');
+    logger.error('[SendGrid] API key not configured', new Error('[SendGrid] API key not configured'), { file: 'sendgrid-service.ts' });
     return {
       success: false,
       error: 'Email service not configured.',
@@ -85,17 +86,20 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
 
     const [response] = await sgMail.send(msg);
 
-    console.log(`[SendGrid] Email sent successfully to ${options.to}`);
+    logger.info('SendGrid Email sent successfully to options.to}', { file: 'sendgrid-service.ts' });
 
     return {
       success: true,
       messageId: response.headers['x-message-id'],
     };
   } catch (error: any) {
-    console.error('[SendGrid] Error sending email:', error);
+    logger.error('[SendGrid] Error sending email:', error, { file: 'sendgrid-service.ts' });
     
     if (error.response) {
-      console.error('[SendGrid] Response error:', error.response.body);
+      logger.error('[SendGrid] Response error', new Error('SendGrid error'), { 
+        responseBody: error.response.body,
+        file: 'sendgrid-service.ts' 
+      });
     }
 
     return {
@@ -237,7 +241,7 @@ export async function sendTemplateEmail(options: {
       messageId: response.headers['x-message-id'],
     };
   } catch (error: any) {
-    console.error('[SendGrid] Error sending template email:', error);
+    logger.error('[SendGrid] Error sending template email:', error, { file: 'sendgrid-service.ts' });
     return {
       success: false,
       error: error.message,

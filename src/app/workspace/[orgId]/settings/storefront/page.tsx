@@ -109,7 +109,7 @@ export default function StorefrontSettingsPage() {
           setConfig(configData as StorefrontConfig);
         }
       } catch (error) {
-        console.error('Failed to load storefront config:', error);
+        logger.error('Failed to load storefront config:', error, { file: 'page.tsx' });
       }
     };
     
@@ -132,7 +132,7 @@ export default function StorefrontSettingsPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to save storefront config:', error);
+      logger.error('Failed to save storefront config:', error, { file: 'page.tsx' });
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }
@@ -161,7 +161,8 @@ export default function StorefrontSettingsPage() {
     html: `<!-- Add to your website -->
 <script src="https://yourplatform.com/embed.js" async></script>
 <div data-crm-widget="${widgetId}" data-type="full_store"></div>`,
-    react: `import { CRMStoreWidget } from '@your-platform/react-widgets';
+    react: `import { CRMStoreWidget } from '@your-platform/react-widgets'
+import { logger } from '@/lib/logger/logger';;
 
 <CRMStoreWidget 
   widgetId="${widgetId}"

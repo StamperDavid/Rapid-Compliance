@@ -5,7 +5,8 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { CompanyEnrichmentData } from './types';
+import type { CompanyEnrichmentData } from './types'
+import { logger } from '@/lib/logger/logger';;
 
 const CACHE_TTL_DAYS = 7; // Cache for 7 days
 
@@ -36,7 +37,7 @@ export async function getCachedEnrichment(
     );
     
     if (results.length === 0) {
-      console.log(`[Cache] No cached data for ${domain}`);
+      logger.info('Cache No cached data for domain}', { file: 'cache-service.ts' });
       return null;
     }
     
@@ -49,14 +50,14 @@ export async function getCachedEnrichment(
       : new Date(cached.expiresAt);
     
     if (now > expiresAt) {
-      console.log(`[Cache] Cached data for ${domain} has expired`);
+      logger.info('Cache Cached data for domain} has expired', { file: 'cache-service.ts' });
       return null;
     }
     
-    console.log(`[Cache] HIT for ${domain} - saved a scrape!`);
+    logger.info('Cache HIT for domain} - saved a scrape!', { file: 'cache-service.ts' });
     return cached.data;
   } catch (error) {
-    console.error('[Cache] Error reading cache:', error);
+    logger.error('[Cache] Error reading cache:', error, { file: 'cache-service.ts' });
     return null; // Fail gracefully - just re-scrape
   }
 }
@@ -89,9 +90,9 @@ export async function cacheEnrichment(
       cacheEntry
     );
     
-    console.log(`[Cache] Saved ${domain} to cache (expires in ${ttlDays} days)`);
+    logger.info('Cache Saved domain} to cache (expires in ttlDays} days)', { file: 'cache-service.ts' });
   } catch (error) {
-    console.error('[Cache] Error saving to cache:', error);
+    logger.error('[Cache] Error saving to cache:', error, { file: 'cache-service.ts' });
     // Don't throw - caching failure shouldn't break enrichment
   }
 }
@@ -109,9 +110,9 @@ export async function invalidateCache(
       domain.replace(/[^a-zA-Z0-9-]/g, '-')
     );
     
-    console.log(`[Cache] Invalidated cache for ${domain}`);
+    logger.info('Cache Invalidated cache for domain}', { file: 'cache-service.ts' });
   } catch (error) {
-    console.error('[Cache] Error invalidating cache:', error);
+    logger.error('[Cache] Error invalidating cache:', error, { file: 'cache-service.ts' });
   }
 }
 
@@ -159,7 +160,7 @@ export async function getCacheStats(organizationId: string): Promise<{
       avgAge,
     };
   } catch (error) {
-    console.error('[Cache] Error getting stats:', error);
+    logger.error('[Cache] Error getting stats:', error, { file: 'cache-service.ts' });
     return {
       totalCached: 0,
       hitRate: 0,
@@ -195,10 +196,10 @@ export async function purgeExpiredCache(organizationId: string): Promise<number>
       }
     }
     
-    console.log(`[Cache] Purged ${purgedCount} expired entries`);
+    logger.info('Cache Purged purgedCount} expired entries', { file: 'cache-service.ts' });
     return purgedCount;
   } catch (error) {
-    console.error('[Cache] Error purging expired cache:', error);
+    logger.error('[Cache] Error purging expired cache:', error, { file: 'cache-service.ts' });
     return 0;
   }
 }

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AgentConfigurationPage() {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ export default function AgentConfigurationPage() {
         alert('Please complete onboarding first to configure your AI agent.');
       }
     } catch (error) {
-      console.error('Error loading base model:', error);
+      logger.error('Error loading base model:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -55,7 +56,7 @@ export default function AgentConfigurationPage() {
       
       alert('✅ Configuration saved successfully!\n\nYour Base Model has been updated. Changes will take effect in training and future Golden Masters.');
     } catch (error) {
-      console.error('Error saving configuration:', error);
+      logger.error('Error saving configuration:', error, { file: 'page.tsx' });
       alert('Failed to save configuration. Please try again.');
     } finally {
       setSaving(false);

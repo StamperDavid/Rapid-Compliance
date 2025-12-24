@@ -9,7 +9,8 @@ import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { logger } from '@/lib/logger/logger';;
 
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
@@ -65,7 +66,7 @@ function CRMContent() {
           setConfig(configData);
         }
       } catch (error) {
-        console.error('Failed to load CRM config:', error);
+        logger.error('Failed to load CRM config:', error, { file: 'page.tsx' });
         // Continue with null config (defaults will be used)
       }
     };

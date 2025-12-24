@@ -4,7 +4,8 @@
  */
 
 import type { ChatRequest } from '@/types/ai-models';
-import { sendChatRequest } from '../model-provider';
+import { sendChatRequest } from '../model-provider'
+import { logger } from '@/lib/logger/logger';;
 
 export interface VerificationResult {
   isAccurate: boolean;
@@ -93,7 +94,7 @@ Provide your analysis in JSON format:
       reasoning: 'Unable to parse verification result',
     };
   } catch (error: any) {
-    console.error('[Self-Correction] Verification error:', error);
+    logger.error('[Self-Correction] Verification error:', error, { file: 'self-corrector.ts' });
     
     // Fallback on error
     return {
@@ -180,7 +181,7 @@ Corrected Response:`,
       confidence: 85,
     };
   } catch (error: any) {
-    console.error('[Self-Correction] Correction error:', error);
+    logger.error('[Self-Correction] Correction error:', error, { file: 'self-corrector.ts' });
     
     // Return original if correction fails
     return {

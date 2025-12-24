@@ -18,7 +18,8 @@ import SlackIntegration from '@/components/integrations/SlackIntegration';
 import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
+import { logger } from '@/lib/logger/logger';;
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
@@ -46,7 +47,7 @@ export default function IntegrationsPage() {
           setIntegrations(integrationsData as Record<string, ConnectedIntegration | null>);
         }
       } catch (error) {
-        console.error('Failed to load integrations:', error);
+        logger.error('Failed to load integrations:', error, { file: 'page.tsx' });
       }
     };
     
@@ -77,7 +78,7 @@ export default function IntegrationsPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to save integration:', error);
+      logger.error('Failed to save integration:', error, { file: 'page.tsx' });
     }
   };
 
@@ -100,7 +101,7 @@ export default function IntegrationsPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to disconnect integration:', error);
+      logger.error('Failed to disconnect integration:', error, { file: 'page.tsx' });
     }
   };
 
@@ -125,7 +126,7 @@ export default function IntegrationsPage() {
           false
         );
       } catch (error) {
-        console.error('Failed to update integration:', error);
+        logger.error('Failed to update integration:', error, { file: 'page.tsx' });
       }
     }
   };

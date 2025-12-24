@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 interface SubscriptionData {
   plan: string;
@@ -53,7 +54,7 @@ export default function BillingSettingsPage() {
         setSelectedPlan(org.planId || org.plan || 'starter');
       }
     } catch (error) {
-      console.error('Failed to load billing data:', error);
+      logger.error('Failed to load billing data:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ export default function BillingSettingsPage() {
         throw new Error(data.error || 'Failed to upgrade plan');
       }
     } catch (error: any) {
-      console.error('Upgrade error:', error);
+      logger.error('Upgrade error:', error, { file: 'page.tsx' });
       alert(error.message || 'Failed to upgrade plan. Please try again.');
     } finally {
       setUpgrading(false);
@@ -116,7 +117,7 @@ export default function BillingSettingsPage() {
         throw new Error(data.error || 'Failed to open billing portal');
       }
     } catch (error: any) {
-      console.error('Billing portal error:', error);
+      logger.error('Billing portal error:', error, { file: 'page.tsx' });
       alert('Billing portal is not available. Please contact support.');
     }
   };

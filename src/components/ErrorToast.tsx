@@ -6,7 +6,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast'
+import { logger } from '@/lib/logger/logger';;
 
 export interface APIErrorResponse {
   success: false;
@@ -61,7 +62,7 @@ export function showErrorToast(error: unknown, fallbackMessage = 'An error occur
 
   // Log details for debugging
   if (details) {
-    console.error('[Error Details]', details);
+    logger.error('[Error Details]', details, { file: 'ErrorToast.tsx' });
   }
 }
 

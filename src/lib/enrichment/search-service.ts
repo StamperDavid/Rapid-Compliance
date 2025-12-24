@@ -4,13 +4,14 @@
  * Cost: ~$1 per 1000 searches (vs $500-1000 for Clearbit)
  */
 
-import type { CompanySearchResult } from './types';
+import type { CompanySearchResult } from './types'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Search for a company using multiple strategies
  */
 export async function searchCompany(query: string): Promise<CompanySearchResult[]> {
-  console.log(`[Search Service] Searching for: ${query}`);
+  logger.info('Search Service Searching for: query}', { file: 'search-service.ts' });
   
   try {
     // Try Google search first (most reliable)
@@ -31,7 +32,7 @@ export async function searchCompany(query: string): Promise<CompanySearchResult[
       source: 'domain-guess',
     }];
   } catch (error: any) {
-    console.error('[Search Service] Error:', error.message);
+    logger.error('[Search Service] Error', error, { file: 'search-service.ts' });
     
     // Last resort: guess the domain
     const likelyDomain = guessDomainFromCompanyName(query);
@@ -88,7 +89,7 @@ async function searchWithSerper(query: string, apiKey: string): Promise<CompanyS
     });
     
     if (!response.ok) {
-      console.error('[Serper] API error:', response.status);
+      logger.error('[Serper] API error', new Error('Serper API failed'), { status: response.status, file: 'search-service.ts' });
       return [];
     }
     
@@ -102,7 +103,7 @@ async function searchWithSerper(query: string, apiKey: string): Promise<CompanyS
       source: 'serper',
     }));
   } catch (error: any) {
-    console.error('[Serper] Error:', error.message);
+    logger.error('[Serper] Error', error, { file: 'search-service.ts' });
     return [];
   }
 }
@@ -122,7 +123,7 @@ async function searchWithGoogleCustomSearch(
     const response = await fetch(url);
     
     if (!response.ok) {
-      console.error('[Google Custom Search] API error:', response.status);
+      logger.error('[Google Custom Search] API error', new Error('Google Custom Search failed'), { status: response.status, file: 'search-service.ts' });
       return [];
     }
     
@@ -136,7 +137,7 @@ async function searchWithGoogleCustomSearch(
       source: 'google-custom-search',
     }));
   } catch (error: any) {
-    console.error('[Google Custom Search] Error:', error.message);
+    logger.error('[Google Custom Search] Error', error, { file: 'search-service.ts' });
     return [];
   }
 }
@@ -189,7 +190,7 @@ async function searchGoogleDirect(query: string): Promise<CompanySearchResult[]>
     
     return results;
   } catch (error: any) {
-    console.error('[Google Direct] Error:', error.message);
+    logger.error('[Google Direct] Error', error, { file: 'search-service.ts' });
     return [];
   }
 }
@@ -208,7 +209,7 @@ export async function searchCompanyNews(companyName: string, limit: number = 5):
     const newsApiKey = process.env.NEWS_API_KEY;
     
     if (!newsApiKey) {
-      console.warn('[Search Service] NEWS_API_KEY not configured');
+      logger.warn('[Search Service] NEWS_API_KEY not configured', { file: 'search-service.ts' });
       return [];
     }
     
@@ -230,7 +231,7 @@ export async function searchCompanyNews(companyName: string, limit: number = 5):
       summary: article.description,
     }));
   } catch (error: any) {
-    console.error('[Search Service] News search error:', error.message);
+    logger.error('[Search Service] News search error', error, { file: 'search-service.ts' });
     return [];
   }
 }
@@ -352,4 +353,5 @@ export async function detectTechStack(domain: string): Promise<string[]> {
     return [];
   }
 }
+
 

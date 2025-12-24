@@ -6,7 +6,8 @@
  */
 
 import * as cheerio from 'cheerio';
-import type { ScrapedContent } from './types';
+import type { ScrapedContent } from './types'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Scrape and clean a website
@@ -15,7 +16,7 @@ import type { ScrapedContent } from './types';
  */
 export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
   try {
-    console.log(`[Web Scraper] Scraping: ${url}`);
+    logger.info('Web Scraper Scraping: url}', { file: 'web-scraper.ts' });
     
     // Fetch the website
     const response = await fetch(url, {
@@ -82,7 +83,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
     // This makes it easier for LLMs to process
     const markdownText = convertToMarkdown($content);
     
-    console.log(`[Web Scraper] Successfully scraped ${url} - ${cleanedText.length} chars`);
+    logger.info('Web Scraper Successfully scraped url} - cleanedText.length} chars', { file: 'web-scraper.ts' });
     
     return {
       url,
@@ -93,7 +94,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
       metadata,
     };
   } catch (error: any) {
-    console.error(`[Web Scraper] Error scraping ${url}:`, error.message);
+    logger.error(`[Web Scraper] Error scraping ${url}`, error, { file: 'web-scraper.ts' });
     throw new Error(`Failed to scrape website: ${error.message}`);
   }
 }
@@ -139,7 +140,7 @@ function convertToMarkdown($: cheerio.CheerioAPI): string {
  * Scrape multiple pages in parallel (for deeper research)
  */
 export async function scrapeMultiplePages(urls: string[]): Promise<ScrapedContent[]> {
-  console.log(`[Web Scraper] Scraping ${urls.length} pages in parallel...`);
+  logger.info('Web Scraper Scraping urls.length} pages in parallel...', { file: 'web-scraper.ts' });
   
   const results = await Promise.allSettled(
     urls.map(url => scrapeWebsite(url))
@@ -298,4 +299,5 @@ export async function scrapeCareersPage(baseUrl: string): Promise<{
   
   return { isHiring: false, jobCount: 0, jobs: [] };
 }
+
 

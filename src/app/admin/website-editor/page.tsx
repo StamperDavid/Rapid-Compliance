@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import Link from 'next/link';
+import Link from 'next/link'
+import { logger } from '@/lib/logger/logger';;
 
 // ============================================================================
 // TYPES
@@ -1471,7 +1472,7 @@ const load = async () => {
       setHasChanges(false);
       alert('Published successfully!');
     } catch (e) {
-      console.error('Failed to save:', e);
+      logger.error('Failed to save:', e, { file: 'page.tsx' });
       alert('Failed to save');
     } finally {
       setIsSaving(false);

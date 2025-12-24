@@ -53,7 +53,7 @@ export async function parsePDF(file: File | Buffer): Promise<PDFParseResult> {
       },
     };
   } catch (error: any) {
-    console.error('Error parsing PDF:', error);
+    logger.error('Error parsing PDF:', error, { file: 'pdf-parser.ts' });
     throw new Error(`Failed to parse PDF: ${error.message}`);
   }
 }
@@ -98,12 +98,12 @@ Return JSON format:
         return JSON.parse(jsonMatch[0]);
       }
     } catch (e) {
-      console.warn('Failed to parse JSON from AI response:', e);
+      logger.warn('Failed to parse JSON from AI response', { error: e, file: 'pdf-parser.ts' });
     }
     
     return {};
   } catch (error) {
-    console.error('Error extracting structured data from PDF:', error);
+    logger.error('Error extracting structured data from PDF:', error, { file: 'pdf-parser.ts' });
     return {};
   }
 }

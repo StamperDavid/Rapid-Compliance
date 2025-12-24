@@ -3,7 +3,8 @@
  * Provides consistent error responses across all API routes
  */
 
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger/logger';;
 
 export class APIError extends Error {
   constructor(
@@ -32,7 +33,7 @@ export interface ErrorResponse {
  * Handle API errors and return consistent response
  */
 export function handleAPIError(error: unknown): NextResponse<ErrorResponse> {
-  console.error('[API Error]', error);
+  logger.error('[API Error]', error, { file: 'error-handler.ts' });
 
   // Handle known API errors
   if (error instanceof APIError) {

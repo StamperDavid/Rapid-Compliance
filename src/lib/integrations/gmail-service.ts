@@ -4,7 +4,8 @@
  */
 
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client } from 'google-auth-library'
+import { logger } from '@/lib/logger/logger';;
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -285,7 +286,7 @@ export async function sendEmailViaGmail(options: {
     body: options.body,
   });
 
-  console.log(`[Gmail] Email sent successfully: ${result.id}`);
+  logger.info('Gmail Email sent successfully: result.id}', { file: 'gmail-service.ts' });
 }
 
 /**
@@ -332,14 +333,14 @@ export async function syncEmailsToCRM(
 
         synced++;
       } catch (error) {
-        console.error('[Gmail Sync] Error syncing email:', error);
+        logger.error('[Gmail Sync] Error syncing email:', error, { file: 'gmail-service.ts' });
         errors++;
       }
     }
 
     return { synced, errors };
   } catch (error) {
-    console.error('[Gmail Sync] Error syncing emails:', error);
+    logger.error('[Gmail Sync] Error syncing emails:', error, { file: 'gmail-service.ts' });
     throw error;
   }
 }

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import type { Organization } from '@/types/organization';
+import type { Organization } from '@/types/organization'
+import { logger } from '@/lib/logger/logger';;
 
 // Default settings for organizations missing this data
 const DEFAULT_SETTINGS = {
@@ -68,7 +69,7 @@ export default function EditOrganizationPage() {
         }
         setLoading(false);
       } catch (error) {
-        console.error('Failed to load organization:', error);
+        logger.error('Failed to load organization:', error, { file: 'page.tsx' });
         setLoading(false);
       }
     }
@@ -102,7 +103,7 @@ export default function EditOrganizationPage() {
       setSaving(false);
       router.push(`/admin/organizations/${orgId}`);
     } catch (error) {
-      console.error('Failed to save organization:', error);
+      logger.error('Failed to save organization:', error, { file: 'page.tsx' });
       setSaving(false);
       alert('Failed to save organization. Please try again.');
     }

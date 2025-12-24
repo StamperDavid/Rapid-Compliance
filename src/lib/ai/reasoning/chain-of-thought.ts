@@ -4,7 +4,8 @@
  */
 
 import type { ReasoningStep, ChatRequest, ChatResponse } from '@/types/ai-models';
-import { sendChatRequest } from '../model-provider';
+import { sendChatRequest } from '../model-provider'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Execute chain-of-thought reasoning
@@ -132,7 +133,7 @@ async function executeReasoningStep(params: {
       duration: Date.now() - startTime,
     };
   } catch (error: any) {
-    console.error(`[Chain-of-Thought] Step ${params.step} error:`, error);
+    logger.error('[Chain-of-Thought] Step ${params.step} error:', error, { file: 'chain-of-thought.ts' });
     
     // Return error step with low confidence
     return {

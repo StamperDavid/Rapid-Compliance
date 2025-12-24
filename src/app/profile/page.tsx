@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ export default function ProfilePage() {
     // LEGACY BACKUP (DO NOT USE):   try {
     // LEGACY BACKUP (DO NOT USE):     setTheme(JSON.parse(savedTheme));
     // LEGACY BACKUP (DO NOT USE):   } catch (error) {
-    // LEGACY BACKUP (DO NOT USE):     console.error('Failed to load theme:', error);
+    // LEGACY BACKUP (DO NOT USE):     logger.error('Failed to load theme:', error, { file: 'page.tsx' });
     // LEGACY BACKUP (DO NOT USE):   }
     // LEGACY BACKUP (DO NOT USE): }
   }, []);
@@ -83,7 +84,7 @@ export default function ProfilePage() {
       setSaveMessage('Profile updated successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
-      console.error('Failed to save profile:', error);
+      logger.error('Failed to save profile:', error, { file: 'page.tsx' });
       setSaveMessage('Failed to save profile');
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {

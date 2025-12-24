@@ -5,7 +5,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger/logger';;
 
 export interface CartItem {
   id: string;
@@ -47,7 +48,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
         setCart(data.cart.items || []);
       }
     } catch (error) {
-      console.error('Error loading cart:', error);
+      logger.error('Error loading cart:', error, { file: 'ShoppingCart.tsx' });
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
         await loadCart();
       }
     } catch (error) {
-      console.error('Error updating quantity:', error);
+      logger.error('Error updating quantity:', error, { file: 'ShoppingCart.tsx' });
     }
   };
 
@@ -86,7 +87,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
         await loadCart();
       }
     } catch (error) {
-      console.error('Error removing item:', error);
+      logger.error('Error removing item:', error, { file: 'ShoppingCart.tsx' });
     }
   };
 

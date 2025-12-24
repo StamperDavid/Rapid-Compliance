@@ -4,7 +4,8 @@
  */
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import type { PaymentRequest, PaymentResult } from './payment-service';
+import type { PaymentRequest, PaymentResult } from './payment-service'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Process Authorize.Net payment
@@ -104,7 +105,7 @@ export async function processAuthorizeNetPayment(
       };
     }
   } catch (error: any) {
-    console.error('Authorize.Net payment error:', error);
+    logger.error('Authorize.Net payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
       error: error.message || 'Authorize.Net payment processing failed',
@@ -230,7 +231,7 @@ export async function process2CheckoutPayment(
       };
     }
   } catch (error: any) {
-    console.error('2Checkout payment error:', error);
+    logger.error('2Checkout payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
       error: error.message || '2Checkout payment processing failed',
@@ -334,7 +335,7 @@ export async function processMolliePayment(
       };
     }
   } catch (error: any) {
-    console.error('Mollie payment error:', error);
+    logger.error('Mollie payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
       error: error.message || 'Mollie payment processing failed',

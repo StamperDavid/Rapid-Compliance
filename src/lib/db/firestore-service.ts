@@ -25,7 +25,8 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/config'
+import { logger } from '@/lib/logger/logger';;
 
 // Helper to check if Firestore is available
 function ensureFirestore() {
@@ -70,7 +71,7 @@ export class FirestoreService {
     docId: string
   ): Promise<T | null> {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot get document.');
+      logger.warn('Firestore is not initialized. Cannot get document.', { file: 'firestore-service.ts' });
       return null;
     }
 
@@ -83,7 +84,7 @@ export class FirestoreService {
       }
       return null;
     } catch (error) {
-      console.error(`Error getting document ${docId} from ${collectionPath}:`, error);
+      logger.error('Error getting document ${docId} from ${collectionPath}:', error, { file: 'firestore-service.ts' });
       return null; // Return null instead of throwing to prevent crashes
     }
   }
@@ -97,7 +98,7 @@ export class FirestoreService {
     constraints: QueryConstraint[] = []
   ): Promise<T[]> {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot get documents.');
+      logger.warn('Firestore is not initialized. Cannot get documents.', { file: 'firestore-service.ts' });
       return [];
     }
 
@@ -110,7 +111,7 @@ export class FirestoreService {
         ...doc.data(),
       })) as T[];
     } catch (error) {
-      console.error(`Error getting all documents from ${collectionPath}:`, error);
+      logger.error('Error getting all documents from ${collectionPath}:', error, { file: 'firestore-service.ts' });
       return []; // Return empty array instead of throwing
     }
   }
@@ -129,7 +130,7 @@ export class FirestoreService {
     hasMore: boolean;
   }> {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot get documents.');
+      logger.warn('Firestore is not initialized. Cannot get documents.', { file: 'firestore-service.ts' });
       return { data: [], lastDoc: null, hasMore: false };
     }
 
@@ -165,7 +166,7 @@ export class FirestoreService {
         hasMore,
       };
     } catch (error) {
-      console.error(`Error getting paginated documents from ${collectionPath}:`, error);
+      logger.error('Error getting paginated documents from ${collectionPath}:', error, { file: 'firestore-service.ts' });
       return { data: [], lastDoc: null, hasMore: false };
     }
   }
@@ -190,7 +191,7 @@ export class FirestoreService {
       };
       await setDoc(docRef, dataWithTimestamps, { merge });
     } catch (error) {
-      console.error(`Error setting document ${docId} in ${collectionPath}:`, error);
+      logger.error('Error setting document ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -212,7 +213,7 @@ export class FirestoreService {
         updatedAt: serverTimestamp(),
       } as any);
     } catch (error) {
-      console.error(`Error updating document ${docId} in ${collectionPath}:`, error);
+      logger.error('Error updating document ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -227,7 +228,7 @@ export class FirestoreService {
       const docRef = doc(firestoreDb, collectionPath, docId);
       await deleteDoc(docRef);
     } catch (error) {
-      console.error(`Error deleting document ${docId} from ${collectionPath}:`, error);
+      logger.error('Error deleting document ${docId} from ${collectionPath}:', error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -241,7 +242,7 @@ export class FirestoreService {
     callback: (data: T | null) => void
   ): () => void {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot subscribe to document.');
+      logger.warn('Firestore is not initialized. Cannot subscribe to document.', { file: 'firestore-service.ts' });
       callback(null);
       return () => {}; // Return no-op unsubscribe
     }
@@ -258,7 +259,7 @@ export class FirestoreService {
         }
       },
       (error) => {
-        console.error(`Error in subscription for ${docId} in ${collectionPath}:`, error);
+        logger.error('Error in subscription for ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
         callback(null);
       }
     );
@@ -273,7 +274,7 @@ export class FirestoreService {
     callback: (data: T[]) => void
   ): () => void {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot subscribe to collection.');
+      logger.warn('Firestore is not initialized. Cannot subscribe to collection.', { file: 'firestore-service.ts' });
       callback([]);
       return () => {}; // Return no-op unsubscribe
     }
@@ -290,7 +291,7 @@ export class FirestoreService {
         callback(data);
       },
       (error) => {
-        console.error(`Error in collection subscription for ${collectionPath}:`, error);
+        logger.error('Error in collection subscription for ${collectionPath}:', error, { file: 'firestore-service.ts' });
         callback([]);
       }
     );

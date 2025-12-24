@@ -2,7 +2,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'
+import { logger } from '@/lib/logger/logger';;
 
 // Move components OUTSIDE to prevent re-creation on every render
 function TextInputField({ label, field, placeholder, required, formData, updateField }: any) {
@@ -287,7 +288,7 @@ export default function OnboardingWizard() {
         throw new Error(result.error || 'Failed to process onboarding');
       }
     } catch (error: any) {
-      console.error('Failed to complete onboarding:', error);
+      logger.error('Failed to complete onboarding:', error, { file: 'page.tsx' });
       setIsAnalyzing(false);
       alert(`❌ Error: ${error.message || 'Failed to complete onboarding. Please try again.'}`);
     }

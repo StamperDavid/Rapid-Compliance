@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import Tooltip from '@/components/Tooltip';
-import type { Organization } from '@/types/organization';
+import type { Organization } from '@/types/organization'
+import { logger } from '@/lib/logger/logger';;
 
 export default function OrganizationsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -19,14 +20,14 @@ export default function OrganizationsPage() {
     async function loadOrganizations() {
       try {
         setLoading(true);
-        console.log('🔍 Loading organizations...');
+        logger.info('🔍 Loading organizations...', { file: 'page.tsx' });
         const { auth } = await import('@/lib/firebase/config');
         
         const currentUser = auth.currentUser;
         let orgs: any[] = [];
         
         if (!currentUser) {
-          console.warn('🔍 No authenticated user');
+          logger.warn('🔍 No authenticated user', { file: 'page.tsx' });
           setAuthError('NOT_LOGGED_IN');
           setLoading(false);
           return;
@@ -42,15 +43,15 @@ export default function OrganizationsPage() {
         if (response.ok) {
           const data = await response.json();
           orgs = data.organizations || [];
-          console.log('🔍 Organizations loaded via API:', orgs.length);
+          logger.info('🔍 Organizations loaded via API', { count: orgs.length, file: 'page.tsx' });
         } else if (response.status === 403) {
-          console.error('🔍 Not authorized as super_admin');
+          logger.error('🔍 Not authorized as super_admin', new Error('🔍 Not authorized as super_admin'), { file: 'page.tsx' });
           setAuthError('NOT_SUPER_ADMIN');
           setLoading(false);
           return;
         } else {
           const errorText = await response.text();
-          console.error('🔍 API error:', response.status, errorText);
+          logger.error('🔍 API error', new Error(errorText), { status: response.status, file: 'page.tsx' });
         }
         
         // Convert to Organization type
@@ -73,7 +74,7 @@ export default function OrganizationsPage() {
         setOrganizations(organizations);
         setLoading(false);
       } catch (error) {
-        console.error('Failed to load organizations:', error);
+        logger.error('Failed to load organizations:', error, { file: 'page.tsx' });
         setOrganizations([]);
         setLoading(false);
       }

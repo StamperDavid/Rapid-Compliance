@@ -6,7 +6,8 @@ import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
+import { logger } from '@/lib/logger/logger';;
 
 export default function OrganizationSettingsPage() {
   const { user } = useAuth();
@@ -66,7 +67,7 @@ export default function OrganizationSettingsPage() {
           }));
         }
       } catch (error) {
-        console.error('Failed to load organization data:', error);
+        logger.error('Failed to load organization data:', error, { file: 'page.tsx' });
       }
     };
     
@@ -94,7 +95,7 @@ export default function OrganizationSettingsPage() {
       
       alert('Organization settings saved successfully!');
     } catch (error) {
-      console.error('Failed to save organization settings:', error);
+      logger.error('Failed to save organization settings:', error, { file: 'page.tsx' });
       alert('Failed to save settings');
     } finally {
       setSaving(false);

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 interface APIKey {
   service: string;
@@ -35,7 +36,7 @@ export default function APIKeysPage() {
         setKeys(data.keys || {});
       }
     } catch (error) {
-      console.error('Failed to load API keys:', error);
+      logger.error('Failed to load API keys:', error, { file: 'page.tsx' });
     }
   };
 

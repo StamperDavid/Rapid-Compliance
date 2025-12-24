@@ -4,7 +4,8 @@
  */
 
 import type { ModelName } from '@/types/ai-models';
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface OpenRouterConfig {
   apiKey?: string;
@@ -80,7 +81,7 @@ export class OpenRouterProvider {
         provider: 'openrouter',
       };
     } catch (error: any) {
-      console.error('[OpenRouterProvider] Error:', error);
+      logger.error('[OpenRouterProvider] Error:', error, { file: 'openrouter-provider.ts' });
       throw error;
     }
   }
@@ -137,7 +138,7 @@ export class OpenRouterProvider {
       const data = await response.json();
       return data.data; // Array of available models
     } catch (error: any) {
-      console.error('[OpenRouterProvider] Error fetching models:', error);
+      logger.error('[OpenRouterProvider] Error fetching models:', error, { file: 'openrouter-provider.ts' });
       throw error;
     }
   }

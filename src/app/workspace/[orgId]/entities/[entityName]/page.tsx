@@ -6,7 +6,8 @@ import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useRecords } from '@/hooks/useRecords';
-import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas';
+import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
+import { logger } from '@/lib/logger/logger';;
 
 interface EntityRecord {
   id: string;
@@ -158,7 +159,7 @@ export default function EntityTablePage() {
       setIsAdding(false);
       setFormData(getDefaultFormData());
     } catch (err) {
-      console.error('Error creating record:', err);
+      logger.error('Error creating record:', err, { file: 'page.tsx' });
       alert('Failed to create record.');
     }
   };
@@ -181,7 +182,7 @@ export default function EntityTablePage() {
       setEditingId(null);
       setFormData(getDefaultFormData());
     } catch (err) {
-      console.error('Error updating record:', err);
+      logger.error('Error updating record:', err, { file: 'page.tsx' });
       alert('Failed to update record.');
     }
   };
@@ -191,7 +192,7 @@ export default function EntityTablePage() {
       try {
         await deleteRecord(id);
       } catch (err) {
-        console.error('Error deleting record:', err);
+        logger.error('Error deleting record:', err, { file: 'page.tsx' });
         alert('Failed to delete record.');
       }
     }

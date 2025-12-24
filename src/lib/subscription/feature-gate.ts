@@ -9,7 +9,8 @@ import {
   PLAN_LIMITS,
   PLAN_PRICING 
 } from '@/types/subscription';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export class FeatureGate {
   /**
@@ -36,7 +37,7 @@ export class FeatureGate {
       }
       return (featureConfig as any)?.enabled === true;
     } catch (error) {
-      console.error('[FeatureGate] Error checking feature access:', error);
+      logger.error('[FeatureGate] Error checking feature access:', error, { file: 'feature-gate.ts' });
       return false;
     }
   }
@@ -107,7 +108,7 @@ export class FeatureGate {
       
       return { allowed, remaining, limit, used };
     } catch (error) {
-      console.error('[FeatureGate] Error checking usage limit:', error);
+      logger.error('[FeatureGate] Error checking usage limit:', error, { file: 'feature-gate.ts' });
       return { allowed: false, remaining: 0, limit: 0, used: 0 };
     }
   }
@@ -155,7 +156,7 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
     } catch (error) {
-      console.error('[FeatureGate] Error incrementing usage:', error);
+      logger.error('[FeatureGate] Error incrementing usage:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -215,9 +216,9 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Reset monthly limits for org: ${orgId}`);
+      logger.info('FeatureGate Reset monthly limits for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      console.error('[FeatureGate] Error resetting monthly limits:', error);
+      logger.error('[FeatureGate] Error resetting monthly limits:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -239,7 +240,7 @@ export class FeatureGate {
       
       return sub as OrganizationSubscription;
     } catch (error) {
-      console.error('[FeatureGate] Error getting subscription:', error);
+      logger.error('[FeatureGate] Error getting subscription:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -259,7 +260,7 @@ export class FeatureGate {
         false
       );
     } catch (error) {
-      console.error('[FeatureGate] Error saving subscription:', error);
+      logger.error('[FeatureGate] Error saving subscription:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -338,7 +339,7 @@ export class FeatureGate {
     
     await this.saveSubscription(orgId, subscription);
     
-    console.log(`[FeatureGate] Created default ${plan} subscription for org: ${orgId}`);
+    logger.info('FeatureGate Created default plan} subscription for org: orgId}', { file: 'feature-gate.ts' });
     
     return subscription;
   }
@@ -380,11 +381,11 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Updated subscription from ${oldPlan} to ${newPlan} for org: ${orgId}`);
+      logger.info('FeatureGate Updated subscription from oldPlan} to newPlan} for org: orgId}', { file: 'feature-gate.ts' });
       
       return subscription;
     } catch (error) {
-      console.error('[FeatureGate] Error updating plan:', error);
+      logger.error('[FeatureGate] Error updating plan:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -419,9 +420,9 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Toggled ${feature} to ${enabled} for org: ${orgId}`);
+      logger.info('FeatureGate Toggled feature} to enabled} for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      console.error('[FeatureGate] Error toggling feature:', error);
+      logger.error('[FeatureGate] Error toggling feature:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -466,9 +467,9 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Added add-on ${addOnId} for org: ${orgId}`);
+      logger.info('FeatureGate Added add-on addOnId} for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      console.error('[FeatureGate] Error adding add-on:', error);
+      logger.error('[FeatureGate] Error adding add-on:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }

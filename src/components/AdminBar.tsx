@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
-import { useParams } from 'next/navigation';
+import { useParams } from 'next/navigation'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AdminBar() {
   const { user, loading } = useAuth();
@@ -24,7 +25,7 @@ export default function AdminBar() {
       try {
         setTheme(JSON.parse(savedTheme));
       } catch (error) {
-        console.error('Failed to load theme:', error);
+        logger.error('Failed to load theme:', error, { file: 'AdminBar.tsx' });
       }
     }
   }, []);
@@ -174,7 +175,7 @@ export default function AdminBar() {
                           await signOut(auth);
                         }
                       } catch (error) {
-                        console.error('Error signing out:', error);
+                        logger.error('Error signing out:', error, { file: 'AdminBar.tsx' });
                       }
                       window.location.href = '/';
                     }}

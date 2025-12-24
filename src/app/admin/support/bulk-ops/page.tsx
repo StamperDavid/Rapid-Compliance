@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import type { BulkOperation } from '@/types/admin';
+import type { BulkOperation } from '@/types/admin'
+import { logger } from '@/lib/logger/logger';;
 
 export default function BulkOperationsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -75,7 +76,7 @@ export default function BulkOperationsPage() {
         ));
       }, 2000);
     } catch (error) {
-      console.error('Bulk operation failed:', error);
+      logger.error('Bulk operation failed:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

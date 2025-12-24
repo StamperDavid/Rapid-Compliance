@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 export default function RevenueAnalyticsPage() {
   const params = useParams();
@@ -28,7 +29,7 @@ export default function RevenueAnalyticsPage() {
         setAnalytics(data.analytics);
       }
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      logger.error('Failed to load analytics:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

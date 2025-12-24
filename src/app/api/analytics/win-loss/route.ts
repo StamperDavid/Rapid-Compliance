@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
       route: '/api/analytics/win-loss',
       orgId,
       period,
-      wonDeals: analytics.wonDeals,
-      lostDeals: analytics.lostDeals,
+      won: analytics.won,
+      lost: analytics.lost,
     });
 
     return NextResponse.json(analytics);

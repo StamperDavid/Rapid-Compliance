@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function AdminLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      console.log('✅ Firebase Auth successful:', user.email);
+      logger.info('✅ Firebase Auth successful', { email: user.email, file: 'page.tsx' });
       
       // Verify user is a super_admin by checking their Firestore document
       const token = await user.getIdToken();
@@ -113,7 +114,7 @@ export default function AdminLoginPage() {
       router.push('/admin');
       
     } catch (err: any) {
-      console.error('Login error:', err);
+      logger.error('Login error:', err, { file: 'page.tsx' });
       
       // Map Firebase error codes to user-friendly messages
       const errorMessages: Record<string, string> = {

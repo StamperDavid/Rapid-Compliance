@@ -4,14 +4,15 @@
  * NO paid APIs - all free tier or public data
  */
 
-import type { CompanyEnrichmentData } from './types';
+import type { CompanyEnrichmentData } from './types'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Get company data from WHOIS (free)
  */
 export async function getWhoisData(domain: string): Promise<Partial<CompanyEnrichmentData>> {
   try {
-    console.log(`[WHOIS] Looking up ${domain}...`);
+    logger.info('WHOIS Looking up domain}...', { file: 'backup-sources.ts' });
     
     // Use a free WHOIS API
     const response = await fetch(`https://www.whoisxmlapi.com/whoisserver/WhoisService?domainName=${domain}&apiKey=at_00000000000000000000000000000&outputFormat=JSON`);
@@ -33,7 +34,7 @@ export async function getWhoisData(domain: string): Promise<Partial<CompanyEnric
       contactPhone: registrant.telephone,
     };
   } catch (error) {
-    console.error('[WHOIS] Error:', error);
+    logger.error('[WHOIS] Error:', error, { file: 'backup-sources.ts' });
     return {};
   }
 }
@@ -44,7 +45,7 @@ export async function getWhoisData(domain: string): Promise<Partial<CompanyEnric
  */
 export async function getTechStackFromDNS(domain: string): Promise<string[]> {
   try {
-    console.log(`[DNS] Checking tech stack for ${domain}...`);
+    logger.info('DNS Checking tech stack for domain}...', { file: 'backup-sources.ts' });
     
     const techStack: string[] = [];
     
@@ -80,13 +81,13 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
           if (txtString.includes('hubspot')) techStack.push('HubSpot');
         } catch {}
       } catch (error) {
-        console.warn('[DNS] DNS module not available in this environment');
+        logger.warn('[DNS] DNS module not available in this environment', { file: 'backup-sources.ts' });
       }
     }
     
     return [...new Set(techStack)];
   } catch (error) {
-    console.error('[DNS] Error:', error);
+    logger.error('[DNS] Error:', error, { file: 'backup-sources.ts' });
     return [];
   }
 }
@@ -99,11 +100,11 @@ export async function getCrunchbaseData(companyName: string): Promise<Partial<Co
     const apiKey = process.env.CRUNCHBASE_API_KEY;
     
     if (!apiKey) {
-      console.warn('[Crunchbase] API key not configured');
+      logger.warn('[Crunchbase] API key not configured', { file: 'backup-sources.ts' });
       return {};
     }
     
-    console.log(`[Crunchbase] Looking up ${companyName}...`);
+    logger.info('Crunchbase Looking up companyName}...', { file: 'backup-sources.ts' });
     
     const response = await fetch(
       `https://api.crunchbase.com/api/v4/autocompletes?query=${encodeURIComponent(companyName)}&collection_ids=organizations&user_key=${apiKey}`
@@ -144,7 +145,7 @@ export async function getCrunchbaseData(companyName: string): Promise<Partial<Co
       revenue: props.revenue_range,
     };
   } catch (error) {
-    console.error('[Crunchbase] Error:', error);
+    logger.error('[Crunchbase] Error:', error, { file: 'backup-sources.ts' });
     return {};
   }
 }
@@ -157,11 +158,11 @@ export async function getGoogleKnowledgeGraph(companyName: string): Promise<Part
     const apiKey = process.env.GOOGLE_KNOWLEDGE_GRAPH_API_KEY;
     
     if (!apiKey) {
-      console.warn('[Google KG] API key not configured');
+      logger.warn('[Google KG] API key not configured', { file: 'backup-sources.ts' });
       return {};
     }
     
-    console.log(`[Google KG] Looking up ${companyName}...`);
+    logger.info('Google KG Looking up companyName}...', { file: 'backup-sources.ts' });
     
     const response = await fetch(
       `https://kgsearch.googleapis.com/v1/entities:search?query=${encodeURIComponent(companyName)}&types=Organization&key=${apiKey}&limit=1`
@@ -184,7 +185,7 @@ export async function getGoogleKnowledgeGraph(companyName: string): Promise<Part
       website: entity.url,
     };
   } catch (error) {
-    console.error('[Google KG] Error:', error);
+    logger.error('[Google KG] Error:', error, { file: 'backup-sources.ts' });
     return {};
   }
 }
@@ -194,7 +195,7 @@ export async function getGoogleKnowledgeGraph(companyName: string): Promise<Part
  */
 export async function getWikipediaData(companyName: string): Promise<Partial<CompanyEnrichmentData>> {
   try {
-    console.log(`[Wikipedia] Looking up ${companyName}...`);
+    logger.info('Wikipedia Looking up companyName}...', { file: 'backup-sources.ts' });
     
     // Search for page
     const searchResponse = await fetch(
@@ -240,7 +241,7 @@ export async function getWikipediaData(companyName: string): Promise<Partial<Com
       description,
     };
   } catch (error) {
-    console.error('[Wikipedia] Error:', error);
+    logger.error('[Wikipedia] Error:', error, { file: 'backup-sources.ts' });
     return {};
   }
 }
@@ -252,7 +253,7 @@ export async function getAllBackupData(
   companyName: string,
   domain: string
 ): Promise<Partial<CompanyEnrichmentData>> {
-  console.log('[Backup Sources] Fetching from all free sources...');
+  logger.info('[Backup Sources] Fetching from all free sources...', { file: 'backup-sources.ts' });
   
   // Run all in parallel
   const [whois, dns, crunchbase, google, wikipedia] = await Promise.all([
@@ -276,7 +277,7 @@ export async function getAllBackupData(
     merged.techStack = [...(merged.techStack || []), ...dns];
   }
   
-  console.log('[Backup Sources] Merged data from backup sources');
+  logger.info('[Backup Sources] Merged data from backup sources', { file: 'backup-sources.ts' });
   
   return merged;
 }

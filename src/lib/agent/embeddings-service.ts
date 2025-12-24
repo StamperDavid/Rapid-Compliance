@@ -62,7 +62,7 @@ export async function generateEmbedding(
     if (!response.ok) {
       // Fallback: Use Gemini to generate a text representation for embedding
       // In production, use proper Vertex AI Embeddings API
-      console.warn('Embedding API not available, using fallback');
+      logger.warn('Embedding API not available, using fallback', { file: 'embeddings-service.ts' });
       return generateEmbeddingFallback(text);
     }
     
@@ -77,7 +77,7 @@ export async function generateEmbedding(
       model: 'text-embedding-004',
     };
   } catch (error: any) {
-    console.error('Error generating embedding:', error);
+    logger.error('Error generating embedding:', error, { file: 'embeddings-service.ts' });
     // Fallback to simple hash-based embedding for now
     return generateEmbeddingFallback(text);
   }

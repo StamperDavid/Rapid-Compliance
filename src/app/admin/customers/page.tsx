@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'
+import { logger } from '@/lib/logger/logger';;
 
 export default function CustomersAdminPage() {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export default function CustomersAdminPage() {
       const customersData = await getAllCustomers();
       setCustomers(customersData);
     } catch (error) {
-      console.error('Failed to load customers:', error);
+      logger.error('Failed to load customers:', error, { file: 'page.tsx' });
     } finally {
       setIsLoading(false);
     }

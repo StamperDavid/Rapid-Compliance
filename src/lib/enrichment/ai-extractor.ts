@@ -4,7 +4,8 @@
  * Layer 3: Schema-First Extraction
  */
 
-import type { CompanyEnrichmentData, ScrapedContent } from './types';
+import type { CompanyEnrichmentData, ScrapedContent } from './types'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Extract structured company data from scraped content using AI
@@ -14,14 +15,14 @@ export async function extractCompanyData(
   scrapedContent: ScrapedContent,
   companyName: string
 ): Promise<Partial<CompanyEnrichmentData>> {
-  console.log(`[AI Extractor] Extracting data for: ${companyName}`);
+  logger.info('AI Extractor Extracting data for: companyName}', { file: 'ai-extractor.ts' });
   
   try {
     // Get OpenAI API key
     const apiKey = process.env.OPENAI_API_KEY;
     
     if (!apiKey) {
-      console.warn('[AI Extractor] OPENAI_API_KEY not configured, using fallback extraction');
+      logger.warn('[AI Extractor] OPENAI_API_KEY not configured, using fallback extraction', { file: 'ai-extractor.ts' });
       return fallbackExtraction(scrapedContent, companyName);
     }
     
@@ -105,14 +106,14 @@ export async function extractCompanyData(
     
     if (!response.ok) {
       const error = await response.text();
-      console.error('[AI Extractor] OpenAI API error:', error);
+      logger.error('[AI Extractor] OpenAI API error:', error, { file: 'ai-extractor.ts' });
       return fallbackExtraction(scrapedContent, companyName);
     }
     
     const data = await response.json();
     const extracted = JSON.parse(data.choices[0].message.content);
     
-    console.log('[AI Extractor] Successfully extracted data');
+    logger.info('[AI Extractor] Successfully extracted data', { file: 'ai-extractor.ts' });
     
     return {
       name: extracted.name || companyName,
@@ -129,7 +130,7 @@ export async function extractCompanyData(
       contactPhone: extracted.contactPhone,
     };
   } catch (error: any) {
-    console.error('[AI Extractor] Error:', error.message);
+    logger.error('[AI Extractor] Error', error, { file: 'ai-extractor.ts' });
     return fallbackExtraction(scrapedContent, companyName);
   }
 }
@@ -274,4 +275,5 @@ export function calculateConfidence(data: Partial<CompanyEnrichmentData>): numbe
   
   return Math.min(100, score);
 }
+
 

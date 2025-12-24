@@ -12,7 +12,8 @@ import type {
   AIFunction,
 } from '@/types/ai-models';
 import { MODEL_CAPABILITIES } from '@/types/ai-models';
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export class OpenAIProvider implements ModelProvider {
   provider = 'openai' as const;
@@ -24,7 +25,7 @@ export class OpenAIProvider implements ModelProvider {
     this.organizationId = organizationId;
     this.apiKey = process.env.OPENAI_API_KEY || ''; // Fallback to env
     if (!this.apiKey) {
-      console.warn('[OpenAI] API key not configured in env, will attempt to load from database');
+      logger.warn('[OpenAI] API key not configured in env, will attempt to load from database', { file: 'openai-provider.ts' });
     }
   }
   
@@ -44,7 +45,7 @@ export class OpenAIProvider implements ModelProvider {
       
       return this.apiKey;
     } catch (error) {
-      console.error('[OpenAI] Failed to load API key:', error);
+      logger.error('[OpenAI] Failed to load API key:', error, { file: 'openai-provider.ts' });
       throw new Error('OpenAI API key not configured');
     }
   }
@@ -113,7 +114,7 @@ export class OpenAIProvider implements ModelProvider {
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
-      console.error('[OpenAI] Chat error:', error);
+      logger.error('[OpenAI] Chat error:', error, { file: 'openai-provider.ts' });
       throw error;
     }
   }
@@ -179,7 +180,7 @@ export class OpenAIProvider implements ModelProvider {
         }
       }
     } catch (error: any) {
-      console.error('[OpenAI] Stream error:', error);
+      logger.error('[OpenAI] Stream error:', error, { file: 'openai-provider.ts' });
       throw error;
     }
   }

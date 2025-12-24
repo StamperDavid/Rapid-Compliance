@@ -62,7 +62,7 @@ class AnalyticsCache {
       return null;
     }
 
-    console.log(`[Cache] HIT: ${namespace}:${key}`);
+    logger.info('Cache HIT: namespace}:key}', { file: 'analytics-cache.ts' });
     return entry.data as T;
   }
 
@@ -85,7 +85,7 @@ class AnalyticsCache {
       ttl,
     });
 
-    console.log(`[Cache] SET: ${namespace}:${key} (TTL: ${ttl}ms)`);
+    logger.info('Cache SET: namespace}:key} (TTL: ttl}ms)', { file: 'analytics-cache.ts' });
   }
 
   /**
@@ -96,7 +96,7 @@ class AnalyticsCache {
     const deleted = this.cache.delete(cacheKey);
     
     if (deleted) {
-      console.log(`[Cache] INVALIDATED: ${namespace}:${key}`);
+      logger.info('Cache INVALIDATED: namespace}:key}', { file: 'analytics-cache.ts' });
     }
   }
 
@@ -113,7 +113,7 @@ class AnalyticsCache {
       }
     }
 
-    console.log(`[Cache] INVALIDATED ${count} entries for namespace: ${namespace}`);
+    logger.info('Cache INVALIDATED count} entries for namespace: namespace}', { file: 'analytics-cache.ts' });
   }
 
   /**
@@ -130,7 +130,7 @@ class AnalyticsCache {
     }
 
     if (cleaned > 0) {
-      console.log(`[Cache] CLEANED UP ${cleaned} expired entries`);
+      logger.info('Cache CLEANED UP cleaned} expired entries', { file: 'analytics-cache.ts' });
     }
 
     return cleaned;
@@ -170,7 +170,7 @@ class AnalyticsCache {
   clear(): void {
     const size = this.cache.size;
     this.cache.clear();
-    console.log(`[Cache] CLEARED all ${size} entries`);
+    logger.info('Cache CLEARED all size} entries', { file: 'analytics-cache.ts' });
   }
 }
 
@@ -202,7 +202,7 @@ export async function withCache<T>(
   }
 
   // Cache miss - fetch data
-  console.log(`[Cache] MISS: ${organizationId}:${queryType} - fetching...`);
+  logger.info('Cache MISS: organizationId}:queryType} - fetching...', { file: 'analytics-cache.ts' });
   const data = await fetchFn();
 
   // Store in cache
@@ -244,7 +244,7 @@ if (typeof setInterval !== 'undefined') {
     const cleaned = analyticsCache.cleanupExpired();
     if (cleaned > 0) {
       const stats = analyticsCache.getStats();
-      console.log(`[Cache] Automatic cleanup: ${cleaned} expired, ${stats.validEntries} active`);
+      logger.info('Cache Automatic cleanup: cleaned} expired, stats.validEntries} active', { file: 'analytics-cache.ts' });
     }
   }, 10 * 60 * 1000); // Every 10 minutes
 }

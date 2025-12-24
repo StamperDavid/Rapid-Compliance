@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import Link from 'next/link'
+import { logger } from '@/lib/logger/logger';;
 
 interface ThemeConfig {
   // Colors
@@ -132,12 +133,12 @@ export default function ThemeEditorPage() {
                 setFaviconPreview(parsed.branding.favicon);
               }
             } catch (error) {
-              console.error('Failed to load theme:', error);
+              logger.error('Failed to load theme:', error, { file: 'page.tsx' });
             }
           }
         }
       } catch (error) {
-        console.error('Failed to load theme from Firestore:', error);
+        logger.error('Failed to load theme from Firestore:', error, { file: 'page.tsx' });
         // Fallback to localStorage
         const savedTheme = localStorage.getItem('appTheme');
         if (savedTheme) {
@@ -145,7 +146,7 @@ export default function ThemeEditorPage() {
             const parsed = JSON.parse(savedTheme);
             setTheme(parsed);
           } catch (e) {
-            console.error('Failed to load theme:', e);
+            logger.error('Failed to load theme:', e, { file: 'page.tsx' });
           }
         }
       }

@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/config';
+import { auth, db } from '@/lib/firebase/config'
+import { logger } from '@/lib/logger/logger';;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function LoginPage() {
       );
 
       const user = userCredential.user;
-      console.log('User signed in:', user.uid);
+      logger.info('User signed in', { uid: user.uid, file: 'page.tsx' });
 
       // Get user document to find their organization
       const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -53,7 +54,7 @@ export default function LoginPage() {
       // Redirect to workspace dashboard
       router.push(`/workspace/${orgId}/dashboard`);
     } catch (error: any) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error, { file: 'page.tsx' });
 
       // User-friendly error messages
       const errorMessages: Record<string, string> = {

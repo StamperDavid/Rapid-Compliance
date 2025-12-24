@@ -5,7 +5,8 @@
  * Playwright is FREE and open-source - no token costs!
  */
 
-import type { ScrapedContent } from './types';
+import type { ScrapedContent } from './types'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Scrape a website using Playwright (handles JavaScript)
@@ -13,7 +14,7 @@ import type { ScrapedContent } from './types';
  */
 export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
   try {
-    console.log(`[Browser Scraper] Launching browser for: ${url}`);
+    logger.info('Browser Scraper Launching browser for: url}', { file: 'browser-scraper.ts' });
     
     // Dynamic import to avoid loading Playwright in edge runtime
     let playwright;
@@ -105,7 +106,7 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       
       await browser.close();
       
-      console.log(`[Browser Scraper] Successfully scraped ${url} - ${cleanedText.length} chars`);
+      logger.info('Browser Scraper Successfully scraped url} - cleanedText.length} chars', { file: 'browser-scraper.ts' });
       
       return {
         url,
@@ -120,7 +121,7 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       throw error;
     }
   } catch (error: any) {
-    console.error(`[Browser Scraper] Error scraping ${url}:`, error.message);
+    logger.error(`[Browser Scraper] Error scraping ${url}`, error, { file: 'browser-scraper.ts' });
     throw new Error(`Browser scraping failed: ${error.message}`);
   }
 }
@@ -137,16 +138,16 @@ export async function smartScrape(url: string): Promise<ScrapedContent> {
     
     // If we got meaningful content, return it
     if (result.cleanedText.length > 200) {
-      console.log(`[Smart Scraper] Static scrape successful for ${url}`);
+      logger.info('Smart Scraper Static scrape successful for url}', { file: 'browser-scraper.ts' });
       return result;
     }
     
     // Otherwise, fall back to browser (for JavaScript sites)
-    console.log(`[Smart Scraper] Static scrape insufficient, using browser for ${url}`);
+    logger.info('Smart Scraper Static scrape insufficient, using browser for url}', { file: 'browser-scraper.ts' });
     return await scrapeWithBrowser(url);
   } catch (error) {
     // If simple fetch fails, try browser
-    console.log(`[Smart Scraper] Static scrape failed, using browser for ${url}`);
+    logger.info('Smart Scraper Static scrape failed, using browser for url}', { file: 'browser-scraper.ts' });
     return await scrapeWithBrowser(url);
   }
 }
@@ -165,14 +166,18 @@ export async function scrapeWithRetry(
       // Add delay between retries (exponential backoff)
       if (attempt > 0) {
         const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-        console.log(`[Scraper] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms delay...`);
+        logger.info('Scraper Retry attempt attempt + 1}/maxRetries} after delay}ms delay...', { file: 'browser-scraper.ts' });
         await sleep(delay);
       }
       
       return await smartScrape(url);
     } catch (error: any) {
       lastError = error;
-      console.error(`[Scraper] Attempt ${attempt + 1}/${maxRetries} failed:`, error.message);
+      logger.error(`[Scraper] Attempt ${attempt + 1}/${maxRetries} failed`, error, { 
+        attempt: attempt + 1, 
+        maxRetries,
+        file: 'browser-scraper.ts' 
+      });
       
       // Don't retry on certain errors
       if (error.message.includes('ERR_NAME_NOT_RESOLVED') || 
@@ -220,7 +225,7 @@ class RateLimiter {
     
     if (timeSinceLastRequest < this.minDelay) {
       const delay = this.minDelay - timeSinceLastRequest;
-      console.log(`[Rate Limiter] Throttling request to ${domain} for ${delay}ms`);
+      logger.info('Rate Limiter Throttling request to domain} for delay}ms', { file: 'browser-scraper.ts' });
       await sleep(delay);
     }
     
@@ -229,4 +234,5 @@ class RateLimiter {
 }
 
 export const rateLimiter = new RateLimiter();
+
 

@@ -6,7 +6,8 @@ import { useParams } from 'next/navigation';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { logger } from '@/lib/logger/logger';;
 
 interface DashboardStats {
   totalLeads: number;
@@ -159,7 +160,7 @@ export default function WorkspaceDashboardPage() {
           });
         } catch (e) {
           // Tasks collection might not exist yet
-          console.log('No tasks found');
+          logger.info('No tasks found', { file: 'page.tsx' });
         }
         setTasks(tasksData);
 
@@ -189,7 +190,7 @@ export default function WorkspaceDashboardPage() {
             });
           });
         } catch (e) {
-          console.log('Could not fetch recent deals');
+          logger.info('Could not fetch recent deals', { file: 'page.tsx' });
         }
 
         // Get recent leads
@@ -215,7 +216,7 @@ export default function WorkspaceDashboardPage() {
             });
           });
         } catch (e) {
-          console.log('Could not fetch recent leads');
+          logger.info('Could not fetch recent leads', { file: 'page.tsx' });
         }
 
         // Sort by time (most recent first)
@@ -236,7 +237,7 @@ export default function WorkspaceDashboardPage() {
           lostDeals,
         });
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        logger.error('Error fetching dashboard data:', error, { file: 'page.tsx' });
       } finally {
         setLoading(false);
       }

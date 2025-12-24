@@ -4,7 +4,8 @@
  */
 
 import type { SchemaField } from '@/types/schema';
-import type { EntityRecord } from '@/types/entity';
+import type { EntityRecord } from '@/types/entity'
+import { logger } from '@/lib/logger/logger';;
 
 export class FormulaEngine {
   /**
@@ -24,7 +25,7 @@ export class FormulaEngine {
       
       return result;
     } catch (error) {
-      console.error('Formula evaluation error:', error);
+      logger.error('Formula evaluation error:', error, { file: 'formula-engine.ts' });
       return null;
     }
   }

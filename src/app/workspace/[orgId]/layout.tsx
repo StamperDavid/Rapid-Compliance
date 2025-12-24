@@ -24,10 +24,69 @@ export default function WorkspaceLayout({
   const brandName = theme?.branding?.companyName || 'AI CRM';
   const logoUrl = theme?.branding?.logoUrl;
 
-  // Minimal navigation - just core CRM + Conversations
-  const navItems = [
-    { href: `/workspace/${orgId}/dashboard`, icon: '📊', label: 'Dashboard' },
-    { href: `/workspace/${orgId}/conversations`, icon: '💬', label: 'Conversations' },
+  // Complete navigation
+  const navSections = [
+    {
+      title: 'Main',
+      items: [
+        { href: `/workspace/${orgId}/dashboard`, icon: '📊', label: 'Dashboard' },
+        { href: `/workspace/${orgId}/conversations`, icon: '💬', label: 'Conversations' },
+      ]
+    },
+    {
+      title: 'CRM',
+      items: [
+        { href: `/workspace/${orgId}/leads`, icon: '🎯', label: 'Leads' },
+        { href: `/workspace/${orgId}/deals`, icon: '💼', label: 'Deals' },
+        { href: `/workspace/${orgId}/contacts`, icon: '👤', label: 'Contacts' },
+      ]
+    },
+    {
+      title: 'Outbound',
+      items: [
+        { href: `/workspace/${orgId}/outbound/sequences`, icon: '📧', label: 'Sequences' },
+        { href: `/workspace/${orgId}/email/campaigns`, icon: '📮', label: 'Campaigns' },
+        { href: `/workspace/${orgId}/nurture`, icon: '🌱', label: 'Nurture' },
+        { href: `/workspace/${orgId}/calls`, icon: '📞', label: 'Calls' },
+      ]
+    },
+    {
+      title: 'Automation',
+      items: [
+        { href: `/workspace/${orgId}/workflows`, icon: '⚡', label: 'Workflows' },
+        { href: `/workspace/${orgId}/ab-tests`, icon: '🧪', label: 'A/B Tests' },
+      ]
+    },
+    {
+      title: 'AI',
+      items: [
+        { href: `/workspace/${orgId}/settings/ai-agents/training`, icon: '🤖', label: 'Agent Training' },
+        { href: `/workspace/${orgId}/ai/fine-tuning`, icon: '🎓', label: 'Fine-Tuning' },
+        { href: `/workspace/${orgId}/ai/datasets`, icon: '📚', label: 'Datasets' },
+      ]
+    },
+    {
+      title: 'E-Commerce',
+      items: [
+        { href: `/workspace/${orgId}/products`, icon: '📦', label: 'Products' },
+        { href: `/workspace/${orgId}/analytics/ecommerce`, icon: '💰', label: 'Orders' },
+      ]
+    },
+    {
+      title: 'Analytics',
+      items: [
+        { href: `/workspace/${orgId}/analytics`, icon: '📈', label: 'Overview' },
+        { href: `/workspace/${orgId}/analytics/revenue`, icon: '💵', label: 'Revenue' },
+        { href: `/workspace/${orgId}/analytics/pipeline`, icon: '🔄', label: 'Pipeline' },
+      ]
+    },
+    {
+      title: 'Settings',
+      items: [
+        { href: `/workspace/${orgId}/settings`, icon: '⚙️', label: 'Settings' },
+        { href: `/workspace/${orgId}/integrations`, icon: '🔌', label: 'Integrations' },
+      ]
+    },
   ];
 
   // Check if current path matches
@@ -53,64 +112,44 @@ export default function WorkspaceLayout({
           flexDirection: 'column'
         }}>
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            {/* Main Navigation */}
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  backgroundColor: isActive(item.href) ? '#1a1a1a' : 'transparent',
-                  color: isActive(item.href) ? primaryColor : '#999',
-                  borderLeft: isActive(item.href) ? `3px solid ${primaryColor}` : '3px solid transparent',
-                  fontSize: '0.875rem',
-                  fontWeight: isActive(item.href) ? '600' : '400',
-                  textDecoration: 'none'
-                }}
-              >
-                <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
-                {sidebarOpen && <span>{item.label}</span>}
-              </Link>
-            ))}
-
-            {/* Divider */}
-            <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '1rem 0' }} />
-
-            {/* CRM Section Label */}
-            <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem' }}>
-              {sidebarOpen && (
-                <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  CRM
-                </span>
-              )}
-            </div>
-
-            {/* CRM Entities */}
-            {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
-              <Link
-                key={key}
-                href={`/workspace/${orgId}/entities/${key}`}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  backgroundColor: pathname?.includes(`/entities/${key}`) ? '#1a1a1a' : 'transparent',
-                  color: pathname?.includes(`/entities/${key}`) ? primaryColor : '#999',
-                  borderLeft: pathname?.includes(`/entities/${key}`) ? `3px solid ${primaryColor}` : '3px solid transparent',
-                  fontSize: '0.875rem',
-                  fontWeight: pathname?.includes(`/entities/${key}`) ? '600' : '400',
-                  textDecoration: 'none'
-                }}
-              >
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
+            {/* Render all sections */}
+            {navSections.map((section, sectionIdx) => (
+              <div key={sectionIdx}>
+                {sectionIdx > 0 && <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '1rem 0' }} />}
+                
+                {/* Section Label */}
+                {sidebarOpen && (
+                  <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem', marginTop: sectionIdx > 0 ? '1rem' : '0' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {section.title}
+                    </span>
+                  </div>
+                )}
+                
+                {/* Section Items */}
+                {section.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    style={{
+                      width: '100%',
+                      padding: '0.875rem 1.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      backgroundColor: isActive(item.href) ? '#1a1a1a' : 'transparent',
+                      color: isActive(item.href) ? primaryColor : '#999',
+                      borderLeft: isActive(item.href) ? `3px solid ${primaryColor}` : '3px solid transparent',
+                      fontSize: '0.875rem',
+                      fontWeight: isActive(item.href) ? '600' : '400',
+                      textDecoration: 'none'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
+                    {sidebarOpen && <span>{item.label}</span>}
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
 
@@ -142,6 +181,7 @@ export default function WorkspaceLayout({
     </div>
   );
 }
+
 
 
 

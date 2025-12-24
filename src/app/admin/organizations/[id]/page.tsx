@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import Tooltip from '@/components/Tooltip';
-import type { Organization, PlanLimits } from '@/types/organization';
+import type { Organization, PlanLimits } from '@/types/organization'
+import { logger } from '@/lib/logger/logger';;
 
 // Default plan limits for organizations missing this data
 const DEFAULT_PLAN_LIMITS: PlanLimits = {
@@ -58,7 +59,7 @@ export default function OrganizationDetailPage() {
         setOrganization(org);
         setLoading(false);
       } catch (error) {
-        console.error('Failed to load organization:', error);
+        logger.error('Failed to load organization:', error, { file: 'page.tsx' });
         setOrganization(null);
         setLoading(false);
       }

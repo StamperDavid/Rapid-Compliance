@@ -5,7 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from './feature-gate';
-import { OrganizationSubscription } from '@/types/subscription';
+import { OrganizationSubscription } from '@/types/subscription'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Require that organization has access to a specific feature
@@ -37,7 +38,7 @@ export async function requireFeature(
     
     return null; // Feature is available, continue
   } catch (error: any) {
-    console.error('[Subscription Middleware] Error checking feature access:', error);
+    logger.error('[Subscription Middleware] Error checking feature access:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify feature access' },
       { status: 500 }
@@ -80,7 +81,7 @@ export async function requireLimit(
     
     return null; // Under limit, continue
   } catch (error: any) {
-    console.error('[Subscription Middleware] Error checking usage limit:', error);
+    logger.error('[Subscription Middleware] Error checking usage limit:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify usage limit' },
       { status: 500 }
@@ -121,7 +122,7 @@ export async function incrementFeatureUsage(
   try {
     await FeatureGate.incrementUsage(orgId, feature, amount);
   } catch (error) {
-    console.error('[Subscription Middleware] Error incrementing usage:', error);
+    logger.error('[Subscription Middleware] Error incrementing usage:', error, { file: 'middleware.ts' });
     // Don't throw - this is a non-critical operation
   }
 }
@@ -255,7 +256,7 @@ export async function withFeatureGate<T>(
       ...result,
     });
   } catch (error: any) {
-    console.error('[Feature Gate] Error in handler:', error);
+    logger.error('[Feature Gate] Error in handler:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: error.message || 'Operation failed' },
       { status: 500 }

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import type { User } from '@/types/user';
+import type { User } from '@/types/user'
+import { logger } from '@/lib/logger/logger';;
 
 export default function UsersPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -20,7 +21,7 @@ export default function UsersPage() {
         const currentUser = auth.currentUser;
         
         if (!currentUser) {
-          console.warn('Not authenticated');
+          logger.warn('Not authenticated', { file: 'page.tsx' });
           setLoading(false);
           return;
         }
@@ -57,12 +58,15 @@ export default function UsersPage() {
           }));
           setUsers(mappedUsers);
         } else {
-          console.error('Failed to fetch users:', response.status);
+          logger.error('Failed to fetch users', new Error('Fetch users failed'), { 
+            status: response.status,
+            file: 'page.tsx' 
+          });
           // Set empty array on error
           setUsers([]);
         }
       } catch (error) {
-        console.error('Error loading users:', error);
+        logger.error('Error loading users:', error, { file: 'page.tsx' });
         setUsers([]);
       } finally {
         setLoading(false);

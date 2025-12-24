@@ -4,7 +4,8 @@
  * Use this for privileged operations in API routes
  */
 
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin'
+import { logger } from '@/lib/logger/logger';;
 import type { 
   QueryConstraint, 
   DocumentData, 
@@ -30,7 +31,7 @@ export class AdminFirestoreService {
         ...doc.data(),
       };
     } catch (error) {
-      console.error(`[Admin Firestore] Error getting document ${collectionPath}/${docId}:`, error);
+      logger.error('[Admin Firestore] Error getting document ${collectionPath}/${docId}:', error, { file: 'admin-firestore-service.ts' });
       throw error;
     }
   }
@@ -72,7 +73,7 @@ export class AdminFirestoreService {
         ...doc.data(),
       }));
     } catch (error) {
-      console.error(`[Admin Firestore] Error getting documents from ${collectionPath}:`, error);
+      logger.error('[Admin Firestore] Error getting documents from ${collectionPath}:', error, { file: 'admin-firestore-service.ts' });
       throw error;
     }
   }
@@ -95,7 +96,7 @@ export class AdminFirestoreService {
         await docRef.set(data);
       }
     } catch (error) {
-      console.error(`[Admin Firestore] Error setting document ${collectionPath}/${docId}:`, error);
+      logger.error('[Admin Firestore] Error setting document ${collectionPath}/${docId}:', error, { file: 'admin-firestore-service.ts' });
       throw error;
     }
   }
@@ -108,7 +109,7 @@ export class AdminFirestoreService {
       const docRef = await adminDb.collection(collectionPath).add(data);
       return docRef.id;
     } catch (error) {
-      console.error(`[Admin Firestore] Error adding document to ${collectionPath}:`, error);
+      logger.error('[Admin Firestore] Error adding document to ${collectionPath}:', error, { file: 'admin-firestore-service.ts' });
       throw error;
     }
   }
@@ -125,7 +126,7 @@ export class AdminFirestoreService {
       const docRef = adminDb.collection(collectionPath).doc(docId);
       await docRef.update(data);
     } catch (error) {
-      console.error(`[Admin Firestore] Error updating document ${collectionPath}/${docId}:`, error);
+      logger.error('[Admin Firestore] Error updating document ${collectionPath}/${docId}:', error, { file: 'admin-firestore-service.ts' });
       throw error;
     }
   }
@@ -138,7 +139,7 @@ export class AdminFirestoreService {
       const docRef = adminDb.collection(collectionPath).doc(docId);
       await docRef.delete();
     } catch (error) {
-      console.error(`[Admin Firestore] Error deleting document ${collectionPath}/${docId}:`, error);
+      logger.error('[Admin Firestore] Error deleting document ${collectionPath}/${docId}:', error, { file: 'admin-firestore-service.ts' });
       throw error;
     }
   }

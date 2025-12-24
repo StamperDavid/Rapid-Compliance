@@ -11,7 +11,8 @@ import { executeStripeFunction } from './payment/stripe';
 import { executeCalendlyFunction } from './scheduling/calendly';
 import { executeShopifyFunction } from './ecommerce/shopify';
 import { executeSalesforceFunction } from './crm/salesforce';
-import { executeHubSpotFunction } from './crm/hubspot';
+import { executeHubSpotFunction } from './crm/hubspot'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Execute a function call from the AI agent
@@ -21,7 +22,7 @@ export async function executeFunctionCall(
 ): Promise<FunctionCallResponse> {
   const startTime = Date.now();
   
-  console.log(`[Function Calling] Executing ${request.functionName} for org ${request.organizationId}`);
+  logger.info('Function Calling Executing request.functionName} for org request.organizationId}', { file: 'function-calling.ts' });
   
   try {
     // Get the integration
@@ -115,7 +116,7 @@ export async function executeFunctionCall(
       timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
-    console.error(`[Function Calling] Error:`, error);
+    logger.error('[Function Calling] Error:', error, { file: 'function-calling.ts' });
     
     // Log the error
     await logIntegrationAction({
@@ -157,7 +158,7 @@ async function getConnectedIntegration(
     
     return integration;
   } catch (error) {
-    console.error('[Function Calling] Error fetching integration:', error);
+    logger.error('[Function Calling] Error fetching integration:', error, { file: 'function-calling.ts' });
     return null;
   }
 }
@@ -180,7 +181,7 @@ async function logIntegrationAction(log: any): Promise<void> {
       false
     );
   } catch (error) {
-    console.error('[Function Calling] Error logging action:', error);
+    logger.error('[Function Calling] Error logging action:', error, { file: 'function-calling.ts' });
   }
 }
 
@@ -271,10 +272,10 @@ export async function getAvailableFunctions(organizationId: string): Promise<any
       }
     }
     
-    console.log(`[Function Calling] ${functions.length} functions available for org ${organizationId}`);
+    logger.info('Function Calling functions.length} functions available for org organizationId}', { file: 'function-calling.ts' });
     return functions;
   } catch (error) {
-    console.error('[Function Calling] Error getting functions:', error);
+    logger.error('[Function Calling] Error getting functions:', error, { file: 'function-calling.ts' });
     // Fallback: return empty array
     return [];
   }

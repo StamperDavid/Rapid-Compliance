@@ -83,7 +83,7 @@ export interface ExtractedEntities {
  * Classify an email reply using AI
  */
 export async function classifyReply(reply: EmailReply): Promise<ReplyClassification> {
-  console.log(`[Reply Handler] Classifying reply from ${reply.from}`);
+  logger.info('Reply Handler Classifying reply from reply.from}', { file: 'reply-handler.ts' });
 
   try {
     // Use AI to classify the reply
@@ -91,7 +91,7 @@ export async function classifyReply(reply: EmailReply): Promise<ReplyClassificat
     
     return classification;
   } catch (error) {
-    console.error('[Reply Handler] Classification failed:', error);
+    logger.error('[Reply Handler] Classification failed:', error, { file: 'reply-handler.ts' });
     
     // Fallback to basic classification
     return fallbackClassification(reply);
@@ -106,14 +106,14 @@ export async function generateReply(
   classification: ReplyClassification,
   context: ProspectContext
 ): Promise<GeneratedReply> {
-  console.log(`[Reply Handler] Generating reply for ${classification.intent} intent`);
+  logger.info('Reply Handler Generating reply for classification.intent} intent', { file: 'reply-handler.ts' });
 
   try {
     const response = await generateWithAI(originalReply, classification, context);
     
     return response;
   } catch (error) {
-    console.error('[Reply Handler] Reply generation failed:', error);
+    logger.error('[Reply Handler] Reply generation failed:', error, { file: 'reply-handler.ts' });
     throw error;
   }
 }
@@ -267,7 +267,7 @@ function parseClassificationResponse(
       reasoning: parsed.reasoning || 'AI classification',
     };
   } catch (error) {
-    console.error('[Reply Handler] Failed to parse AI classification:', error);
+    logger.error('[Reply Handler] Failed to parse AI classification:', error, { file: 'reply-handler.ts' });
     return fallbackClassification(reply);
   }
 }

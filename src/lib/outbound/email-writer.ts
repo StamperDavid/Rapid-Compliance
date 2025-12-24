@@ -3,7 +3,8 @@
  * Generates personalized cold emails using AI and prospect research
  */
 
-import { ProspectData, ProspectResearch, generatePersonalizationTokens } from './prospect-research';
+import { ProspectData, ProspectResearch, generatePersonalizationTokens } from './prospect-research'
+import { logger } from '@/lib/logger/logger';;
 
 export interface EmailGenerationRequest {
   prospect: ProspectData;
@@ -32,7 +33,7 @@ export interface GeneratedEmail {
 export async function generateColdEmail(
   request: EmailGenerationRequest
 ): Promise<GeneratedEmail> {
-  console.log(`[Email Writer] Generating email for ${request.prospect.name} at ${request.prospect.company}`);
+  logger.info('Email Writer Generating email for request.prospect.name} at request.prospect.company}', { file: 'email-writer.ts' });
 
   // Generate personalization tokens
   const tokens = request.research 
@@ -211,7 +212,7 @@ async function generateWithAI(
     
     return response.text.trim();
   } catch (error) {
-    console.error('[Email Writer] AI generation failed:', error);
+    logger.error('[Email Writer] AI generation failed:', error, { file: 'email-writer.ts' });
     // Fallback to template
     return await buildAIDAEmail(request, tokens);
   }

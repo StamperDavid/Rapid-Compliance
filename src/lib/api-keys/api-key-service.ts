@@ -3,7 +3,8 @@
  * Centralized service for managing and accessing API keys
  */
 
-import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '@/types/api-keys';
+import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '@/types/api-keys'
+import { logger } from '@/lib/logger/logger';;
 
 class APIKeyService {
   private static instance: APIKeyService;
@@ -206,7 +207,10 @@ class APIKeyService {
         }
         
         if (platformKeys) {
-          console.log('[API Key Service] Platform keys found:', Object.keys(platformKeys));
+          logger.info('[API Key Service] Platform keys found', { 
+            keys: Object.keys(platformKeys),
+            file: 'api-key-service.ts' 
+          });
           // Convert platform keys format to APIKeysConfig format
           return {
             id: 'keys-platform',
@@ -232,7 +236,7 @@ class APIKeyService {
           } as APIKeysConfig;
         }
       } catch (error) {
-        console.error('[API Key Service] Error fetching platform API keys:', error);
+        logger.error('[API Key Service] Error fetching platform API keys:', error, { file: 'api-key-service.ts' });
       }
     }
 
@@ -256,7 +260,7 @@ class APIKeyService {
         }
       }
     } catch (error) {
-      console.error('Error fetching API keys via admin SDK:', error);
+      logger.error('Error fetching API keys via admin SDK:', error, { file: 'api-key-service.ts' });
     }
 
     try {
@@ -276,7 +280,7 @@ class APIKeyService {
         updatedAt: keysData.updatedAt ? new Date(keysData.updatedAt) : new Date(),
       } as APIKeysConfig;
     } catch (error) {
-      console.error('Error fetching API keys from Firestore:', error);
+      logger.error('Error fetching API keys from Firestore:', error, { file: 'api-key-service.ts' });
       return null;
     }
   }

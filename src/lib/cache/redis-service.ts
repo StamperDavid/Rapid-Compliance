@@ -37,14 +37,14 @@ export class RedisService {
         
         await this.client.connect();
         this.isConnected = true;
-        console.log('[Redis] Connected successfully');
+        logger.info('[Redis] Connected successfully', { file: 'redis-service.ts' });
       } else {
         // Fallback to in-memory cache for development
-        console.warn('[Redis] No REDIS_URL found, using in-memory cache');
+        logger.warn('[Redis] No REDIS_URL found, using in-memory cache', { file: 'redis-service.ts' });
         this.isConnected = false;
       }
     } catch (error) {
-      console.error('[Redis] Connection failed:', error);
+      logger.error('[Redis] Connection failed:', error, { file: 'redis-service.ts' });
       this.isConnected = false;
     }
   }
@@ -75,7 +75,7 @@ export class RedisService {
         return null;
       }
     } catch (error) {
-      console.error('[Cache] Get error:', error);
+      logger.error('[Cache] Get error:', error, { file: 'redis-service.ts' });
       return null;
     }
   }
@@ -102,7 +102,7 @@ export class RedisService {
         }
       }
     } catch (error) {
-      console.error('[Cache] Set error:', error);
+      logger.error('[Cache] Set error:', error, { file: 'redis-service.ts' });
     }
   }
   
@@ -119,7 +119,7 @@ export class RedisService {
         this.memoryCache.delete(fullKey);
       }
     } catch (error) {
-      console.error('[Cache] Delete error:', error);
+      logger.error('[Cache] Delete error:', error, { file: 'redis-service.ts' });
     }
   }
   
@@ -145,7 +145,7 @@ export class RedisService {
         }
       }
     } catch (error) {
-      console.error('[Cache] Delete pattern error:', error);
+      logger.error('[Cache] Delete pattern error:', error, { file: 'redis-service.ts' });
     }
   }
   
@@ -164,7 +164,7 @@ export class RedisService {
         return cached ? cached.expiry > Date.now() : false;
       }
     } catch (error) {
-      console.error('[Cache] Exists error:', error);
+      logger.error('[Cache] Exists error:', error, { file: 'redis-service.ts' });
       return false;
     }
   }
@@ -209,7 +209,7 @@ export class RedisService {
         return newValue;
       }
     } catch (error) {
-      console.error('[Cache] Increment error:', error);
+      logger.error('[Cache] Increment error:', error, { file: 'redis-service.ts' });
       return 0;
     }
   }

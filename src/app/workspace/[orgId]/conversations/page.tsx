@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import { ChatSessionService, ChatSession, ChatMessage } from '@/lib/agent/chat-session-service';
+import { ChatSessionService, ChatSession, ChatMessage } from '@/lib/agent/chat-session-service'
+import { logger } from '@/lib/logger/logger';;
 
 export default function ConversationsPage() {
   const { user } = useAuth();
@@ -43,7 +44,7 @@ export default function ConversationsPage() {
     ChatSessionService.getSessionHistory(orgId, 50)
       .then(setCompletedConversations)
       .catch((err) => {
-        console.error('Failed to load history:', err);
+        logger.error('Failed to load history:', err, { file: 'page.tsx' });
       });
 
     return () => unsubscribe();
@@ -88,7 +89,7 @@ export default function ConversationsPage() {
       await ChatSessionService.requestTakeover(orgId, conversationId, user.id, 'Manual takeover');
       alert(`Taking over conversation. You are now connected to the customer chat.`);
     } catch (err) {
-      console.error('Failed to take over:', err);
+      logger.error('Failed to take over:', err, { file: 'page.tsx' });
       alert('Failed to take over conversation. Please try again.');
     }
   };
@@ -104,7 +105,7 @@ export default function ConversationsPage() {
       
       alert(`Conversation sent to Training Center for improvement.`);
     } catch (err) {
-      console.error('Failed to flag for training:', err);
+      logger.error('Failed to flag for training:', err, { file: 'page.tsx' });
       alert('Failed to send to training. Please try again.');
     }
   };

@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
-import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
+import { logger } from '@/lib/logger/logger';;
 
 interface ChatMessage {
   id: string;
@@ -88,7 +89,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Chat error:', error);
+      logger.error('Chat error:', error, { file: 'page.tsx' });
       const fallbackMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',

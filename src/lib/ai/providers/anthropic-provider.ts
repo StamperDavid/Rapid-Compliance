@@ -11,7 +11,8 @@ import type {
   ModelName,
 } from '@/types/ai-models';
 import { MODEL_CAPABILITIES } from '@/types/ai-models';
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export class AnthropicProvider implements ModelProvider {
   provider = 'anthropic' as const;
@@ -24,7 +25,7 @@ export class AnthropicProvider implements ModelProvider {
     this.organizationId = organizationId;
     this.apiKey = process.env.ANTHROPIC_API_KEY || ''; // Fallback to env
     if (!this.apiKey) {
-      console.warn('[Anthropic] API key not configured in env, will attempt to load from database');
+      logger.warn('[Anthropic] API key not configured in env, will attempt to load from database', { file: 'anthropic-provider.ts' });
     }
   }
   
@@ -44,7 +45,7 @@ export class AnthropicProvider implements ModelProvider {
       
       return this.apiKey;
     } catch (error) {
-      console.error('[Anthropic] Failed to load API key:', error);
+      logger.error('[Anthropic] Failed to load API key:', error, { file: 'anthropic-provider.ts' });
       throw new Error('Anthropic API key not configured');
     }
   }
@@ -126,7 +127,7 @@ export class AnthropicProvider implements ModelProvider {
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
-      console.error('[Anthropic] Chat error:', error);
+      logger.error('[Anthropic] Chat error:', error, { file: 'anthropic-provider.ts' });
       throw error;
     }
   }
@@ -198,7 +199,7 @@ export class AnthropicProvider implements ModelProvider {
         }
       }
     } catch (error: any) {
-      console.error('[Anthropic] Stream error:', error);
+      logger.error('[Anthropic] Stream error:', error, { file: 'anthropic-provider.ts' });
       throw error;
     }
   }

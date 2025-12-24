@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'
+import { logger } from '@/lib/logger/logger';;
 
 export default function SubscriptionsAdminPage() {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ export default function SubscriptionsAdminPage() {
       const plansData = await getAllPlans();
       setPlans(plansData);
     } catch (error) {
-      console.error('Failed to load plans:', error);
+      logger.error('Failed to load plans:', error, { file: 'page.tsx' });
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +38,7 @@ export default function SubscriptionsAdminPage() {
       setEditingPlan(null);
       alert('Plan saved successfully!');
     } catch (error) {
-      console.error('Failed to save plan:', error);
+      logger.error('Failed to save plan:', error, { file: 'page.tsx' });
       alert('Failed to save plan');
     }
   };

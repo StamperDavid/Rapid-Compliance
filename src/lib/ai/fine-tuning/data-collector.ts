@@ -4,7 +4,8 @@
  */
 
 import type { TrainingExample } from '@/types/fine-tuning';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Collect training example from a conversation
@@ -36,7 +37,7 @@ export async function collectTrainingExample(params: {
   });
   
   if (!shouldCollect) {
-    console.log('[Data Collector] Example does not meet quality criteria');
+    logger.info('[Data Collector] Example does not meet quality criteria', { file: 'data-collector.ts' });
     return null as any;
   }
   
@@ -67,7 +68,7 @@ export async function collectTrainingExample(params: {
     false
   );
   
-  console.log(`[Data Collector] Collected example: ${example.id}`);
+  logger.info('Data Collector Collected example: example.id}', { file: 'data-collector.ts' });
   
   return example;
 }
@@ -154,7 +155,7 @@ export async function collectFromHumanCorrection(params: {
     false
   );
   
-  console.log(`[Data Collector] Collected human correction: ${example.id}`);
+  logger.info('Data Collector Collected human correction: example.id}', { file: 'data-collector.ts' });
   
   return example;
 }
@@ -221,7 +222,7 @@ export async function approveTrainingExample(
     }
   );
   
-  console.log(`[Data Collector] Approved example: ${exampleId}`);
+  logger.info('Data Collector Approved example: exampleId}', { file: 'data-collector.ts' });
 }
 
 /**

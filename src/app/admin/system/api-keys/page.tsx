@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 interface IntegrationCard {
   id: string;
@@ -187,7 +188,7 @@ export default function AdminAPIKeysPageNew() {
         setKeys(adminSettings as Record<string, any>);
       }
     } catch (error) {
-      console.error('Error loading API keys:', error);
+      logger.error('Error loading API keys:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

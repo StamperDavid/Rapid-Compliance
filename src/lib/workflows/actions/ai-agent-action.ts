@@ -85,7 +85,7 @@ export async function executeAIAgentAction(
       );
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
-      console.warn('[AI Agent Action] RAG enhancement failed:', error);
+      logger.warn('[AI Agent Action] RAG enhancement failed', { error, file: 'ai-agent-action.ts' });
     }
   }
 
@@ -118,7 +118,7 @@ export async function executeAIAgentAction(
         result = JSON.parse(result);
       }
     } catch (error) {
-      console.warn('[AI Agent Action] Failed to parse JSON response:', result);
+      logger.warn('[AI Agent Action] Failed to parse JSON response', { result, error, file: 'ai-agent-action.ts' });
       // Keep as string if parsing fails
     }
   }

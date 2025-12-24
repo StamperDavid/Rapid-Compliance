@@ -4,7 +4,8 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { SubscriptionPlan, CustomerSubscription, RevenueMetrics, AdminCustomer, PlanDetails } from '@/types/subscription';
+import type { SubscriptionPlan, CustomerSubscription, RevenueMetrics, AdminCustomer, PlanDetails } from '@/types/subscription'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Get all subscription plans
@@ -18,7 +19,7 @@ export async function getAllPlans(): Promise<PlanDetails[]> {
     
     return (plans as unknown as PlanDetails[]).sort((a, b) => a.displayOrder - b.displayOrder);
   } catch (error) {
-    console.error('[Subscription Manager] Error fetching plans:', error);
+    logger.error('[Subscription Manager] Error fetching plans:', error, { file: 'subscription-manager.ts' });
     return [];
   }
 }
@@ -95,6 +96,22 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
         // Calculate health score
         const healthScore = calculateHealthScore(subscription, usage);
         
+        // Get support ticket counts if available
+        let openTickets = 0;
+        let totalTickets = 0;
+        try {
+          const tickets = await FirestoreService.getAll(
+            `${COLLECTIONS.ORGANIZATIONS}/${org.id}/support_tickets`,
+            []
+          );
+          totalTickets = tickets.length;
+          openTickets = tickets.filter((t: any) => 
+            t.status === 'open' || t.status === 'in_progress'
+          ).length;
+        } catch (error) {
+          // No support tickets collection exists yet, that's fine
+        }
+        
         customers.push({
           id: org.id,
           organizationId: org.id,
@@ -111,8 +128,8 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
           healthScore,
           riskLevel: healthScore >= 70 ? 'low' : healthScore >= 40 ? 'medium' : 'high',
           lastActive: (org as any).lastActive || new Date().toISOString(),
-          openTickets: 0, // TODO: Get from support system
-          totalTickets: 0,
+          openTickets,
+          totalTickets,
           createdAt: (org as any).createdAt || new Date().toISOString(),
           trialStartedAt: subscription.status === 'trialing' ? subscription.createdAt : undefined,
           convertedAt: subscription.status === 'active' ? subscription.currentPeriodStart : undefined,
@@ -122,7 +139,7 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
     
     return customers;
   } catch (error) {
-    console.error('[Subscription Manager] Error fetching customers:', error);
+    logger.error('[Subscription Manager] Error fetching customers:', error, { file: 'subscription-manager.ts' });
     return [];
   }
 }
@@ -143,14 +160,47 @@ async function getOrganizationUsage(organizationId: string): Promise<{
       []
     );
     
-    // Count users (TODO: implement)
-    const users = 1;
+    // Count users - get all members with access to this organization
+    const usersSnapshot = await FirestoreService.getAll(
+      COLLECTIONS.USERS,
+      [{ field: 'organizationId', operator: '==', value: organizationId }]
+    );
+    const users = usersSnapshot.length;
     
     // Count CRM records (approximate across all workspaces)
-    const crmRecords = 0; // TODO: Count across all workspaces
+    let crmRecords = 0;
+    try {
+      const [leads, deals, contacts] = await Promise.all([
+        FirestoreService.getAll(
+          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.LEADS}`,
+          []
+        ),
+        FirestoreService.getAll(
+          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.DEALS}`,
+          []
+        ),
+        FirestoreService.getAll(
+          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.CONTACTS}`,
+          []
+        ),
+      ]);
+      crmRecords = leads.length + deals.length + contacts.length;
+    } catch (error) {
+      // If collection doesn't exist, that's okay
+      crmRecords = 0;
+    }
     
-    // Count conversations (TODO: implement)
-    const conversations = 0;
+    // Count conversations from agent instances
+    let conversations = 0;
+    try {
+      const instances = await FirestoreService.getAll(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.AGENT_INSTANCES}`,
+        []
+      );
+      conversations = instances.length;
+    } catch (error) {
+      conversations = 0;
+    }
     
     return {
       agents: agents.length,
@@ -272,6 +322,55 @@ export async function calculateRevenueMetrics(
       percentage: mrr > 0 ? (data.mrr / mrr) * 100 : 0,
     }));
     
+    // Calculate revenue churn rate (MRR lost from churned customers)
+    let revenueChurnRate = 0;
+    if (mrr > 0) {
+      let lostMrr = 0;
+      for (const customer of customers.filter(c =>
+        c.subscription &&
+        c.subscription.status === 'cancelled' &&
+        c.subscription.canceledAt &&
+        new Date(c.subscription.canceledAt as string) >= periodStart &&
+        new Date(c.subscription.canceledAt as string) <= periodEnd
+      )) {
+        const sub = customer.subscription as any;
+        if (sub.billingCycle === 'monthly') {
+          lostMrr += sub.amount || sub.mrr || 0;
+        } else {
+          lostMrr += (sub.amount || sub.mrr || 0) / 12;
+        }
+      }
+      revenueChurnRate = (lostMrr / mrr) * 100;
+    }
+    
+    // Calculate MRR growth (compare to previous period)
+    const periodDays = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+    const previousPeriodStart = new Date(periodStart);
+    previousPeriodStart.setDate(previousPeriodStart.getDate() - periodDays);
+    const previousPeriodEnd = new Date(periodStart);
+    
+    let previousMrr = 0;
+    for (const customer of customers) {
+      const createdAt = new Date(customer.createdAt);
+      if (createdAt < previousPeriodEnd && customer.subscription?.status === 'active') {
+        const sub = customer.subscription as any;
+        if (sub.billingCycle === 'monthly') {
+          previousMrr += sub.amount || sub.mrr || 0;
+        } else {
+          previousMrr += (sub.amount || sub.mrr || 0) / 12;
+        }
+      }
+    }
+    
+    const mrrGrowth = previousMrr > 0 ? ((mrr - previousMrr) / previousMrr) * 100 : 0;
+    const arrGrowth = mrrGrowth; // ARR grows at same rate as MRR
+    
+    // Calculate customer lifetime value (simplified: average revenue * average lifetime)
+    // Estimate average lifetime as inverse of churn rate (in months)
+    const avgLifetimeMonths = churnRate > 0 ? (100 / churnRate) : 36; // Default to 36 months if no churn
+    const avgRevenuePerCustomer = activeSubscriptions.length > 0 ? mrr / activeSubscriptions.length : 0;
+    const customerLifetimeValue = avgRevenuePerCustomer * avgLifetimeMonths;
+    
     return {
       startDate,
       endDate,
@@ -282,16 +381,16 @@ export async function calculateRevenueMetrics(
       newCustomers,
       churnedCustomers,
       churnRate,
-      revenueChurnRate: 0, // TODO: Calculate based on revenue lost
-      mrrGrowth: 0, // TODO: Compare to previous period
-      arrGrowth: 0,
-      averageRevenuePerCustomer: activeSubscriptions.length > 0 ? mrr / activeSubscriptions.length : 0,
-      customerLifetimeValue: 0, // TODO: Calculate based on historical data
+      revenueChurnRate,
+      mrrGrowth,
+      arrGrowth,
+      averageRevenuePerCustomer: avgRevenuePerCustomer,
+      customerLifetimeValue,
       revenueByPlan: revenueByPlanArray,
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('[Subscription Manager] Error calculating metrics:', error);
+    logger.error('[Subscription Manager] Error calculating metrics:', error, { file: 'subscription-manager.ts' });
     throw error;
   }
 }

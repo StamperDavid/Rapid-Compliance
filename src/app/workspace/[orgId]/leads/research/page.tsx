@@ -8,7 +8,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 interface Message {
   id: string;
@@ -143,7 +144,7 @@ export default function LeadResearchPage() {
         }),
       });
     } catch (error) {
-      console.error('Failed to save feedback:', error);
+      logger.error('Failed to save feedback:', error, { file: 'page.tsx' });
     }
   };
   

@@ -351,18 +351,32 @@ export async function getCampaignStats(campaignId: string, organizationId?: stri
 /**
  * List all campaigns
  */
-export async function listCampaigns(organizationId: string): Promise<EmailCampaign[]> {
-  // Load campaigns from Firestore
+export async function listCampaigns(
+  organizationId: string, 
+  pageSize: number = 50,
+  lastDocId?: string
+): Promise<{ campaigns: EmailCampaign[]; hasMore: boolean }> {
+  // Load campaigns from Firestore with pagination
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
-  const campaigns = await EmailCampaignService.getAll(organizationId);
+  const { orderBy } = await import('firebase/firestore');
+  const result = await EmailCampaignService.getAllPaginated(
+    organizationId,
+    [orderBy('createdAt', 'desc')],
+    Math.min(pageSize, 100) // Max 100 per page
+  );
   
   // Convert Firestore data back to EmailCampaign format
-  return campaigns.map((c: any) => ({
+  const campaigns = result.data.map((c: any) => ({
     ...c,
     createdAt: new Date(c.createdAt),
     updatedAt: new Date(c.updatedAt),
     scheduledFor: c.scheduledFor ? new Date(c.scheduledFor) : undefined,
     sentAt: c.sentAt ? new Date(c.sentAt) : undefined,
   })) as EmailCampaign[];
+  
+  return {
+    campaigns,
+    hasMore: result.hasMore,
+  };
 }
 

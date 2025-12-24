@@ -27,6 +27,7 @@ import { getCachedEnrichment, cacheEnrichment } from './cache-service';
 import { validateEnrichmentData } from './validation-service';
 import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Main enrichment function (PRODUCTION READY)
@@ -38,7 +39,11 @@ export async function enrichCompany(
 ): Promise<EnrichmentResponse> {
   const startTime = Date.now();
   
-  console.log('[Enrichment] Starting production enrichment:', request);
+  logger.info('Starting production enrichment', {
+    organizationId,
+    companyName: request.companyName,
+    domain: request.domain,
+  });
   
   try {
     // Step 1: Validate input
@@ -98,7 +103,7 @@ export async function enrichCompany(
     const cached = await getCachedEnrichment(domain, organizationId);
     
     if (cached) {
-      console.log(`[Enrichment] ✅ Cache HIT for ${domain} - returning cached data`);
+      logger.info('Enrichment ✅ Cache HIT for domain} - returning cached data', { file: 'enrichment-service.ts' });
       
       return {
         success: true,
@@ -117,7 +122,7 @@ export async function enrichCompany(
       };
     }
     
-    console.log(`[Enrichment] Cache MISS for ${domain} - scraping fresh data`);
+    logger.info('Enrichment Cache MISS for domain} - scraping fresh data', { file: 'enrichment-service.ts' });
     
     // Step 4: Rate limit to avoid blocking
     await rateLimiter.throttle(domain);
@@ -133,7 +138,7 @@ export async function enrichCompany(
       scrapeCalls++;
       scrapedContent = await scrapeWithRetry(website, 3);
     } catch (error: any) {
-      console.error(`[Enrichment] Scraping failed for ${domain}:`, error.message);
+      logger.error(`[Enrichment] Scraping failed for ${domain}`, error, { file: 'enrichment-service.ts' });
       
       // Don't give up yet - try backup sources
       return await useBackupSources(
@@ -200,7 +205,7 @@ export async function enrichCompany(
     
     // If validation fails catastrophically, try backup sources
     if (!validation.isValid && validation.confidence < 30) {
-      console.warn(`[Enrichment] Validation failed for ${domain}, trying backup sources...`);
+      logger.warn('[Enrichment] Validation failed for ${domain}, trying backup sources...', { file: 'enrichment-service.ts' });
       
       return await useBackupSources(
         companyIdentifier,
@@ -214,7 +219,10 @@ export async function enrichCompany(
     
     // Step 10: Log warnings if any
     if (validation.warnings.length > 0) {
-      console.warn(`[Enrichment] Validation warnings for ${domain}:`, validation.warnings);
+      logger.warn(`[Enrichment] Validation warnings for ${domain}`, { 
+        warnings: validation.warnings,
+        file: 'enrichment-service.ts' 
+      });
     }
     
     // Step 11: Calculate costs
@@ -238,9 +246,9 @@ export async function enrichCompany(
       success: true,
     });
     
-    console.log(`[Enrichment] ✅ SUCCESS for ${domain}`);
-    console.log(`  Cost: $${totalCost.toFixed(4)} | Saved: $${(0.75 - totalCost).toFixed(4)}`);
-    console.log(`  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms`);
+    logger.info('Enrichment ✅ SUCCESS for domain}', { file: 'enrichment-service.ts' });
+    logger.info('  Cost: $${totalCost.toFixed(4)} | Saved: $${(0.75 - totalCost).toFixed(4)}', { file: 'enrichment-service.ts' });
+    logger.info('  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms', { file: 'enrichment-service.ts' });
     
     return {
       success: true,
@@ -258,7 +266,7 @@ export async function enrichCompany(
       },
     };
   } catch (error: any) {
-    console.error('[Enrichment] Unexpected error:', error);
+    logger.error('[Enrichment] Unexpected error:', error, { file: 'enrichment-service.ts' });
     
     await logEnrichmentCost(organizationId, {
       organizationId,
@@ -290,7 +298,7 @@ async function useBackupSources(
   startTime: number,
   costs: { searchCalls: number; scrapeCalls: number; aiTokens?: number }
 ): Promise<EnrichmentResponse> {
-  console.log('[Enrichment] Using backup sources (WHOIS, DNS, Wikipedia, etc.)...');
+  logger.info('[Enrichment] Using backup sources (WHOIS, DNS, Wikipedia, etc.)...', { file: 'enrichment-service.ts' });
   
   try {
     // Get data from all free sources
@@ -342,7 +350,7 @@ async function useBackupSources(
         success: true,
       });
       
-      console.log(`[Enrichment] ⚠️ PARTIAL SUCCESS using backup sources for ${domain}`);
+      logger.info('Enrichment ⚠️ PARTIAL SUCCESS using backup sources for domain}', { file: 'enrichment-service.ts' });
       
       return {
         success: true,
@@ -424,7 +432,7 @@ export async function enrichCompanies(
     maxConcurrent?: number;
   }
 ): Promise<EnrichmentResponse[]> {
-  console.log(`[Enrichment] Batch enriching ${companies.length} companies...`);
+  logger.info('Enrichment Batch enriching companies.length} companies...', { file: 'enrichment-service.ts' });
   
   if (options?.parallel === false) {
     // Sequential processing
@@ -453,7 +461,7 @@ export async function enrichCompanies(
     }
   }
   
-  console.log(`[Enrichment] Batch complete: ${results.filter(r => r.success).length}/${companies.length} successful`);
+  logger.info('Enrichment Batch complete: results.filter(r => r.success).length}/companies.length} successful', { file: 'enrichment-service.ts' });
   
   return results;
 }
@@ -504,7 +512,7 @@ async function logEnrichmentCost(organizationId: string, log: EnrichmentCostLog)
       false
     );
   } catch (error) {
-    console.error('[Enrichment] Error logging cost:', error);
+    logger.error('[Enrichment] Error logging cost:', error, { file: 'enrichment-service.ts' });
   }
 }
 
@@ -558,7 +566,7 @@ export async function getEnrichmentAnalytics(
       cacheHitRate,
     };
   } catch (error) {
-    console.error('[Enrichment] Error getting analytics:', error);
+    logger.error('[Enrichment] Error getting analytics:', error, { file: 'enrichment-service.ts' });
     return {
       totalEnrichments: 0,
       successfulEnrichments: 0,
@@ -571,4 +579,5 @@ export async function getEnrichmentAnalytics(
     };
   }
 }
+
 

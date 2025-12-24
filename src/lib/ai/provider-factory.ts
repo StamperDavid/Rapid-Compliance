@@ -8,7 +8,8 @@ import { OpenAIProvider } from './providers/openai-provider';
 import { AnthropicProvider } from './providers/anthropic-provider';
 import { GeminiProvider } from './providers/gemini-provider';
 import { OpenRouterProvider } from './openrouter-provider';
-import type { ModelName } from '@/types/ai-models';
+import type { ModelName } from '@/types/ai-models'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Simple provider interface for chat routes
@@ -128,7 +129,7 @@ export class AIProviderFactory {
             },
           };
         } catch (error: any) {
-          console.error(`[AIProviderFactory] Error generating response:`, error);
+          logger.error('[AIProviderFactory] Error generating response:', error, { file: 'provider-factory.ts' });
           throw new Error(`AI generation failed: ${error.message}`);
         }
       },

@@ -70,7 +70,7 @@ export async function researchProspect(
   prospect: ProspectData,
   organizationId: string = 'default'
 ): Promise<ProspectResearch> {
-  console.log(`[Prospect Research] Researching ${prospect.company}...`);
+  logger.info('Prospect Research Researching prospect.company}...', { file: 'prospect-research.ts' });
 
   try {
     // Run research tasks in parallel
@@ -103,7 +103,7 @@ export async function researchProspect(
       insights,
     };
   } catch (error) {
-    console.error('[Prospect Research] Error:', error);
+    logger.error('[Prospect Research] Error:', error, { file: 'prospect-research.ts' });
     
     // Return minimal data on error
     return {
@@ -157,7 +157,7 @@ async function getCompanyInfo(companyName: string, orgId: string): Promise<Compa
       };
     }
   } catch (error) {
-    console.error('[getCompanyInfo] Enrichment error:', error);
+    logger.error('[getCompanyInfo] Enrichment error:', error, { file: 'prospect-research.ts' });
   }
   
   // Fallback to basic info if enrichment fails

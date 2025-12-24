@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger/logger';;
 
 export interface WebsiteTheme {
   logoUrl: string;
@@ -71,7 +72,7 @@ export function useWebsiteTheme() {
         // If no config exists, DEFAULT_THEME is already set
       } catch (error) {
         // Silently fall back to default theme - this is expected if no config exists yet
-        console.log('Using default theme (no custom config found)');
+        logger.info('Using default theme (no custom config found)', { file: 'useWebsiteTheme.ts' });
       } finally {
         setLoading(false);
       }

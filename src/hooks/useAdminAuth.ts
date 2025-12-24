@@ -9,7 +9,8 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import type { AdminRole, AdminUser, AdminPermissions } from '@/types/admin';
-import { ADMIN_ROLE_PERMISSIONS } from '@/types/admin';
+import { ADMIN_ROLE_PERMISSIONS } from '@/types/admin'
+import { logger } from '@/lib/logger/logger';;
 
 export function useAdminAuth() {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
@@ -48,20 +49,24 @@ export function useAdminAuth() {
               mfaEnabled: false,
             };
             
-            console.log('✅ Admin authenticated:', adminUserData.email, adminUserData.role);
+            logger.info('✅ Admin authenticated', { 
+              email: adminUserData.email, 
+              role: adminUserData.role,
+              file: 'useAdminAuth.ts' 
+            });
             setAdminUser(adminUserData);
           } else {
             // User is logged in to Firebase but not an admin
-            console.log('❌ User is not an admin');
+            logger.info('❌ User is not an admin', { file: 'useAdminAuth.ts' });
             setAdminUser(null);
           }
         } catch (error) {
-          console.error('Error verifying admin status:', error);
+          logger.error('Error verifying admin status:', error, { file: 'useAdminAuth.ts' });
           setAdminUser(null);
         }
       } else {
         // No Firebase user logged in
-        console.log('📊 No Firebase user logged in');
+        logger.info('📊 No Firebase user logged in', { file: 'useAdminAuth.ts' });
         setAdminUser(null);
       }
       setLoading(false);

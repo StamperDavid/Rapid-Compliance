@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import Link from 'next/link';
+import Link from 'next/link'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Admin Platform Sales Agent Training Center
@@ -84,7 +85,7 @@ export default function AdminSalesAgentTrainingPage() {
       try {
         setTheme(JSON.parse(savedTheme));
       } catch (error) {
-        console.error('Failed to load theme:', error);
+        logger.error('Failed to load theme:', error, { file: 'page.tsx' });
       }
     }
     loadTrainingData();
@@ -125,7 +126,7 @@ export default function AdminSalesAgentTrainingPage() {
       return await sendChatMessage(conversationHistory as any, systemPrompt);
       
     } catch (error: any) {
-      console.error('Error calling AI provider:', error);
+      logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
       throw new Error(error.message || 'Failed to get AI response');
     }
   };
@@ -138,7 +139,7 @@ export default function AdminSalesAgentTrainingPage() {
       loadPlatformData();
       
     } catch (error) {
-      console.error('Error loading training data:', error);
+      logger.error('Error loading training data:', error, { file: 'page.tsx' });
       loadPlatformData();
     } finally {
       setLoading(false);
@@ -331,7 +332,7 @@ Always be helpful, professional, and focused on understanding the prospect's nee
       setChatMessages(prev => [...prev, agentMessage]);
       
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error, { file: 'page.tsx' });
       
       // Fallback response for demo purposes
       const fallbackMessage = {
@@ -522,7 +523,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
       alert(`✅ Golden Master v${newVersion} Created and saved to Firestore!\n\nYour trained AI agent is ready to deploy.`);
       setActiveTab('golden');
     } catch (error: any) {
-      console.error('Error saving golden master:', error);
+      logger.error('Error saving golden master:', error, { file: 'page.tsx' });
       alert(`❌ Error saving Golden Master: ${error.message}`);
     }
   };
@@ -563,7 +564,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
 
       alert(`✅ Golden Master v${version} is now LIVE in Firestore!`);
     } catch (error: any) {
-      console.error('Error deploying golden master:', error);
+      logger.error('Error deploying golden master:', error, { file: 'page.tsx' });
       alert(`❌ Error deploying: ${error.message}`);
     }
   };

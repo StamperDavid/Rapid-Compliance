@@ -3,7 +3,8 @@
  * Extracts data from Excel files (product catalogs, pricing sheets, etc.)
  */
 
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx'
+import { logger } from '@/lib/logger/logger';;
 
 export interface ExcelParseResult {
   sheets: Array<{
@@ -69,7 +70,7 @@ export async function parseExcel(file: File | Buffer): Promise<ExcelParseResult>
       },
     };
   } catch (error: any) {
-    console.error('Error parsing Excel:', error);
+    logger.error('Error parsing Excel:', error, { file: 'excel-parser.ts' });
     throw new Error(`Failed to parse Excel: ${error.message}`);
   }
 }

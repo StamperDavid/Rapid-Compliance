@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { auth } from '@/lib/firebase/config'
+import { logger } from '@/lib/logger/logger';;
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -25,7 +26,7 @@ export default function ForgotPasswordPage() {
       await sendPasswordResetEmail(auth, email);
       setSuccess(true);
     } catch (error: any) {
-      console.error('Password reset error:', error);
+      logger.error('Password reset error:', error, { file: 'page.tsx' });
 
       // User-friendly error messages
       const errorMessages: Record<string, string> = {

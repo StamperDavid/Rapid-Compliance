@@ -14,7 +14,8 @@ import type {
 } from '@/types/agent-memory';
 import { buildPersonaFromOnboarding, buildBusinessContextFromOnboarding, buildBehaviorConfigFromOnboarding } from './persona-builder';
 import { compileSystemPrompt } from './prompt-compiler';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface GoldenMasterBuilderOptions {
   onboardingData: OnboardingData;
@@ -41,12 +42,15 @@ export async function createGoldenMasterFromBase(
 ): Promise<GoldenMaster> {
   const { baseModel, userId, trainingScore, trainedScenarios, notes } = options;
   
-  console.log('[Golden Master Builder] Creating Golden Master from Base Model:', baseModel.id);
+  logger.info('[Golden Master Builder] Creating Golden Master from Base Model', { 
+    baseModelId: baseModel.id, 
+    file: 'golden-master-builder.ts' 
+  });
   
   // Get next version number
   const nextVersion = await getNextGoldenMasterVersion(baseModel.orgId);
   
-  console.log('[Golden Master Builder] Next version:', nextVersion);
+  logger.info('[Golden Master Builder] Next version', { version: nextVersion, file: 'golden-master-builder.ts' });
   
   // Get previous version for changelog
   const { orderBy, limit } = await import('firebase/firestore');
@@ -88,7 +92,11 @@ export async function createGoldenMasterFromBase(
     changesSummary: notes,
   };
   
-  console.log('[Golden Master Builder] Golden Master created:', goldenMaster.id, goldenMaster.version);
+  logger.info('[Golden Master Builder] Golden Master created', { 
+    id: goldenMaster.id, 
+    version: goldenMaster.version,
+    file: 'golden-master-builder.ts' 
+  });
   
   return goldenMaster;
 }
@@ -122,9 +130,9 @@ async function getNextGoldenMasterVersion(organizationId: string): Promise<strin
 export async function buildGoldenMaster(
   options: GoldenMasterBuilderOptions
 ): Promise<GoldenMaster> {
-  console.warn('[Golden Master Builder] WARNING: buildGoldenMaster() is deprecated!');
-  console.warn('[Golden Master Builder] Use createGoldenMasterFromBase() instead.');
-  console.warn('[Golden Master Builder] Golden Masters should only be created from trained Base Models.');
+  logger.warn('[Golden Master Builder] WARNING: buildGoldenMaster() is deprecated!', { file: 'golden-master-builder.ts' });
+  logger.warn('[Golden Master Builder] Use createGoldenMasterFromBase() instead.', { file: 'golden-master-builder.ts' });
+  logger.warn('[Golden Master Builder] Golden Masters should only be created from trained Base Models.', { file: 'golden-master-builder.ts' });
   
   const { onboardingData, knowledgeBase, organizationId, userId, workspaceId } = options;
   
@@ -224,7 +232,10 @@ export async function createGoldenMaster(
   // Save to Firestore
   await saveGoldenMaster(goldenMaster);
   
-  console.log('[Golden Master Builder] Golden Master created and saved:', goldenMaster.version);
+  logger.info('[Golden Master Builder] Golden Master created and saved', { 
+    version: goldenMaster.version,
+    file: 'golden-master-builder.ts' 
+  });
   
   return goldenMaster;
 }
@@ -281,7 +292,10 @@ export async function deployGoldenMaster(organizationId: string, goldenMasterId:
   // Commit batch
   await batch.commit();
   
-  console.log('[Golden Master Builder] Golden Master deployed:', goldenMasterId);
+  logger.info('[Golden Master Builder] Golden Master deployed', { 
+    goldenMasterId,
+    file: 'golden-master-builder.ts' 
+  });
 }
 
 /**

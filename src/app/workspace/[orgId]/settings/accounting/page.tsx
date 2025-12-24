@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'
+import { logger } from '@/lib/logger/logger';;
 
 interface AccountingConfig {
   platform: 'quickbooks' | 'xero' | 'freshbooks' | 'wave' | 'sage' | 'none';
@@ -103,7 +104,7 @@ export default function AccountingPage() {
           setConfig(configData as AccountingConfig);
         }
       } catch (error) {
-        console.error('Failed to load accounting config:', error);
+        logger.error('Failed to load accounting config:', error, { file: 'page.tsx' });
       }
     };
     
@@ -126,7 +127,7 @@ export default function AccountingPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to save accounting config:', error);
+      logger.error('Failed to save accounting config:', error, { file: 'page.tsx' });
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }

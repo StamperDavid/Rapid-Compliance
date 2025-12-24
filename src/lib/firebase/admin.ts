@@ -3,7 +3,8 @@
  * Server-side only - for API routes and server actions
  */
 
-import admin from 'firebase-admin';
+import admin from 'firebase-admin'
+import { logger } from '@/lib/logger/logger';;
 
 // Initialize Firebase Admin SDK (singleton)
 let adminApp: admin.app.App | null = null;
@@ -31,7 +32,7 @@ function initializeAdmin() {
       process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
       process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
 
-      console.log('🔥 Firebase Admin initialized for emulator');
+      logger.info('🔥 Firebase Admin initialized for emulator', { file: 'admin.ts' });
       return adminApp;
     } catch (error: any) {
       if (error.code === 'app/duplicate-app') {
@@ -49,7 +50,7 @@ function initializeAdmin() {
     // Option 1: Full JSON in single env var
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-      console.log('🔑 Using FIREBASE_SERVICE_ACCOUNT_KEY env var');
+      logger.info('🔑 Using FIREBASE_SERVICE_ACCOUNT_KEY env var', { file: 'admin.ts' });
     }
     
     // Option 2: Individual env vars (preferred for Vercel)
@@ -70,7 +71,7 @@ function initializeAdmin() {
         clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
         privateKey: privateKey,
       };
-      console.log('🔑 Using individual Firebase Admin env vars');
+      logger.info('🔑 Using individual Firebase Admin env vars', { file: 'admin.ts' });
     }
 
     // Option 3: Try to load from file (local development)
@@ -79,15 +80,15 @@ function initializeAdmin() {
         const fs = require('fs');
         const path = require('path');
         const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
-        console.log('🔍 Looking for serviceAccountKey.json at:', keyPath);
+        logger.info('🔍 Looking for serviceAccountKey.json', { path: keyPath, file: 'admin.ts' });
         if (fs.existsSync(keyPath)) {
           serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-          console.log('🔑 Loaded serviceAccountKey.json successfully');
+          logger.info('🔑 Loaded serviceAccountKey.json successfully', { file: 'admin.ts' });
         } else {
-          console.warn('⚠️ serviceAccountKey.json not found at:', keyPath);
+          logger.warn('⚠️ serviceAccountKey.json not found', { path: keyPath, file: 'admin.ts' });
         }
       } catch (e: any) {
-        console.warn('⚠️ Could not load serviceAccountKey.json:', e.message);
+        logger.warn('⚠️ Could not load serviceAccountKey.json', { error: e.message, file: 'admin.ts' });
       }
     }
 
@@ -97,18 +98,18 @@ function initializeAdmin() {
       });
     } else {
       // Use application default credentials (for GCP)
-      console.warn('⚠️ No Firebase credentials found, using default credentials');
+      logger.warn('⚠️ No Firebase credentials found, using default credentials', { file: 'admin.ts' });
       adminApp = admin.initializeApp();
     }
 
-    console.log('🔥 Firebase Admin initialized');
+    logger.info('🔥 Firebase Admin initialized', { file: 'admin.ts' });
     return adminApp;
   } catch (error: any) {
     if (error.code === 'app/duplicate-app') {
       adminApp = admin.app();
       return adminApp;
     }
-    console.error('❌ Firebase Admin initialization failed:', error.message);
+    logger.error('❌ Firebase Admin initialization failed', error, { file: 'admin.ts' });
     throw error;
   }
 }
@@ -116,15 +117,19 @@ function initializeAdmin() {
 // Initialize on import (server-side only)
 if (typeof window === 'undefined') {
   try {
-    console.log('[Firebase Admin] Initializing...');
-    console.log('[Firebase Admin] FIREBASE_ADMIN_PROJECT_ID:', process.env.FIREBASE_ADMIN_PROJECT_ID ? 'SET' : 'MISSING');
-    console.log('[Firebase Admin] FIREBASE_ADMIN_CLIENT_EMAIL:', process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'SET' : 'MISSING');
-    console.log('[Firebase Admin] FIREBASE_ADMIN_PRIVATE_KEY:', process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 'SET (length: ' + process.env.FIREBASE_ADMIN_PRIVATE_KEY.length + ')' : 'MISSING');
+    logger.info('[Firebase Admin] Initializing...', { 
+      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID ? 'SET' : 'MISSING',
+      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'SET' : 'MISSING',
+      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? `SET (length: ${process.env.FIREBASE_ADMIN_PRIVATE_KEY.length})` : 'MISSING',
+      file: 'admin.ts' 
+    });
     initializeAdmin();
-    console.log('[Firebase Admin] ✅ Initialization complete. adminApp:', adminApp ? 'INITIALIZED' : 'NULL');
+    logger.info('[Firebase Admin] ✅ Initialization complete', { 
+      adminApp: adminApp ? 'INITIALIZED' : 'NULL',
+      file: 'admin.ts' 
+    });
   } catch (error: any) {
-    console.error('[Firebase Admin] ❌ Initialization failed:', error.message);
-    console.error('[Firebase Admin] Error stack:', error.stack);
+    logger.error('[Firebase Admin] ❌ Initialization failed', error, { file: 'admin.ts' });
   }
 }
 

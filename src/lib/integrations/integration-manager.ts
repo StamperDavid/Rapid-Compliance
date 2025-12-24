@@ -6,7 +6,8 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { getValidAccessToken } from './oauth-service';
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Get integration
@@ -303,10 +304,10 @@ async function syncGmail(organizationId: string, integrationId: string, accessTo
   try {
     const gmailService = await import('./gmail-sync-service');
     const result = await gmailService.syncGmailMessages(organizationId, accessToken);
-    console.log(`[Gmail Sync] Synced ${result.messagesSynced} emails for org ${organizationId}`);
+    logger.info('Gmail Sync Synced result.messagesSynced} emails for org organizationId}', { file: 'integration-manager.ts' });
     return result.messagesSynced;
   } catch (error: any) {
-    console.error('[Gmail Sync] Error:', error);
+    logger.error('[Gmail Sync] Error:', error, { file: 'integration-manager.ts' });
     throw new Error(`Gmail sync failed: ${error.message}`);
   }
 }
@@ -318,10 +319,10 @@ async function syncGoogleCalendar(organizationId: string, integrationId: string,
   try {
     const calendarService = await import('./calendar-sync-service');
     const result = await calendarService.syncCalendarEvents(organizationId, 'google', accessToken);
-    console.log(`[Google Calendar Sync] Synced ${result.eventsSynced} events for org ${organizationId}`);
+    logger.info('Google Calendar Sync Synced result.eventsSynced} events for org organizationId}', { file: 'integration-manager.ts' });
     return result.eventsSynced;
   } catch (error: any) {
-    console.error('[Google Calendar Sync] Error:', error);
+    logger.error('[Google Calendar Sync] Error:', error, { file: 'integration-manager.ts' });
     throw new Error(`Google Calendar sync failed: ${error.message}`);
   }
 }
@@ -333,10 +334,10 @@ async function syncOutlook(organizationId: string, integrationId: string, access
   try {
     const outlookService = await import('./outlook-sync-service');
     const result = await outlookService.syncOutlookMessages(organizationId, accessToken);
-    console.log(`[Outlook Sync] Synced ${result.messagesSynced} emails for org ${organizationId}`);
+    logger.info('Outlook Sync Synced result.messagesSynced} emails for org organizationId}', { file: 'integration-manager.ts' });
     return result.messagesSynced;
   } catch (error: any) {
-    console.error('[Outlook Sync] Error:', error);
+    logger.error('[Outlook Sync] Error:', error, { file: 'integration-manager.ts' });
     throw new Error(`Outlook sync failed: ${error.message}`);
   }
 }

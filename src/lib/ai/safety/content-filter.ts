@@ -4,7 +4,8 @@
  */
 
 import type { ChatRequest } from '@/types/ai-models';
-import { sendChatRequest } from '../model-provider';
+import { sendChatRequest } from '../model-provider'
+import { logger } from '@/lib/logger/logger';;
 
 export interface SafetyCheckResult {
   isSafe: boolean;
@@ -138,7 +139,7 @@ Return JSON:
       };
     }
   } catch (error) {
-    console.error('[Safety] Hate speech check error:', error);
+    logger.error('[Safety] Hate speech check error:', error, { file: 'content-filter.ts' });
   }
   
   return {
@@ -295,7 +296,7 @@ export async function checkForBias(
       };
     }
   } catch (error) {
-    console.error('[Safety] Bias check error:', error);
+    logger.error('[Safety] Bias check error:', error, { file: 'content-filter.ts' });
   }
   
   return {

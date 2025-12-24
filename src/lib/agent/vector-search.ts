@@ -5,7 +5,8 @@
 
 import type { Embedding, EmbeddingResult } from './embeddings-service';
 import { generateEmbedding } from './embeddings-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface SearchResult {
   text: string;
@@ -91,7 +92,7 @@ export async function searchKnowledgeBase(
       .slice(0, limit)
       .filter(r => r.score > 0.3); // Minimum similarity threshold
   } catch (error) {
-    console.error('Error searching knowledge base:', error);
+    logger.error('Error searching knowledge base:', error, { file: 'vector-search.ts' });
     return [];
   }
 }
@@ -124,7 +125,7 @@ export async function storeEmbedding(
       false
     );
   } catch (error) {
-    console.error('Error storing embedding:', error);
+    logger.error('Error storing embedding:', error, { file: 'vector-search.ts' });
     throw error;
   }
 }
@@ -197,7 +198,7 @@ export async function indexKnowledgeBase(
       }
     }
   } catch (error) {
-    console.error('Error indexing knowledge base:', error);
+    logger.error('Error indexing knowledge base:', error, { file: 'vector-search.ts' });
     throw error;
   }
 }

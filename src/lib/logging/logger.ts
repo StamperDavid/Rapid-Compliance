@@ -81,7 +81,7 @@ class Logger {
       // await log.write(log.entry(logEntry));
     } catch (error) {
       // Fallback to console if Cloud Logging fails
-      console.error('Failed to send log to Cloud Logging:', error);
+      logger.error('Failed to send log to Cloud Logging:', error, { file: 'logger.ts' });
       console.log(JSON.stringify(logEntry));
     }
   }

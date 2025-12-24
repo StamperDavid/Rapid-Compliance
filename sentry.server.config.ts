@@ -32,9 +32,6 @@ Sentry.init({
   // Attach stack trace to messages
   attachStacktrace: true,
   
-  // Enable automatic session tracking
-  autoSessionTracking: true,
-  
   // Filter out sensitive data
   beforeSend(event, hint) {
     // Don't send events if Sentry is not configured
@@ -114,15 +111,9 @@ Sentry.init({
   
   // Server-side integrations
   integrations: [
-    // Add HTTP integration for better request tracking
-    new Sentry.Integrations.Http({ tracing: true }),
+    // HTTP integration is automatically included in Next.js
+    // No need to manually add
   ],
-  
-  // Transport options
-  transportOptions: {
-    // Retry failed requests
-    maxQueueSize: 100,
-  },
 });
 
 

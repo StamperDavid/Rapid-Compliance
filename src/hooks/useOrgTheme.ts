@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
+import { useAuth } from './useAuth'
+import { logger } from '@/lib/logger/logger';;
 
 export interface ThemeConfig {
   colors: {
@@ -98,7 +99,7 @@ export function useOrgTheme() {
           setTheme({ ...DEFAULT_THEME, ...themeData } as ThemeConfig);
         }
       } catch (error) {
-        console.error('Failed to load organization theme:', error);
+        logger.error('Failed to load organization theme:', error, { file: 'useOrgTheme.ts' });
       } finally {
         setLoading(false);
       }

@@ -11,7 +11,8 @@ import type { OnboardingData, BaseModel, KnowledgeBase, AgentPersona } from '@/t
 import { buildPersonaFromOnboarding } from './persona-builder';
 import { processKnowledgeBase, KnowledgeProcessorOptions } from './knowledge-processor';
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
-import { COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 // Dynamic import of AdminFirestoreService to prevent client-side bundling
 
@@ -113,7 +114,7 @@ export async function processOnboarding(
       baseModel, // Changed from goldenMaster
     };
   } catch (error: any) {
-    console.error('[Onboarding Processor] Error:', error);
+    logger.error('[Onboarding Processor] Error:', error, { file: 'onboarding-processor.ts' });
     return {
       success: false,
       error: error.message || 'Failed to process onboarding',

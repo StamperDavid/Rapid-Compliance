@@ -4,7 +4,8 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction } from '@/types/workflow';
+import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction } from '@/types/workflow'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Execute create entity action
@@ -213,7 +214,7 @@ export async function executeDeleteEntityAction(
     });
     recordIds = queryResults.map((r: any) => r.id);
     if (recordIds.length === 0) {
-      console.log('[Entity Action] No records found matching query for delete');
+      logger.info('[Entity Action] No records found matching query for delete', { file: 'entity-action.ts' });
       return { recordIds: [], success: true, message: 'No records matched query' };
     }
   }
@@ -343,7 +344,7 @@ Generate ONLY the value for this field. Do not include any explanation or format
     
     return response.text.trim();
   } catch (error) {
-    console.error('[Entity Action] AI generation failed:', error);
+    logger.error('[Entity Action] AI generation failed:', error, { file: 'entity-action.ts' });
     return `[AI Error: ${error}]`;
   }
 }

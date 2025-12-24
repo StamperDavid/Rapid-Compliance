@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AgentPersonaPage() {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ export default function AgentPersonaPage() {
           }
         }
       } catch (error) {
-        console.error('Failed to load config:', error);
+        logger.error('Failed to load config:', error, { file: 'page.tsx' });
       }
     };
     loadConfig();
@@ -69,7 +70,7 @@ export default function AgentPersonaPage() {
         alert('Failed to save AI settings');
       }
     } catch (error) {
-      console.error('Error saving AI settings:', error);
+      logger.error('Error saving AI settings:', error, { file: 'page.tsx' });
       alert('Error saving AI settings');
     } finally {
       setSaveLoading(false);

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 export default function SubscriptionPage() {
   const params = useParams();
@@ -26,7 +27,7 @@ export default function SubscriptionPage() {
         setSubscription(data.subscription);
       }
     } catch (error) {
-      console.error('Failed to load subscription:', error);
+      logger.error('Failed to load subscription:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,7 @@ export default function SubscriptionPage() {
         loadSubscription(); // Reload
       }
     } catch (error) {
-      console.error('Failed to toggle feature:', error);
+      logger.error('Failed to toggle feature:', error, { file: 'page.tsx' });
     }
   };
 

@@ -11,7 +11,8 @@ import {
   EnrollmentStatus,
   StepActionStatus 
 } from '@/types/outbound-sequence';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export class SequenceEngine {
   /**
@@ -227,7 +228,7 @@ export class SequenceEngine {
 
       
     } catch (error: any) {
-      console.error(`[Sequence Engine] Error executing step:`, error);
+      logger.error('[Sequence Engine] Error executing step:', error, { file: 'sequence-engine.ts' });
 
       // Record failed action
       const failedAction: StepAction = {
@@ -293,10 +294,10 @@ export class SequenceEngine {
         },
       });
 
-      console.log(`[Sequence Engine] Email sent via Gmail to ${prospect.email}`);
+      logger.info('Sequence Engine Email sent via Gmail to prospect.email}', { file: 'sequence-engine.ts' });
       return;
     } catch (gmailError: any) {
-      console.warn('[Sequence Engine] Gmail send failed, trying fallback:', gmailError.message);
+      logger.warn('[Sequence Engine] Gmail send failed, trying fallback', { error: gmailError.message, file: 'sequence-engine.ts' });
       
       // Fallback to SendGrid if Gmail fails
       if (emailProvider === 'sendgrid') {
@@ -328,7 +329,7 @@ export class SequenceEngine {
           throw new Error(result.error || 'Failed to send email via SendGrid');
         }
 
-        console.log(`[Sequence Engine] Email sent via SendGrid to ${prospect.email}`);
+        logger.info('Sequence Engine Email sent via SendGrid to prospect.email}', { file: 'sequence-engine.ts' });
       } else {
         throw gmailError;
       }
@@ -552,7 +553,7 @@ export class SequenceEngine {
         stats
       );
     } catch (error) {
-      console.error('[Sequence Engine] Error tracking step execution:', error);
+      logger.error('[Sequence Engine] Error tracking step execution:', error, { file: 'sequence-engine.ts' });
       // Don't throw - analytics failure shouldn't stop execution
     }
   }
@@ -700,7 +701,7 @@ export class SequenceEngine {
       
       return enrollments.length > 0 ? enrollments[0] : null;
     } catch (error) {
-      console.error('[SequenceEngine] Error getting enrollment:', error);
+      logger.error('[SequenceEngine] Error getting enrollment:', error, { file: 'sequence-engine.ts' });
     return null;
     }
   }

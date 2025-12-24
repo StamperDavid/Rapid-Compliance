@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations';
+import { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations'
+import { logger } from '@/lib/logger/logger';;
 
 interface GoogleCalendarIntegrationProps {
   integration: GoogleCalendarType | null;
@@ -41,7 +42,7 @@ export default function GoogleCalendarIntegration({
       const org: { id?: string } = typeof window !== 'undefined' ? {} : {}; // TODO: Get from route params
       
       if (!user.uid || !org.id) {
-        console.error('User or organization not found');
+        logger.error('User or organization not found', new Error('User or organization not found'), { file: 'GoogleCalendarIntegration.tsx' });
         setIsConnecting(false);
         return;
       }
@@ -49,7 +50,7 @@ export default function GoogleCalendarIntegration({
       // Redirect to REAL Google OAuth
       window.location.href = `/api/integrations/google/auth?userId=${user.uid}&orgId=${org.id}`;
     } catch (error) {
-      console.error('Connection failed:', error);
+      logger.error('Connection failed:', error, { file: 'GoogleCalendarIntegration.tsx' });
       setIsConnecting(false);
     }
   };

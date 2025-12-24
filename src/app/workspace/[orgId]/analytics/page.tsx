@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AnalyticsDashboard() {
   const params = useParams();
@@ -36,7 +37,7 @@ export default function AnalyticsDashboard() {
         workflows: workflows.success ? workflows.analytics : null,
       });
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      logger.error('Failed to load analytics:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

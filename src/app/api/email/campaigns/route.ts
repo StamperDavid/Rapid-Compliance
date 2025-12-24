@@ -42,9 +42,18 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ success: true, stats });
     } else {
-      // List all campaigns
-      const campaigns = await listCampaigns(organizationId);
-      return NextResponse.json({ success: true, campaigns });
+      // List all campaigns with pagination
+      const limit = parseInt(searchParams.get('limit') || '50');
+      const cursor = searchParams.get('cursor');
+      const result = await listCampaigns(organizationId, limit, cursor);
+      return NextResponse.json({ 
+        success: true, 
+        campaigns: result.campaigns,
+        pagination: {
+          hasMore: result.hasMore,
+          pageSize: result.campaigns.length,
+        },
+      });
     }
   } catch (error: any) {
     logger.error('Campaign fetch error', error, { route: '/api/email/campaigns' });

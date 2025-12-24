@@ -4,7 +4,8 @@
  * REAL IMPLEMENTATION with provider integration
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface SMSOptions {
   to: string | string[];
@@ -222,7 +223,7 @@ async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMS
           },
           false
         ).catch((error) => {
-          console.error('Failed to save SMS to Firestore:', error);
+          logger.error('Failed to save SMS to Firestore:', error, { file: 'sms-service.ts' });
           // Don't fail the send if Firestore save fails
         });
       }
@@ -407,7 +408,7 @@ export async function queryTwilioStatus(
       errorMessage: data.error_message,
     };
   } catch (error) {
-    console.error('[SMS Service] Error querying Twilio status:', error);
+    logger.error('[SMS Service] Error querying Twilio status:', error, { file: 'sms-service.ts' });
     return null;
   }
 }

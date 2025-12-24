@@ -1,4 +1,5 @@
-import { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory';
+import { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory'
+import { logger } from '@/lib/logger/logger';;
 
 // Check if running on server or client
 const isServer = typeof window === 'undefined';
@@ -78,7 +79,11 @@ export async function buildBaseModel(params: {
  * Uses Admin SDK on server, Client SDK on client
  */
 export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
-  console.log('[saveBaseModel] Saving base model:', baseModel.id, 'for orgId:', baseModel.orgId);
+  logger.info('[saveBaseModel] Saving base model', { 
+    baseModelId: baseModel.id, 
+    orgId: baseModel.orgId,
+    file: 'base-model-builder.ts' 
+  });
   
   if (isServer) {
     // Server-side: Use Admin SDK (bypasses security rules)
@@ -88,7 +93,7 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    console.log('[saveBaseModel] Successfully saved to baseModels collection');
+    logger.info('[saveBaseModel] Successfully saved to baseModels collection', { file: 'base-model-builder.ts' });
   } else {
     // Client-side: Use Client SDK (follows security rules)
     const { db } = await import('@/lib/firebase/config');
@@ -99,7 +104,7 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    console.log('[saveBaseModel] Successfully saved to baseModels collection (client)');
+    logger.info('[saveBaseModel] Successfully saved to baseModels collection (client)', { file: 'base-model-builder.ts' });
   }
 }
 
@@ -107,7 +112,7 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
  * Get Base Model for an organization
  */
 export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
-  console.log('[getBaseModel] Looking for base model with orgId:', orgId);
+  logger.info('[getBaseModel] Looking for base model', { orgId, file: 'base-model-builder.ts' });
   
   if (isServer) {
     // Server-side: Use Admin SDK
@@ -117,7 +122,7 @@ export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
       where('orgId', '==', orgId)
     ]);
     
-    console.log('[getBaseModel] Found', baseModels.length, 'base models');
+    logger.info('[getBaseModel] Found base models', { count: baseModels.length, file: 'base-model-builder.ts' });
     return baseModels.length > 0 ? (baseModels[0] as BaseModel) : null;
   } else {
     // Client-side: Use Client SDK
@@ -129,7 +134,10 @@ export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
     );
     
     const snapshot = await getDocs(q);
-    console.log('[getBaseModel] Client query found', snapshot.docs.length, 'base models');
+    logger.info('[getBaseModel] Client query found base models', { 
+      count: snapshot.docs.length,
+      file: 'base-model-builder.ts' 
+    });
     
     if (snapshot.empty) {
       return null;

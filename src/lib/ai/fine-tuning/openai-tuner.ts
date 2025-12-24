@@ -5,7 +5,8 @@
 
 import type { TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { formatForOpenAI, validateTrainingData } from './data-formatter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Create fine-tuning job with OpenAI
@@ -22,7 +23,7 @@ export async function createOpenAIFineTuningJob(params: {
 }): Promise<FineTuningJob> {
   const { organizationId, baseModel, examples, hyperparameters } = params;
   
-  console.log(`[OpenAI Fine-Tuning] Starting job for ${organizationId}`);
+  logger.info('OpenAI Fine-Tuning Starting job for organizationId}', { file: 'openai-tuner.ts' });
   
   // Validate data
   const validation = validateTrainingData(examples);
@@ -92,7 +93,7 @@ export async function createOpenAIFineTuningJob(params: {
     false
   );
   
-  console.log(`[OpenAI Fine-Tuning] Job created: ${job.id}`);
+  logger.info('OpenAI Fine-Tuning Job created: job.id}', { file: 'openai-tuner.ts' });
   
   // Start monitoring job
   monitorFineTuningJob(organizationId, job.id, jobData.id);
@@ -155,7 +156,7 @@ async function monitorFineTuningJob(
       );
       
       if (!response.ok) {
-        console.error('[OpenAI Fine-Tuning] Failed to check status');
+        logger.error('[OpenAI Fine-Tuning] Failed to check status', new Error('[OpenAI Fine-Tuning] Failed to check status'), { file: 'openai-tuner.ts' });
         return;
       }
       
@@ -187,7 +188,7 @@ async function monitorFineTuningJob(
         setTimeout(checkStatus, 30000);
       }
     } catch (error) {
-      console.error('[OpenAI Fine-Tuning] Monitoring error:', error);
+      logger.error('[OpenAI Fine-Tuning] Monitoring error:', error, { file: 'openai-tuner.ts' });
     }
   };
   

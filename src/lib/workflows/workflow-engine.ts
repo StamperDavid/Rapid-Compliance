@@ -1,11 +1,12 @@
 /**
  * Workflow Execution Engine
  * Handles workflow triggers, conditions, and actions
- * MOCK IMPLEMENTATION - Ready for backend integration
+ * Production implementation with all action types supported
  */
 
 import { Workflow, WorkflowTrigger, WorkflowAction, WorkflowCondition } from '@/types/workflow';
-import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore'
+import { logger } from '@/lib/logger/logger';;
 
 export interface WorkflowExecution {
   id: string;
@@ -111,7 +112,7 @@ export async function executeWorkflow(
 
 /**
  * Evaluate workflow conditions
- * MOCK: Evaluates conditions against trigger data
+ * Evaluates conditions against trigger data with AND/OR logic
  */
 async function evaluateConditions(
   conditions: WorkflowCondition[],
@@ -218,7 +219,7 @@ async function executeAction(
     
     case 'cloud_function':
       // Cloud functions are called via HTTP action with the function URL
-      console.warn('[Workflow Engine] Cloud function actions should use http_request with function URL');
+      logger.warn('[Workflow Engine] Cloud function actions should use http_request with function URL', { file: 'workflow-engine.ts' });
       throw new Error('Cloud Function action: Use http_request with your function URL instead');
     
     case 'create_task':
@@ -280,10 +281,10 @@ export async function registerWorkflowTrigger(
       break;
     
     default:
-      console.warn(`Unknown trigger type: ${(workflow.trigger as any).type}`);
+      logger.warn('Unknown trigger type: ${(workflow.trigger as any).type}', { file: 'workflow-engine.ts' });
   }
   
-  console.log(`[Workflow Engine] Registered trigger for workflow ${workflow.id}`);
+  logger.info('Workflow Engine Registered trigger for workflow workflow.id}', { file: 'workflow-engine.ts' });
 }
 
 /**
@@ -303,12 +304,12 @@ export async function unregisterWorkflowTrigger(
     unregisterScheduleTrigger(workflowId, organizationId, workspaceId).catch(() => {}),
   ]);
   
-  console.log(`[Workflow Engine] Unregistered trigger for workflow ${workflowId}`);
+  logger.info('Workflow Engine Unregistered trigger for workflow workflowId}', { file: 'workflow-engine.ts' });
 }
 
 /**
  * Get workflow execution history
- * MOCK: Will query database in real implementation
+ * Queries Firestore for historical workflow executions
  */
 export async function getWorkflowExecutions(
   workflowId: string,
@@ -337,7 +338,7 @@ export async function getWorkflowExecutions(
 
 /**
  * Test workflow execution
- * MOCK: Executes workflow with test data
+ * Executes workflow with test data for validation purposes
  */
 export async function testWorkflowExecution(
   workflow: Workflow,

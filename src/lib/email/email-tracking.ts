@@ -73,7 +73,7 @@ export function generateTrackedLink(messageId: string, originalUrl: string): Tra
     // For now, we'll need the caller to pass it
     // Store via API route (which will save to Firestore)
     // Note: Caller needs to provide organizationId
-    console.warn('generateTrackedLink: organizationId needed for Firestore storage');
+    logger.warn('generateTrackedLink: organizationId needed for Firestore storage', { file: 'email-tracking.ts' });
   }
 
   return {
@@ -186,7 +186,7 @@ export async function recordEmailOpen(
   // Note: This function is called from API route, so we need organizationId
   // The API route should extract it from the tracking data or metadata
   // For now, log it (API route will handle the actual storage)
-  console.log('Email opened:', { trackingId, ipAddress, userAgent });
+  logger.info('Email opened', { trackingId, ipAddress, userAgent, file: 'email-tracking.ts' });
   
   // The actual storage happens in the API route which has access to organizationId
 }
@@ -210,7 +210,7 @@ export async function recordEmailClick(
   // Get link data from Firestore (called from API route, so server-side)
   // The API route will handle this and return the original URL
   // For now, return null (API route will handle the lookup and redirect)
-  console.log('Email clicked:', { linkId, ipAddress, userAgent });
+  logger.info('Email clicked', { linkId, ipAddress, userAgent, file: 'email-tracking.ts' });
   
   // The actual lookup and redirect happens in the API route
   return null;

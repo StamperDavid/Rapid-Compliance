@@ -2,7 +2,8 @@
 
 import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
+import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
+import { logger } from '@/lib/logger/logger';;
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -74,7 +75,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
       setChatMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Chat error:', error);
+      logger.error('Chat error:', error, { file: 'PublicLayout.tsx' });
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',

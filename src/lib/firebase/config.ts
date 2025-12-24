@@ -6,7 +6,8 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage';
+import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage'
+import { logger } from '@/lib/logger/logger';;
 
 // Firebase config from environment variables
 // Loads from .env.local (local overrides) and .env.development/.env.production (defaults)
@@ -28,14 +29,17 @@ const isFirebaseConfigured = !!(
 
 // Log configuration status (only in server-side)
 if (typeof window === 'undefined') {
-  console.log('[Firebase Config] Checking configuration...');
-  console.log('[Firebase Config] Project ID:', firebaseConfig.projectId || 'MISSING');
-  console.log('[Firebase Config] Auth Domain:', firebaseConfig.authDomain || 'MISSING');
-  console.log('[Firebase Config] Is Configured:', isFirebaseConfigured);
+  logger.info('[Firebase Config] Checking configuration...', { file: 'config.ts' });
+  logger.info('[Firebase Config] Configuration', { 
+    projectId: firebaseConfig.projectId || 'MISSING',
+    authDomain: firebaseConfig.authDomain || 'MISSING',
+    isConfigured: isFirebaseConfigured,
+    file: 'config.ts' 
+  });
   
   if (!isFirebaseConfigured) {
-    console.error('[Firebase Config] ❌ Firebase is not properly configured!');
-    console.error('[Firebase Config] Missing environment variables. Check Vercel settings.');
+    logger.error('[Firebase Config] ❌ Firebase is not properly configured!', new Error('[Firebase Config] ❌ Firebase is not properly configured!'), { file: 'config.ts' });
+    logger.error('[Firebase Config] Missing environment variables. Check Vercel settings.', new Error('[Firebase Config] Missing environment variables. Check Vercel settings.'), { file: 'config.ts' });
   }
 }
 

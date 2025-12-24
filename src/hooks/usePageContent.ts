@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger/logger';;
 
 interface WidgetElement {
   id: string;
@@ -54,7 +55,7 @@ export function usePageContent(pageId: string) {
           }
         }
       } catch (error) {
-        console.error('Failed to load page content:', error);
+        logger.error('Failed to load page content:', error, { file: 'usePageContent.ts' });
       } finally {
         setLoading(false);
       }

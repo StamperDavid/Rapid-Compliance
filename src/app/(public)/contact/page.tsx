@@ -13,7 +13,7 @@ function FallbackContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    logger.info('Contact form submitted', { email: formData.email, subject: formData.subject, file: 'page.tsx' });
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 5000);
   };

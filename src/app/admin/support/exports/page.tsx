@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import type { BulkOperation } from '@/types/admin';
+import type { BulkOperation } from '@/types/admin'
+import { logger } from '@/lib/logger/logger';;
 
 export default function DataExportsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -54,7 +55,7 @@ export default function DataExportsPage() {
         ));
       }, 2000);
     } catch (error) {
-      console.error('Export failed:', error);
+      logger.error('Export failed:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

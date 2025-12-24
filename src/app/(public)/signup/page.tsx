@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/config';
+import { auth, db } from '@/lib/firebase/config'
+import { logger } from '@/lib/logger/logger';;
 
 export default function SignupPage() {
   const router = useRouter();
@@ -50,10 +51,10 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted! Current step:', step);
+    logger.info('Form submitted!', { step, file: 'page.tsx' });
     
     if (step === 1) {
-      console.log('Moving to step 2');
+      logger.info('Moving to step 2', { file: 'page.tsx' });
       setStep(2);
       return;
     }
@@ -87,7 +88,7 @@ export default function SignupPage() {
 
   const createAccount = async () => {
     try {
-      console.log('Creating account:', formData);
+      logger.info('Creating account', { email: formData.email, plan: formData.planId, file: 'page.tsx' });
       
       if (!auth || !db) {
         throw new Error('Firebase not initialized');
@@ -101,7 +102,7 @@ export default function SignupPage() {
       );
       
       const user = userCredential.user;
-      console.log('User created in Auth:', user.uid);
+      logger.info('User created in Auth', { uid: user.uid, file: 'page.tsx' });
 
       // Generate organization ID
       const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -119,7 +120,7 @@ export default function SignupPage() {
           : null,
         status: 'active',
       });
-      console.log('Organization created:', orgId);
+      logger.info('Organization created', { orgId, file: 'page.tsx' });
 
       // Create user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
@@ -130,7 +131,7 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      console.log('User document created');
+      logger.info('User document created', { file: 'page.tsx' });
 
       // Success!
       alert(`Account created successfully! Welcome to ${formData.companyName}!`);
@@ -138,7 +139,7 @@ export default function SignupPage() {
       // Redirect to onboarding (not dashboard - users must complete onboarding first)
       router.push(`/workspace/${orgId}/onboarding`);
     } catch (error: any) {
-      console.error('Failed to create account:', error);
+      logger.error('Failed to create account:', error, { file: 'page.tsx' });
       
       // User-friendly error messages
       let errorMessage = 'Failed to create account';
@@ -159,11 +160,11 @@ export default function SignupPage() {
   const processPayment = async () => {
     try {
       // TODO: Implement Stripe payment
-      console.log('Processing payment:', formData);
+      logger.info('Processing payment', { plan: formData.planId, billingCycle: formData.billingCycle, file: 'page.tsx' });
       
       await createAccount();
     } catch (error) {
-      console.error('Failed to process payment:', error);
+      logger.error('Failed to process payment:', error, { file: 'page.tsx' });
       alert('Failed to process payment');
     }
   };

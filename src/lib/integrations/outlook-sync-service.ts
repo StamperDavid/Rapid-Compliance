@@ -4,7 +4,8 @@
  */
 
 import { Client } from '@microsoft/microsoft-graph-client';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface OutlookMessage {
   id: string;
@@ -89,7 +90,7 @@ export async function syncOutlookMessages(
     // Full sync (first time)
     return await fullSync(client, organizationId, maxResults);
   } catch (error) {
-    console.error('[Outlook Sync] Error:', error);
+    logger.error('[Outlook Sync] Error:', error, { file: 'outlook-sync-service.ts' });
     throw error;
   }
 }
@@ -119,7 +120,7 @@ async function fullSync(
         await saveMessageToCRM(organizationId, message);
         messagesSynced++;
       } catch (err) {
-        console.error(`[Outlook Sync] Error processing message ${message.id}:`, err);
+        logger.error('[Outlook Sync] Error processing message ${message.id}:', err, { file: 'outlook-sync-service.ts' });
         errors++;
       }
     }
@@ -139,7 +140,7 @@ async function fullSync(
     
     return status;
   } catch (error) {
-    console.error('[Outlook Sync] Full sync error:', error);
+    logger.error('[Outlook Sync] Full sync error:', error, { file: 'outlook-sync-service.ts' });
     throw error;
   }
 }
@@ -173,7 +174,7 @@ async function incrementalSync(
           messagesSynced++;
         }
       } catch (err) {
-        console.error(`[Outlook Sync] Error processing message ${message.id}:`, err);
+        logger.error('[Outlook Sync] Error processing message ${message.id}:', err, { file: 'outlook-sync-service.ts' });
         errors++;
       }
     }
@@ -195,10 +196,10 @@ async function incrementalSync(
     
     return status;
   } catch (error) {
-    console.error('[Outlook Sync] Incremental sync error:', error);
+    logger.error('[Outlook Sync] Incremental sync error:', error, { file: 'outlook-sync-service.ts' });
     // If delta link is invalid, fall back to full sync
     if ((error as any).statusCode === 410) {
-      console.log('[Outlook Sync] Delta link invalid, performing full sync');
+      logger.info('[Outlook Sync] Delta link invalid, performing full sync', { file: 'outlook-sync-service.ts' });
       return await fullSync(client, organizationId, 100);
     }
     throw error;
@@ -261,7 +262,7 @@ async function saveMessageToCRM(organizationId: string, message: OutlookMessage)
       );
     }
   } catch (error) {
-    console.error('[Outlook Sync] Error saving message to CRM:', error);
+    logger.error('[Outlook Sync] Error saving message to CRM:', error, { file: 'outlook-sync-service.ts' });
     throw error;
   }
 }
@@ -276,7 +277,7 @@ async function deleteMessageFromCRM(organizationId: string, messageId: string): 
       messageId
     );
   } catch (error) {
-    console.error('[Outlook Sync] Error deleting message:', error);
+    logger.error('[Outlook Sync] Error deleting message:', error, { file: 'outlook-sync-service.ts' });
   }
 }
 
@@ -325,7 +326,7 @@ export async function sendOutlookEmail(
     
     return response.id || 'sent';
   } catch (error) {
-    console.error('[Outlook Sync] Error sending email:', error);
+    logger.error('[Outlook Sync] Error sending email:', error, { file: 'outlook-sync-service.ts' });
     throw error;
   }
 }
@@ -342,7 +343,7 @@ async function findContactByEmail(organizationId: string, email: string): Promis
     
     return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
   } catch (error) {
-    console.error('[Outlook Sync] Error finding contact:', error);
+    logger.error('[Outlook Sync] Error finding contact:', error, { file: 'outlook-sync-service.ts' });
     return null;
   }
 }
@@ -373,7 +374,7 @@ async function saveSyncStatus(status: OutlookSyncStatus): Promise<void> {
       status
     );
   } catch (error) {
-    console.error('[Outlook Sync] Error saving sync status:', error);
+    logger.error('[Outlook Sync] Error saving sync status:', error, { file: 'outlook-sync-service.ts' });
   }
 }
 
@@ -399,10 +400,10 @@ export async function setupOutlookPushNotifications(
       .api('/subscriptions')
       .post(subscription);
     
-    console.log('[Outlook Sync] Push notifications enabled');
+    logger.info('[Outlook Sync] Push notifications enabled', { file: 'outlook-sync-service.ts' });
     return response.id;
   } catch (error) {
-    console.error('[Outlook Sync] Error setting up push notifications:', error);
+    logger.error('[Outlook Sync] Error setting up push notifications:', error, { file: 'outlook-sync-service.ts' });
     throw error;
   }
 }
@@ -421,9 +422,9 @@ export async function stopOutlookPushNotifications(
       .api(`/subscriptions/${subscriptionId}`)
       .delete();
     
-    console.log('[Outlook Sync] Push notifications disabled');
+    logger.info('[Outlook Sync] Push notifications disabled', { file: 'outlook-sync-service.ts' });
   } catch (error) {
-    console.error('[Outlook Sync] Error stopping push notifications:', error);
+    logger.error('[Outlook Sync] Error stopping push notifications:', error, { file: 'outlook-sync-service.ts' });
     throw error;
   }
 }
@@ -444,9 +445,9 @@ export async function renewOutlookSubscription(
         expirationDateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
       });
     
-    console.log('[Outlook Sync] Subscription renewed');
+    logger.info('[Outlook Sync] Subscription renewed', { file: 'outlook-sync-service.ts' });
   } catch (error) {
-    console.error('[Outlook Sync] Error renewing subscription:', error);
+    logger.error('[Outlook Sync] Error renewing subscription:', error, { file: 'outlook-sync-service.ts' });
     throw error;
   }
 }

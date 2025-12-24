@@ -1,14 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+/**
+ * Team Members Management Page
+ * Manage users, roles, and permissions for the organization
+ * NOTE: This is a complex page with inline styles - pagination added to Firestore query
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { usePagination } from '@/hooks/usePagination';
 import AdminBar from '@/components/AdminBar';
 import type { RolePermissions, UserRole } from '@/types/permissions';
 import { ROLE_PERMISSIONS } from '@/types/permissions';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { where, orderBy as firestoreOrderBy, QueryConstraint } from 'firebase/firestore';
 
 interface TeamMember {
   id: number;
@@ -34,7 +42,6 @@ export default function TeamMembersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [activePermissionTab, setActivePermissionTab] = useState<'preset' | 'custom'>('preset');
-  const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   const [inviteData, setInviteData] = useState({
@@ -44,59 +51,55 @@ export default function TeamMembersPage() {
     department: ''
   });
 
-
-  // Load team members from Firestore
-  useEffect(() => {
-    async function loadTeamMembers() {
-      try {
-        setLoading(true);
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const { where } = await import('firebase/firestore');
-        
-        // Query users who belong to this organization
-        const users = await FirestoreService.getAll(
-          COLLECTIONS.USERS,
-          [where('organizationId', '==', orgId)]
-        );
-        
-        // Map to TeamMember format
-        const members: TeamMember[] = (users || []).map((u: any, index: number) => ({
-          id: index + 1,
-          name: u.displayName || u.email?.split('@')[0] || 'Unknown',
-          email: u.email || '',
-          role: u.role || 'employee',
-          title: u.title || '',
-          department: u.department || '',
-          status: u.status || 'active',
-          joinedDate: u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
-          customPermissions: u.customPermissions
-        }));
-        
-        setTeamMembers(members);
-      } catch (error) {
-        console.error('Failed to load team members:', error);
-        // Show current user as fallback
-        if (user) {
-          setTeamMembers([{
-            id: 1,
-            name: user.displayName || user.email?.split('@')[0] || 'You',
-            email: user.email || '',
-            role: (user.role as UserRole) || 'admin',
-            title: '',
-            department: '',
-            status: 'active',
-            joinedDate: 'Current User'
-          }]);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
+  // Fetch function with pagination
+  const fetchUsers = useCallback(async (lastDoc?: any) => {
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
+    const constraints: QueryConstraint[] = [
+      where('organizationId', '==', orgId),
+      firestoreOrderBy('createdAt', 'desc')
+    ];
+
+    return await FirestoreService.getAllPaginated(
+      COLLECTIONS.USERS,
+      constraints,
+      50,
+      lastDoc
+    );
+  }, [orgId]);
+
+  const {
+    data: users,
+    loading,
+    error,
+    hasMore,
+    loadMore,
+    refresh
+  } = usePagination({ fetchFn: fetchUsers });
+
+  // Convert Firestore users to TeamMember format
+  useEffect(() => {
+    const members: TeamMember[] = (users || []).map((u: any, index: number) => ({
+      id: index + 1,
+      name: u.displayName || u.email?.split('@')[0] || 'Unknown',
+      email: u.email || '',
+      role: u.role || 'employee',
+      title: u.title || '',
+      department: u.department || '',
+      status: u.status || 'active',
+      joinedDate: u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
+      customPermissions: u.customPermissions
+    }));
+    
+    setTeamMembers(members);
+  }, [users]);
+
+  // Initial load
+  useEffect(() => {
     if (orgId) {
-      loadTeamMembers();
+      refresh();
     }
-  }, [orgId, user]);
+  }, [orgId, refresh]);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
@@ -321,19 +324,29 @@ export default function TeamMembersPage() {
               </button>
             </div>
 
+            {error && (
+              <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#2a0a0a', border: '1px solid #4a0a0a', borderRadius: '0.5rem', color: '#ff6b6b' }}>
+                {error}
+              </div>
+            )}
+
             {/* Team Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
               <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
                 <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Total Members</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>4</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff' }}>{teamMembers.length}</div>
               </div>
               <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
                 <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Active</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4ade80' }}>3</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4ade80' }}>
+                  {teamMembers.filter(m => m.status === 'active').length}
+                </div>
               </div>
               <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.75rem', padding: '1.5rem' }}>
                 <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Pending Invites</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fbbf24' }}>1</div>
+                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fbbf24' }}>
+                  {teamMembers.filter(m => m.status === 'invited').length}
+                </div>
               </div>
             </div>
 
@@ -397,6 +410,28 @@ export default function TeamMembersPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination */}
+              {(hasMore || loading) && (
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                  <button
+                    onClick={loadMore}
+                    disabled={loading || !hasMore}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: loading || !hasMore ? '#222' : '#333',
+                      color: loading || !hasMore ? '#666' : '#fff',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      cursor: loading || !hasMore ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500'
+                    }}
+                  >
+                    {loading ? 'Loading...' : hasMore ? `Load More (Showing ${teamMembers.length})` : 'All loaded'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -460,4 +495,3 @@ export default function TeamMembersPage() {
     </div>
   );
 }
-

@@ -4,7 +4,8 @@
  * https://data.crunchbase.com/docs
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 const CRUNCHBASE_API_BASE = 'https://api.crunchbase.com/api/v4';
 
@@ -71,7 +72,7 @@ export async function searchOrganization(
     const apiKey = await getCrunchbaseApiKey(organizationId);
     
     if (!apiKey) {
-      console.warn('[Crunchbase] API key not configured');
+      logger.warn('[Crunchbase] API key not configured', { file: 'crunchbase-service.ts' });
       return null;
     }
 
@@ -87,14 +88,14 @@ export async function searchOrganization(
     );
 
     if (!searchResponse.ok) {
-      console.error(`[Crunchbase] Search failed: ${searchResponse.status}`);
+      logger.error('[Crunchbase] Search failed: ${searchResponse.status}', new Error('[Crunchbase] Search failed: ${searchResponse.status}'), { file: 'crunchbase-service.ts' });
       return null;
     }
 
     const searchData = await searchResponse.json();
     
     if (!searchData.entities || searchData.entities.length === 0) {
-      console.log(`[Crunchbase] No results found for: ${companyName}`);
+      logger.info('Crunchbase No results found for: companyName}', { file: 'crunchbase-service.ts' });
       return null;
     }
 
@@ -104,7 +105,7 @@ export async function searchOrganization(
     // Fetch full organization data
     return await getOrganizationByPermalink(permalink, organizationId);
   } catch (error) {
-    console.error('[Crunchbase] Error searching organization:', error);
+    logger.error('[Crunchbase] Error searching organization:', error, { file: 'crunchbase-service.ts' });
     return null;
   }
 }
@@ -134,7 +135,7 @@ export async function getOrganizationByPermalink(
     );
 
     if (!response.ok) {
-      console.error(`[Crunchbase] Get organization failed: ${response.status}`);
+      logger.error('[Crunchbase] Get organization failed: ${response.status}', new Error('[Crunchbase] Get organization failed: ${response.status}'), { file: 'crunchbase-service.ts' });
       return null;
     }
 
@@ -150,7 +151,7 @@ export async function getOrganizationByPermalink(
       funding_rounds: fundingRounds,
     };
   } catch (error) {
-    console.error('[Crunchbase] Error getting organization:', error);
+    logger.error('[Crunchbase] Error getting organization:', error, { file: 'crunchbase-service.ts' });
     return null;
   }
 }
@@ -186,7 +187,7 @@ export async function getFundingRounds(
     const data = await response.json();
     return data.cards?.funding_rounds || [];
   } catch (error) {
-    console.error('[Crunchbase] Error getting funding rounds:', error);
+    logger.error('[Crunchbase] Error getting funding rounds:', error, { file: 'crunchbase-service.ts' });
     return [];
   }
 }
@@ -205,7 +206,7 @@ async function getCrunchbaseApiKey(organizationId: string): Promise<string | nul
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.crunchbaseApiKey || null;
   } catch (error) {
-    console.error('[Crunchbase] Error getting API key:', error);
+    logger.error('[Crunchbase] Error getting API key:', error, { file: 'crunchbase-service.ts' });
     return null;
   }
 }

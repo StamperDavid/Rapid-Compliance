@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { organizationIdSchema } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * OAuth Integration Routes
