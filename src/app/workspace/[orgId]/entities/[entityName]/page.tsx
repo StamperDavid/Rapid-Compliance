@@ -338,14 +338,20 @@ export default function EntityTablePage() {
         );
 
       case 'lookup':
-        // TODO: Implement lookup field with record picker
+        // Lookup field with record picker
+        const LookupFieldPicker = require('@/components/LookupFieldPicker').default;
         return (
-          <input
-            type="text"
-            value={value || ''}
-            onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+          <LookupFieldPicker
+            organizationId={orgId}
+            workspaceId="default"
+            targetEntity={field.lookupEntity || 'contacts'}
+            value={value}
+            onChange={(recordId: string | null, record: any | null) => {
+              setFormData({ ...formData, [field.key]: recordId });
+            }}
+            label={field.label}
+            placeholder={`Search ${field.lookupEntity || 'records'}...`}
             style={baseInputStyle}
-            placeholder={`Enter ${field.label.toLowerCase()} ID`}
           />
         );
 

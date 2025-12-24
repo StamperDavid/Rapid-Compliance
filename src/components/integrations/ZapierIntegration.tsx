@@ -37,9 +37,39 @@ export default function ZapierIntegration({
       alert('Please enter your Zapier webhook URL');
       return;
     }
+    
+    // Validate webhook URL format
+    try {
+      new URL(webhookUrl);
+      if (!webhookUrl.includes('hooks.zapier.com')) {
+        throw new Error('Invalid Zapier webhook URL');
+      }
+    } catch (error) {
+      alert('Please enter a valid Zapier webhook URL (e.g., https://hooks.zapier.com/hooks/catch/...)');
+      return;
+    }
+    
     setIsConnecting(true);
-    // MOCK: Simulate connection
-    setTimeout(() => {
+    
+    try {
+      // Test the webhook connection
+      const testResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'connection_test',
+          timestamp: new Date().toISOString(),
+          message: 'Testing Zapier webhook connection',
+        }),
+      });
+      
+      if (!testResponse.ok) {
+        throw new Error('Webhook test failed - please verify the URL is correct');
+      }
+      
+      // Connection successful
       onConnect({
         id: 'zapier',
         name: 'Zapier',
@@ -57,9 +87,12 @@ export default function ZapierIntegration({
         },
         connectedAt: new Date().toISOString(),
       });
-      setIsConnecting(false);
       setWebhookUrl('');
-    }, 1500);
+    } catch (error: any) {
+      alert(`Connection failed: ${error.message}`);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   if (!integration || integration.status !== 'active') {

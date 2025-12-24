@@ -1440,9 +1440,26 @@ function DashboardContent() {
                               </div>
                             </div>
                             <button
-                              onClick={() => {
-                                // TODO: Run report and show results (will be implemented with backend)
-                                alert('Report execution will be implemented with backend integration');
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch('/api/reports/execute', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      reportId: report.id,
+                                      orgId: selectedOrg,
+                                      parameters: {},
+                                    }),
+                                  });
+                                  const data = await response.json();
+                                  if (data.success) {
+                                    alert(`Report executed successfully!\n\n${JSON.stringify(data.results.summary || data.results, null, 2)}`);
+                                  } else {
+                                    alert(`Error: ${data.error || 'Failed to execute report'}`);
+                                  }
+                                } catch (error: any) {
+                                  alert(`Error: ${error.message}`);
+                                }
                               }}
                               style={{
                                 width: '100%',
