@@ -22,6 +22,7 @@ interface SchemaField {
   required?: boolean;
   options?: string[];
   config?: { linkedSchema?: string };
+  lookupEntity?: string;
 }
 
 export default function EntityTablePage() {
