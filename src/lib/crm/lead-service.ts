@@ -247,15 +247,21 @@ export async function enrichLead(
       throw new Error('Lead not found');
     }
 
-    // Call enrichment service
-    const { enrichPerson } = await import('@/lib/enrichment/enrichment-service');
+    // Call enrichment service for company data
+    const { enrichCompany } = await import('@/lib/enrichment/enrichment-service');
     
-    const enrichmentData = await enrichPerson({
-      firstName: lead.firstName,
-      lastName: lead.lastName,
-      email: lead.email,
-      company: lead.company,
-    });
+    let enrichmentData = null;
+    
+    // Only enrich if we have company information
+    if (lead.company) {
+      const enrichmentResponse = await enrichCompany({
+        companyName: lead.company,
+      }, organizationId);
+      
+      if (enrichmentResponse.success) {
+        enrichmentData = enrichmentResponse.data;
+      }
+    }
 
     // Update lead with enrichment data
     const updatedLead = await updateLead(organizationId, leadId, {
