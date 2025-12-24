@@ -1447,7 +1447,7 @@ function DashboardContent() {
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                       reportId: report.id,
-                                      orgId: selectedOrg,
+                                      orgId: user?.organizationId,
                                       parameters: {},
                                     }),
                                   });
