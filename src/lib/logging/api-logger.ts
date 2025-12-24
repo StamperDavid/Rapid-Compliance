@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { logger, LogContext } from './logger';
+import { logger, LogContext } from '../logger/logger';
 
 /**
  * Log API request and response
