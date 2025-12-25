@@ -1,6 +1,7 @@
 /**
  * Sentry Monitoring Middleware
  * Comprehensive error tracking and performance monitoring for all API routes
+ * Updated for Sentry v8+ API
  */
 
 import { NextRequest, NextResponse } from 'next/server';
