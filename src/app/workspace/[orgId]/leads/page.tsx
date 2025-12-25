@@ -62,6 +62,7 @@ export default function LeadsPage() {
               <th className="text-left p-4">Company</th>
               <th className="text-left p-4">Email</th>
               <th className="text-left p-4">Phone</th>
+              <th className="text-left p-4">Tier</th>
               <th className="text-left p-4">Score</th>
               <th className="text-left p-4">Status</th>
               <th className="text-left p-4">Actions</th>
@@ -70,7 +71,7 @@ export default function LeadsPage() {
           <tbody>
             {leads.length === 0 && !loading ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-gray-400">
+                <td colSpan={8} className="p-8 text-center text-gray-400">
                   No leads found. Click &quot;+ Add Lead&quot; to create your first lead.
                 </td>
               </tr>
@@ -81,6 +82,15 @@ export default function LeadsPage() {
                   <td className="p-4 text-gray-400">{lead.company || lead.companyName}</td>
                   <td className="p-4 text-gray-400">{lead.email}</td>
                   <td className="p-4 text-gray-400">{lead.phone || 'N/A'}</td>
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                      (lead.score || 50) >= 75 ? 'bg-red-600 text-white' : 
+                      (lead.score || 50) >= 50 ? 'bg-orange-500 text-white' : 
+                      'bg-blue-500 text-white'
+                    }`}>
+                      {(lead.score || 50) >= 75 ? '🔥 HOT' : (lead.score || 50) >= 50 ? '☀️ WARM' : '❄️ COLD'}
+                    </span>
+                  </td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded text-xs ${(lead.score || 0) >= 80 ? 'bg-green-900 text-green-300' : (lead.score || 0) >= 60 ? 'bg-yellow-900 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>
                       {lead.score || 50}

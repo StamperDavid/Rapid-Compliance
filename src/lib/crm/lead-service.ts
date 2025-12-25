@@ -129,16 +129,43 @@ export async function getLead(
 }
 
 /**
- * Create a new lead
+ * Create a new lead with auto-enrichment
  */
 export async function createLead(
   organizationId: string,
   data: Omit<Lead, 'id' | 'organizationId' | 'workspaceId' | 'createdAt'>,
-  workspaceId: string = 'default'
+  workspaceId: string = 'default',
+  options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean } = {}
 ): Promise<Lead> {
   try {
     const leadId = `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
+
+    let enrichmentData = null;
+    let enrichedScore = data.score || 50;
+
+    // Auto-enrich if enabled and company provided
+    if (options.autoEnrich !== false && data.company) {
+      try {
+        const { enrichCompany } = await import('@/lib/enrichment/enrichment-service');
+        const enrichmentResponse = await enrichCompany({
+          companyName: data.company,
+        }, organizationId);
+        
+        if (enrichmentResponse.success) {
+          enrichmentData = enrichmentResponse.data;
+          enrichedScore = calculateEnrichedScore({ ...data, score: enrichedScore } as Lead, enrichmentData);
+          
+          logger.info('Lead auto-enriched on creation', {
+            leadId,
+            dataPoints: Object.keys(enrichmentData || {}).length,
+          });
+        }
+      } catch (enrichError) {
+        // Don't fail lead creation if enrichment fails
+        logger.warn('Auto-enrichment failed, continuing with lead creation', enrichError);
+      }
+    }
 
     const lead: Lead = {
       ...data,
@@ -146,7 +173,8 @@ export async function createLead(
       organizationId,
       workspaceId,
       status: data.status || 'new',
-      score: data.score || 50,
+      score: enrichedScore,
+      enrichmentData,
       createdAt: now,
       updatedAt: now,
     };
@@ -158,11 +186,38 @@ export async function createLead(
       false
     );
 
+    // Log activity
+    try {
+      const { logStatusChange } = await import('./activity-logger');
+      await logStatusChange({
+        organizationId,
+        workspaceId,
+        relatedEntityType: 'lead',
+        relatedEntityId: leadId,
+        relatedEntityName: `${data.firstName} ${data.lastName}`,
+        fieldChanged: 'status',
+        previousValue: null,
+        newValue: lead.status,
+        userName: 'System',
+      });
+    } catch (activityError) {
+      logger.warn('Failed to log lead creation activity', activityError);
+    }
+
+    // Fire CRM event for workflow triggers
+    try {
+      const { fireLeadCreated } = await import('./event-triggers');
+      await fireLeadCreated(organizationId, workspaceId, leadId, lead);
+    } catch (triggerError) {
+      logger.warn('Failed to fire lead created event', triggerError);
+    }
+
     logger.info('Lead created', {
       organizationId,
       leadId,
       email: lead.email,
       source: lead.source,
+      enriched: !!enrichmentData,
     });
 
     return lead;
@@ -182,6 +237,12 @@ export async function updateLead(
   workspaceId: string = 'default'
 ): Promise<Lead> {
   try {
+    // Get current lead for comparison
+    const currentLead = await getLead(organizationId, leadId, workspaceId);
+    if (!currentLead) {
+      throw new Error('Lead not found');
+    }
+
     const updatedData = {
       ...updates,
       updatedAt: new Date(),
@@ -203,6 +264,35 @@ export async function updateLead(
     const lead = await getLead(organizationId, leadId, workspaceId);
     if (!lead) {
       throw new Error('Lead not found after update');
+    }
+
+    // Fire events for significant changes
+    try {
+      const { fireLeadStatusChanged, fireLeadScoreChanged } = await import('./event-triggers');
+      
+      if (updates.status && updates.status !== currentLead.status) {
+        await fireLeadStatusChanged(
+          organizationId,
+          workspaceId,
+          leadId,
+          currentLead.status,
+          updates.status,
+          lead
+        );
+      }
+
+      if (updates.score && updates.score !== currentLead.score) {
+        await fireLeadScoreChanged(
+          organizationId,
+          workspaceId,
+          leadId,
+          currentLead.score || 0,
+          updates.score,
+          lead
+        );
+      }
+    } catch (triggerError) {
+      logger.warn('Failed to fire lead update events', triggerError);
     }
 
     return lead;

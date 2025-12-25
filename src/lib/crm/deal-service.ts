@@ -215,6 +215,14 @@ export async function moveDealToStage(
   workspaceId: string = 'default'
 ): Promise<Deal> {
   try {
+    // Get current deal for event firing
+    const currentDeal = await getDeal(organizationId, dealId, workspaceId);
+    if (!currentDeal) {
+      throw new Error('Deal not found');
+    }
+
+    const oldStage = currentDeal.stage;
+
     const updates: Partial<Deal> = {
       stage: newStage,
     };
@@ -227,9 +235,18 @@ export async function moveDealToStage(
 
     const deal = await updateDeal(organizationId, dealId, updates, workspaceId);
 
+    // Fire CRM event
+    try {
+      const { fireDealStageChanged } = await import('./event-triggers');
+      await fireDealStageChanged(organizationId, workspaceId, dealId, oldStage, newStage, deal);
+    } catch (triggerError) {
+      logger.warn('Failed to fire deal stage changed event', triggerError);
+    }
+
     logger.info('Deal moved to new stage', {
       organizationId,
       dealId,
+      oldStage,
       newStage,
       value: deal.value,
     });
