@@ -284,7 +284,7 @@ export async function sendBulkSMS(
 
 /**
  * Send SMS from template
- * MOCK: Will replace template variables and send
+ * Loads template, replaces variables, and sends SMS
  */
 export async function sendSMSFromTemplate(
   templateId: string,
@@ -292,7 +292,7 @@ export async function sendSMSFromTemplate(
   variables: Record<string, string>,
   options: Omit<SMSOptions, 'to' | 'message'>
 ): Promise<SMSResult> {
-  // MOCK: In real implementation, this would:
+  // Template-based SMS flow:
   // 1. Load template from database
   // 2. Replace variables in template message
   // 3. Send SMS

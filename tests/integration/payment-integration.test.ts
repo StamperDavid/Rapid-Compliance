@@ -52,12 +52,10 @@ describe('Payment Integration Tests', () => {
   });
 
   describe('Payment Processing (Requires Stripe Test Key)', () => {
-    it.skip('should process Stripe payment in test mode', async () => {
-      // SKIP: Requires STRIPE_TEST_SECRET_KEY configured
-      // To run this test:
-      // 1. Add STRIPE_TEST_SECRET_KEY to apiKeyService for test org
-      // 2. Remove .skip from this test
-      // 3. Run: npm run test:integration
+    it('should process Stripe payment in test mode', async () => {
+      // NOTE: Test will skip gracefully if Stripe not configured
+      // To enable: Set STRIPE_TEST_SECRET_KEY in environment
+      // Or configure via API keys for test org
       
       const request = {
         workspaceId: `${testOrgId}/workspaces/${testWorkspaceId}`,

@@ -18,7 +18,7 @@ export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Plan selection
-    planId: 'agent-only',
+    planId: 'tier1',
     billingCycle: 'monthly' as 'monthly' | 'yearly',
     
     // Step 2: Account info
@@ -59,7 +59,7 @@ export default function SignupPage() {
     },
   };
 
-  const selectedPlan = plans[formData.planId as keyof typeof plans];
+  const selectedPlan = tiers[formData.planId as keyof typeof tiers];
   const price = formData.billingCycle === 'monthly' 
     ? selectedPlan.monthlyPrice 
     : selectedPlan.yearlyPrice;
@@ -275,7 +275,7 @@ export default function SignupPage() {
 
                 {/* Plan Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  {Object.entries(plans).map(([id, plan]) => (
+                  {Object.entries(tiers).map(([id, plan]) => (
                     <button
                       key={id}
                       type="button"

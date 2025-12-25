@@ -237,13 +237,12 @@ export async function getAvailableFunctions(organizationId: string): Promise<any
   
   try {
     // Get connected integrations for this org
-    const { getAllIntegrations } = await import('./integration-manager');
-    const connectedIntegrations = await getAllIntegrations(organizationId);
+    const { listConnectedIntegrations } = await import('./integration-manager');
+    const connectedIntegrations = await listConnectedIntegrations(organizationId);
     
-    // Only return functions for ACTIVE integrations
+    // Only return functions for connected integrations (credentials exist = active)
     const activeProviderIds = connectedIntegrations
-      .filter(i => i.status === 'active')
-      .map(i => i.providerId || i.id);
+      .map(i => i.integrationId);
     
     for (const provider of Object.values(INTEGRATION_PROVIDERS)) {
       // Skip if not connected

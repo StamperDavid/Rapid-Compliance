@@ -33,36 +33,18 @@ export default function SlackIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'slack',
-        name: 'Slack',
-        description: 'Get notifications in Slack channels',
-        icon: '💬',
-        category: 'communication',
-        status: 'active',
-        organizationId: 'demo-org',
-        teamName: 'My Team',
-        settings: {
-          notifications: {
-            newDeal: true,
-            dealWon: true,
-            dealLost: false,
-            newLead: true,
-            taskDue: true,
-          },
-          channels: {
-            deals: '#deals',
-            leads: '#leads',
-            tasks: '#tasks',
-            general: '#general',
-          },
-        },
-        connectedAt: new Date().toISOString(),
-      });
+    try {
+      // Get current user and org from context or URL
+      const userId = localStorage.getItem('userId') || 'current-user';
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Redirect to real OAuth flow
+      window.location.href = `/api/integrations/slack/auth?userId=${userId}&orgId=${orgId}`;
+    } catch (error) {
+      console.error('Failed to start Slack OAuth:', error);
       setIsConnecting(false);
-    }, 2000);
+      alert('Failed to connect to Slack. Please try again.');
+    }
   };
 
   if (!integration || integration.status !== 'active') {

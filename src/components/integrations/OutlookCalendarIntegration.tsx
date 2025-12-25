@@ -33,29 +33,18 @@ export default function OutlookCalendarIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'outlook-calendar',
-        name: 'Outlook Calendar',
-        description: 'Sync events and meetings',
-        icon: '📅',
-        category: 'calendar',
-        status: 'active',
-        organizationId: 'demo-org',
-        calendarId: 'primary',
-        settings: {
-          syncDirection: 'bidirectional',
-          syncCalendars: ['Calendar'],
-          autoCreateEvents: true,
-          reminderSettings: {
-            defaultReminderMinutes: 15,
-          },
-        },
-        connectedAt: new Date().toISOString(),
-      });
+    try {
+      // Get current user and org from context or URL
+      const userId = localStorage.getItem('userId') || 'current-user';
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Redirect to real Microsoft OAuth flow (same as Outlook, includes calendar scopes)
+      window.location.href = `/api/integrations/microsoft/auth?userId=${userId}&orgId=${orgId}`;
+    } catch (error) {
+      console.error('Failed to start Outlook Calendar OAuth:', error);
       setIsConnecting(false);
-    }, 2000);
+      alert('Failed to connect to Outlook Calendar. Please try again.');
+    }
   };
 
   if (!integration || integration.status !== 'active') {

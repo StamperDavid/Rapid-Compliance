@@ -320,8 +320,8 @@ Looking forward to speaking with you!
       await sendEmail({
         to: attendee.email,
         subject,
-        body,
-        organizationId,
+        text: body,
+        metadata: { organizationId },
       });
 
       // Send SMS reminder if phone provided
@@ -329,7 +329,7 @@ Looking forward to speaking with you!
         const { sendSMS } = await import('@/lib/sms/sms-service');
         await sendSMS({
           to: attendee.phone,
-          body: `Reminder: ${meeting.title} at ${meeting.startTime.toLocaleTimeString()}. ${meeting.zoomJoinUrl || ''}`,
+          message: `Reminder: ${meeting.title} at ${meeting.startTime.toLocaleTimeString()}. ${meeting.zoomJoinUrl || ''}`,
           organizationId,
         });
       }

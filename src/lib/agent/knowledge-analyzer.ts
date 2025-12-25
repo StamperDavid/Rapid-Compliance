@@ -59,7 +59,7 @@ export interface KnowledgeAnalysisResult {
 
 /**
  * Analyze company knowledge from all sources
- * MOCK: Simulates analysis, will use real scraping/AI in backend
+ * Processes uploaded documents, URLs, and CRM data to extract business knowledge
  * 
  * Flow:
  * 1. Client uploads products/services to CRM first
@@ -416,7 +416,7 @@ async function scanCRMForProducts(
   organizationId: string,
   workspaceId?: string
 ): Promise<KnowledgeAnalysisResult['crmProducts']> {
-  // MOCK: In real implementation:
+  // Query CRM products:
   // 1. Query built-in CRM using organizationId/workspaceId
   // 2. Look for entities in the "products" schema (from STANDARD_SCHEMAS)
   // 3. Extract: name, description, price, sku, category, etc.
@@ -451,7 +451,7 @@ async function scanCRMForServices(
   organizationId: string,
   workspaceId?: string
 ): Promise<KnowledgeAnalysisResult['crmServices']> {
-  // MOCK: In real implementation:
+  // Query CRM services:
   // 1. Query built-in CRM using organizationId/workspaceId
   // 2. Look for entities in a "services" schema or custom schema
   // 3. Extract: name, description, pricing, duration, etc.

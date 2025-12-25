@@ -376,9 +376,9 @@ Best regards
     await sendEmail({
       to: recipientEmail,
       subject,
-      body,
-      htmlBody: proposal.htmlContent,
-      organizationId,
+      text: body,
+      html: proposal.htmlContent,
+      metadata: { organizationId },
     });
 
     // Update proposal status

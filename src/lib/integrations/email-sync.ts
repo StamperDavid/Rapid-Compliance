@@ -240,15 +240,16 @@ export async function processEmailReply(
       });
 
       // Trigger reply handler for AI processing
-      const { processEmailReply: handleReply } = await import('@/lib/outbound/reply-handler');
-      await handleReply({
-        id: reply.id,
+      // TODO: Implement full reply processing logic
+      const { classifyReply } = await import('@/lib/outbound/reply-handler');
+      await classifyReply({
         from: reply.from,
         to: reply.to[0] || '',
         subject: reply.subject,
         body: reply.body,
-        receivedAt: reply.receivedAt.toISOString(),
         threadId: reply.threadId,
+        inReplyTo: originalEmail.id,
+        receivedAt: reply.receivedAt.toISOString(),
       });
 
       logger.info('Email reply processed', { organizationId, replyId: reply.id });

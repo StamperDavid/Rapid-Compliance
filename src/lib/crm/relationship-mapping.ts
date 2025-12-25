@@ -124,7 +124,7 @@ export async function getEntityRelationships(
       `organizations/${organizationId}/workspaces/${workspaceId}/relationships`
     );
 
-    const filtered = allRels.data.filter(
+    const filtered = allRels.filter(
       rel =>
         (rel.fromEntityType === entityType && rel.fromEntityId === entityId) ||
         (rel.toEntityType === entityType && rel.toEntityId === entityId)

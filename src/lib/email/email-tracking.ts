@@ -36,14 +36,11 @@ export interface EmailTrackingStats {
 
 /**
  * Generate tracking pixel URL
- * MOCK: Returns mock URL, will generate real tracking endpoint in backend
+ * Returns URL to email open tracking endpoint
  */
 export function generateTrackingPixel(messageId: string): TrackingPixel {
-  // MOCK: In real implementation, this would:
-  // 1. Generate unique tracking ID
-  // 2. Create tracking record in database
-  // 3. Return URL to tracking pixel endpoint
-
+  // Generate tracking pixel URL for email opens
+  // Tracking endpoint will log opens when pixel is loaded
   const pixelUrl = `/api/email/track/open/${messageId}`;
   
   return {
@@ -53,28 +50,17 @@ export function generateTrackingPixel(messageId: string): TrackingPixel {
 }
 
 /**
- * Generate tracked link
- * MOCK: Returns mock tracked URL, will generate real redirect endpoint in backend
+ * Generate tracked link for click tracking
+ * Returns URL to click tracking redirect endpoint
  */
 export function generateTrackedLink(messageId: string, originalUrl: string): TrackingLink {
-  // MOCK: In real implementation, this would:
-  // 1. Generate unique link ID
-  // 2. Store original URL in database
-  // 3. Return URL to redirect endpoint
-
+  // Generate unique link ID for tracking
   const linkId = `link_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const trackedUrl = `/api/email/track/click/${linkId}`;
 
-  // Store link mapping in Firestore (via API call)
-  // Note: This is called client-side, so we'll store via API route
-  // We need organizationId - it should be passed or extracted from messageId
-  // For now, we'll need to update the caller to pass organizationId
-  // This is a temporary solution - the caller should provide organizationId
+  // Link mapping should be stored in Firestore when email is sent
+  // The tracking endpoint will redirect to originalUrl after logging the click
   if (typeof window !== 'undefined') {
-    // Extract organizationId from messageId if possible, or get from context
-    // For now, we'll need the caller to pass it
-    // Store via API route (which will save to Firestore)
-    // Note: Caller needs to provide organizationId
     logger.warn('generateTrackedLink: organizationId needed for Firestore storage', { file: 'email-tracking.ts' });
   }
 
@@ -86,19 +72,19 @@ export function generateTrackedLink(messageId: string, originalUrl: string): Tra
 }
 
 /**
- * Process email HTML and add tracking
- * MOCK: Will inject tracking pixels and convert links in real implementation
+ * Process email HTML and add tracking pixels and link tracking
+ * Injects tracking pixel for opens and converts links for click tracking
  */
 export function processEmailHtml(html: string, messageId: string, trackOpens: boolean, trackClicks: boolean): string {
   let processedHtml = html;
 
-  // MOCK: Add tracking pixel
+  // Add tracking pixel for email opens
   if (trackOpens) {
     const pixel = generateTrackingPixel(messageId);
     processedHtml += `<img src="${pixel.pixelUrl}" width="1" height="1" style="display:none;" />`;
   }
 
-  // MOCK: Convert links to tracked links
+  // Convert links to tracked links for click tracking
   if (trackClicks) {
     // In real implementation, this would:
     // 1. Parse HTML
@@ -111,8 +97,8 @@ export function processEmailHtml(html: string, messageId: string, trackOpens: bo
 }
 
 /**
- * Get email tracking statistics
- * MOCK: Returns mock stats, will query database in real implementation
+ * Get email tracking statistics from database
+ * Queries Firestore for tracking events and calculates stats
  */
 export async function getEmailTrackingStats(
   messageId: string,

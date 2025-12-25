@@ -5,6 +5,7 @@ import { subscriptionCreateSchema, validateInput } from '@/lib/validation/schema
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { SubscriptionTier } from '@/types/subscription';
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Create subscription
     const subscription = await createSubscription(
       customer.id,
-      planId,
+      planId as SubscriptionTier,
       organizationId,
       trialDays || 14
     );

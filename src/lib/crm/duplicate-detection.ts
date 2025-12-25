@@ -93,11 +93,9 @@ export async function detectLeadDuplicates(
 ): Promise<DuplicateDetectionResult> {
   try {
     // Get all leads in organization
-    const existingLeadsResult = await FirestoreService.getAll<Lead>(
+    const existingLeads = await FirestoreService.getAll<Lead>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/leads/records`
     );
-    
-    const existingLeads = existingLeadsResult.data;
     const matches: DuplicateMatch[] = [];
 
     // Check each existing lead for similarity
@@ -233,11 +231,9 @@ export async function detectContactDuplicates(
   contact: Partial<any>
 ): Promise<DuplicateDetectionResult> {
   try {
-    const existingContactsResult = await FirestoreService.getAll<any>(
+    const existingContacts = await FirestoreService.getAll<any>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/contacts/records`
     );
-    
-    const existingContacts = existingContactsResult.data;
     const matches: DuplicateMatch[] = [];
 
     for (const existingContact of existingContacts) {
@@ -320,11 +316,9 @@ export async function detectCompanyDuplicates(
   company: Partial<any>
 ): Promise<DuplicateDetectionResult> {
   try {
-    const existingCompaniesResult = await FirestoreService.getAll<any>(
+    const existingCompanies = await FirestoreService.getAll<any>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/companies/records`
     );
-    
-    const existingCompanies = existingCompaniesResult.data;
     const matches: DuplicateMatch[] = [];
 
     for (const existingCompany of existingCompanies) {

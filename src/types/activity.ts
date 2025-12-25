@@ -66,6 +66,7 @@ export interface Activity {
     fromEmail?: string;
     toEmail?: string;
     ccEmails?: string[];
+    threadId?: string;
     opens?: number;
     clicks?: number;
     linkClicked?: string;

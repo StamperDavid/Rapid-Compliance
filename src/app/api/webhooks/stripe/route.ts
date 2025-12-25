@@ -180,8 +180,10 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     if (!organizationId) return;
 
     // Log successful payment
-    await FirestoreService.create(
+    const historyId = `payment_${invoice.id}_${Date.now()}`;
+    await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/billing_history`,
+      historyId,
       {
         type: 'payment_succeeded',
         invoiceId: invoice.id,
@@ -189,7 +191,8 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         currency: invoice.currency,
         paidAt: new Date(invoice.status_transitions.paid_at! * 1000).toISOString(),
         createdAt: new Date().toISOString(),
-      }
+      },
+      false // Don't merge, create new document
     );
 
     logger.info(`[Stripe Webhook] Payment succeeded for org: ${organizationId}, amount: ${invoice.amount_paid}`);
@@ -263,7 +266,7 @@ Questions? Reply to this email.
     `.trim();
 
     // TODO: Actually send the email
-    logger.info(`[Email] Trial end email content:`, emailContent);
+    logger.info('[Email] Trial end email content:', { content: emailContent });
   } catch (error) {
     logger.error('[Email] Error sending trial end email:', error);
   }

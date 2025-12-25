@@ -155,8 +155,8 @@ async function notifyMentionedUsers(
         await sendEmail({
           to: user.email,
           subject: `${comment.authorName} mentioned you in a comment`,
-          body: `${comment.authorName} mentioned you:\n\n"${comment.content}"\n\nView in CRM: [LINK]`,
-          organizationId,
+          text: `${comment.authorName} mentioned you:\n\n"${comment.content}"\n\nView in CRM: [LINK]`,
+          metadata: { organizationId },
         });
       }
     }
@@ -228,8 +228,8 @@ async function notifyTaskAssignment(
       await sendEmail({
         to: user.email,
         subject: `New task assigned: ${task.title}`,
-        body: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${task.dueDate?.toLocaleDateString() || 'No due date'}\n\n${task.description || ''}`,
-        organizationId,
+        text: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${task.dueDate?.toLocaleDateString() || 'No due date'}\n\n${task.description || ''}`,
+        metadata: { organizationId },
       });
     }
 
@@ -252,7 +252,7 @@ export async function calculateLeaderboard(
       `organizations/${organizationId}/members`
     );
 
-    const members = membersResult.data;
+    const members = membersResult;
     const leaderboard: LeaderboardEntry[] = [];
 
     // Calculate period start date
@@ -322,9 +322,9 @@ async function calculateUserMetrics(
   endDate: Date
 ): Promise<LeaderboardEntry['metrics']> {
   try {
-    const { getLeads } = await import('./lead-service');
-    const { getDeals } = await import('./deal-service');
-    const { getActivities } = await import('./activity-service');
+    const { getLeads } = await import('@/lib/crm/lead-service');
+    const { getDeals } = await import('@/lib/crm/deal-service');
+    const { getActivities } = await import('@/lib/crm/activity-service');
 
     // Get leads created by user
     const leadsResult = await getLeads(organizationId, workspaceId, { ownerId: userId }, { pageSize: 1000 });
@@ -366,7 +366,7 @@ async function calculateUserMetrics(
     const tasksResult = await FirestoreService.getAll<TeamTask>(
       `organizations/${organizationId}/workspaces/${workspaceId}/tasks`
     );
-    const tasksCompleted = tasksResult.data.filter(t => 
+    const tasksCompleted = tasksResult.filter(t => 
       t.assignedTo === userId && 
       t.status === 'completed' &&
       t.completedAt &&
@@ -410,7 +410,7 @@ export async function getUserTasks(
       `organizations/${organizationId}/workspaces/${workspaceId}/tasks`
     );
 
-    let tasks = result.data.filter(t => t.assignedTo === userId);
+    let tasks = result.filter(t => t.assignedTo === userId);
 
     if (status) {
       tasks = tasks.filter(t => t.status === status);

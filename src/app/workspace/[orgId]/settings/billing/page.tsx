@@ -209,7 +209,7 @@ export default function BillingSettingsPage() {
     }
   ];
 
-  const currentPlan = tiers.find(p => p.id === subscription?.tier || p.id === subscription?.plan) || tiers[0];
+  const currentPlan = tiers.find(p => p.id === subscription?.plan) || tiers[0];
   const isTrialing = subscription?.status === 'trialing';
   const trialDaysLeft = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -457,9 +457,9 @@ export default function BillingSettingsPage() {
             <div style={{ marginBottom: '2rem' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Available Plans</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
-                {plans.map(plan => {
+                {tiers.map(plan => {
                   const isCurrent = plan.id === subscription?.plan;
-                  const isUpgrade = plans.findIndex(p => p.id === plan.id) > plans.findIndex(p => p.id === subscription?.plan);
+                  const isUpgrade = tiers.findIndex(p => p.id === plan.id) > tiers.findIndex(p => p.id === subscription?.plan);
                   
                   return (
                     <div

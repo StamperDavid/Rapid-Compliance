@@ -38,8 +38,22 @@ export default function StripeIntegration({
       return;
     }
     setIsConnecting(true);
-    // MOCK: Simulate connection
-    setTimeout(() => {
+    try {
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Save Stripe API key to backend
+      const response = await fetch('/api/settings/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          service: 'stripe',
+          apiKey: apiKey,
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to save Stripe API key');
+      
       onConnect({
         id: 'stripe',
         name: 'Stripe',
@@ -47,7 +61,7 @@ export default function StripeIntegration({
         icon: '💳',
         category: 'payment',
         status: 'active',
-        organizationId: 'demo-org',
+        organizationId: orgId,
         apiKey: apiKey.substring(0, 10) + '...', // Show partial key
         settings: {
           autoCreateCustomers: true,
@@ -55,9 +69,13 @@ export default function StripeIntegration({
         },
         connectedAt: new Date().toISOString(),
       });
-      setIsConnecting(false);
       setApiKey('');
-    }, 1500);
+    } catch (error) {
+      console.error('Failed to configure Stripe:', error);
+      alert('Failed to save Stripe API key. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   if (!integration || integration.status !== 'active') {

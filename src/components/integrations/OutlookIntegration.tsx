@@ -33,28 +33,18 @@ export default function OutlookIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'outlook',
-        name: 'Outlook',
-        description: 'Sync emails and track opens/clicks',
-        icon: '📨',
-        category: 'email',
-        status: 'active',
-        organizationId: 'demo-org',
-        email: 'user@outlook.com',
-        settings: {
-          syncDirection: 'bidirectional',
-          syncFolders: ['Inbox', 'Sent Items'],
-          autoCreateContacts: true,
-          trackOpens: true,
-          trackClicks: true,
-        },
-        connectedAt: new Date().toISOString(),
-      });
+    try {
+      // Get current user and org from context or URL
+      const userId = localStorage.getItem('userId') || 'current-user';
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Redirect to real Microsoft OAuth flow
+      window.location.href = `/api/integrations/microsoft/auth?userId=${userId}&orgId=${orgId}`;
+    } catch (error) {
+      console.error('Failed to start Outlook OAuth:', error);
       setIsConnecting(false);
-    }, 2000);
+      alert('Failed to connect to Outlook. Please try again.');
+    }
   };
 
   if (!integration || integration.status !== 'active') {

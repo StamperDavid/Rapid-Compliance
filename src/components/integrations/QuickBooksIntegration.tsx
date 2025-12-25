@@ -33,27 +33,18 @@ export default function QuickBooksIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'quickbooks',
-        name: 'QuickBooks',
-        description: 'Sync invoices, payments, and customers',
-        icon: '📊',
-        category: 'accounting',
-        status: 'active',
-        organizationId: 'demo-org',
-        syncSettings: {
-          syncInvoices: true,
-          syncPayments: true,
-          syncCustomers: true,
-          syncItems: true,
-          syncDirection: 'bidirectional',
-        },
-        connectedAt: new Date().toISOString(),
-      });
+    try {
+      // Get current user and org from context or URL
+      const userId = localStorage.getItem('userId') || 'current-user';
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Redirect to real QuickBooks OAuth flow
+      window.location.href = `/api/integrations/quickbooks/auth?userId=${userId}&orgId=${orgId}`;
+    } catch (error) {
+      console.error('Failed to start QuickBooks OAuth:', error);
       setIsConnecting(false);
-    }, 2000);
+      alert('Failed to connect to QuickBooks. Please try again.');
+    }
   };
 
   if (!integration || integration.status !== 'active') {

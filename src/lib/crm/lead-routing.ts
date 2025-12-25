@@ -72,7 +72,7 @@ export async function routeLead(
       `organizations/${organizationId}/leadRoutingRules`
     );
 
-    const rules = rulesResult.data
+    const rules = rulesResult
       .filter(r => r.enabled)
       .sort((a, b) => b.priority - a.priority); // Higher priority first
 
@@ -347,7 +347,7 @@ async function getDefaultAssignment(organizationId: string): Promise<string> {
       `organizations/${organizationId}/members`
     );
 
-    const activeMembers = membersResult.data.filter(m => m.role === 'admin' || m.role === 'member');
+    const activeMembers = membersResult.filter(m => m.role === 'admin' || m.role === 'member');
 
     if (activeMembers.length > 0) {
       // Round-robin through org members
