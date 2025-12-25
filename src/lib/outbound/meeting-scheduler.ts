@@ -574,7 +574,8 @@ async function cancelCalendarEvent(calendarEventId: string, userId?: string): Pr
 
 async function sendCalendarInvite(meeting: ScheduledMeeting): Promise<void> {
   // Google Calendar sends invites automatically when creating event
-  logger.info('Meeting Scheduler Calendar invites sent to meeting.attendees.map(a => a.email).join(', ')}', { file: 'meeting-scheduler.ts' });
+  const attendees = meeting.attendees.map(a => a.email).join(', ');
+  logger.info(`Meeting Scheduler Calendar invites sent to ${attendees}`, { file: 'meeting-scheduler.ts' });
 }
 
 async function getCalendarTokens(userId: string): Promise<{ access_token: string; refresh_token?: string } | null> {
