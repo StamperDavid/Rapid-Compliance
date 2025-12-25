@@ -258,10 +258,17 @@ export async function executeWorkflow(
       status: result.status,
     });
 
-    return result;
+    return {
+      success: result.status === 'completed',
+      executionId: result.id,
+    };
   } catch (error: any) {
     logger.error('Workflow execution failed', error, { organizationId, workflowId });
-    throw new Error(`Failed to execute workflow: ${error.message}`);
+    return {
+      success: false,
+      executionId: '',
+      error: error.message,
+    };
   }
 }
 
