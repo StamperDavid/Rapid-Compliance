@@ -254,13 +254,21 @@ export async function sendCampaign(
     
     const result = await executeSend(campaignId, organizationId);
 
+    if (!result.success) {
+      return { success: false, sent: 0, error: result.error };
+    }
+
+    // Get updated campaign to retrieve sent count
+    const updatedCampaign = await getCampaign(organizationId, campaignId);
+    const sentCount = updatedCampaign?.stats?.sent || 0;
+
     logger.info('Campaign sent', {
       organizationId,
       campaignId,
-      success: result.success,
+      sent: sentCount,
     });
 
-    return result;
+    return { success: true, sent: sentCount };
   } catch (error: any) {
     logger.error('Failed to send campaign', error, { organizationId, campaignId });
     throw new Error(`Failed to send campaign: ${error.message}`);
