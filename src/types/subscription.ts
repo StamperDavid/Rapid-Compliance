@@ -1,26 +1,136 @@
 /**
- * Subscription and Feature Gating Types
- * Defines subscription tiers, features, and usage limits
+ * Subscription Types - Volume-Based "Growth Partner" Model
+ * All tiers have access to ALL features - differentiated only by record capacity
  */
 
+// NEW: Volume-based tier system (replaces feature-gated plans)
+export type SubscriptionTier = 'tier1' | 'tier2' | 'tier3' | 'tier4';
+
+// DEPRECATED: Legacy plan types (kept for backward compatibility during migration)
 export type SubscriptionPlan = 'starter' | 'professional' | 'enterprise' | 'custom';
+
 export type BillingCycle = 'monthly' | 'yearly';
 export type SubscriptionStatus = 'active' | 'trial' | 'past_due' | 'canceled' | 'paused';
+
+/**
+ * SINGLE SOURCE OF TRUTH: Volume-Based Pricing Tiers
+ * Success-Linked Pricing - Pay for what you store, not what you use
+ */
+export const VOLUME_TIERS = {
+  tier1: {
+    id: 'tier1',
+    name: 'Tier 1',
+    price: 400, // $400/month
+    recordMin: 0,
+    recordMax: 100,
+    description: 'Perfect for getting started',
+  },
+  tier2: {
+    id: 'tier2',
+    name: 'Tier 2',
+    price: 650, // $650/month
+    recordMin: 101,
+    recordMax: 250,
+    description: 'Growing your pipeline',
+  },
+  tier3: {
+    id: 'tier3',
+    name: 'Tier 3',
+    price: 1000, // $1,000/month
+    recordMin: 251,
+    recordMax: 500,
+    description: 'Scaling your operations',
+  },
+  tier4: {
+    id: 'tier4',
+    name: 'Tier 4',
+    price: 1250, // $1,250/month
+    recordMin: 501,
+    recordMax: 1000,
+    description: 'Enterprise-level capacity',
+  },
+} as const;
+
+/**
+ * All-Inclusive Features (Every tier gets everything)
+ * No feature gating - everyone has access to the full platform
+ */
+export const ALL_INCLUSIVE_FEATURES = [
+  // AI & Automation
+  'AI Sales Agents (Unlimited)',
+  'AI Email Writer (Unlimited)',
+  'AI Reply Handler',
+  'AI Meeting Scheduler',
+  
+  // Lead Generation
+  'Lead Scraper & Enrichment',
+  'Prospect Finder (All Sources)',
+  'Data Import/Export',
+  
+  // Outbound & Campaigns
+  'Email Sequences (Unlimited)',
+  'Multi-Channel Outreach (Email, LinkedIn, SMS)',
+  'A/B Testing',
+  
+  // Social Media AI
+  'Social Media Management',
+  'Content Generation',
+  'Auto-Posting',
+  
+  // CRM & Admin
+  'Full CRM Suite',
+  'Workflow Automation',
+  'E-commerce Integration',
+  'Custom Schemas',
+  'API Access',
+  'White-Label Options',
+  
+  // Support
+  'Email & Chat Support',
+  'Knowledge Base',
+] as const;
+
+/**
+ * BYOK (Bring Your Own Key) - No Token Markup
+ * Users connect their own API keys and pay raw market rates
+ */
+export const BYOK_PROVIDERS = [
+  'OpenRouter',
+  'OpenAI',
+  'Anthropic',
+  'Google AI',
+  'Custom LLMs',
+] as const;
 
 export interface OrganizationSubscription {
   organizationId: string;
   
-  // Plan details
-  plan: SubscriptionPlan;
+  // NEW: Volume-based tier (primary pricing model)
+  tier: SubscriptionTier;
+  
+  // DEPRECATED: Legacy plan field (kept for backward compatibility)
+  plan?: SubscriptionPlan;
+  
   billingCycle: BillingCycle;
   status: SubscriptionStatus;
   
   // Trial information
   trialEndsAt?: string; // ISO date
   isTrialing: boolean;
+  trialRequiresPayment: boolean; // NEW: Always true - credit card required for trial
   
-  // Core features (always enabled for all plans)
-  coreFeatures: {
+  // NEW: Record capacity tracking (what determines pricing tier)
+  recordCount: number; // Current total records across all workspaces
+  recordCapacity: number; // Max allowed for current tier
+  recordCountLastUpdated: string; // ISO date
+  
+  // NEW: All features enabled (no gating)
+  // Features are controlled by tier capacity, not feature flags
+  allFeaturesEnabled: true; // Always true - everyone gets everything
+  
+  // DEPRECATED: Feature gating removed in volume-based model
+  // Kept for backward compatibility during migration
+  coreFeatures?: {
     aiChatAgent: boolean;
     crm: boolean;
     ecommerce: boolean;
@@ -28,13 +138,13 @@ export interface OrganizationSubscription {
     whiteLabel: boolean;
   };
   
-  // Outbound features (configurable per plan)
-  outboundFeatures: OutboundFeatures;
+  // DEPRECATED: Outbound features no longer gated
+  outboundFeatures?: OutboundFeatures;
   
-  // Add-ons purchased
-  addOns: SubscriptionAddOn[];
+  // DEPRECATED: Add-ons not needed (everything included)
+  addOns?: SubscriptionAddOn[];
   
-  // Usage tracking for current billing period
+  // Usage tracking for analytics (not for limiting access)
   usage: UsageMetrics;
   
   // Billing information
@@ -437,7 +547,27 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, Partial<OutboundFeatures>> = 
   },
 };
 
-// Plan pricing
+// NEW: Volume-Based Tier Pricing (primary pricing structure)
+export const TIER_PRICING: Record<SubscriptionTier, { monthly: number; yearly: number }> = {
+  tier1: {
+    monthly: 400,
+    yearly: 4000, // ~17% discount (10 months pricing)
+  },
+  tier2: {
+    monthly: 650,
+    yearly: 6500, // ~17% discount
+  },
+  tier3: {
+    monthly: 1000,
+    yearly: 10000, // ~17% discount
+  },
+  tier4: {
+    monthly: 1250,
+    yearly: 12500, // ~17% discount
+  },
+};
+
+// DEPRECATED: Legacy plan pricing (kept for backward compatibility)
 export const PLAN_PRICING: Record<SubscriptionPlan, { monthly: number; yearly: number }> = {
   starter: {
     monthly: 99,
@@ -626,4 +756,78 @@ export interface AdminCustomer {
   createdAt: string;
   trialStartedAt?: string;
   convertedAt?: string;
+}
+
+/**
+ * Helper Functions for Volume-Based Tier System
+ */
+
+/**
+ * Determine the appropriate tier based on record count
+ */
+export function getTierForRecordCount(recordCount: number): SubscriptionTier {
+  if (recordCount <= VOLUME_TIERS.tier1.recordMax) return 'tier1';
+  if (recordCount <= VOLUME_TIERS.tier2.recordMax) return 'tier2';
+  if (recordCount <= VOLUME_TIERS.tier3.recordMax) return 'tier3';
+  return 'tier4';
+}
+
+/**
+ * Get tier details by tier ID
+ */
+export function getTierDetails(tier: SubscriptionTier) {
+  return VOLUME_TIERS[tier];
+}
+
+/**
+ * Get pricing for a tier
+ */
+export function getTierPricing(tier: SubscriptionTier, cycle: BillingCycle = 'monthly') {
+  return cycle === 'monthly' 
+    ? TIER_PRICING[tier].monthly 
+    : TIER_PRICING[tier].yearly;
+}
+
+/**
+ * Check if record count is within tier capacity
+ */
+export function isWithinTierCapacity(recordCount: number, tier: SubscriptionTier): boolean {
+  const tierDetails = VOLUME_TIERS[tier];
+  return recordCount <= tierDetails.recordMax;
+}
+
+/**
+ * Calculate required tier for given record count
+ */
+export function calculateRequiredTier(currentCount: number, additionalRecords: number): {
+  tier: SubscriptionTier;
+  totalRecords: number;
+  price: number;
+  needsUpgrade: boolean;
+  currentTier: SubscriptionTier;
+} {
+  const totalRecords = currentCount + additionalRecords;
+  const requiredTier = getTierForRecordCount(totalRecords);
+  const currentTier = getTierForRecordCount(currentCount);
+  
+  return {
+    tier: requiredTier,
+    totalRecords,
+    price: TIER_PRICING[requiredTier].monthly,
+    needsUpgrade: requiredTier !== currentTier,
+    currentTier,
+  };
+}
+
+/**
+ * Get all tiers for pricing page display
+ */
+export function getAllTiers() {
+  return Object.entries(VOLUME_TIERS).map(([key, value]) => ({
+    ...value,
+    tier: key as SubscriptionTier,
+    monthlyPrice: TIER_PRICING[key as SubscriptionTier].monthly,
+    yearlyPrice: TIER_PRICING[key as SubscriptionTier].yearly,
+    features: ALL_INCLUSIVE_FEATURES,
+  }));
 }
