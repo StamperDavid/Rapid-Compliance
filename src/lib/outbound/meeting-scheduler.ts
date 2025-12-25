@@ -692,7 +692,7 @@ async function sendMeetingUpdate(
       });
     }
     
-    logger.info('Meeting Scheduler Sent updateType} emails to meeting.attendees.length} attendees', { file: 'meeting-scheduler.ts' });
+    logger.info(`Meeting Scheduler Sent ${updateType} emails to ${meeting.attendees.length} attendees`, { file: 'meeting-scheduler.ts' });
   } catch (error) {
     logger.error('[Meeting Scheduler] Error sending update email:', error, { file: 'meeting-scheduler.ts' });
     // Don't throw - email failure shouldn't block the main operation
