@@ -10,6 +10,11 @@
 ## 📋 **START HERE**
 
 ### For First-Time Users
+0. **[DOCUMENTATION_GUIDE.md](./DOCUMENTATION_GUIDE.md)** 👑 **SINGLE SOURCE OF TRUTH REFERENCE**
+   - Status: ✅ NEW (Dec 25, 2025)
+   - What it covers: Where to find what (quick reference guide)
+   - Who needs it: EVERYONE - know where to look for answers
+
 1. **[BETA_LAUNCH_GUIDE.md](./BETA_LAUNCH_GUIDE.md)** ⭐ **READ THIS FIRST**
    - Status: ✅ CURRENT (Dec 24, 2025)
    - What it covers: Beta launch readiness, known limitations, launch checklist
