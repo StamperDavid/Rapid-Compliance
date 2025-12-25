@@ -8,7 +8,7 @@
 
 ## 🎯 Executive Summary
 
-You can **launch to beta TODAY** with 5-10 users under supervision. The platform is **92% complete** with all core features working. The remaining 8% is production hardening for scale (100+ users).
+You can **launch to beta TODAY** with 5-10 users under supervision. The platform is **87% complete** with all core features working. The remaining 13% is production hardening for scale (100+ users). See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for details.
 
 ### What Just Got Fixed (Last 2 Hours)
 
@@ -175,7 +175,7 @@ You can **launch to beta TODAY** with 5-10 users under supervision. The platform
 ## 🎉 You're Ready for Beta!
 
 **Bottom Line:**
-- Platform is 92% complete
+- Platform is 87% complete (verified in PROJECT_STATUS.md)
 - All major features work
 - Known limitations documented
 - Beta users can start using it TODAY

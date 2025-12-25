@@ -1,5 +1,8 @@
 # AI Sales Platform
 
+> 📊 **Current Status:** 87% complete - See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for details  
+> 🚀 **Build Status:** ✅ Passing (138 routes) - Last updated Dec 25, 2025
+
 AI-powered sales platform with intelligent agent system, customer memory persistence, and real-time conversation management.
 
 ## Core Innovation: Golden Master + Customer Memory
@@ -261,7 +264,7 @@ Key variables:
 
 ## Current Status
 
-**Functional** (65-70% complete):
+**Functional** (87% complete - see PROJECT_STATUS.md):
 - ✅ AI agent training and deployment
 - ✅ Real-time conversation monitoring
 - ✅ Customer memory persistence

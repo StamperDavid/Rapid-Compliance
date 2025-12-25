@@ -1,5 +1,9 @@
 # Production Readiness Roadmap - 6 Week Plan
 
+> ⚠️ **NOTICE:** This document is outdated (written Dec 23 before build fixes).  
+> **See [PROJECT_STATUS.md](./PROJECT_STATUS.md) for current status.**  
+> Many issues listed here have been resolved (Dec 25, 2025).
+
 **Start Date:** December 23, 2025  
 **Target Launch:** February 3, 2026  
 **Goal:** Production-ready platform for 100+ users
