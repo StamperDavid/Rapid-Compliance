@@ -42,9 +42,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check feature access
-    const featureCheck = await requireFeature(request, orgId, 'emailSequences');
-    if (featureCheck) return featureCheck;
+    // NEW PRICING MODEL: All features available to all active subscriptions
+    // Feature check no longer needed - everyone gets email sequences!
+    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
+    // if (featureCheck) return featureCheck;
 
     // Get sequences with pagination
     const { orderBy } = await import('firebase/firestore');
@@ -94,9 +95,10 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('At least one step is required');
     }
 
-    // Check feature access
-    const featureCheck = await requireFeature(request, orgId, 'emailSequences');
-    if (featureCheck) return featureCheck;
+    // NEW PRICING MODEL: All features available to all active subscriptions
+    // Feature check no longer needed - everyone gets email sequences!
+    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
+    // if (featureCheck) return featureCheck;
 
     // Create sequence
     const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

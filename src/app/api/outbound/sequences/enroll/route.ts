@@ -46,9 +46,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check feature access
-    const featureCheck = await requireFeature(request, orgId, 'emailSequences');
-    if (featureCheck) return featureCheck;
+    // NEW PRICING MODEL: All features available to all active subscriptions
+    // Feature check no longer needed - everyone gets sequence enrollment!
+    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
+    // if (featureCheck) return featureCheck;
 
     // Enroll each prospect
     const results = await Promise.allSettled(

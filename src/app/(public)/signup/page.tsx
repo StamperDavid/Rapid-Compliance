@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 export default function SignupPage() {
   const router = useRouter();
@@ -26,21 +31,31 @@ export default function SignupPage() {
     startTrial: true,
   });
 
-  const plans = {
-    'agent-only': {
-      name: 'Agent Only',
-      monthlyPrice: 29,
-      yearlyPrice: 280,
+  // NEW: Volume-based tiers
+  const tiers = {
+    'tier1': {
+      name: 'Tier 1',
+      monthlyPrice: 400,
+      yearlyPrice: 4000,
+      recordCapacity: '0-100 records',
     },
-    'starter': {
-      name: 'Starter',
-      monthlyPrice: 49,
-      yearlyPrice: 470,
+    'tier2': {
+      name: 'Tier 2',
+      monthlyPrice: 650,
+      yearlyPrice: 6500,
+      recordCapacity: '101-250 records',
     },
-    'professional': {
-      name: 'Professional',
-      monthlyPrice: 149,
-      yearlyPrice: 1430,
+    'tier3': {
+      name: 'Tier 3',
+      monthlyPrice: 1000,
+      yearlyPrice: 10000,
+      recordCapacity: '251-500 records',
+    },
+    'tier4': {
+      name: 'Tier 4',
+      monthlyPrice: 1250,
+      yearlyPrice: 12500,
+      recordCapacity: '501-1,000 records',
     },
   };
 
@@ -86,12 +101,23 @@ export default function SignupPage() {
     }
   };
 
-  const createAccount = async () => {
+  // NEW: Create account with mandatory payment method
+  const createAccount = async (paymentMethodId?: string) => {
     try {
-      logger.info('Creating account', { email: formData.email, plan: formData.planId, file: 'page.tsx' });
+      logger.info('Creating account with payment method', { 
+        email: formData.email, 
+        tier: formData.planId,
+        hasPaymentMethod: !!paymentMethodId,
+        file: 'page.tsx' 
+      });
       
       if (!auth || !db) {
         throw new Error('Firebase not initialized');
+      }
+
+      // NEW: For trial, payment method is REQUIRED
+      if (formData.startTrial && !paymentMethodId) {
+        throw new Error('Payment method required for trial. Credit card must be on file.');
       }
 
       // Create Firebase Auth user
@@ -107,20 +133,43 @@ export default function SignupPage() {
       // Generate organization ID
       const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+      // NEW: Create Stripe customer and subscription
+      const subscriptionResponse = await fetch('/api/billing/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          email: formData.email,
+          name: formData.companyName,
+          tierId: formData.planId || 'tier1', // Default to tier1
+          paymentMethodId, // Attach payment method to subscription
+          trialDays: formData.startTrial ? 14 : 0,
+        }),
+      });
+
+      if (!subscriptionResponse.ok) {
+        throw new Error('Failed to create subscription');
+      }
+
+      const { customerId, subscriptionId } = await subscriptionResponse.json();
+
       // Create organization document in Firestore
       await setDoc(doc(db, 'organizations', orgId), {
         name: formData.companyName,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         ownerId: user.uid,
-        plan: formData.planId,
+        tier: formData.planId || 'tier1', // NEW: Tier-based
+        plan: formData.planId, // DEPRECATED: Kept for backward compat
         billingCycle: formData.billingCycle,
         trialEndsAt: formData.startTrial 
           ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
           : null,
-        status: 'active',
+        status: formData.startTrial ? 'trialing' : 'active',
+        stripeCustomerId: customerId,
+        subscriptionId: subscriptionId,
       });
-      logger.info('Organization created', { orgId, file: 'page.tsx' });
+      logger.info('Organization created with subscription', { orgId, subscriptionId, file: 'page.tsx' });
 
       // Create user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
@@ -134,9 +183,9 @@ export default function SignupPage() {
       logger.info('User document created', { file: 'page.tsx' });
 
       // Success!
-      alert(`Account created successfully! Welcome to ${formData.companyName}!`);
+      alert(`Account created successfully! Welcome to ${formData.companyName}!\n\n${formData.startTrial ? '14-day free trial started. You\'ll be charged based on your usage at the end of the trial.' : 'Subscription activated!'}`);
       
-      // Redirect to onboarding (not dashboard - users must complete onboarding first)
+      // Redirect to onboarding
       router.push(`/workspace/${orgId}/onboarding`);
     } catch (error: any) {
       logger.error('Failed to create account:', error, { file: 'page.tsx' });

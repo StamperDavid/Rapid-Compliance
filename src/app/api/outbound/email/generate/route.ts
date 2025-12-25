@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Prospect name and company are required');
     }
 
-    // Check feature access and usage limits
-    const gateCheck = await requireFeatureWithLimit(request, orgId, 'aiEmailWriter', 1);
-    if (gateCheck) return gateCheck;
+    // NEW PRICING MODEL: All features available, no usage limits
+    // Feature/usage check no longer needed - unlimited AI email generation!
+    // const gateCheck = await requireFeatureWithLimit(request, orgId, 'aiEmailWriter', 1);
+    // if (gateCheck) return gateCheck;
 
     const prospectData: ProspectData = {
       name: prospect.name,

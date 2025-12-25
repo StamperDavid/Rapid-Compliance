@@ -48,9 +48,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check feature access
-    const featureCheck = await requireFeature(request, orgId, 'multiChannelOutreach' as any);
-    if (featureCheck) return featureCheck;
+    // NEW PRICING MODEL: All features available to all active subscriptions
+    // Feature check no longer needed - everyone gets meeting scheduling!
+    // const featureCheck = await requireFeature(request, orgId, 'multiChannelOutreach' as any);
+    // if (featureCheck) return featureCheck;
 
     const meetingRequest: MeetingRequest = {
       prospectEmail,
