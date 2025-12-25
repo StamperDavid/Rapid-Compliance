@@ -36,6 +36,7 @@ export async function logApiRequest(
     // Server errors
     logger.error(
       `${method} ${path} returned ${statusCode}`,
+      new Error(`API Error ${statusCode}`),
       logContext
     );
   } else if (statusCode >= 400) {
@@ -46,7 +47,10 @@ export async function logApiRequest(
     );
   } else {
     // Success
-    logger.logRequest(method, path, statusCode, duration, logContext);
+    logger.info(
+      `${method} ${path} returned ${statusCode} (${duration}ms)`,
+      logContext
+    );
   }
 }
 
@@ -62,12 +66,16 @@ export function logApiError(
   const method = request.method;
   const path = new URL(request.url).pathname;
 
-  logger.logApiError(method, path, statusCode, error, {
-    ...context,
-    method,
-    path,
-    statusCode,
-  });
+  logger.error(
+    `${method} ${path} error: ${error.message}`,
+    error,
+    {
+      ...context,
+      method,
+      path,
+      statusCode,
+    }
+  );
 }
 
 
