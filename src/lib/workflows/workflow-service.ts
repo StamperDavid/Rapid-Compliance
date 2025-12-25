@@ -254,8 +254,8 @@ export async function executeWorkflow(
     logger.info('Workflow executed', {
       organizationId,
       workflowId,
-      executionId: result.executionId,
-      success: result.success,
+      executionId: result.id,
+      status: result.status,
     });
 
     return result;
