@@ -234,6 +234,7 @@ export async function deleteCampaign(
 
 /**
  * Send campaign
+ * Returns the number of emails sent
  */
 export async function sendCampaign(
   organizationId: string,
