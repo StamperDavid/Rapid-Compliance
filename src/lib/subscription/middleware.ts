@@ -9,8 +9,8 @@ import { OrganizationSubscription } from '@/types/subscription'
 import { logger } from '@/lib/logger/logger';;
 
 /**
- * Require that organization has access to a specific feature
- * Returns error response if feature is not available
+ * NEW: All features are available to all active/trialing subscriptions
+ * This now only checks if subscription is active, not which features they have
  */
 export async function requireFeature(
   request: NextRequest,
@@ -23,14 +23,15 @@ export async function requireFeature(
     if (!hasAccess) {
       const subscription = await FeatureGate.getSubscription(orgId);
       
+      // In new model, if hasAccess is false, it means subscription is inactive
+      // NOT that they don't have the feature
       return NextResponse.json(
         { 
           success: false, 
-          error: `Feature '${feature}' is not available on your current plan`,
-          currentPlan: subscription.plan,
+          error: `Your subscription is ${subscription.status}. Please reactivate to access this feature.`,
+          subscriptionStatus: subscription.status,
           feature,
-          upgrade: true,
-          upgradeMessage: getUpgradeMessage(feature, subscription.plan),
+          reactivateRequired: true,
         },
         { status: 403 }
       );
