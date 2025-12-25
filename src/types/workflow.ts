@@ -7,6 +7,7 @@ import { EntityFilter } from './entity';
  */
 export interface Workflow {
   id: string;
+  organizationId: string;
   workspaceId: string;
   
   // Basic info
