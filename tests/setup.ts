@@ -10,20 +10,8 @@ Object.defineProperty(process.env, 'NODE_ENV', {
   writable: true,
 });
 
-// Mock Firestore
-jest.mock('@/lib/db/firestore-service', () => ({
-  FirestoreService: {
-    get: jest.fn(),
-    set: jest.fn(),
-    getAll: jest.fn(),
-    delete: jest.fn(),
-  },
-  COLLECTIONS: {
-    ORGANIZATIONS: 'organizations',
-    USERS: 'users',
-    WORKSPACES: 'workspaces',
-  },
-}));
+// Firestore will use real Firebase connection
+// No mocking - tests use actual dev database
 
 // Mock API Key Service
 jest.mock('@/lib/api-keys/api-key-service', () => ({

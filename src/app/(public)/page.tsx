@@ -214,23 +214,44 @@ export default function LandingPage() {
       <section className="pt-44 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-full mb-8">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="text-sm text-gray-300">AI-Powered Sales Automation</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 rounded-full mb-8">
+              <span className="text-2xl">🚀</span>
+              <span className="text-sm font-semibold text-indigo-300">Complete Sales Platform - Not Just a Chatbot</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-              Your AI Sales Team,
+              Replace Your Entire
               <br />
-              <span className="bg-gradient-to-r from-gray-300 to-gray-400 bg-clip-text text-transparent">
-                Working 24/7
+              <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                Sales Stack
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
-              Train a custom AI sales agent on your business in minutes. Deploy it on your website. 
-              Watch it qualify leads, answer questions, and close deals while you sleep.
+            <p className="text-xl md:text-2xl text-gray-300 mb-6 max-w-3xl mx-auto">
+              AI sales agents + CRM + automation + lead generation + email sequences + social media AI.
             </p>
+            <p className="text-lg text-gray-400 mb-12 max-w-3xl mx-auto">
+              Stop paying for 6 different tools. Get everything in one place with transparent, usage-based pricing.
+            </p>
+
+            {/* Key Differentiators */}
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
+              <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-lg">
+                <div className="text-sm text-gray-400">Starting at</div>
+                <div className="text-xl font-bold text-white">$400/month</div>
+                <div className="text-xs text-gray-500">All features included</div>
+              </div>
+              <div className="px-6 py-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <div className="text-sm text-green-300">💡 BYOK</div>
+                <div className="text-xl font-bold text-white">Zero AI Markup</div>
+                <div className="text-xs text-green-400">Pay raw market rates</div>
+              </div>
+              <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-lg">
+                <div className="text-sm text-gray-400">Simple Pricing</div>
+                <div className="text-xl font-bold text-white">Records Based</div>
+                <div className="text-xs text-gray-500">Not feature gated</div>
+              </div>
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -274,39 +295,156 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* What's Included */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-white mb-2">10x</div>
-              <div className="text-gray-400">More Qualified Leads</div>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              What's Included in Every Plan
+            </h2>
+            <p className="text-xl text-gray-300">
+              The $400 user gets the <span className="text-indigo-400 font-semibold">same features</span> as the $1,250 user. You only pay based on CRM records stored.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {[
+              { icon: '🤖', title: 'Custom AI Sales Agent', desc: 'Fully trainable on your business' },
+              { icon: '📧', title: 'Unlimited Email Sequences', desc: 'No sending limits' },
+              { icon: '📱', title: 'Multi-Channel Outreach', desc: 'Email, LinkedIn, SMS automation' },
+              { icon: '📊', title: 'Full CRM Suite', desc: 'Custom schemas & objects' },
+              { icon: '⚡', title: 'Workflow Automation', desc: 'Build any workflow' },
+              { icon: '🛒', title: 'Built-in E-Commerce Engine', desc: 'Cart, checkout, payments' },
+              { icon: '🔍', title: 'Lead Scraper & Enrichment', desc: 'Find and enrich prospects' },
+              { icon: '🎨', title: 'White-Label Branding', desc: 'Your domain, your brand' },
+              { icon: '🔑', title: 'API Access', desc: 'Full API documentation' },
+            ].map((feature, index) => (
+              <div key={index} className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-center hover:border-indigo-500/50 transition">
+                <div className="text-4xl mb-3">{feature.icon}</div>
+                <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-400">{feature.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Stop Juggling Tools */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Stop Juggling 6 Different Tools
+            </h2>
+            <p className="text-xl text-gray-300">
+              Replace your "Frankenstein stack" with one unified platform
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            {/* Before */}
+            <div className="bg-red-900/20 border-2 border-red-700/50 rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-4xl">😫</span>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">The Old Way</h3>
+                  <p className="text-red-300 text-sm">Fragmented & Expensive</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">Apollo/ZoomInfo</span>
+                  <span className="text-red-300 font-semibold">$99-399/mo</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">Air AI/11x</span>
+                  <span className="text-red-300 font-semibold">$500-2,000/mo</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">Outreach Tool (Email/LinkedIn)</span>
+                  <span className="text-red-300 font-semibold">$49-199/mo</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">Zapier</span>
+                  <span className="text-red-300 font-semibold">$29-599/mo</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">HubSpot CRM</span>
+                  <span className="text-red-300 font-semibold">$45-1,200/mo</span>
+                </div>
+                <div className="border-t border-red-700/50 pt-3 mt-3 flex justify-between items-center">
+                  <span className="text-white font-bold">TOTAL</span>
+                  <span className="text-red-300 font-bold text-2xl">$722-4,397/mo</span>
+                </div>
+              </div>
+              <div className="mt-4 text-red-300/70 text-xs">
+                Plus: Integration hell, 5 support teams, data syncing nightmares
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-white mb-2">24/7</div>
-              <div className="text-gray-400">Always Available</div>
+
+            {/* After */}
+            <div className="bg-green-900/20 border-2 border-green-500/50 rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-4xl">🎉</span>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">The New Way</h3>
+                  <p className="text-green-300 text-sm">All-In-One & Affordable</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">✓ Lead Scraper & Enrichment</span>
+                  <span className="text-green-300 font-semibold">Included</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">✓ AI Sales Agents (Unlimited)</span>
+                  <span className="text-green-300 font-semibold">Included</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">✓ Multi-Channel Outreach</span>
+                  <span className="text-green-300 font-semibold">Included</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">✓ Workflow Automation</span>
+                  <span className="text-green-300 font-semibold">Included</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-white/90">✓ Full CRM + E-commerce</span>
+                  <span className="text-green-300 font-semibold">Included</span>
+                </div>
+                <div className="border-t border-green-700/50 pt-3 mt-3 flex justify-between items-center">
+                  <span className="text-white font-bold">TOTAL</span>
+                  <span className="text-green-300 font-bold text-2xl">$400-1,250/mo</span>
+                </div>
+              </div>
+              <div className="mt-4 text-green-300/70 text-xs">
+                Plus: Everything synced, one dashboard, one support team, BYOK pricing
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-white mb-2">&lt;1hr</div>
-              <div className="text-gray-400">Setup Time</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-white mb-2">90%</div>
-              <div className="text-gray-400">Customer Satisfaction</div>
+          </div>
+
+          <div className="text-center">
+            <div className="inline-block bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/40 rounded-xl px-8 py-4">
+              <p className="text-green-300 font-bold text-2xl mb-1">
+                Save $322-3,147 per month
+              </p>
+              <p className="text-white text-sm">
+                That's $3,864-37,764 saved per year
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Three Steps to Your AI Sales Team
             </h2>
             <p className="text-xl text-gray-300">
-              Get up and running in hours, not weeks
+              Get up and running in less than an hour
             </p>
           </div>
 
@@ -392,75 +530,138 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
+      {/* One Platform, Six Tools Replaced */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Everything You Need to Sell More
+              One Platform. Six Tools Replaced.
             </h2>
             <p className="text-xl text-gray-300">
-              Not just a chatbot. A complete AI sales platform.
+              Everything you need for modern sales, all in one place
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: '🤖',
-                title: 'Trainable AI Agent',
-                description: 'Custom-trained on YOUR business, products, and sales process'
-              },
-              {
-                icon: '🧠',
-                title: 'Customer Memory',
-                description: 'Remembers every conversation, preference, and interaction'
-              },
-              {
-                icon: '💬',
-                title: 'Lead Qualification',
-                description: 'Automatically scores and qualifies leads using AI'
-              },
-              {
-                icon: '📊',
-                title: 'Built-in CRM',
-                description: 'Manage contacts, deals, and pipeline in one place'
-              },
-              {
-                icon: '⚡',
-                title: 'Workflow Automation',
-                description: 'Auto-follow-ups, email sequences, task creation'
-              },
-              {
-                icon: '🛒',
-                title: 'E-Commerce Ready',
-                description: 'Take payments, manage inventory, process orders'
-              },
-              {
-                icon: '📈',
-                title: 'Real-Time Analytics',
-                description: 'Track conversions, revenue, and agent performance'
-              },
-              {
-                icon: '🎨',
-                title: 'White-Label Ready',
-                description: 'Your brand, your colors, your domain'
-              },
-              {
-                icon: '🔗',
-                title: 'Integrations',
-                description: 'Connect to Stripe, Slack, Google, and more'
-              }
-            ].map((feature, index) => (
-              <div
-                key={index}
-                className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:bg-white/10 transition"
-              >
-                <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
-                <p className="text-gray-300">{feature.description}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Replace Apollo/ZoomInfo */}
+            <div className="p-8 bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-blue-400 mb-2">Replaces Apollo/ZoomInfo</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Lead Intelligence</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Lead Scraper & Enrichment</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Prospect Database</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Company & Contact Data</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Replace Air AI/11x */}
+            <div className="p-8 bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-purple-400 mb-2">Replaces Air AI/11x</div>
+              <h3 className="text-2xl font-bold text-white mb-4">AI Sales Agents</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Unlimited AI Agents</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Custom Training</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Customer Memory</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Replace HubSpot */}
+            <div className="p-8 bg-gradient-to-br from-orange-900/20 to-orange-800/10 border border-orange-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-orange-400 mb-2">Replaces HubSpot/Pipedrive</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Full CRM Suite</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Custom Schemas & Objects</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Pipeline Management</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Activity Tracking</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Social & Multi-Channel */}
+            <div className="p-8 bg-gradient-to-br from-pink-900/20 to-pink-800/10 border border-pink-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-pink-400 mb-2">Outreach Automation</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Multi-Channel Engagement</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Email Sequences</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>LinkedIn Messaging</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>SMS Campaigns</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Replace Zapier */}
+            <div className="p-8 bg-gradient-to-br from-yellow-900/20 to-yellow-800/10 border border-yellow-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-yellow-400 mb-2">Replaces Zapier/Make</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Automation Engine</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Workflow Builder</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Email Sequences (Unlimited)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Native Integrations</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* E-Commerce */}
+            <div className="p-8 bg-gradient-to-br from-green-900/20 to-green-800/10 border border-green-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-green-400 mb-2">Commerce Platform</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Built-in E-Commerce Engine</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Product Catalog</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Cart & Checkout</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Order & Payment Processing</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>

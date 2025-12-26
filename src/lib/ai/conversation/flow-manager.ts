@@ -136,23 +136,23 @@ export const CONVERSATION_FLOWS: Record<string, Omit<ConversationFlow, 'id' | 'c
         nextStepId: 'recommend_starter', // Default
       },
       {
-        id: 'recommend_agent_only',
+        id: 'recommend_tier1',
         type: 'question',
-        question: 'For just the AI agent, our Agent-Only plan at $29/month is perfect. Does that work?',
+        question: 'Based on your needs, Tier 1 at $400/month (0-100 records) with ALL features included is perfect. Does that work?',
         requiredInfo: 'planAccepted',
         nextStepId: 'create_checkout',
       },
       {
-        id: 'recommend_starter',
+        id: 'recommend_tier2',
         type: 'question',
-        question: 'Our Starter plan at $49/month includes AI agent + CRM. Sound good?',
+        question: 'Our Tier 2 at $650/month (101-250 records) includes everything - unlimited AI agents, full CRM, automation, and more. Sound good?',
         requiredInfo: 'planAccepted',
         nextStepId: 'create_checkout',
       },
       {
-        id: 'recommend_professional',
+        id: 'recommend_tier3',
         type: 'question',
-        question: 'Our Professional plan at $149/month has everything. Ready to get started?',
+        question: 'For your scale, Tier 3 at $1,000/month (251-500 records) has the entire platform. Ready to get started?',
         requiredInfo: 'planAccepted',
         nextStepId: 'create_checkout',
       },
@@ -280,6 +280,7 @@ export function getCurrentStepMessage(
   
   return '';
 }
+
 
 
 

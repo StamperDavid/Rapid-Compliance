@@ -85,58 +85,21 @@ export const STRIPE_TIERS: Record<SubscriptionTier, StripeTierPlan> = {
   },
 };
 
-// DEPRECATED: Legacy plans (kept for backward compatibility during migration)
+// DEPRECATED: Legacy interface kept only for type compatibility
+// DO NOT USE - Use STRIPE_TIERS instead
 export interface SubscriptionPlan {
   id: string;
   name: string;
-  price: number; // in cents
+  price: number;
   interval: 'month' | 'year';
   limits: {
     records: number;
     aiConversations: number;
     emails: number;
-    gmv: number; // in cents
+    gmv: number;
   };
   features: string[];
 }
-
-export const PLANS: Record<string, SubscriptionPlan> = {
-  pro: {
-    id: 'pro',
-    name: 'Pro',
-    price: 9900, // $99/month
-    interval: 'month',
-    limits: {
-      records: 50000,
-      aiConversations: 1000,
-      emails: 10000,
-      gmv: 1000000, // $10,000
-    },
-    features: [
-      'Standard branding',
-      'Standard support',
-      'Email support',
-    ],
-  },
-  enterprise: {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 49900, // $499/month
-    interval: 'month',
-    limits: {
-      records: -1, // unlimited
-      aiConversations: -1, // unlimited
-      emails: -1, // unlimited
-      gmv: -1, // unlimited
-    },
-    features: [
-      'Full white-labeling',
-      'Dedicated account manager',
-      'Phone + priority support',
-      'Custom domain included',
-    ],
-  },
-};
 
 /**
  * Create a Stripe customer
