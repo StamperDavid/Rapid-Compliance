@@ -1,3 +1,7 @@
+// Load environment variables FIRST (before any other imports)
+import { config } from 'dotenv'
+config({ path: '.env.local' })
+
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'
