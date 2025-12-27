@@ -19,6 +19,7 @@ interface ChatMessage {
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const { theme, loading } = useWebsiteTheme();
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -120,6 +121,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 </span>
               )}
             </Link>
+
+            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
               <Link href="/features" className="hover:opacity-100 transition" style={{ color: theme.textColor, opacity: 0.8 }}>
                 Features
@@ -147,7 +150,56 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 Start Free Trial
               </Link>
             </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg"
+              style={{ color: theme.textColor }}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isMobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
+
+          {/* Mobile Menu Dropdown */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden py-4 border-t border-white/10">
+              <div className="flex flex-col space-y-4">
+                <Link href="/features" className="hover:opacity-100 transition py-2" style={{ color: theme.textColor, opacity: 0.8 }} onClick={() => setIsMobileMenuOpen(false)}>
+                  Features
+                </Link>
+                <Link href="/pricing" className="hover:opacity-100 transition py-2" style={{ color: theme.textColor, opacity: 0.8 }} onClick={() => setIsMobileMenuOpen(false)}>
+                  Pricing
+                </Link>
+                <Link href="/faq" className="hover:opacity-100 transition py-2" style={{ color: theme.textColor, opacity: 0.8 }} onClick={() => setIsMobileMenuOpen(false)}>
+                  FAQ
+                </Link>
+                <Link href="/about" className="hover:opacity-100 transition py-2" style={{ color: theme.textColor, opacity: 0.8 }} onClick={() => setIsMobileMenuOpen(false)}>
+                  About
+                </Link>
+                <Link href="/contact" className="hover:opacity-100 transition py-2" style={{ color: theme.textColor, opacity: 0.8 }} onClick={() => setIsMobileMenuOpen(false)}>
+                  Contact
+                </Link>
+                <Link href="/login" className="hover:opacity-100 transition py-2" style={{ color: theme.textColor, opacity: 0.8 }} onClick={() => setIsMobileMenuOpen(false)}>
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-4 py-2 rounded-lg font-semibold transition text-center"
+                  style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Start Free Trial
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
