@@ -436,8 +436,95 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* BYOK: Zero AI Markup */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              BYOK: We Don't Markup Your AI Costs
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Most AI platforms mark up tokens by 300-500%. We don't. You pay OpenAI/Anthropic directly at cost.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            {/* Competitor */}
+            <div className="bg-red-900/20 border-2 border-red-700/50 rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-4xl">😰</span>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">Typical AI Platform</h3>
+                  <p className="text-red-300 text-sm">Hidden Token Markup</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-gray-300">Platform Fee</span>
+                    <span className="text-white font-semibold">$1,500/mo</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-gray-300">AI Usage <span className="text-xs text-red-400">(400% markup)</span></span>
+                    <span className="text-white font-semibold">$400/mo</span>
+                  </div>
+                  <div className="text-xs text-red-300/70">(Real cost: $100, but you pay $400)</div>
+                </div>
+                <div className="border-t border-red-700/50 pt-4 mt-4 flex justify-between items-center">
+                  <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>
+                  <span className="text-red-300 font-bold text-3xl">$1,900/mo</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Our Platform */}
+            <div className="bg-green-900/20 border-2 border-green-500/50 rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-4xl">💚</span>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">Our Platform (BYOK)</h3>
+                  <p className="text-green-300 text-sm">100% Transparent</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-gray-300">Platform Fee <span className="text-xs text-green-400">(from us)</span></span>
+                    <span className="text-white font-semibold">$650/mo</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-baseline mb-1">
+                    <span className="text-gray-300">AI Usage <span className="text-xs text-green-400">(0% markup)</span></span>
+                    <span className="text-white font-semibold">$100/mo</span>
+                  </div>
+                  <div className="text-xs text-green-300/70">(You pay OpenAI directly at cost)</div>
+                </div>
+                <div className="border-t border-green-700/50 pt-4 mt-4 flex justify-between items-center">
+                  <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>
+                  <span className="text-green-300 font-bold text-3xl">$750/mo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="inline-block bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-500/40 rounded-xl px-8 py-4">
+              <p className="text-green-300 font-bold text-2xl mb-1">
+                You Save: $1,150/month
+              </p>
+              <p className="text-white text-sm">
+                That's $13,800 saved per year with complete transparency
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">

@@ -203,11 +203,23 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         </div>
       </footer>
 
-      {/* Floating Chat Widget */}
+      {/* Dimmed Overlay when chat is open */}
+      {isChatOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-300"
+          onClick={() => setIsChatOpen(false)}
+        />
+      )}
+
+      {/* Chat Widget */}
       <div className="fixed bottom-6 right-6 z-50">
-        {/* Chat Window */}
+        {/* Chat Window - Modal Style */}
         {isChatOpen && (
-          <div className="absolute bottom-20 right-0 w-96 max-w-[calc(100vw-2rem)] bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+            <div 
+              className="w-full max-w-2xl bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden animate-in slide-in-from-bottom-8 zoom-in-95 duration-300 pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
             {/* Header */}
             <div 
               className="px-4 py-3 flex items-center justify-between"
@@ -236,7 +248,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             </div>
 
             {/* Messages */}
-            <div className="h-72 overflow-y-auto p-4 space-y-3 bg-slate-800">
+            <div className="h-[500px] overflow-y-auto p-4 space-y-3 bg-slate-800">
               {chatMessages.map((msg) => (
                 <div
                   key={msg.id}
@@ -290,6 +302,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   </svg>
                 </button>
               </div>
+            </div>
             </div>
           </div>
         )}
