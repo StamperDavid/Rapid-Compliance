@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
