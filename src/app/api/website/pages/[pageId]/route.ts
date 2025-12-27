@@ -142,6 +142,7 @@ export async function PUT(
     }
 
     const now = admin.firestore.Timestamp.now();
+    const performedBy = await getUserIdentifier();
 
     // CRITICAL: Cannot change organizationId
     const updatedData = {
@@ -149,7 +150,7 @@ export async function PUT(
       organizationId: existingData.organizationId, // ← Keep original orgId
       id: params.pageId,
       updatedAt: now,
-      lastEditedBy: user,
+      lastEditedBy: performedBy,
       version: (existingData.version || 1) + 1,
     };
 
