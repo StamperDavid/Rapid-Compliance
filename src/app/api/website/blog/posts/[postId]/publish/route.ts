@@ -182,6 +182,7 @@ export async function DELETE(
     }
 
     const now = new Date().toISOString();
+    const performedBy = await getUserIdentifier();
 
     // Unpublish - revert to draft
     await postRef.update({
