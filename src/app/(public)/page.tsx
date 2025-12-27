@@ -634,8 +634,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Replace Apollo/ZoomInfo */}
-            <div className="p-8 bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-blue-400 mb-2">Replaces Apollo/ZoomInfo</div>
+            <div className="p-8 bg-gradient-to-br from-indigo-900/20 to-indigo-800/10 border border-indigo-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-indigo-400 mb-2">Replaces Apollo/ZoomInfo</div>
               <h3 className="text-2xl font-bold text-white mb-4">Lead Intelligence</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
@@ -674,8 +674,8 @@ export default function LandingPage() {
             </div>
 
             {/* Replace HubSpot */}
-            <div className="p-8 bg-gradient-to-br from-orange-900/20 to-orange-800/10 border border-orange-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-orange-400 mb-2">Replaces HubSpot/Pipedrive</div>
+            <div className="p-8 bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-purple-400 mb-2">Replaces HubSpot/Pipedrive</div>
               <h3 className="text-2xl font-bold text-white mb-4">Full CRM Suite</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
@@ -694,8 +694,8 @@ export default function LandingPage() {
             </div>
 
             {/* Social & Multi-Channel */}
-            <div className="p-8 bg-gradient-to-br from-pink-900/20 to-pink-800/10 border border-pink-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-pink-400 mb-2">Outreach Automation</div>
+            <div className="p-8 bg-gradient-to-br from-indigo-800/20 to-slate-800/10 border border-indigo-400/30 rounded-2xl">
+              <div className="text-sm font-semibold text-indigo-300 mb-2">Outreach Automation</div>
               <h3 className="text-2xl font-bold text-white mb-4">Multi-Channel Engagement</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
@@ -714,8 +714,8 @@ export default function LandingPage() {
             </div>
 
             {/* Replace Zapier */}
-            <div className="p-8 bg-gradient-to-br from-yellow-900/20 to-yellow-800/10 border border-yellow-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-yellow-400 mb-2">Replaces Zapier/Make</div>
+            <div className="p-8 bg-gradient-to-br from-purple-800/20 to-indigo-900/10 border border-purple-400/30 rounded-2xl">
+              <div className="text-sm font-semibold text-purple-300 mb-2">Replaces Zapier/Make</div>
               <h3 className="text-2xl font-bold text-white mb-4">Automation Engine</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
@@ -734,8 +734,8 @@ export default function LandingPage() {
             </div>
 
             {/* E-Commerce */}
-            <div className="p-8 bg-gradient-to-br from-green-900/20 to-green-800/10 border border-green-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-green-400 mb-2">Commerce Platform</div>
+            <div className="p-8 bg-gradient-to-br from-slate-800/30 to-indigo-900/10 border border-slate-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-slate-300 mb-2">Commerce Platform</div>
               <h3 className="text-2xl font-bold text-white mb-4">Built-in E-Commerce Engine</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
