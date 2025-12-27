@@ -106,6 +106,7 @@ export default function EditorCanvas({
                 onSelectWidget={(widgetId) => onSelectElement({ type: 'widget', sectionId: section.id, widgetId })}
                 onUpdateSection={(updates) => onUpdateSection(section.id, updates)}
                 onDeleteSection={() => onDeleteSection(section.id)}
+                onAddWidget={(widget, colIndex) => onAddWidget(section.id, widget, colIndex)}
                 onDeleteWidget={(widgetId) => onDeleteWidget(section.id, widgetId)}
               />
             ))}
@@ -146,6 +147,7 @@ interface SectionRendererProps {
   onSelectWidget: (widgetId: string) => void;
   onUpdateSection: (updates: Partial<PageSection>) => void;
   onDeleteSection: () => void;
+  onAddWidget: (widget: Widget, columnIndex: number) => void;
   onDeleteWidget: (widgetId: string) => void;
 }
 
@@ -157,6 +159,7 @@ function SectionRenderer({
   onSelectWidget,
   onUpdateSection,
   onDeleteSection,
+  onAddWidget,
   onDeleteWidget,
 }: SectionRendererProps) {
   const sectionStyles: React.CSSProperties = {
@@ -251,7 +254,7 @@ function SectionRenderer({
                     data: definition.defaultData || {},
                     style: definition.defaultStyle || {},
                   };
-                  onAddWidget(section.id, newWidget, colIndex);
+                  onAddWidget(newWidget, colIndex);
                 }
               }
             }}
