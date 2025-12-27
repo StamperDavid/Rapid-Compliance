@@ -88,7 +88,7 @@ export async function DELETE(
     await auditRef.add({
       type: 'domain_removed',
       domainId,
-      performedBy: 'system', // TODO: Use actual user
+      performedBy,
       performedAt: new Date().toISOString(),
       organizationId,
     });

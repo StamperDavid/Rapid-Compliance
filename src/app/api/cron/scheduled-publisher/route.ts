@@ -16,12 +16,17 @@ export const maxDuration = 60; // 60 seconds max execution
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add authentication/authorization
     // Verify this is a legitimate cron request
-    // const authHeader = request.headers.get('authorization');
-    // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    
+    // If CRON_SECRET is set, require authentication
+    if (cronSecret) {
+      if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+        console.error('[Cron] Unauthorized access attempt');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
 
     console.log('[Cron] Starting scheduled publisher...');
 

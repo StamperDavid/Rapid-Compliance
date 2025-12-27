@@ -65,7 +65,7 @@ export async function POST(
     // Update data
     const updateData: any = {
       updatedAt: now,
-      lastEditedBy: 'system', // TODO: Use actual user
+      lastEditedBy: performedBy,
     };
 
     if (scheduledFor) {
@@ -187,7 +187,7 @@ export async function DELETE(
       status: 'draft',
       scheduledFor: null,
       updatedAt: now,
-      lastEditedBy: 'system', // TODO: Use actual user
+      lastEditedBy: performedBy,
     });
 
     // Create audit log entry

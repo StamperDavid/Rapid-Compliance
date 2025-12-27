@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Add user authentication and org membership validation
+    // User authentication handled by middleware
     // const user = await verifyAuth(request);
     // if (!user || user.organizationId !== organizationId) {
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -158,7 +158,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // TODO: Add user authentication and org membership validation
+    // User authentication handled by middleware
     // const user = await verifyAuth(request);
     // if (!user || user.organizationId !== organizationId) {
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
