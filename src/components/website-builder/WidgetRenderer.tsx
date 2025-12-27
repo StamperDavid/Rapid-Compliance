@@ -421,6 +421,92 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
         </pre>
       );
 
+    case 'modal':
+      return (
+        <div style={style}>
+          <button
+            style={{
+              padding: '12px 24px',
+              background: widget.data.buttonColor || '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '500',
+            }}
+          >
+            {widget.data.buttonText || 'Open Modal'}
+          </button>
+        </div>
+      );
+
+    case 'tabs':
+      const tabs = widget.data.tabs || [{ title: 'Tab 1', content: 'Content 1' }];
+      return (
+        <div style={style}>
+          <div style={{ borderBottom: '2px solid #dee2e6', display: 'flex' }}>
+            {tabs.map((tab: any, index: number) => (
+              <button
+                key={index}
+                style={{
+                  padding: '12px 24px',
+                  background: index === 0 ? '#007bff' : 'transparent',
+                  color: index === 0 ? 'white' : '#495057',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  borderBottom: index === 0 ? '2px solid #007bff' : 'none',
+                }}
+              >
+                {tab.title}
+              </button>
+            ))}
+          </div>
+          <div style={{ padding: '20px', background: 'white' }}>
+            {tabs[0]?.content || 'Tab content'}
+          </div>
+        </div>
+      );
+
+    case 'accordion':
+      const accordionItems = widget.data.items || [{ title: 'Accordion Item', content: 'Content' }];
+      return (
+        <div style={style}>
+          {accordionItems.map((item: any, index: number) => (
+            <div
+              key={index}
+              style={{
+                border: '1px solid #dee2e6',
+                borderRadius: '6px',
+                marginBottom: '8px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  padding: '16px',
+                  background: '#f8f9fa',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                {item.title}
+                <span style={{ fontSize: '12px' }}>▼</span>
+              </div>
+              <div style={{ padding: '16px', background: 'white', borderTop: '1px solid #dee2e6' }}>
+                {item.content}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+
     default:
       return (
         <div style={{
