@@ -20,10 +20,24 @@ if (!admin.apps.length) {
     // In development, use service account file
     else {
       try {
-        const serviceAccount = require('../../../serviceAccountKey.json');
-        credential = admin.credential.cert(serviceAccount);
+        // Only require in development when file exists
+        if (process.env.NODE_ENV === 'development') {
+          const path = require('path');
+          const fs = require('fs');
+          const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
+          
+          if (fs.existsSync(keyPath)) {
+            const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+            credential = admin.credential.cert(serviceAccount);
+          } else {
+            throw new Error('serviceAccountKey.json not found');
+          }
+        } else {
+          // In production without env var, use application default
+          credential = admin.credential.applicationDefault();
+        }
       } catch (error) {
-        console.error('[Firebase Admin] Could not load serviceAccountKey.json, using application default credentials');
+        console.error('[Firebase Admin] Service account error, using application default credentials');
         credential = admin.credential.applicationDefault();
       }
     }

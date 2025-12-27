@@ -4,23 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin';
+import { db, admin } from '@/lib/firebase-admin';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
 import { SchemaChangeEventPublisherServer } from '@/lib/schema/server/schema-change-publisher-server';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
-
-// Initialize admin if needed
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = require('@/../serviceAccountKey.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (error) {
-    // Already initialized
-  }
-}
 
 /**
  * POST /api/schemas/[schemaId]/update
@@ -42,7 +29,6 @@ export async function POST(
       );
     }
     
-    const db = getFirestore();
     
     // Get current schema
     const schemaDoc = await db

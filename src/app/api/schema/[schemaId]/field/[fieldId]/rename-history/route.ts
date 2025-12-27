@@ -29,9 +29,6 @@ export async function GET(
       );
     }
     
-    // Use admin SDK
-    const db = getFirestore();
-    
     // Get schema
     const schemaDoc = await db
       .collection('organizations')
