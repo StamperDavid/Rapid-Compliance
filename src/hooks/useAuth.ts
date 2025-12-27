@@ -11,7 +11,8 @@ import type { UserRole } from '@/types/permissions';
 import { hasPermission, type RolePermissions } from '@/types/permissions';
 import { onAuthStateChange, type AuthUser } from '@/lib/auth/auth-service';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface AppUser {
   id: string;
@@ -66,7 +67,7 @@ export function useAuth() {
               workspaceId: userProfile?.currentWorkspaceId,
             });
           } catch (error) {
-            console.error('Error loading user profile:', error);
+            logger.error('Error loading user profile:', error, { file: 'useAuth.ts' });
             // Fallback to basic user info with admin role
             setUser({
               id: authUser.uid,
@@ -91,7 +92,7 @@ export function useAuth() {
 
       return () => unsubscribe();
     }).catch((error) => {
-      console.error('Error checking Firebase config:', error);
+      logger.error('Error checking Firebase config:', error, { file: 'useAuth.ts' });
       // Fallback to demo mode
       setUser({
         id: 'demo-user',

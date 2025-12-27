@@ -3,26 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 export default function SubscriptionPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-    
     loadSubscription();
   }, []);
 
@@ -34,7 +27,7 @@ export default function SubscriptionPage() {
         setSubscription(data.subscription);
       }
     } catch (error) {
-      console.error('Failed to load subscription:', error);
+      logger.error('Failed to load subscription:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -53,7 +46,7 @@ export default function SubscriptionPage() {
         loadSubscription(); // Reload
       }
     } catch (error) {
-      console.error('Failed to toggle feature:', error);
+      logger.error('Failed to toggle feature:', error, { file: 'page.tsx' });
     }
   };
 

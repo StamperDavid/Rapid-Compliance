@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { logger } from '@/lib/logger/logger';;
 
 interface ThemeColors {
   primary: { main: string; light: string; dark: string; contrast: string };
@@ -72,7 +73,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(savedTheme);
         setTheme({ ...DEFAULT_THEME, ...parsed });
       } catch (error) {
-        console.error('Failed to load theme:', error);
+        logger.error('Failed to load theme:', error, { file: 'ThemeContext.tsx' });
       }
     }
     setIsLoaded(true);

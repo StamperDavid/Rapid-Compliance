@@ -4,7 +4,8 @@
  * Fallback to env vars if not found in Firestore
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Get API key for organization
@@ -37,7 +38,7 @@ export async function getAPIKey(
 
     return envMap[service] || null;
   } catch (error) {
-    console.error('[API Keys] Error loading key:', error);
+    logger.error('[API Keys] Error loading key:', error, { file: 'api-keys.ts' });
     // Fallback to env
     const envMap: Record<string, string | undefined> = {
       openai: process.env.OPENAI_API_KEY,
@@ -77,6 +78,12 @@ export async function getConfiguredServices(organizationId: string): Promise<str
 
   return configured;
 }
+
+
+
+
+
+
 
 
 

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
-import { useParams } from 'next/navigation';
+import { useParams } from 'next/navigation'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AdminBar() {
   const { user, loading } = useAuth();
@@ -24,7 +25,7 @@ export default function AdminBar() {
       try {
         setTheme(JSON.parse(savedTheme));
       } catch (error) {
-        console.error('Failed to load theme:', error);
+        logger.error('Failed to load theme:', error, { file: 'AdminBar.tsx' });
       }
     }
   }, []);
@@ -42,17 +43,17 @@ export default function AdminBar() {
   const shouldShowSettings = user.role === 'admin' || user.role === 'owner' || user.role === 'manager' || canAccessSettings;
 
   return (
-    <div style={{ backgroundColor: '#1a1a1a', borderBottom: '1px solid #333', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1.5rem' }}>
+    <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', position: 'sticky', top: 0, zIndex: 100 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 2rem' }}>
         {/* Left: Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Link href="/crm" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link href={`/workspace/${orgId}/dashboard`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
             {logoUrl ? (
-              <img src={logoUrl} alt={brandName} style={{ height: '32px', maxWidth: '150px', objectFit: 'contain' }} />
+              <img src={logoUrl} alt={brandName} style={{ maxHeight: '40px', maxWidth: '150px', objectFit: 'contain' }} />
             ) : (
               <>
-                <span style={{ fontSize: '1.25rem' }}>🚀</span>
-                <span style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>
+                <span style={{ fontSize: '1.5rem' }}>🚀</span>
+                <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff' }}>
                   {brandName}
                 </span>
               </>
@@ -60,18 +61,70 @@ export default function AdminBar() {
           </Link>
         </div>
 
-        {/* Center: Admin Tools */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, justifyContent: 'center' }}>
+        {/* Center: Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, justifyContent: 'center' }}>
           {shouldShowSettings && (
             <Link 
               href={`/workspace/${orgId}/settings`}
-              style={{ padding: '0.5rem 1rem', color: '#999', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', borderRadius: '0.375rem', transition: 'all 0.2s' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.625rem 1.25rem',
+                backgroundColor: '#1a1a1a',
+                color: '#fff',
+                borderRadius: '0.5rem',
+                textDecoration: 'none',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                border: '1px solid #333',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#222';
+                e.currentTarget.style.borderColor = primaryColor;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#1a1a1a';
+                e.currentTarget.style.borderColor = '#333';
+              }}
             >
-              ⚙️ Settings
+              <span>⚙️</span>
+              Settings
             </Link>
           )}
+          <button
+            onClick={() => {
+              const feedback = prompt('What feedback or feature request would you like to share?');
+              if (feedback) {
+                alert('Thank you for your feedback! We\'ll review it shortly.');
+                // TODO: Send feedback to backend
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.625rem 1.25rem',
+              backgroundColor: primaryColor,
+              color: '#fff',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <span>💬</span>
+            Feedback / Requests
+          </button>
         </div>
 
         {/* Right: User Menu */}
@@ -122,7 +175,7 @@ export default function AdminBar() {
                           await signOut(auth);
                         }
                       } catch (error) {
-                        console.error('Error signing out:', error);
+                        logger.error('Error signing out:', error, { file: 'AdminBar.tsx' });
                       }
                       window.location.href = '/';
                     }}

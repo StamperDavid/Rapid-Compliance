@@ -5,6 +5,7 @@ import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors, successResponse } from '@/lib/api/error-handler';
+import { logger } from '@/lib/logger/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
-      console.warn('RAG enhancement failed, using base prompt:', error);
+      logger.warn('RAG enhancement failed, using base prompt', { error, orgId, customerId });
       // Continue with base prompt if RAG fails
     }
 
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
       processingTime,
     });
   } catch (error: any) {
-    console.error('[Agent Chat Error]', error);
+    logger.error('Agent chat error', error, { route: '/api/agent/chat' });
     
     // Handle specific error cases
     if (error?.message?.includes('API key')) {

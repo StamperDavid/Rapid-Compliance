@@ -1,18 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/config';
+import { auth, db } from '@/lib/firebase/config'
+import { logger } from '@/lib/logger/logger';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Plan selection
-    planId: 'agent-only',
+    planId: 'tier1',
     billingCycle: 'monthly' as 'monthly' | 'yearly',
     
     // Step 2: Account info
@@ -25,35 +31,45 @@ export default function SignupPage() {
     startTrial: true,
   });
 
-  const plans = {
-    'agent-only': {
-      name: 'Agent Only',
-      monthlyPrice: 29,
-      yearlyPrice: 280,
+  // NEW: Volume-based tiers
+  const tiers = {
+    'tier1': {
+      name: 'Tier 1',
+      monthlyPrice: 400,
+      yearlyPrice: 4000,
+      recordCapacity: '0-100 records',
     },
-    'starter': {
-      name: 'Starter',
-      monthlyPrice: 49,
-      yearlyPrice: 470,
+    'tier2': {
+      name: 'Tier 2',
+      monthlyPrice: 650,
+      yearlyPrice: 6500,
+      recordCapacity: '101-250 records',
     },
-    'professional': {
-      name: 'Professional',
-      monthlyPrice: 149,
-      yearlyPrice: 1430,
+    'tier3': {
+      name: 'Tier 3',
+      monthlyPrice: 1000,
+      yearlyPrice: 10000,
+      recordCapacity: '251-500 records',
+    },
+    'tier4': {
+      name: 'Tier 4',
+      monthlyPrice: 1250,
+      yearlyPrice: 12500,
+      recordCapacity: '501-1,000 records',
     },
   };
 
-  const selectedPlan = plans[formData.planId as keyof typeof plans];
+  const selectedPlan = tiers[formData.planId as keyof typeof tiers];
   const price = formData.billingCycle === 'monthly' 
     ? selectedPlan.monthlyPrice 
     : selectedPlan.yearlyPrice;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted! Current step:', step);
+    logger.info('Form submitted!', { step, file: 'page.tsx' });
     
     if (step === 1) {
-      console.log('Moving to step 2');
+      logger.info('Moving to step 2', { file: 'page.tsx' });
       setStep(2);
       return;
     }
@@ -85,12 +101,23 @@ export default function SignupPage() {
     }
   };
 
-  const createAccount = async () => {
+  // NEW: Create account with mandatory payment method
+  const createAccount = async (paymentMethodId?: string) => {
     try {
-      console.log('Creating account:', formData);
+      logger.info('Creating account with payment method', { 
+        email: formData.email, 
+        tier: formData.planId,
+        hasPaymentMethod: !!paymentMethodId,
+        file: 'page.tsx' 
+      });
       
       if (!auth || !db) {
         throw new Error('Firebase not initialized');
+      }
+
+      // NEW: For trial, payment method is REQUIRED
+      if (formData.startTrial && !paymentMethodId) {
+        throw new Error('Payment method required for trial. Credit card must be on file.');
       }
 
       // Create Firebase Auth user
@@ -101,10 +128,30 @@ export default function SignupPage() {
       );
       
       const user = userCredential.user;
-      console.log('User created in Auth:', user.uid);
+      logger.info('User created in Auth', { uid: user.uid, file: 'page.tsx' });
 
       // Generate organization ID
       const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // NEW: Create Stripe customer and subscription
+      const subscriptionResponse = await fetch('/api/billing/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          email: formData.email,
+          name: formData.companyName,
+          tierId: formData.planId || 'tier1', // Default to tier1
+          paymentMethodId, // Attach payment method to subscription
+          trialDays: formData.startTrial ? 14 : 0,
+        }),
+      });
+
+      if (!subscriptionResponse.ok) {
+        throw new Error('Failed to create subscription');
+      }
+
+      const { customerId, subscriptionId } = await subscriptionResponse.json();
 
       // Create organization document in Firestore
       await setDoc(doc(db, 'organizations', orgId), {
@@ -112,14 +159,17 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         ownerId: user.uid,
-        plan: formData.planId,
+        tier: formData.planId || 'tier1', // NEW: Tier-based
+        plan: formData.planId, // DEPRECATED: Kept for backward compat
         billingCycle: formData.billingCycle,
         trialEndsAt: formData.startTrial 
           ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
           : null,
-        status: 'active',
+        status: formData.startTrial ? 'trialing' : 'active',
+        stripeCustomerId: customerId,
+        subscriptionId: subscriptionId,
       });
-      console.log('Organization created:', orgId);
+      logger.info('Organization created with subscription', { orgId, subscriptionId, file: 'page.tsx' });
 
       // Create user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
@@ -130,15 +180,15 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      console.log('User document created');
+      logger.info('User document created', { file: 'page.tsx' });
 
       // Success!
-      alert(`Account created successfully! Welcome to ${formData.companyName}!`);
+      alert(`Account created successfully! Welcome to ${formData.companyName}!\n\n${formData.startTrial ? '14-day free trial started. You\'ll be charged based on your usage at the end of the trial.' : 'Subscription activated!'}`);
       
-      // Redirect to workspace dashboard
-      router.push(`/workspace/${orgId}/dashboard`);
+      // Redirect to onboarding
+      router.push(`/workspace/${orgId}/onboarding`);
     } catch (error: any) {
-      console.error('Failed to create account:', error);
+      logger.error('Failed to create account:', error, { file: 'page.tsx' });
       
       // User-friendly error messages
       let errorMessage = 'Failed to create account';
@@ -159,11 +209,11 @@ export default function SignupPage() {
   const processPayment = async () => {
     try {
       // TODO: Implement Stripe payment
-      console.log('Processing payment:', formData);
+      logger.info('Processing payment', { plan: formData.planId, billingCycle: formData.billingCycle, file: 'page.tsx' });
       
       await createAccount();
     } catch (error) {
-      console.error('Failed to process payment:', error);
+      logger.error('Failed to process payment:', error, { file: 'page.tsx' });
       alert('Failed to process payment');
     }
   };
@@ -225,7 +275,7 @@ export default function SignupPage() {
 
                 {/* Plan Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                  {Object.entries(plans).map(([id, plan]) => (
+                  {Object.entries(tiers).map(([id, plan]) => (
                     <button
                       key={id}
                       type="button"
@@ -318,17 +368,12 @@ export default function SignupPage() {
                     />
                   </div>
 
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.startTrial}
-                      onChange={(e) => setFormData({ ...formData, startTrial: e.target.checked })}
-                      className="w-5 h-5"
-                    />
-                    <span className="text-gray-300">
-                      Start with 14-day free trial (no credit card required)
-                    </span>
-                  </label>
+                  {/* Credit card is now required - trial checkbox removed */}
+                  <div className="p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+                    <p className="text-gray-300 text-sm">
+                      💳 Credit card required to start your 14-day free trial. You won't be charged until your trial ends.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-4">

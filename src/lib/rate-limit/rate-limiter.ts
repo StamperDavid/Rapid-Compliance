@@ -3,7 +3,7 @@
  * Prevents abuse and DDoS attacks by limiting request frequency
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // In-memory rate limit store (for development)
 // In production, use Redis or similar distributed cache
@@ -19,14 +19,80 @@ const defaultConfig: RateLimitConfig = {
   windowMs: 60 * 1000, // 1 minute
 };
 
-// Per-endpoint rate limits
+// Per-endpoint rate limits (specific limits for high-traffic/sensitive endpoints)
 const endpointLimits: Record<string, RateLimitConfig> = {
+  // Email/SMS (expensive operations)
   '/api/email/send': { maxRequests: 50, windowMs: 60 * 1000 }, // 50 emails per minute
   '/api/sms/send': { maxRequests: 20, windowMs: 60 * 1000 }, // 20 SMS per minute
-  '/api/workflows/execute': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/email/campaigns': { maxRequests: 30, windowMs: 60 * 1000 },
+  
+  // Payment endpoints (fraud prevention)
   '/api/checkout/create-payment-intent': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/checkout/create-session': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/billing/subscribe': { maxRequests: 20, windowMs: 60 * 1000 },
+  '/api/billing/webhook': { maxRequests: 500, windowMs: 60 * 1000 }, // Higher for Stripe webhooks
+  
+  // Admin endpoints (strict - privilege escalation risk)
+  '/api/admin/users': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/admin/organizations': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/admin/verify': { maxRequests: 10, windowMs: 60 * 1000 }, // Brute force protection
+  
+  // AI/Heavy compute
   '/api/agent/chat': { maxRequests: 100, windowMs: 60 * 1000 },
+  '/api/leads/research': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/leads/enrich': { maxRequests: 50, windowMs: 60 * 1000 },
+  
+  // Workflow execution
+  '/api/workflows/execute': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/workflows/triggers/schedule': { maxRequests: 10, windowMs: 60 * 1000 }, // Internal cron only
+  '/api/workflows/webhooks': { maxRequests: 500, windowMs: 60 * 1000 }, // Higher for external webhooks
+  
+  // Search/Analytics (read-heavy)
   '/api/search': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/analytics/revenue': { maxRequests: 100, windowMs: 60 * 1000 },
+  '/api/analytics/pipeline': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // E-commerce
+  '/api/ecommerce/orders': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // Outbound sequences
+  '/api/outbound/sequences': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // OAuth integrations (moderate limits)
+  '/api/integrations/google/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/microsoft/auth': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/microsoft/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/slack/auth': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/slack/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/quickbooks/auth': { maxRequests: 50, windowMs: 60 * 1000 },
+  '/api/integrations/quickbooks/callback': { maxRequests: 50, windowMs: 60 * 1000 },
+  
+  // Webhooks (high limits - legitimate traffic)
+  '/api/webhooks/email': { maxRequests: 500, windowMs: 60 * 1000 },
+  '/api/webhooks/gmail': { maxRequests: 500, windowMs: 60 * 1000 },
+  '/api/webhooks/sms': { maxRequests: 500, windowMs: 60 * 1000 },
+  
+  // Tracking pixels (very high limit - email clients)
+  '/api/email/track': { maxRequests: 1000, windowMs: 60 * 1000 },
+  '/api/email/track/link': { maxRequests: 500, windowMs: 60 * 1000 },
+  
+  // Setup (strict - should be called rarely)
+  '/api/setup/create-platform-org': { maxRequests: 5, windowMs: 60 * 1000 },
+  
+  // Health checks (high limit - monitoring)
+  '/api/health': { maxRequests: 200, windowMs: 60 * 1000 },
+  '/api/health/detailed': { maxRequests: 100, windowMs: 60 * 1000 },
+  
+  // Test endpoints (strict - should be disabled in prod)
+  '/api/test/admin-status': { maxRequests: 10, windowMs: 60 * 1000 },
+  '/api/test/outbound': { maxRequests: 10, windowMs: 60 * 1000 },
+  
+  // Cron jobs (very strict - internal only)
+  '/api/cron/process-sequences': { maxRequests: 10, windowMs: 60 * 1000 },
+  
+  // Auth endpoints (brute force prevention)
+  '/api/auth/login': { maxRequests: 5, windowMs: 60 * 1000 }, // 5 login attempts per minute
+  '/api/auth/register': { maxRequests: 3, windowMs: 60 * 1000 },
 };
 
 /**
@@ -124,20 +190,19 @@ if (typeof setInterval !== 'undefined') {
 export async function rateLimitMiddleware(
   request: NextRequest,
   endpoint?: string
-): Promise<Response | null> {
+): Promise<NextResponse | null> {
   const result = await checkRateLimit(request, endpoint);
   
   if (!result.allowed) {
-    return new Response(
-      JSON.stringify({
+    return NextResponse.json(
+      {
         success: false,
         error: 'Rate limit exceeded',
         retryAfter: Math.ceil((result.resetAt - Date.now()) / 1000),
-      }),
+      },
       {
         status: 429,
         headers: {
-          'Content-Type': 'application/json',
           'X-RateLimit-Limit': endpointLimits[endpoint || new URL(request.url).pathname]?.maxRequests.toString() || '100',
           'X-RateLimit-Remaining': result.remaining.toString(),
           'X-RateLimit-Reset': new Date(result.resetAt).toISOString(),
@@ -149,6 +214,12 @@ export async function rateLimitMiddleware(
   
   return null; // Request allowed
 }
+
+
+
+
+
+
 
 
 

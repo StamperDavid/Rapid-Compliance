@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import Link from 'next/link';
+import Link from 'next/link'
+import { logger } from '@/lib/logger/logger';;
 
 interface UserDetails {
   id: string;
@@ -60,7 +61,7 @@ export default function UserDetailPage() {
         }
         setLoading(false);
       } catch (error) {
-        console.error('Failed to load user:', error);
+        logger.error('Failed to load user:', error, { file: 'page.tsx' });
         setLoading(false);
       }
     }
@@ -305,5 +306,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+
+
+
+
+
 
 

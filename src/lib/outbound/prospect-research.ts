@@ -3,6 +3,8 @@
  * Researches companies and prospects to enable personalized outreach
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface ProspectResearch {
   companyInfo: CompanyInfo;
   recentNews: NewsItem[];
@@ -70,7 +72,7 @@ export async function researchProspect(
   prospect: ProspectData,
   organizationId: string = 'default'
 ): Promise<ProspectResearch> {
-  console.log(`[Prospect Research] Researching ${prospect.company}...`);
+  logger.info('Prospect Research Researching prospect.company}...', { file: 'prospect-research.ts' });
 
   try {
     // Run research tasks in parallel
@@ -103,7 +105,7 @@ export async function researchProspect(
       insights,
     };
   } catch (error) {
-    console.error('[Prospect Research] Error:', error);
+    logger.error('[Prospect Research] Error:', error, { file: 'prospect-research.ts' });
     
     // Return minimal data on error
     return {
@@ -123,37 +125,45 @@ export async function researchProspect(
 }
 
 /**
- * Get company information
+ * Get company information using NEW enrichment service (no Clearbit!)
+ * Cost: ~$0.001 per lead (vs $0.50-$1.00 with Clearbit)
  */
 async function getCompanyInfo(companyName: string, orgId: string): Promise<CompanyInfo> {
-  const { enrichCompanyByDomain, searchCompanyByName, formatClearbitCompanyData } = await import('./apis/clearbit-service');
+  const { enrichCompany } = await import('@/lib/enrichment/enrichment-service');
   
-  // Try to guess domain
+  try {
+    // Use our new enrichment service
+    const result = await enrichCompany(
+      {
+        companyName,
+        includeNews: false, // We get news separately
+        includeJobs: false, // We get hiring signals separately
+        includeSocial: false, // We get social separately
+      },
+      orgId
+    );
+    
+    if (result.success && result.data) {
+      const data = result.data;
+      return {
+        name: data.name,
+        website: data.website,
+        domain: data.domain,
+        industry: data.industry,
+        size: data.employeeRange || data.size,
+        description: data.description,
+        location: data.headquarters?.city && data.headquarters?.state
+          ? `${data.headquarters.city}, ${data.headquarters.state}`
+          : undefined,
+        founded: data.foundedYear?.toString(),
+      };
+    }
+  } catch (error) {
+    logger.error('[getCompanyInfo] Enrichment error:', error, { file: 'prospect-research.ts' });
+  }
+  
+  // Fallback to basic info if enrichment fails
   const domain = guessDomainFromCompanyName(companyName);
-  
-  // Try Clearbit by domain first
-  let clearbitData = await enrichCompanyByDomain(domain, orgId);
-  
-  // If not found, try company name search
-  if (!clearbitData) {
-    clearbitData = await searchCompanyByName(companyName, orgId);
-  }
-  
-  if (clearbitData) {
-    const formatted = formatClearbitCompanyData(clearbitData);
-    return {
-      name: formatted.name,
-      website: formatted.website,
-      domain: formatted.domain,
-      industry: formatted.industry,
-      size: formatted.size,
-      description: formatted.description,
-      location: formatted.location,
-      founded: formatted.founded,
-    };
-  }
-  
-  // Fallback to basic info
   return {
     name: companyName,
     website: `https://${domain}`,
@@ -177,17 +187,9 @@ function guessDomainFromCompanyName(companyName: string): string {
  * Get recent news about the company
  */
 async function getRecentNews(companyName: string, orgId: string): Promise<NewsItem[]> {
-  const { getCompanyNews } = await import('./apis/news-service');
+  const { searchCompanyNews } = await import('@/lib/enrichment/search-service');
   
-  const articles = await getCompanyNews(companyName, orgId, 5);
-  
-  return articles.map(article => ({
-    title: article.title,
-    url: article.url,
-    publishedDate: article.publishedDate,
-    source: article.source,
-    summary: article.summary,
-  }));
+  return await searchCompanyNews(companyName, 5);
 }
 
 /**
@@ -220,56 +222,67 @@ async function getFundingInfo(companyName: string, orgId: string): Promise<Fundi
 }
 
 /**
- * Detect technology stack
+ * Detect technology stack using our free scraper
  */
 async function getTechStack(companyName: string, orgId: string): Promise<string[]> {
-  const { getTechStack } = await import('./apis/builtwith-service');
+  const { detectTechStack } = await import('@/lib/enrichment/search-service');
   
   const domain = guessDomainFromCompanyName(companyName);
   
-  return await getTechStack(domain, orgId);
+  return await detectTechStack(domain);
 }
 
 /**
- * Find hiring signals (job postings)
+ * Find hiring signals (job postings) by scraping careers page
  */
 async function getHiringSignals(companyName: string, orgId: string): Promise<JobPosting[]> {
-  const { getCompanyJobs } = await import('./apis/linkedin-service');
+  const { scrapeCareersPage } = await import('@/lib/enrichment/web-scraper');
   
-  const jobs = await getCompanyJobs(companyName, orgId, 10);
-  
-  return jobs.map(job => ({
-    title: job.title,
-    department: job.department,
-    url: job.url,
-    postedDate: job.postedDate,
-  }));
+  try {
+    const domain = guessDomainFromCompanyName(companyName);
+    const careers = await scrapeCareersPage(`https://${domain}`);
+    
+    return careers.jobs.map(job => ({
+      title: job.title,
+      department: 'Unknown',
+      url: job.url,
+      postedDate: new Date().toISOString(),
+    }));
+  } catch (error) {
+    return [];
+  }
 }
 
 /**
- * Get social media presence
+ * Get social media presence by scraping the company website
  */
 async function getSocialPresence(companyName: string, orgId: string): Promise<SocialPresence> {
-  // Try to get from Clearbit data first
-  const { searchCompanyByName } = await import('./apis/clearbit-service');
+  const { searchLinkedIn } = await import('@/lib/enrichment/search-service');
+  const { scrapeWebsite, extractDataPoints } = await import('@/lib/enrichment/web-scraper');
   
-  const clearbitData = await searchCompanyByName(companyName, orgId);
-  
-  if (clearbitData) {
+  try {
+    // Scrape website to find social links
+    const domain = guessDomainFromCompanyName(companyName);
+    const content = await scrapeWebsite(`https://${domain}`);
+    const dataPoints = extractDataPoints(content);
+    
+    // Also search for LinkedIn profile
+    const linkedinUrl = await searchLinkedIn(companyName);
+    
     return {
-      linkedin: clearbitData.linkedin?.handle ? `https://linkedin.com/company/${clearbitData.linkedin.handle}` : undefined,
-      twitter: clearbitData.twitter?.handle ? `https://twitter.com/${clearbitData.twitter.handle}` : undefined,
-      facebook: clearbitData.facebook?.handle ? `https://facebook.com/${clearbitData.facebook.handle}` : undefined,
+      linkedin: linkedinUrl || dataPoints.socialLinks.find(link => link.includes('linkedin.com')),
+      twitter: dataPoints.socialLinks.find(link => link.includes('twitter.com') || link.includes('x.com')),
+      facebook: dataPoints.socialLinks.find(link => link.includes('facebook.com')),
+    };
+  } catch (error) {
+    // Fallback: generate likely URLs
+    const companySlug = companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    
+    return {
+      linkedin: `https://linkedin.com/company/${companySlug}`,
+      twitter: `https://twitter.com/${companySlug}`,
     };
   }
-  
-  // Fallback: generate likely URLs
-  const companySlug = companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-  
-  return {
-    linkedin: `https://linkedin.com/company/${companySlug}`,
-    twitter: `https://twitter.com/${companySlug}`,
-  };
 }
 
 /**

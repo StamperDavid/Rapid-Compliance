@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * OAuth Callback Handler
@@ -74,13 +75,13 @@ export async function GET(
         `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?success=${encodeURIComponent(provider)}`
       );
     } catch (error: any) {
-      console.error('OAuth callback error:', error);
+      logger.error('OAuth callback inner error', error, { route: '/api/integrations/oauth/callback', provider: params.provider });
       return NextResponse.redirect(
         `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(error.message)}`
       );
     }
   } catch (error: any) {
-    console.error('OAuth callback error:', error);
+    logger.error('OAuth callback error', error, { route: '/api/integrations/oauth/callback', provider: params.provider });
     return NextResponse.redirect(
       `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(error.message || 'Unknown error')}`
     );

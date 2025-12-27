@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { withCache } from '@/lib/cache/analytics-cache';
 
 /**
  * GET /api/analytics/win-loss - Get win/loss analysis
@@ -10,47 +14,74 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/win-loss');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     const period = searchParams.get('period') || '90d';
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'orgId is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('orgId is required');
     }
 
-    // Calculate date range based on period
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (period) {
-      case '7d':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case '30d':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case '90d':
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case 'all':
-        startDate = new Date('2020-01-01');
-        break;
-      default:
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    }
+    // Use caching for analytics queries (TTL: 10 minutes)
+    const analytics = await withCache(
+      orgId,
+      'win-loss',
+      async () => calculateWinLossAnalytics(orgId, period),
+      { period }
+    );
 
-    // Get deals from Firestore
-    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
-    let allDeals: any[] = [];
-    
-    try {
-      allDeals = await FirestoreService.getAll(dealsPath, []);
-    } catch (e) {
-      console.log('No deals collection yet');
-    }
+    logger.info('Win/loss analytics retrieved', {
+      route: '/api/analytics/win-loss',
+      orgId,
+      period,
+      won: analytics.won,
+      lost: analytics.lost,
+    });
+
+    return NextResponse.json(analytics);
+  } catch (error: any) {
+    logger.error('Error getting win/loss analytics', error, { route: '/api/analytics/win-loss' });
+    return errors.database('Failed to get win/loss analytics', error);
+  }
+}
+
+/**
+ * Calculate win/loss analytics (extracted for caching)
+ */
+async function calculateWinLossAnalytics(orgId: string, period: string) {
+  // Calculate date range based on period
+  const now = new Date();
+  let startDate: Date;
+  
+  switch (period) {
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case 'all':
+      startDate = new Date('2020-01-01');
+      break;
+    default:
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  }
+
+  // Get deals from Firestore
+  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
+  let allDeals: any[] = [];
+  
+  try {
+    allDeals = await FirestoreService.getAll(dealsPath, []);
+  } catch (e) {
+    logger.debug('No deals collection yet', { orgId });
+  }
 
     // Filter closed deals in period
     const wonStatuses = ['won', 'closed_won'];
@@ -192,28 +223,19 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.week.localeCompare(b.week));
 
-    return NextResponse.json({
+    return {
       success: true,
-      analytics: {
-        totalDeals,
-        won: wonDeals.length,
-        lost: lostDeals.length,
-        winRate: Math.round(winRate * 10) / 10,
-        wonRevenue,
-        lostRevenue,
-        avgWonDeal: Math.round(avgWonDeal),
-        avgLostDeal: Math.round(avgLostDeal),
-        lossReasons,
-        byRep,
-        byCompetitor,
-        trends,
-      },
-    });
-  } catch (error: any) {
-    console.error('Error getting win/loss analytics:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get win/loss analytics' },
-      { status: 500 }
-    );
-  }
+      totalDeals,
+      won: wonDeals.length,
+      lost: lostDeals.length,
+      winRate: Math.round(winRate * 10) / 10,
+      wonRevenue,
+      lostRevenue,
+      avgWonDeal: Math.round(avgWonDeal),
+      avgLostDeal: Math.round(avgLostDeal),
+      lossReasons,
+      byRep,
+      byCompetitor,
+      trends,
+    };
 }

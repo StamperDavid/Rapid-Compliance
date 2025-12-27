@@ -12,7 +12,8 @@ import PipelineChart from '@/components/analytics/PipelineChart';
 import ForecastChart from '@/components/analytics/ForecastChart';
 import WinLossChart from '@/components/analytics/WinLossChart';
 import ReportBuilder from '@/components/analytics/ReportBuilder';
-import { CustomReport } from '@/types/analytics';
+import { CustomReport } from '@/types/analytics'
+import { logger } from '@/lib/logger/logger';;
 
 type AnalyticsView = 'overview' | 'revenue' | 'pipeline' | 'forecasting' | 'win-loss' | 'reports';
 type RevenueSubView = 'overview' | 'by-source' | 'by-product' | 'by-rep';
@@ -104,7 +105,7 @@ function DashboardContent() {
           }
         }
       } catch (error) {
-        console.error('Failed to load reports:', error);
+        logger.error('Failed to load reports:', error, { file: 'page.tsx' });
         // Fallback to empty array
         setReports([]);
       }
@@ -349,7 +350,7 @@ function DashboardContent() {
       }
       setShowReportBuilder(false);
     } catch (error) {
-      console.error('Failed to save report:', error);
+      logger.error('Failed to save report:', error, { file: 'page.tsx' });
       // Still update UI even if Firestore save fails
     }
   };
@@ -371,7 +372,7 @@ function DashboardContent() {
         const updated = reports.filter(r => r.id !== reportId);
         setReports(updated);
       } catch (error) {
-        console.error('Failed to delete report:', error);
+        logger.error('Failed to delete report:', error, { file: 'page.tsx' });
         // Still update UI even if Firestore delete fails
         const updated = reports.filter(r => r.id !== reportId);
         setReports(updated);
@@ -1439,9 +1440,26 @@ function DashboardContent() {
                               </div>
                             </div>
                             <button
-                              onClick={() => {
-                                // TODO: Run report and show results (will be implemented with backend)
-                                alert('Report execution will be implemented with backend integration');
+                              onClick={async () => {
+                                try {
+                                  const response = await fetch('/api/reports/execute', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      reportId: report.id,
+                                      orgId: user?.organizationId,
+                                      parameters: {},
+                                    }),
+                                  });
+                                  const data = await response.json();
+                                  if (data.success) {
+                                    alert(`Report executed successfully!\n\n${JSON.stringify(data.results.summary || data.results, null, 2)}`);
+                                  } else {
+                                    alert(`Error: ${data.error || 'Failed to execute report'}`);
+                                  }
+                                } catch (error: any) {
+                                  alert(`Error: ${error.message}`);
+                                }
                               }}
                               style={{
                                 width: '100%',

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger/logger';;
 
 export interface WebsiteTheme {
   logoUrl: string;
@@ -43,8 +44,9 @@ export function useWebsiteTheme() {
       try {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
         
-        // Try to load from the new config structure first
-        const configData = await FirestoreService.get('platform/website', 'config');
+        // Try to load from platform collection, website document
+        // Firestore paths must have even segments: collection/document
+        const configData = await FirestoreService.get('platformConfig', 'website');
         
         if (configData?.branding) {
           const branding = configData.branding;
@@ -63,15 +65,14 @@ export function useWebsiteTheme() {
             fontFamily: branding.fonts?.body ? `${branding.fonts.body}, sans-serif` : DEFAULT_THEME.fontFamily,
             headingFont: branding.fonts?.heading ? `${branding.fonts.heading}, sans-serif` : DEFAULT_THEME.headingFont,
           });
-        } else {
-          // Fallback to old theme structure
-          const themeData = await FirestoreService.get('platform/website', 'theme');
-          if (themeData) {
-            setTheme({ ...DEFAULT_THEME, ...themeData });
-          }
+        } else if (configData?.theme) {
+          // Theme data stored directly in website document
+          setTheme({ ...DEFAULT_THEME, ...configData.theme });
         }
+        // If no config exists, DEFAULT_THEME is already set
       } catch (error) {
-        console.error('Failed to load website theme:', error);
+        // Silently fall back to default theme - this is expected if no config exists yet
+        logger.info('Using default theme (no custom config found)', { file: 'useWebsiteTheme.ts' });
       } finally {
         setLoading(false);
       }

@@ -8,6 +8,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
 import { scheduleMeeting, MeetingRequest } from '@/lib/outbound/meeting-scheduler';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,9 +48,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check feature access
-    const featureCheck = await requireFeature(request, orgId, 'multiChannelOutreach' as any);
-    if (featureCheck) return featureCheck;
+    // NEW PRICING MODEL: All features available to all active subscriptions
+    // Feature check no longer needed - everyone gets meeting scheduling!
+    // const featureCheck = await requireFeature(request, orgId, 'multiChannelOutreach' as any);
+    // if (featureCheck) return featureCheck;
 
     const meetingRequest: MeetingRequest = {
       prospectEmail,
@@ -84,15 +88,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[Meeting API] Error scheduling meeting:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Failed to schedule meeting',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    logger.error('Meeting scheduler error', error, { route: '/api/outbound/meetings/schedule' });
+    return errors.externalService('Calendar service', error);
   }
 }
 

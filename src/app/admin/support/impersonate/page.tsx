@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { logger } from '@/lib/logger/logger';;
 
 export default function ImpersonatePage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -54,7 +55,7 @@ export default function ImpersonatePage() {
           false
         );
       } catch (error) {
-        console.error('Failed to save impersonation session:', error);
+        logger.error('Failed to save impersonation session:', error, { file: 'page.tsx' });
         // Continue even if save fails
       }
       
@@ -62,7 +63,7 @@ export default function ImpersonatePage() {
       // In production, this would fetch the user's org and redirect properly
       router.push(`/workspace/demo-org/dashboard`);
     } catch (error) {
-      console.error('Impersonation failed:', error);
+      logger.error('Impersonation failed:', error, { file: 'page.tsx' });
       alert('Failed to start impersonation session');
     } finally {
       setLoading(false);

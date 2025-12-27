@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import type { User } from '@/types/user';
+import type { User } from '@/types/user'
+import { logger } from '@/lib/logger/logger';;
 
 export default function UsersPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -13,79 +14,66 @@ export default function UsersPage() {
   const [filterOrg, setFilterOrg] = useState<string>('all');
 
   useEffect(() => {
-    // Load users
-    setTimeout(() => {
-      const mockUsers: (User & { organizationId: string; organizationName: string })[] = [
-        {
-          id: 'user-1',
-          email: 'john@acme.com',
-          profile: {
-            firstName: 'John',
-            lastName: 'Doe',
-            displayName: 'John Doe',
-            timezone: 'America/New_York',
-          },
-          preferences: {
-            theme: 'dark',
-            language: 'en',
-            notifications: { email: true, push: true, slack: false },
-          },
-          createdAt: new Date('2023-01-20') as any,
-          updatedAt: new Date() as any,
-          lastLoginAt: new Date() as any,
-          status: 'active',
-          emailVerified: true,
-          organizationId: 'org-1',
-          organizationName: 'Acme Corporation',
-        },
-        {
-          id: 'user-2',
-          email: 'jane@techstart.com',
-          profile: {
-            firstName: 'Jane',
-            lastName: 'Smith',
-            displayName: 'Jane Smith',
-            timezone: 'America/Los_Angeles',
-          },
-          preferences: {
-            theme: 'light',
-            language: 'en',
-            notifications: { email: true, push: false, slack: true },
-          },
-          createdAt: new Date('2024-02-05') as any,
-          updatedAt: new Date() as any,
-          lastLoginAt: new Date() as any,
-          status: 'active',
-          emailVerified: true,
-          organizationId: 'org-2',
-          organizationName: 'TechStart Inc',
-        },
-        {
-          id: 'user-3',
-          email: 'bob@globalservices.com',
-          profile: {
-            firstName: 'Bob',
-            lastName: 'Johnson',
-            displayName: 'Bob Johnson',
-            timezone: 'UTC',
-          },
-          preferences: {
-            theme: 'dark',
-            language: 'en',
-            notifications: { email: false, push: false, slack: false },
-          },
-          createdAt: new Date('2024-03-12') as any,
-          updatedAt: new Date() as any,
-          lastLoginAt: new Date('2024-03-15') as any,
-          status: 'suspended',
-          emailVerified: true,
-          organizationId: 'org-3',
-          organizationName: 'Global Services',
-        },
-      ];
-      setUsers(mockUsers);
-      setLoading(false);
-    }, 500);
+    async function loadUsers() {
+      try {
+        setLoading(true);
+        const { auth } = await import('@/lib/firebase/config');
+        const currentUser = auth.currentUser;
+        
+        if (!currentUser) {
+          logger.warn('Not authenticated', { file: 'page.tsx' });
+          setLoading(false);
+          return;
+        }
+
+        // Use API route to fetch all users
+        const token = await currentUser.getIdToken();
+        const response = await fetch('/api/admin/users', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const mappedUsers = (data.users || []).map((u: any) => ({
+            id: u.id,
+            email: u.email || '',
+            profile: {
+              firstName: u.firstName || u.displayName?.split(' ')[0] || '',
+              lastName: u.lastName || u.displayName?.split(' ').slice(1).join(' ') || '',
+              displayName: u.displayName || u.email?.split('@')[0] || 'Unknown',
+              timezone: u.timezone || 'UTC',
+            },
+            preferences: u.preferences || {
+              theme: 'dark',
+              language: 'en',
+              notifications: { email: true, push: true, slack: false },
+            },
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt,
+            lastLoginAt: u.lastLoginAt,
+            status: u.status || 'active',
+            emailVerified: u.emailVerified ?? true,
+            organizationId: u.organizationId || 'unknown',
+            organizationName: u.organizationName || u.organizationId || 'Unknown Org',
+          }));
+          setUsers(mappedUsers);
+        } else {
+          logger.error('Failed to fetch users', new Error('Fetch users failed'), { 
+            status: response.status,
+            file: 'page.tsx' 
+          });
+          // Set empty array on error
+          setUsers([]);
+        }
+      } catch (error) {
+        logger.error('Error loading users:', error, { file: 'page.tsx' });
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadUsers();
   }, []);
 
   const uniqueOrgs = Array.from(new Set(users.map(u => u.organizationId)));

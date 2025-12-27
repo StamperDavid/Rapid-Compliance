@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import Tooltip from '@/components/Tooltip';
-import type { PlatformMetrics, SystemHealth } from '@/types/admin';
+import type { PlatformMetrics, SystemHealth } from '@/types/admin'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AdminDashboard() {
   const { adminUser } = useAdminAuth();
@@ -16,12 +17,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        console.log('📊 Admin Dashboard: Loading data...');
+        logger.info('📊 Admin Dashboard: Loading data...', { file: 'page.tsx' });
         const { auth } = await import('@/lib/firebase/config');
         
         // Check auth state and get token
         const currentUser = auth.currentUser;
-        console.log('📊 Current auth user:', currentUser?.email || 'NOT LOGGED IN');
+        logger.info('📊 Current auth user', { email: currentUser?.email || 'NOT LOGGED IN', file: 'page.tsx' });
         
         let orgs: any[] = [];
         let users: any[] = [];
@@ -43,10 +44,10 @@ export default function AdminDashboard() {
           if (orgsResponse.ok) {
             const data = await orgsResponse.json();
             orgs = data.organizations || [];
-            console.log('📊 Organizations fetched via API:', orgs.length);
+            logger.info('📊 Organizations fetched via API', { count: orgs.length, file: 'page.tsx' });
           } else {
             const errorText = await orgsResponse.text();
-            console.error('📊 Orgs API error:', orgsResponse.status, errorText);
+            logger.error('📊 Orgs API error', new Error(errorText), { status: orgsResponse.status, file: 'page.tsx' });
             // If 403, user is not a super_admin
             if (orgsResponse.status === 403) {
               throw new Error('NOT_SUPER_ADMIN');
@@ -56,12 +57,12 @@ export default function AdminDashboard() {
           if (usersResponse.ok) {
             const data = await usersResponse.json();
             users = data.users || [];
-            console.log('📊 Users fetched via API:', users.length);
+            logger.info('📊 Users fetched via API', { count: users.length, file: 'page.tsx' });
           } else {
-            console.error('📊 Users API error:', usersResponse.status);
+            logger.error('📊 Users API error', new Error('Users API failed'), { status: usersResponse.status, file: 'page.tsx' });
           }
         } else {
-          console.warn('📊 No authenticated user - redirecting to login');
+          logger.warn('📊 No authenticated user - redirecting to login', { file: 'page.tsx' });
           throw new Error('NOT_LOGGED_IN');
         }
         
@@ -131,7 +132,7 @@ export default function AdminDashboard() {
 
         setLoading(false);
       } catch (error: any) {
-        console.error('❌ Failed to load dashboard data:', error);
+        logger.error('❌ Failed to load dashboard data:', error, { file: 'page.tsx' });
         
         // Handle auth errors
         if (error.message === 'NOT_LOGGED_IN') {

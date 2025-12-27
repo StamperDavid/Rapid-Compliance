@@ -1,7 +1,14 @@
 /**
  * LinkedIn Messaging Service
  * Send messages via LinkedIn (for sequence steps)
+ * 
+ * PRODUCTION READY:
+ * - Uses RapidAPI for automated sends (when RAPIDAPI_KEY is configured)
+ * - Gracefully falls back to manual task creation if API is not configured
+ * - No errors thrown - returns success/error status
  */
+
+import { logger } from '@/lib/logger/logger';
 
 export interface LinkedInMessageResult {
   success: boolean;
@@ -11,7 +18,11 @@ export interface LinkedInMessageResult {
 
 /**
  * Send LinkedIn message
- * Note: LinkedIn's API is restricted. This uses RapidAPI or similar service.
+ * Note: LinkedIn's official API is restricted. This uses RapidAPI or similar service.
+ * 
+ * Configuration:
+ * - Set RAPIDAPI_KEY environment variable for automated sends
+ * - Without RAPIDAPI_KEY, creates manual tasks for sales reps
  */
 export async function sendLinkedInMessage(
   accessToken: string,
@@ -20,15 +31,10 @@ export async function sendLinkedInMessage(
   organizationId: string
 ): Promise<LinkedInMessageResult> {
   try {
-    // LinkedIn's official API doesn't allow automated messaging
-    // Most users would need to use:
-    // 1. LinkedIn Sales Navigator API (premium)
-    // 2. RapidAPI LinkedIn endpoints
-    // 3. Phantombuster or similar automation tools
-    
-    console.log('[LinkedIn] Attempting to send message:', {
-      recipient: recipientIdentifier,
-      message: message.substring(0, 50) + '...',
+    logger.info('LinkedIn: Attempting to send message', {
+      recipient: recipientIdentifier.substring(0, 30) + '...',
+      messageLength: message.length,
+      organizationId,
     });
     
     // Check if using RapidAPI
@@ -39,6 +45,10 @@ export async function sendLinkedInMessage(
     }
     
     // Fallback: Log message for manual sending
+    logger.info('LinkedIn: No RapidAPI key configured, creating manual task', {
+      organizationId,
+    });
+    
     await logMessageForManualSend(organizationId, recipientIdentifier, message);
     
     return {
@@ -46,7 +56,10 @@ export async function sendLinkedInMessage(
       messageId: `linkedin-manual-${Date.now()}`,
     };
   } catch (error) {
-    console.error('[LinkedIn] Error sending message:', error);
+    logger.error('LinkedIn: Error sending message', error as Error, {
+      organizationId,
+    });
+    
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -79,17 +92,27 @@ async function sendViaRapidAPI(
     });
     
     if (!response.ok) {
+      const errorText = await response.text();
+      logger.warn('LinkedIn: RapidAPI request failed', {
+        status: response.status,
+        error: errorText,
+      });
+      
       throw new Error(`RapidAPI error: ${response.status}`);
     }
     
     const data = await response.json();
+    
+    logger.info('LinkedIn: Message sent successfully via RapidAPI', {
+      messageId: data.messageId || data.id,
+    });
     
     return {
       success: true,
       messageId: data.messageId || data.id,
     };
   } catch (error) {
-    console.error('[LinkedIn] RapidAPI error:', error);
+    logger.error('LinkedIn: RapidAPI error', error as Error);
     throw error;
   }
 }
@@ -128,7 +151,11 @@ async function logMessageForManualSend(
     }
   );
   
-  console.log('[LinkedIn] Created manual task for message');
+  logger.info('LinkedIn: Created manual task for message', {
+    taskId,
+    organizationId,
+    recipient: recipientIdentifier.substring(0, 30) + '...',
+  });
 }
 
 /**
@@ -143,6 +170,7 @@ export async function sendConnectionRequest(
     const rapidApiKey = process.env.RAPIDAPI_KEY;
     
     if (!rapidApiKey) {
+      logger.warn('LinkedIn: Cannot send connection request - RapidAPI key not configured');
       return {
         success: false,
         error: 'LinkedIn API not configured',
@@ -168,12 +196,16 @@ export async function sendConnectionRequest(
     
     const data = await response.json();
     
+    logger.info('LinkedIn: Connection request sent successfully', {
+      invitationId: data.invitationId || data.id,
+    });
+    
     return {
       success: true,
       messageId: data.invitationId || data.id,
     };
   } catch (error) {
-    console.error('[LinkedIn] Error sending connection request:', error);
+    logger.error('LinkedIn: Error sending connection request', error as Error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -192,6 +224,7 @@ export async function getConversationThread(
     const rapidApiKey = process.env.RAPIDAPI_KEY;
     
     if (!rapidApiKey) {
+      logger.debug('LinkedIn: Cannot fetch conversation - RapidAPI key not configured');
       return [];
     }
     
@@ -206,13 +239,26 @@ export async function getConversationThread(
     );
     
     if (!response.ok) {
+      logger.warn('LinkedIn: Failed to fetch conversation', {
+        conversationId,
+        status: response.status,
+      });
       return [];
     }
     
     const data = await response.json();
-    return data.messages || [];
+    const messages = data.messages || [];
+    
+    logger.debug('LinkedIn: Conversation fetched successfully', {
+      conversationId,
+      messageCount: messages.length,
+    });
+    
+    return messages;
   } catch (error) {
-    console.error('[LinkedIn] Error fetching conversation:', error);
+    logger.error('LinkedIn: Error fetching conversation', error as Error, {
+      conversationId,
+    });
     return [];
   }
 }

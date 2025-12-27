@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
-import type { UserRole } from '@/types/permissions';
+import type { UserRole } from '@/types/permissions'
+import { logger } from '@/lib/logger/logger';;
 
 interface AuthContextType {
   user: {
@@ -28,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isFirebaseConfigured) {
       // Firebase not configured - use demo mode
-      console.warn('Firebase not configured. Running in demo mode.');
+      logger.warn('Firebase not configured. Running in demo mode.', { file: 'AuthProvider.tsx' });
       setUser({
         id: 'demo-user',
         email: 'admin@demo.com',
@@ -61,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 workspaceId: userProfile?.currentWorkspaceId,
               });
             } catch (error) {
-              console.error('Error loading user profile:', error);
+              logger.error('Error loading user profile:', error, { file: 'AuthProvider.tsx' });
               setUser({
                 id: authUser.uid,
                 email: authUser.email || '',
@@ -78,11 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => unsubscribe();
       }).catch((error) => {
-        console.error('Error loading Firestore service:', error);
+        logger.error('Error loading Firestore service:', error, { file: 'AuthProvider.tsx' });
         setLoading(false);
       });
     }).catch((error) => {
-      console.error('Error loading auth service:', error);
+      logger.error('Error loading auth service:', error, { file: 'AuthProvider.tsx' });
       setLoading(false);
     });
   }, []);

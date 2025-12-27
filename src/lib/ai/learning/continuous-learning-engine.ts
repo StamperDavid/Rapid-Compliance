@@ -7,7 +7,8 @@ import type { ContinuousLearningConfig, TrainingExample } from '@/types/fine-tun
 import { collectTrainingExample, getTrainingDataStats } from '../fine-tuning/data-collector';
 import { createOpenAIFineTuningJob } from '../fine-tuning/openai-tuner';
 import { createVertexAIFineTuningJob } from '../fine-tuning/vertex-tuner';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Process conversation feedback and trigger learning
@@ -83,9 +84,11 @@ async function shouldTriggerFineTuning(
   
   // Need minimum approved examples
   if (stats.approved < config.minExamplesForTraining) {
-    console.log(
-      `[Continuous Learning] Not enough examples: ${stats.approved}/${config.minExamplesForTraining}`
-    );
+    logger.info('[Continuous Learning] Not enough examples', { 
+      approved: stats.approved, 
+      required: config.minExamplesForTraining,
+      file: 'continuous-learning-engine.ts' 
+    });
     return false;
   }
   
@@ -111,7 +114,7 @@ async function shouldTriggerFineTuning(
   // Check budget
   const monthlySpend = await getMonthlyTrainingSpend(organizationId);
   if (monthlySpend >= config.maxMonthlyTrainingCost) {
-    console.log('[Continuous Learning] Budget limit reached');
+    logger.info('[Continuous Learning] Budget limit reached', { file: 'continuous-learning-engine.ts' });
     return false;
   }
   
@@ -125,7 +128,7 @@ async function triggerFineTuning(
   organizationId: string,
   config: ContinuousLearningConfig
 ): Promise<string> {
-  console.log(`[Continuous Learning] Triggering fine-tuning for ${organizationId}`);
+  logger.info('Continuous Learning Triggering fine-tuning for organizationId}', { file: 'continuous-learning-engine.ts' });
   
   // Get approved examples
   const examples = await FirestoreService.getAll(
@@ -300,8 +303,8 @@ export async function evaluateAndDeployModel(
     confidenceThreshold: 95,
   });
   
-  console.log(`[Continuous Learning] Started A/B test: ${test.id}`);
-  console.log(`[Continuous Learning] Control: ${currentModel}, Treatment: ${fineTunedModelId}`);
+  logger.info('Continuous Learning Started A/B test: test.id}', { file: 'continuous-learning-engine.ts' });
+  logger.info('Continuous Learning Control: currentModel}, Treatment: fineTunedModelId}', { file: 'continuous-learning-engine.ts' });
   
   return {
     deployed: false,

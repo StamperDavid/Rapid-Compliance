@@ -4,7 +4,8 @@
  */
 
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client } from 'google-auth-library'
+import { logger } from '@/lib/logger/logger';;
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -249,6 +250,46 @@ export function getEmailBody(message: any): { text: string; html: string } {
 }
 
 /**
+ * Send email via Gmail (wrapper for sequence engine)
+ */
+export async function sendEmailViaGmail(options: {
+  to: string;
+  from: string;
+  subject: string;
+  body: string;
+  organizationId: string;
+  metadata?: Record<string, string>;
+}): Promise<void> {
+  // Get Gmail tokens from organization's integrations
+  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  
+  const integrations = await FirestoreService.getAll(
+    `${COLLECTIONS.ORGANIZATIONS}/${options.organizationId}/integrations`,
+    []
+  );
+  
+  const gmailIntegration = integrations.find((i: any) => i.service === 'gmail' || i.providerId === 'google');
+  
+  if (!gmailIntegration || !gmailIntegration.accessToken) {
+    throw new Error('Gmail not connected. Please connect your Google account first.');
+  }
+
+  const tokens = {
+    access_token: gmailIntegration.accessToken,
+    refresh_token: gmailIntegration.refreshToken,
+  };
+
+  // Send the email
+  const result = await sendGmailEmail(tokens, {
+    to: options.to,
+    subject: options.subject,
+    body: options.body,
+  });
+
+  logger.info('Gmail Email sent successfully: result.id}', { file: 'gmail-service.ts' });
+}
+
+/**
  * Sync emails to CRM
  */
 export async function syncEmailsToCRM(
@@ -292,17 +333,23 @@ export async function syncEmailsToCRM(
 
         synced++;
       } catch (error) {
-        console.error('[Gmail Sync] Error syncing email:', error);
+        logger.error('[Gmail Sync] Error syncing email:', error, { file: 'gmail-service.ts' });
         errors++;
       }
     }
 
     return { synced, errors };
   } catch (error) {
-    console.error('[Gmail Sync] Error syncing emails:', error);
+    logger.error('[Gmail Sync] Error syncing emails:', error, { file: 'gmail-service.ts' });
     throw error;
   }
 }
+
+
+
+
+
+
 
 
 

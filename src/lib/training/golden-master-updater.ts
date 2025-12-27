@@ -5,7 +5,8 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { compileSystemPrompt } from '@/lib/agent/prompt-compiler';
-import type { GoldenMaster } from '@/types/agent-memory';
+import type { GoldenMaster } from '@/types/agent-memory'
+import { logger } from '@/lib/logger/logger';;
 import type {
   GoldenMasterUpdateRequest,
   ImprovementSuggestion,
@@ -22,7 +23,7 @@ export async function createUpdateRequest(
   improvements: ImprovementSuggestion[],
   sourceSessionIds: string[]
 ): Promise<GoldenMasterUpdateRequest> {
-  console.log(`[GM Updater] Creating update request for Golden Master ${goldenMasterId}`);
+  logger.info('GM Updater Creating update request for Golden Master goldenMasterId}', { file: 'golden-master-updater.ts' });
   
   // Get current Golden Master
   const goldenMaster = await getGoldenMaster(organizationId, goldenMasterId);
@@ -57,7 +58,7 @@ export async function createUpdateRequest(
     false
   );
   
-  console.log(`[GM Updater] Update request created: ${updateRequest.id}`);
+  logger.info('GM Updater Update request created: updateRequest.id}', { file: 'golden-master-updater.ts' });
   
   return updateRequest;
 }
@@ -236,7 +237,7 @@ function analyzeImpact(
 export async function applyUpdateRequest(
   updateRequest: GoldenMasterUpdateRequest
 ): Promise<GoldenMaster> {
-  console.log(`[GM Updater] Applying update request ${updateRequest.id}`);
+  logger.info('GM Updater Applying update request updateRequest.id}', { file: 'golden-master-updater.ts' });
   
   const { organizationId, goldenMasterId, proposedChanges } = updateRequest;
   
@@ -293,7 +294,7 @@ export async function applyUpdateRequest(
     false
   );
   
-  console.log(`[GM Updater] New Golden Master version created: ${newVersion}`);
+  logger.info('GM Updater New Golden Master version created: newVersion}', { file: 'golden-master-updater.ts' });
   
   return updatedGM;
 }
@@ -326,7 +327,7 @@ async function getGoldenMaster(
     );
     return gm as GoldenMaster;
   } catch (error) {
-    console.error('[GM Updater] Error fetching Golden Master:', error);
+    logger.error('[GM Updater] Error fetching Golden Master:', error, { file: 'golden-master-updater.ts' });
     return null;
   }
 }
@@ -338,7 +339,7 @@ export async function deployGoldenMaster(
   organizationId: string,
   goldenMasterId: string
 ): Promise<void> {
-  console.log(`[GM Updater] Deploying Golden Master ${goldenMasterId}`);
+  logger.info('GM Updater Deploying Golden Master goldenMasterId}', { file: 'golden-master-updater.ts' });
   
   // Get the Golden Master to deploy
   const newGM = await getGoldenMaster(organizationId, goldenMasterId);
@@ -379,6 +380,6 @@ export async function deployGoldenMaster(
     false
   );
   
-  console.log(`[GM Updater] Golden Master ${goldenMasterId} deployed to production`);
+  logger.info('GM Updater Golden Master goldenMasterId} deployed to production', { file: 'golden-master-updater.ts' });
 }
 

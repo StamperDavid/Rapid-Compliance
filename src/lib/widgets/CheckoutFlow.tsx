@@ -6,7 +6,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe } from '@stripe/stripe-js'
+import { logger } from '@/lib/logger/logger';;
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -77,7 +78,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
         await stripe.redirectToCheckout({ sessionId });
       }
     } catch (error) {
-      console.error('Payment error:', error);
+      logger.error('Payment error:', error, { file: 'CheckoutFlow.tsx' });
       alert('Payment failed. Please try again.');
     } finally {
       setLoading(false);
@@ -336,6 +337,12 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

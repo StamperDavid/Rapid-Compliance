@@ -10,6 +10,9 @@ import {
 } from '@/lib/ecommerce/cart-service';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 const addToCartSchema = z.object({
   sessionId: z.string(),
@@ -38,6 +41,9 @@ const discountSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/cart');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -48,10 +54,7 @@ export async function GET(request: NextRequest) {
     const workspaceId = searchParams.get('workspaceId');
 
     if (!workspaceId) {
-      return NextResponse.json(
-        { success: false, error: 'workspaceId required' },
-        { status: 400 }
-      );
+      return errors.badRequest('workspaceId required');
     }
 
     const cart = await getOrCreateCart(sessionId, workspaceId, authResult.user?.uid);
@@ -61,7 +64,7 @@ export async function GET(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error getting cart:', error);
+    logger.error('Error getting cart', error, { route: '/api/ecommerce/cart' });
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to get cart' },
       { status: 500 }
@@ -108,11 +111,8 @@ export async function POST(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error adding to cart:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to add to cart' },
-      { status: 500 }
-    );
+    logger.error('Error adding to cart', error, { route: '/api/ecommerce/cart' });
+    return errors.database('Failed to add to cart', error);
   }
 }
 
@@ -155,11 +155,8 @@ export async function PATCH(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error updating cart:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update cart' },
-      { status: 500 }
-    );
+    logger.error('Error updating cart', error, { route: '/api/ecommerce/cart' });
+    return errors.database('Failed to update cart', error);
   }
 }
 
@@ -192,11 +189,8 @@ export async function DELETE(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error removing from cart:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to remove from cart' },
-      { status: 500 }
-    );
+    logger.error('Error removing from cart', error, { route: '/api/ecommerce/cart' });
+    return errors.database('Failed to remove from cart', error);
   }
 }
 

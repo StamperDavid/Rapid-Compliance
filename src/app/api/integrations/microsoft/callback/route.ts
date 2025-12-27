@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/outlook-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/microsoft/callback');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -37,6 +44,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect('/integrations?error=oauth_failed');
   }
 }
+
+
+
+
+
+
 
 
 

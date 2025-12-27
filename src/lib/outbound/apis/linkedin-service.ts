@@ -4,7 +4,8 @@
  * Uses RapidAPI LinkedIn endpoints or web scraping
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface LinkedInJob {
   title: string;
@@ -35,7 +36,7 @@ export async function getCompanyJobs(
       return await getJobsFromPublicSearch(companyName, maxResults);
     }
   } catch (error) {
-    console.error('[LinkedIn] Error fetching jobs:', error);
+    logger.error('[LinkedIn] Error fetching jobs:', error, { file: 'linkedin-service.ts' });
     return [];
   }
 }
@@ -60,7 +61,7 @@ async function getJobsFromRapidAPI(
     );
 
     if (!response.ok) {
-      console.error(`[LinkedIn RapidAPI] Error: ${response.status}`);
+      logger.error('[LinkedIn RapidAPI] Error: ${response.status}', new Error('[LinkedIn RapidAPI] Error: ${response.status}'), { file: 'linkedin-service.ts' });
       return [];
     }
 
@@ -80,7 +81,7 @@ async function getJobsFromRapidAPI(
       seniority: extractSeniority(job.title),
     }));
   } catch (error) {
-    console.error('[LinkedIn RapidAPI] Error:', error);
+    logger.error('[LinkedIn RapidAPI] Error:', error, { file: 'linkedin-service.ts' });
     return [];
   }
 }
@@ -103,7 +104,7 @@ async function getJobsFromPublicSearch(
     });
 
     if (!response.ok) {
-      console.log('[LinkedIn] Public search unavailable');
+      logger.info('[LinkedIn] Public search unavailable', { file: 'linkedin-service.ts' });
       return [];
     }
 
@@ -139,7 +140,7 @@ async function getJobsFromPublicSearch(
     
     return jobs;
   } catch (error) {
-    console.error('[LinkedIn] Public search error:', error);
+    logger.error('[LinkedIn] Public search error:', error, { file: 'linkedin-service.ts' });
     return generateFallbackJobs(companyName);
   }
 }
@@ -241,7 +242,7 @@ async function getLinkedInApiKey(organizationId: string): Promise<string | null>
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.rapidApiKey || null;
   } catch (error) {
-    console.error('[LinkedIn] Error getting API key:', error);
+    logger.error('[LinkedIn] Error getting API key:', error, { file: 'linkedin-service.ts' });
     return null;
   }
 }
@@ -308,6 +309,12 @@ export function analyzeHiringSignals(jobs: LinkedInJob[]): {
     insights,
   };
 }
+
+
+
+
+
+
 
 
 

@@ -4,6 +4,8 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { checkoutCompleteSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,14 +33,7 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, paymentIntentId, orderData } = validation.data;
@@ -89,11 +84,8 @@ export async function POST(request: NextRequest) {
       status: 'completed',
     });
   } catch (error: any) {
-    console.error('Checkout complete error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to complete checkout' },
-      { status: 500 }
-    );
+    logger.error('Checkout completion error', error, { route: '/api/checkout/complete' });
+    return errors.externalService('Stripe', error);
   }
 }
 

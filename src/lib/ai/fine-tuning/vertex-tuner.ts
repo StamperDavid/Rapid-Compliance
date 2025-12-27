@@ -5,7 +5,8 @@
 
 import type { TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { formatForVertexAI, validateTrainingData } from './data-formatter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Create fine-tuning job with Vertex AI
@@ -22,7 +23,7 @@ export async function createVertexAIFineTuningJob(params: {
 }): Promise<FineTuningJob> {
   const { organizationId, baseModel, examples, hyperparameters } = params;
   
-  console.log(`[Vertex AI Fine-Tuning] Starting job for ${organizationId}`);
+  logger.info('Vertex AI Fine-Tuning Starting job for organizationId}', { file: 'vertex-tuner.ts' });
   
   // Validate data
   const validation = validateTrainingData(examples);
@@ -91,7 +92,7 @@ export async function createVertexAIFineTuningJob(params: {
     false
   );
   
-  console.log(`[Vertex AI Fine-Tuning] Job created: ${job.id}`);
+  logger.info('Vertex AI Fine-Tuning Job created: job.id}', { file: 'vertex-tuner.ts' });
   
   // Note: In production, would start monitoring the actual Vertex AI job
   
@@ -145,6 +146,12 @@ export async function getVertexAIJobStatus(
   
   return job;
 }
+
+
+
+
+
+
 
 
 

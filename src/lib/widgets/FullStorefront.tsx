@@ -7,7 +7,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { ProductGrid } from './ProductGrid';
-import { ShoppingCart } from './ShoppingCart';
+import { ShoppingCart } from './ShoppingCart'
+import { logger } from '@/lib/logger/logger';;
 
 export interface FullStorefrontProps {
   organizationId: string;
@@ -50,7 +51,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
         setCategories(cats);
       }
     } catch (error) {
-      console.error('Error loading products:', error);
+      logger.error('Error loading products:', error, { file: 'FullStorefront.tsx' });
     } finally {
       setLoading(false);
     }
@@ -86,7 +87,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
       
       alert('Added to cart!');
     } catch (error) {
-      console.error('Error adding to cart:', error);
+      logger.error('Error adding to cart:', error, { file: 'FullStorefront.tsx' });
     }
   };
 

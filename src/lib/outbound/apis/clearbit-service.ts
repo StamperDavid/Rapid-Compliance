@@ -4,7 +4,8 @@
  * https://clearbit.com/docs
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 const CLEARBIT_API_BASE = 'https://company.clearbit.com/v2';
 const CLEARBIT_PERSON_API = 'https://person.clearbit.com/v2';
@@ -128,7 +129,7 @@ export async function enrichCompanyByDomain(
     const apiKey = await getClearbitApiKey(organizationId);
     
     if (!apiKey) {
-      console.warn('[Clearbit] API key not configured');
+      logger.warn('[Clearbit] API key not configured', { file: 'clearbit-service.ts' });
       return null;
     }
 
@@ -143,20 +144,20 @@ export async function enrichCompanyByDomain(
     );
 
     if (response.status === 404) {
-      console.log(`[Clearbit] Company not found for domain: ${domain}`);
+      logger.info('Clearbit Company not found for domain: domain}', { file: 'clearbit-service.ts' });
       return null;
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[Clearbit] API error (${response.status}):`, errorText);
+      logger.error('[Clearbit] API error (${response.status}):', errorText, { file: 'clearbit-service.ts' });
       return null;
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('[Clearbit] Error enriching company:', error);
+    logger.error('[Clearbit] Error enriching company:', error, { file: 'clearbit-service.ts' });
     return null;
   }
 }
@@ -172,7 +173,7 @@ export async function searchCompanyByName(
     const apiKey = await getClearbitApiKey(organizationId);
     
     if (!apiKey) {
-      console.warn('[Clearbit] API key not configured');
+      logger.warn('[Clearbit] API key not configured', { file: 'clearbit-service.ts' });
       return null;
     }
 
@@ -209,7 +210,7 @@ export async function searchCompanyByName(
 
     return null;
   } catch (error) {
-    console.error('[Clearbit] Error searching company:', error);
+    logger.error('[Clearbit] Error searching company:', error, { file: 'clearbit-service.ts' });
     return null;
   }
 }
@@ -225,7 +226,7 @@ export async function enrichPersonByEmail(
     const apiKey = await getClearbitApiKey(organizationId);
     
     if (!apiKey) {
-      console.warn('[Clearbit] API key not configured');
+      logger.warn('[Clearbit] API key not configured', { file: 'clearbit-service.ts' });
       return null;
     }
 
@@ -240,7 +241,7 @@ export async function enrichPersonByEmail(
     );
 
     if (response.status === 404) {
-      console.log(`[Clearbit] Person not found for email: ${email}`);
+      logger.info('Clearbit Person not found for email: email}', { file: 'clearbit-service.ts' });
       return null;
     }
 
@@ -251,7 +252,7 @@ export async function enrichPersonByEmail(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('[Clearbit] Error enriching person:', error);
+    logger.error('[Clearbit] Error enriching person:', error, { file: 'clearbit-service.ts' });
     return null;
   }
 }
@@ -293,7 +294,7 @@ export async function enrichProspect(
       company: data.company || null,
     };
   } catch (error) {
-    console.error('[Clearbit] Error enriching prospect:', error);
+    logger.error('[Clearbit] Error enriching prospect:', error, { file: 'clearbit-service.ts' });
     return { person: null, company: null };
   }
 }
@@ -312,7 +313,7 @@ async function getClearbitApiKey(organizationId: string): Promise<string | null>
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.clearbitApiKey || null;
   } catch (error) {
-    console.error('[Clearbit] Error getting API key:', error);
+    logger.error('[Clearbit] Error getting API key:', error, { file: 'clearbit-service.ts' });
     return null;
   }
 }
@@ -362,6 +363,12 @@ export function formatClearbitCompanyData(company: ClearbitCompany): {
     technologies: company.tech || [],
   };
 }
+
+
+
+
+
+
 
 
 

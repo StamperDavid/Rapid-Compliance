@@ -25,7 +25,8 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/config'
+import { logger } from '@/lib/logger/logger';;
 
 // Helper to check if Firestore is available
 function ensureFirestore() {
@@ -70,7 +71,7 @@ export class FirestoreService {
     docId: string
   ): Promise<T | null> {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot get document.');
+      logger.warn('Firestore is not initialized. Cannot get document.', { file: 'firestore-service.ts' });
       return null;
     }
 
@@ -83,20 +84,21 @@ export class FirestoreService {
       }
       return null;
     } catch (error) {
-      console.error(`Error getting document ${docId} from ${collectionPath}:`, error);
+      logger.error('Error getting document ${docId} from ${collectionPath}:', error, { file: 'firestore-service.ts' });
       return null; // Return null instead of throwing to prevent crashes
     }
   }
 
   /**
    * Get all documents from a collection
+   * WARNING: This fetches ALL documents. Use getAllPaginated() for large collections.
    */
   static async getAll<T = DocumentData>(
     collectionPath: string,
     constraints: QueryConstraint[] = []
   ): Promise<T[]> {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot get documents.');
+      logger.warn('Firestore is not initialized. Cannot get documents.', { file: 'firestore-service.ts' });
       return [];
     }
 
@@ -109,8 +111,63 @@ export class FirestoreService {
         ...doc.data(),
       })) as T[];
     } catch (error) {
-      console.error(`Error getting all documents from ${collectionPath}:`, error);
+      logger.error('Error getting all documents from ${collectionPath}:', error, { file: 'firestore-service.ts' });
       return []; // Return empty array instead of throwing
+    }
+  }
+
+  /**
+   * Get documents with pagination
+   */
+  static async getAllPaginated<T = DocumentData>(
+    collectionPath: string,
+    constraints: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ): Promise<{
+    data: T[];
+    lastDoc: QueryDocumentSnapshot | null;
+    hasMore: boolean;
+  }> {
+    if (!db) {
+      logger.warn('Firestore is not initialized. Cannot get documents.', { file: 'firestore-service.ts' });
+      return { data: [], lastDoc: null, hasMore: false };
+    }
+
+    try {
+      // Add limit to constraints
+      const paginatedConstraints = [
+        ...constraints,
+        limit(pageSize + 1), // Fetch one extra to check if there are more
+      ];
+
+      // Add startAfter if we have a lastDoc
+      if (lastDoc) {
+        paginatedConstraints.push(startAfter(lastDoc));
+      }
+
+      const q = query(collection(db, collectionPath), ...paginatedConstraints);
+      const querySnapshot = await getDocs(q);
+      
+      const docs = querySnapshot.docs;
+      const hasMore = docs.length > pageSize;
+      
+      // Remove the extra document if we have more
+      const data = (hasMore ? docs.slice(0, pageSize) : docs).map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as T[];
+      
+      const newLastDoc = hasMore ? docs[pageSize - 1] : (docs.length > 0 ? docs[docs.length - 1] : null);
+
+      return {
+        data,
+        lastDoc: newLastDoc,
+        hasMore,
+      };
+    } catch (error) {
+      logger.error('Error getting paginated documents from ${collectionPath}:', error, { file: 'firestore-service.ts' });
+      return { data: [], lastDoc: null, hasMore: false };
     }
   }
 
@@ -134,7 +191,7 @@ export class FirestoreService {
       };
       await setDoc(docRef, dataWithTimestamps, { merge });
     } catch (error) {
-      console.error(`Error setting document ${docId} in ${collectionPath}:`, error);
+      logger.error('Error setting document ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -156,7 +213,7 @@ export class FirestoreService {
         updatedAt: serverTimestamp(),
       } as any);
     } catch (error) {
-      console.error(`Error updating document ${docId} in ${collectionPath}:`, error);
+      logger.error('Error updating document ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -171,7 +228,7 @@ export class FirestoreService {
       const docRef = doc(firestoreDb, collectionPath, docId);
       await deleteDoc(docRef);
     } catch (error) {
-      console.error(`Error deleting document ${docId} from ${collectionPath}:`, error);
+      logger.error('Error deleting document ${docId} from ${collectionPath}:', error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -185,7 +242,7 @@ export class FirestoreService {
     callback: (data: T | null) => void
   ): () => void {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot subscribe to document.');
+      logger.warn('Firestore is not initialized. Cannot subscribe to document.', { file: 'firestore-service.ts' });
       callback(null);
       return () => {}; // Return no-op unsubscribe
     }
@@ -202,7 +259,7 @@ export class FirestoreService {
         }
       },
       (error) => {
-        console.error(`Error in subscription for ${docId} in ${collectionPath}:`, error);
+        logger.error('Error in subscription for ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
         callback(null);
       }
     );
@@ -217,7 +274,7 @@ export class FirestoreService {
     callback: (data: T[]) => void
   ): () => void {
     if (!db) {
-      console.warn('Firestore is not initialized. Cannot subscribe to collection.');
+      logger.warn('Firestore is not initialized. Cannot subscribe to collection.', { file: 'firestore-service.ts' });
       callback([]);
       return () => {}; // Return no-op unsubscribe
     }
@@ -234,7 +291,7 @@ export class FirestoreService {
         callback(data);
       },
       (error) => {
-        console.error(`Error in collection subscription for ${collectionPath}:`, error);
+        logger.error('Error in collection subscription for ${collectionPath}:', error, { file: 'firestore-service.ts' });
         callback([]);
       }
     );
@@ -408,6 +465,27 @@ export class RecordService {
     );
   }
 
+  /**
+   * Get records with pagination
+   * @param pageSize - Number of records per page (default 50, max 100)
+   * @param lastDoc - Document snapshot to start after (for cursor pagination)
+   */
+  static async getAllPaginated(
+    orgId: string,
+    workspaceId: string,
+    entityName: string,
+    filters: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ) {
+    return FirestoreService.getAllPaginated(
+      RecordService.getCollectionPath(orgId, workspaceId, entityName),
+      filters,
+      Math.min(pageSize, 100), // Enforce max page size
+      lastDoc
+    );
+  }
+
   static async set(orgId: string, workspaceId: string, entityName: string, recordId: string, data: any) {
     return FirestoreService.set(
       RecordService.getCollectionPath(orgId, workspaceId, entityName),
@@ -458,6 +536,24 @@ export class WorkflowService {
     );
   }
 
+  /**
+   * Get workflows with pagination
+   */
+  static async getAllPaginated(
+    orgId: string,
+    workspaceId: string,
+    constraints: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ) {
+    return FirestoreService.getAllPaginated(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+      constraints,
+      Math.min(pageSize, 100),
+      lastDoc
+    );
+  }
+
   static async set(orgId: string, workspaceId: string, workflowId: string, data: any) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
@@ -482,6 +578,23 @@ export class EmailCampaignService {
   static async getAll(orgId: string) {
     return FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`
+    );
+  }
+
+  /**
+   * Get campaigns with pagination
+   */
+  static async getAllPaginated(
+    orgId: string,
+    constraints: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: QueryDocumentSnapshot
+  ) {
+    return FirestoreService.getAllPaginated(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      constraints,
+      Math.min(pageSize, 100),
+      lastDoc
     );
   }
 

@@ -33,35 +33,39 @@ export default function TeamsIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'teams',
-        name: 'Microsoft Teams',
-        description: 'Get notifications in Teams channels',
-        icon: '💼',
-        category: 'communication',
-        status: 'active',
-        organizationId: 'demo-org',
-        settings: {
-          notifications: {
-            newDeal: true,
-            dealWon: true,
-            dealLost: false,
-            newLead: true,
-            taskDue: true,
-          },
-          channels: {
-            deals: 'Deals',
-            leads: 'Leads',
-            tasks: 'Tasks',
-            general: 'General',
-          },
-        },
-        connectedAt: new Date().toISOString(),
+    
+    try {
+      // Microsoft Teams OAuth flow
+      // NOTE: Requires TEAMS_CLIENT_ID and TEAMS_CLIENT_SECRET configured in API keys
+      const response = await fetch('/api/integrations/teams/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       });
+      
+      const data = await response.json();
+      
+      if (data.authUrl) {
+        // Redirect to Microsoft OAuth
+        window.location.href = data.authUrl;
+      } else if (data.error) {
+        // Teams not configured - show instructions
+        alert(
+          'Microsoft Teams integration requires configuration.\n\n' +
+          'Steps:\n' +
+          '1. Create a Teams app in Microsoft Azure Portal\n' +
+          '2. Get your Client ID and Client Secret\n' +
+          '3. Add them to Settings > API Keys > Teams\n' +
+          '4. Try connecting again\n\n' +
+          'For now, you can use Slack or webhooks as alternatives.'
+        );
+        setIsConnecting(false);
+      } else {
+        throw new Error('Unexpected response from auth endpoint');
+      }
+    } catch (error: any) {
+      alert(`Connection error: ${error.message}`);
       setIsConnecting(false);
-    }, 2000);
+    }
   };
 
   if (!integration || integration.status !== 'active') {

@@ -7,7 +7,8 @@
 // In production, integrate with Algolia or Typesense
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface SearchResult {
   id: string;
@@ -85,7 +86,7 @@ export async function searchWorkspace(
       }
     }
   } catch (error) {
-    console.error('Error searching workspace:', error);
+    logger.error('Error searching workspace:', error, { file: 'search-service.ts' });
   }
 
   return results.slice(0, options.limit || 50);
@@ -104,7 +105,7 @@ export async function indexRecord(
 ): Promise<void> {
   // In production, add to search index
   // For now, records are automatically searchable via Firestore queries
-  console.log('Indexing record:', { orgId, workspaceId, entityName, recordId });
+  logger.info('Indexing record', { orgId, workspaceId, entityName, recordId, file: 'search-service.ts' });
 }
 
 /**
@@ -117,7 +118,7 @@ export async function unindexRecord(
   recordId: string
 ): Promise<void> {
   // In production, remove from search index
-  console.log('Unindexing record:', { orgId, workspaceId, entityName, recordId });
+  logger.info('Unindexing record', { orgId, workspaceId, entityName, recordId, file: 'search-service.ts' });
 }
 
 /**
@@ -126,8 +127,14 @@ export async function unindexRecord(
 export async function initializeSearch(): Promise<void> {
   // In production, initialize Algolia/Typesense client
   // For now, using Firestore-based search
-  console.log('Search initialized (using Firestore)');
+  logger.info('Search initialized (using Firestore)', { file: 'search-service.ts' });
 }
+
+
+
+
+
+
 
 
 

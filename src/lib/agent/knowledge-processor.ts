@@ -4,7 +4,8 @@
  */
 
 import type { KnowledgeBase, KnowledgeDocument, KnowledgeURL, FAQ } from '@/types/agent-memory';
-import { analyzeCompanyKnowledge } from './knowledge-analyzer';
+import { analyzeCompanyKnowledge } from './knowledge-analyzer'
+import { logger } from '@/lib/logger/logger';;
 
 export interface KnowledgeProcessorOptions {
   organizationId: string;
@@ -186,7 +187,7 @@ async function processFile(
     
     return document;
   } catch (error) {
-    console.error('Error processing file:', error);
+    logger.error('Error processing file:', error, { file: 'knowledge-processor.ts' });
     return null;
   }
 }
@@ -287,7 +288,7 @@ export async function processDocumentContent(
     
     return processedContent;
   } catch (error) {
-    console.error('Error processing document content:', error);
+    logger.error('Error processing document content:', error, { file: 'knowledge-processor.ts' });
     return content; // Return original content if processing fails
   }
 }

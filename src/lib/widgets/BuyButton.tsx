@@ -5,7 +5,8 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState } from 'react'
+import { logger } from '@/lib/logger/logger';;
 
 export interface BuyButtonProps {
   productId: string;
@@ -69,7 +70,7 @@ export function BuyButton({
         }
       }
     } catch (error) {
-      console.error('Error processing purchase:', error);
+      logger.error('Error processing purchase:', error, { file: 'BuyButton.tsx' });
     } finally {
       setLoading(false);
     }
@@ -137,6 +138,12 @@ export function BuyButton({
     </button>
   );
 }
+
+
+
+
+
+
 
 
 

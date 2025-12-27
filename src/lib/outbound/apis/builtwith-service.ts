@@ -4,7 +4,8 @@
  * https://api.builtwith.com/
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 const BUILTWITH_API_BASE = 'https://api.builtwith.com';
 
@@ -37,7 +38,7 @@ export async function getTechStack(
     const apiKey = await getBuiltWithApiKey(organizationId);
     
     if (!apiKey) {
-      console.warn('[BuiltWith] API key not configured, using fallback');
+      logger.warn('[BuiltWith] API key not configured, using fallback', { file: 'builtwith-service.ts' });
       return await getFallbackTechStack(domain);
     }
 
@@ -51,7 +52,7 @@ export async function getTechStack(
     );
 
     if (!response.ok) {
-      console.error(`[BuiltWith] API error: ${response.status}`);
+      logger.error('[BuiltWith] API error: ${response.status}', new Error('[BuiltWith] API error: ${response.status}'), { file: 'builtwith-service.ts' });
       return await getFallbackTechStack(domain);
     }
 
@@ -77,7 +78,7 @@ export async function getTechStack(
 
     return technologies;
   } catch (error) {
-    console.error('[BuiltWith] Error getting tech stack:', error);
+    logger.error('[BuiltWith] Error getting tech stack:', error, { file: 'builtwith-service.ts' });
     return await getFallbackTechStack(domain);
   }
 }
@@ -141,7 +142,7 @@ export async function getTechStackDetailed(
       Categories: categories,
     };
   } catch (error) {
-    console.error('[BuiltWith] Error getting detailed tech stack:', error);
+    logger.error('[BuiltWith] Error getting detailed tech stack:', error, { file: 'builtwith-service.ts' });
     return null;
   }
 }
@@ -194,7 +195,7 @@ async function getFallbackTechStack(domain: string): Promise<string[]> {
 
     return technologies;
   } catch (error) {
-    console.error('[BuiltWith] Fallback detection error:', error);
+    logger.error('[BuiltWith] Fallback detection error:', error, { file: 'builtwith-service.ts' });
     return [];
   }
 }
@@ -213,7 +214,7 @@ async function getBuiltWithApiKey(organizationId: string): Promise<string | null
     const keys = await apiKeyService.getKeys(organizationId);
     return keys?.enrichment?.builtWithApiKey || null;
   } catch (error) {
-    console.error('[BuiltWith] Error getting API key:', error);
+    logger.error('[BuiltWith] Error getting API key:', error, { file: 'builtwith-service.ts' });
     return null;
   }
 }
@@ -291,6 +292,12 @@ export function categorizeTechnologies(technologies: string[]): {
 
   return categories;
 }
+
+
+
+
+
+
 
 
 

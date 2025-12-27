@@ -7,9 +7,15 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { analyzeTrainingSession } from '@/lib/training/feedback-processor';
 import type { TrainingSession } from '@/types/training';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/training/analyze-session');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -22,10 +28,7 @@ export async function POST(request: NextRequest) {
     const { sessionId, organizationId } = body;
 
     if (!sessionId || !organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Session ID and organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Session ID and organization ID required');
     }
 
     // Verify access
@@ -70,13 +73,16 @@ export async function POST(request: NextRequest) {
       analysis,
     });
   } catch (error: any) {
-    console.error('Error analyzing training session:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to analyze session' },
-      { status: 500 }
-    );
+    logger.error('Error analyzing session', error, { route: '/api/training/analyze-session' });
+    return errors.database('Failed to analyze session', error);
   }
 }
+
+
+
+
+
+
 
 
 

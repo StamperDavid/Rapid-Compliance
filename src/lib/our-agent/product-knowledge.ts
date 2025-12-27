@@ -63,51 +63,64 @@ We provide an AI-powered sales platform that combines a trainable AI sales agent
 - Remove our branding
 - Complete customization
 
-## Pricing Plans
+## Pricing - Growth Partner Model
 
-### Starter - $49/month ($470/year)
-- 1 AI sales agent
-- 1,000 conversations/month
-- Basic CRM (1,000 records)
-- Email support
-- Standard training
-- Website embed
-- Basic analytics
+### Success-Linked Pricing: Pay for What You Store, Not What You Use
 
-### Professional - $149/month ($1,430/year)
-- 3 AI sales agents
-- 10,000 conversations/month
-- Advanced CRM (10,000 records)
-- Priority support
-- Advanced training & feedback
-- Custom domain
-- Workflow automation
-- Advanced analytics
-- Integrations
-- E-commerce features
+All tiers include ALL features - no gating, no limits. You only pay based on your CRM record count.
 
-### Enterprise - Custom Pricing
-- Unlimited AI agents
-- Unlimited conversations
-- Unlimited CRM records
-- Dedicated support
-- Custom training program
-- White-label options
-- Custom integrations
-- SLA guarantee
-- Advanced security
-- Multi-region deployment
+### Tier 1 - $400/month ($4,000/year)
+- 0-100 CRM records
+- ✓ ALL FEATURES INCLUDED
+- ✓ Custom AI Sales Agent (Fully Trainable)
+- ✓ Lead Scraper & Enrichment
+- ✓ Email Sequences (Unlimited)
+- ✓ Multi-Channel Outreach (Email, LinkedIn, SMS)
+- ✓ Full CRM Suite
+- ✓ Workflow Automation
+- ✓ Built-in E-Commerce Engine
+- ✓ API Access
+- ✓ White-Label Options
+
+### Tier 2 - $650/month ($6,500/year) 🔥 MOST POPULAR
+- 101-250 CRM records
+- ✓ ALL FEATURES INCLUDED (same as Tier 1)
+- Perfect for growing businesses
+
+### Tier 3 - $1,000/month ($10,000/year)
+- 251-500 CRM records
+- ✓ ALL FEATURES INCLUDED (same as Tier 1)
+- Scaling your operations
+
+### Tier 4 - $1,250/month ($12,500/year)
+- 501-1,000 CRM records
+- ✓ ALL FEATURES INCLUDED (same as Tier 1)
+- Enterprise-level capacity
+
+### Enterprise (1,000+ records)
+- Contact sales for custom pricing
+- Volume discounts available
+- Dedicated account manager
+- Custom SLA agreements
+
+## Key Differentiator: BYOK (Bring Your Own Keys)
+- We don't markup AI tokens
+- Connect your own API key (we recommend OpenRouter - one key for all AI models)
+- Pay raw market rates for AI compute directly to the provider
+- Optional: Use OpenAI or Anthropic keys directly if preferred
+- Complete pricing transparency
 
 ## Free Trial
 - 14 days free
-- No credit card required
-- Full Professional plan access
-- Cancel anytime
+- Credit card required
+- Full access to ALL features
+- Cancel anytime before trial ends
 
-## Overage Pricing
-- Conversations: $0.05 per additional conversation
-- CRM records: $0.01 per additional record
-- Or upgrade to a higher plan
+## What Counts as a Record?
+- Any contact, lead, company, or custom object in your CRM
+- Deleted records don't count toward your limit
+- We'll notify you at 80% capacity
+- Auto-upgrade available when you exceed limits
 
 ## Setup Time
 - 5 minutes to complete onboarding wizard
@@ -127,7 +140,7 @@ We provide an AI-powered sales platform that combines a trainable AI sales agent
 "We've built in multiple safeguards: 1) You train it on your exact information, 2) It only answers based on your knowledge base, 3) It escalates to humans when unsure, 4) You review and improve it continuously. Plus, you can set it to training mode until you're 100% confident."
 
 ### "This seems expensive"
-"Let's break it down. The Professional plan at $149/month is less than hiring one sales rep for even 2 hours per month. But your AI agent works 24/7/365, never calls in sick, and handles unlimited conversations. Most customers see ROI in the first month."
+"Let's break it down. Even our Tier 4 at $1,250/month is less than hiring one sales rep for 8 hours per month. But your AI agents work 24/7/365, never call in sick, and handle unlimited conversations. Plus, you get the ENTIRE platform - CRM, email sequences, social media AI, workflow automation - all included. Most customers see ROI in the first week."
 
 ### "We already have a CRM"
 "No problem! We integrate with major CRMs like Salesforce and HubSpot. Or, you can use our built-in CRM and migrate your data. Many customers actually prefer our CRM because it's more flexible and customizable."
@@ -140,7 +153,7 @@ We provide an AI-powered sales platform that combines a trainable AI sales agent
 - Done! Your AI agent is now working 24/7."
 
 ### "What if I need help?"
-"We offer email support on all plans, priority support on Professional, and dedicated support on Enterprise. Plus, our documentation is comprehensive, and we have a growing community of users."
+"We offer email and chat support on all tiers. Plus, our documentation is comprehensive, and we have a growing community of users. Enterprise customers (1,000+ records) can arrange dedicated account management."
 
 ### "Can I cancel anytime?"
 "Absolutely. No long-term contracts. Cancel anytime and your subscription ends at the current billing period. We'll even help you export your data if you need it."
@@ -205,9 +218,9 @@ We provide an AI-powered sales platform that combines a trainable AI sales agent
 - Comprehensive documentation
 - Video tutorials
 - Community forum
-- Email support (all plans)
-- Priority support (Professional+)
-- Dedicated support manager (Enterprise)
+- Email & chat support (all tiers)
+- Knowledge base access
+- Dedicated account manager (Enterprise 1,000+ records)
 
 ## Success Stories
 - TechStart Inc: 300% increase in lead conversion
@@ -243,7 +256,7 @@ export const OUR_AGENT_PERSONA = {
 export const OUR_COMMON_QUESTIONS = [
   {
     q: "How much does it cost?",
-    a: "We have three plans: Starter ($49/month), Professional ($149/month), and Enterprise (custom pricing). All plans include a 14-day free trial with no credit card required. Would you like me to explain what's included in each plan?"
+    a: "We use volume-based pricing: Tier 1 ($400/month for 0-100 records), Tier 2 ($650/month for 101-250 records), Tier 3 ($1,000/month for 251-500 records), and Tier 4 ($1,250/month for 501-1,000 records). Here's the key: ALL features are included in every tier - unlimited AI agents, CRM, automation, everything. You only pay based on how many records you store. Plus we offer BYOK (Bring Your Own Keys) so you pay raw market rates for AI compute with no markup from us."
   },
   {
     q: "How long does setup take?",
@@ -259,7 +272,7 @@ export const OUR_COMMON_QUESTIONS = [
   },
   {
     q: "Is there a free trial?",
-    a: "Absolutely! 14 days free, no credit card required. You get full access to all Professional plan features. If you love it (which most people do!), you can upgrade. If not, your trial simply expires. Want me to help you get started?"
+    a: "Absolutely! 14 days free, credit card required. You get full access to ALL features - the entire platform with no limits. If you love it (which most people do!), your subscription continues. If not, cancel before the trial ends. Want me to help you get started?"
   }
 ];
 

@@ -1,0 +1,173 @@
+/**
+ * Workflow Service Tests
+ * Integration tests for workflow service layer
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import {
+  getWorkflows,
+  getWorkflow,
+  createWorkflow,
+  updateWorkflow,
+  deleteWorkflow,
+  setWorkflowStatus,
+} from '@/lib/workflows/workflow-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
+
+describe('WorkflowService', () => {
+  const testOrgId = `test-org-${Date.now()}`;
+  const testWorkspaceId = 'default';
+  let testWorkflowId: string;
+
+  beforeEach(async () => {
+    await FirestoreService.set('organizations', testOrgId, {
+      id: testOrgId,
+      name: 'Test Organization',
+    }, false);
+  });
+
+  afterEach(async () => {
+    if (testWorkflowId) {
+      try {
+        await deleteWorkflow(testOrgId, testWorkflowId, testWorkspaceId);
+      } catch (error) {
+        // Ignore
+      }
+    }
+  });
+
+  describe('createWorkflow', () => {
+    it('should create a new workflow', async () => {
+      const workflow = await createWorkflow(
+        testOrgId,
+        {
+          name: 'Test Workflow',
+          description: 'A test workflow',
+          trigger: {
+            id: 'trigger-1',
+            type: 'manual',
+            name: 'Manual Trigger',
+            config: {},
+          },
+          actions: [
+            {
+              id: 'action-1',
+              type: 'delay',
+              duration: 3600,
+              onError: 'stop',
+            },
+          ],
+          status: 'draft',
+          conditions: [],
+          settings: {
+            stopOnError: false,
+            parallel: false,
+          },
+          permissions: {
+            canView: ['owner', 'admin'],
+            canEdit: ['owner', 'admin'],
+            canExecute: ['owner', 'admin', 'member'],
+          },
+        },
+        'test-user',
+        testWorkspaceId
+      );
+      testWorkflowId = workflow.id;
+
+      expect(workflow.id).toBeDefined();
+      expect(workflow.name).toBe('Test Workflow');
+      expect(workflow.status).toBe('draft');
+      expect(workflow.stats?.totalRuns).toBe(0);
+      expect(workflow.version).toBe(1);
+    });
+  });
+
+  describe('setWorkflowStatus', () => {
+    it('should activate workflow', async () => {
+      const workflow = await createWorkflow(
+        testOrgId,
+        {
+          name: 'Activatable Workflow',
+          trigger: { id: 't1', type: 'manual', name: 'Manual', config: {} },
+          actions: [],
+          status: 'draft',
+          conditions: [],
+          settings: { stopOnError: false, parallel: false },
+          permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
+        },
+        'test-user',
+        testWorkspaceId
+      );
+      testWorkflowId = workflow.id;
+
+      const activated = await setWorkflowStatus(testOrgId, workflow.id, 'active', testWorkspaceId);
+
+      expect(activated.status).toBe('active');
+    });
+
+    it('should pause workflow', async () => {
+      const workflow = await createWorkflow(
+        testOrgId,
+        {
+          name: 'Pausable Workflow',
+          trigger: { id: 't1', type: 'manual', name: 'Manual', config: {} },
+          actions: [],
+          status: 'active',
+          conditions: [],
+          settings: { stopOnError: false, parallel: false },
+          permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
+        },
+        'test-user',
+        testWorkspaceId
+      );
+      testWorkflowId = workflow.id;
+
+      const paused = await setWorkflowStatus(testOrgId, workflow.id, 'paused', testWorkspaceId);
+
+      expect(paused.status).toBe('paused');
+    });
+  });
+
+  describe('getWorkflows with filters', () => {
+    it('should filter workflows by status', async () => {
+      const active = await createWorkflow(
+        testOrgId,
+        {
+          name: 'Active Workflow',
+          trigger: { id: 't1', type: 'manual', name: 'Manual', config: {} },
+          actions: [],
+          status: 'active',
+          conditions: [],
+          settings: { stopOnError: false, parallel: false },
+          permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
+        },
+        'test-user',
+        testWorkspaceId
+      );
+
+      const draft = await createWorkflow(
+        testOrgId,
+        {
+          name: 'Draft Workflow',
+          trigger: { id: 't2', type: 'manual', name: 'Manual', config: {} },
+          actions: [],
+          status: 'draft',
+          conditions: [],
+          settings: { stopOnError: false, parallel: false },
+          permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
+        },
+        'test-user',
+        testWorkspaceId
+      );
+
+      const result = await getWorkflows(testOrgId, testWorkspaceId, { status: 'active' });
+
+      expect(result.data.some(w => w.id === active.id)).toBe(true);
+      expect(result.data.every(w => w.status === 'active')).toBe(true);
+
+      await deleteWorkflow(testOrgId, active.id, testWorkspaceId);
+      await deleteWorkflow(testOrgId, draft.id, testWorkspaceId);
+    });
+  });
+});
+

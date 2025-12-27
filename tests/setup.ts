@@ -1,29 +1,24 @@
 /**
  * Test Setup
- * Global test configuration and mocks
+ * Global test configuration - uses real Firebase Admin SDK
  */
 
-// Mock environment variables
+// Set test environment
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
 Object.defineProperty(process.env, 'NODE_ENV', {
   value: 'test',
   writable: true,
 });
 
-// Mock Firestore
-jest.mock('@/lib/db/firestore-service', () => ({
-  FirestoreService: {
-    get: jest.fn(),
-    set: jest.fn(),
-    getAll: jest.fn(),
-    delete: jest.fn(),
-  },
-  COLLECTIONS: {
-    ORGANIZATIONS: 'organizations',
-    USERS: 'users',
-    WORKSPACES: 'workspaces',
-  },
-}));
+// Mock FirestoreService to use AdminFirestoreService (proper way for tests)
+// This uses Admin SDK which bypasses security rules
+jest.mock('@/lib/db/firestore-service', () => {
+  const { AdminFirestoreService } = jest.requireActual('@/lib/db/admin-firestore-service');
+  return {
+    FirestoreService: AdminFirestoreService,
+    COLLECTIONS: jest.requireActual('@/lib/db/firestore-service').COLLECTIONS,
+  };
+});
 
 // Mock API Key Service
 jest.mock('@/lib/api-keys/api-key-service', () => ({

@@ -2,26 +2,20 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 export default function WebhooksPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-  }, []);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
@@ -100,7 +94,7 @@ export default function WebhooksPage() {
             {/* Header */}
             <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
-                <Link href="/workspace/demo-org/settings" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+                <Link href={`/workspace/${orgId}/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
                   ← Back to Settings
                 </Link>
                 <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Webhooks</h1>
@@ -111,6 +105,31 @@ export default function WebhooksPage() {
               <button onClick={() => setShowCreateModal(true)} style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
                 + Create Webhook
               </button>
+            </div>
+
+            {/* Explanation Box */}
+            <div style={{ backgroundColor: '#1a1a3a', border: '1px solid #3333aa', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>🔗</span> What are Webhooks?
+              </h3>
+              <p style={{ color: '#a0a0c0', fontSize: '0.875rem', lineHeight: '1.6', marginBottom: '1rem' }}>
+                Webhooks allow your CRM to send real-time notifications to external systems when events occur. 
+                For example, when a new contact is created or a deal is won, we can instantly notify your other tools.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#6366f1', marginBottom: '0.25rem' }}>Example Use Case</div>
+                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Send a Slack message when a deal is won</div>
+                </div>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#10b981', marginBottom: '0.25rem' }}>Example Use Case</div>
+                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Sync new contacts to your email platform</div>
+                </div>
+                <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#f59e0b', marginBottom: '0.25rem' }}>Example Use Case</div>
+                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Trigger automations in Zapier or Make</div>
+                </div>
+              </div>
             </div>
 
             {/* Webhooks List */}
@@ -215,6 +234,12 @@ export default function WebhooksPage() {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

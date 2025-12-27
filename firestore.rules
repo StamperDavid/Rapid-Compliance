@@ -219,10 +219,28 @@ service cloud.firestore {
       // Super admins have FULL access
       allow read, write: if isSuperAdmin();
       
-      // Platform admins can also access
-      allow read, write: if isAuthenticated() 
-        && getUserRole() == 'admin'
-        && getUserOrgId() == 'platform';
+      // Platform admins can also access (any admin role can read)
+      allow read, write: if isAuthenticated() && isAdminOrOwner();
+    }
+    
+    // Base Models collection (training models)
+    match /baseModels/{modelId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Users can read base models for their organization
+      allow read: if isAuthenticated() 
+        && belongsToOrg(resource.data.orgId);
+      
+      // Managers and above can create/update
+      allow create, update: if isAuthenticated() 
+        && request.resource.data.orgId == getUserOrgId()
+        && isManagerOrAbove();
+      
+      // Only owners can delete
+      allow delete: if isAuthenticated() 
+        && belongsToOrg(resource.data.orgId)
+        && getUserRole() == 'owner';
     }
     
     // Golden Masters collection (AI agent configs)
@@ -304,13 +322,144 @@ service cloud.firestore {
         && getUserRole() == 'owner';
     }
     
-    // Organization subcollections (leads, deals, activities, etc.)
+    // Sensitive subcollections requiring elevated permissions
+    
+    // OAuth states (temporary OAuth flow data)
+    match /organizations/{orgId}/oauthStates/{stateId} {
+      allow read, write: if isSuperAdmin();
+      allow create, read: if isAuthenticated() && belongsToOrg(orgId);
+      allow delete: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Enrichment costs (billing data - read-only for regular users)
+    match /organizations/{orgId}/enrichment-costs/{costId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
+    // Enrichment cache (read-only for regular users, system writes)
+    match /organizations/{orgId}/enrichment-cache/{cacheId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      // Only system/backend should write (via admin SDK)
+    }
+    
+    // Integration status (OAuth token metadata - manager+ only)
+    match /organizations/{orgId}/integrationStatus/{statusId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
+    // A/B Tests (manager+ only)
+    match /organizations/{orgId}/abTests/{testId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
+    // Agent persona & knowledge base (manager+ can edit)
+    match /organizations/{orgId}/agentPersona/{docId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
+    match /organizations/{orgId}/knowledgeBase/{docId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
+    // Active/archived agent instances (system managed, read-only for users)
+    match /organizations/{orgId}/activeInstances/{instanceId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    match /organizations/{orgId}/archivedInstances/{instanceId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Email sync data (all authenticated users in org)
+    match /organizations/{orgId}/emails/{emailId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // SMS messages (all authenticated users in org)
+    match /organizations/{orgId}/smsMessages/{messageId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // SMS templates (manager+ can edit)
+    match /organizations/{orgId}/smsTemplates/{templateId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
+    // Sequences & enrollments (all authenticated users)
+    match /organizations/{orgId}/sequences/{sequenceId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    match /organizations/{orgId}/enrollments/{enrollmentId} {
+      allow read, write: if isSuperAdmin();
+      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    match /organizations/{orgId}/sequenceAnalytics/{analyticsId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    match /organizations/{orgId}/sequenceStepStats/{statsId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Generic organization subcollections (leads, deals, prospects, tasks, etc.)
+    // More restrictive than before - read for all, write for authenticated
     match /organizations/{orgId}/{subcollection}/{docId} {
       // Super admins have FULL access (IT support)
       allow read, write: if isSuperAdmin();
       
-      // Allow authenticated users to read/write subcollections in their org
-      allow read, write: if isAuthenticated() && belongsToOrg(orgId);
+      // All authenticated org users can read
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Only authenticated org users can write (not just any user)
+      allow create, update: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Managers and above can delete
+      allow delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
+    // Base Models subcollection (within organizations)
+    match /organizations/{orgId}/baseModels/{modelId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Admins can create/update base models
+      allow read, write: if isAuthenticated() && isAdminOrOwner();
+      
+      // Users in org can read
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+    }
+    
+    // Golden Masters subcollection (within organizations)
+    match /organizations/{orgId}/goldenMasters/{masterId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Admins can create/update golden masters
+      allow read, write: if isAuthenticated() && isAdminOrOwner();
+      
+      // Users in org can read
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
     }
     
     // Nested subcollections (records within workspaces, etc.)
@@ -348,6 +497,32 @@ service cloud.firestore {
       // Allow if user belongs to the session's org
       allow read, write: if isAuthenticated() 
         && belongsToOrg(get(/databases/$(database)/documents/chatSessions/$(sessionId)).data.organizationId);
+    }
+    
+    // Subscription plans (read-only for users, super admin manages)
+    match /subscriptionPlans/{planId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // All authenticated users can read plans
+      allow read: if isAuthenticated();
+    }
+    
+    // Customer subscriptions (tied to organizations)
+    match /customerSubscriptions/{subscriptionId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Users can read their org's subscription
+      allow read: if isAuthenticated() && belongsToOrg(resource.data.organizationId);
+      
+      // Only owners can modify subscription
+      allow update: if isAuthenticated() 
+        && belongsToOrg(resource.data.organizationId)
+        && getUserRole() == 'owner';
+      
+      // Only super admins can create/delete subscriptions
+      allow create, delete: if isSuperAdmin();
     }
     
     // Default: Deny all other access

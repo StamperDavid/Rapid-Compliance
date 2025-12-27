@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 interface IntegrationCard {
   id: string;
@@ -187,7 +188,7 @@ export default function AdminAPIKeysPageNew() {
         setKeys(adminSettings as Record<string, any>);
       }
     } catch (error) {
-      console.error('Error loading API keys:', error);
+      logger.error('Error loading API keys:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -278,10 +279,20 @@ export default function AdminAPIKeysPageNew() {
           <Link href="/admin/system/settings" className="text-indigo-400 hover:text-indigo-300 mb-4 inline-block">
             ← Back to System Settings
           </Link>
-          <h1 className="text-3xl font-bold mb-2">Platform Integrations</h1>
-          <p className="text-gray-400">
-            Connect your platform to essential services. Click any card to configure.
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Platform Integrations</h1>
+              <p className="text-gray-400">
+                Connect your platform to essential services. Click any card to configure.
+              </p>
+            </div>
+            <button
+              onClick={() => alert('Custom integration builder coming soon! For now, contact support to add custom integrations.')}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2"
+            >
+              <span>➕</span> Add Custom Integration
+            </button>
+          </div>
         </div>
 
         {/* Global Save Message */}

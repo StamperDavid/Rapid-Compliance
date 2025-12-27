@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'
+import { logger } from '@/lib/logger/logger';;
 
 export default function BusinessSetupPage() {
   const { user } = useAuth();
@@ -40,7 +41,7 @@ export default function BusinessSetupPage() {
         }
         setLoading(false);
       } catch (error) {
-        console.error('Failed to load onboarding data:', error);
+        logger.error('Failed to load onboarding data:', error, { file: 'page.tsx' });
         setLoading(false);
       }
     }
@@ -62,7 +63,7 @@ export default function BusinessSetupPage() {
       alert('Business setup saved successfully!');
       setSaving(false);
     } catch (error) {
-      console.error('Failed to save:', error);
+      logger.error('Failed to save:', error, { file: 'page.tsx' });
       alert('Failed to save changes. Please try again.');
       setSaving(false);
     }
@@ -517,6 +518,12 @@ function FormField({
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

@@ -3,6 +3,8 @@ import { createNurtureSequence, enrollLeadInSequence, analyzeLeadLifecycle, getL
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { leadNurtureSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,14 +32,7 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { action, data, organizationId } = validation.data;
@@ -53,10 +48,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'create-sequence':
         if (!data.sequence) {
-          return NextResponse.json(
-            { success: false, error: 'Sequence data is required' },
-            { status: 400 }
-          );
+          return errors.badRequest('Sequence data is required');
         }
         const sequence = await createNurtureSequence({
           ...data.sequence,
@@ -67,36 +59,24 @@ export async function POST(request: NextRequest) {
 
       case 'enroll-lead':
         if (!data.leadId || !data.sequenceId || !data.organizationId) {
-          return NextResponse.json(
-            { success: false, error: 'leadId, sequenceId, and organizationId are required' },
-            { status: 400 }
-          );
+          return errors.badRequest('leadId, sequenceId, and organizationId are required');
         }
         const result = await enrollLeadInSequence(data.leadId, data.sequenceId, data.organizationId);
         if (!result.success) {
-          return NextResponse.json(
-            { success: false, error: result.error },
-            { status: 400 }
-          );
+          return errors.badRequest(result.error || 'Failed to enroll lead');
         }
         return NextResponse.json({ success: true });
 
       case 'analyze-lifecycle':
         if (!data.leadId) {
-          return NextResponse.json(
-            { success: false, error: 'leadId is required' },
-            { status: 400 }
-          );
+          return errors.badRequest('leadId is required');
         }
         const analysis = await analyzeLeadLifecycle(data.leadId);
         return NextResponse.json({ success: true, analysis });
 
       case 'get-attribution':
         if (!data.leadId) {
-          return NextResponse.json(
-            { success: false, error: 'leadId is required' },
-            { status: 400 }
-          );
+          return errors.badRequest('leadId is required');
         }
         // Type assertion: validation ensures model is one of the valid values
         const attribution = getLeadAttribution(
@@ -106,16 +86,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, attribution });
 
       default:
-        return NextResponse.json(
-          { success: false, error: 'Invalid action' },
-          { status: 400 }
-        );
+        return errors.badRequest('Invalid action');
     }
   } catch (error: any) {
-    console.error('Lead nurture error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process request' },
-      { status: 500 }
-    );
+    logger.error('Lead nurture error', error, { route: '/api/leads/nurture' });
+    return errors.database('Failed to process nurture request', error);
   }
 }

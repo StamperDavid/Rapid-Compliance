@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import type { BulkOperation } from '@/types/admin';
+import type { BulkOperation } from '@/types/admin'
+import { logger } from '@/lib/logger/logger';;
 
 export default function BulkOperationsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -11,6 +12,25 @@ export default function BulkOperationsPage() {
   const [operationType, setOperationType] = useState<'update' | 'delete' | 'suspend'>('update');
   const [targetOrgs, setTargetOrgs] = useState<string[]>([]);
   const [parameters, setParameters] = useState<Record<string, any>>({});
+
+  // This page is intentionally disabled - too dangerous for production
+  const isDisabled = true;
+
+  if (isDisabled) {
+    return (
+      <div style={{ padding: '2rem', color: '#fff' }}>
+        <div style={{ padding: '2rem', backgroundColor: '#7f1d1d', border: '2px solid #991b1b', borderRadius: '1rem', color: '#fff', textAlign: 'center' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⚠️</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Bulk Operations Disabled</div>
+          <div style={{ fontSize: '0.875rem', color: '#fecaca', maxWidth: '500px', margin: '0 auto' }}>
+            Bulk operations have been disabled for safety. These operations can cause irreversible damage to customer data.
+            <br /><br />
+            If you need to perform bulk operations, please use the Firebase Console directly with proper backup procedures.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!hasPermission('canAccessSupportTools')) {
     return (
@@ -56,7 +76,7 @@ export default function BulkOperationsPage() {
         ));
       }, 2000);
     } catch (error) {
-      console.error('Bulk operation failed:', error);
+      logger.error('Bulk operation failed:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -270,6 +290,12 @@ export default function BulkOperationsPage() {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { logger } from '@/lib/logger/logger';;
 
 interface Message {
   id: string;
@@ -153,7 +154,7 @@ export function ChatWidget({
       setMessages((prev) => [...prev, assistantMessage]);
       onMessage?.(assistantMessage);
     } catch (error) {
-      console.error('Chat error:', error);
+      logger.error('Chat error:', error, { file: 'ChatWidget.tsx' });
       
       const errorMessage: Message = {
         id: `msg_${Date.now()}_error`,

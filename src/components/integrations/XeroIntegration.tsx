@@ -33,27 +33,20 @@ export default function XeroIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'xero',
-        name: 'Xero',
-        description: 'Sync invoices, payments, and contacts',
-        icon: '📊',
-        category: 'accounting',
-        status: 'active',
-        organizationId: 'demo-org',
-        syncSettings: {
-          syncInvoices: true,
-          syncPayments: true,
-          syncContacts: true,
-          syncItems: true,
-          syncDirection: 'bidirectional',
-        },
-        connectedAt: new Date().toISOString(),
-      });
+    try {
+      // Get current user and org from context or URL
+      const userId = localStorage.getItem('userId') || 'current-user';
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Note: Xero OAuth implementation needs to be completed in backend
+      // For now, show configuration needed message
+      alert('Xero integration requires additional backend configuration. Please contact support.');
       setIsConnecting(false);
-    }, 2000);
+    } catch (error) {
+      console.error('Failed to start Xero OAuth:', error);
+      setIsConnecting(false);
+      alert('Failed to connect to Xero. Please try again.');
+    }
   };
 
   if (!integration || integration.status !== 'active') {

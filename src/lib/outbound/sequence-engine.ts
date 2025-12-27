@@ -11,7 +11,8 @@ import {
   EnrollmentStatus,
   StepActionStatus 
 } from '@/types/outbound-sequence';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export class SequenceEngine {
   /**
@@ -227,7 +228,7 @@ export class SequenceEngine {
 
       
     } catch (error: any) {
-      console.error(`[Sequence Engine] Error executing step:`, error);
+      logger.error('[Sequence Engine] Error executing step:', error, { file: 'sequence-engine.ts' });
 
       // Record failed action
       const failedAction: StepAction = {
@@ -255,8 +256,6 @@ export class SequenceEngine {
     step: SequenceStep,
     organizationId: string
   ): Promise<void> {
-    
-
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
     // Get prospect email from CRM
@@ -269,37 +268,72 @@ export class SequenceEngine {
       throw new Error('Prospect email not found');
     }
 
-    // Get SendGrid API key from org settings
-    const { getAPIKey } = await import('@/lib/config/api-keys');
-    const sendgridKey = await getAPIKey(organizationId, 'sendgrid');
-    
-    if (!sendgridKey) {
-      throw new Error('SendGrid not configured for this organization');
+    // Get organization settings to determine email provider
+    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+    const emailProvider = org?.emailProvider || 'gmail'; // Default to Gmail
+    const fromEmail = org?.fromEmail || process.env.FROM_EMAIL;
+
+    if (!fromEmail) {
+      throw new Error('FROM_EMAIL not configured for this organization');
     }
 
-    // Send email via SendGrid
-    const { sendEmail } = await import('@/lib/email/sendgrid-service');
-    const result = await sendEmail({
-      to: prospect.email,
-      subject: step.subject || 'Follow-up',
-      html: step.body,
-      tracking: {
-        trackOpens: true,
-        trackClicks: true,
-      },
-      metadata: {
-        enrollmentId: enrollment.id,
-        stepId: step.id,
+    // Try Gmail API first (free, integrated)
+    try {
+      const { sendEmailViaGmail } = await import('@/lib/integrations/gmail-service');
+      
+      await sendEmailViaGmail({
+        to: prospect.email,
+        from: fromEmail,
+        subject: step.subject || 'Follow-up',
+        body: step.body,
         organizationId,
-        prospectId: enrollment.prospectId,
-      },
-    }, sendgridKey);
+        metadata: {
+          enrollmentId: enrollment.id,
+          stepId: step.id,
+          prospectId: enrollment.prospectId,
+        },
+      });
 
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to send email');
+      logger.info('Sequence Engine Email sent via Gmail to prospect.email}', { file: 'sequence-engine.ts' });
+      return;
+    } catch (gmailError: any) {
+      logger.warn('[Sequence Engine] Gmail send failed, trying fallback', { error: gmailError.message, file: 'sequence-engine.ts' });
+      
+      // Fallback to SendGrid if Gmail fails
+      if (emailProvider === 'sendgrid') {
+        const { getAPIKey } = await import('@/lib/config/api-keys');
+        const sendgridKey = await getAPIKey(organizationId, 'sendgrid');
+        
+        if (!sendgridKey) {
+          throw new Error('Gmail failed and SendGrid not configured. Cannot send email.');
+        }
+
+        const { sendEmail } = await import('@/lib/email/sendgrid-service');
+        const result = await sendEmail({
+          to: prospect.email,
+          subject: step.subject || 'Follow-up',
+          html: step.body,
+          tracking: {
+            trackOpens: true,
+            trackClicks: true,
+          },
+          metadata: {
+            enrollmentId: enrollment.id,
+            stepId: step.id,
+            organizationId,
+            prospectId: enrollment.prospectId,
+          },
+        }, sendgridKey);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to send email via SendGrid');
+        }
+
+        logger.info('Sequence Engine Email sent via SendGrid to prospect.email}', { file: 'sequence-engine.ts' });
+      } else {
+        throw gmailError;
+      }
     }
-
-    
   }
 
   /**
@@ -371,25 +405,35 @@ export class SequenceEngine {
     // Send SMS via Twilio
     const { sendSMS } = await import('@/lib/sms/sms-service');
     
-    await sendSMS({
+    const result = await sendSMS({
       to: prospect.phone,
       message: step.content,
       organizationId,
     });
     
-    // Save SMS record
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to send SMS');
+    }
+    
+    // Save SMS record with Twilio message ID for webhook tracking
+    const smsRecordId = result.messageId || `${Date.now()}-${enrollment.prospectId}`;
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/smsMessages`,
-      `${Date.now()}-${enrollment.prospectId}`,
+      smsRecordId,
       {
+        id: smsRecordId,
+        messageId: result.messageId, // Twilio SID for webhook matching
         prospectId: enrollment.prospectId,
         sequenceId: enrollment.sequenceId,
+        enrollmentId: enrollment.id,
         stepId: step.id,
         to: prospect.phone,
         message: step.content,
         status: 'sent',
-        sentAt: new Date(),
-        createdAt: new Date(),
+        sentAt: new Date().toISOString(),
+        provider: result.provider || 'twilio',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
     );
     
@@ -509,7 +553,7 @@ export class SequenceEngine {
         stats
       );
     } catch (error) {
-      console.error('[Sequence Engine] Error tracking step execution:', error);
+      logger.error('[Sequence Engine] Error tracking step execution:', error, { file: 'sequence-engine.ts' });
       // Don't throw - analytics failure shouldn't stop execution
     }
   }
@@ -643,8 +687,23 @@ export class SequenceEngine {
     sequenceId: string,
     organizationId: string
   ): Promise<ProspectEnrollment | null> {
-    // TODO: Query by prospectId and sequenceId
+    try {
+      const { where, limit } = await import('firebase/firestore');
+      
+      const enrollments = await FirestoreService.getAll<ProspectEnrollment>(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+        [
+          where('prospectId', '==', prospectId),
+          where('sequenceId', '==', sequenceId),
+          limit(1)
+        ]
+      );
+      
+      return enrollments.length > 0 ? enrollments[0] : null;
+    } catch (error) {
+      logger.error('[SequenceEngine] Error getting enrollment:', error, { file: 'sequence-engine.ts' });
     return null;
+    }
   }
 
   /**

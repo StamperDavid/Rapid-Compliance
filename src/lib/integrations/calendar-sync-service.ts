@@ -4,7 +4,8 @@
  */
 
 import { calendar_v3, google } from 'googleapis';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 const CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/calendar',
@@ -84,7 +85,7 @@ export async function syncCalendarEvents(
     // Full sync (first time)
     return await fullSync(calendar, organizationId, calendarId);
   } catch (error) {
-    console.error('[Calendar Sync] Error:', error);
+    logger.error('[Calendar Sync] Error:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
@@ -128,7 +129,7 @@ async function fullSync(
             await saveEventToCRM(organizationId, parsed);
             eventsSynced++;
           } catch (err) {
-            console.error(`[Calendar Sync] Error processing event ${event.id}:`, err);
+            logger.error('[Calendar Sync] Error processing event ${event.id}:', err, { file: 'calendar-sync-service.ts' });
             errors++;
           }
         }
@@ -150,7 +151,7 @@ async function fullSync(
     
     return status;
   } catch (error) {
-    console.error('[Calendar Sync] Full sync error:', error);
+    logger.error('[Calendar Sync] Full sync error:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
@@ -191,7 +192,7 @@ async function incrementalSync(
               eventsSynced++;
             }
           } catch (err) {
-            console.error(`[Calendar Sync] Error processing event ${event.id}:`, err);
+            logger.error('[Calendar Sync] Error processing event ${event.id}:', err, { file: 'calendar-sync-service.ts' });
             errors++;
           }
         }
@@ -213,10 +214,10 @@ async function incrementalSync(
     
     return status;
   } catch (error) {
-    console.error('[Calendar Sync] Incremental sync error:', error);
+    logger.error('[Calendar Sync] Incremental sync error:', error, { file: 'calendar-sync-service.ts' });
     // If sync token is invalid, fall back to full sync
     if ((error as any).code === 410) {
-      console.log('[Calendar Sync] Sync token invalid, performing full sync');
+      logger.info('[Calendar Sync] Sync token invalid, performing full sync', { file: 'calendar-sync-service.ts' });
       return await fullSync(calendar, organizationId, calendarId);
     }
     throw error;
@@ -322,7 +323,7 @@ async function saveEventToCRM(organizationId: string, event: CalendarEvent): Pro
       );
     }
   } catch (error) {
-    console.error('[Calendar Sync] Error saving event to CRM:', error);
+    logger.error('[Calendar Sync] Error saving event to CRM:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
@@ -337,7 +338,7 @@ async function deleteEventFromCRM(organizationId: string, eventId: string): Prom
       eventId
     );
   } catch (error) {
-    console.error('[Calendar Sync] Error deleting event:', error);
+    logger.error('[Calendar Sync] Error deleting event:', error, { file: 'calendar-sync-service.ts' });
   }
 }
 
@@ -388,7 +389,7 @@ export async function createCalendarEvent(
     
     return response.data.id!;
   } catch (error) {
-    console.error('[Calendar Sync] Error creating event:', error);
+    logger.error('[Calendar Sync] Error creating event:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
@@ -424,7 +425,7 @@ export async function updateCalendarEvent(
       sendUpdates: 'all',
     });
   } catch (error) {
-    console.error('[Calendar Sync] Error updating event:', error);
+    logger.error('[Calendar Sync] Error updating event:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
@@ -446,7 +447,7 @@ export async function deleteCalendarEvent(
       sendUpdates: 'all',
     });
   } catch (error) {
-    console.error('[Calendar Sync] Error deleting event:', error);
+    logger.error('[Calendar Sync] Error deleting event:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
@@ -463,7 +464,7 @@ async function findContactByEmail(organizationId: string, email: string): Promis
     
     return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
   } catch (error) {
-    console.error('[Calendar Sync] Error finding contact:', error);
+    logger.error('[Calendar Sync] Error finding contact:', error, { file: 'calendar-sync-service.ts' });
     return null;
   }
 }
@@ -494,7 +495,7 @@ async function saveSyncStatus(organizationId: string, calendarId: string, status
       status
     );
   } catch (error) {
-    console.error('[Calendar Sync] Error saving sync status:', error);
+    logger.error('[Calendar Sync] Error saving sync status:', error, { file: 'calendar-sync-service.ts' });
   }
 }
 
@@ -518,10 +519,10 @@ export async function setupCalendarPushNotifications(
       },
     });
     
-    console.log('[Calendar Sync] Push notifications enabled');
+    logger.info('[Calendar Sync] Push notifications enabled', { file: 'calendar-sync-service.ts' });
     return response.data.id!;
   } catch (error) {
-    console.error('[Calendar Sync] Error setting up push notifications:', error);
+    logger.error('[Calendar Sync] Error setting up push notifications:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
@@ -544,9 +545,9 @@ export async function stopCalendarPushNotifications(
       },
     });
     
-    console.log('[Calendar Sync] Push notifications disabled');
+    logger.info('[Calendar Sync] Push notifications disabled', { file: 'calendar-sync-service.ts' });
   } catch (error) {
-    console.error('[Calendar Sync] Error stopping push notifications:', error);
+    logger.error('[Calendar Sync] Error stopping push notifications:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }

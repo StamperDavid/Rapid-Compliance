@@ -40,8 +40,24 @@ export default function PayPalIntegration({
       return;
     }
     setIsConnecting(true);
-    // MOCK: Simulate connection
-    setTimeout(() => {
+    try {
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Save PayPal API keys to backend
+      const response = await fetch('/api/settings/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          service: 'paypal',
+          apiKey: clientId,
+          apiSecret: clientSecret,
+          mode: mode,
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to save PayPal credentials');
+      
       onConnect({
         id: 'paypal',
         name: 'PayPal',
@@ -49,7 +65,7 @@ export default function PayPalIntegration({
         icon: '💳',
         category: 'payment',
         status: 'active',
-        organizationId: 'demo-org',
+        organizationId: orgId,
         clientId: clientId.substring(0, 10) + '...',
         clientSecret: '***',
         mode,
@@ -59,10 +75,14 @@ export default function PayPalIntegration({
         },
         connectedAt: new Date().toISOString(),
       });
-      setIsConnecting(false);
       setClientId('');
       setClientSecret('');
-    }, 1500);
+    } catch (error) {
+      console.error('Failed to configure PayPal:', error);
+      alert('Failed to save PayPal credentials. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   if (!integration || integration.status !== 'active') {

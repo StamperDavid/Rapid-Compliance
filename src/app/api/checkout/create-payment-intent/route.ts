@@ -4,6 +4,8 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { paymentIntentSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,35 +33,29 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, amount, currency, metadata } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied to this organization');
     }
 
     // Get Stripe keys from API key service
     const stripeKeys = await apiKeyService.getServiceKey(organizationId, 'stripe');
     
     if (!stripeKeys?.secretKey) {
-      return NextResponse.json(
-        { success: false, error: 'Stripe not configured. Please add Stripe API keys in settings.' },
-        { status: 400 }
-      );
+      return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
     }
+
+    logger.info('Creating payment intent', {
+      route: '/api/checkout/create-payment-intent',
+      organizationId,
+      amount,
+      currency,
+    });
 
     const stripe = new Stripe(stripeKeys.secretKey, {
       apiVersion: '2023-10-16',
@@ -79,17 +75,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    logger.info('Payment intent created successfully', {
+      route: '/api/checkout/create-payment-intent',
+      paymentIntentId: paymentIntent.id,
+      amount,
+    });
+
     return NextResponse.json({
       success: true,
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     });
   } catch (error: any) {
-    console.error('Payment intent creation error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create payment intent' },
-      { status: 500 }
-    );
+    logger.error('Payment intent creation error', error, {
+      route: '/api/checkout/create-payment-intent',
+      organizationId: (await request.json()).organizationId,
+    });
+    return errors.externalService('Stripe', error);
   }
 }
 

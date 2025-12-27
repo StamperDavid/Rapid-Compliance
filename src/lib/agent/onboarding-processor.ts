@@ -3,13 +3,18 @@
  * Orchestrates the complete flow: onboarding → persona → knowledge → Base Model
  * NOTE: Creates Base Model (editable), NOT Golden Master!
  * Client will save Golden Master manually after training.
+ * 
+ * IMPORTANT: This service runs SERVER-SIDE ONLY and uses Admin SDK to bypass security rules
  */
 
 import type { OnboardingData, BaseModel, KnowledgeBase, AgentPersona } from '@/types/agent-memory';
 import { buildPersonaFromOnboarding } from './persona-builder';
 import { processKnowledgeBase, KnowledgeProcessorOptions } from './knowledge-processor';
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
+
+// Dynamic import of AdminFirestoreService to prevent client-side bundling
 
 export interface OnboardingProcessorOptions {
   onboardingData: OnboardingData;
@@ -62,10 +67,11 @@ export async function processOnboarding(
       workspaceId,
     });
     
-    // Step 4: Save everything to Firestore
+    // Step 4: Save everything to Firestore using Admin SDK (bypasses security rules)
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     
     // Save persona
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentPersona`,
       'current',
       {
@@ -78,7 +84,7 @@ export async function processOnboarding(
     );
     
     // Save knowledge base
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
       'current',
       {
@@ -108,7 +114,7 @@ export async function processOnboarding(
       baseModel, // Changed from goldenMaster
     };
   } catch (error: any) {
-    console.error('[Onboarding Processor] Error:', error);
+    logger.error('[Onboarding Processor] Error:', error, { file: 'onboarding-processor.ts' });
     return {
       success: false,
       error: error.message || 'Failed to process onboarding',
@@ -118,6 +124,7 @@ export async function processOnboarding(
 
 /**
  * Get processing status for an organization
+ * SERVER-SIDE ONLY - Uses Admin SDK
  */
 export async function getProcessingStatus(organizationId: string): Promise<{
   hasPersona: boolean;
@@ -128,36 +135,42 @@ export async function getProcessingStatus(organizationId: string): Promise<{
   goldenMasterVersion?: string;
 }> {
   try {
-    const persona = await FirestoreService.get(
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    
+    const persona = await AdminFirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentPersona`,
       'current'
     );
     
-    const knowledgeBase = await FirestoreService.get(
+    const knowledgeBase = await AdminFirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
       'current'
     );
     
     // Check for Base Model
-    const { orderBy, limit, where } = await import('firebase/firestore');
-    const baseModels = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.BASE_MODELS}`,
-      [orderBy('createdAt', 'desc'), limit(1)]
+    const baseModels = await AdminFirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.BASE_MODELS}`
+    );
+    
+    // Sort and get latest base model
+    const sortedBaseModels = baseModels.sort((a: any, b: any) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     
     // Check for Golden Master
-    const goldenMasters = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`,
-      [where('isActive', '==', true)]
+    const goldenMasters = await AdminFirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`
     );
+    
+    const activeGoldenMaster = goldenMasters.find((gm: any) => gm.isActive);
     
     return {
       hasPersona: !!persona,
       hasKnowledgeBase: !!knowledgeBase,
-      hasBaseModel: baseModels.length > 0,
-      baseModelStatus: baseModels.length > 0 ? baseModels[0].status : undefined,
-      hasGoldenMaster: goldenMasters.length > 0,
-      goldenMasterVersion: goldenMasters.length > 0 ? goldenMasters[0].version : undefined,
+      hasBaseModel: sortedBaseModels.length > 0,
+      baseModelStatus: sortedBaseModels.length > 0 ? sortedBaseModels[0].status : undefined,
+      hasGoldenMaster: !!activeGoldenMaster,
+      goldenMasterVersion: activeGoldenMaster?.version,
     };
   } catch (error) {
     return {

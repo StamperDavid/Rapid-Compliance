@@ -5,8 +5,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Rate limiting (strict - test endpoint should be disabled in production)
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/test/outbound');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const { searchParams } = new URL(request.url);
   const orgId = searchParams.get('orgId');
 
@@ -134,6 +141,12 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(results);
 }
+
+
+
+
+
+
 
 
 

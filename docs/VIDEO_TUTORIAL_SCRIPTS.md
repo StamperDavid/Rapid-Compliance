@@ -28,24 +28,24 @@ Scripts for creating video tutorials for the platform.
 
 ---
 
-## **Video 2: Ensemble Mode Explained (2 minutes)**
+## **Video 2: Golden Master System Explained (2 minutes)**
 
 ### **Script:**
 
 **[0:00-0:20] Intro**
-> "What makes our AI better than competitors? One word: Ensemble. Let me show you what that means and why it matters."
+> "What makes our AI different from competitors? Our Golden Master system. Let me show you what that means and why it matters."
 
 **[0:20-0:50] The Problem**
-> "Most platforms use a single AI model - maybe GPT-4, maybe Claude. But here's the issue: different models are better at different things. GPT-4 is great at reasoning, Claude excels at creativity, Gemini is lightning fast. So which should you use? The answer: ALL OF THEM."
+> "Most AI chatbots forget everything between sessions. When a customer returns, they have to repeat their needs, their budget, their timeline - everything. It's frustrating and kills conversions."
 
-**[0:50-1:30] How Ensemble Works**
-> "With Ensemble mode, we query 3 to 5 models in parallel. Each responds to your customer's question. Then, our advanced scoring system rates each response on coherence, relevance, specificity, and confidence. The highest-scoring answer wins and goes to your customer. All of this happens in under 2 seconds."
+**[0:50-1:30] How Golden Master Works**
+> "With our Golden Master system, you train an AI agent specifically for your business. This becomes your 'Golden Master' - a versioned configuration you can deploy to production. Then, every customer gets a persistent memory. When they return, the agent remembers their previous conversations, preferences, and history. It's like having a sales rep who never forgets."
 
 **[1:30-1:50] The Results**
-> "The result? You always get the best possible answer. Not just good - the BEST. Our ensemble mode delivers 90 to 95% quality compared to the industry standard of 70 to 90%. That's the difference between a satisfied customer and a converted customer."
+> "The result? Customers feel recognized and valued. No repeating themselves. Your conversion rates improve because relationships persist across sessions. That's the difference between a one-time visitor and a loyal customer."
 
 **[1:50-2:00] Conclusion**
-> "No competitor has this. It's your secret weapon. Enable it in your AI agent settings and watch your conversion rates soar. Thanks for watching!"
+> "Ready to give your customers a personalized AI experience? Train your Golden Master in the Training Center. It's that simple. Thanks for watching!"
 
 ---
 
@@ -169,6 +169,12 @@ Scripts for creating video tutorials for the platform.
 ---
 
 **Ready to record!** 🎥
+
+
+
+
+
+
 
 
 

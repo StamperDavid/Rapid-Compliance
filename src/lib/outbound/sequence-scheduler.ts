@@ -6,7 +6,8 @@
 
 import { SequenceEngine } from './sequence-engine';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { ProspectEnrollment } from '@/types/outbound-sequence';
+import { ProspectEnrollment } from '@/types/outbound-sequence'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Process all due sequence steps
@@ -16,7 +17,7 @@ export async function processSequences(): Promise<{
   processed: number;
   errors: number;
 }> {
-  console.log('[Sequence Scheduler] Starting sequence processing...');
+  logger.info('[Sequence Scheduler] Starting sequence processing...', { file: 'sequence-scheduler.ts' });
 
   let processed = 0;
   let errors = 0;
@@ -44,32 +45,42 @@ export async function processSequences(): Promise<{
               }
             }
           } catch (error) {
-            console.error(`[Sequence Scheduler] Error processing enrollment ${enrollment.id}:`, error);
+            logger.error('[Sequence Scheduler] Error processing enrollment ${enrollment.id}:', error, { file: 'sequence-scheduler.ts' });
             errors++;
           }
         }
       } catch (error) {
-        console.error(`[Sequence Scheduler] Error processing org ${orgId}:`, error);
+        logger.error('[Sequence Scheduler] Error processing org ${orgId}:', error, { file: 'sequence-scheduler.ts' });
         errors++;
       }
     }
 
-    console.log(`[Sequence Scheduler] Completed. Processed: ${processed}, Errors: ${errors}`);
+    logger.info('Sequence Scheduler Completed. Processed: processed}, Errors: errors}', { file: 'sequence-scheduler.ts' });
 
     return { processed, errors };
   } catch (error) {
-    console.error('[Sequence Scheduler] Fatal error:', error);
+    logger.error('[Sequence Scheduler] Fatal error:', error, { file: 'sequence-scheduler.ts' });
     throw error;
   }
 }
 
 /**
- * Get all organizations
+ * Get all organizations with active sequences
  */
 async function getAllOrganizations(): Promise<string[]> {
-  // TODO: Query Firestore for all organization IDs
-  // For now, return empty array - this will be populated in production
-  return [];
+  try {
+    // Get all organizations that have sequences
+    const orgs = await FirestoreService.getAll(
+      COLLECTIONS.ORGANIZATIONS,
+      []
+    );
+    
+    // Return org IDs
+    return orgs.map((org: any) => org.id);
+  } catch (error) {
+    logger.error('[Sequence Scheduler] Error getting organizations:', error, { file: 'sequence-scheduler.ts' });
+    return [];
+  }
 }
 
 /**
@@ -89,7 +100,7 @@ async function getActiveEnrollments(orgId: string): Promise<ProspectEnrollment[]
 
     return enrollments as ProspectEnrollment[];
   } catch (error) {
-    console.error(`[Sequence Scheduler] Error getting enrollments for ${orgId}:`, error);
+    logger.error('[Sequence Scheduler] Error getting enrollments for ${orgId}:', error, { file: 'sequence-scheduler.ts' });
     return [];
   }
 }
@@ -100,9 +111,14 @@ async function getActiveEnrollments(orgId: string): Promise<ProspectEnrollment[]
 export async function handleEmailBounce(
   enrollmentId: string,
   stepId: string,
-  organizationId: string
+  organizationId: string,
+  reason?: string
 ): Promise<void> {
-  console.log(`[Sequence Scheduler] Handling bounce for enrollment ${enrollmentId}`);
+  logger.info('Sequence Scheduler Handling bounce for enrollment', { 
+    enrollmentId, 
+    reason: reason || 'unknown',
+    file: 'sequence-scheduler.ts' 
+  });
 
   // Get enrollment
   const enrollment = await FirestoreService.get(
@@ -117,7 +133,14 @@ export async function handleEmailBounce(
   if (action) {
     action.status = 'bounced';
     action.bouncedAt = new Date().toISOString();
+    action.bounceReason = reason || 'unknown';
     action.updatedAt = new Date().toISOString();
+  }
+
+  // Determine unenroll reason based on bounce type
+  let unenrollReason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced' = 'bounced';
+  if (reason === 'spam_report' || reason === 'unsubscribed') {
+    unenrollReason = 'unsubscribed';
   }
 
   // Unenroll from sequence
@@ -125,7 +148,7 @@ export async function handleEmailBounce(
     enrollment.prospectId,
     enrollment.sequenceId,
     organizationId,
-    'bounced'
+    unenrollReason
   );
 }
 
@@ -138,7 +161,7 @@ export async function handleEmailReply(
   organizationId: string,
   replyContent: string
 ): Promise<void> {
-  console.log(`[Sequence Scheduler] Handling reply for enrollment ${enrollmentId}`);
+  logger.info('Sequence Scheduler Handling reply for enrollment enrollmentId}', { file: 'sequence-scheduler.ts' });
 
   // Get enrollment
   const enrollment = await FirestoreService.get(

@@ -3,17 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import { ChatSessionService, ChatSession, ChatMessage } from '@/lib/agent/chat-session-service';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { ChatSessionService, ChatSession, ChatMessage } from '@/lib/agent/chat-session-service'
+import { logger } from '@/lib/logger/logger';;
 
 export default function ConversationsPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   
@@ -24,16 +23,6 @@ export default function ConversationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-  }, []);
 
   // Subscribe to real-time active sessions
   useEffect(() => {
@@ -55,7 +44,7 @@ export default function ConversationsPage() {
     ChatSessionService.getSessionHistory(orgId, 50)
       .then(setCompletedConversations)
       .catch((err) => {
-        console.error('Failed to load history:', err);
+        logger.error('Failed to load history:', err, { file: 'page.tsx' });
       });
 
     return () => unsubscribe();
@@ -100,7 +89,7 @@ export default function ConversationsPage() {
       await ChatSessionService.requestTakeover(orgId, conversationId, user.id, 'Manual takeover');
       alert(`Taking over conversation. You are now connected to the customer chat.`);
     } catch (err) {
-      console.error('Failed to take over:', err);
+      logger.error('Failed to take over:', err, { file: 'page.tsx' });
       alert('Failed to take over conversation. Please try again.');
     }
   };
@@ -116,7 +105,7 @@ export default function ConversationsPage() {
       
       alert(`Conversation sent to Training Center for improvement.`);
     } catch (err) {
-      console.error('Failed to flag for training:', err);
+      logger.error('Failed to flag for training:', err, { file: 'page.tsx' });
       alert('Failed to send to training. Please try again.');
     }
   };
@@ -125,47 +114,7 @@ export default function ConversationsPage() {
   const flaggedCount = completedConversations.filter((c: any) => c.flaggedForTraining).length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <div style={{ width: sidebarOpen ? '260px' : '70px', backgroundColor: '#0a0a0a', borderRight: '1px solid #1a1a1a', transition: 'width 0.3s', display: 'flex', flexDirection: 'column' }}>
-          <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            <Link href={`/workspace/${orgId}/dashboard`} style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none' }}>
-              <span style={{ fontSize: '1.25rem' }}>🏠</span>
-              {sidebarOpen && <span>Dashboard</span>}
-            </Link>
-            <Link href={`/workspace/${orgId}/conversations`} style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', borderLeft: `3px solid ${primaryColor}`, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', position: 'relative' }}>
-              <span style={{ fontSize: '1.25rem' }}>💬</span>
-              {sidebarOpen && <span>Conversations</span>}
-              {needsAttentionCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '0.75rem',
-                  right: sidebarOpen ? '1rem' : '0.5rem',
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#ef4444',
-                  borderRadius: '50%',
-                  boxShadow: '0 0 8px #ef4444'
-                }} />
-              )}
-            </Link>
-            {Object.entries(STANDARD_SCHEMAS).slice(0, 5).map(([key, schema]) => (
-              <Link key={key} href={`/workspace/${orgId}/entities/${key}`} style={{ width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', backgroundColor: 'transparent', color: '#999', borderLeft: '3px solid transparent', fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none' }}>
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
-            ))}
-          </nav>
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#999', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-              {sidebarOpen ? '← Collapse' : '→'}
-            </button>
-          </div>
-        </div>
-
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
           <div style={{ padding: '2rem', borderBottom: '1px solid #333' }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Live Conversations</h1>
             <p style={{ color: '#666', fontSize: '0.875rem' }}>Monitor active customer sessions and review past conversations</p>
@@ -600,7 +549,5 @@ export default function ConversationsPage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
   );
 }

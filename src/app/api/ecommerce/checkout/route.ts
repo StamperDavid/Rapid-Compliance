@@ -3,6 +3,9 @@ import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 const checkoutSchema = z.object({
   cartId: z.string(),
@@ -49,6 +52,9 @@ const checkoutSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/checkout');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -93,11 +99,8 @@ export async function POST(request: NextRequest) {
       message: 'Order placed successfully',
     });
   } catch (error: any) {
-    console.error('Error processing checkout:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process checkout' },
-      { status: 500 }
-    );
+    logger.error('Checkout processing error', error, { route: '/api/ecommerce/checkout' });
+    return errors.externalService('Checkout service', error);
   }
 }
 

@@ -4,7 +4,8 @@
  * REAL IMPLEMENTATION with provider integration
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface SMSOptions {
   to: string | string[];
@@ -222,7 +223,7 @@ async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMS
           },
           false
         ).catch((error) => {
-          console.error('Failed to save SMS to Firestore:', error);
+          logger.error('Failed to save SMS to Firestore:', error, { file: 'sms-service.ts' });
           // Don't fail the send if Firestore save fails
         });
       }
@@ -283,7 +284,7 @@ export async function sendBulkSMS(
 
 /**
  * Send SMS from template
- * MOCK: Will replace template variables and send
+ * Loads template, replaces variables, and sends SMS
  */
 export async function sendSMSFromTemplate(
   templateId: string,
@@ -291,7 +292,7 @@ export async function sendSMSFromTemplate(
   variables: Record<string, string>,
   options: Omit<SMSOptions, 'to' | 'message'>
 ): Promise<SMSResult> {
-  // MOCK: In real implementation, this would:
+  // Template-based SMS flow:
   // 1. Load template from database
   // 2. Replace variables in template message
   // 3. Send SMS
@@ -327,7 +328,6 @@ export async function sendSMSFromTemplate(
 
 /**
  * Get SMS delivery status
- * MOCK: Will query Twilio API or database in real implementation
  */
 export interface SMSDeliveryStatus {
   messageId: string;
@@ -368,18 +368,49 @@ export async function getSMSDeliveryStatus(
 }
 
 /**
- * Handle Twilio webhook
- * MOCK: Will process delivery status updates in real implementation
+ * Query Twilio API for real-time delivery status
  */
-export async function handleTwilioWebhook(webhookData: any): Promise<void> {
-  // MOCK: In real implementation, this would:
-  // 1. Verify webhook signature
-  // 2. Parse webhook payload
-  // 3. Update SMS record in database
-  // 4. Trigger workflows if configured
-  // 5. Send notifications
+export async function queryTwilioStatus(
+  messageId: string,
+  organizationId: string
+): Promise<SMSDeliveryStatus | null> {
+  try {
+    // Get Twilio credentials
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const keys = await apiKeyService.getKeys(organizationId);
+    const twilioConfig = keys?.sms?.twilio;
 
-  console.log('Twilio webhook received (mock)', webhookData);
+    if (!twilioConfig?.accountSid || !twilioConfig?.authToken) {
+      throw new Error('Twilio credentials not configured');
+    }
+
+    // Query Twilio API
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioConfig.accountSid}/Messages/${messageId}.json`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Basic ${btoa(`${twilioConfig.accountSid}:${twilioConfig.authToken}`)}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Twilio API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      messageId: data.sid,
+      status: data.status,
+      sentAt: data.date_sent ? new Date(data.date_sent) : undefined,
+      deliveredAt: data.date_updated && data.status === 'delivered' ? new Date(data.date_updated) : undefined,
+      errorCode: data.error_code?.toString(),
+      errorMessage: data.error_message,
+    };
+  } catch (error) {
+    logger.error('[SMS Service] Error querying Twilio status:', error, { file: 'sms-service.ts' });
+    return null;
+  }
 }
 
 

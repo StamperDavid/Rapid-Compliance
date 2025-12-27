@@ -33,24 +33,18 @@ export default function GmailIntegration({
 
   const handleConnect = async () => {
     setIsConnecting(true);
-    // MOCK: Simulate OAuth flow
-    setTimeout(() => {
-      onConnect({
-        id: 'gmail',
-        provider: 'gmail',
-        status: 'active',
-        organizationId: 'demo-org',
-        connectedAt: new Date().toISOString(),
-        settings: {
-          syncDirection: 'bidirectional',
-          syncFolders: ['INBOX', 'SENT'],
-          autoCreateContacts: true,
-          trackOpens: true,
-          trackClicks: true,
-        },
-      } as any);
+    try {
+      // Get current user and org from context or URL
+      const userId = localStorage.getItem('userId') || 'current-user';
+      const orgId = window.location.pathname.split('/')[2] || 'current-org';
+      
+      // Redirect to real Google OAuth flow
+      window.location.href = `/api/integrations/google/auth?userId=${userId}&orgId=${orgId}`;
+    } catch (error) {
+      console.error('Failed to start Gmail OAuth:', error);
       setIsConnecting(false);
-    }, 2000);
+      alert('Failed to connect to Gmail. Please try again.');
+    }
   };
 
   if (!integration || integration.status !== 'active') {

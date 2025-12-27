@@ -4,7 +4,8 @@
  */
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import type { OrderPayment } from '@/types/ecommerce';
+import type { OrderPayment } from '@/types/ecommerce'
+import { logger } from '@/lib/logger/logger';;
 
 export interface PaymentRequest {
   workspaceId: string;
@@ -188,7 +189,7 @@ async function processStripePayment(
       };
     }
   } catch (error: any) {
-    console.error('Stripe payment error:', error);
+    logger.error('Stripe payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
       error: error.message || 'Payment processing failed',
@@ -199,7 +200,7 @@ async function processStripePayment(
 /**
  * Calculate Stripe processing fee
  */
-function calculateStripeFee(amount: number): number {
+export function calculateStripeFee(amount: number): number {
   // Stripe fee: 2.9% + $0.30
   return amount * 0.029 + 0.30;
 }
@@ -272,7 +273,7 @@ async function processSquarePayment(
       };
     }
   } catch (error: any) {
-    console.error('Square payment error:', error);
+    logger.error('Square payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
       error: error.message || 'Square payment processing failed',
@@ -283,7 +284,7 @@ async function processSquarePayment(
 /**
  * Calculate Square processing fee
  */
-function calculateSquareFee(amount: number): number {
+export function calculateSquareFee(amount: number): number {
   // Square fee: 2.6% + $0.10 (card present) or 2.9% + $0.30 (card not present)
   // Using card not present rate
   return amount * 0.029 + 0.30;
@@ -422,7 +423,7 @@ async function processPayPalPayment(
     };
     
   } catch (error: any) {
-    console.error('PayPal payment error:', error);
+    logger.error('PayPal payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
       error: error.message || 'PayPal payment processing failed',
@@ -433,9 +434,17 @@ async function processPayPalPayment(
 /**
  * Calculate PayPal processing fee
  */
-function calculatePayPalFee(amount: number): number {
+export function calculatePayPalFee(amount: number): number {
   // PayPal fee: 2.9% + $0.30 (standard)
   return amount * 0.029 + 0.30;
+}
+
+/**
+ * Calculate Razorpay processing fee (approximate)
+ */
+export function calculateRazorpayFee(amount: number): number {
+  // Razorpay: ~2% + small fixed; use 2% baseline
+  return amount * 0.02;
 }
 
 /**

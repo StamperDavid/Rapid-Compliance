@@ -7,7 +7,9 @@
 import { OpenAIProvider } from './providers/openai-provider';
 import { AnthropicProvider } from './providers/anthropic-provider';
 import { GeminiProvider } from './providers/gemini-provider';
-import type { ModelName } from '@/types/ai-models';
+import { OpenRouterProvider } from './openrouter-provider';
+import type { ModelName } from '@/types/ai-models'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Simple provider interface for chat routes
@@ -61,6 +63,10 @@ export class AIProviderFactory {
       case 'google':
         provider = new GeminiProvider();
         break;
+
+      case 'openrouter':
+        provider = new OpenRouterProvider(organizationId);
+        break;
       
       default:
         throw new Error(`Unknown provider type for model: ${model}`);
@@ -73,15 +79,24 @@ export class AIProviderFactory {
   /**
    * Determine provider type from model name
    */
-  private static getProviderType(model: ModelName): 'openai' | 'anthropic' | 'google' {
-    if (model.startsWith('gpt-')) return 'openai';
-    if (model.startsWith('claude-')) return 'anthropic';
-    if (model.startsWith('gemini-')) return 'google';
+  private static getProviderType(model: ModelName): 'openai' | 'anthropic' | 'google' | 'openrouter' {
+    // Convert to string and check
+    const modelStr = String(model);
+    
+    // Check for OpenRouter format first (e.g., openrouter/anthropic/claude-3.5-sonnet)
+    if (modelStr.includes('openrouter/') || modelStr.startsWith('openrouter/')) {
+      return 'openrouter';
+    }
+    
+    // Check for specific provider prefixes
+    if (modelStr.startsWith('gpt-')) return 'openai';
+    if (modelStr.startsWith('claude-')) return 'anthropic';
+    if (modelStr.startsWith('gemini-')) return 'google';
     
     // Default to OpenAI for common aliases
-    if (model === 'gpt-4-turbo' || model === 'gpt-4') return 'openai';
+    if (modelStr === 'gpt-4-turbo' || modelStr === 'gpt-4') return 'openai';
     
-    throw new Error(`Cannot determine provider for model: ${model}`);
+    throw new Error(`Cannot determine provider for model: ${modelStr}`);
   }
   
   /**
@@ -114,7 +129,7 @@ export class AIProviderFactory {
             },
           };
         } catch (error: any) {
-          console.error(`[AIProviderFactory] Error generating response:`, error);
+          logger.error('[AIProviderFactory] Error generating response:', error, { file: 'provider-factory.ts' });
           throw new Error(`AI generation failed: ${error.message}`);
         }
       },

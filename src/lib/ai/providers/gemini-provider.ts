@@ -11,7 +11,8 @@ import type {
   ModelName,
 } from '@/types/ai-models';
 import { MODEL_CAPABILITIES } from '@/types/ai-models';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { logger } from '@/lib/logger/logger';;
 
 export class GeminiProvider implements ModelProvider {
   provider = 'google' as const;
@@ -21,7 +22,7 @@ export class GeminiProvider implements ModelProvider {
   constructor() {
     this.apiKey = process.env.GOOGLE_API_KEY || '';
     if (!this.apiKey) {
-      console.warn('[Gemini] API key not configured');
+      logger.warn('[Gemini] API key not configured', { file: 'gemini-provider.ts' });
     }
     this.client = new GoogleGenerativeAI(this.apiKey);
   }
@@ -99,7 +100,7 @@ export class GeminiProvider implements ModelProvider {
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
-      console.error('[Gemini] Chat error:', error);
+      logger.error('[Gemini] Chat error:', error, { file: 'gemini-provider.ts' });
       throw error;
     }
   }
@@ -145,7 +146,7 @@ export class GeminiProvider implements ModelProvider {
         }
       }
     } catch (error: any) {
-      console.error('[Gemini] Stream error:', error);
+      logger.error('[Gemini] Stream error:', error, { file: 'gemini-provider.ts' });
       throw error;
     }
   }

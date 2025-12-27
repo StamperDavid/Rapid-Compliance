@@ -3,7 +3,8 @@
  * Data-driven optimization through variant testing
  */
 
-import { cacheService, CacheTTL } from '../cache/redis-service';
+import { cacheService, CacheTTL } from '../cache/redis-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface ABTest {
   id: string;
@@ -248,7 +249,7 @@ async function checkForWinner(test: ABTest): Promise<void> {
       true
     );
     
-    console.log(`[A/B Test] Winner declared for ${test.name}: ${winner.name} (${confidence.toFixed(1)}% confidence)`);
+    logger.info('A/B Test Winner declared for test.name}: winner.name} (confidence.toFixed(1)}% confidence)', { file: 'ab-test-service.ts' });
   }
 }
 
@@ -436,31 +437,31 @@ export const ABTestTemplates = {
    */
   pricing: (organizationId: string) =>
     createABTest(organizationId, {
-      name: 'Pricing Strategy Test',
-      description: 'Test different price points',
+      name: 'Tier Messaging Test',
+      description: 'Test different tier messaging approaches',
       status: 'draft',
       targetMetric: 'purchase',
       trafficAllocation: 100,
       variants: [
         {
-          id: 'price-99',
-          name: '$99/month',
+          id: 'tier-record-focus',
+          name: 'Record-Focused Messaging',
           trafficWeight: 33,
-          config: { price: 99 },
+          config: { messaging: 'Pay for what you store' },
           metrics: { impressions: 0, conversions: 0, conversionRate: 0 },
         },
         {
-          id: 'price-149',
-          name: '$149/month',
+          id: 'tier-value-focus',
+          name: 'Value-Focused Messaging',
           trafficWeight: 33,
-          config: { price: 149 },
+          config: { messaging: 'All features included' },
           metrics: { impressions: 0, conversions: 0, conversionRate: 0 },
         },
         {
-          id: 'price-199',
-          name: '$199/month',
+          id: 'tier-byok-focus',
+          name: 'BYOK-Focused Messaging',
           trafficWeight: 34,
-          config: { price: 199 },
+          config: { messaging: 'No AI markup - raw rates' },
           metrics: { impressions: 0, conversions: 0, conversionRate: 0 },
         },
       ],
@@ -494,6 +495,13 @@ export const ABTestTemplates = {
       ],
     }),
 };
+
+
+
+
+
+
+
 
 
 

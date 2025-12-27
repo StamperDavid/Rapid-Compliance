@@ -6,7 +6,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { RecordService } from '@/lib/db/firestore-service';
-import { where, orderBy, QueryConstraint } from 'firebase/firestore';
+import { where, orderBy, QueryConstraint } from 'firebase/firestore'
+import { logger } from '@/lib/logger/logger';;
 
 export interface UseRecordsOptions {
   organizationId: string;
@@ -105,7 +106,7 @@ export function useRecords<T = any>(
       setAllRecords(data as T[]);
       paginateRecords(data as T[]);
     } catch (err) {
-      console.error('Error loading records:', err);
+      logger.error('Error loading records:', err, { file: 'useRecords.ts' });
       setError(err as Error);
     } finally {
       setLoading(false);
@@ -161,7 +162,7 @@ export function useRecords<T = any>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        console.error('Error creating record:', err);
+        logger.error('Error creating record:', err, { file: 'useRecords.ts' });
         throw err;
       }
     },
@@ -183,7 +184,7 @@ export function useRecords<T = any>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        console.error('Error updating record:', err);
+        logger.error('Error updating record:', err, { file: 'useRecords.ts' });
         throw err;
       }
     },
@@ -204,7 +205,7 @@ export function useRecords<T = any>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        console.error('Error deleting record:', err);
+        logger.error('Error deleting record:', err, { file: 'useRecords.ts' });
         throw err;
       }
     },

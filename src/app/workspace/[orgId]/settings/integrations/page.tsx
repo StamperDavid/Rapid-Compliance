@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import AdminBar from '@/components/AdminBar';
+import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar';
 import QuickBooksIntegration from '@/components/integrations/QuickBooksIntegration';
 import XeroIntegration from '@/components/integrations/XeroIntegration';
 import StripeIntegration from '@/components/integrations/StripeIntegration';
@@ -17,23 +18,19 @@ import SlackIntegration from '@/components/integrations/SlackIntegration';
 import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
+import { logger } from '@/lib/logger/logger';;
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const params = useParams();
+  const orgId = params.orgId as string;
+  const { theme } = useOrgTheme();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
 
     // Load saved integrations from Firestore
     const loadIntegrations = async () => {
@@ -50,7 +47,7 @@ export default function IntegrationsPage() {
           setIntegrations(integrationsData as Record<string, ConnectedIntegration | null>);
         }
       } catch (error) {
-        console.error('Failed to load integrations:', error);
+        logger.error('Failed to load integrations:', error, { file: 'page.tsx' });
       }
     };
     
@@ -81,7 +78,7 @@ export default function IntegrationsPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to save integration:', error);
+      logger.error('Failed to save integration:', error, { file: 'page.tsx' });
     }
   };
 
@@ -104,7 +101,7 @@ export default function IntegrationsPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to disconnect integration:', error);
+      logger.error('Failed to disconnect integration:', error, { file: 'page.tsx' });
     }
   };
 
@@ -129,7 +126,7 @@ export default function IntegrationsPage() {
           false
         );
       } catch (error) {
-        console.error('Failed to update integration:', error);
+        logger.error('Failed to update integration:', error, { file: 'page.tsx' });
       }
     }
   };
@@ -276,7 +273,7 @@ export default function IntegrationsPage() {
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
               <Link 
-                href="/workspace/demo-org/settings" 
+                href={`/workspace/${orgId}/settings`} 
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 

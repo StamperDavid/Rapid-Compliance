@@ -14,6 +14,7 @@ import {
   AgentNote,
   InstanceLifecycleService
 } from '@/types/agent-memory';
+import { logger } from '@/lib/logger/logger';
 
 export class AgentInstanceManager implements InstanceLifecycleService {
   /**
@@ -27,18 +28,19 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    * 5. Return ready-to-use instance
    */
   async spawnInstance(customerId: string, orgId: string): Promise<AgentInstance> {
-    console.log(`[Instance Manager] Spawning instance for customer: ${customerId}`);
+    logger.info('Spawning agent instance', { customerId, orgId });
     
     // 1. Get active Golden Master
     const goldenMaster = await this.getActiveGoldenMaster(orgId);
     if (!goldenMaster) {
+      logger.error('No active Golden Master found', { orgId });
       throw new Error('No active Golden Master found. Please deploy a Golden Master first.');
     }
     
     // 2. Load or create customer memory
     let customerMemory = await this.getCustomerMemory(customerId, orgId);
     if (!customerMemory) {
-      console.log('[Instance Manager] New customer detected, creating memory record');
+      logger.info('New customer detected, creating memory record', { customerId, orgId });
       customerMemory = await this.createCustomerMemory(customerId, orgId);
     }
     
@@ -74,7 +76,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       goldenMasterId: goldenMaster.id,
       goldenMasterVersion: goldenMaster.version,
       systemPrompt,
-      knowledgeBase: goldenMaster.knowledgeBase.documents.map(d => d.id),
+      knowledgeBase: goldenMaster.knowledgeBase?.documents?.map(d => d.id) || [],
       customerMemory,
       status: 'active',
       spawnedAt: new Date().toISOString(),
@@ -88,7 +90,12 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     // Store instance in active instances (Redis/Memory cache)
     await this.storeActiveInstance(instance);
     
-    console.log(`[Instance Manager] Instance ${instance.instanceId} spawned successfully`);
+    logger.info('Agent instance spawned successfully', {
+      instanceId: instance.instanceId,
+      sessionId: instance.sessionId,
+      customerId,
+      goldenMasterVersion: instance.goldenMasterVersion,
+    });
     return instance;
   }
   
@@ -96,7 +103,44 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    * Compile system prompt by combining Golden Master config with customer context
    */
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
-    const { businessContext, agentPersona, behaviorConfig } = goldenMaster;
+    // Handle both nested and flat structures for backwards compatibility
+    const businessContext = goldenMaster.businessContext || {
+      businessName: (goldenMaster as any).businessName || 'Your Business',
+      industry: (goldenMaster as any).industry || 'General',
+      problemSolved: (goldenMaster as any).problemSolved || '',
+      uniqueValue: (goldenMaster as any).uniqueValue || '',
+      topProducts: (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') || '',
+      pricingStrategy: (goldenMaster as any).pricingStrategy || '',
+      discountPolicy: (goldenMaster as any).discountPolicy || '',
+      returnPolicy: (goldenMaster as any).returnPolicy || '',
+      warrantyTerms: (goldenMaster as any).warrantyTerms || '',
+      geographicCoverage: (goldenMaster as any).geographicCoverage || '',
+      deliveryTimeframes: (goldenMaster as any).deliveryTimeframes || '',
+      typicalSalesFlow: (goldenMaster as any).typicalSalesFlow || '',
+      discoveryQuestions: (goldenMaster as any).discoveryQuestions || '',
+      commonObjections: (goldenMaster as any).commonObjections || '',
+      priceObjections: (goldenMaster as any).priceObjections || '',
+      timeObjections: (goldenMaster as any).timeObjections || '',
+      competitorObjections: (goldenMaster as any).competitorObjections || '',
+      requiredDisclosures: (goldenMaster as any).requiredDisclosures || '',
+      prohibitedTopics: (goldenMaster as any).prohibitedTopics || ''
+    };
+    
+    const agentPersona = goldenMaster.agentPersona || {
+      name: (goldenMaster as any).name || 'AI Assistant',
+      tone: (goldenMaster as any).tone || 'Professional and helpful',
+      greeting: (goldenMaster as any).greeting || 'Hello! How can I help you today?',
+      closingMessage: (goldenMaster as any).closingMessage || 'Thanks for chatting!',
+      objectives: (goldenMaster as any).objectives || [],
+      escalationRules: (goldenMaster as any).escalationRules || []
+    };
+    
+    const behaviorConfig = goldenMaster.behaviorConfig || {
+      closingAggressiveness: (goldenMaster as any).closingAggressiveness || 5,
+      questionFrequency: (goldenMaster as any).questionFrequency || 'moderate',
+      responseLength: (goldenMaster as any).responseLength || 'medium',
+      proactiveLevel: (goldenMaster as any).proactiveLevel || 5
+    };
     
     // Include training learnings in system prompt (from Golden Master)
     const trainingNotes = goldenMaster.trainedScenarios || [];
@@ -307,7 +351,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Load customer memory
       const memory = await this.getCustomerMemory(customerId, orgId);
       if (!memory) {
-        console.error(`[Instance Manager] No memory found for customer ${customerId}`);
+        logger.error('[Instance Manager] No memory found for customer ${customerId}', new Error('[Instance Manager] No memory found for customer ${customerId}'), { file: 'instance-manager.ts' });
         return;
       }
 
@@ -342,9 +386,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Save updated memory
       await this.saveCustomerMemory(memory);
       
-      console.log(`[Instance Manager] Added messages to memory for customer ${customerId}`);
+      logger.info('Instance Manager Added messages to memory for customer customerId}', { file: 'instance-manager.ts' });
     } catch (error) {
-      console.error('[Instance Manager] Error adding message to memory:', error);
+      logger.error('[Instance Manager] Error adding message to memory:', error, { file: 'instance-manager.ts' });
       // Don't throw - we don't want to fail the API call if memory update fails
     }
   }
@@ -378,11 +422,11 @@ ${this.summarizeRecentConversations(customerMemory)}
    * Terminate instance and save final session state
    */
   async terminateInstance(instanceId: string, outcome: CustomerSession['outcome']): Promise<void> {
-    console.log(`[Instance Manager] Terminating instance ${instanceId} with outcome: ${outcome}`);
+    logger.info('Terminating agent instance', { instanceId, outcome });
     
     const instance = await this.getActiveInstance(instanceId);
     if (!instance) {
-      console.warn('Instance already terminated or not found');
+      logger.warn('Instance already terminated or not found', { instanceId });
       return;
     }
     
@@ -419,7 +463,13 @@ ${this.summarizeRecentConversations(customerMemory)}
     // Archive instance for analytics (optional)
     await this.archiveInstance(instance);
     
-    console.log(`[Instance Manager] Instance ${instanceId} terminated successfully`);
+    logger.info('Agent instance terminated successfully', {
+      instanceId,
+      sessionId: instance.sessionId,
+      outcome,
+      messageCount: instance.messageCount,
+      duration: instance.customerMemory.sessions.find(s => s.sessionId === instance.sessionId)?.duration,
+    });
   }
   
   /**
@@ -436,7 +486,11 @@ ${this.summarizeRecentConversations(customerMemory)}
     const maxIdleMinutes = 30; // Auto-terminate after 30 minutes of inactivity
     
     if (idleMinutes > maxIdleMinutes) {
-      console.log(`[Instance Manager] Instance ${instanceId} idle for ${idleMinutes} minutes, auto-terminating`);
+      logger.warn('Instance idle for too long, auto-terminating', {
+        instanceId,
+        idleMinutes: Math.round(idleMinutes),
+        maxIdleMinutes,
+      });
       await this.terminateInstance(instanceId, 'abandoned');
       return 'unresponsive';
     } else if (idleMinutes > 5) {
@@ -450,7 +504,7 @@ ${this.summarizeRecentConversations(customerMemory)}
    * Escalate to human agent
    */
   async escalateToHuman(instanceId: string, reason: string): Promise<void> {
-    console.log(`[Instance Manager] Escalating instance ${instanceId} to human. Reason: ${reason}`);
+    logger.info('Instance Manager Escalating instance instanceId} to human. Reason: reason}', { file: 'instance-manager.ts' });
     
     const instance = await this.getActiveInstance(instanceId);
     if (!instance) throw new Error('Instance not found');
@@ -490,28 +544,83 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async getActiveGoldenMaster(orgId: string): Promise<GoldenMaster | null> {
     try {
+      logger.info('Instance Manager Fetching Golden Masters for org: orgId}', { file: 'instance-manager.ts' });
+      
+      // Prefer admin SDK to bypass security rules
+      try {
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          const snap = await adminDb
+            .collection('organizations')
+            .doc(orgId)
+            .collection('goldenMasters')
+            .get();
+          
+          const goldenMasters = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          logger.info('Instance Manager Found Golden Masters (admin SDK)', { 
+            count: goldenMasters.length, 
+            file: 'instance-manager.ts' 
+          });
+          
+          const active = goldenMasters.find((gm: any) => gm.isActive === true);
+          logger.info('Instance Manager Active Golden Master', { 
+            activeId: active ? active.id : 'NONE',
+            file: 'instance-manager.ts' 
+          });
+          return active as GoldenMaster | null;
+        }
+      } catch (adminError) {
+        logger.warn('[Instance Manager] Admin SDK failed, falling back to client SDK', { 
+          error: adminError,
+          file: 'instance-manager.ts' 
+        });
+      }
+      
+      // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const goldenMasters = await FirestoreService.getAll(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
         []
       );
+      logger.info('Instance Manager Found goldenMasters.length} Golden Masters (client SDK)', { file: 'instance-manager.ts' });
       const active = goldenMasters.find((gm: any) => gm.isActive === true);
       return active as GoldenMaster | null;
     } catch (error) {
-      console.error('Error fetching Golden Master:', error);
+      logger.error('[Instance Manager] Error fetching Golden Master:', error, { file: 'instance-manager.ts' });
       return null;
     }
   }
   
   private async getCustomerMemory(customerId: string, orgId: string): Promise<CustomerMemory | null> {
     try {
+      // Prefer admin SDK
+      try {
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          const doc = await adminDb
+            .collection('organizations')
+            .doc(orgId)
+            .collection('customerMemories')
+            .doc(customerId)
+            .get();
+          
+          if (doc.exists) {
+            return { id: doc.id, ...doc.data() } as unknown as CustomerMemory;
+          }
+          return null;
+        }
+      } catch (adminError) {
+        logger.warn('[Instance Manager] Admin SDK failed for customer memory, using client SDK', { file: 'instance-manager.ts' });
+      }
+      
+      // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       return await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
         customerId
       );
     } catch (error) {
-      console.error('Error fetching customer memory:', error);
+      logger.error('Error fetching customer memory:', error, { file: 'instance-manager.ts' });
       return null;
     }
   }
@@ -569,6 +678,23 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async saveCustomerMemory(memory: CustomerMemory): Promise<void> {
     try {
+      // Prefer admin SDK
+      try {
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          await adminDb
+            .collection('organizations')
+            .doc(memory.orgId)
+            .collection('customerMemories')
+            .doc(memory.customerId)
+            .set(memory, { merge: true });
+          return;
+        }
+      } catch (adminError) {
+        logger.warn('[Instance Manager] Admin SDK failed for saving memory, using client SDK', { file: 'instance-manager.ts' });
+      }
+      
+      // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${memory.orgId}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
@@ -577,7 +703,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         true
       );
     } catch (error) {
-      console.error('Error saving customer memory:', error);
+      logger.error('Error saving customer memory:', error, { file: 'instance-manager.ts' });
       throw error;
     }
   }
@@ -597,7 +723,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         true
       );
     } catch (error) {
-      console.error('Error storing active instance:', error);
+      logger.error('Error storing active instance:', error, { file: 'instance-manager.ts' });
     }
   }
   
@@ -609,7 +735,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // In production, maintain a lookup table or use Redis with instanceId as key
       return null;
     } catch (error) {
-      console.error('Error getting active instance:', error);
+      logger.error('Error getting active instance:', error, { file: 'instance-manager.ts' });
       return null;
     }
   }
@@ -618,9 +744,9 @@ ${this.summarizeRecentConversations(customerMemory)}
     try {
       // In production, remove from Redis and Firestore
       // For now, just log
-      console.log('[Instance Manager] Removing active instance:', instanceId);
+      logger.info('[Instance Manager] Removing active instance', { instanceId, file: 'instance-manager.ts' });
     } catch (error) {
-      console.error('Error removing active instance:', error);
+      logger.error('Error removing active instance:', error, { file: 'instance-manager.ts' });
     }
   }
   
@@ -637,13 +763,17 @@ ${this.summarizeRecentConversations(customerMemory)}
         false
       );
     } catch (error) {
-      console.error('Error archiving instance:', error);
+      logger.error('Error archiving instance:', error, { file: 'instance-manager.ts' });
     }
   }
   
   private async notifyHumanAgents(instance: AgentInstance, reason: string): Promise<void> {
     // TODO: Implement - send real-time notification to human agents
-    console.log('[Instance Manager] Notifying human agents for escalation:', reason);
+    logger.info('[Instance Manager] Notifying human agents for escalation', { 
+      reason, 
+      instanceId: instance.instanceId,
+      file: 'instance-manager.ts' 
+    });
   }
   
   // ===== ID Generators =====

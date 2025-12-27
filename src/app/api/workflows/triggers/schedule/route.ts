@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeScheduledWorkflows } from '@/lib/workflows/triggers/schedule-trigger';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Schedule trigger endpoint
@@ -7,6 +10,12 @@ import { executeScheduledWorkflows } from '@/lib/workflows/triggers/schedule-tri
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (strict - internal only)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/workflows/triggers/schedule');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Verify this is called by Cloud Scheduler (check headers/auth)
     // In production, verify Cloud Scheduler authentication
     
@@ -17,13 +26,16 @@ export async function POST(request: NextRequest) {
       message: 'Scheduled workflows executed',
     });
   } catch (error: any) {
-    console.error('Error executing scheduled workflows:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to execute scheduled workflows' },
-      { status: 500 }
-    );
+    logger.error('Error executing scheduled workflows', error, { route: '/api/workflows/triggers/schedule' });
+    return errors.internal('Failed to execute scheduled workflows', error);
   }
 }
+
+
+
+
+
+
 
 
 

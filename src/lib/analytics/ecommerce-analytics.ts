@@ -237,3 +237,9 @@ function calculateRevenueByDay(orders: any[], startDate: Date, endDate: Date): a
 
 
 
+
+
+
+
+
+

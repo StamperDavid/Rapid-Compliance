@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 interface SubscriptionData {
   plan: string;
@@ -24,22 +25,14 @@ export default function BillingSettingsPage() {
   const params = useParams();
   const router = useRouter();
   const orgId = params.orgId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState('professional');
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
 
     // Load organization billing data
     loadBillingData();
@@ -61,7 +54,7 @@ export default function BillingSettingsPage() {
         setSelectedPlan(org.planId || org.plan || 'starter');
       }
     } catch (error) {
-      console.error('Failed to load billing data:', error);
+      logger.error('Failed to load billing data:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -101,7 +94,7 @@ export default function BillingSettingsPage() {
         throw new Error(data.error || 'Failed to upgrade plan');
       }
     } catch (error: any) {
-      console.error('Upgrade error:', error);
+      logger.error('Upgrade error:', error, { file: 'page.tsx' });
       alert(error.message || 'Failed to upgrade plan. Please try again.');
     } finally {
       setUpgrading(false);
@@ -124,79 +117,99 @@ export default function BillingSettingsPage() {
         throw new Error(data.error || 'Failed to open billing portal');
       }
     } catch (error: any) {
-      console.error('Billing portal error:', error);
+      logger.error('Billing portal error:', error, { file: 'page.tsx' });
       alert('Billing portal is not available. Please contact support.');
     }
   };
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
-  const plans = [
+  // NEW: Volume-based tiers (all-inclusive features)
+  const tiers = [
     {
-      id: 'agent-only',
-      name: 'Agent Only',
-      price: '$29',
+      id: 'tier1',
+      name: 'Tier 1',
+      price: '$400',
       period: 'month',
-      limits: { records: 500, aiConversations: 100, emails: 500 },
+      recordCapacity: '0-100 records',
+      limits: { records: 100, aiConversations: -1, emails: -1 },
       features: [
-        'AI Chat Widget',
-        'Up to 500 contacts',
-        '100 AI conversations/month',
-        'Basic analytics',
-        'Email support'
+        '✓ All Features Included',
+        '✓ AI Sales Agents (Unlimited)',
+        '✓ Lead Scraper & Enrichment',
+        '✓ Email Sequences (Unlimited)',
+        '✓ Multi-Channel Outreach',
+        '✓ Social Media AI',
+        '✓ Full CRM Suite',
+        '✓ Workflow Automation',
+        '✓ API Access',
+        '✓ White-Label Options'
       ]
     },
     {
-      id: 'starter',
-      name: 'Starter',
-      price: '$49',
+      id: 'tier2',
+      name: 'Tier 2',
+      price: '$650',
       period: 'month',
-      limits: { records: 2500, aiConversations: 500, emails: 2500 },
+      recordCapacity: '101-250 records',
+      limits: { records: 250, aiConversations: -1, emails: -1 },
       features: [
-        'Everything in Agent Only',
-        'Up to 2,500 contacts',
-        '500 AI conversations/month',
-        'Email sequences',
-        'CRM features',
-        'Priority support'
-      ]
-    },
-    {
-      id: 'professional',
-      name: 'Professional',
-      price: '$149',
-      period: 'month',
-      limits: { records: 25000, aiConversations: 2500, emails: 25000 },
-      features: [
-        'Everything in Starter',
-        'Up to 25,000 contacts',
-        '2,500 AI conversations/month',
-        'Advanced AI features',
-        'Custom schemas',
-        'API access',
-        'Team collaboration'
+        '✓ All Features Included',
+        '✓ AI Sales Agents (Unlimited)',
+        '✓ Lead Scraper & Enrichment',
+        '✓ Email Sequences (Unlimited)',
+        '✓ Multi-Channel Outreach',
+        '✓ Social Media AI',
+        '✓ Full CRM Suite',
+        '✓ Workflow Automation',
+        '✓ API Access',
+        '✓ White-Label Options'
       ],
       popular: true
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 'Custom',
-      period: '',
-      limits: { records: -1, aiConversations: -1, emails: -1 },
+      id: 'tier3',
+      name: 'Tier 3',
+      price: '$1,000',
+      period: 'month',
+      recordCapacity: '251-500 records',
+      limits: { records: 500, aiConversations: -1, emails: -1 },
       features: [
-        'Everything in Professional',
-        'Unlimited contacts',
-        'Unlimited AI conversations',
-        'White-label options',
-        'Dedicated support',
-        'Custom integrations',
-        'SLA guarantee'
+        '✓ All Features Included',
+        '✓ AI Sales Agents (Unlimited)',
+        '✓ Lead Scraper & Enrichment',
+        '✓ Email Sequences (Unlimited)',
+        '✓ Multi-Channel Outreach',
+        '✓ Social Media AI',
+        '✓ Full CRM Suite',
+        '✓ Workflow Automation',
+        '✓ API Access',
+        '✓ White-Label Options'
+      ]
+    },
+    {
+      id: 'tier4',
+      name: 'Tier 4',
+      price: '$1,250',
+      period: 'month',
+      recordCapacity: '501-1,000 records',
+      limits: { records: 1000, aiConversations: -1, emails: -1 },
+      features: [
+        '✓ All Features Included',
+        '✓ AI Sales Agents (Unlimited)',
+        '✓ Lead Scraper & Enrichment',
+        '✓ Email Sequences (Unlimited)',
+        '✓ Multi-Channel Outreach',
+        '✓ Social Media AI',
+        '✓ Full CRM Suite',
+        '✓ Workflow Automation',
+        '✓ API Access',
+        '✓ White-Label Options'
       ]
     }
   ];
 
-  const currentPlan = plans.find(p => p.id === subscription?.plan) || plans[0];
+  const currentPlan = tiers.find(p => p.id === subscription?.plan) || tiers[0];
   const isTrialing = subscription?.status === 'trialing';
   const trialDaysLeft = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -327,16 +340,29 @@ export default function BillingSettingsPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                 <div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
-                    {currentPlan.name} Plan
+                    {currentPlan.name}
                     {isTrialing && (
                       <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', fontWeight: '600', backgroundColor: '#fbbf24', color: '#000', padding: '0.25rem 0.5rem', borderRadius: '0.25rem' }}>
                         TRIAL
                       </span>
                     )}
                   </div>
-                  <div style={{ color: '#999', marginTop: '0.25rem' }}>
-                    {currentPlan.price}/{currentPlan.period || 'custom'} • 
-                    {subscription?.currentPeriodEnd && ` Renews on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`}
+                  <div style={{ color: '#999', marginTop: '0.25rem', fontSize: '0.875rem' }}>
+                    {currentPlan.price}/{currentPlan.period} • {currentPlan.recordCapacity}
+                  </div>
+                  <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    {subscription?.currentPeriodEnd && `Renews on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`}
+                  </div>
+                  <div style={{ 
+                    marginTop: '0.75rem',
+                    padding: '0.5rem 0.75rem',
+                    backgroundColor: '#0a0a0a',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    color: primaryColor,
+                    fontWeight: '500'
+                  }}>
+                    ✓ All Features Included • No Limits on Usage
                   </div>
                 </div>
                 <button
@@ -409,15 +435,31 @@ export default function BillingSettingsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* NEW: BYOK Callout */}
+              <div style={{ 
+                backgroundColor: '#0a0a0a', 
+                border: '1px solid #1a1a1a',
+                borderRadius: '0.5rem', 
+                padding: '1rem',
+                marginTop: '1rem'
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '600', color: primaryColor, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  💡 Bring Your Own Keys (BYOK)
+                </div>
+                <div style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.5' }}>
+                  We don't markup AI tokens. Connect your own OpenRouter, OpenAI, or Anthropic API keys to pay raw market rates for compute.
+                </div>
+              </div>
             </div>
 
             {/* Available Plans */}
             <div style={{ marginBottom: '2rem' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Available Plans</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
-                {plans.map(plan => {
+                {tiers.map(plan => {
                   const isCurrent = plan.id === subscription?.plan;
-                  const isUpgrade = plans.findIndex(p => p.id === plan.id) > plans.findIndex(p => p.id === subscription?.plan);
+                  const isUpgrade = tiers.findIndex(p => p.id === plan.id) > tiers.findIndex(p => p.id === subscription?.plan);
                   
                   return (
                     <div

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, Timestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { withCache } from '@/lib/cache/analytics-cache';
 
 /**
  * GET /api/analytics/revenue - Get revenue analytics
@@ -11,46 +15,80 @@ import { where, Timestamp } from 'firebase/firestore';
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/revenue');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     const period = searchParams.get('period') || '30d';
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'orgId is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('orgId is required');
     }
 
-    // Calculate date range based on period
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (period) {
-      case '7d':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case '30d':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case '90d':
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case 'all':
-        startDate = new Date('2020-01-01'); // Far enough back
-        break;
-      default:
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    }
+    // Use caching for analytics queries
+    const analytics = await withCache(
+      orgId,
+      'revenue',
+      async () => calculateRevenueAnalytics(orgId, period),
+      { period }
+    );
 
-    // Get deals from Firestore
+    logger.info('Revenue analytics retrieved', { 
+      route: '/api/analytics/revenue',
+      orgId, 
+      period,
+      totalRevenue: analytics.totalRevenue,
+    });
+
+    return NextResponse.json(analytics);
+  } catch (error: any) {
+    logger.error('Revenue analytics error', error, { route: '/api/analytics/revenue' });
+    return errors.internal('Failed to generate revenue analytics', error);
+  }
+}
+
+/**
+ * Calculate revenue analytics (extracted for caching)
+ */
+async function calculateRevenueAnalytics(orgId: string, period: string) {
+  // Calculate date range based on period
+  const now = new Date();
+  let startDate: Date;
+  
+  switch (period) {
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case 'all':
+      startDate = new Date('2020-01-01'); // Far enough back
+      break;
+    default:
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+    // Get deals from Firestore with date filtering for better performance
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
     let allDeals: any[] = [];
     
     try {
-      allDeals = await FirestoreService.getAll(dealsPath, []);
+      // Fetch with reasonable constraints to prevent timeout
+      // Note: For analytics, we need all matching records to calculate totals
+      // If org has 10,000+ deals, consider implementing background jobs for analytics
+      const constraints = [
+        // Limit to won/closed deals to reduce data fetched
+        // Multiple status checks would require OR queries (not supported in single query)
+        // So we fetch all and filter - consider indexing if performance becomes an issue
+      ];
+      allDeals = await FirestoreService.getAll(dealsPath, constraints);
     } catch (e) {
-      console.log('No deals collection yet');
+      logger.debug('No deals collection yet', { orgId });
     }
 
     // Filter by date and status
@@ -69,7 +107,7 @@ export async function GET(request: NextRequest) {
     try {
       allOrders = await FirestoreService.getAll(ordersPath, []);
     } catch (e) {
-      console.log('No orders collection yet');
+      logger.debug('No orders collection yet', { orgId });
     }
 
     const completedOrders = allOrders.filter(order => {
@@ -185,24 +223,15 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
-    return NextResponse.json({
+    return {
       success: true,
-      analytics: {
-        totalRevenue,
-        dealsCount,
-        avgDealSize,
-        mrr,
-        growth,
-        bySource,
-        byProduct,
-        byRep,
-      },
-    });
-  } catch (error: any) {
-    console.error('Error getting revenue analytics:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get revenue analytics' },
-      { status: 500 }
-    );
-  }
+      totalRevenue,
+      dealsCount,
+      avgDealSize,
+      mrr,
+      growth,
+      bySource,
+      byProduct,
+      byRep,
+    };
 }

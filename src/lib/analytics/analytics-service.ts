@@ -567,28 +567,43 @@ async function calculatePipelineTrends(workspaceId: string, period: string): Pro
     ]
   );
   
-  // Group by date
+  // Group by date and stage
   const trends: any[] = [];
-  const dateMap = new Map<string, { value: number; deals: number }>();
+  const dateMap = new Map<string, { value: number; deals: number; byStage: Map<string, { value: number; count: number }> }>();
   
   deals.forEach(deal => {
     const date = new Date(deal.createdAt?.toDate?.() || deal.createdAt);
     const dateKey = date.toISOString().split('T')[0];
     const value = parseFloat(deal.value) || 0;
+    const stage = deal.stage || 'unknown';
     
-    const existing = dateMap.get(dateKey) || { value: 0, deals: 0 };
+    const existing = dateMap.get(dateKey) || { value: 0, deals: 0, byStage: new Map() };
+    const stageData = existing.byStage.get(stage) || { value: 0, count: 0 };
+    
+    existing.byStage.set(stage, {
+      value: stageData.value + value,
+      count: stageData.count + 1,
+    });
+    
     dateMap.set(dateKey, {
       value: existing.value + value,
       deals: existing.deals + 1,
+      byStage: existing.byStage,
     });
   });
   
   dateMap.forEach((data, dateKey) => {
+    // Convert byStage Map to object
+    const byStage: Record<string, { value: number; count: number }> = {};
+    data.byStage.forEach((stageData, stage) => {
+      byStage[stage] = stageData;
+    });
+    
     trends.push({
       date: new Date(dateKey),
       totalValue: data.value,
       totalDeals: data.deals,
-      byStage: {}, // TODO: Calculate by stage
+      byStage,
     });
   });
   
@@ -772,37 +787,48 @@ function analyzeLossReasons(lostDeals: any[]): any[] {
 }
 
 function analyzeWinFactors(wonDeals: any[]): any[] {
-  const factorMap = new Map<string, number>();
+  const factorMap = new Map<string, { count: number; totalValue: number }>();
   
   wonDeals.forEach(deal => {
+    const value = parseFloat(deal.value) || 0;
+    
     // Extract factors from deal notes, tags, etc.
     const tags = deal.tags || [];
     tags.forEach((tag: string) => {
-      factorMap.set(tag, (factorMap.get(tag) || 0) + 1);
+      const existing = factorMap.get(tag) || { count: 0, totalValue: 0 };
+      factorMap.set(tag, {
+        count: existing.count + 1,
+        totalValue: existing.totalValue + value,
+      });
     });
   });
   
   const total = wonDeals.length;
   
   return Array.from(factorMap.entries())
-    .map(([factor, frequency]) => ({
+    .map(([factor, data]) => ({
       factor,
-      frequency,
-      percentage: total > 0 ? (frequency / total) * 100 : 0,
-      averageDealSize: 0, // TODO: Calculate
+      frequency: data.count,
+      percentage: total > 0 ? (data.count / total) * 100 : 0,
+      averageDealSize: data.count > 0 ? data.totalValue / data.count : 0,
     }))
     .sort((a, b) => b.frequency - a.frequency)
     .slice(0, 10); // Top 10
 }
 
 function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
-  const competitorMap = new Map<string, { wins: number; losses: number; totalValue: number }>();
+  const competitorMap = new Map<string, { wins: number; losses: number; totalValue: number; reasons: Map<string, number> }>();
   
   // From lost deals
   lostDeals.forEach(deal => {
     const competitor = deal.lostToCompetitor || deal.competitor;
     if (competitor) {
-      const existing = competitorMap.get(competitor) || { wins: 0, losses: 0, totalValue: 0 };
+      const existing = competitorMap.get(competitor) || { wins: 0, losses: 0, totalValue: 0, reasons: new Map() };
+      
+      // Extract loss reason
+      const reason = deal.lostReason || deal.lossReason || 'Unknown';
+      existing.reasons.set(reason, (existing.reasons.get(reason) || 0) + 1);
+      
       competitorMap.set(competitor, {
         ...existing,
         losses: existing.losses + 1,
@@ -815,7 +841,7 @@ function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
   wonDeals.forEach(deal => {
     const competitor = deal.competitor;
     if (competitor) {
-      const existing = competitorMap.get(competitor) || { wins: 0, losses: 0, totalValue: 0 };
+      const existing = competitorMap.get(competitor) || { wins: 0, losses: 0, totalValue: 0, reasons: new Map() };
       competitorMap.set(competitor, {
         ...existing,
         wins: existing.wins + 1,
@@ -823,14 +849,23 @@ function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
     }
   });
   
-  return Array.from(competitorMap.entries()).map(([competitor, data]) => ({
+  return Array.from(competitorMap.entries()).map(([competitor, data]) => {
+    // Extract top 3 most common reasons
+    const commonReasons = Array.from(data.reasons.entries())
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+      .map(r => r.reason);
+    
+    return {
     competitor,
     wins: data.wins,
     losses: data.losses,
     winRate: (data.wins + data.losses) > 0 ? (data.wins / (data.wins + data.losses)) * 100 : 0,
     averageDealSize: data.losses > 0 ? data.totalValue / data.losses : 0,
-    commonReasons: [], // TODO: Extract from lost deals
-  }));
+      commonReasons,
+    };
+  });
 }
 
 function analyzeWinLossByRep(wonDeals: any[], lostDeals: any[]): any[] {

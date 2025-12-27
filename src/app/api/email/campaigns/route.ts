@@ -3,6 +3,8 @@ import { createCampaign, sendCampaign, getCampaignStats, listCampaigns } from '@
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { campaignActionSchema, validateInput, organizationIdSchema } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,50 +20,44 @@ export async function GET(request: NextRequest) {
     const campaignId = searchParams.get('campaignId');
 
     if (!organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('organizationId is required');
     }
 
     // Validate organizationId format
     const orgValidation = organizationIdSchema.safeParse(organizationId);
     if (!orgValidation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid organizationId format' },
-        { status: 400 }
-      );
+      return errors.badRequest('Invalid organizationId format');
     }
 
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied to this organization');
     }
 
     if (campaignId) {
       // Get specific campaign stats
       const stats = await getCampaignStats(campaignId);
       if (!stats) {
-        return NextResponse.json(
-          { success: false, error: 'Campaign not found' },
-          { status: 404 }
-        );
+        return errors.notFound('Campaign not found');
       }
       return NextResponse.json({ success: true, stats });
     } else {
-      // List all campaigns
-      const campaigns = await listCampaigns(organizationId);
-      return NextResponse.json({ success: true, campaigns });
+      // List all campaigns with pagination
+      const limit = parseInt(searchParams.get('limit') || '50');
+      const cursor = searchParams.get('cursor');
+      const result = await listCampaigns(organizationId, limit, cursor);
+      return NextResponse.json({ 
+        success: true, 
+        campaigns: result.campaigns,
+        pagination: {
+          hasMore: result.hasMore,
+          pageSize: result.campaigns.length,
+        },
+      });
     }
   } catch (error: any) {
-    console.error('Campaign fetch error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch campaigns' },
-      { status: 500 }
-    );
+    logger.error('Campaign fetch error', error, { route: '/api/email/campaigns' });
+    return errors.database('Failed to fetch campaigns', error);
   }
 }
 
@@ -91,32 +87,19 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { action, campaign, campaignId, organizationId } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied to this organization');
     }
 
     if (action === 'create') {
       if (!campaign) {
-        return NextResponse.json(
-          { success: false, error: 'Campaign data is required' },
-          { status: 400 }
-        );
+        return errors.badRequest('Campaign data is required');
       }
 
       const newCampaign = await createCampaign({
@@ -129,33 +112,21 @@ export async function POST(request: NextRequest) {
 
     if (action === 'send') {
       if (!campaignId) {
-        return NextResponse.json(
-          { success: false, error: 'campaignId is required' },
-          { status: 400 }
-        );
+        return errors.badRequest('campaignId is required');
       }
 
       const result = await sendCampaign(campaignId);
       if (!result.success) {
-        return NextResponse.json(
-          { success: false, error: result.error },
-          { status: 400 }
-        );
+        return errors.badRequest(result.error || 'Failed to send campaign');
       }
 
       return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json(
-      { success: false, error: 'Invalid action. Use: create or send' },
-      { status: 400 }
-    );
+    return errors.badRequest('Invalid action. Use: create or send');
   } catch (error: any) {
-    console.error('Campaign processing error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process campaign' },
-      { status: 500 }
-    );
+    logger.error('Campaign processing error', error, { route: '/api/email/campaigns' });
+    return errors.database('Failed to process campaign', error);
   }
 }
 

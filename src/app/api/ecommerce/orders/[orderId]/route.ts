@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Order } from '@/types/ecommerce';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/ecommerce/orders/[orderId] - Get order
@@ -11,6 +14,9 @@ export async function GET(
   { params }: { params: { orderId: string } }
 ) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/orders');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -20,10 +26,7 @@ export async function GET(
     const workspaceId = searchParams.get('workspaceId');
 
     if (!workspaceId) {
-      return NextResponse.json(
-        { success: false, error: 'workspaceId required' },
-        { status: 400 }
-      );
+      return errors.badRequest('workspaceId required');
     }
 
     const order = await FirestoreService.get<Order>(
@@ -32,10 +35,7 @@ export async function GET(
     );
 
     if (!order) {
-      return NextResponse.json(
-        { success: false, error: 'Order not found' },
-        { status: 404 }
-      );
+      return errors.notFound('Order not found');
     }
 
     // Verify user has access (customer email or organization member)
@@ -52,13 +52,16 @@ export async function GET(
       order,
     });
   } catch (error: any) {
-    console.error('Error getting order:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get order' },
-      { status: 500 }
-    );
+    logger.error('Error fetching order', error, { route: '/api/ecommerce/orders' });
+    return errors.database('Failed to fetch order', error);
   }
 }
+
+
+
+
+
+
 
 
 

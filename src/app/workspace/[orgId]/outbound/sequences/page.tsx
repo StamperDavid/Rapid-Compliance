@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';
-import { OutboundSequence, ProspectEnrollment } from '@/types/outbound-sequence';
+import { OutboundSequence, ProspectEnrollment } from '@/types/outbound-sequence'
+import { logger } from '@/lib/logger/logger';;
 
 export default function EmailSequencesPage() {
   const { user } = useAuth();
@@ -43,7 +45,7 @@ export default function EmailSequencesPage() {
         );
         setEnrollments(enr);
       } catch (error) {
-        console.error('Error loading sequences:', error);
+        logger.error('Error loading sequences:', error, { file: 'page.tsx' });
       } finally {
         setLoading(false);
       }
@@ -112,7 +114,7 @@ export default function EmailSequencesPage() {
       setSequences([...sequences, newSequence]);
       setShowCreateModal(false);
     } catch (error) {
-      console.error('Error creating sequence:', error);
+      logger.error('Error creating sequence:', error, { file: 'page.tsx' });
       alert('Failed to create sequence');
     }
   };
@@ -129,7 +131,7 @@ export default function EmailSequencesPage() {
         s.id === sequenceId ? { ...s, status: 'active' as const } : s
       ));
     } catch (error) {
-      console.error('Error activating sequence:', error);
+      logger.error('Error activating sequence:', error, { file: 'page.tsx' });
       alert('Failed to activate sequence');
     }
   };
@@ -146,7 +148,7 @@ export default function EmailSequencesPage() {
         s.id === sequenceId ? { ...s, status: 'paused' as const } : s
       ));
     } catch (error) {
-      console.error('Error pausing sequence:', error);
+      logger.error('Error pausing sequence:', error, { file: 'page.tsx' });
       alert('Failed to pause sequence');
     }
   };

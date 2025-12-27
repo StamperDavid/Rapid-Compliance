@@ -5,9 +5,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { deployGoldenMaster } from '@/lib/training/golden-master-updater';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/training/deploy-golden-master');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -20,18 +26,12 @@ export async function POST(request: NextRequest) {
     const { organizationId, goldenMasterId } = body;
 
     if (!organizationId || !goldenMasterId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID and Golden Master ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID and Golden Master ID required');
     }
 
     // Verify access
     if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied');
     }
 
     // Deploy the Golden Master
@@ -42,13 +42,16 @@ export async function POST(request: NextRequest) {
       message: 'Golden Master deployed to production',
     });
   } catch (error: any) {
-    console.error('Error deploying Golden Master:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to deploy Golden Master' },
-      { status: 500 }
-    );
+    logger.error('Error deploying Golden Master', error, { route: '/api/training/deploy-golden-master' });
+    return errors.database('Failed to deploy Golden Master', error);
   }
 }
+
+
+
+
+
+
 
 
 

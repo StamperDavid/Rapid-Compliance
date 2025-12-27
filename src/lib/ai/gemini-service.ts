@@ -4,7 +4,8 @@
  * Dynamically fetches API keys from Firestore admin settings
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { logger } from '@/lib/logger/logger';;
 
 let cachedGenAI: GoogleGenerativeAI | null = null;
 let lastKeyFetch = 0;
@@ -22,8 +23,8 @@ async function getApiKey(): Promise<string> {
 
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
-    
-    const apiKey = adminKeys?.ai?.geminiApiKey || adminKeys?.ai?.googleApiKey;
+
+    const apiKey = adminKeys?.gemini?.apiKey || adminKeys?.google?.apiKey;
     
     if (!apiKey) {
       throw new Error('Gemini API key not configured in admin settings. Please add it at /admin/system/api-keys');
@@ -35,7 +36,7 @@ async function getApiKey(): Promise<string> {
     
     return apiKey;
   } catch (error: any) {
-    console.error('Error fetching Gemini API key:', error);
+    logger.error('Error fetching Gemini API key:', error, { file: 'gemini-service.ts' });
     throw new Error('Failed to fetch Gemini API key from admin settings');
   }
 }
@@ -103,7 +104,7 @@ export async function sendChatMessage(
       },
     };
   } catch (error: any) {
-    console.error('Error calling Gemini API:', error);
+    logger.error('Error calling Gemini API:', error, { file: 'gemini-service.ts' });
     throw new Error(error.message || 'Failed to get response from AI');
   }
 }
@@ -137,7 +138,7 @@ export async function generateText(
       },
     };
   } catch (error: any) {
-    console.error('Error generating text with Gemini:', error);
+    logger.error('Error generating text with Gemini:', error, { file: 'gemini-service.ts' });
     throw new Error(error.message || 'Failed to generate text');
   }
 }
@@ -172,7 +173,7 @@ export async function* streamChatMessage(
       yield chunkText;
     }
   } catch (error: any) {
-    console.error('Error streaming from Gemini:', error);
+    logger.error('Error streaming from Gemini:', error, { file: 'gemini-service.ts' });
     throw new Error(error.message || 'Failed to stream response');
   }
 }

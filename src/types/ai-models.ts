@@ -3,7 +3,7 @@
  * Unified types for multiple AI providers
  */
 
-export type AIProvider = 'openai' | 'anthropic' | 'google';
+export type AIProvider = 'openai' | 'anthropic' | 'google' | 'openrouter';
 
 export type ModelName =
   // OpenAI
@@ -18,7 +18,9 @@ export type ModelName =
   // Google
   | 'gemini-1.5-pro'
   | 'gemini-1.5-flash'
-  | 'gemini-1.0-pro';
+  | 'gemini-1.0-pro'
+  // OpenRouter (allow any upstream identifier)
+  | `openrouter/${string}`;
 
 export interface ModelCapabilities {
   provider: AIProvider;
@@ -168,13 +170,13 @@ export interface IntelligentResponse {
   // Model info
   model: ModelName;
   provider: AIProvider;
-  
-  // Alternative responses (if using ensemble)
-  alternatives?: Array<{
-    model: ModelName;
-    response: string;
+
+  // Metadata
+  metadata?: {
+    temperature?: number;
+    maxTokens?: number;
     confidence: number;
-  }>;
+  };
   
   // Corrections (if self-corrected)
   corrections?: Array<{
@@ -247,7 +249,6 @@ export type ModelSelectionStrategy =
   | 'cheapest' // Prioritize cost
   | 'best-quality' // Prioritize accuracy
   | 'balanced' // Balance speed/cost/quality
-  | 'ensemble' // Use multiple models
   | 'adaptive'; // Learn which model works best
 
 /**
@@ -264,13 +265,6 @@ export interface OrganizationModelConfig {
   
   // Strategy
   selectionStrategy: ModelSelectionStrategy;
-  
-  // Ensemble settings (if using ensemble)
-  ensembleConfig?: {
-    models: ModelName[];
-    votingStrategy: 'majority' | 'weighted' | 'confidence';
-    minAgreement: number; // 0-100, minimum % of models that must agree
-  };
   
   // Fine-tuned models
   fineTunedModels: Array<{
@@ -479,6 +473,12 @@ export const MODEL_CAPABILITIES: Record<ModelName, ModelCapabilities> = {
     isDeprecated: false,
   },
 };
+
+
+
+
+
+
 
 
 

@@ -11,7 +11,8 @@ import type {
   ChatResponse,
   IntelligentResponse,
 } from '@/types/ai-models';
-import { OpenRouterProvider, getAIProvider } from './openrouter-provider';
+import { OpenRouterProvider, getAIProvider } from './openrouter-provider'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Base interface that all providers must implement
@@ -123,7 +124,7 @@ export async function initializeProviders(): Promise<void> {
   ProviderFactory.register('anthropic', new AnthropicProvider());
   ProviderFactory.register('google', new GeminiProvider());
   
-  console.log('[Model Providers] Initialized: OpenAI, Anthropic, Google');
+  logger.info('[Model Providers] Initialized: OpenAI, Anthropic, Google', { file: 'model-provider.ts' });
 }
 
 

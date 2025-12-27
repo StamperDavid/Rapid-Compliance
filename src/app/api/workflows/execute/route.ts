@@ -4,6 +4,8 @@ import { Workflow } from '@/types/workflow';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { workflowExecuteSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,31 +33,50 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
+      return errors.validation('Validation failed', errorDetails);
+    }
+
+    const data = validation.data;
+
+    // Verify user has access to this organization
+    if (user.organizationId !== data.organizationId) {
+      return errors.forbidden('Access denied to this organization');
+    }
+
+    // Handle both workflow object and workflowId variants
+    let workflow: Workflow;
+    if ('workflow' in data) {
+      workflow = data.workflow as Workflow;
+    } else if ('workflowId' in data) {
+      // Load workflow from database using workflowId
+      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+      const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+      
+      const loadedWorkflow = await AdminFirestoreService.get(
+        COLLECTIONS.WORKFLOWS,
+        data.workflowId
+      );
+      
+      if (!loadedWorkflow) {
+        return NextResponse.json(
+          { success: false, error: 'Workflow not found' },
+          { status: 404 }
+        );
+      }
+      
+      workflow = loadedWorkflow as Workflow;
+    } else {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
+        { success: false, error: 'Invalid request: workflow or workflowId required' },
         { status: 400 }
       );
     }
 
-    const { organizationId, workflow, triggerData } = validation.data;
-
-    // Verify user has access to this organization
-    if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
-    }
-
     // Execute workflow
-    const execution = await executeWorkflow(workflow as Workflow, {
-      ...triggerData,
+    const execution = await executeWorkflow(workflow, {
+      ...data.triggerData,
       userId: user.uid,
-      organizationId,
+      organizationId: data.organizationId,
     });
 
     return NextResponse.json({
@@ -63,11 +84,8 @@ export async function POST(request: NextRequest) {
       execution,
     });
   } catch (error: any) {
-    console.error('Workflow execution error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to execute workflow' },
-      { status: 500 }
-    );
+    logger.error('Workflow execution error', error, { route: '/api/workflows/execute' });
+    return errors.internal('Failed to execute workflow', error);
   }
 }
 

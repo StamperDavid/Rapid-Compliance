@@ -3,7 +3,8 @@
  * REAL email sending, tracking, and webhook handling
  */
 
-import sgMail from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail'
+import { logger } from '@/lib/logger/logger';;
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
 const FROM_NAME = process.env.FROM_NAME || 'AI Sales Platform';
@@ -44,7 +45,7 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
   const SENDGRID_API_KEY = apiKey || process.env.SENDGRID_API_KEY;
   
   if (!SENDGRID_API_KEY) {
-    console.error('[SendGrid] API key not configured');
+    logger.error('[SendGrid] API key not configured', new Error('[SendGrid] API key not configured'), { file: 'sendgrid-service.ts' });
     return {
       success: false,
       error: 'Email service not configured.',
@@ -85,17 +86,20 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
 
     const [response] = await sgMail.send(msg);
 
-    console.log(`[SendGrid] Email sent successfully to ${options.to}`);
+    logger.info('SendGrid Email sent successfully to options.to}', { file: 'sendgrid-service.ts' });
 
     return {
       success: true,
       messageId: response.headers['x-message-id'],
     };
   } catch (error: any) {
-    console.error('[SendGrid] Error sending email:', error);
+    logger.error('[SendGrid] Error sending email:', error, { file: 'sendgrid-service.ts' });
     
     if (error.response) {
-      console.error('[SendGrid] Response error:', error.response.body);
+      logger.error('[SendGrid] Response error', new Error('SendGrid error'), { 
+        responseBody: error.response.body,
+        file: 'sendgrid-service.ts' 
+      });
     }
 
     return {
@@ -148,7 +152,11 @@ export async function sendBulkEmails(
  * Add tracking pixel to HTML email
  */
 export function addTrackingPixel(html: string, trackingId: string): string {
-  const pixel = `<img src="https://yourdomain.com/api/webhooks/email/track/open/${trackingId}" width="1" height="1" alt="" style="display:none" />`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000';
+  
+  const pixel = `<img src="${baseUrl}/api/email/track/${trackingId}" width="1" height="1" alt="" style="display:none" />`;
   
   // Add pixel before closing body tag if it exists
   if (html.includes('</body>')) {
@@ -163,11 +171,15 @@ export function addTrackingPixel(html: string, trackingId: string): string {
  * Wrap links with click tracking
  */
 export function addClickTracking(html: string, trackingId: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000';
+  
   // Replace all href attributes with tracking redirect
   return html.replace(
     /href="([^"]+)"/g,
     (match, url) => {
-      const trackingUrl = `https://yourdomain.com/api/webhooks/email/track/click/${trackingId}?url=${encodeURIComponent(url)}`;
+      const trackingUrl = `${baseUrl}/api/email/track/link?t=${trackingId}&url=${encodeURIComponent(url)}`;
       return `href="${trackingUrl}"`;
     }
   );
@@ -229,7 +241,7 @@ export async function sendTemplateEmail(options: {
       messageId: response.headers['x-message-id'],
     };
   } catch (error: any) {
-    console.error('[SendGrid] Error sending template email:', error);
+    logger.error('[SendGrid] Error sending template email:', error, { file: 'sendgrid-service.ts' });
     return {
       success: false,
       error: error.message,

@@ -6,14 +6,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/google/callback');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
 
   if (!code || !state) {
-    return NextResponse.redirect('/integrations?error=oauth_failed');
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?error=oauth_failed`);
   }
 
   try {
@@ -25,37 +35,51 @@ export async function GET(request: NextRequest) {
     // Exchange code for tokens
     const tokens = await getTokensFromCode(code);
 
-    // Save integration to Firestore
-    const integrationId = `google_calendar_${userId}`;
-    await FirestoreService.set(
-      COLLECTIONS.INTEGRATIONS,
-      integrationId,
-      {
+    // Save integration using Admin SDK (server-side, bypasses security rules)
+    const { adminDb } = await import('@/lib/firebase/admin');
+    
+    if (!adminDb) {
+      throw new Error('Firebase Admin not initialized');
+    }
+
+    const integrationId = `google_${Date.now()}`;
+    await adminDb
+      .collection('organizations')
+      .doc(orgId)
+      .collection('integrations')
+      .doc(integrationId)
+      .set({
         id: integrationId,
         userId,
-        organizationId: orgId,
-        provider: 'google',
-        type: 'calendar',
-        status: 'active',
-        credentials: {
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          expiry_date: tokens.expiry_date,
-        },
-        createdAt: new Date().toISOString(),
+        service: 'gmail',
+        providerId: 'google',
+        status: 'connected',
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiryDate: tokens.expiry_date,
+        connectedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
-      false
-    );
+      });
 
-    console.log('[Google OAuth] Calendar integration saved for user:', userId);
+    logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', orgId });
 
-    return NextResponse.redirect(`/workspace/${orgId}/integrations?success=google_calendar`);
+    // Redirect to admin integrations page (use current domain)
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?success=gmail`);
   } catch (error: any) {
-    console.error('[Google OAuth] Error:', error);
-    return NextResponse.redirect('/integrations?error=oauth_failed');
+    logger.error('Google OAuth callback error', error, { route: '/api/integrations/google/callback' });
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?error=oauth_failed`);
   }
 }
+
+
+
+
+
+
 
 
 

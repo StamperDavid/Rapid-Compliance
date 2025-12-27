@@ -23,11 +23,12 @@ import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
 // Only warn in non-build environments
 if (!isFirebaseConfigured || !auth) {
   if (typeof window !== 'undefined' || process.env.NODE_ENV === 'development') {
-    console.warn('Firebase Auth is not configured. Authentication features will be disabled.');
+    logger.warn('Firebase Auth is not configured. Authentication features will be disabled.', { file: 'auth-service.ts' });
   }
 }
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface AuthUser {
   uid: string;
@@ -80,7 +81,7 @@ export async function signUp(
     
     return userCredential;
   } catch (error: any) {
-    console.error('Error signing up:', error);
+    logger.error('Error signing up:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to sign up');
   }
 }
@@ -96,7 +97,7 @@ export async function signIn(email: string, password: string): Promise<UserCrede
   try {
     return await signInWithEmailAndPassword(auth, email, password);
   } catch (error: any) {
-    console.error('Error signing in:', error);
+    logger.error('Error signing in:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to sign in');
   }
 }
@@ -111,7 +112,7 @@ export async function signInWithGoogle(): Promise<UserCredential> {
     provider.addScope('profile');
     return await signInWithPopup(auth, provider);
   } catch (error: any) {
-    console.error('Error signing in with Google:', error);
+    logger.error('Error signing in with Google:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to sign in with Google');
   }
 }
@@ -126,7 +127,7 @@ export async function signInWithMicrosoft(): Promise<UserCredential> {
     provider.addScope('profile');
     return await signInWithPopup(auth, provider);
   } catch (error: any) {
-    console.error('Error signing in with Microsoft:', error);
+    logger.error('Error signing in with Microsoft:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to sign in with Microsoft');
   }
 }
@@ -138,7 +139,7 @@ export async function signOutUser(): Promise<void> {
   try {
     await signOut(auth);
   } catch (error: any) {
-    console.error('Error signing out:', error);
+    logger.error('Error signing out:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to sign out');
   }
 }
@@ -150,7 +151,7 @@ export async function resetPassword(email: string): Promise<void> {
   try {
     await sendPasswordResetEmail(auth, email);
   } catch (error: any) {
-    console.error('Error sending password reset:', error);
+    logger.error('Error sending password reset:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to send password reset email');
   }
 }
@@ -166,7 +167,7 @@ export async function verifyEmail(): Promise<void> {
     }
     await sendEmailVerification(user);
   } catch (error: any) {
-    console.error('Error sending email verification:', error);
+    logger.error('Error sending email verification:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to send email verification');
   }
 }
@@ -232,7 +233,7 @@ export async function updateUserProfile(updates: {
       updatedAt: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Error updating profile:', error);
+    logger.error('Error updating profile:', error, { file: 'auth-service.ts' });
     throw new Error(error.message || 'Failed to update profile');
   }
 }

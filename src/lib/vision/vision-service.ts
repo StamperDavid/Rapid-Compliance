@@ -4,6 +4,8 @@
  * Uses GPT-4 Vision and Gemini Pro Vision
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface VisionAnalysisRequest {
   imageUrl?: string;
   imageBase64?: string;
@@ -103,7 +105,7 @@ async function analyzeWithGPT4Vision(
       processingTime: Date.now() - startTime,
     };
   } catch (error: any) {
-    console.error('[GPT-4 Vision] Error:', error);
+    logger.error('[GPT-4 Vision] Error:', error, { file: 'vision-service.ts' });
     throw new Error(`Image analysis failed: ${error.message}`);
   }
 }
@@ -166,7 +168,7 @@ async function analyzeWithGeminiVision(
       processingTime: Date.now() - startTime,
     };
   } catch (error: any) {
-    console.error('[Gemini Vision] Error:', error);
+    logger.error('[Gemini Vision] Error:', error, { file: 'vision-service.ts' });
     throw new Error(`Image analysis failed: ${error.message}`);
   }
 }
@@ -211,7 +213,7 @@ export async function analyzeVideo(
       summary,
     };
   } catch (error: any) {
-    console.error('[Video Analysis] Error:', error);
+    logger.error('[Video Analysis] Error:', error, { file: 'vision-service.ts' });
     throw new Error(`Video analysis failed: ${error.message}`);
   }
 }
@@ -225,7 +227,7 @@ async function extractVideoFrames(
 ): Promise<string[]> {
   // In production, use ffmpeg or cloud service
   // For now, return mock frames
-  console.warn('[Video] Frame extraction not yet implemented, using mock data');
+  logger.warn('[Video] Frame extraction not yet implemented, using mock data', { file: 'vision-service.ts' });
   return [];
 }
 
@@ -374,6 +376,12 @@ export const VisionUseCases = {
       prompt: 'Describe this image in detail. What do you see? What is happening? What are the key elements?',
     }),
 };
+
+
+
+
+
+
 
 
 

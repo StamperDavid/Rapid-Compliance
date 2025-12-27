@@ -9,7 +9,8 @@ import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { logger } from '@/lib/logger/logger';;
 
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
@@ -65,7 +66,7 @@ function CRMContent() {
           setConfig(configData);
         }
       } catch (error) {
-        console.error('Failed to load CRM config:', error);
+        logger.error('Failed to load CRM config:', error, { file: 'page.tsx' });
         // Continue with null config (defaults will be used)
       }
     };
@@ -238,13 +239,13 @@ function CRMContent() {
     a.click();
   };
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setImportFile(file);
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
       const lines = text.split('\n').filter(line => line.trim());
       if (lines.length < 2) {
@@ -253,6 +254,42 @@ function CRMContent() {
       }
 
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const totalRows = lines.length - 1; // Subtract header row
+
+      // NEW: Check record capacity before importing
+      try {
+        const capacityResponse = await fetch('/api/subscription/check-capacity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId: user?.organizationId,
+            additionalRecords: totalRows,
+          }),
+        });
+
+        if (capacityResponse.ok) {
+          const capacityCheck = await capacityResponse.json();
+          
+          if (!capacityCheck.allowed) {
+            showToast(
+              `⚠️ Cannot import ${totalRows} records. ${capacityCheck.message}`,
+              'error'
+            );
+            setImportFile(null);
+            return;
+          }
+          
+          // Show capacity info
+          showToast(
+            `✅ ${capacityCheck.message}`,
+            'success'
+          );
+        }
+      } catch (error) {
+        console.error('Error checking capacity:', error);
+        // Continue anyway - don't block import on capacity check failure
+      }
+
       const data = lines.slice(1, 6).map(line => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
         return headers.reduce((obj: any, header, idx) => {

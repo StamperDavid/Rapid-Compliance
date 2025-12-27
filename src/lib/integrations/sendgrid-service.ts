@@ -3,6 +3,8 @@
  * Handles email sending via SendGrid API
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface SendEmailOptions {
   to: string | string[];
   subject: string;
@@ -33,7 +35,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
   const apiKey = process.env.SENDGRID_API_KEY;
   
   if (!apiKey) {
-    console.warn('[SendGrid] No API key configured, email not sent');
+    logger.warn('[SendGrid] No API key configured, email not sent', { file: 'sendgrid-service.ts' });
     return {
       success: false,
       error: 'SendGrid API key not configured',
@@ -92,14 +94,14 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
 
     const messageId = response.headers.get('x-message-id') || undefined;
 
-    console.log(`[SendGrid] Email sent successfully to ${options.to}`);
+    logger.info('SendGrid Email sent successfully to options.to}', { file: 'sendgrid-service.ts' });
     
     return {
       success: true,
       messageId,
     };
   } catch (error: any) {
-    console.error('[SendGrid] Error sending email:', error);
+    logger.error('[SendGrid] Error sending email:', error, { file: 'sendgrid-service.ts' });
     return {
       success: false,
       error: error.message,
@@ -118,6 +120,12 @@ export async function sendBulkEmail(
   );
   return results;
 }
+
+
+
+
+
+
 
 
 

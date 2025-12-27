@@ -2,14 +2,19 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
+import { logger } from '@/lib/logger/logger';;
 
 export default function OrganizationSettingsPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     companyName: 'Demo Organization',
@@ -30,15 +35,6 @@ export default function OrganizationSettingsPage() {
   });
 
   React.useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-    
     // Load organization data from Firestore
     const loadOrganizationData = async () => {
       if (!user?.organizationId) return;
@@ -71,7 +67,7 @@ export default function OrganizationSettingsPage() {
           }));
         }
       } catch (error) {
-        console.error('Failed to load organization data:', error);
+        logger.error('Failed to load organization data:', error, { file: 'page.tsx' });
       }
     };
     
@@ -99,7 +95,7 @@ export default function OrganizationSettingsPage() {
       
       alert('Organization settings saved successfully!');
     } catch (error) {
-      console.error('Failed to save organization settings:', error);
+      logger.error('Failed to save organization settings:', error, { file: 'page.tsx' });
       alert('Failed to save settings');
     } finally {
       setSaving(false);
@@ -189,7 +185,7 @@ export default function OrganizationSettingsPage() {
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
-              <Link href="/workspace/demo-org/settings" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
+              <Link href={`/workspace/${orgId}/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
                 ← Back to Settings
               </Link>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Organization Settings</h1>
@@ -438,7 +434,7 @@ export default function OrganizationSettingsPage() {
               {/* Actions */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingTop: '2rem', borderTop: '1px solid #333' }}>
                 <Link
-                  href="/workspace/demo-org/settings"
+                  href={`/workspace/${orgId}/settings`}
                   style={{ padding: '0.75rem 1.5rem', backgroundColor: '#222', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid #333' }}
                 >
                   Cancel

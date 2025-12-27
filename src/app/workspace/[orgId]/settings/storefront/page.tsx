@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { logger } from '@/lib/logger/logger';
 
 interface StorefrontConfig {
   enabled: boolean;
@@ -83,6 +85,8 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 
 export default function StorefrontSettingsPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const { theme: crmTheme } = useOrgTheme(); // Get CRM theme automatically
   const [config, setConfig] = useState<StorefrontConfig>(DEFAULT_CONFIG);
   const [activeTab, setActiveTab] = useState<'setup' | 'widgets'>('setup'); // Removed 'theme' tab
@@ -106,7 +110,7 @@ export default function StorefrontSettingsPage() {
           setConfig(configData as StorefrontConfig);
         }
       } catch (error) {
-        console.error('Failed to load storefront config:', error);
+        logger.error('Failed to load storefront config', error as Error);
       }
     };
     
@@ -129,7 +133,7 @@ export default function StorefrontSettingsPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to save storefront config:', error);
+      logger.error('Failed to save storefront config', error as Error);
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }
@@ -158,7 +162,7 @@ export default function StorefrontSettingsPage() {
     html: `<!-- Add to your website -->
 <script src="https://yourplatform.com/embed.js" async></script>
 <div data-crm-widget="${widgetId}" data-type="full_store"></div>`,
-    react: `import { CRMStoreWidget } from '@your-platform/react-widgets';
+    react: `import { CRMStoreWidget } from '@your-platform/react-widgets'
 
 <CRMStoreWidget 
   widgetId="${widgetId}"
@@ -187,7 +191,7 @@ export default function StorefrontSettingsPage() {
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <Link href="/workspace/demo-org/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
+              <Link href={`/workspace/${orgId}/settings`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
                 ← Back to Settings
               </Link>
               <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Online Storefront</h1>
@@ -243,7 +247,7 @@ export default function StorefrontSettingsPage() {
             <span style={{ fontSize: '1.25rem' }}>✨</span>
             <div style={{ fontSize: '0.875rem', color: '#86efac', lineHeight: '1.5' }}>
               <strong>Automatic Theme Sync:</strong> Your storefront automatically uses your CRM theme colors and branding. 
-              To change colors, logo, or fonts, go to <Link href="/workspace/demo-org/settings/theme" style={{ color: '#6ee7b7', textDecoration: 'underline' }}>Theme Settings</Link>.
+              To change colors, logo, or fonts, go to <Link href={`/workspace/${orgId}/settings/theme`} style={{ color: '#6ee7b7', textDecoration: 'underline' }}>Theme Settings</Link>.
             </div>
           </div>
 
@@ -546,7 +550,7 @@ export default function StorefrontSettingsPage() {
                   <div style={{ backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.5rem', padding: '1rem', display: 'flex', gap: '0.75rem' }}>
                     <span style={{ fontSize: '1.25rem' }}>💡</span>
                     <div style={{ fontSize: '0.75rem', color: '#86efac', lineHeight: '1.5' }}>
-                      <strong>Payment Gateway API Keys:</strong> Configure your Stripe, PayPal, and Square credentials in the <Link href="/workspace/demo-org/settings/api-keys" style={{ color: '#6ee7b7', textDecoration: 'underline' }}>API Keys settings</Link>.
+                      <strong>Payment Gateway API Keys:</strong> Configure your Stripe, PayPal, and Square credentials in the <Link href={`/workspace/${orgId}/settings/api-keys`} style={{ color: '#6ee7b7', textDecoration: 'underline' }}>API Keys settings</Link>.
                     </div>
                   </div>
 

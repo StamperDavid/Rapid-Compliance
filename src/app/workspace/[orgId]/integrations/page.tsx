@@ -1,40 +1,51 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { usePagination } from '@/hooks/usePagination';
 import { INTEGRATION_PROVIDERS } from '@/types/integrations';
 import type { IntegrationProvider, ConnectedIntegration } from '@/types/integrations';
+import { orderBy, QueryConstraint } from 'firebase/firestore'
+import { logger } from '@/lib/logger/logger';;
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   
-  const [connectedIntegrations, setConnectedIntegrations] = useState<ConnectedIntegration[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadConnectedIntegrations();
+  // Fetch connected integrations with pagination
+  const fetchIntegrations = useCallback(async (lastDoc?: any) => {
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    
+    const constraints: QueryConstraint[] = [
+      orderBy('connectedAt', 'desc')
+    ];
+
+    return await FirestoreService.getAllPaginated(
+      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
+      constraints,
+      50,
+      lastDoc
+    );
   }, [orgId]);
 
-  const loadConnectedIntegrations = async () => {
-    setIsLoading(true);
-    try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const integrations = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
-        []
-      );
-      setConnectedIntegrations(integrations as ConnectedIntegration[]);
-    } catch (error) {
-      console.error('Failed to load integrations:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {
+    data: connectedIntegrations,
+    loading: isLoading,
+    error,
+    hasMore,
+    loadMore,
+    refresh
+  } = usePagination({ fetchFn: fetchIntegrations });
+
+  // Initial load
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const handleConnect = async (provider: IntegrationProvider) => {
     if (provider.requiresOAuth) {
@@ -75,10 +86,10 @@ export default function IntegrationsPage() {
         false
       );
 
-      await loadConnectedIntegrations();
+      await refresh(); // Refresh pagination
       alert(`${INTEGRATION_PROVIDERS[providerId].name} connected successfully!`);
     } catch (error) {
-      console.error('Failed to save integration:', error);
+      logger.error('Failed to save integration:', error, { file: 'page.tsx' });
       alert('Failed to connect integration');
     }
   };
@@ -92,9 +103,9 @@ export default function IntegrationsPage() {
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
         integrationId
       );
-      await loadConnectedIntegrations();
+      await refresh(); // Refresh pagination
     } catch (error) {
-      console.error('Failed to disconnect integration:', error);
+      logger.error('Failed to disconnect integration:', error, { file: 'page.tsx' });
       alert('Failed to disconnect integration');
     }
   };
@@ -127,6 +138,12 @@ export default function IntegrationsPage() {
             Connect your AI agent to the tools you already use
           </p>
         </div>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-900/20 border border-red-900 rounded-lg text-red-300">
+            {error}
+          </div>
+        )}
 
         {/* Connected Integrations */}
         {connectedIntegrations.length > 0 && (
@@ -169,6 +186,19 @@ export default function IntegrationsPage() {
                 );
               })}
             </div>
+
+            {/* Load More for Connected Integrations */}
+            {(hasMore || isLoading) && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={loadMore}
+                  disabled={isLoading || !hasMore}
+                  className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Loading...' : hasMore ? `Load More (${connectedIntegrations.length} shown)` : 'All loaded'}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -299,4 +329,3 @@ export default function IntegrationsPage() {
     </div>
   );
 }
-

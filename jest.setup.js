@@ -1,5 +1,24 @@
+// Load environment variables FIRST (before any other imports)
+import { config } from 'dotenv'
+config({ path: '.env.local' })
+
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
+import { TextEncoder, TextDecoder } from 'util'
+import { ReadableStream } from 'stream/web'
+
+// Node test environment polyfills
+if (!global.TextEncoder) {
+  global.TextEncoder = TextEncoder
+}
+if (!global.TextDecoder) {
+  // @ts-ignore
+  global.TextDecoder = TextDecoder
+}
+if (!global.ReadableStream) {
+  // @ts-ignore
+  global.ReadableStream = ReadableStream
+}
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
@@ -19,13 +38,14 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
-// Mock Firebase
-jest.mock('@/lib/firebase/config', () => ({
-  isFirebaseConfigured: jest.fn(() => false),
-  db: null,
-  auth: null,
-  storage: null,
-}))
+// Firebase will use real config from environment variables
+// Tests connect to actual Firebase dev database
+
+
+
+
+
+
 
 
 

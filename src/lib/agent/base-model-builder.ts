@@ -1,16 +1,11 @@
-import { db } from '@/lib/firebase/config';
-import {
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  query,
-  where,
-  getDocs,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory';
+import { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory'
+import { logger } from '@/lib/logger/logger';;
+
+// Check if running on server or client
+const isServer = typeof window === 'undefined';
+
+// Prevent firebase-admin from being bundled on client
+// (it's only imported dynamically when isServer is true)
 
 /**
  * Build a Base Model from onboarding data
@@ -81,33 +76,76 @@ export async function buildBaseModel(params: {
 
 /**
  * Save Base Model to Firestore
+ * Uses Admin SDK on server, Client SDK on client
  */
 export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
-  const docRef = doc(db, 'baseModels', baseModel.id);
-  await setDoc(docRef, {
-    ...baseModel,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  logger.info('[saveBaseModel] Saving base model', { 
+    baseModelId: baseModel.id, 
+    orgId: baseModel.orgId,
+    file: 'base-model-builder.ts' 
   });
+  
+  if (isServer) {
+    // Server-side: Use Admin SDK (bypasses security rules)
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    await AdminFirestoreService.set('baseModels', baseModel.id, {
+      ...baseModel,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    logger.info('[saveBaseModel] Successfully saved to baseModels collection', { file: 'base-model-builder.ts' });
+  } else {
+    // Client-side: Use Client SDK (follows security rules)
+    const { db } = await import('@/lib/firebase/config');
+    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+    const docRef = doc(db, 'baseModels', baseModel.id);
+    await setDoc(docRef, {
+      ...baseModel,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    logger.info('[saveBaseModel] Successfully saved to baseModels collection (client)', { file: 'base-model-builder.ts' });
+  }
 }
 
 /**
  * Get Base Model for an organization
  */
 export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
-  const q = query(
-    collection(db, 'baseModels'),
-    where('orgId', '==', orgId)
-  );
+  logger.info('[getBaseModel] Looking for base model', { orgId, file: 'base-model-builder.ts' });
   
-  const snapshot = await getDocs(q);
-  
-  if (snapshot.empty) {
-    return null;
+  if (isServer) {
+    // Server-side: Use Admin SDK
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const { where } = await import('firebase/firestore');
+    const baseModels = await AdminFirestoreService.getAll('baseModels', [
+      where('orgId', '==', orgId)
+    ]);
+    
+    logger.info('[getBaseModel] Found base models', { count: baseModels.length, file: 'base-model-builder.ts' });
+    return baseModels.length > 0 ? (baseModels[0] as BaseModel) : null;
+  } else {
+    // Client-side: Use Client SDK
+    const { db } = await import('@/lib/firebase/config');
+    const { collection, query, where, getDocs } = await import('firebase/firestore');
+    const q = query(
+      collection(db, 'baseModels'),
+      where('orgId', '==', orgId)
+    );
+    
+    const snapshot = await getDocs(q);
+    logger.info('[getBaseModel] Client query found base models', { 
+      count: snapshot.docs.length,
+      file: 'base-model-builder.ts' 
+    });
+    
+    if (snapshot.empty) {
+      return null;
+    }
+    
+    const doc = snapshot.docs[0];
+    return doc.data() as BaseModel;
   }
-  
-  const doc = snapshot.docs[0];
-  return doc.data() as BaseModel;
 }
 
 /**
@@ -118,12 +156,12 @@ export async function updateBaseModel(
   baseModelId: string,
   updates: Partial<BaseModel>
 ): Promise<void> {
-  const docRef = doc(db, 'baseModels', baseModelId);
-  
   // Rebuild system prompt if config changed
   if (updates.businessContext || updates.agentPersona || updates.behaviorConfig) {
-    const currentDoc = await getDoc(docRef);
-    const current = currentDoc.data() as BaseModel;
+    const current = await getBaseModel(orgId);
+    if (!current) {
+      throw new Error('Base model not found');
+    }
     
     updates.systemPrompt = buildSystemPrompt({
       businessContext: updates.businessContext || current.businessContext,
@@ -132,10 +170,23 @@ export async function updateBaseModel(
     });
   }
   
-  await updateDoc(docRef, {
-    ...updates,
-    updatedAt: serverTimestamp(),
-  });
+  if (isServer) {
+    // Server-side: Use Admin SDK
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    await AdminFirestoreService.update('baseModels', baseModelId, {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+  } else {
+    // Client-side: Use Client SDK
+    const { db } = await import('@/lib/firebase/config');
+    const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+    const docRef = doc(db, 'baseModels', baseModelId);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp(),
+    });
+  }
 }
 
 /**
@@ -146,26 +197,52 @@ export async function addTrainingScenario(
   scenarioId: string,
   score: number
 ): Promise<void> {
-  const docRef = doc(db, 'baseModels', baseModelId);
-  const docSnap = await getDoc(docRef);
-  
-  if (!docSnap.exists()) {
-    throw new Error('Base model not found');
+  if (isServer) {
+    // Server-side: Use Admin SDK
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    const current = await AdminFirestoreService.get('baseModels', baseModelId);
+    
+    if (!current) {
+      throw new Error('Base model not found');
+    }
+    
+    const scenarios = [...(current.trainingScenarios || []), scenarioId];
+    
+    // Calculate new average training score
+    const totalScore = (current.trainingScore || 0) * (current.trainingScenarios?.length || 0) + score;
+    const newScore = totalScore / scenarios.length;
+    
+    await AdminFirestoreService.update('baseModels', baseModelId, {
+      trainingScenarios: scenarios,
+      trainingScore: newScore,
+      status: newScore >= 80 ? 'ready' : 'training',
+      updatedAt: new Date().toISOString(),
+    });
+  } else {
+    // Client-side: Use Client SDK
+    const { db } = await import('@/lib/firebase/config');
+    const { doc, getDoc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+    const docRef = doc(db, 'baseModels', baseModelId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error('Base model not found');
+    }
+    
+    const current = docSnap.data() as BaseModel;
+    const scenarios = [...current.trainingScenarios, scenarioId];
+    
+    // Calculate new average training score
+    const totalScore = current.trainingScore * current.trainingScenarios.length + score;
+    const newScore = totalScore / scenarios.length;
+    
+    await updateDoc(docRef, {
+      trainingScenarios: scenarios,
+      trainingScore: newScore,
+      status: newScore >= 80 ? 'ready' : 'training',
+      updatedAt: serverTimestamp(),
+    });
   }
-  
-  const current = docSnap.data() as BaseModel;
-  const scenarios = [...current.trainingScenarios, scenarioId];
-  
-  // Calculate new average training score
-  const totalScore = current.trainingScore * current.trainingScenarios.length + score;
-  const newScore = totalScore / scenarios.length;
-  
-  await updateDoc(docRef, {
-    trainingScenarios: scenarios,
-    trainingScore: newScore,
-    status: newScore >= 80 ? 'ready' : 'training', // Ready at 80%+
-    updatedAt: serverTimestamp(),
-  });
 }
 
 /**

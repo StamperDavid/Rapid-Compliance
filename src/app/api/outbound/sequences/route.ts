@@ -9,13 +9,22 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { OutboundSequence } from '@/types/outbound-sequence';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
- * GET /api/outbound/sequences?orgId=xxx
- * List all sequences for an organization
+ * GET /api/outbound/sequences?orgId=xxx&page=1&limit=50
+ * List sequences for an organization with pagination
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/sequences');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -23,6 +32,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
+    const pageSize = parseInt(searchParams.get('limit') || '50');
+    const cursor = searchParams.get('cursor'); // For pagination
 
     if (!orgId) {
       return NextResponse.json(
@@ -31,26 +42,30 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check feature access
-    const featureCheck = await requireFeature(request, orgId, 'emailSequences');
-    if (featureCheck) return featureCheck;
+    // NEW PRICING MODEL: All features available to all active subscriptions
+    // Feature check no longer needed - everyone gets email sequences!
+    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
+    // if (featureCheck) return featureCheck;
 
-    // Get all sequences
-    const sequences = await FirestoreService.getAll(
+    // Get sequences with pagination
+    const { orderBy } = await import('firebase/firestore');
+    const result = await FirestoreService.getAllPaginated(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/sequences`,
-      []
+      [orderBy('createdAt', 'desc')],
+      Math.min(pageSize, 100) // Max 100 per page
     );
 
     return NextResponse.json({
       success: true,
-      sequences,
+      sequences: result.data,
+      pagination: {
+        hasMore: result.hasMore,
+        pageSize: result.data.length,
+      },
     });
   } catch (error: any) {
-    console.error('[Sequences API] Error listing sequences:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to list sequences' },
-      { status: 500 }
-    );
+    logger.error('Error listing sequences', error, { route: '/api/outbound/sequences' });
+    return errors.database('Failed to list sequences', error);
   }
 }
 
@@ -69,29 +84,21 @@ export async function POST(request: NextRequest) {
     const { orgId, name, description, steps, autoEnroll = false } = body;
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID is required');
     }
 
     if (!name) {
-      return NextResponse.json(
-        { success: false, error: 'Sequence name is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Sequence name is required');
     }
 
     if (!steps || !Array.isArray(steps) || steps.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'At least one step is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('At least one step is required');
     }
 
-    // Check feature access
-    const featureCheck = await requireFeature(request, orgId, 'emailSequences');
-    if (featureCheck) return featureCheck;
+    // NEW PRICING MODEL: All features available to all active subscriptions
+    // Feature check no longer needed - everyone gets email sequences!
+    // const featureCheck = await requireFeature(request, orgId, 'emailSequences');
+    // if (featureCheck) return featureCheck;
 
     // Create sequence
     const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -167,11 +174,8 @@ export async function POST(request: NextRequest) {
       sequence,
     });
   } catch (error: any) {
-    console.error('[Sequences API] Error creating sequence:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create sequence' },
-      { status: 500 }
-    );
+    logger.error('Error creating sequence', error, { route: '/api/outbound/sequences' });
+    return errors.database('Failed to create sequence', error);
   }
 }
 

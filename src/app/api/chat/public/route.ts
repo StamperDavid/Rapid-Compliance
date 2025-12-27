@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+
+// Force Node.js runtime (required for Firebase Admin SDK)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * Public Chat API
@@ -21,25 +27,45 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!customerId || !orgId || !message) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Missing required fields: customerId, orgId, message' 
-        },
-        { status: 400 }
-      );
+      return errors.badRequest('Missing required fields: customerId, orgId, message');
     }
 
     // Validate message length
     if (message.length > 2000) {
-      return NextResponse.json(
-        { success: false, error: 'Message too long. Maximum 2000 characters.' },
-        { status: 400 }
-      );
+      return errors.badRequest('Message too long. Maximum 2000 characters.');
     }
 
-    // Verify organization exists and has chat enabled
-    const organization = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+    // Note: The 'platform-admin' organization is for the landing page demo
+    // It uses the trained golden master from /admin/sales-agent/training
+    // and spawns ephemeral agents the same way as regular organizations
+
+    // Verify organization exists and has chat enabled (prefer Admin SDK, fallback to client SDK)
+    let organization: any = null;
+    let chatConfig: any = null;
+    try {
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const orgSnap = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc(orgId).get();
+        if (orgSnap.exists) {
+          organization = { id: orgSnap.id, ...orgSnap.data() };
+        }
+        const chatSnap = await adminDb
+          .collection(COLLECTIONS.ORGANIZATIONS)
+          .doc(orgId)
+          .collection('settings')
+          .doc('chatWidget')
+          .get();
+        if (chatSnap.exists) {
+          chatConfig = chatSnap.data();
+        }
+      }
+    } catch (e) {
+      // Ignore and fallback
+    }
+
+    if (!organization) {
+      organization = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+    }
     if (!organization) {
       return NextResponse.json(
         { success: false, error: 'Invalid organization' },
@@ -47,11 +73,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if chat widget is enabled for this org
-    const chatConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
-      'chatWidget'
-    );
+    if (!chatConfig) {
+      chatConfig = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/settings`,
+        'chatWidget'
+      );
+    }
 
     // Default to enabled if no config exists
     if (chatConfig && chatConfig.enabled === false) {
@@ -80,13 +107,32 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Get agent configuration
-    const agentConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
-      'default'
-    );
+    // Get agent configuration (prefer Admin SDK)
+    let agentConfig: any = null;
+    try {
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const cfgSnap = await adminDb
+          .collection(COLLECTIONS.ORGANIZATIONS)
+          .doc(orgId)
+          .collection('agentConfig')
+          .doc('default')
+          .get();
+        if (cfgSnap.exists) {
+          agentConfig = cfgSnap.data();
+        }
+      }
+    } catch (e) {
+      // Ignore and fallback
+    }
+    if (!agentConfig) {
+      agentConfig = await FirestoreService.get(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
+        'default'
+      );
+    }
     
-    const selectedModel = (agentConfig as any)?.selectedModel || 'gpt-4-turbo';
+    const selectedModel = (agentConfig as any)?.selectedModel || 'openrouter/anthropic/claude-3.5-sonnet';
     const modelConfig = (agentConfig as any)?.modelConfig || {
       temperature: 0.7,
       maxTokens: 2048,
@@ -116,7 +162,7 @@ export async function POST(request: NextRequest) {
       const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
-      console.warn('RAG enhancement failed, using base prompt:', error);
+      logger.warn('RAG enhancement failed, using base prompt', { route: '/api/chat/public', error });
     }
 
     // Generate response using AI
@@ -155,7 +201,7 @@ export async function POST(request: NextRequest) {
         false
       );
     } catch (error) {
-      console.warn('Failed to track chat message:', error);
+      logger.warn('Failed to track chat message', { route: '/api/chat/public', error });
       // Don't fail the request if analytics tracking fails
     }
 
@@ -167,7 +213,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('[Public Chat Error]', error);
+    logger.error('Public chat error', error, { route: '/api/chat/public' });
     
     // Handle API key issues
     if (error?.message?.includes('API key')) {

@@ -4,7 +4,8 @@
  * REAL IMPLEMENTATION with provider integration
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface EmailOptions {
   to: string | string[];
@@ -379,7 +380,7 @@ function addTrackingPixel(
         },
         false
       ).catch((error) => {
-        console.error('Failed to store tracking mapping:', error);
+        logger.error('Failed to store tracking mapping:', error, { file: 'email-service.ts' });
       });
     });
   }

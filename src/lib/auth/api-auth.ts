@@ -4,7 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 // Firebase Admin SDK (optional - only if configured)
 let adminAuth: any = null;
@@ -50,7 +51,7 @@ async function initializeAdminAuth() {
     adminInitialized = true;
     return adminAuth;
   } catch (error) {
-    console.error('Failed to initialize Firebase Admin:', error);
+    logger.error('Failed to initialize Firebase Admin:', error, { file: 'api-auth.ts' });
     adminInitialized = true; // Mark as initialized to prevent retries
     return null;
   }
@@ -83,7 +84,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
     if (!auth) {
       // In development, if admin SDK is not configured, allow requests
       if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️ Firebase Admin not configured. Skipping token verification in development.');
+        logger.warn('⚠️ Firebase Admin not configured. Skipping token verification in development.', { file: 'api-auth.ts' });
         return null; // Will be handled by requireAuth
       }
       return null;
@@ -102,7 +103,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
       role: userProfile?.role,
     };
   } catch (error) {
-    console.error('Token verification failed:', error);
+    logger.error('Token verification failed:', error, { file: 'api-auth.ts' });
     return null;
   }
 }
@@ -118,7 +119,7 @@ export async function requireAuth(
 
   // In development, allow bypass if Firebase Admin is not configured
   if (!user && process.env.NODE_ENV === 'development') {
-    console.warn('⚠️ Development mode: Allowing unauthenticated request');
+    logger.warn('⚠️ Development mode: Allowing unauthenticated request', { file: 'api-auth.ts' });
     return {
       user: {
         uid: 'dev-user',
@@ -195,15 +196,16 @@ export async function requireOrganization(
   const { user } = authResult;
 
   // If organizationId is provided, verify user belongs to it
-  if (organizationId && user.organizationId !== organizationId) {
+  if (organizationId && user.organizationId && user.organizationId !== organizationId) {
     return NextResponse.json(
       { success: false, error: 'Access denied to this organization' },
       { status: 403 }
     );
   }
 
-  // If no organizationId provided, user must have one
-  if (!user.organizationId) {
+  // For onboarding, allow users without organizationId if they're admin/owner
+  // They're likely setting up their first organization
+  if (!user.organizationId && !['admin', 'owner', 'super_admin'].includes(user.role || '')) {
     return NextResponse.json(
       { success: false, error: 'User must belong to an organization' },
       { status: 403 }

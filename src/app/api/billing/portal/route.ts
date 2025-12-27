@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createBillingPortalSession } from '@/lib/billing/stripe-service';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +26,7 @@ export async function POST(request: NextRequest) {
 
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied to this organization' },
-        { status: 403 }
-      );
+      return errors.forbidden('Access denied to this organization');
     }
 
     // Get organization's Stripe customer ID
@@ -35,10 +34,7 @@ export async function POST(request: NextRequest) {
     const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
 
     if (!org?.stripeCustomerId) {
-      return NextResponse.json(
-        { success: false, error: 'No billing account found. Please set up a subscription first.' },
-        { status: 400 }
-      );
+      return errors.badRequest('No billing account found. Please set up a subscription first.');
     }
 
     // Create billing portal session
@@ -54,13 +50,16 @@ export async function POST(request: NextRequest) {
       url: session.url,
     });
   } catch (error: any) {
-    console.error('Error creating billing portal session:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create billing portal session' },
-      { status: 500 }
-    );
+    logger.error('Error creating billing portal session', error, { route: '/api/billing/portal' });
+    return errors.externalService('Stripe', error);
   }
 }
+
+
+
+
+
+
 
 
 

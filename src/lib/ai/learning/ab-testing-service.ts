@@ -3,7 +3,8 @@
  * Compares fine-tuned models against base models to measure improvement
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface ABTest {
   id: string;
@@ -115,7 +116,7 @@ export async function createABTest(params: {
     }
   );
   
-  console.log(`[A/B Testing] Created test ${testId}: ${controlModel} vs ${treatmentModel}`);
+  logger.info('A/B Testing Created test testId}: controlModel} vs treatmentModel}', { file: 'ab-testing-service.ts' });
   
   return test;
 }
@@ -320,7 +321,11 @@ export async function evaluateABTest(
     }
   );
   
-  console.log(`[A/B Testing] Test ${testId} evaluated:`, results);
+  logger.info(`[A/B Testing] Test ${testId} evaluated`, { 
+    testId, 
+    results,
+    file: 'ab-testing-service.ts' 
+  });
   
   return results;
 }
@@ -399,7 +404,7 @@ export async function completeABTestAndDeploy(
       }
     );
     
-    console.log(`[A/B Testing] Deployed fine-tuned model: ${winningModel}`);
+    logger.info('A/B Testing Deployed fine-tuned model: winningModel}', { file: 'ab-testing-service.ts' });
     
     return {
       deployed: true,
@@ -470,6 +475,12 @@ function calculateStatisticalSignificance(
   
   return Math.min(z / 1.96 * 95, 100);
 }
+
+
+
+
+
+
 
 
 

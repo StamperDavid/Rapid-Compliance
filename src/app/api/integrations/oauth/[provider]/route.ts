@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { organizationIdSchema } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * OAuth Integration Routes
@@ -78,7 +79,7 @@ export async function GET(
     // Redirect to OAuth provider
     return NextResponse.redirect(authUrl);
   } catch (error: any) {
-    console.error('OAuth initiation error:', error);
+    logger.error('OAuth initiation error', error, { route: '/api/integrations/oauth' });
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to initiate OAuth' },
       { status: 500 }

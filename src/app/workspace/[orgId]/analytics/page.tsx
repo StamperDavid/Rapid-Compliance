@@ -3,27 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AnalyticsDashboard() {
   const params = useParams();
   const orgId = params.orgId as string;
+  const { theme } = useOrgTheme();
   
-  const [theme, setTheme] = useState<any>(null);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
-    
     loadAnalytics();
   }, [selectedPeriod]);
 
@@ -45,7 +37,7 @@ export default function AnalyticsDashboard() {
         workflows: workflows.success ? workflows.analytics : null,
       });
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      logger.error('Failed to load analytics:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -55,11 +47,8 @@ export default function AnalyticsDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: '#999', fontSize: '1rem' }}>Loading analytics...</div>
-        </div>
+      <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+        <div style={{ color: '#999', fontSize: '1rem' }}>Loading analytics...</div>
       </div>
     );
   }
@@ -82,10 +71,7 @@ export default function AnalyticsDashboard() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-      
-      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+      <div style={{ padding: '2rem', overflowY: 'auto' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -297,9 +283,14 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
+
+
+
+
+
+
 
 
 

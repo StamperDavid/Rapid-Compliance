@@ -3,6 +3,8 @@
  * Handles "Add to Home Screen" functionality
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -44,7 +46,7 @@ export async function showInstallPrompt(): Promise<boolean> {
     
     return false;
   } catch (error) {
-    console.error('Error showing install prompt:', error);
+    logger.error('Error showing install prompt:', error, { file: 'install-prompt.ts' });
     return false;
   }
 }
@@ -74,6 +76,12 @@ export function isAppInstalled(): boolean {
 export function isInstallPromptAvailable(): boolean {
   return deferredPrompt !== null;
 }
+
+
+
+
+
+
 
 
 

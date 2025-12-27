@@ -4,7 +4,8 @@
  */
 
 import type { ChatRequest } from '@/types/ai-models';
-import { sendChatRequest } from '../model-provider';
+import { sendChatRequest } from '../model-provider'
+import { logger } from '@/lib/logger/logger';;
 
 export interface ExtractedEntity {
   type: 'person' | 'company' | 'product' | 'email' | 'phone' | 'date' | 'money' | 'location' | 'custom';
@@ -87,7 +88,7 @@ Be precise and only extract entities you're confident about.`,
     
     return [];
   } catch (error: any) {
-    console.error('[Entity Extractor] Error:', error);
+    logger.error('[Entity Extractor] Error:', error, { file: 'entity-extractor.ts' });
     return [];
   }
 }
@@ -234,7 +235,7 @@ export async function extractIntent(
       subIntents: [],
     };
   } catch (error: any) {
-    console.error('[Intent Extractor] Error:', error);
+    logger.error('[Intent Extractor] Error:', error, { file: 'entity-extractor.ts' });
     return {
       primary: 'general_chat',
       confidence: 50,
@@ -283,10 +284,16 @@ export async function extractPainPointsAndObjections(
     
     return { painPoints: [], objections: [] };
   } catch (error: any) {
-    console.error('[Pain Points Extractor] Error:', error);
+    logger.error('[Pain Points Extractor] Error:', error, { file: 'entity-extractor.ts' });
     return { painPoints: [], objections: [] };
   }
 }
+
+
+
+
+
+
 
 
 

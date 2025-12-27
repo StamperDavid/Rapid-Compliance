@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api/admin-auth';
+import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * POST /api/admin/verify
@@ -9,6 +11,12 @@ import { createErrorResponse, createSuccessResponse } from '@/lib/api/admin-auth
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/verify');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Get the auth token from the request headers
     const authHeader = request.headers.get('Authorization');
     
@@ -27,7 +35,7 @@ export async function POST(request: NextRequest) {
     try {
       decodedToken = await adminAuth.verifyIdToken(token);
     } catch (tokenError: any) {
-      console.error('Token verification failed:', tokenError.code);
+      logger.warn('Token verification failed', { route: '/api/admin/verify', code: tokenError.code });
       return createErrorResponse(
         tokenError.code === 'auth/id-token-expired' 
           ? 'Token expired - please re-authenticate'
@@ -50,14 +58,14 @@ export async function POST(request: NextRequest) {
     // Check for admin roles
     const adminRoles = ['super_admin', 'admin'];
     if (!adminRoles.includes(userData.role)) {
-      console.warn(`Non-admin login attempt by user ${userId} with role ${userData.role}`);
+      logger.warn('Non-admin login attempt', { route: '/api/admin/verify', userId, role: userData.role });
       return createErrorResponse(
         'Admin access required. Please contact your platform administrator.',
         403
       );
     }
     
-    console.log(`✅ Admin verified: ${userData.email} (${userData.role})`);
+    logger.info('Admin verified', { route: '/api/admin/verify', email: userData.email, role: userData.role });
     
     return createSuccessResponse({
       uid: userId,
@@ -69,10 +77,16 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Admin verify error:', error);
+    logger.error('Admin verify error', error, { route: '/api/admin/verify' });
     return createErrorResponse('Verification failed', 500);
   }
 }
+
+
+
+
+
+
 
 
 

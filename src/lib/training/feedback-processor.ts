@@ -3,7 +3,8 @@
  * Analyzes training sessions and generates improvement suggestions
  */
 
-import { generateText } from '@/lib/ai/gemini-service';
+import { generateText } from '@/lib/ai/gemini-service'
+import { logger } from '@/lib/logger/logger';;
 import type {
   TrainingSession,
   TrainingAnalysis,
@@ -17,7 +18,7 @@ import type {
 export async function analyzeTrainingSession(
   session: TrainingSession
 ): Promise<TrainingAnalysis> {
-  console.log(`[Feedback Processor] Analyzing session ${session.id}`);
+  logger.info('Feedback Processor Analyzing session session.id}', { file: 'feedback-processor.ts' });
   
   // Build analysis prompt
   const prompt = buildAnalysisPrompt(session);
@@ -28,7 +29,7 @@ export async function analyzeTrainingSession(
   // Parse the response
   const analysis = parseAnalysisResponse(response.text, session);
   
-  console.log(`[Feedback Processor] Analysis complete. Found ${analysis.suggestions.length} improvement suggestions`);
+  logger.info('Feedback Processor Analysis complete. Found analysis.suggestions.length} improvement suggestions', { file: 'feedback-processor.ts' });
   
   return analysis;
 }
@@ -136,7 +137,7 @@ function parseAnalysisResponse(
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('[Feedback Processor] Failed to parse analysis:', error);
+    logger.error('[Feedback Processor] Failed to parse analysis:', error, { file: 'feedback-processor.ts' });
     
     // Return fallback analysis based on score
     return generateFallbackAnalysis(session);
@@ -254,6 +255,12 @@ export function getTopSuggestions(
     })
     .slice(0, count);
 }
+
+
+
+
+
+
 
 
 

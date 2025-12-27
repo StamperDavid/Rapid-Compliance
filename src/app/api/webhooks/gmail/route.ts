@@ -8,13 +8,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getEmail, parseEmailHeaders, getEmailBody } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail } from '@/lib/outbound/reply-handler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (higher limit for webhooks)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/webhooks/gmail');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Gmail sends push notifications as JSON
     const body = await request.json();
     
-    console.log('[Gmail Webhook] Received notification:', body);
+    logger.info('Gmail webhook received', { route: '/api/webhooks/gmail', notification: body });
 
     // Decode the message
     const message = body.message;
@@ -26,12 +35,12 @@ export async function POST(request: NextRequest) {
     
     const { emailAddress, historyId } = data;
     
-    console.log('[Gmail Webhook] New email for:', emailAddress, 'History ID:', historyId);
+    logger.info('Gmail webhook processing', { route: '/api/webhooks/gmail', emailAddress, historyId });
 
     // Find user/org for this email address
     const integration = await findIntegrationByEmail(emailAddress);
     if (!integration) {
-      console.log('[Gmail Webhook] No integration found for:', emailAddress);
+      logger.debug('No integration found', { route: '/api/webhooks/gmail', emailAddress });
       return NextResponse.json({ success: true });
     }
 
@@ -72,11 +81,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('[Gmail Webhook] Error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('Gmail webhook error', error, { route: '/api/webhooks/gmail' });
+    return errors.internal('Internal error', error);
   }
 }
 
@@ -101,7 +107,7 @@ async function findIntegrationByEmail(email: string): Promise<any | null> {
     // Find matching email
     return integrations.find((int: any) => int.email === email) || null;
   } catch (error) {
-    console.error('[Gmail Webhook] Error finding integration:', error);
+    logger.error('Error finding integration', error, { route: '/api/webhooks/gmail' });
     return null;
   }
 }
@@ -121,13 +127,13 @@ async function processNewEmail(
     const headers = parseEmailHeaders(email);
     const body = getEmailBody(email);
 
-    console.log('[Gmail Webhook] Processing email:', headers.subject);
+    logger.info('Processing Gmail email', { route: '/api/webhooks/gmail', subject: headers.subject });
 
     // Check if this is a reply to our outbound email
     const isReply = headers.inReplyTo || headers.references;
     
     if (!isReply) {
-      console.log('[Gmail Webhook] Not a reply, skipping AI processing');
+      logger.debug('Not a reply, skipping AI processing', { route: '/api/webhooks/gmail' });
       return;
     }
 
@@ -142,7 +148,7 @@ async function processNewEmail(
       receivedAt: headers.date,
     });
 
-    console.log('[Gmail Webhook] Reply classified as:', classification.intent);
+    logger.info('Reply classified', { route: '/api/webhooks/gmail', intent: classification.intent });
 
     // Handle based on classification
     switch (classification.suggestedAction) {
@@ -158,26 +164,45 @@ async function processNewEmail(
               headers.messageId,
               email.threadId
             );
-            console.log('[Gmail Webhook] Auto-sent reply');
+            logger.info('Auto-sent reply', { route: '/api/webhooks/gmail' });
           }
         } else {
           // Save for human review
           await saveForReview(organizationId, email, classification);
-          console.log('[Gmail Webhook] Saved for human review');
+          logger.info('Saved for human review', { route: '/api/webhooks/gmail' });
         }
         break;
 
       case 'book_meeting':
         // Trigger meeting scheduler
-        console.log('[Gmail Webhook] Triggering meeting scheduler');
+        logger.info('Triggering meeting scheduler', { route: '/api/webhooks/gmail' });
         // TODO: Implement auto-meeting booking
         await saveForReview(organizationId, email, classification);
         break;
 
       case 'unenroll':
         // Remove from sequences
-        console.log('[Gmail Webhook] Unenrolling prospect');
-        // TODO: Implement unenroll logic
+        logger.info('Unenrolling prospect', { route: '/api/webhooks/gmail' });
+        await unenrollProspectFromSequences(
+          organizationId, 
+          headers.from, 
+          classification.intent === 'unsubscribe' ? 'unsubscribed' : 'replied'
+        );
+        await saveForReview(organizationId, email, classification);
+        break;
+      
+      case 'mark_as_converted':
+        // Mark prospect as converted
+        logger.info('Marking prospect as converted', { route: '/api/webhooks/gmail' });
+        await unenrollProspectFromSequences(organizationId, headers.from, 'converted');
+        await saveForReview(organizationId, email, classification);
+        break;
+      
+      case 'pause_sequence':
+        // Pause but don't remove from sequence
+        logger.info('Pausing sequences for prospect', { route: '/api/webhooks/gmail' });
+        await pauseProspectSequences(organizationId, headers.from);
+        await saveForReview(organizationId, email, classification);
         break;
 
       default:
@@ -185,7 +210,110 @@ async function processNewEmail(
         await saveForReview(organizationId, email, classification);
     }
   } catch (error) {
-    console.error('[Gmail Webhook] Error processing email:', error);
+    logger.error('Error processing Gmail email', error, { route: '/api/webhooks/gmail' });
+  }
+}
+
+/**
+ * Unenroll prospect from all active sequences
+ */
+async function unenrollProspectFromSequences(
+  organizationId: string,
+  prospectEmail: string,
+  reason: 'manual' | 'replied' | 'converted' | 'unsubscribed' | 'bounced'
+): Promise<void> {
+  try {
+    // Find prospect by email
+    const { where } = await import('firebase/firestore');
+    const prospects = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      [where('email', '==', prospectEmail)]
+    );
+
+    if (prospects.length === 0) {
+      logger.debug('No prospect found for email', { route: '/api/webhooks/gmail', email: prospectEmail });
+      return;
+    }
+
+    const prospectId = prospects[0].id;
+
+    // Find all active enrollments for this prospect
+    const enrollments = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+      [
+        where('prospectId', '==', prospectId),
+        where('status', '==', 'active'),
+      ]
+    );
+
+    // Unenroll from each sequence
+    const { SequenceEngine } = await import('@/lib/outbound/sequence-engine');
+    for (const enrollment of enrollments) {
+      await SequenceEngine['unenrollProspect'](
+        prospectId,
+        enrollment.sequenceId,
+        organizationId,
+        reason
+      );
+      logger.info('Unenrolled prospect from sequence', { 
+        route: '/api/webhooks/gmail', 
+        prospectId, 
+        sequenceId: enrollment.sequenceId,
+        reason 
+      });
+    }
+  } catch (error) {
+    logger.error('Error unenrolling prospect', error, { route: '/api/webhooks/gmail' });
+  }
+}
+
+/**
+ * Pause prospect sequences (don't unenroll)
+ */
+async function pauseProspectSequences(
+  organizationId: string,
+  prospectEmail: string
+): Promise<void> {
+  try {
+    const { where } = await import('firebase/firestore');
+    const prospects = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
+      [where('email', '==', prospectEmail)]
+    );
+
+    if (prospects.length === 0) return;
+
+    const prospectId = prospects[0].id;
+
+    // Find all active enrollments
+    const enrollments = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+      [
+        where('prospectId', '==', prospectId),
+        where('status', '==', 'active'),
+      ]
+    );
+
+    // Pause each enrollment
+    for (const enrollment of enrollments) {
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
+        enrollment.id,
+        {
+          ...enrollment,
+          status: 'paused',
+          pausedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        false
+      );
+      logger.info('Paused enrollment', { 
+        route: '/api/webhooks/gmail', 
+        enrollmentId: enrollment.id 
+      });
+    }
+  } catch (error) {
+    logger.error('Error pausing sequences', error, { route: '/api/webhooks/gmail' });
   }
 }
 

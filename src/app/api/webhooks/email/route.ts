@@ -8,22 +8,29 @@ import {
   handleEmailBounce,
   handleEmailOpen,
   handleEmailClick,
+  handleEmailReply,
 } from '@/lib/outbound/sequence-scheduler';
 import { parseSendGridWebhook, SendGridWebhookEvent } from '@/lib/email/sendgrid-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting (high limit for webhooks)
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/webhooks/email');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // SendGrid sends an array of events
     const body = await request.json();
     
     if (!Array.isArray(body)) {
-      return NextResponse.json(
-        { error: 'Invalid webhook format' },
-        { status: 400 }
-      );
+      return errors.badRequest('Invalid webhook format');
     }
 
-    console.log(`[Email Webhook] Received ${body.length} events from SendGrid`);
+    logger.info('Email webhook received', { route: '/api/webhooks/email', eventCount: body.length });
 
     // Parse SendGrid events
     const events = parseSendGridWebhook(body);
@@ -36,7 +43,7 @@ export async function POST(request: NextRequest) {
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
 
-    console.log(`[Email Webhook] Processed: ${successful} successful, ${failed} failed`);
+    logger.info('Email webhook processed', { route: '/api/webhooks/email', successful, failed });
 
     return NextResponse.json({
       success: true,
@@ -44,11 +51,8 @@ export async function POST(request: NextRequest) {
       failed,
     });
   } catch (error: any) {
-    console.error('[Email Webhook] Error processing webhook:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    logger.error('Email webhook processing error', error, { route: '/api/webhooks/email' });
+    return errors.internal('Failed to process webhook', error);
   }
 }
 
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest) {
  * Process a single SendGrid event
  */
 async function processEvent(event: SendGridWebhookEvent): Promise<void> {
-  console.log(`[Email Webhook] Processing ${event.event} event for ${event.email}`);
+  logger.debug('Processing email event', { route: '/api/webhooks/email', event: event.event, email: event.email });
 
   // Extract metadata from custom args
   const enrollmentId = event.enrollmentId;
@@ -64,38 +68,51 @@ async function processEvent(event: SendGridWebhookEvent): Promise<void> {
   const organizationId = event.organizationId;
 
   if (!enrollmentId || !stepId || !organizationId) {
-    console.warn('[Email Webhook] Event missing required metadata:', event);
+    logger.warn('Event missing metadata', { route: '/api/webhooks/email', event });
     return;
   }
 
   // Handle different event types
   switch (event.event) {
     case 'delivered':
-      console.log(`[Email Webhook] Email delivered to ${event.email}`);
-      // Could track delivery if needed
+      logger.info('Email delivered', { route: '/api/webhooks/email', email: event.email });
+      // Track delivery status if needed for analytics
       break;
 
     case 'open':
       await handleEmailOpen(enrollmentId, stepId, organizationId);
+      logger.info('Email opened', { route: '/api/webhooks/email', enrollmentId });
       break;
 
     case 'click':
       await handleEmailClick(enrollmentId, stepId, organizationId);
+      logger.info('Email clicked', { route: '/api/webhooks/email', enrollmentId, url: event.url });
       break;
 
     case 'bounce':
     case 'dropped':
-      await handleEmailBounce(enrollmentId, stepId, organizationId);
+      const bounceReason = event.reason || event.type || 'Unknown';
+      logger.warn('Email bounced', { 
+        route: '/api/webhooks/email', 
+        enrollmentId, 
+        reason: bounceReason,
+        bounceType: event.type 
+      });
+      await handleEmailBounce(enrollmentId, stepId, organizationId, bounceReason);
       break;
 
     case 'spamreport':
+      logger.warn('Spam report', { route: '/api/webhooks/email', enrollmentId, email: event.email });
+      await handleEmailBounce(enrollmentId, stepId, organizationId, 'spam_report');
+      break;
+
     case 'unsubscribe':
-      // Handle unsubscribe
-      await handleEmailBounce(enrollmentId, stepId, organizationId);
+      logger.info('Unsubscribe request', { route: '/api/webhooks/email', enrollmentId, email: event.email });
+      await handleEmailBounce(enrollmentId, stepId, organizationId, 'unsubscribed');
       break;
 
     default:
-      console.log(`[Email Webhook] Unhandled event type: ${event.event}`);
+      logger.debug('Unhandled event type', { route: '/api/webhooks/email', eventType: event.event });
   }
 }
 

@@ -4,20 +4,30 @@
  */
 
 import type { ModelName } from '@/types/ai-models';
+import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { logger } from '@/lib/logger/logger';;
 
 export interface OpenRouterConfig {
-  apiKey: string;
+  apiKey?: string;
   model?: ModelName;
   baseURL?: string;
+  organizationId?: string;
 }
 
 export class OpenRouterProvider {
-  private apiKey: string;
+  private apiKey: string | null = null;
   private baseURL: string;
+  private organizationId: string | null = null;
 
-  constructor(config: OpenRouterConfig) {
-    this.apiKey = config.apiKey;
-    this.baseURL = config.baseURL || 'https://openrouter.ai/api/v1';
+  constructor(configOrOrgId: OpenRouterConfig | string) {
+    if (typeof configOrOrgId === 'string') {
+      this.organizationId = configOrOrgId;
+      this.baseURL = 'https://openrouter.ai/api/v1';
+    } else {
+      this.apiKey = configOrOrgId.apiKey || null;
+      this.baseURL = configOrOrgId.baseURL || 'https://openrouter.ai/api/v1';
+      this.organizationId = configOrOrgId.organizationId || null;
+    }
   }
 
   /**
@@ -35,10 +45,11 @@ export class OpenRouterProvider {
       // Map internal model names to OpenRouter model names
       const openrouterModel = this.mapModelName(params.model);
 
+      const apiKey = await this.getApiKey();
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
           'X-Title': 'AI Sales Platform',
@@ -70,7 +81,7 @@ export class OpenRouterProvider {
         provider: 'openrouter',
       };
     } catch (error: any) {
-      console.error('[OpenRouterProvider] Error:', error);
+      logger.error('[OpenRouterProvider] Error:', error, { file: 'openrouter-provider.ts' });
       throw error;
     }
   }
@@ -103,6 +114,9 @@ export class OpenRouterProvider {
     };
 
     // Return mapped name or use as-is if not in map
+    if (typeof model === 'string' && model.startsWith('openrouter/')) {
+      return model.replace('openrouter/', '');
+    }
     return modelMap[model] || model;
   }
 
@@ -124,9 +138,23 @@ export class OpenRouterProvider {
       const data = await response.json();
       return data.data; // Array of available models
     } catch (error: any) {
-      console.error('[OpenRouterProvider] Error fetching models:', error);
+      logger.error('[OpenRouterProvider] Error fetching models:', error, { file: 'openrouter-provider.ts' });
       throw error;
     }
+  }
+
+  private async getApiKey(): Promise<string> {
+    if (this.apiKey) return this.apiKey;
+    if (!this.organizationId) {
+      throw new Error('OpenRouter API key not configured');
+    }
+    const keys = await apiKeyService.getKeys(this.organizationId);
+    const key = keys?.ai?.openrouterApiKey;
+    if (!key) {
+      throw new Error(`OpenRouter API key not configured for organization ${this.organizationId}. Please add it in the API Keys settings.`);
+    }
+    this.apiKey = key;
+    return key;
   }
 }
 
@@ -184,6 +212,12 @@ export function getAIProvider(keys: any, preferredModel?: ModelName) {
 
   return null;
 }
+
+
+
+
+
+
 
 
 

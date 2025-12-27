@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { logger } from '@/lib/logger/logger';;
 
 export default function AgentTrainingPage() {
   const { user } = useAuth();
@@ -11,7 +12,7 @@ export default function AgentTrainingPage() {
   const orgId = params.orgId as string;
   
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden'>('chat');
   
   // Base Model & Golden Master states
@@ -78,14 +79,6 @@ export default function AgentTrainingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
     loadTrainingData();
   }, [orgId]);
   
@@ -109,9 +102,9 @@ export default function AgentTrainingPage() {
       const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
       
       // Prefer OpenRouter (supports all models)
-      if (adminKeys?.ai?.openrouterApiKey) {
+      if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
-        const provider = new OpenRouterProvider({ apiKey: adminKeys.ai.openrouterApiKey });
+        const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
         
         // Convert history to OpenRouter format
         const messages = [
@@ -136,7 +129,7 @@ export default function AgentTrainingPage() {
       return await sendChatMessage(conversationHistory as any, systemPrompt);
       
     } catch (error: any) {
-      console.error('Error calling AI provider:', error);
+      logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
       throw new Error(error.message || 'Failed to get AI response');
     }
   };
@@ -148,7 +141,7 @@ export default function AgentTrainingPage() {
       // Check if Firebase is configured
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (!isFirebaseConfigured) {
-        console.warn('Firebase not configured, loading demo data');
+        logger.warn('Firebase not configured, loading demo data', { file: 'page.tsx' });
         loadDemoData();
         setLoading(false);
         return;
@@ -160,7 +153,7 @@ export default function AgentTrainingPage() {
       
       // If no model found and this is platform-admin, use demo data for dogfooding
       if (!model && orgId === 'platform-admin') {
-        console.log('No base model for platform-admin, loading demo data for dogfooding');
+        logger.info('No base model for platform-admin, loading demo data for dogfooding', { file: 'page.tsx' });
         loadDemoData();
         setLoading(false);
         return;
@@ -176,18 +169,24 @@ export default function AgentTrainingPage() {
       const active = await getActiveGoldenMaster(orgId);
       setActiveGoldenMaster(active);
       
-      // Load training materials
+      // Load training materials (paginated - first 100)
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const materialsSnap = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`
-      );
-      setUploadedMaterials(materialsSnap || []);
+      const { orderBy } = await import('firebase/firestore');
       
-      // Load training history
-      const historySnap = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`
+      const materialsResult = await FirestoreService.getAllPaginated(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`,
+        [orderBy('uploadedAt', 'desc')],
+        100 // Load more materials at once for training
       );
-      setTrainingHistory(historySnap || []);
+      setUploadedMaterials(materialsResult.data || []);
+      
+      // Load training history (paginated - first 50 sessions)
+      const historyResult = await FirestoreService.getAllPaginated(
+        `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
+        [orderBy('timestamp', 'desc')],
+        50
+      );
+      setTrainingHistory(historyResult.data || []);
       
       // Calculate overall score
       if (model?.trainingScore) {
@@ -195,7 +194,7 @@ export default function AgentTrainingPage() {
       }
       
     } catch (error) {
-      console.error('Error loading training data:', error);
+      logger.error('Error loading training data:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -258,7 +257,7 @@ export default function AgentTrainingPage() {
       await saveTrainingSession();
       
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error, { file: 'page.tsx' });
       alert('Failed to get agent response. Please try again.');
     } finally {
       setIsTyping(false);
@@ -325,7 +324,7 @@ export default function AgentTrainingPage() {
       setBetterResponse('');
       
     } catch (error) {
-      console.error('Error saving feedback:', error);
+      logger.error('Error saving feedback:', error, { file: 'page.tsx' });
       alert('Failed to save feedback. Please try again.');
     }
   };
@@ -346,7 +345,7 @@ export default function AgentTrainingPage() {
       }
       
     } catch (error) {
-      console.error('Error updating training score:', error);
+      logger.error('Error updating training score:', error, { file: 'page.tsx' });
     }
   };
 
@@ -443,7 +442,7 @@ export default function AgentTrainingPage() {
       setSessionNotes('');
       
     } catch (error) {
-      console.error('Error saving sales criteria scoring:', error);
+      logger.error('Error saving sales criteria scoring:', error, { file: 'page.tsx' });
       alert('Failed to save session score. Please try again.');
     }
   };
@@ -469,7 +468,7 @@ export default function AgentTrainingPage() {
       );
       
     } catch (error) {
-      console.error('Error saving training session:', error);
+      logger.error('Error saving training session:', error, { file: 'page.tsx' });
     }
   };
 
@@ -517,7 +516,7 @@ export default function AgentTrainingPage() {
       alert(`✅ ${files.length} training material(s) uploaded successfully!\n\nThe content has been processed and will be used to train your AI agent.`);
       
     } catch (error) {
-      console.error('Error uploading training materials:', error);
+      logger.error('Error uploading training materials:', error, { file: 'page.tsx' });
       alert('Failed to upload training materials. Please try again.');
     } finally {
       setIsUploading(false);
@@ -563,7 +562,7 @@ export default function AgentTrainingPage() {
       setActiveTab('golden');
       
     } catch (error) {
-      console.error('Error saving Golden Master:', error);
+      logger.error('Error saving Golden Master:', error, { file: 'page.tsx' });
       alert('Failed to save Golden Master. Please try again.');
     }
   };
@@ -744,7 +743,7 @@ export default function AgentTrainingPage() {
 
     setOverallScore(85.8);
     
-    console.log('✅ Demo data loaded for platform sales agent');
+    logger.info('✅ Demo data loaded for platform sales agent', { file: 'page.tsx' });
   };
 
   const handleDeployGoldenMaster = async (gmId: string, version: string) => {
@@ -762,7 +761,7 @@ export default function AgentTrainingPage() {
       await loadTrainingData();
       
     } catch (error) {
-      console.error('Error deploying Golden Master:', error);
+      logger.error('Error deploying Golden Master:', error, { file: 'page.tsx' });
       alert('Failed to deploy Golden Master. Please try again.');
     }
   };
@@ -772,21 +771,16 @@ export default function AgentTrainingPage() {
   // Loading state
   if (loading || firebaseConfigured === null) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <p style={{ color: '#999' }}>Loading training center...</p>
         </div>
-      </div>
     );
   }
 
   // Firebase not configured state
   if (firebaseConfigured === false) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <div style={{ textAlign: 'center', maxWidth: '700px', padding: '2rem' }}>
             <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔥</div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
@@ -844,15 +838,12 @@ export default function AgentTrainingPage() {
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
   if (!baseModel) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem' }}>
           <div style={{ textAlign: 'center', maxWidth: '600px', padding: '2rem' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
               No Base Model Found
@@ -876,7 +867,6 @@ export default function AgentTrainingPage() {
             </a>
           </div>
         </div>
-      </div>
     );
   }
 
@@ -892,9 +882,7 @@ export default function AgentTrainingPage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
       {/* Header */}
       <div style={{ padding: '2rem', borderBottom: '1px solid #1a1a1a' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>

@@ -3,6 +3,7 @@
  * Processes knowledge base and automatically indexes it
  */
 
+import { logger } from '@/lib/logger/logger';
 import { processKnowledgeBase, KnowledgeProcessorOptions } from './knowledge-processor';
 import { indexKnowledgeBase } from './vector-search';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
@@ -33,12 +34,18 @@ export async function processAndIndexKnowledgeBase(
   try {
     await indexKnowledgeBase(options.organizationId);
   } catch (error) {
-    console.warn('Failed to index knowledge base:', error);
+    logger.warn('Failed to index knowledge base', { error, file: 'knowledge-processor-enhanced.ts' });
     // Continue even if indexing fails
   }
   
   return knowledgeBase;
 }
+
+
+
+
+
+
 
 
 

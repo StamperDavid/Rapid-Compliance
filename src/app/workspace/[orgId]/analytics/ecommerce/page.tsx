@@ -3,25 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar'
+import { logger } from '@/lib/logger/logger';;
 
 export default function EcommerceAnalyticsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
   
-  const [theme, setTheme] = useState<any>(null);
+  const { theme } = useOrgTheme();
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      try {
-        setTheme(JSON.parse(savedTheme));
-      } catch (error) {
-        console.error('Failed to load theme:', error);
-      }
-    }
     loadAnalytics();
   }, []);
 
@@ -34,7 +28,7 @@ export default function EcommerceAnalyticsPage() {
         setAnalytics(data.analytics);
       }
     } catch (error) {
-      console.error('Failed to load analytics:', error);
+      logger.error('Failed to load analytics:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

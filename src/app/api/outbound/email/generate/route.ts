@@ -9,9 +9,15 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeatureWithLimit, incrementFeatureUsage } from '@/lib/subscription/middleware';
 import { researchProspect, ProspectData } from '@/lib/outbound/prospect-research';
 import { generateColdEmail, validateEmail, EmailTemplate, EmailTone } from '@/lib/outbound/email-writer';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/email/generate');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -31,22 +37,17 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'Organization ID is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID is required');
     }
 
     if (!prospect || !prospect.name || !prospect.company) {
-      return NextResponse.json(
-        { success: false, error: 'Prospect name and company are required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Prospect name and company are required');
     }
 
-    // Check feature access and usage limits
-    const gateCheck = await requireFeatureWithLimit(request, orgId, 'aiEmailWriter', 1);
-    if (gateCheck) return gateCheck;
+    // NEW PRICING MODEL: All features available, no usage limits
+    // Feature/usage check no longer needed - unlimited AI email generation!
+    // const gateCheck = await requireFeatureWithLimit(request, orgId, 'aiEmailWriter', 1);
+    // if (gateCheck) return gateCheck;
 
     const prospectData: ProspectData = {
       name: prospect.name,
@@ -61,9 +62,9 @@ export async function POST(request: NextRequest) {
     if (!skipResearch) {
       try {
         research = await researchProspect(prospectData);
-        console.log(`[Email API] Research completed for ${prospect.company}`);
+        logger.info('Prospect research completed', { route: '/api/outbound/email/generate', company: prospect.company });
       } catch (error) {
-        console.warn('[Email API] Research failed, continuing without it:', error);
+        logger.warn('Prospect research failed, continuing without it', { route: '/api/outbound/email/generate', error });
         // Continue without research - won't fail the email generation
       }
     }
@@ -83,14 +84,14 @@ export async function POST(request: NextRequest) {
     // Validate email
     const validation = validateEmail(generatedEmail);
     if (!validation.valid) {
-      console.warn('[Email API] Generated email failed validation:', validation.errors);
+      logger.warn('Generated email failed validation', { route: '/api/outbound/email/generate', errors: validation.errors });
       // Still return it but flag the issues
     }
 
     // Increment usage counter (only on successful generation)
     await incrementFeatureUsage(orgId, 'aiEmailWriter', 1);
 
-    console.log(`[Email API] Email generated in ${generationTime}ms for ${prospect.name}`);
+    logger.info('Email generated successfully', { route: '/api/outbound/email/generate', prospect: prospect.name, generationTime });
 
     return NextResponse.json({
       success: true,
@@ -118,17 +119,16 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[Email API] Error generating email:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || 'Failed to generate email',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      },
-      { status: 500 }
-    );
+    logger.error('Email generation error', error, { route: '/api/outbound/email/generate' });
+    return errors.externalService('AI email generation', error);
   }
 }
+
+
+
+
+
+
 
 
 

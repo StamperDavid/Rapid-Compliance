@@ -1,19 +1,27 @@
 /**
- * Feature Gate Service
- * Enforces subscription limits and feature access control
+ * Subscription Service - Volume-Based Model
+ * In the new pricing model, ALL features are available to ALL tiers
+ * The only limit is record capacity (storage), not feature access
  */
 
 import { 
   OrganizationSubscription, 
   SubscriptionPlan,
+  SubscriptionTier,
   PLAN_LIMITS,
-  PLAN_PRICING 
+  PLAN_PRICING,
+  VOLUME_TIERS,
+  TIER_PRICING,
+  getTierForRecordCount,
+  isWithinTierCapacity
 } from '@/types/subscription';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { logger } from '@/lib/logger/logger';;
 
 export class FeatureGate {
   /**
-   * Check if organization has access to a specific outbound feature
+   * NEW: All features are available to all tiers
+   * This method now always returns true (no gating)
    */
   static async hasFeature(
     orgId: string,
@@ -22,22 +30,72 @@ export class FeatureGate {
     try {
       const subscription = await this.getSubscription(orgId);
       
-      // Check if subscription is active
-      if (subscription.status !== 'active' && !subscription.isTrialing) {
-        return false;
+      // Only check if subscription is active or trialing
+      // If yes, ALL features are available
+      if (subscription.status === 'active' || subscription.isTrialing) {
+        return true; // ✨ Everyone gets everything!
       }
       
-      const featureConfig = subscription.outboundFeatures[feature];
-      
-      // Feature must exist and be enabled
-      // Handle both object with enabled property and boolean values
-      if (typeof featureConfig === 'boolean') {
-        return featureConfig;
-      }
-      return (featureConfig as any)?.enabled === true;
-    } catch (error) {
-      console.error('[FeatureGate] Error checking feature access:', error);
+      // If subscription is past_due, canceled, or paused, block access
       return false;
+    } catch (error) {
+      logger.error('[FeatureGate] Error checking feature access:', error, { file: 'feature-gate.ts' });
+      return false;
+    }
+  }
+  
+  /**
+   * NEW: Check record capacity (the only limit in volume-based pricing)
+   */
+  static async checkRecordCapacity(
+    orgId: string,
+    additionalRecords: number = 0
+  ): Promise<{
+    allowed: boolean;
+    currentCount: number;
+    newTotal: number;
+    capacity: number;
+    tier: SubscriptionTier;
+    needsUpgrade: boolean;
+    requiredTier?: SubscriptionTier;
+  }> {
+    try {
+      const subscription = await this.getSubscription(orgId);
+      const currentCount = subscription.recordCount || 0;
+      const newTotal = currentCount + additionalRecords;
+      
+      // Determine current tier
+      const currentTier = subscription.tier || getTierForRecordCount(currentCount);
+      const capacity = VOLUME_TIERS[currentTier].recordMax;
+      
+      // Check if within capacity
+      const allowed = newTotal <= capacity;
+      
+      // If exceeding, determine required tier
+      let requiredTier: SubscriptionTier | undefined;
+      if (!allowed) {
+        requiredTier = getTierForRecordCount(newTotal);
+      }
+      
+      return {
+        allowed,
+        currentCount,
+        newTotal,
+        capacity,
+        tier: currentTier,
+        needsUpgrade: !allowed,
+        requiredTier,
+      };
+    } catch (error) {
+      logger.error('[FeatureGate] Error checking record capacity:', error, { file: 'feature-gate.ts' });
+      return {
+        allowed: false,
+        currentCount: 0,
+        newTotal: additionalRecords,
+        capacity: 0,
+        tier: 'tier1',
+        needsUpgrade: false,
+      };
     }
   }
 
@@ -107,7 +165,7 @@ export class FeatureGate {
       
       return { allowed, remaining, limit, used };
     } catch (error) {
-      console.error('[FeatureGate] Error checking usage limit:', error);
+      logger.error('[FeatureGate] Error checking usage limit:', error, { file: 'feature-gate.ts' });
       return { allowed: false, remaining: 0, limit: 0, used: 0 };
     }
   }
@@ -155,7 +213,7 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
     } catch (error) {
-      console.error('[FeatureGate] Error incrementing usage:', error);
+      logger.error('[FeatureGate] Error incrementing usage:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -215,9 +273,9 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Reset monthly limits for org: ${orgId}`);
+      logger.info('FeatureGate Reset monthly limits for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      console.error('[FeatureGate] Error resetting monthly limits:', error);
+      logger.error('[FeatureGate] Error resetting monthly limits:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -239,7 +297,7 @@ export class FeatureGate {
       
       return sub as OrganizationSubscription;
     } catch (error) {
-      console.error('[FeatureGate] Error getting subscription:', error);
+      logger.error('[FeatureGate] Error getting subscription:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -259,42 +317,54 @@ export class FeatureGate {
         false
       );
     } catch (error) {
-      console.error('[FeatureGate] Error saving subscription:', error);
+      logger.error('[FeatureGate] Error saving subscription:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
 
   /**
-   * Create default subscription for new organization
+   * NEW: Create default subscription with volume-based tier
    */
   static async createDefaultSubscription(
     orgId: string,
-    plan: SubscriptionPlan = 'professional' // Start with trial of professional plan
+    tier: SubscriptionTier = 'tier1' // Start with Tier 1 trial
   ): Promise<OrganizationSubscription> {
     const now = new Date();
     const trialEnd = new Date(now.getTime() + (14 * 24 * 60 * 60 * 1000)); // 14 days trial
     const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1); // End of month
     
-    const planLimits = PLAN_LIMITS[plan];
-    const pricing = PLAN_PRICING[plan];
+    const tierDetails = VOLUME_TIERS[tier];
+    const pricing = TIER_PRICING[tier];
     
     const subscription: OrganizationSubscription = {
       organizationId: orgId,
-      plan,
+      tier, // NEW: Volume-based tier
+      plan: undefined, // DEPRECATED: No longer used
       billingCycle: 'monthly',
       status: 'trial',
       trialEndsAt: trialEnd.toISOString(),
       isTrialing: true,
+      trialRequiresPayment: true, // NEW: Credit card required for trial
       
+      // NEW: Record capacity tracking
+      recordCount: 0,
+      recordCapacity: tierDetails.recordMax,
+      recordCountLastUpdated: now.toISOString(),
+      
+      // NEW: All features enabled
+      allFeaturesEnabled: true,
+      
+      // DEPRECATED: Feature gating fields (kept for backward compatibility)
       coreFeatures: {
         aiChatAgent: true,
         crm: true,
         ecommerce: true,
         workflows: true,
-        whiteLabel: plan !== 'starter',
+        whiteLabel: true, // Everyone gets white-label now
       },
       
-      outboundFeatures: planLimits as any,
+      // DEPRECATED: No longer gating outbound features
+      outboundFeatures: undefined,
       
       addOns: [],
       
@@ -338,7 +408,7 @@ export class FeatureGate {
     
     await this.saveSubscription(orgId, subscription);
     
-    console.log(`[FeatureGate] Created default ${plan} subscription for org: ${orgId}`);
+    logger.info('FeatureGate Created default plan} subscription for org: orgId}', { file: 'feature-gate.ts' });
     
     return subscription;
   }
@@ -380,11 +450,11 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Updated subscription from ${oldPlan} to ${newPlan} for org: ${orgId}`);
+      logger.info('FeatureGate Updated subscription from oldPlan} to newPlan} for org: orgId}', { file: 'feature-gate.ts' });
       
       return subscription;
     } catch (error) {
-      console.error('[FeatureGate] Error updating plan:', error);
+      logger.error('[FeatureGate] Error updating plan:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -419,9 +489,9 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Toggled ${feature} to ${enabled} for org: ${orgId}`);
+      logger.info('FeatureGate Toggled feature} to enabled} for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      console.error('[FeatureGate] Error toggling feature:', error);
+      logger.error('[FeatureGate] Error toggling feature:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -466,9 +536,9 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
       
-      console.log(`[FeatureGate] Added add-on ${addOnId} for org: ${orgId}`);
+      logger.info('FeatureGate Added add-on addOnId} for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      console.error('[FeatureGate] Error adding add-on:', error);
+      logger.error('[FeatureGate] Error adding add-on:', error, { file: 'feature-gate.ts' });
       throw error;
     }
   }

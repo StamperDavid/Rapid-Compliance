@@ -304,18 +304,311 @@ export interface GoldenMaster {
   changesSummary?: string; // What changed from previous version
 }
 
+/**
+ * Onboarding Data - Comprehensive business context collected during onboarding
+ * Expanded to 20-25 steps including sales methodology
+ */
 export interface OnboardingData {
-  // All 15 steps of data from onboarding wizard
+  // ===== BUSINESS BASICS (Step 1-3) =====
+  businessName: string;
+  industry: string;
+  website?: string;
+  
+  // ===== VALUE PROPOSITION (Step 4-5) =====
+  problemSolved: string;
+  uniqueValue: string;
+  targetCustomer: string;
+  
+  // ===== PRODUCTS & SERVICES (Step 6) =====
+  topProducts: string; // Description of main offerings
+  
+  // ===== PRICING (Step 7) =====
+  priceRange?: string;
+  discountPolicy?: string;
+  
+  // ===== SALES PROCESS (Step 8) =====
+  typicalSalesFlow?: string;
+  
+  // ===== DISCOVERY (Step 9) =====
+  discoveryQuestions?: string;
+  
+  // ===== OBJECTIONS (Step 10) =====
+  commonObjections?: string;
+  priceObjections?: string;
+  
+  // ===== POLICIES (Step 11-12) =====
+  returnPolicy?: string;
+  warrantyTerms?: string;
+  satisfactionGuarantee?: string;
+  
+  // ===== COMPLIANCE (Step 13) =====
+  requiredDisclosures?: string;
+  prohibitedTopics?: string;
+  
+  // ===== COMPETITORS (Step 14) =====
+  competitors?: string[];
+  competitiveAdvantages?: string;
+  
+  // ===== KNOWLEDGE BASE (Step 15) =====
+  websiteUrls?: string[];
+  faqUrl?: string;
+  
+  // ===== AGENT IDENTITY (Step 16) =====
+  agentName?: string;
+  communicationStyle?: string; // 'professional', 'friendly', 'consultative', etc.
+  greetingMessage?: string;
+  closingMessage?: string;
+  personalityTraits?: string[];
+  
+  // ===== BEHAVIOR (Step 17) =====
+  closingStyle?: number; // 1-10 aggressiveness
+  discoveryDepth?: number; // 1-7 questions before recommendation
+  responseLength?: 'concise' | 'balanced' | 'detailed';
+  proactivityLevel?: number; // 1-10
+  maxDiscount?: number; // Max discount agent can offer
+  idleTimeoutMinutes?: number; // Organization-level setting
+  
+  // ===== ESCALATION (Step 18) =====
+  escalationRules?: string[];
+  
+  // ===== NEW: OBJECTION HANDLING STRATEGIES (Step 19) =====
+  objectionHandling?: {
+    priceObjectionStrategy?: string;
+    competitorObjectionStrategy?: string;
+    timingObjectionStrategy?: string;
+    authorityObjectionStrategy?: string;
+    needObjectionStrategy?: string;
+  };
+  
+  // ===== NEW: CUSTOMER SENTIMENT ANALYSIS (Step 20) =====
+  customerSentimentHandling?: {
+    angryCustomerApproach?: string;
+    confusedCustomerApproach?: string;
+    readyToBuySignals?: string[];
+    disengagementSignals?: string[];
+    frustratedCustomerApproach?: string;
+  };
+  
+  // ===== NEW: DISCOVERY QUESTION FRAMEWORKS (Step 21) =====
+  discoveryFrameworks?: {
+    budgetQualificationQuestions?: string[];
+    timelineQuestions?: string[];
+    authorityQuestions?: string[];
+    needIdentificationQuestions?: string[];
+    painPointQuestions?: string[];
+  };
+  
+  // ===== NEW: CLOSING TECHNIQUES (Step 22) =====
+  closingTechniques?: {
+    assumptiveCloseConditions?: string[];
+    urgencyCreationTactics?: string[];
+    trialCloseTriggers?: string[];
+    softCloseApproaches?: string[];
+  };
+  
+  // ===== NEW: RULES & RESTRICTIONS (Step 23) =====
+  agentRules?: {
+    prohibitedBehaviors?: string[]; // "No sports talk", "No political opinions", etc.
+    behavioralBoundaries?: string[];
+    mustAlwaysMention?: string[]; // Things agent should always bring up
+    neverMention?: string[]; // Things to avoid
+  };
+  
+  // ===== NEW: TRAINING METRICS SELECTION (Step 24) =====
+  selectedTrainingMetrics?: string[]; // IDs of metrics client wants to focus on
+  
+  // ===== NEW: SALES MATERIALS UPLOAD (Step 25) =====
+  uploadedSalesMaterials?: {
+    id: string;
+    filename: string;
+    type: 'pdf' | 'document';
+    uploadedAt: string;
+    extractedMethodology?: SalesMethodology;
+  }[];
+  
+  // ===== METADATA =====
+  completedAt?: string;
+  completedBy?: string;
+  version?: string; // Onboarding form version
+  
+  // Allow additional properties from form data
   [key: string]: any;
 }
 
+/**
+ * Sales Methodology extracted from uploaded books/documents
+ * (NEPQ, SPIN Selling, Challenger Sale, etc.)
+ */
+export interface SalesMethodology {
+  methodologyName: string; // "NEPQ", "SPIN Selling", etc.
+  coreFramework: string; // Summary of the methodology
+  discoveryApproach: string; // How to conduct discovery
+  objectionHandlingPrinciples: string[];
+  closingPhilosophy: string;
+  keyQuestions: string[]; // Strategic questions from the methodology
+  dosList: string[]; // Best practices
+  dontsList: string[]; // Things to avoid
+  applicableScenarios: string[]; // When to use this methodology
+}
+
+/**
+ * Agent Persona - Comprehensive sales agent personality and capabilities
+ * Expanded to 50+ fields across sales methodology categories
+ */
 export interface AgentPersona {
+  // ===== BASIC IDENTITY =====
   name?: string;
-  tone: string;
+  tone: string; // 'professional', 'friendly', 'consultative', etc.
   greeting: string;
   closingMessage: string;
-  objectives: string[];
+  personalityTraits?: string[]; // ['empathetic', 'analytical', 'enthusiastic']
+  
+  // ===== CORE OBJECTIVES =====
+  objectives: string[]; // Primary sales goals
+  
+  // ===== ESCALATION =====
   escalationRules: string[];
+  escalationTriggers?: {
+    customerAngerLevel?: number; // 1-10, when to escalate
+    complexityThreshold?: string; // Types of questions to escalate
+    priceNegotiationLimit?: number; // Above this amount, escalate
+  };
+  
+  // ===== OBJECTION HANDLING STRATEGIES =====
+  objectionHandling?: {
+    priceObjectionStrategy?: string;
+    competitorObjectionStrategy?: string;
+    timingObjectionStrategy?: string;
+    authorityObjectionStrategy?: string;
+    needObjectionStrategy?: string;
+    
+    // Training adjustable fields
+    emphasizeOnPriceObjection?: 'roi' | 'features' | 'testimonials' | 'guarantee';
+    competitorComparisonApproach?: 'feature-based' | 'value-based' | 'complement-not-compete';
+  };
+  
+  // ===== CUSTOMER SENTIMENT ANALYSIS =====
+  sentimentHandling?: {
+    angryCustomerApproach?: string;
+    confusedCustomerApproach?: string;
+    readyToBuySignals?: string[]; // What to look for
+    disengagementSignals?: string[]; // Warning signs
+    frustratedCustomerApproach?: string;
+    
+    // Training adjustable fields
+    empathyLevel?: number; // 1-10, how empathetic to be
+    patienceLevel?: number; // 1-10, how patient with repeated questions
+    reassuranceFrequency?: 'low' | 'medium' | 'high';
+  };
+  
+  // ===== DISCOVERY QUESTION FRAMEWORKS =====
+  discoveryFrameworks?: {
+    budgetQualificationQuestions?: string[];
+    timelineQuestions?: string[];
+    authorityQuestions?: string[];
+    needIdentificationQuestions?: string[];
+    painPointQuestions?: string[];
+    
+    // Training adjustable fields
+    questionsBeforeRecommendation?: number; // How many discovery questions to ask
+    discoveryDepth?: 'surface' | 'moderate' | 'deep';
+    questioningStyle?: 'direct' | 'consultative' | 'socratic';
+  };
+  
+  // ===== CLOSING TECHNIQUES =====
+  closingTechniques?: {
+    assumptiveCloseConditions?: string[];
+    urgencyCreationTactics?: string[];
+    trialCloseTriggers?: string[];
+    softCloseApproaches?: string[];
+    
+    // Training adjustable fields
+    closingAggressiveness?: number; // 1-10
+    urgencyEmphasis?: 'none' | 'subtle' | 'moderate' | 'strong';
+    closeAttemptFrequency?: 'once' | 'multiple' | 'persistent';
+    closingLanguageStyle?: 'assumptive' | 'consultative' | 'direct';
+  };
+  
+  // ===== PRODUCT KNOWLEDGE & RECOMMENDATIONS =====
+  productKnowledge?: {
+    emphasisOnFeatures?: boolean;
+    emphasisOnBenefits?: boolean;
+    emphasisOnROI?: boolean;
+    technicalDepth?: 'basic' | 'intermediate' | 'expert';
+    
+    // Training adjustable fields
+    whenToRecommendProducts?: 'early' | 'after-discovery' | 'when-asked';
+    upsellThreshold?: number; // How confident before suggesting upgrades
+    crossSellEnabled?: boolean;
+  };
+  
+  // ===== COMMUNICATION STYLE =====
+  communicationStyle?: {
+    responseLength?: 'concise' | 'balanced' | 'detailed';
+    formalityLevel?: number; // 1-10
+    humorLevel?: 'none' | 'subtle' | 'moderate';
+    storytellingFrequency?: 'never' | 'occasional' | 'frequent';
+    technicalJargonUsage?: 'avoid' | 'when-appropriate' | 'freely';
+    
+    // Training adjustable fields
+    activeListeningSignals?: string[]; // Phrases that show listening
+    summaryFrequency?: 'never' | 'occasionally' | 'frequently';
+    clarificationThreshold?: number; // How often to ask for clarification
+  };
+  
+  // ===== VALUE COMMUNICATION =====
+  valuePresentation?: {
+    primaryValueDrivers?: string[]; // What to emphasize
+    roiCalculationApproach?: string;
+    testimonialUsage?: 'never' | 'when-relevant' | 'frequently';
+    caseStudyUsage?: 'never' | 'when-relevant' | 'frequently';
+    guaranteeEmphasis?: 'subtle' | 'moderate' | 'prominent';
+    
+    // Training adjustable fields
+    valuePropositionTiming?: 'early' | 'mid-conversation' | 'during-objections';
+  };
+  
+  // ===== COMPETITIVE POSITIONING =====
+  competitiveStrategy?: {
+    competitorMentionApproach?: 'acknowledge-redirect' | 'direct-comparison' | 'feature-focus';
+    differentiationEmphasis?: string[]; // What makes you different
+    competitorWeaknesses?: Record<string, string>; // Competitor name → their weakness
+    
+    // Training adjustable fields
+    competitiveStanceAggressiveness?: number; // 1-10
+  };
+  
+  // ===== PROACTIVE BEHAVIOR =====
+  proactiveBehavior?: {
+    proactivityLevel?: number; // 1-10
+    followUpSuggestionTiming?: 'immediate' | 'after-delay' | 'end-of-conversation';
+    resourceSharingFrequency?: 'never' | 'when-asked' | 'proactively';
+    nextStepSuggestions?: boolean; // Suggest next steps?
+  };
+  
+  // ===== RULES & BOUNDARIES =====
+  rules?: {
+    prohibitedBehaviors?: string[];
+    behavioralBoundaries?: string[];
+    mustAlwaysMention?: string[];
+    neverMention?: string[];
+    complianceRequirements?: string[];
+  };
+  
+  // ===== TRAINING-SPECIFIC METADATA =====
+  trainingAdjustments?: {
+    lastAdjustedAt?: string;
+    adjustmentHistory?: {
+      field: string;
+      oldValue: any;
+      newValue: any;
+      reason: string;
+      timestamp: string;
+    }[];
+  };
+  
+  // ===== APPLIED METHODOLOGIES =====
+  appliedMethodologies?: SalesMethodology[]; // From uploaded sales books
 }
 
 export interface KnowledgeBase {

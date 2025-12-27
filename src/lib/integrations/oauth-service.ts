@@ -17,6 +17,14 @@ export interface OAuthConfig {
   tokenUrl: string;
 }
 
+// Lightweight config map for tests and fallback defaults
+export const OAuthConfig: Record<string, Partial<OAuthConfig>> = {
+  google: { provider: 'google', authorizationUrl: 'https://accounts.google.com/o/oauth2/auth', tokenUrl: 'https://oauth2.googleapis.com/token', scopes: [] },
+  microsoft: { provider: 'microsoft', authorizationUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize', tokenUrl: 'https://login.microsoftonline.com/common/oauth2/v2.0/token', scopes: [] },
+  quickbooks: { provider: 'quickbooks', authorizationUrl: 'https://appcenter.intuit.com/connect/oauth2', tokenUrl: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', scopes: [] },
+  xero: { provider: 'xero', authorizationUrl: 'https://login.xero.com/identity/connect/authorize', tokenUrl: 'https://identity.xero.com/connect/token', scopes: [] },
+};
+
 export interface OAuthState {
   state: string;
   organizationId: string;

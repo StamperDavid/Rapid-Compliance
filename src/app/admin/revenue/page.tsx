@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import type { RevenueMetrics } from '@/types/subscription';
+import type { RevenueMetrics } from '@/types/subscription'
+import { logger } from '@/lib/logger/logger';;
 
 export default function RevenueAdminPage() {
   const [metrics, setMetrics] = useState<RevenueMetrics | null>(null);
@@ -43,7 +44,7 @@ export default function RevenueAdminPage() {
       
       setMetrics(metricsData);
     } catch (error) {
-      console.error('Failed to load metrics:', error);
+      logger.error('Failed to load metrics:', error, { file: 'page.tsx' });
       // Set empty metrics instead of null to show "No data" state
       setMetrics(null);
     } finally {

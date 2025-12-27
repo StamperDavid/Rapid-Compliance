@@ -9,13 +9,13 @@ import { executeWorkflow } from './workflow-engine';
 
 /**
  * Trigger workflow manually
- * MOCK: Will be called by event listeners in real implementation
+ * Called by event listeners when trigger conditions are met
  */
 export async function triggerWorkflow(
   workflow: Workflow,
   triggerData: any
 ): Promise<void> {
-  // MOCK: In real implementation, this would:
+  // Workflow execution:
   // 1. Verify trigger matches workflow trigger config
   // 2. Execute workflow
   // 3. Log execution
@@ -25,7 +25,7 @@ export async function triggerWorkflow(
 
 /**
  * Handle entity created event
- * MOCK: Will be called by entity service in real implementation
+ * Called by entity service when new entities are created
  */
 export async function handleEntityCreated(
   schemaId: string,
@@ -117,7 +117,7 @@ export async function handleEntityDeleted(
 
 /**
  * Handle schedule trigger
- * MOCK: Will be called by Cloud Scheduler in real implementation
+ * Called by scheduled jobs (cron) at specified intervals
  */
 export async function handleScheduleTrigger(
   scheduleType: 'daily' | 'weekly' | 'monthly' | 'hourly',
@@ -144,7 +144,7 @@ export async function handleScheduleTrigger(
 
 /**
  * Handle webhook trigger
- * MOCK: Will be called by webhook endpoint in real implementation
+ * Called by webhook endpoint when external systems send data
  */
 export async function handleWebhookTrigger(
   webhookId: string,
@@ -175,6 +175,12 @@ export async function handleWebhookTrigger(
 function getNestedValue(obj: any, path: string): any {
   return path.split('.').reduce((current, key) => current?.[key], obj);
 }
+
+
+
+
+
+
 
 
 

@@ -3,6 +3,9 @@ import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 const entityChangeSchema = z.object({
   organizationId: z.string(),
@@ -20,6 +23,9 @@ const entityChangeSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/workflows/triggers/entity');
+    if (rateLimitResponse) return rateLimitResponse;
+
     // Authentication
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
@@ -38,14 +44,7 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, workspaceId, schemaId, changeType, recordId, recordData } = validation.data;
@@ -73,11 +72,8 @@ export async function POST(request: NextRequest) {
       message: 'Entity change processed, workflows triggered',
     });
   } catch (error: any) {
-    console.error('Error handling entity change:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process entity change' },
-      { status: 500 }
-    );
+    logger.error('Error processing entity change', error, { route: '/api/workflows/triggers/entity' });
+    return errors.internal('Failed to process entity change', error);
   }
 }
 

@@ -5,7 +5,8 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, EntityTrigger } from '@/types/workflow';
-import { executeWorkflow } from '../workflow-engine';
+import { executeWorkflow } from '../workflow-engine'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Register Firestore trigger for workflow
@@ -38,7 +39,7 @@ export async function registerFirestoreTrigger(
     false
   );
   
-  console.log(`[Firestore Trigger] Registered trigger for workflow ${workflow.id}`);
+  logger.info('Firestore Trigger Registered trigger for workflow workflow.id}', { file: 'firestore-trigger.ts' });
 }
 
 /**
@@ -93,7 +94,7 @@ export async function handleEntityChange(
       
       await executeWorkflow(workflow as Workflow, triggerData);
     } catch (error) {
-      console.error(`[Firestore Trigger] Error executing workflow ${workflow.id}:`, error);
+      logger.error('[Firestore Trigger] Error executing workflow ${workflow.id}:', error, { file: 'firestore-trigger.ts' });
       // Continue with other workflows
     }
   }
@@ -112,8 +113,14 @@ export async function unregisterFirestoreTrigger(
     workflowId
   );
   
-  console.log(`[Firestore Trigger] Unregistered trigger for workflow ${workflowId}`);
+  logger.info('Firestore Trigger Unregistered trigger for workflow workflowId}', { file: 'firestore-trigger.ts' });
 }
+
+
+
+
+
+
 
 
 

@@ -5,11 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from './feature-gate';
-import { OrganizationSubscription } from '@/types/subscription';
+import { OrganizationSubscription } from '@/types/subscription'
+import { logger } from '@/lib/logger/logger';;
 
 /**
- * Require that organization has access to a specific feature
- * Returns error response if feature is not available
+ * NEW: All features are available to all active/trialing subscriptions
+ * This now only checks if subscription is active, not which features they have
  */
 export async function requireFeature(
   request: NextRequest,
@@ -22,14 +23,15 @@ export async function requireFeature(
     if (!hasAccess) {
       const subscription = await FeatureGate.getSubscription(orgId);
       
+      // In new model, if hasAccess is false, it means subscription is inactive
+      // NOT that they don't have the feature
       return NextResponse.json(
         { 
           success: false, 
-          error: `Feature '${feature}' is not available on your current plan`,
-          currentPlan: subscription.plan,
+          error: `Your subscription is ${subscription.status}. Please reactivate to access this feature.`,
+          subscriptionStatus: subscription.status,
           feature,
-          upgrade: true,
-          upgradeMessage: getUpgradeMessage(feature, subscription.plan),
+          reactivateRequired: true,
         },
         { status: 403 }
       );
@@ -37,7 +39,7 @@ export async function requireFeature(
     
     return null; // Feature is available, continue
   } catch (error: any) {
-    console.error('[Subscription Middleware] Error checking feature access:', error);
+    logger.error('[Subscription Middleware] Error checking feature access:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify feature access' },
       { status: 500 }
@@ -80,7 +82,7 @@ export async function requireLimit(
     
     return null; // Under limit, continue
   } catch (error: any) {
-    console.error('[Subscription Middleware] Error checking usage limit:', error);
+    logger.error('[Subscription Middleware] Error checking usage limit:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify usage limit' },
       { status: 500 }
@@ -121,7 +123,7 @@ export async function incrementFeatureUsage(
   try {
     await FeatureGate.incrementUsage(orgId, feature, amount);
   } catch (error) {
-    console.error('[Subscription Middleware] Error incrementing usage:', error);
+    logger.error('[Subscription Middleware] Error incrementing usage:', error, { file: 'middleware.ts' });
     // Don't throw - this is a non-critical operation
   }
 }
@@ -255,13 +257,19 @@ export async function withFeatureGate<T>(
       ...result,
     });
   } catch (error: any) {
-    console.error('[Feature Gate] Error in handler:', error);
+    logger.error('[Feature Gate] Error in handler:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: error.message || 'Operation failed' },
       { status: 500 }
     );
   }
 }
+
+
+
+
+
+
 
 
 

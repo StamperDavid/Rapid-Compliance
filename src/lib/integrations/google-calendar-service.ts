@@ -4,7 +4,8 @@
  */
 
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client } from 'google-auth-library'
+import { logger } from '@/lib/logger/logger';;
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -84,8 +85,25 @@ export async function getTokensFromCode(code: string): Promise<{
   refresh_token?: string;
   expiry_date?: number;
 }> {
+  // Verify environment variables are set
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    logger.error('[Google OAuth] Missing environment variables', new Error('[Google OAuth] Missing environment variables'), { file: 'google-calendar-service.ts' });
+    logger.error('Google Calendar credentials missing', new Error('Missing Google credentials'), {
+      clientId: GOOGLE_CLIENT_ID ? 'SET' : 'MISSING',
+      clientSecret: GOOGLE_CLIENT_SECRET ? 'SET' : 'MISSING',
+      file: 'google-calendar-service.ts'
+    });
+    throw new Error('Google OAuth credentials not configured');
+  }
+
   const oauth2Client = createOAuth2Client();
+  
+  logger.info('[Google OAuth] Exchanging code for tokens...', { file: 'google-calendar-service.ts' });
+  logger.info('[Google OAuth] Redirect URI', { redirectUri: GOOGLE_REDIRECT_URI, file: 'google-calendar-service.ts' });
+  
   const { tokens } = await oauth2Client.getToken(code);
+  
+  logger.info('[Google OAuth] Tokens received successfully', { file: 'google-calendar-service.ts' });
   
   return {
     access_token: tokens.access_token!,
@@ -298,6 +316,12 @@ export async function findAvailableSlots(
 
   return slots;
 }
+
+
+
+
+
+
 
 
 

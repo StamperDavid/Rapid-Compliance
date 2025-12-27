@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens } from '@/lib/integrations/oauth-service';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/integrations/oauth/callback/[provider] - OAuth callback handler
@@ -35,12 +36,18 @@ export async function GET(
       `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/workspace/*/settings/integrations?success=connected`
     );
   } catch (error: any) {
-    console.error('Error in OAuth callback:', error);
+    logger.error('OAuth callback error', error, { route: '/api/integrations/oauth/callback' });
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/workspace/*/settings/integrations?error=${encodeURIComponent(error.message || 'OAuth failed')}`
     );
   }
 }
+
+
+
+
+
+
 
 
 

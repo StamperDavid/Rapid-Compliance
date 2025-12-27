@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { recordEmailOpen } from '@/lib/email/email-service';
+import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * Email Tracking Pixel
@@ -12,6 +14,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { trackingId: string } }
 ) {
+  // Rate limiting (very high limit for tracking pixels)
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/email/track');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const trackingId = params.trackingId;
     
@@ -70,7 +78,7 @@ export async function GET(
       },
       false
     ).catch((error) => {
-      console.error('Error recording email open event:', error);
+      logger.error('Error recording email open', error, { route: '/api/email/track' });
       // Silently fail - don't break email tracking
     });
 

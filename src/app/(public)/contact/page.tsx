@@ -5,6 +5,7 @@ import PublicLayout from '@/components/PublicLayout';
 import PageRenderer from '@/components/PageRenderer';
 import { usePageContent } from '@/hooks/usePageContent';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
+import { logger } from '@/lib/logger/logger';
 
 function FallbackContent() {
   const { theme } = useWebsiteTheme();
@@ -13,7 +14,7 @@ function FallbackContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    logger.info('Contact form submitted', { email: formData.email, company: formData.company });
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 5000);
   };
@@ -110,3 +111,9 @@ export default function ContactPage() {
     </PublicLayout>
   );
 }
+
+
+
+
+
+

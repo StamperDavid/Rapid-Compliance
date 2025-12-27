@@ -5,7 +5,8 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, ScheduleTrigger } from '@/types/workflow';
-import { executeWorkflow } from '../workflow-engine';
+import { executeWorkflow } from '../workflow-engine'
+import { logger } from '@/lib/logger/logger';;
 
 /**
  * Register schedule trigger
@@ -37,7 +38,7 @@ export async function registerScheduleTrigger(
     false
   );
   
-  console.log(`[Schedule Trigger] Registered schedule for workflow ${workflow.id}`);
+  logger.info('Schedule Trigger Registered schedule for workflow workflow.id}', { file: 'schedule-trigger.ts' });
 }
 
 /**
@@ -144,7 +145,7 @@ export async function executeScheduledWorkflows(): Promise<void> {
             false
           );
         } catch (error) {
-          console.error(`[Schedule Trigger] Error executing workflow ${trigger.workflowId}:`, error);
+          logger.error('[Schedule Trigger] Error executing workflow ${trigger.workflowId}:', error, { file: 'schedule-trigger.ts' });
           // Continue with other workflows
         }
       }
@@ -165,8 +166,14 @@ export async function unregisterScheduleTrigger(
     workflowId
   );
   
-  console.log(`[Schedule Trigger] Unregistered schedule for workflow ${workflowId}`);
+  logger.info('Schedule Trigger Unregistered schedule for workflow workflowId}', { file: 'schedule-trigger.ts' });
 }
+
+
+
+
+
+
 
 
 

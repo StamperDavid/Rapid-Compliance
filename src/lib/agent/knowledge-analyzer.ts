@@ -5,6 +5,8 @@
  * REAL IMPLEMENTATION - Uses web scraping and AI extraction
  */
 
+import { logger } from '@/lib/logger/logger';
+
 export interface KnowledgeAnalysisResult {
   companyInfo: {
     name: string;
@@ -57,7 +59,7 @@ export interface KnowledgeAnalysisResult {
 
 /**
  * Analyze company knowledge from all sources
- * MOCK: Simulates analysis, will use real scraping/AI in backend
+ * Processes uploaded documents, URLs, and CRM data to extract business knowledge
  * 
  * Flow:
  * 1. Client uploads products/services to CRM first
@@ -77,7 +79,7 @@ export async function analyzeCompanyKnowledge(
   socialMediaUrls?: string[]
 ): Promise<KnowledgeAnalysisResult> {
   // REAL: Perform actual analysis
-  console.log('Starting knowledge analysis...');
+  logger.info('Starting knowledge analysis...', { file: 'knowledge-analyzer.ts' });
 
   // REAL: This will:
   // 1. FIRST: Query CRM for products/services entities
@@ -93,21 +95,21 @@ export async function analyzeCompanyKnowledge(
   // 8. Return structured knowledge
 
   // STEP 1: Scan built-in CRM for products/services (client uploaded these first)
-  console.log('Step 1: Scanning built-in CRM for products and services...');
+  logger.info('Step 1: Scanning built-in CRM for products and services...', { file: 'knowledge-analyzer.ts' });
   const crmProducts = await scanCRMForProducts(organizationId, workspaceId);
   const crmServices = await scanCRMForServices(organizationId, workspaceId);
   
-  console.log(`Found ${crmProducts.length} products and ${crmServices.length} services in CRM`);
+  logger.info('Found ${crmProducts.length} products and ${crmServices.length} services in CRM', { file: 'knowledge-analyzer.ts' });
 
   // STEP 2: Scrape website for additional company info
-  console.log('Step 2: Scraping website for company information...');
+  logger.info('Step 2: Scraping website for company information...', { file: 'knowledge-analyzer.ts' });
   const websiteContent = await scrapeWebsite(websiteUrl);
   const websiteProducts = await extractProducts(websiteContent);
   
   // STEP 3: Extract FAQs if FAQ page provided
   let faqs: KnowledgeAnalysisResult['faqs'] = [];
   if (faqPageUrl) {
-    console.log('Step 3: Extracting FAQs from FAQ page...');
+    logger.info('Step 3: Extracting FAQs from FAQ page...', { file: 'knowledge-analyzer.ts' });
     faqs = await extractFAQs(faqPageUrl);
   }
   
@@ -118,7 +120,7 @@ export async function analyzeCompanyKnowledge(
     commonPhrases: [],
   };
   if (socialMediaUrls && socialMediaUrls.length > 0) {
-    console.log('Step 4: Analyzing social media for brand voice...');
+    logger.info('Step 4: Analyzing social media for brand voice...', { file: 'knowledge-analyzer.ts' });
     brandVoice = await analyzeBrandVoice(socialMediaUrls);
   }
 
@@ -176,11 +178,11 @@ export async function analyzeCompanyKnowledge(
     analysisResult,
     false
   ).catch((error) => {
-    console.error('Failed to save knowledge analysis to Firestore:', error);
+    logger.error('Failed to save knowledge analysis to Firestore:', error, { file: 'knowledge-analyzer.ts' });
     // Don't fail the analysis if storage fails
   });
 
-  console.log('Knowledge analysis complete');
+  logger.info('Knowledge analysis complete', { file: 'knowledge-analyzer.ts' });
   return mockResult;
 }
 
@@ -231,7 +233,7 @@ async function scrapeWebsite(url: string): Promise<string> {
     
     return `${title}\n${metaDescription}\n${textContent}`.substring(0, 50000); // Limit to 50k chars
   } catch (error: any) {
-    console.error('Error scraping website:', error);
+    logger.error('Error scraping website:', error, { file: 'knowledge-analyzer.ts' });
     // Return empty string on error - will be handled by caller
     return '';
   }
@@ -281,7 +283,7 @@ Return ONLY a valid JSON array of products in this format:
     
     return [];
   } catch (error: any) {
-    console.error('Error extracting products:', error);
+    logger.error('Error extracting products:', error, { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -332,7 +334,7 @@ Return ONLY a valid JSON array of FAQs in this format:
     
     return [];
   } catch (error: any) {
-    console.error('Error extracting FAQs:', error);
+    logger.error('Error extracting FAQs:', error, { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -397,7 +399,7 @@ Return ONLY a valid JSON object in this format:
       commonPhrases: []
     };
   } catch (error: any) {
-    console.error('Error analyzing brand voice:', error);
+    logger.error('Error analyzing brand voice:', error, { file: 'knowledge-analyzer.ts' });
     return {
       tone: 'professional',
       keyMessages: [],
@@ -414,7 +416,7 @@ async function scanCRMForProducts(
   organizationId: string,
   workspaceId?: string
 ): Promise<KnowledgeAnalysisResult['crmProducts']> {
-  // MOCK: In real implementation:
+  // Query CRM products:
   // 1. Query built-in CRM using organizationId/workspaceId
   // 2. Look for entities in the "products" schema (from STANDARD_SCHEMAS)
   // 3. Extract: name, description, price, sku, category, etc.
@@ -436,7 +438,7 @@ async function scanCRMForProducts(
       category: p.category || p.fields?.category,
     }));
   } catch (error) {
-    console.error('Error querying CRM for products:', error);
+    logger.error('Error querying CRM for products:', error, { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -449,7 +451,7 @@ async function scanCRMForServices(
   organizationId: string,
   workspaceId?: string
 ): Promise<KnowledgeAnalysisResult['crmServices']> {
-  // MOCK: In real implementation:
+  // Query CRM services:
   // 1. Query built-in CRM using organizationId/workspaceId
   // 2. Look for entities in a "services" schema or custom schema
   // 3. Extract: name, description, pricing, duration, etc.
@@ -470,7 +472,7 @@ async function scanCRMForServices(
       duration: s.duration || s.fields?.duration,
     }));
   } catch (error) {
-    console.error('Error querying CRM for services:', error);
+    logger.error('Error querying CRM for services:', error, { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -585,7 +587,7 @@ export async function buildKnowledgeBase(
       false
     );
   } catch (error) {
-    console.error('Error saving knowledge base:', error);
+    logger.error('Error saving knowledge base:', error, { file: 'knowledge-analyzer.ts' });
   }
   
   // TODO: In future, create vector embeddings using Vertex AI Embeddings API

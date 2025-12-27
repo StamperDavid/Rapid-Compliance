@@ -4,7 +4,8 @@
  */
 
 import { NextRequest } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminDb, adminAuth } from '@/lib/firebase/admin'
+import { logger } from '@/lib/logger/logger';;
 
 export interface AdminUser {
   uid: string;
@@ -62,7 +63,10 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     try {
       decodedToken = await adminAuth.verifyIdToken(token);
     } catch (tokenError: any) {
-      console.error('Token verification failed:', tokenError.code);
+      logger.error('Token verification failed', tokenError, { 
+        code: tokenError.code,
+        file: 'admin-auth.ts' 
+      });
       return {
         success: false,
         error: tokenError.code === 'auth/id-token-expired' 
@@ -89,7 +93,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     
     // Check for super_admin role
     if (userData.role !== 'super_admin') {
-      console.warn(`Non-admin access attempt by user ${userId} with role ${userData.role}`);
+      logger.warn('Non-admin access attempt by user ${userId} with role ${userData.role}', { file: 'admin-auth.ts' });
       return {
         success: false,
         error: 'Super admin access required',
@@ -108,7 +112,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     };
     
   } catch (error: any) {
-    console.error('Admin auth error:', error);
+    logger.error('Admin auth error:', error, { file: 'admin-auth.ts' });
     return {
       success: false,
       error: 'Authentication failed',

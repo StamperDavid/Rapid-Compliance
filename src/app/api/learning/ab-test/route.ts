@@ -11,17 +11,20 @@ import {
   completeABTestAndDeploy 
 } from '@/lib/ai/learning/ab-testing-service';
 import { checkAndDeployWinner } from '@/lib/ai/learning/continuous-learning-engine';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/learning/ab-test');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     
     if (!organizationId) {
-      return NextResponse.json(
-        { error: 'Organization ID required' },
-        { status: 400 }
-      );
+      return errors.badRequest('Organization ID required');
     }
     
     // Get active A/B test
@@ -43,11 +46,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[A/B Test API] GET error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to get A/B test' },
-      { status: 500 }
-    );
+    logger.error('A/B test GET error', error, { route: '/api/learning/ab-test' });
+    return errors.database('Failed to get A/B test', error);
   }
 }
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       message: `A/B test started: ${controlModel} vs ${treatmentModel}`,
     });
   } catch (error: any) {
-    console.error('[A/B Test API] POST error:', error);
+    logger.error('A/B test creation error', error, { route: '/api/learning/ab-test' });
     return NextResponse.json(
       { error: error.message || 'Failed to create A/B test' },
       { status: 500 }
@@ -159,11 +159,8 @@ export async function PUT(request: NextRequest) {
       { status: 400 }
     );
   } catch (error: any) {
-    console.error('[A/B Test API] PUT error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to update A/B test' },
-      { status: 500 }
-    );
+    logger.error('A/B test PUT error', error, { route: '/api/learning/ab-test' });
+    return errors.database('Failed to update A/B test', error);
   }
 }
 

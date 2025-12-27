@@ -96,7 +96,7 @@ export default function AdminLayout({
           <NavSection title="System">
             <NavLink href="/admin/system/health" icon="🏥" tooltip="Monitor system health: database, storage, AI, email, SMS services status">System Health</NavLink>
             <NavLink href="/admin/system/api-keys" icon="🔑" tooltip="Manage YOUR platform API keys: Firebase, Stripe, Gemini, etc. (separate from client keys)">Platform API Keys</NavLink>
-            <NavLink href="/admin/system/flags" icon="🚩" tooltip="Enable/disable platform features for all organizations">Feature Flags</NavLink>
+            <NavLink href="/admin/system/flags" icon="🎚️" tooltip="Enable/disable platform features for all organizations">Feature Controls</NavLink>
             <NavLink href="/admin/system/logs" icon="📋" tooltip="View audit logs of all platform actions and changes">Audit Logs</NavLink>
             <NavLink href="/admin/system/settings" icon="⚙️" tooltip="Platform-wide settings: limits, maintenance mode, system parameters">Settings</NavLink>
           </NavSection>

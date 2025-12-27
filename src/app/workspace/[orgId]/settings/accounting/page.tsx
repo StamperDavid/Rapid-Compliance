@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth'
+import { logger } from '@/lib/logger/logger';;
 
 interface AccountingConfig {
   platform: 'quickbooks' | 'xero' | 'freshbooks' | 'wave' | 'sage' | 'none';
@@ -80,6 +83,8 @@ const PLATFORMS = [
 
 export default function AccountingPage() {
   const { user } = useAuth();
+  const params = useParams();
+  const orgId = params.orgId as string;
   const [config, setConfig] = useState<AccountingConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
@@ -99,7 +104,7 @@ export default function AccountingPage() {
           setConfig(configData as AccountingConfig);
         }
       } catch (error) {
-        console.error('Failed to load accounting config:', error);
+        logger.error('Failed to load accounting config:', error, { file: 'page.tsx' });
       }
     };
     
@@ -122,7 +127,7 @@ export default function AccountingPage() {
         false
       );
     } catch (error) {
-      console.error('Failed to save accounting config:', error);
+      logger.error('Failed to save accounting config:', error, { file: 'page.tsx' });
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }
@@ -162,7 +167,7 @@ export default function AccountingPage() {
       {/* Header */}
       <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '2rem' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
-          <Link href="/workspace/demo-org/settings" style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
+          <Link href={`/workspace/${orgId}/settings`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', display: 'inline-block', marginBottom: '0.5rem' }}>
             ← Back to Settings
           </Link>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#fff', margin: 0, marginBottom: '0.5rem' }}>Accounting Software Integration</h1>

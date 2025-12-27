@@ -3,6 +3,9 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { applyDiscountCode, removeDiscountCode } from '@/lib/ecommerce/cart-service';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 const discountSchema = z.object({
   sessionId: z.string(),
@@ -15,6 +18,9 @@ const discountSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/cart/discount');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -30,14 +36,7 @@ export async function POST(request: NextRequest) {
         message: e.message || 'Validation error',
       })) || [];
       
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Validation failed',
-          details: errorDetails,
-        },
-        { status: 400 }
-      );
+      return errors.validation('Validation failed', errorDetails);
     }
 
     const { sessionId, workspaceId, code } = validation.data;
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error applying discount:', error);
+    logger.error('Error applying discount', error, { route: '/api/ecommerce/cart/discount' });
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to apply discount code' },
       { status: 500 }
@@ -86,11 +85,8 @@ export async function DELETE(request: NextRequest) {
       cart,
     });
   } catch (error: any) {
-    console.error('Error removing discount:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to remove discount code' },
-      { status: 500 }
-    );
+    logger.error('Error removing discount', error, { route: '/api/ecommerce/cart/discount' });
+    return errors.database('Failed to remove discount', error);
   }
 }
 

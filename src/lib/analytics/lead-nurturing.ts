@@ -4,7 +4,8 @@
  */
 
 import { sendEmail } from '@/lib/email/email-service';
-import { calculateLeadScore, LeadScoringFactors } from './lead-scoring';
+import { calculateLeadScore, LeadScoringFactors } from './lead-scoring'
+import { logger } from '@/lib/logger/logger';;
 
 export interface LeadNurtureSequence {
   id: string;
@@ -192,7 +193,7 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
       updatedAt: fullSequence.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Failed to save nurture sequence to Firestore:', error);
+    logger.error('Failed to save nurture sequence to Firestore:', error, { file: 'lead-nurturing.ts' });
   }
 
   return fullSequence;
@@ -235,7 +236,7 @@ export async function enrollLeadInSequence(
   if (firstEmail) {
     // In production, would schedule email via job queue
     // For now, just mark as enrolled
-    console.log(`Lead ${leadId} enrolled in sequence ${sequenceId}, first email scheduled`);
+    logger.info('Lead ${leadId} enrolled in sequence ${sequenceId}, first email scheduled', { file: 'lead-nurturing.ts' });
   }
 
   // Update sequence stats
@@ -294,7 +295,7 @@ export async function enrichLead(
       enrichedAt: enrichment.enrichedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Failed to save lead enrichment to Firestore:', error);
+    logger.error('Failed to save lead enrichment to Firestore:', error, { file: 'lead-nurturing.ts' });
   }
 
   return enrichment;
@@ -323,7 +324,7 @@ export async function trackLeadActivity(activity: LeadActivity): Promise<void> {
       false
     );
   } catch (error) {
-    console.error('Failed to save lead activity to Firestore:', error);
+    logger.error('Failed to save lead activity to Firestore:', error, { file: 'lead-nurturing.ts' });
   }
 }
 
@@ -448,7 +449,7 @@ export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<
       false
     );
   } catch (error) {
-    console.error('Failed to save lead segment to Firestore:', error);
+    logger.error('Failed to save lead segment to Firestore:', error, { file: 'lead-nurturing.ts' });
     // Fallback to localStorage if Firestore fails (development only)
     if (typeof window !== 'undefined') {
       const segments = JSON.parse(localStorage.getItem('leadSegments') || '[]');

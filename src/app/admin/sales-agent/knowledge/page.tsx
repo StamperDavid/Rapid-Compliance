@@ -83,52 +83,103 @@ export default function KnowledgeBasePage() {
     setPricing([
       {
         id: '1',
-        plan: 'Starter',
-        price: 99,
+        plan: 'Tier 1',
+        price: 400,
         billingPeriod: 'month',
+        recordRange: '0-100 records',
         features: [
-          'Up to 1,000 CRM records',
-          '1 AI Agent',
-          '5 users',
-          'Email support',
-          'Basic workflows'
+          'All Features Included',
+          'AI Sales Agents (Unlimited)',
+          'Lead Scraper & Enrichment',
+          'Email Sequences (Unlimited)',
+          'Multi-Channel Outreach',
+          'Social Media AI',
+          'Full CRM Suite',
+          'Workflow Automation',
+          'API Access',
+          'White-Label Options'
         ],
-        idealFor: 'Small businesses just getting started',
+        idealFor: 'Perfect for getting started',
         enabled: true
       },
       {
         id: '2',
-        plan: 'Professional',
-        price: 299,
+        plan: 'Tier 2',
+        price: 650,
         billingPeriod: 'month',
+        recordRange: '101-250 records',
         features: [
-          'Up to 10,000 CRM records',
-          '3 AI Agents',
-          '25 users',
-          'Priority support',
-          'Advanced workflows',
-          'E-commerce features',
-          'Custom integrations'
+          'All Features Included',
+          'AI Sales Agents (Unlimited)',
+          'Lead Scraper & Enrichment',
+          'Email Sequences (Unlimited)',
+          'Multi-Channel Outreach',
+          'Social Media AI',
+          'Full CRM Suite',
+          'Workflow Automation',
+          'API Access',
+          'White-Label Options'
         ],
-        idealFor: 'Growing businesses with sales teams',
+        idealFor: 'Growing your pipeline',
         enabled: true,
         popular: true
       },
       {
         id: '3',
+        plan: 'Tier 3',
+        price: 1000,
+        billingPeriod: 'month',
+        recordRange: '251-500 records',
+        features: [
+          'All Features Included',
+          'AI Sales Agents (Unlimited)',
+          'Lead Scraper & Enrichment',
+          'Email Sequences (Unlimited)',
+          'Multi-Channel Outreach',
+          'Social Media AI',
+          'Full CRM Suite',
+          'Workflow Automation',
+          'API Access',
+          'White-Label Options'
+        ],
+        idealFor: 'Scaling your operations',
+        enabled: true
+      },
+      {
+        id: '4',
+        plan: 'Tier 4',
+        price: 1250,
+        billingPeriod: 'month',
+        recordRange: '501-1,000 records',
+        features: [
+          'All Features Included',
+          'AI Sales Agents (Unlimited)',
+          'Lead Scraper & Enrichment',
+          'Email Sequences (Unlimited)',
+          'Multi-Channel Outreach',
+          'Social Media AI',
+          'Full CRM Suite',
+          'Workflow Automation',
+          'API Access',
+          'White-Label Options'
+        ],
+        idealFor: 'Enterprise-level capacity',
+        enabled: true
+      },
+      {
+        id: '5',
         plan: 'Enterprise',
         price: 'Custom',
         billingPeriod: 'month',
+        recordRange: '1,000+ records',
         features: [
-          'Unlimited records',
-          'Unlimited AI Agents',
-          'Unlimited users',
-          'Dedicated support',
-          'Custom development',
-          'SLA guarantees',
-          'On-premise deployment option'
+          'All Features Included',
+          'Volume discounts available',
+          'Dedicated account manager',
+          'Custom SLA agreements',
+          'Priority support & training'
         ],
-        idealFor: 'Large organizations with complex needs',
+        idealFor: 'Large organizations with high volume',
         enabled: true
       }
     ]);
@@ -579,6 +630,13 @@ export default function KnowledgeBasePage() {
     </div>
   );
 }
+
+
+
+
+
+
+
 
 
 

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
  * GET /api/analytics/ecommerce - Get e-commerce analytics
@@ -10,15 +13,15 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/ecommerce');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
     const period = searchParams.get('period') || '30d';
 
     if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: 'orgId is required' },
-        { status: 400 }
-      );
+      return errors.badRequest('orgId is required');
     }
 
     // Calculate date range based on period
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
     try {
       allOrders = await FirestoreService.getAll(ordersPath, []);
     } catch (e) {
-      console.log('No orders collection yet');
+      logger.debug('No orders collection yet', { orgId });
     }
 
     // Filter by date
@@ -75,7 +78,7 @@ export async function GET(request: NextRequest) {
     try {
       allCarts = await FirestoreService.getAll(cartsPath, []);
     } catch (e) {
-      console.log('No carts collection yet');
+      logger.debug('No carts collection yet', { orgId });
     }
 
     const abandonedCarts = allCarts.filter(cart => {
@@ -177,10 +180,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error getting ecommerce analytics:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get ecommerce analytics' },
-      { status: 500 }
-    );
+    logger.error('Error getting ecommerce analytics', error, { route: '/api/analytics/ecommerce' });
+    return errors.database('Failed to get ecommerce analytics', error);
   }
 }
