@@ -410,6 +410,9 @@ export default function CustomDomainsPage() {
               domain={domain}
               onVerify={handleVerifyDomain}
               onRemove={handleRemoveDomain}
+              primaryColor={primaryColor}
+              bgColor={bgColor}
+              textColor={textColor}
             />
           ))}
         </div>
@@ -422,10 +425,16 @@ function DomainCard({
   domain,
   onVerify,
   onRemove,
+  primaryColor,
+  bgColor,
+  textColor,
 }: {
   domain: CustomDomain;
   onVerify: (id: string) => void;
   onRemove: (id: string) => void;
+  primaryColor: string;
+  bgColor: string;
+  textColor: string;
 }) {
   const [showDNS, setShowDNS] = useState(false);
 
