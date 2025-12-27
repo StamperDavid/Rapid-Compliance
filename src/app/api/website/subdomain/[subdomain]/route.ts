@@ -5,22 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin';
-
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = require('@/../serviceAccountKey.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (error) {
-    // Already initialized
-  }
-}
-
-const db = getFirestore();
+import { db } from '@/lib/firebase-admin';
 
 /**
  * GET /api/website/subdomain/[subdomain]

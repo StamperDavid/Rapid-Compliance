@@ -3,21 +3,8 @@
  * Publishes schema change events from API routes only
  */
 
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin';
+import { db, admin } from '@/lib/firebase-admin';
 import { SchemaChangeEvent } from '../schema-change-tracker';
-
-// Initialize admin SDK if needed
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = require('@/../serviceAccountKey.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (error) {
-    // Already initialized or missing service account
-  }
-}
 
 export class SchemaChangeEventPublisherServer {
   /**

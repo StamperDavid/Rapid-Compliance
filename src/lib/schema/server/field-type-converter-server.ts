@@ -3,21 +3,8 @@
  * For use in API routes only
  */
 
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin';
+import { db, admin } from '@/lib/firebase-admin';
 import { FieldType } from '@/types/schema';
-
-// Initialize admin SDK if needed
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = require('@/../serviceAccountKey.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin:', error);
-  }
-}
 
 export interface TypeConversionPreview {
   recordId: string;

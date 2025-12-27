@@ -3,22 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize admin SDK if needed
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = require('@/../serviceAccountKey.json');
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (error) {
-    // Already initialized or missing service account
-  }
-}
-
-const db = getFirestore();
+import { db, admin } from '@/lib/firebase-admin';
 
 function slugify(value: string) {
   return value

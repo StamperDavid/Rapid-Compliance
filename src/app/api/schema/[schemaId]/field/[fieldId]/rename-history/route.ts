@@ -6,16 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
-import { getFirestore } from 'firebase-admin/firestore';
-import admin from 'firebase-admin';
-
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  const serviceAccount = require('@/../serviceAccountKey.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-}
+import { db, admin } from '@/lib/firebase-admin';
 
 /**
  * GET /api/schema/[schemaId]/field/[fieldId]/rename-history

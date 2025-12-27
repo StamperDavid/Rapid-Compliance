@@ -19,8 +19,13 @@ if (!admin.apps.length) {
     } 
     // In development, use service account file
     else {
-      const serviceAccount = require('@/../serviceAccountKey.json');
-      credential = admin.credential.cert(serviceAccount);
+      try {
+        const serviceAccount = require('../../../serviceAccountKey.json');
+        credential = admin.credential.cert(serviceAccount);
+      } catch (error) {
+        console.error('[Firebase Admin] Could not load serviceAccountKey.json, using application default credentials');
+        credential = admin.credential.applicationDefault();
+      }
     }
 
     admin.initializeApp({
