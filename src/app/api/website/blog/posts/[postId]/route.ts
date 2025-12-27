@@ -1,0 +1,205 @@
+/**
+ * Individual Blog Post API
+ * Get, update, delete a specific blog post
+ * CRITICAL: Multi-tenant - scoped to organizationId
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/firebase-admin';
+import { BlogPost } from '@/types/website';
+
+/**
+ * GET /api/website/blog/posts/:postId
+ * Get a specific blog post
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { postId: string } }
+) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const organizationId = searchParams.get('organizationId');
+    const postId = params.postId;
+
+    // CRITICAL: Validate organizationId
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'organizationId required' },
+        { status: 400 }
+      );
+    }
+
+    // Get post document
+    const postRef = db
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('website')
+      .doc('config')
+      .collection('blog-posts')
+      .doc(postId);
+
+    const postDoc = await postRef.get();
+
+    if (!postDoc.exists) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
+    const postData = postDoc.data() as BlogPost;
+
+    // CRITICAL: Double-check organizationId matches
+    if (postData.organizationId !== organizationId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({
+      post: {
+        id: postDoc.id,
+        ...postData,
+      },
+    });
+  } catch (error) {
+    console.error('[Blog Post API] GET error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch post' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/website/blog/posts/:postId
+ * Update a blog post
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { postId: string } }
+) {
+  try {
+    const body = await request.json();
+    const { organizationId, post } = body;
+    const postId = params.postId;
+
+    // CRITICAL: Validate organizationId
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'organizationId required' },
+        { status: 400 }
+      );
+    }
+
+    // Get existing post
+    const postRef = db
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('website')
+      .doc('config')
+      .collection('blog-posts')
+      .doc(postId);
+
+    const existingPost = await postRef.get();
+
+    if (!existingPost.exists) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
+    const existingData = existingPost.data();
+
+    // CRITICAL: Verify post belongs to this org
+    if (existingData?.organizationId !== organizationId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    // Update post
+    const updatedPost: BlogPost = {
+      ...existingData,
+      ...post,
+      id: postId,
+      organizationId, // CRITICAL: Ensure org doesn't change
+      updatedAt: new Date().toISOString(),
+    } as BlogPost;
+
+    await postRef.set(updatedPost);
+
+    return NextResponse.json({ post: updatedPost });
+  } catch (error) {
+    console.error('[Blog Post API] PUT error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update post' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/website/blog/posts/:postId
+ * Delete a blog post
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { postId: string } }
+) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const organizationId = searchParams.get('organizationId');
+    const postId = params.postId;
+
+    // CRITICAL: Validate organizationId
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'organizationId required' },
+        { status: 400 }
+      );
+    }
+
+    // Get post to verify ownership
+    const postRef = db
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('website')
+      .doc('config')
+      .collection('blog-posts')
+      .doc(postId);
+
+    const postDoc = await postRef.get();
+
+    if (!postDoc.exists) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
+    const postData = postDoc.data();
+
+    // CRITICAL: Verify post belongs to this org
+    if (postData?.organizationId !== organizationId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    await postRef.delete();
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[Blog Post API] DELETE error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete post' },
+      { status: 500 }
+    );
+  }
+}
+

@@ -1,0 +1,115 @@
+/**
+ * Navigation API
+ * Manage site navigation (header menu, footer)
+ * CRITICAL: Multi-tenant - scoped to organizationId
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/firebase-admin';
+import { Navigation } from '@/types/website';
+
+/**
+ * GET /api/website/navigation
+ * Get navigation for an organization
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const organizationId = searchParams.get('organizationId');
+
+    // CRITICAL: Validate organizationId
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'organizationId required' },
+        { status: 400 }
+      );
+    }
+
+    // Get navigation document
+    const navRef = db
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('website')
+      .doc('navigation');
+
+    const navDoc = await navRef.get();
+
+    if (!navDoc.exists) {
+      return NextResponse.json(
+        { error: 'Navigation not found' },
+        { status: 404 }
+      );
+    }
+
+    const navigationData = navDoc.data() as Navigation;
+
+    // CRITICAL: Double-check organizationId matches
+    if (navigationData.organizationId !== organizationId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ navigation: navigationData });
+  } catch (error) {
+    console.error('[Navigation API] GET error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch navigation' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/website/navigation
+ * Create or update navigation
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { organizationId, navigation } = body;
+
+    // CRITICAL: Validate organizationId
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'organizationId required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate navigation data
+    if (!navigation) {
+      return NextResponse.json(
+        { error: 'Invalid navigation data' },
+        { status: 400 }
+      );
+    }
+
+    // Ensure organizationId is set
+    const navigationData: Navigation = {
+      ...navigation,
+      id: 'navigation',
+      organizationId, // CRITICAL: Set org ownership
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Save to Firestore
+    const navRef = db
+      .collection('organizations')
+      .doc(organizationId) // CRITICAL: Scoped to org
+      .collection('website')
+      .doc('navigation');
+
+    await navRef.set(navigationData);
+
+    return NextResponse.json({ navigation: navigationData });
+  } catch (error) {
+    console.error('[Navigation API] POST error:', error);
+    return NextResponse.json(
+      { error: 'Failed to save navigation' },
+      { status: 500 }
+    );
+  }
+}
+

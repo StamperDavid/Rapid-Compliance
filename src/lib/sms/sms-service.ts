@@ -413,5 +413,42 @@ export async function queryTwilioStatus(
   }
 }
 
+/**
+ * SMS Provider configurations
+ */
+export const SMS_PROVIDERS = [
+  {
+    id: 'twilio',
+    name: 'Twilio',
+    description: 'Global SMS provider with excellent delivery rates',
+  },
+  {
+    id: 'vonage',
+    name: 'Vonage (formerly Nexmo)',
+    description: 'International SMS provider',
+  },
+];
+
+/**
+ * Validate phone number format
+ * Returns true if phone number is valid E.164 format
+ */
+export function validatePhoneNumber(phone: string): boolean {
+  // E.164 format: +[country code][number]
+  // Must start with +, followed by 1-15 digits
+  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+  const cleaned = phone.replace(/\s/g, '');
+  return phoneRegex.test(cleaned);
+}
+
+/**
+ * Render SMS template with variable replacement
+ * Replaces {{variableName}} with actual values
+ */
+export function renderSMSTemplate(template: string, variables: Record<string, any>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    return variables[key]?.toString() || match;
+  });
+}
 
 

@@ -170,6 +170,7 @@ Use any:
 3. Advance to 3 days before trial end
 4. Webhook should fire: `trial_will_end`
 5. Check logs - should count records and assign tier
+6. Owner should receive email notification with tier assignment
 
 ---
 
@@ -182,6 +183,26 @@ When ready for production:
 3. Create **Live products** (same as test mode)
 4. Create **Live webhook** endpoint
 5. Update `.env.production` with live keys
+
+---
+
+## Email Notifications
+
+The system automatically sends emails for:
+
+### Trial Ending (3 days before)
+- **Trigger:** `customer.subscription.trial_will_end` webhook
+- **Recipient:** Organization owner
+- **Content:** Tier assignment based on record count
+- **Action:** Allows user to adjust records before billing
+
+### Payment Failed
+- **Trigger:** `invoice.payment_failed` webhook
+- **Recipient:** Organization owner
+- **Content:** Payment failure details and retry info
+- **Action:** Prompts user to update payment method
+
+**Email Provider Required:** Configure SendGrid, Resend, or SMTP in your organization settings for emails to send.
 
 ---
 
@@ -202,6 +223,12 @@ When ready for production:
 - Check server logs for errors
 - Verify `/api/billing/subscribe` route exists
 - Test endpoint directly with Postman
+
+### Emails not sending?
+- Check email provider (SendGrid/Resend/SMTP) is configured
+- Verify organization owner has valid email address
+- Check server logs for email errors
+- Test email service independently via `/api/email/send`
 
 ---
 

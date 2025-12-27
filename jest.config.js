@@ -8,8 +8,8 @@ const createJestConfig = nextJest({
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  // Use node environment for E2E tests, jsdom for others
-  testEnvironment: 'jest-environment-jsdom',
+  // Use node environment for server-side tests (Admin SDK requires no window object)
+  testEnvironment: 'node',
   testEnvironmentOptions: {
     customExportConditions: [''],
   },

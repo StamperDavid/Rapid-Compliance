@@ -1,0 +1,478 @@
+/**
+ * Navigation Management
+ * Build and manage site navigation (header menu, footer)
+ * CRITICAL: Multi-tenant - scoped to organizationId
+ */
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import AdminBar from '@/components/AdminBar';
+import { Navigation, NavItem, Page } from '@/types/website';
+
+export default function NavigationManagementPage() {
+  const params = useParams();
+  const orgId = params.orgId as string;
+
+  const [navigation, setNavigation] = useState<Navigation | null>(null);
+  const [pages, setPages] = useState<Page[]>([]);
+  const [homepage, setHomepage] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, [orgId]);
+
+  async function loadData() {
+    try {
+      setLoading(true);
+
+      // Load navigation
+      const navResponse = await fetch(`/api/website/navigation?organizationId=${orgId}`);
+      if (navResponse.ok) {
+        const navData = await navResponse.json();
+        setNavigation(navData.navigation);
+      } else {
+        // Initialize default navigation
+        setNavigation({
+          id: 'nav',
+          organizationId: orgId,
+          header: [],
+          footer: {
+            columns: [],
+            copyright: `© ${new Date().getFullYear()} Your Company. All rights reserved.`,
+            socialLinks: [],
+            showLogo: true,
+          },
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'current-user',
+        });
+      }
+
+      // Load pages
+      const pagesResponse = await fetch(`/api/website/pages?organizationId=${orgId}`);
+      if (pagesResponse.ok) {
+        const pagesData = await pagesResponse.json();
+        setPages(pagesData.pages || []);
+      }
+
+      // Load site settings to get homepage
+      const settingsResponse = await fetch(`/api/website/settings?organizationId=${orgId}`);
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        setHomepage(settingsData.settings?.homepage || '');
+      }
+    } catch (error) {
+      console.error('[Navigation] Load error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveNavigation() {
+    if (!navigation) return;
+
+    try {
+      setSaving(true);
+
+      const response = await fetch('/api/website/navigation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          navigation: {
+            ...navigation,
+            updatedAt: new Date().toISOString(),
+            updatedBy: 'current-user', // TODO: Get from auth
+          },
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save navigation');
+
+      alert('Navigation saved successfully!');
+    } catch (error) {
+      console.error('[Navigation] Save error:', error);
+      alert('Failed to save navigation');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveHomepage() {
+    try {
+      const response = await fetch('/api/website/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          settings: {
+            homepage,
+          },
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save homepage');
+
+      alert('Homepage updated successfully!');
+    } catch (error) {
+      console.error('[Navigation] Save homepage error:', error);
+      alert('Failed to save homepage');
+    }
+  }
+
+  function addHeaderLink() {
+    if (!navigation) return;
+
+    const label = prompt('Link label:');
+    if (!label) return;
+
+    const url = prompt('Link URL (e.g., /about or https://...):');
+    if (!url) return;
+
+    const newLink: NavItem = {
+      id: `link_${Date.now()}`,
+      label,
+      url,
+      type: 'page',
+      newTab: false,
+    };
+
+    setNavigation({
+      ...navigation,
+      header: [...navigation.header, newLink],
+    });
+  }
+
+  function removeHeaderLink(linkId: string) {
+    if (!navigation) return;
+
+    setNavigation({
+      ...navigation,
+      header: navigation.header.filter(link => link.id !== linkId),
+    });
+  }
+
+  function moveHeaderLink(index: number, direction: 'up' | 'down') {
+    if (!navigation) return;
+
+    const newHeader = [...navigation.header];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= newHeader.length) return;
+
+    [newHeader[index], newHeader[targetIndex]] = [newHeader[targetIndex], newHeader[index]];
+
+    setNavigation({
+      ...navigation,
+      header: newHeader,
+    });
+  }
+
+  if (loading) {
+    return (
+      <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
+        <AdminBar />
+        <div>Loading navigation...</div>
+      </div>
+    );
+  }
+
+  if (!navigation) {
+    return (
+      <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
+        <AdminBar />
+        <div>Failed to load navigation</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
+      <AdminBar />
+
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: '#111' }}>
+            Navigation Management
+          </h1>
+          <p style={{ margin: 0, color: '#666' }}>
+            Manage your site navigation and homepage
+          </p>
+        </div>
+
+        {/* Homepage Settings */}
+        <div style={{
+          background: 'white',
+          borderRadius: '8px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}>
+          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: '#212529' }}>
+            Homepage
+          </h2>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: '#495057',
+            }}>
+              Homepage (leave empty for default landing):
+            </label>
+            <select
+              value={homepage}
+              onChange={(e) => setHomepage(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ced4da',
+                borderRadius: '4px',
+                fontSize: '1rem',
+              }}
+            >
+              <option value="">-- Default Landing Page --</option>
+              {pages.map((page) => (
+                <option key={page.id} value={page.id}>
+                  {page.title} (/{page.slug})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            onClick={saveHomepage}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+            }}
+          >
+            Save Homepage Setting
+          </button>
+        </div>
+
+        {/* Header Navigation */}
+        <div style={{
+          background: 'white',
+          borderRadius: '8px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1.5rem',
+          }}>
+            <h2 style={{ fontSize: '1.5rem', margin: 0, color: '#212529' }}>
+              Header Menu
+            </h2>
+            <button
+              onClick={addHeaderLink}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+              }}
+            >
+              + Add Link
+            </button>
+          </div>
+
+          {navigation.header.length === 0 ? (
+            <div style={{
+              padding: '2rem',
+              textAlign: 'center',
+              color: '#6c757d',
+              background: '#f8f9fa',
+              borderRadius: '4px',
+            }}>
+              <p style={{ margin: 0 }}>No menu items yet. Add your first link!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {navigation.header.map((link, index) => (
+                <div
+                  key={link.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1rem',
+                    background: '#f8f9fa',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', color: '#212529', marginBottom: '0.25rem' }}>
+                      {link.label}
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                      {link.url}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => moveHeaderLink(index, 'up')}
+                      disabled={index === 0}
+                      style={{
+                        padding: '0.5rem',
+                        background: index === 0 ? '#e9ecef' : '#6c757d',
+                        color: index === 0 ? '#adb5bd' : 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: index === 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moveHeaderLink(index, 'down')}
+                      disabled={index === navigation.header.length - 1}
+                      style={{
+                        padding: '0.5rem',
+                        background: index === navigation.header.length - 1 ? '#e9ecef' : '#6c757d',
+                        color: index === navigation.header.length - 1 ? '#adb5bd' : 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: index === navigation.header.length - 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      ↓
+                    </button>
+                    <button
+                      onClick={() => removeHeaderLink(link.id)}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        background: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Settings */}
+        <div style={{
+          background: 'white',
+          borderRadius: '8px',
+          padding: '2rem',
+          marginBottom: '2rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}>
+          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: '#212529' }}>
+            Footer
+          </h2>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: '#495057',
+            }}>
+              Copyright Text:
+            </label>
+            <input
+              type="text"
+              value={navigation.footer.copyright}
+              onChange={(e) => setNavigation({
+                ...navigation,
+                footer: {
+                  ...navigation.footer,
+                  copyright: e.target.value,
+                },
+              })}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #ced4da',
+                borderRadius: '4px',
+                fontSize: '1rem',
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              color: '#495057',
+              cursor: 'pointer',
+            }}>
+              <input
+                type="checkbox"
+                checked={navigation.footer.showLogo}
+                onChange={(e) => setNavigation({
+                  ...navigation,
+                  footer: {
+                    ...navigation.footer,
+                    showLogo: e.target.checked,
+                  },
+                })}
+                style={{ width: '16px', height: '16px' }}
+              />
+              Show Logo in Footer
+            </label>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={saveNavigation}
+            disabled={saving}
+            style={{
+              padding: '0.75rem 2rem',
+              background: saving ? '#95a5a6' : '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: saving ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600',
+            }}
+          >
+            {saving ? 'Saving...' : 'Save Navigation'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

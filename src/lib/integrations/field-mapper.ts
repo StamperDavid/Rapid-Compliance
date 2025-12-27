@@ -6,6 +6,7 @@
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
+import { executeCustomTransform } from './custom-transforms';
 
 /**
  * Integration Field Mapping
@@ -71,6 +72,7 @@ export interface FieldTransform {
   type: 'uppercase' | 'lowercase' | 'trim' | 'phone' | 'currency' | 'date' | 'custom';
   format?: string; // For date/currency formatting
   customFunction?: string; // Custom transform function name
+  params?: Record<string, any>; // Parameters for custom transform functions
   direction?: 'inbound' | 'outbound' | 'both'; // When to apply transform
 }
 
@@ -468,10 +470,24 @@ export class FieldMappingManager {
         return value;
       
       case 'custom':
-        // Would call custom transform function
-        logger.warn('[Field Mapper] Custom transforms not implemented', {
-          file: 'field-mapper.ts',
-        });
+        // Execute custom transform function from registry
+        if (transform.customFunction) {
+          const result = executeCustomTransform(
+            transform.customFunction,
+            value,
+            transform.params
+          );
+          
+          if (result.success) {
+            return result.value;
+          } else {
+            logger.warn('[Field Mapper] Custom transform failed', {
+              function: transform.customFunction,
+              error: result.error,
+              file: 'field-mapper.ts',
+            });
+          }
+        }
         return value;
       
       default:

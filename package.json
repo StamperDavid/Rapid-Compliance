@@ -24,6 +24,7 @@
     "seed:test-orgs": "tsx scripts/seed-test-organizations.ts",
     "seed:quick": "tsx scripts/seed-test-organizations.ts",
     "seed:e2e": "node scripts/seed-e2e-test-data.js",
+    "seed:website-test": "node scripts/seed-website-test-data.js",
     "test:payments": "node scripts/test-payments.js",
     "load:pagination": "node scripts/load-test-pagination.js",
     "load:analytics": "node scripts/load-test-analytics.js",

@@ -454,6 +454,245 @@ service cloud.firestore {
       allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
     }
     
+    // ========================================
+    // WEBSITE BUILDER - MULTI-TENANT ISOLATION
+    // ========================================
+    
+    // Website configuration (manager+ only)
+    match /organizations/{orgId}/website/settings {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      allow delete: if false; // Never delete site config
+    }
+    
+    // Website pages (manager+ can edit)
+    match /organizations/{orgId}/website/pages/{pageId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Published pages can be read publicly (for public site viewing)
+      allow read: if resource.data.status == 'published';
+      
+      // Org members can read all pages (including drafts)
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Managers and above can create/update/delete pages
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Prevent cross-org data leaks
+      // Validate organizationId matches on create/update
+      allow create: if request.resource.data.organizationId == orgId;
+      allow update: if resource.data.organizationId == orgId 
+                    && request.resource.data.organizationId == orgId;
+    }
+    
+    // Blog posts (manager+ can edit)
+    match /organizations/{orgId}/website/posts/{postId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Published posts can be read publicly
+      allow read: if resource.data.status == 'published';
+      
+      // Org members can read all posts
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Managers and above can create/update/delete
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+      allow update: if resource.data.organizationId == orgId 
+                    && request.resource.data.organizationId == orgId;
+    }
+    
+    // Website theme (manager+ can edit)
+    match /organizations/{orgId}/website/theme {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      allow delete: if false; // Never delete theme
+    }
+    
+    // Navigation (manager+ can edit)
+    match /organizations/{orgId}/website/navigation {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      allow delete: if false; // Never delete navigation
+    }
+    
+    // Custom templates (manager+ can create/edit their org's templates)
+    match /organizations/{orgId}/website/templates/{templateId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+      allow update: if resource.data.organizationId == orgId 
+                    && request.resource.data.organizationId == orgId;
+    }
+    
+    // Website media/assets (all org members can upload)
+    match /organizations/{orgId}/website/media/{mediaId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create: if isAuthenticated() && belongsToOrg(orgId);
+      allow update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+    }
+    
+    // ========================================
+    // WEBSITE BUILDER - NEW SPRINT 5-8 COLLECTIONS
+    // ========================================
+    
+    // Preview tokens (manager+ can create, anyone with token can read)
+    match /organizations/{orgId}/website/preview-tokens/tokens/{tokenId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Anyone can read with the token (for preview links)
+      allow read: if true;
+      
+      // Managers and above can create/delete tokens
+      allow create, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+    }
+    
+    // Audit log entries (manager+ can read, system creates)
+    match /organizations/{orgId}/website/audit-log/entries/{entryId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Managers and above can read audit log
+      allow read: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // System creates entries (via Admin SDK)
+      // No client creates allowed
+    }
+    
+    // Page version history (manager+ can read/restore)
+    match /organizations/{orgId}/website/pages/items/{pageId}/versions/{versionId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Managers and above can read versions
+      allow read: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // System creates versions (via Admin SDK)
+      // No client creates/updates allowed
+    }
+    
+    // Blog posts in config subcollection (manager+ can edit)
+    match /organizations/{orgId}/website/config/blog-posts/{postId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Published posts can be read publicly
+      allow read: if resource.data.status == 'published';
+      
+      // Org members can read all posts
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Managers and above can create/update/delete
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+      allow update: if resource.data.organizationId == orgId 
+                    && request.resource.data.organizationId == orgId;
+    }
+    
+    // Blog categories (manager+ can edit)
+    match /organizations/{orgId}/website/config/blog-categories/{categoryId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Anyone can read categories (for blog navigation)
+      allow read: if true;
+      
+      // Managers and above can create/update/delete
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+    }
+    
+    // Custom domains in config subcollection (manager+ can edit)
+    match /organizations/{orgId}/website/config/custom-domains/{domainId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Org members can read their domains
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Managers and above can create/update/delete
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+      allow update: if resource.data.organizationId == orgId 
+                    && request.resource.data.organizationId == orgId;
+    }
+    
+    // Pages in items subcollection (manager+ can edit)
+    match /organizations/{orgId}/website/pages/items/{pageId} {
+      allow read, write: if isSuperAdmin();
+      
+      // Published pages can be read publicly
+      allow read: if resource.data.status == 'published';
+      
+      // Org members can read all pages
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      
+      // Managers and above can create/update/delete
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+      
+      // CRITICAL: Validate organizationId
+      allow create: if request.resource.data.organizationId == orgId;
+      allow update: if resource.data.organizationId == orgId 
+                    && request.resource.data.organizationId == orgId;
+    }
+    
+    // ========================================
+    // CUSTOM DOMAIN REGISTRY - CRITICAL ISOLATION
+    // ========================================
+    
+    // Custom domains - GLOBAL collection (not under organizations)
+    // This is critical for subdomain/domain lookup performance
+    match /customDomains/{domain} {
+      allow read, write: if isSuperAdmin();
+      
+      // Anyone can read domain status (for DNS verification UI)
+      allow read: if true;
+      
+      // CRITICAL: Only the org that owns this domain can write
+      allow create: if isAuthenticated() 
+                    && request.resource.data.organizationId == getUserOrgId()
+                    && isManagerOrAbove();
+      
+      allow update, delete: if isAuthenticated() 
+                          && resource.data.organizationId == getUserOrgId()
+                          && isManagerOrAbove();
+      
+      // PREVENT domain hijacking: Cannot change organizationId after creation
+      allow update: if request.resource.data.organizationId == resource.data.organizationId;
+    }
+    
+    // Subdomain registry - GLOBAL collection (for fast lookup)
+    match /subdomains/{subdomain} {
+      allow read, write: if isSuperAdmin();
+      
+      // Anyone can read (for subdomain availability check)
+      allow read: if true;
+      
+      // CRITICAL: Only create if user owns the org
+      allow create: if isAuthenticated() 
+                    && request.resource.data.organizationId == getUserOrgId()
+                    && isManagerOrAbove();
+      
+      // CRITICAL: Cannot update or delete (subdomain is permanent)
+      allow update, delete: if false;
+    }
+    
     // Generic organization subcollections (leads, deals, prospects, tasks, etc.)
     // More restrictive than before - read for all, write for authenticated
     match /organizations/{orgId}/{subcollection}/{docId} {

@@ -21,10 +21,12 @@ import type { Schema, SchemaField, SchemaRelation, FieldType } from '@/types/sch
 
 export class SchemaManager {
   private db: Firestore;
+  private organizationId: string;
   private workspaceId: string;
 
-  constructor(db: Firestore, workspaceId: string) {
+  constructor(db: Firestore, organizationId: string, workspaceId: string) {
     this.db = db;
+    this.organizationId = organizationId;
     this.workspaceId = workspaceId;
   }
 
@@ -34,6 +36,8 @@ export class SchemaManager {
   private getSchemasRef() {
     return collection(
       this.db,
+      'organizations',
+      this.organizationId,
       'workspaces',
       this.workspaceId,
       'schemas'
@@ -44,7 +48,15 @@ export class SchemaManager {
    * Get single schema ref
    */
   private getSchemaRef(schemaId: string) {
-    return doc(this.db, 'workspaces', this.workspaceId, 'schemas', schemaId);
+    return doc(
+      this.db,
+      'organizations',
+      this.organizationId,
+      'workspaces',
+      this.workspaceId,
+      'schemas',
+      schemaId
+    );
   }
 
   /**

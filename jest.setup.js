@@ -2,6 +2,9 @@
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
+// Set NODE_ENV to test
+process.env.NODE_ENV = 'test'
+
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'
@@ -38,8 +41,34 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
+// Mock FirestoreService to use AdminFirestoreService (bypasses security rules for tests)
+// This is CRITICAL - Admin SDK bypasses Firestore security rules, allowing tests to write to dev database
+jest.mock('@/lib/db/firestore-service', () => {
+  const { AdminFirestoreService } = jest.requireActual('@/lib/db/admin-firestore-service');
+  return {
+    FirestoreService: AdminFirestoreService,
+    COLLECTIONS: jest.requireActual('@/lib/db/firestore-service').COLLECTIONS,
+  };
+});
+
+// Mock API Key Service
+jest.mock('@/lib/api-keys/api-key-service', () => ({
+  apiKeyService: {
+    getKeys: jest.fn(),
+    getServiceKey: jest.fn(),
+    saveKeys: jest.fn(),
+  },
+}));
+
 // Firebase will use real config from environment variables
-// Tests connect to actual Firebase dev database
+// Tests connect to actual Firebase DEV database using Admin SDK (bypasses security rules)
+
+// Log Firebase Admin config for debugging
+console.log('[Jest Setup] Firebase Admin Config:', {
+  projectId: process.env.FIREBASE_ADMIN_PROJECT_ID || 'NOT SET',
+  clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'SET' : 'NOT SET',
+  privateKeyLength: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? process.env.FIREBASE_ADMIN_PRIVATE_KEY.length : 0
+})
 
 
 

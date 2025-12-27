@@ -81,6 +81,16 @@ export default function WorkspaceLayout({
       ]
     },
     {
+      title: 'Website',
+      items: [
+        { href: `/workspace/${orgId}/website/pages`, icon: '🌐', label: 'Pages' },
+        { href: `/workspace/${orgId}/website/blog`, icon: '📝', label: 'Blog' },
+        { href: `/workspace/${orgId}/website/domains`, icon: '🔗', label: 'Domains' },
+        { href: `/workspace/${orgId}/website/settings`, icon: '🎨', label: 'Site Settings' },
+        { href: `/workspace/${orgId}/website/audit-log`, icon: '📋', label: 'Audit Log' },
+      ]
+    },
+    {
       title: 'Settings',
       items: [
         { href: `/workspace/${orgId}/settings`, icon: '⚙️', label: 'Settings' },

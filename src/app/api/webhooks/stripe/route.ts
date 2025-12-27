@@ -246,27 +246,136 @@ async function sendTrialEndEmail(
   }
 ) {
   try {
-    // TODO: Integrate with your email service (SendGrid, Resend, etc.)
-    logger.info(`[Email] Would send trial end email to org ${organizationId}:`, data);
-    
-    // Example email content:
-    const emailContent = `
-Your 14-day free trial ends on ${data.trialEndDate}.
+    // Get organization owner's email
+    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+    if (!org?.ownerId) {
+      logger.warn('[Email] No owner found for organization', { organizationId });
+      return;
+    }
 
-Based on your current usage of ${data.recordCount} records, you've been assigned to:
-- ${data.tierName}: $${data.price}/month
+    const owner = await FirestoreService.get(COLLECTIONS.USERS, org.ownerId);
+    if (!owner?.email) {
+      logger.warn('[Email] No email found for organization owner', { organizationId, ownerId: org.ownerId });
+      return;
+    }
 
-You'll be automatically charged $${data.price} when your trial ends.
+    // Format price
+    const formattedPrice = (data.price / 100).toFixed(2);
 
-Need to adjust? You can:
-- Delete records to move to a lower tier
-- Add more records (we'll auto-upgrade you as needed)
+    // Email HTML content
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .tier-box { background: white; border-left: 4px solid #6366f1; padding: 20px; margin: 20px 0; border-radius: 4px; }
+    .price { font-size: 32px; font-weight: bold; color: #6366f1; }
+    .button { display: inline-block; background: #6366f1; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+    .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Your Trial is Ending Soon</h1>
+    </div>
+    <div class="content">
+      <p>Hi ${owner.name || 'there'},</p>
+      
+      <p>Your 14-day free trial ends on <strong>${data.trialEndDate}</strong>.</p>
+      
+      <div class="tier-box">
+        <h2>Your Assigned Tier</h2>
+        <p>Based on your current usage of <strong>${data.recordCount} records</strong>, you've been assigned to:</p>
+        <p class="price">$${formattedPrice}/month</p>
+        <p><strong>${data.tierName}</strong></p>
+      </div>
 
-Questions? Reply to this email.
+      <p>You'll be automatically charged <strong>$${formattedPrice}</strong> when your trial ends.</p>
+
+      <h3>Need to Adjust Your Plan?</h3>
+      <ul>
+        <li>Delete records to move to a lower tier</li>
+        <li>Add more records (we'll auto-upgrade you as needed)</li>
+        <li>All features are included at every tier</li>
+      </ul>
+
+      <a href="${process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/billing" class="button">
+        Manage Billing
+      </a>
+
+      <p>Questions? Just reply to this email and we'll help you out!</p>
+
+      <div class="footer">
+        <p>AI Sales Platform | Volume-Based Pricing</p>
+        <p>You're receiving this because your trial is ending soon.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
     `.trim();
 
-    // TODO: Actually send the email
-    logger.info('[Email] Trial end email content:', { content: emailContent });
+    // Text version for email clients that don't support HTML
+    const textContent = `
+Your Trial is Ending Soon
+
+Hi ${owner.name || 'there'},
+
+Your 14-day free trial ends on ${data.trialEndDate}.
+
+YOUR ASSIGNED TIER
+Based on your current usage of ${data.recordCount} records, you've been assigned to:
+- ${data.tierName}: $${formattedPrice}/month
+
+You'll be automatically charged $${formattedPrice} when your trial ends.
+
+NEED TO ADJUST YOUR PLAN?
+- Delete records to move to a lower tier
+- Add more records (we'll auto-upgrade you as needed)
+- All features are included at every tier
+
+Manage your billing: ${process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/billing
+
+Questions? Just reply to this email and we'll help you out!
+
+---
+AI Sales Platform | Volume-Based Pricing
+    `.trim();
+
+    // Import and use email service
+    const { sendEmail } = await import('@/lib/email/email-service');
+    
+    const result = await sendEmail({
+      to: owner.email,
+      subject: `Your trial ends ${data.trialEndDate} - Tier assigned`,
+      html: htmlContent,
+      text: textContent,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@salesvelocity.ai',
+      fromName: 'AI Sales Platform',
+      metadata: {
+        organizationId,
+        type: 'trial_ending',
+        tier: data.tier,
+      },
+    });
+
+    if (result.success) {
+      logger.info('[Email] Trial end email sent successfully', { 
+        organizationId, 
+        email: owner.email,
+        messageId: result.messageId 
+      });
+    } else {
+      logger.error('[Email] Failed to send trial end email', new Error(result.error), { 
+        organizationId, 
+        email: owner.email 
+      });
+    }
   } catch (error) {
     logger.error('[Email] Error sending trial end email:', error);
   }
@@ -283,9 +392,138 @@ async function sendPaymentFailedEmail(
   }
 ) {
   try {
-    logger.info(`[Email] Would send payment failed email to org ${organizationId}:`, data);
+    // Get organization owner's email
+    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+    if (!org?.ownerId) {
+      logger.warn('[Email] No owner found for organization', { organizationId });
+      return;
+    }
+
+    const owner = await FirestoreService.get(COLLECTIONS.USERS, org.ownerId);
+    if (!owner?.email) {
+      logger.warn('[Email] No email found for organization owner', { organizationId, ownerId: org.ownerId });
+      return;
+    }
+
+    // Format amount
+    const formattedAmount = (data.amount / 100).toFixed(2);
+
+    // Email HTML content
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #ef4444; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+    .alert-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 4px; }
+    .button { display: inline-block; background: #ef4444; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+    .footer { text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; }
+    .amount { font-size: 24px; font-weight: bold; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚠️ Payment Failed</h1>
+    </div>
+    <div class="content">
+      <p>Hi ${owner.name || 'there'},</p>
+      
+      <div class="alert-box">
+        <h2>We couldn't process your payment</h2>
+        <p>Attempted <strong>${data.attemptCount} time(s)</strong></p>
+        <p class="amount">$${formattedAmount}</p>
+      </div>
+
+      <p>We attempted to charge your card for your AI Sales Platform subscription, but the payment failed.</p>
+
+      <h3>What happens next?</h3>
+      <p>We'll retry the payment automatically over the next few days. If all attempts fail, your account may be downgraded or suspended.</p>
+
+      <h3>To avoid service interruption:</h3>
+      <ul>
+        <li>Update your payment method</li>
+        <li>Ensure your card has sufficient funds</li>
+        <li>Contact your bank if the issue persists</li>
+      </ul>
+
+      <a href="${process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/billing" class="button">
+        Update Payment Method
+      </a>
+
+      <p>Need help? Reply to this email and we'll assist you immediately.</p>
+
+      <div class="footer">
+        <p>AI Sales Platform</p>
+        <p>You're receiving this because a payment for your subscription failed.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    // Text version
+    const textContent = `
+⚠️ PAYMENT FAILED
+
+Hi ${owner.name || 'there'},
+
+We couldn't process your payment for your AI Sales Platform subscription.
+
+DETAILS:
+- Amount: $${formattedAmount}
+- Attempt: ${data.attemptCount} time(s)
+
+WHAT HAPPENS NEXT?
+We'll retry the payment automatically over the next few days. If all attempts fail, your account may be downgraded or suspended.
+
+TO AVOID SERVICE INTERRUPTION:
+- Update your payment method
+- Ensure your card has sufficient funds
+- Contact your bank if the issue persists
+
+Update payment method: ${process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/billing
+
+Need help? Reply to this email and we'll assist you immediately.
+
+---
+AI Sales Platform
+    `.trim();
+
+    // Import and use email service
+    const { sendEmail } = await import('@/lib/email/email-service');
     
-    // TODO: Actually send the email
+    const result = await sendEmail({
+      to: owner.email,
+      subject: `⚠️ Payment Failed - Action Required ($${formattedAmount})`,
+      html: htmlContent,
+      text: textContent,
+      from: process.env.SENDGRID_FROM_EMAIL || 'billing@salesvelocity.ai',
+      fromName: 'AI Sales Platform Billing',
+      metadata: {
+        organizationId,
+        type: 'payment_failed',
+        amount: data.amount,
+        attemptCount: data.attemptCount,
+      },
+    });
+
+    if (result.success) {
+      logger.info('[Email] Payment failed email sent successfully', { 
+        organizationId, 
+        email: owner.email,
+        messageId: result.messageId 
+      });
+    } else {
+      logger.error('[Email] Failed to send payment failed email', new Error(result.error), { 
+        organizationId, 
+        email: owner.email 
+      });
+    }
   } catch (error) {
     logger.error('[Email] Error sending payment failed email:', error);
   }

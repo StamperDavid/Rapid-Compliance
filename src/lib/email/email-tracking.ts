@@ -38,15 +38,10 @@ export interface EmailTrackingStats {
  * Generate tracking pixel URL
  * Returns URL to email open tracking endpoint
  */
-export function generateTrackingPixel(messageId: string): TrackingPixel {
-  // Generate tracking pixel URL for email opens
-  // Tracking endpoint will log opens when pixel is loaded
-  const pixelUrl = `/api/email/track/open/${messageId}`;
-  
-  return {
-    messageId,
-    pixelUrl,
-  };
+export function generateTrackingPixel(messageId: string): string {
+  // Return HTML tracking pixel for email opens
+  const pixelUrl = `/api/email/track/${messageId}`;
+  return `<img src="${pixelUrl}" width="1" height="1" style="display:none;" alt="" />`;
 }
 
 /**
@@ -80,8 +75,8 @@ export function processEmailHtml(html: string, messageId: string, trackOpens: bo
 
   // Add tracking pixel for email opens
   if (trackOpens) {
-    const pixel = generateTrackingPixel(messageId);
-    processedHtml += `<img src="${pixel.pixelUrl}" width="1" height="1" style="display:none;" />`;
+    const pixelHtml = generateTrackingPixel(messageId);
+    processedHtml += pixelHtml;
   }
 
   // Convert links to tracked links for click tracking
@@ -94,6 +89,81 @@ export function processEmailHtml(html: string, messageId: string, trackOpens: bo
   }
 
   return processedHtml;
+}
+
+/**
+ * Wrap links in HTML with tracking URLs
+ * Replaces all <a> href attributes with tracking redirects
+ */
+export function wrapLinksWithTracking(html: string, trackingId: string): string {
+  // Simple regex to find all <a> tags and wrap their href with tracking
+  return html.replace(
+    /<a\s+href=["']([^"']+)["']/gi,
+    (match, url) => {
+      const encodedUrl = encodeURIComponent(url);
+      return `<a href="/api/email/track/link?trackingId=${trackingId}&url=${encodedUrl}"`;
+    }
+  );
+}
+
+/**
+ * Classify email bounce type
+ * Returns 'hard' for permanent bounces, 'soft' for temporary, 'spam' for spam detection, 'blocked' for blocked addresses
+ */
+export function classifyBounce(message: string): 'hard' | 'soft' | 'spam' | 'blocked' {
+  const lowerMessage = message.toLowerCase();
+  
+  // Spam indicators
+  const spamKeywords = [
+    'spam detected',
+    'spam content',
+    'spam filter',
+    'identified as spam',
+  ];
+  
+  // Blocked indicators
+  const blockedKeywords = [
+    'blocked',
+    '550 5.7.1',
+    'blacklisted',
+    'blocklist',
+    'rejected by policy',
+  ];
+  
+  // Hard bounce indicators (permanent failures)
+  const hardBounceKeywords = [
+    'user unknown',
+    'invalid recipient',
+    'does not exist',
+    'no such user',
+    '550 5.1.1',
+    'recipient rejected',
+    'address rejected',
+  ];
+  
+  // Check for spam
+  for (const keyword of spamKeywords) {
+    if (lowerMessage.includes(keyword)) {
+      return 'spam';
+    }
+  }
+  
+  // Check for blocked
+  for (const keyword of blockedKeywords) {
+    if (lowerMessage.includes(keyword)) {
+      return 'blocked';
+    }
+  }
+  
+  // Check for hard bounce
+  for (const keyword of hardBounceKeywords) {
+    if (lowerMessage.includes(keyword)) {
+      return 'hard';
+    }
+  }
+  
+  // Everything else is soft bounce (mailbox full, temporarily unavailable, etc.)
+  return 'soft';
 }
 
 /**

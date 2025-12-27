@@ -84,7 +84,7 @@ export class FirestoreService {
       }
       return null;
     } catch (error) {
-      logger.error('Error getting document ${docId} from ${collectionPath}:', error, { file: 'firestore-service.ts' });
+      logger.error(`Error getting document ${docId} from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
       return null; // Return null instead of throwing to prevent crashes
     }
   }
@@ -111,7 +111,7 @@ export class FirestoreService {
         ...doc.data(),
       })) as T[];
     } catch (error) {
-      logger.error('Error getting all documents from ${collectionPath}:', error, { file: 'firestore-service.ts' });
+      logger.error(`Error getting all documents from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
       return []; // Return empty array instead of throwing
     }
   }
@@ -166,7 +166,7 @@ export class FirestoreService {
         hasMore,
       };
     } catch (error) {
-      logger.error('Error getting paginated documents from ${collectionPath}:', error, { file: 'firestore-service.ts' });
+      logger.error(`Error getting paginated documents from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
       return { data: [], lastDoc: null, hasMore: false };
     }
   }
@@ -191,7 +191,7 @@ export class FirestoreService {
       };
       await setDoc(docRef, dataWithTimestamps, { merge });
     } catch (error) {
-      logger.error('Error setting document ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
+      logger.error(`Error setting document ${docId} in ${collectionPath}:`, error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -213,7 +213,7 @@ export class FirestoreService {
         updatedAt: serverTimestamp(),
       } as any);
     } catch (error) {
-      logger.error('Error updating document ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
+      logger.error(`Error updating document ${docId} in ${collectionPath}:`, error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -228,7 +228,7 @@ export class FirestoreService {
       const docRef = doc(firestoreDb, collectionPath, docId);
       await deleteDoc(docRef);
     } catch (error) {
-      logger.error('Error deleting document ${docId} from ${collectionPath}:', error, { file: 'firestore-service.ts' });
+      logger.error(`Error deleting document ${docId} from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -259,7 +259,7 @@ export class FirestoreService {
         }
       },
       (error) => {
-        logger.error('Error in subscription for ${docId} in ${collectionPath}:', error, { file: 'firestore-service.ts' });
+        logger.error(`Error in subscription for ${docId} in ${collectionPath}:`, error, { file: 'firestore-service.ts' });
         callback(null);
       }
     );
@@ -291,7 +291,7 @@ export class FirestoreService {
         callback(data);
       },
       (error) => {
-        logger.error('Error in collection subscription for ${collectionPath}:', error, { file: 'firestore-service.ts' });
+        logger.error(`Error in collection subscription for ${collectionPath}:`, error, { file: 'firestore-service.ts' });
         callback([]);
       }
     );
