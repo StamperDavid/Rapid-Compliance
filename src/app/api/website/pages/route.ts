@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
     // }
 
     const now = admin.firestore.Timestamp.now();
+    const performedBy = await getUserIdentifier();
     const pageId = page.id || `page_${Date.now()}`;
 
     // CRITICAL: Force organizationId to match the authenticated org
@@ -124,8 +125,8 @@ export async function POST(request: NextRequest) {
       version: 1,
       createdAt: now,
       updatedAt: now,
-      createdBy: user,
-      lastEditedBy: 'system',
+      createdBy: performedBy,
+      lastEditedBy: performedBy,
     };
 
     // Check if slug already exists for this org
