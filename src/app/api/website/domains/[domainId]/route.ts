@@ -78,6 +78,8 @@ export async function DELETE(
     await db.collection('custom-domains').doc(domainId).delete();
 
     // Create audit log
+    const performedBy = await getUserIdentifier();
+    
     const auditRef = db
       .collection('organizations')
       .doc(organizationId)
