@@ -330,6 +330,31 @@ const DEFAULT_CONFIG: WebsiteConfig = {
           ],
         },
         {
+          id: 'home-cost-comparison',
+          type: 'section',
+          name: 'Stop Juggling Tools',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: 'rgba(17,24,39,1)', textAlign: 'center' } },
+          children: [
+            { id: 'comp-h2', type: 'heading', content: 'Stop Juggling 6 Different Tools', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'comp-p', type: 'text', content: 'Replace your "Frankenstein stack" with one unified platform', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.7)', marginBottom: '3rem' } } },
+            { id: 'comp-note', type: 'text', content: 'Comparison: Old way ($722-4,397/mo for 6 tools) vs Our platform ($400-1,250/mo for everything). Save $322-3,147 per month.', styles: { desktop: { fontSize: '1rem', color: 'rgba(99,102,241,0.9)', padding: '2rem', backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: '12px', maxWidth: '800px', margin: '0 auto', border: '2px solid rgba(99,102,241,0.3)' } } },
+          ],
+        },
+        {
+          id: 'home-byok',
+          type: 'section',
+          name: 'BYOK Cost Transparency',
+          visible: true,
+          styles: { desktop: { padding: '80px 20px', backgroundColor: 'rgba(17,24,39,1)', textAlign: 'center' } },
+          children: [
+            { id: 'byok-h2', type: 'heading', content: 'BYOK: We Don\'t Markup Your AI Costs', styles: { desktop: { fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#ffffff' } }, settings: { tag: 'h2' } },
+            { id: 'byok-p', type: 'text', content: 'Most AI platforms mark up tokens by 300-500%. We don\'t. Connect your OpenRouter key and pay at cost.', styles: { desktop: { fontSize: '1.125rem', color: 'rgba(255,255,255,0.7)', marginBottom: '2rem' } } },
+            { id: 'byok-rec', type: 'text', content: '💡 We recommend OpenRouter - one key gives you access to GPT-4, Claude, Gemini, and 200+ models', styles: { desktop: { fontSize: '1rem', color: 'rgba(99,102,241,0.9)', padding: '1rem 2rem', backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: '8px', display: 'inline-block', marginBottom: '2rem' } } },
+            { id: 'byok-savings', type: 'text', content: 'Typical AI Platform: $1,900/mo (platform + marked up AI) vs Our Platform: $750/mo (platform + AI at cost) = Save $1,150/month', styles: { desktop: { fontSize: '1rem', color: 'rgba(99,102,241,0.9)', padding: '2rem', backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: '12px', maxWidth: '900px', margin: '0 auto', border: '2px solid rgba(99,102,241,0.3)' } } },
+          ],
+        },
+        {
           id: 'home-tools-replaced',
           type: 'section',
           name: 'Tools Replaced',
