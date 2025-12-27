@@ -343,89 +343,89 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* Before */}
-            <div className="bg-red-900/20 border-2 border-red-700/50 rounded-2xl p-8">
+            <div className="bg-slate-800/50 border-2 border-slate-600/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-4xl">😫</span>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The Old Way</h3>
-                  <p className="text-red-300 text-sm">Fragmented & Expensive</p>
+                  <p className="text-gray-400 text-sm">Fragmented & Expensive</p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">Apollo/ZoomInfo</span>
-                  <span className="text-red-300 font-semibold">$99-399/mo</span>
+                  <span className="text-gray-300 font-semibold">$99-399/mo</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">Air AI/11x</span>
-                  <span className="text-red-300 font-semibold">$500-2,000/mo</span>
+                  <span className="text-gray-300 font-semibold">$500-2,000/mo</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">Outreach Tool (Email/LinkedIn)</span>
-                  <span className="text-red-300 font-semibold">$49-199/mo</span>
+                  <span className="text-gray-300 font-semibold">$49-199/mo</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">Zapier</span>
-                  <span className="text-red-300 font-semibold">$29-599/mo</span>
+                  <span className="text-gray-300 font-semibold">$29-599/mo</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">HubSpot CRM</span>
-                  <span className="text-red-300 font-semibold">$45-1,200/mo</span>
+                  <span className="text-gray-300 font-semibold">$45-1,200/mo</span>
                 </div>
-                <div className="border-t border-red-700/50 pt-3 mt-3 flex justify-between items-center">
+                <div className="border-t border-slate-600/50 pt-3 mt-3 flex justify-between items-center">
                   <span className="text-white font-bold">TOTAL</span>
-                  <span className="text-red-300 font-bold text-2xl">$722-4,397/mo</span>
+                  <span className="text-gray-200 font-bold text-2xl">$722-4,397/mo</span>
                 </div>
               </div>
-              <div className="mt-4 text-red-300/70 text-xs">
+              <div className="mt-4 text-gray-400 text-xs">
                 Plus: Integration hell, 5 support teams, data syncing nightmares
               </div>
             </div>
 
             {/* After */}
-            <div className="bg-green-900/20 border-2 border-green-500/50 rounded-2xl p-8">
+            <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-4xl">🎉</span>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The New Way</h3>
-                  <p className="text-green-300 text-sm">All-In-One & Affordable</p>
+                  <p className="text-indigo-300 text-sm">All-In-One & Affordable</p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">✓ Lead Scraper & Enrichment</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">✓ AI Sales Agents (Unlimited)</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">✓ Multi-Channel Outreach</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">✓ Workflow Automation</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-white/90">✓ Full CRM + E-commerce</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
-                <div className="border-t border-green-700/50 pt-3 mt-3 flex justify-between items-center">
+                <div className="border-t border-indigo-500/50 pt-3 mt-3 flex justify-between items-center">
                   <span className="text-white font-bold">TOTAL</span>
-                  <span className="text-green-300 font-bold text-2xl">$400-1,250/mo</span>
+                  <span className="text-indigo-300 font-bold text-2xl">$400-1,250/mo</span>
                 </div>
               </div>
-              <div className="mt-4 text-green-300/70 text-xs">
+              <div className="mt-4 text-indigo-300/70 text-xs">
                 Plus: Everything synced, one dashboard, one support team, BYOK pricing
               </div>
             </div>
           </div>
 
           <div className="text-center">
-            <div className="inline-block bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/40 rounded-xl px-8 py-4">
-              <p className="text-green-300 font-bold text-2xl mb-1">
+            <div className="inline-block bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-xl px-8 py-4">
+              <p className="text-indigo-300 font-bold text-2xl mb-1">
                 Save $322-3,147 per month
               </p>
               <p className="text-white text-sm">

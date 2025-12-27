@@ -55,34 +55,34 @@ function FallbackContent() {
           
           {/* BYOK Hero Callout */}
           <div className="max-w-3xl mx-auto mb-12">
-            <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-500/40 rounded-2xl p-8">
+            <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/40 rounded-2xl p-8">
               <div className="flex items-center gap-4 mb-4">
                 <div className="text-5xl">💡</div>
                 <div>
                   <h3 className="text-2xl font-bold text-white mb-1">Bring Your Own Keys (BYOK)</h3>
-                  <p className="text-green-300 font-semibold">Zero AI Token Markup. 100% Transparent.</p>
+                  <p className="text-indigo-300 font-semibold">Zero AI Token Markup. 100% Transparent.</p>
                 </div>
               </div>
               <p className="text-white/90 text-lg leading-relaxed mb-4">
-                Connect your own API key and pay the AI provider directly at <span className="font-bold text-green-300">raw market rates</span>. 
+                Connect your own API key and pay the AI provider directly at <span className="font-bold text-indigo-300">raw market rates</span>. 
                 We don't touch your AI costs—that's your direct relationship with the provider. No hidden fees. No markup. Just honest pricing.
               </p>
-              <div className="bg-indigo-500/20 border border-indigo-500/40 rounded-lg p-4 mb-4">
-                <p className="text-indigo-200 text-sm">
+              <div className="bg-purple-500/20 border border-purple-500/40 rounded-lg p-4 mb-4">
+                <p className="text-purple-200 text-sm">
                   💡 <span className="font-bold">We recommend OpenRouter</span> - One key gives you access to GPT-4, Claude, Gemini, Llama, and 200+ models. Simpler than managing multiple provider keys.
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center gap-2 text-white/80">
-                  <span className="text-green-400 text-lg font-bold">⭐</span>
-                  <span><span className="font-semibold text-green-300">OpenRouter</span> (Recommended)</span>
+                  <span className="text-indigo-400 text-lg font-bold">⭐</span>
+                  <span><span className="font-semibold text-indigo-300">OpenRouter</span> (Recommended)</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/80">
-                  <span className="text-green-400 text-lg">✓</span>
+                  <span className="text-indigo-400 text-lg">✓</span>
                   <span>OpenAI Direct (Optional)</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/80">
-                  <span className="text-green-400 text-lg">✓</span>
+                  <span className="text-indigo-400 text-lg">✓</span>
                   <span>Anthropic Direct (Optional)</span>
                 </div>
               </div>
@@ -199,65 +199,65 @@ function FallbackContent() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Competitor Total Cost */}
-              <div className="bg-red-900/20 border border-red-700/50 rounded-xl p-6">
+              <div className="bg-slate-800/50 border border-slate-600/50 rounded-xl p-6">
                 <div className="text-center mb-4">
                   <h4 className="text-xl font-bold text-white mb-1">Typical AI Platform</h4>
-                  <p className="text-red-300 text-sm">All-in-one bill (markup hidden)</p>
+                  <p className="text-gray-400 text-sm">All-in-one bill (markup hidden)</p>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center pb-3 border-b border-red-700/30">
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-600/30">
                     <span className="text-gray-300">Platform Fee</span>
                     <span className="text-white font-semibold">$1,500/mo</span>
                   </div>
-                  <div className="flex justify-between items-center pb-3 border-b border-red-700/30">
-                    <span className="text-gray-300">AI Usage <span className="text-xs text-red-400">(marked up 400%)</span></span>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-600/30">
+                    <span className="text-gray-300">AI Usage <span className="text-xs text-gray-400">(marked up 400%)</span></span>
                     <span className="text-white font-semibold">$400/mo</span>
                   </div>
-                  <div className="text-xs text-red-300/70 mb-3">
-                    (Real OpenAI cost: ~$100, but you pay $400)
+                  <div className="text-xs text-gray-400 mb-3">
+                    (Real OpenRouter cost: ~$100, but you pay $400)
                   </div>
-                  <div className="flex justify-between items-center pt-3 border-t-2 border-red-500/50">
+                  <div className="flex justify-between items-center pt-3 border-t-2 border-slate-500/50">
                     <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>
-                    <span className="text-red-300 font-bold text-2xl">$1,900/mo</span>
+                    <span className="text-gray-200 font-bold text-2xl">$1,900/mo</span>
                   </div>
                 </div>
               </div>
 
               {/* Our Total Cost */}
-              <div className="bg-green-900/20 border-2 border-green-500/50 rounded-xl p-6">
+              <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-xl p-6">
                 <div className="text-center mb-4">
                   <h4 className="text-xl font-bold text-white mb-1">Our Platform (BYOK)</h4>
-                  <p className="text-green-300 text-sm">Two separate bills (full transparency)</p>
+                  <p className="text-indigo-300 text-sm">Prepaid credits (full transparency)</p>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center pb-3 border-b border-green-700/30">
+                  <div className="flex justify-between items-center pb-3 border-b border-indigo-500/30">
                     <div>
                       <div className="text-gray-300">Platform Fee</div>
-                      <div className="text-xs text-green-400">Bill #1: From us</div>
+                      <div className="text-xs text-indigo-400">Monthly bill from us</div>
                     </div>
                     <span className="text-white font-semibold">$650/mo</span>
                   </div>
-                  <div className="flex justify-between items-center pb-3 border-b border-green-700/30">
+                  <div className="flex justify-between items-center pb-3 border-b border-indigo-500/30">
                     <div>
-                      <div className="text-gray-300">AI Usage <span className="text-xs text-green-400">(0% markup)</span></div>
-                      <div className="text-xs text-green-400">Bill #2: From OpenAI</div>
+                      <div className="text-gray-300">AI Credits <span className="text-xs text-indigo-400">(prepaid, 0% markup)</span></div>
+                      <div className="text-xs text-indigo-400">Prepaid to OpenRouter</div>
                     </div>
-                    <span className="text-white font-semibold">$100/mo</span>
+                    <span className="text-white font-semibold">~$100/mo</span>
                   </div>
-                  <div className="text-xs text-green-300/70 mb-3">
-                    (You pay OpenAI directly at raw cost)
+                  <div className="text-xs text-indigo-300/70 mb-3">
+                    (You prepay credits with OpenRouter at cost)
                   </div>
-                  <div className="flex justify-between items-center pt-3 border-t-2 border-green-500/50">
+                  <div className="flex justify-between items-center pt-3 border-t-2 border-indigo-500/50">
                     <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>
-                    <span className="text-green-300 font-bold text-2xl">$750/mo</span>
+                    <span className="text-indigo-300 font-bold text-2xl">$750/mo</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-8 text-center">
-              <div className="inline-block bg-green-500/20 border-2 border-green-500/40 rounded-xl px-8 py-4">
-                <p className="text-green-300 font-bold text-2xl mb-2">
+              <div className="inline-block bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-xl px-8 py-4">
+                <p className="text-indigo-300 font-bold text-2xl mb-2">
                   You Save: $1,150/month ($13,800/year)
                 </p>
                 <p className="text-white text-sm">
@@ -313,73 +313,73 @@ function FallbackContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* Before: The Expensive Stack */}
-            <div className="bg-red-900/20 border border-red-700/50 rounded-2xl p-8">
+            <div className="bg-slate-800/50 border border-slate-600/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-4xl">😫</span>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The Old Way</h3>
-                  <p className="text-red-300 text-sm">Fragmented & Expensive</p>
+                  <p className="text-gray-400 text-sm">Fragmented & Expensive</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">Apollo/ZoomInfo (Lead Data)</span>
-                  <span className="text-red-300 font-semibold">$99-399/mo</span>
+                  <span className="text-gray-300 font-semibold">$99-399/mo</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">Air AI/11x (AI Sales Agents)</span>
-                  <span className="text-red-300 font-semibold">$500-2000/mo</span>
+                  <span className="text-gray-300 font-semibold">$500-2000/mo</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">Outreach Tool (Email/LinkedIn)</span>
-                  <span className="text-red-300 font-semibold">$49-199/mo</span>
+                  <span className="text-gray-300 font-semibold">$49-199/mo</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">Zapier (Automation)</span>
-                  <span className="text-red-300 font-semibold">$29-599/mo</span>
+                  <span className="text-gray-300 font-semibold">$29-599/mo</span>
                 </div>
-                <div className="border-t border-red-700/50 pt-4 flex justify-between items-center">
+                <div className="border-t border-slate-600/50 pt-4 flex justify-between items-center">
                   <span className="text-white font-bold">TOTAL PER MONTH:</span>
-                  <span className="text-red-300 font-bold text-2xl">$677-3,197</span>
+                  <span className="text-gray-200 font-bold text-2xl">$677-3,197</span>
                 </div>
               </div>
-              <div className="mt-6 text-red-300/70 text-sm">
-                Plus: Manual data syncing, integration headaches, support ticket hell
+              <div className="mt-6 text-gray-400 text-sm">
+                Plus: Integration hell, 5 support teams, data syncing nightmares
               </div>
             </div>
 
             {/* After: Our Platform */}
-            <div className="bg-green-900/20 border border-green-700/50 rounded-2xl p-8">
+            <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-4xl">🎉</span>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The New Way</h3>
-                  <p className="text-green-300 text-sm">All-In-One & Affordable</p>
+                  <p className="text-indigo-300 text-sm">All-In-One & Affordable</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">✓ Lead Scraper & Enrichment</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">✓ AI Sales Agents (Unlimited)</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">✓ Multi-Channel Outreach</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-white/90">✓ Workflow Automation</span>
-                  <span className="text-green-300 font-semibold">Included</span>
+                  <span className="text-indigo-300 font-semibold">Included</span>
                 </div>
-                <div className="border-t border-green-700/50 pt-4 flex justify-between items-center">
+                <div className="border-t border-indigo-500/50 pt-4 flex justify-between items-center">
                   <span className="text-white font-bold">TOTAL PER MONTH:</span>
-                  <span className="text-green-300 font-bold text-2xl">$400-1,250</span>
+                  <span className="text-indigo-300 font-bold text-2xl">$400-1,250</span>
                 </div>
               </div>
-              <div className="mt-6 text-green-300/70 text-sm">
+              <div className="mt-6 text-indigo-300/70 text-sm">
                 Plus: Everything synced, one dashboard, one support team, BYOK pricing
               </div>
             </div>
