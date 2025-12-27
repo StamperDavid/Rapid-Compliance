@@ -269,13 +269,13 @@ export default function PageEditorPage() {
     if (!page) return;
 
     // Restore the version content
-    const restoredPage = {
+    const restoredPage: Page = {
       ...page,
       content: version.content,
       seo: version.seo,
       title: version.title,
       slug: version.slug,
-      status: 'draft', // Restored pages become drafts
+      status: 'draft' as const, // Restored pages become drafts
       updatedAt: new Date().toISOString(),
     };
 
