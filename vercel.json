@@ -11,8 +11,7 @@
     },
     {
       "path": "/api/cron/scheduled-publisher",
-      "schedule": "*/5 * * * *",
-      "comment": "Website Builder: Publish scheduled pages every 5 minutes"
+      "schedule": "*/5 * * * *"
     }
   ],
   "headers": [
