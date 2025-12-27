@@ -4,6 +4,9 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+// Force dynamic rendering (uses request.url)
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/analytics/ecommerce - Get e-commerce analytics
  * 
