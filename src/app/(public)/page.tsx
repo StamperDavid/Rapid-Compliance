@@ -261,14 +261,12 @@ export default function LandingPage() {
               >
                 Start Free Trial →
               </Link>
-              <button
-                onClick={() => {
-                  document.getElementById('demo-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
+              <Link
+                href="/demo"
                 className="px-8 py-4 bg-white/10 text-white rounded-lg text-lg font-semibold hover:bg-white/20 transition border border-white/20"
               >
                 See Demo
-              </button>
+              </Link>
             </div>
 
             <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-gray-400">
@@ -756,35 +754,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Demo Section */}
-      <section id="demo-section" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              See It In Action
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              This is a live AI sales agent. Go ahead - ask it anything about our platform. 
-              This is exactly what your customers will experience on your website.
-            </p>
-          </div>
-
-          <LiveChatDemo primaryColor={theme.primaryColor} />
-
-          <div className="mt-12 text-center">
-            <p className="text-gray-400 mb-4">
-              Impressed? Your AI agent can be even smarter - trained specifically on YOUR business.
-            </p>
-            <Link
-              href="/signup"
-              className="inline-block px-8 py-4 rounded-lg text-lg font-semibold transition shadow-lg"
-              style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
-            >
-              Create Your Own AI Agent →
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* Social Proof */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
