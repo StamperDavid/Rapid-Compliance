@@ -64,6 +64,8 @@ export async function POST(
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
     // Store preview token
+    const performedBy = await getUserIdentifier();
+    
     const tokenRef = db
       .collection('organizations')
       .doc(organizationId)
@@ -78,7 +80,7 @@ export async function POST(
       organizationId,
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
-      createdBy: createdBy,
+      createdBy: performedBy,
     });
 
     // Generate preview URL
