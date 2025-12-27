@@ -165,36 +165,7 @@ export async function createSubscription(
   return await stripe.subscriptions.create(subscriptionParams);
 }
 
-/**
- * DEPRECATED: Create subscription with old plan system (backward compatibility)
- */
-export async function createSubscriptionLegacy(
-  customerId: string,
-  planId: string,
-  organizationId: string,
-  trialDays: number = 14
-): Promise<Stripe.Subscription> {
-  const plan = PLANS[planId];
-  if (!plan) {
-    throw new Error(`Invalid plan ID: ${planId}`);
-  }
-
-  const priceId = process.env[`STRIPE_PRICE_ID_${planId.toUpperCase()}`];
-  
-  if (!priceId) {
-    throw new Error(`Stripe price ID not configured for plan: ${planId}`);
-  }
-
-  return await stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: priceId }],
-    trial_period_days: trialDays,
-    metadata: {
-      planId,
-      organizationId,
-    },
-  });
-}
+// DEPRECATED functions removed - use createSubscriptionWithTier instead
 
 /**
  * Update subscription tier (auto-scaling based on record count)
@@ -234,37 +205,7 @@ export async function updateSubscriptionTier(
   });
 }
 
-/**
- * DEPRECATED: Legacy update subscription (backward compatibility)
- */
-export async function updateSubscription(
-  subscriptionId: string,
-  newPlanId: string
-): Promise<Stripe.Subscription> {
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const plan = PLANS[newPlanId];
-  
-  if (!plan) {
-    throw new Error(`Invalid plan ID: ${newPlanId}`);
-  }
-
-  const priceId = process.env[`STRIPE_PRICE_ID_${newPlanId.toUpperCase()}`];
-  if (!priceId) {
-    throw new Error(`Stripe price ID not configured for plan: ${newPlanId}`);
-  }
-
-  return await stripe.subscriptions.update(subscriptionId, {
-    items: [{
-      id: subscription.items.data[0].id,
-      price: priceId,
-    }],
-    proration_behavior: 'always_invoice',
-    metadata: {
-      ...subscription.metadata,
-      planId: newPlanId,
-    },
-  });
-}
+// DEPRECATED function removed - use updateSubscriptionTier instead
 
 /**
  * Cancel subscription
