@@ -164,6 +164,10 @@ export type WidgetType =
   | 'cta'
   | 'stats'
   | 'counter'
+  // Interactive
+  | 'modal'
+  | 'tabs'
+  | 'accordion'
   | 'progress'
   | 'accordion'
   | 'tabs'

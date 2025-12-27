@@ -65,22 +65,21 @@ export function AccessibleWidget({ widget, children }: AccessibleWidgetProps) {
         }
         break;
 
-      // Future widget types - uncomment when implemented
-      // case 'modal':
-      //   attrs['role'] = 'dialog';
-      //   attrs['aria-modal'] = 'true';
-      //   if (widget.data.title) {
-      //     attrs['aria-label'] = widget.data.title;
-      //   }
-      //   break;
+      case 'modal':
+        attrs['role'] = 'dialog';
+        attrs['aria-modal'] = 'true';
+        if (widget.data.title) {
+          attrs['aria-label'] = widget.data.title;
+        }
+        break;
 
-      // case 'tabs':
-      //   attrs['role'] = 'tablist';
-      //   break;
+      case 'tabs':
+        attrs['role'] = 'tablist';
+        break;
 
-      // case 'accordion':
-      //   attrs['role'] = 'region';
-      //   break;
+      case 'accordion':
+        attrs['role'] = 'region';
+        break;
     }
 
     return attrs;
