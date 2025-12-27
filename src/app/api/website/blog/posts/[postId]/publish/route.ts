@@ -61,6 +61,7 @@ export async function POST(
     }
 
     const now = new Date().toISOString();
+    const performedBy = await getUserIdentifier();
 
     // Update data
     const updateData: any = {
