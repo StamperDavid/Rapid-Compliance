@@ -390,7 +390,7 @@ export default function WebsiteSettingsPage() {
             disabled={saving}
             style={{
               padding: '0.75rem 1.5rem',
-              background: theme?.primaryColor || '#007bff',
+              background: primaryColor,
               color: 'white',
               border: 'none',
               borderRadius: '4px',
