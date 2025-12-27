@@ -1,0 +1,138 @@
+/**
+ * Schema Changes API
+ * Endpoints for managing schema change events and impact analysis
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger/logger';
+import {
+  SchemaChangeEventPublisher,
+  SchemaChangeEvent,
+} from '@/lib/schema/schema-change-tracker';
+import {
+  processSchemaChangeEvent,
+  processUnprocessedEvents,
+  getSchemaChangeImpactSummary,
+} from '@/lib/schema/schema-change-handler';
+
+/**
+ * GET /api/schema-changes
+ * Get schema change events
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const organizationId = searchParams.get('organizationId');
+    const schemaId = searchParams.get('schemaId');
+    const workspaceId = searchParams.get('workspaceId');
+    const unprocessedOnly = searchParams.get('unprocessedOnly') === 'true';
+    
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'organizationId is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Get events
+    let events: SchemaChangeEvent[];
+    
+    if (unprocessedOnly) {
+      events = await SchemaChangeEventPublisher.getUnprocessedEvents(
+        organizationId,
+        schemaId || undefined
+      );
+    } else {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
+      
+      const filters: any[] = [];
+      if (schemaId) {
+        filters.push({ field: 'schemaId', operator: '==', value: schemaId });
+      }
+      if (workspaceId) {
+        filters.push({ field: 'workspaceId', operator: '==', value: workspaceId });
+      }
+      
+      events = await FirestoreService.getAll(eventsPath, filters);
+    }
+    
+    return NextResponse.json({
+      success: true,
+      events,
+      count: events.length,
+    });
+    
+  } catch (error) {
+    logger.error('[Schema Changes API] GET failed', error, {
+      file: 'route.ts',
+    });
+    
+    return NextResponse.json(
+      { error: 'Failed to get schema changes' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/schema-changes/process
+ * Manually process schema change events
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { organizationId, eventId } = body;
+    
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'organizationId is required' },
+        { status: 400 }
+      );
+    }
+    
+    if (eventId) {
+      // Process single event
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
+      
+      const event = await FirestoreService.get(eventsPath, eventId);
+      
+      if (!event) {
+        return NextResponse.json(
+          { error: 'Event not found' },
+          { status: 404 }
+        );
+      }
+      
+      await processSchemaChangeEvent(event as SchemaChangeEvent);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Event processed successfully',
+      });
+    } else {
+      // Process all unprocessed events
+      const result = await processUnprocessedEvents(organizationId);
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Unprocessed events processed',
+        processed: result.processed,
+        failed: result.failed,
+      });
+    }
+    
+  } catch (error) {
+    logger.error('[Schema Changes API] POST failed', error, {
+      file: 'route.ts',
+    });
+    
+    return NextResponse.json(
+      { error: 'Failed to process schema changes' },
+      { status: 500 }
+    );
+  }
+}
+
+

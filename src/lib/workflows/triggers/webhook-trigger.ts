@@ -31,7 +31,8 @@ export async function handleWebhook(
   webhookUrl: string,
   method: string,
   headers: Record<string, string>,
-  body: any
+  body: any,
+  queryParams?: Record<string, string>
 ): Promise<void> {
   // Extract workflow ID from webhook URL
   // Format: /api/workflows/webhooks/{workflowId}
@@ -89,7 +90,7 @@ export async function handleWebhook(
           method,
           headers,
           body,
-          query: {}, // TODO: Parse query params
+          query: queryParams || {},
         };
         
         await executeWorkflow(workflow as Workflow, triggerData);
@@ -145,6 +146,7 @@ export async function registerWebhookTrigger(
   
   return trigger.webhookUrl;
 }
+
 
 
 

@@ -422,6 +422,38 @@ service cloud.firestore {
       allow read: if isAuthenticated() && belongsToOrg(orgId);
     }
     
+    // Schema Adaptability System Collections (Server-side managed)
+    
+    // Schema change events (system-managed, read-only for users)
+    match /organizations/{orgId}/schemaChangeEvents/{eventId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      // No client writes - only server via admin SDK
+    }
+    
+    // Schema issues dashboard (system-managed, read-only for users)
+    match /organizations/{orgId}/schemaIssues/{issueId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow update: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove(); // Can mark as resolved
+      // No client creates/deletes - only server
+    }
+    
+    // Notifications (read by users, created by system)
+    match /organizations/{orgId}/notifications/{notificationId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow update: if isAuthenticated() && belongsToOrg(orgId); // Can mark as read
+      // No client creates/deletes - only server
+    }
+    
+    // Integration field mappings (manager+ can configure)
+    match /organizations/{orgId}/integrationFieldMappings/{mappingId} {
+      allow read, write: if isSuperAdmin();
+      allow read: if isAuthenticated() && belongsToOrg(orgId);
+      allow create, update, delete: if isAuthenticated() && belongsToOrg(orgId) && isManagerOrAbove();
+    }
+    
     // Generic organization subcollections (leads, deals, prospects, tasks, etc.)
     // More restrictive than before - read for all, write for authenticated
     match /organizations/{orgId}/{subcollection}/{docId} {

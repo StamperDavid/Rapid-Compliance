@@ -5,19 +5,39 @@
 
 const admin = require('firebase-admin');
 
-// Initialize Firebase Admin (connects to emulator automatically)
+// Initialize Firebase Admin with service account if available
 if (!admin.apps.length) {
+  let credential;
+  try {
+    // Use repo-root service account if present
+    const serviceAccount = require('../serviceAccountKey.json');
+    credential = admin.credential.cert(serviceAccount);
+  } catch (err) {
+    // Fallback to default credentials
+    credential = admin.credential.applicationDefault();
+  }
+
   admin.initializeApp({
-    projectId: 'demo-ai-sales-platform',
+    credential,
+    projectId: process.env.FIREBASE_ADMIN_PROJECT_ID || 'ai-sales-platform-dev',
   });
 }
 
-// Connect to emulators
-process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
-process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+// Optional: set emulators before running if desired:
+// process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+// process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
 
 const db = admin.firestore();
 const auth = admin.auth();
+
+// Live-parity demo accounts to seed in dev
+const ACCOUNTS_TO_SEED = [
+  { email: 'demo-auraflow@test.com', password: 'Testing123!', companyName: 'AuraFlow Analytics (TEST)', planId: 'starter', industry: 'B2B Software as a Service (SaaS)' },
+  { email: 'demo-greenthumb@test.com', password: 'Testing123!', companyName: 'GreenThumb Landscaping (TEST)', planId: 'starter', industry: 'Home Services (Landscaping & Lawn Care)' },
+  { email: 'demo-adventuregear@test.com', password: 'Testing123!', companyName: 'The Adventure Gear Shop (TEST)', planId: 'professional', industry: 'E-commerce (Outdoor Apparel and Gear)' },
+  { email: 'demo-summitwm@test.com', password: 'Testing123!', companyName: 'Summit Wealth Management (TEST)', planId: 'professional', industry: 'Financial Services (Investment Advisory)' },
+  { email: 'demo-pixelperfect@test.com', password: 'Testing123!', companyName: 'PixelPerfect Design Co. (TEST)', planId: 'starter', industry: 'Creative Services (Web Design & Branding)' },
+];
 
 const TEST_ACCOUNTS = [
   {
@@ -293,14 +313,20 @@ async function createTestAccount(accountData) {
   try {
     console.log(`\n📝 Creating account: ${accountData.companyName}...`);
     
-    // Create Firebase Auth user
-    const userRecord = await auth.createUser({
-      email: accountData.email,
-      password: accountData.password,
-      displayName: accountData.companyName,
-    });
-    
-    console.log(`✅ Auth user created: ${userRecord.uid}`);
+    // Create or reuse Firebase Auth user
+    let userRecord;
+    try {
+      userRecord = await auth.getUserByEmail(accountData.email);
+      console.log(`ℹ️ Auth user already exists: ${userRecord.uid}`);
+    } catch {
+      userRecord = await auth.createUser({
+        email: accountData.email,
+        password: accountData.password,
+        displayName: accountData.companyName,
+        emailVerified: true,
+      });
+      console.log(`✅ Auth user created: ${userRecord.uid}`);
+    }
     
     // Generate organization ID
     const orgId = `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -356,11 +382,11 @@ async function createTestAccount(accountData) {
 
 async function seedAllAccounts() {
   console.log('🚀 Starting test account seeding...\n');
-  console.log(`Creating ${TEST_ACCOUNTS.length} test accounts...\n`);
+  console.log(`Creating ${ACCOUNTS_TO_SEED.length} test accounts...\n`);
   
   const results = [];
   
-  for (const account of TEST_ACCOUNTS) {
+  for (const account of ACCOUNTS_TO_SEED) {
     const result = await createTestAccount(account);
     results.push({ ...account, ...result });
     
@@ -374,8 +400,8 @@ async function seedAllAccounts() {
   const successful = results.filter(r => r.success).length;
   const failed = results.filter(r => !r.success).length;
   
-  console.log(`✅ Successful: ${successful}/${TEST_ACCOUNTS.length}`);
-  console.log(`❌ Failed: ${failed}/${TEST_ACCOUNTS.length}`);
+  console.log(`✅ Successful: ${successful}/${ACCOUNTS_TO_SEED.length}`);
+  console.log(`❌ Failed: ${failed}/${ACCOUNTS_TO_SEED.length}`);
   
   if (successful > 0) {
     console.log('\n✅ Successfully created accounts:');

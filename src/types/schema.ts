@@ -85,9 +85,26 @@ export interface SchemaField {
   // Conditional display
   conditionalDisplay?: ConditionalLogic;
   
+  // Rename history for rollback
+  renameHistory?: FieldRenameRecord[];
+  
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/**
+ * Field Rename Record
+ * Tracks field rename history for rollback capability
+ */
+export interface FieldRenameRecord {
+  timestamp: Timestamp;
+  oldKey: string;
+  newKey: string;
+  oldLabel: string;
+  newLabel: string;
+  renamedBy: string; // User ID who made the change
+  reason?: string; // Optional reason for rename
 }
 
 /**

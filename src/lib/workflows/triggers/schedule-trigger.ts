@@ -6,7 +6,8 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, ScheduleTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-engine'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import parser from 'cron-parser';
 
 /**
  * Register schedule trigger
@@ -71,9 +72,27 @@ function calculateNextRun(schedule: ScheduleTrigger['schedule']): string {
     
     return new Date(now.getTime() + milliseconds).toISOString();
   } else if (schedule.type === 'cron') {
-    // TODO: Parse cron expression and calculate next run
-    // For now, return 1 hour from now
-    return new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+    try {
+      const cronExpression = schedule.cron!;
+      
+      // Validate and parse cron expression
+      const interval = parser.parseExpression(cronExpression, {
+        currentDate: now,
+        tz: 'UTC' // Or get from organization settings
+      });
+      
+      // Get next occurrence
+      const next = interval.next().toDate();
+      return next.toISOString();
+    } catch (error) {
+      logger.error('[Schedule] Invalid cron expression', error, {
+        cron: schedule.cron,
+        file: 'schedule-trigger.ts'
+      });
+      
+      // Fallback to 1 day from now if invalid
+      return new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    }
   }
   
   return now.toISOString();
@@ -168,6 +187,22 @@ export async function unregisterScheduleTrigger(
   
   logger.info('Schedule Trigger Unregistered schedule for workflow workflowId}', { file: 'schedule-trigger.ts' });
 }
+
+/**
+ * Validate cron expression
+ */
+export function validateCronExpression(cron: string): { valid: boolean; error?: string } {
+  try {
+    parser.parseExpression(cron);
+    return { valid: true };
+  } catch (error) {
+    return { 
+      valid: false, 
+      error: error instanceof Error ? error.message : 'Invalid cron expression'
+    };
+  }
+}
+
 
 
 

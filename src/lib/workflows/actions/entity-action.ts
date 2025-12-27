@@ -16,34 +16,62 @@ export async function executeCreateEntityAction(
   organizationId: string,
   workspaceId: string
 ): Promise<any> {
-  // Build entity data from field mappings
+  // Get schema for field resolution
+  const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
+  const schema = await FS.get(
+    `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
+    action.schemaId
+  );
+  
+  if (!schema) {
+    throw new Error(`Schema ${action.schemaId} not found`);
+  }
+  
+  // Build entity data from field mappings with dynamic field resolution
   const entityData: Record<string, any> = {};
   
   for (const mapping of action.fieldMappings) {
     let value: any;
+    
+    // Resolve target field using field resolver
+    const { FieldResolver } = await import('@/lib/schema/field-resolver');
+    const resolvedTarget = await FieldResolver.resolveFieldWithCommonAliases(
+      schema,
+      mapping.targetField
+    );
+    
+    if (!resolvedTarget) {
+      logger.warn('[Entity Action] Target field not found in schema', {
+        file: 'entity-action.ts',
+        targetField: mapping.targetField,
+        schemaId: action.schemaId,
+      });
+      continue; // Skip this mapping
+    }
     
     switch (mapping.source) {
       case 'static':
         value = mapping.staticValue;
         break;
       case 'trigger':
-        value = getNestedValue(triggerData, mapping.sourceField || '');
+        // Use field resolver to get value with flexible matching
+        value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
         break;
       case 'variable':
         // Get from workflow variables stored in triggerData._variables
         const variables = triggerData?._variables || triggerData?.variables || {};
-        value = getNestedValue(variables, mapping.sourceField || '');
+        value = FieldResolver.getFieldValue(variables, mapping.sourceField || '');
         // Fallback to trigger data if not found in variables
         if (value === undefined) {
-          value = getNestedValue(triggerData, mapping.sourceField || '');
+          value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
         }
         break;
       case 'ai':
         // Generate using AI
         value = await generateWithAI({
           organizationId,
-          field: mapping.targetField,
-          prompt: mapping.aiPrompt || `Generate a value for field "${mapping.targetField}"`,
+          field: resolvedTarget.fieldKey,
+          prompt: mapping.aiPrompt || `Generate a value for field "${resolvedTarget.fieldLabel}"`,
           context: triggerData,
         });
         break;
@@ -56,18 +84,8 @@ export async function executeCreateEntityAction(
       value = applyTransform(value, mapping.transform);
     }
     
-    entityData[mapping.targetField] = value;
-  }
-  
-  // Get entity name from schema
-  const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
-  const schema = await FS.get(
-    `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
-    action.schemaId
-  );
-  
-  if (!schema) {
-    throw new Error(`Schema ${action.schemaId} not found`);
+    // Use resolved field key instead of original reference
+    entityData[resolvedTarget.fieldKey] = value;
   }
   
   const entityName = (schema as any).name || action.schemaId;
@@ -130,18 +148,34 @@ export async function executeUpdateEntityAction(
     }
   }
   
-  // Build update data from field mappings
+  // Build update data from field mappings with dynamic field resolution
   const updateData: Record<string, any> = {};
+  const { FieldResolver } = await import('@/lib/schema/field-resolver');
   
   for (const mapping of action.fieldMappings) {
     let value: any;
+    
+    // Resolve target field
+    const resolvedTarget = await FieldResolver.resolveFieldWithCommonAliases(
+      schema,
+      mapping.targetField
+    );
+    
+    if (!resolvedTarget) {
+      logger.warn('[Entity Action] Target field not found in schema for update', {
+        file: 'entity-action.ts',
+        targetField: mapping.targetField,
+        schemaId: action.schemaId,
+      });
+      continue;
+    }
     
     switch (mapping.source) {
       case 'static':
         value = mapping.staticValue;
         break;
       case 'trigger':
-        value = getNestedValue(triggerData, mapping.sourceField || '');
+        value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
         break;
       default:
         value = null;
@@ -151,7 +185,7 @@ export async function executeUpdateEntityAction(
       value = applyTransform(value, mapping.transform);
     }
     
-    updateData[mapping.targetField] = value;
+    updateData[resolvedTarget.fieldKey] = value;
   }
   
   // Update records

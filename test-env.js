@@ -11,3 +11,5 @@ console.log('NEXT_PUBLIC_FIREBASE_API_KEY:', process.env.NEXT_PUBLIC_FIREBASE_AP
 
 console.log('\n---');
 console.log('Full GOOGLE_CLIENT_ID value:', process.env.GOOGLE_CLIENT_ID || 'UNDEFINED');
+
+

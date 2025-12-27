@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useRecords } from '@/hooks/useRecords';
@@ -29,9 +29,9 @@ export default function EntityTablePage() {
   const params = useParams();
   const entityName = params.entityName as string;
   const orgId = params.orgId as string;
+  const searchParams = useSearchParams();
+  const workspaceId = (searchParams?.get('workspaceId') as string) || 'default';
 
-  // REAL DATA from Firestore
-  const workspaceId = 'default';
   const {
     records,
     loading,
@@ -46,16 +46,47 @@ export default function EntityTablePage() {
     realTime: true,
   });
 
+  const [schemaList, setSchemaList] = useState<any[]>([]);
+
+  // Load schemas from API
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/schemas?organizationId=${orgId}&workspaceId=${workspaceId}`);
+        if (!res.ok) throw new Error(`Failed to load schemas (${res.status})`);
+        const data = await res.json();
+        if (isMounted) {
+          setSchemaList(data.schemas || []);
+        }
+      } catch (err) {
+        logger.error('Error loading schemas for entity page', err, { file: 'page.tsx' });
+      } finally {
+        // no-op
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [orgId, workspaceId]);
+
   // Get schema dynamically based on entity name
   const schema = useMemo(() => {
     const schemaKey = entityName.toLowerCase();
+    const fromApi = (schemaList || []).find(
+      (s: any) =>
+        s.id?.toLowerCase() === schemaKey ||
+        s.name?.toLowerCase() === schemaKey ||
+        s.pluralName?.toLowerCase() === schemaKey
+    );
+    if (fromApi) return fromApi as any;
     return STANDARD_SCHEMAS[schemaKey as keyof typeof STANDARD_SCHEMAS] || null;
-  }, [entityName]);
+  }, [entityName, schemaList]);
 
   // Get fields from schema or fallback to generic
   const fields: SchemaField[] = useMemo(() => {
     if (schema?.fields) {
-      return schema.fields;
+      return schema.fields as SchemaField[];
     }
     // Fallback for custom entities
     return [

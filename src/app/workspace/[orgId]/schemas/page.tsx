@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 interface Field {
@@ -39,10 +38,12 @@ const FIELD_TYPES = [
 
 export default function SchemaBuilderPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const orgId = params.orgId as string;
+  const workspaceId = (searchParams?.get('workspaceId') as string) || 'default';
 
   // Convert STANDARD_SCHEMAS to the format we need
-  const standardSchemasArray: Schema[] = Object.values(STANDARD_SCHEMAS).map(schema => ({
+  const standardSchemasArray: Schema[] = useMemo(() => Object.values(STANDARD_SCHEMAS).map(schema => ({
     id: schema.id,
     name: schema.name,
     pluralName: schema.pluralName,
@@ -54,9 +55,12 @@ export default function SchemaBuilderPage() {
       type: f.type,
       required: f.required
     }))
-  }));
+  })), []);
 
-  const [schemas, setSchemas] = useState<Schema[]>(standardSchemasArray);
+  const [schemas, setSchemas] = useState<Schema[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingSchema, setEditingSchema] = useState<Schema | null>(null);
@@ -70,25 +74,74 @@ export default function SchemaBuilderPage() {
     ]
   });
 
-  const handleCreateSchema = () => {
-    if (!newSchema.name) return;
+  const loadSchemas = useCallback(async () => {
+    if (!orgId || !workspaceId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/schemas?organizationId=${orgId}&workspaceId=${workspaceId}`);
+      if (!res.ok) {
+        throw new Error(`Failed to load schemas (${res.status})`);
+      }
+      const data = await res.json();
+      const serverSchemas = (data.schemas as Schema[]) || [];
+      if (serverSchemas.length === 0) {
+        setSchemas(standardSchemasArray);
+      } else {
+        setSchemas(serverSchemas);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load schemas');
+      setSchemas(standardSchemasArray);
+    } finally {
+      setLoading(false);
+    }
+  }, [orgId, workspaceId, standardSchemasArray]);
 
-    const schema: Schema = {
-      id: `schema_${Date.now()}`,
-      name: newSchema.name,
-      pluralName: newSchema.pluralName || newSchema.name + 's',
-      icon: newSchema.icon,
-      fields: newSchema.fields
-    };
+  useEffect(() => {
+    loadSchemas();
+  }, [loadSchemas]);
 
-    setSchemas([...schemas, schema]);
-    setIsCreating(false);
-    setNewSchema({
-      name: '',
-      pluralName: '',
-      icon: '📋',
-      fields: [{ id: 'f_new_1', key: 'name', label: 'Name', type: 'text', required: true }]
-    });
+  const handleCreateSchema = async () => {
+    if (!newSchema.name || saving) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/schemas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          workspaceId,
+          schema: newSchema,
+          userId: 'ui-schema-builder'
+        })
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to create schema (${res.status})`);
+      }
+
+      const data = await res.json();
+      if (data?.schema) {
+        setSchemas(prev => [...prev, data.schema]);
+      }
+
+      setIsCreating(false);
+      setNewSchema({
+        name: '',
+        pluralName: '',
+        icon: '📋',
+        fields: [{ id: 'f_new_1', key: 'name', label: 'Name', type: 'text', required: true }]
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to create schema');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addField = () => {
@@ -118,30 +171,72 @@ export default function SchemaBuilderPage() {
     });
   };
 
-  const deleteSchema = (id: string) => {
-    if (confirm('Are you sure you want to delete this schema?')) {
-      setSchemas(schemas.filter(s => s.id !== id));
+  const deleteSchema = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this schema?')) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/schemas/${id}?organizationId=${orgId}&workspaceId=${workspaceId}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to delete schema (${res.status})`);
+      }
+      setSchemas(prev => prev.filter(s => s.id !== id));
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete schema');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveEditedSchema = async () => {
+    if (!editingSchema) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/schemas/${editingSchema.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: orgId,
+          workspaceId,
+          updates: editingSchema,
+          userId: 'ui-schema-builder'
+        })
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to update schema (${res.status})`);
+      }
+
+      setSchemas(prev => prev.map(s => s.id === editingSchema.id ? editingSchema : s));
+      setEditingSchema(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update schema');
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-      
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       {/* Header */}
-      <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}>
+      <div style={{ backgroundColor: 'var(--color-bg-paper)', borderBottom: '1px solid var(--color-border-main)' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Link href={`/workspace/${orgId}/settings`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+              <Link href={`/workspace/${orgId}/settings`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
                 ← Back to Settings
               </Link>
-              <div style={{ height: '1.5rem', width: '1px', backgroundColor: '#333' }}></div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Schema Editor</h1>
+              <div style={{ height: '1.5rem', width: '1px', backgroundColor: 'var(--color-border-main)' }}></div>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>Schema Editor</h1>
             </div>
             <button
               onClick={() => setIsCreating(true)}
-              style={{ padding: '0.625rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+              style={{ padding: '0.625rem 1.5rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: 'var(--radius-button)', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
             >
               + Create Schema
             </button>
@@ -151,33 +246,45 @@ export default function SchemaBuilderPage() {
 
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem 1.5rem' }}>
         {/* Info Box */}
-        <div style={{ backgroundColor: '#1a2e1a', border: '1px solid #2d4a2d', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem' }}>
+        <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-main)', borderRadius: 'var(--radius-card)', padding: '1.5rem', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', gap: '1rem' }}>
             <span style={{ fontSize: '1.5rem' }}>💡</span>
             <div>
-              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#6ee7b7', marginBottom: '0.5rem' }}>Standard CRM Schemas</div>
-              <div style={{ fontSize: '0.875rem', color: '#86efac', lineHeight: '1.6' }}>
+              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Standard CRM Schemas</div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>
                 Below are the 10 standard CRM schemas that come pre-configured. You can customize these or create entirely new schemas for your business needs (e.g., Projects, Properties, Vehicles, Cases, etc.).
               </div>
             </div>
           </div>
         </div>
 
+        {error && (
+          <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: 'var(--radius-card)', backgroundColor: 'var(--color-error)', border: '1px solid var(--color-border-strong)', color: 'white' }}>
+            {error}
+          </div>
+        )}
+
         {/* Existing Schemas */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          {loading && schemas.length === 0 && (
+            <div style={{ color: 'var(--color-text-secondary)' }}>Loading schemas...</div>
+          )}
+          {!loading && schemas.length === 0 && (
+            <div style={{ color: 'var(--color-text-secondary)' }}>No schemas found. Create one to get started.</div>
+          )}
           {schemas.map((schema) => (
-            <div key={schema.id} style={{ backgroundColor: '#0a0a0a', borderRadius: '0.75rem', border: '1px solid #1a1a1a', padding: '1.5rem' }}>
+            <div key={schema.id} style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border-main)', padding: '1.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ fontSize: '2rem' }}>{schema.icon}</span>
                   <div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>{schema.name}</h3>
-                    <p style={{ fontSize: '0.875rem', color: '#666', margin: 0 }}>{schema.pluralName}</p>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>{schema.name}</h3>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0 }}>{schema.pluralName}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => deleteSchema(schema.id)}
-                  style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}
+                  style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}
                   title="Delete"
                 >
                   🗑️
@@ -185,28 +292,28 @@ export default function SchemaBuilderPage() {
               </div>
               
               <div style={{ marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>Fields ({schema.fields.length})</p>
+                <p style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Fields ({schema.fields.length})</p>
                 {schema.fields.slice(0, 3).map((field) => (
-                  <div key={field.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem', backgroundColor: '#111', padding: '0.625rem 0.875rem', borderRadius: '0.375rem', marginBottom: '0.5rem' }}>
-                    <span style={{ color: '#fff' }}>{field.label}</span>
-                    <span style={{ color: '#666', fontSize: '0.75rem' }}>{field.type}</span>
+                  <div key={field.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem', backgroundColor: 'var(--color-bg-elevated)', padding: '0.625rem 0.875rem', borderRadius: 'var(--radius-input)', marginBottom: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                    <span style={{ color: 'var(--color-text-primary)' }}>{field.label}</span>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>{field.type}</span>
                   </div>
                 ))}
                 {schema.fields.length > 3 && (
-                  <p style={{ fontSize: '0.75rem', color: '#666' }}>+{schema.fields.length - 3} more</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>+{schema.fields.length - 3} more</p>
                 )}
               </div>
 
-              <div style={{ paddingTop: '1rem', borderTop: '1px solid #1a1a1a', display: 'flex', gap: '0.5rem' }}>
+              <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--color-border-main)', display: 'flex', gap: '0.5rem' }}>
                 <Link
-                  href={`/workspace/${orgId}/entities/${schema.name.toLowerCase()}`}
-                  style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#6366f1', borderRadius: '0.5rem', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid #333', fontWeight: '500' }}
+                  href={`/workspace/${orgId}/entities/${(schema.id || schema.name).toLowerCase()}?workspaceId=${workspaceId}`}
+                  style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-primary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid var(--color-border-main)', fontWeight: '500' }}
                 >
                   View Data
                 </Link>
                 <button
                   onClick={() => setEditingSchema(schema)}
-                  style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: '#222', color: '#999', borderRadius: '0.5rem', fontSize: '0.875rem', border: '1px solid #333', cursor: 'pointer', fontWeight: '500' }}
+                  style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', border: '1px solid var(--color-border-main)', cursor: 'pointer', fontWeight: '500' }}
                 >
                   Edit
                 </button>

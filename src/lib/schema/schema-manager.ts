@@ -181,6 +181,12 @@ export class SchemaManager {
       throw new Error(`Schema ${schemaId} not found`);
     }
 
+    // Detect schema changes before updating
+    const organizationId = await this.getOrganizationId();
+    if (organizationId) {
+      await this.detectAndPublishChanges(schema, updates, organizationId);
+    }
+
     // Increment version if fields changed
     const version = updates.fields ? schema.version + 1 : schema.version;
 
@@ -190,6 +196,56 @@ export class SchemaManager {
       updatedAt: serverTimestamp(),
       updatedBy: userId
     });
+  }
+
+  /**
+   * Detect and publish schema changes
+   */
+  private async detectAndPublishChanges(
+    oldSchema: Schema,
+    updates: Partial<Schema>,
+    organizationId: string
+  ): Promise<void> {
+    try {
+      // Create a new schema object with updates applied
+      const newSchema: Schema = {
+        ...oldSchema,
+        ...updates,
+      };
+
+      // Detect changes
+      const { SchemaChangeDetector } = await import('./schema-change-tracker');
+      const events = SchemaChangeDetector.detectChanges(oldSchema, newSchema, organizationId);
+
+      // Add events to debouncer (batches rapid changes)
+      if (events.length > 0) {
+        const { SchemaChangeDebouncer } = await import('./schema-change-debouncer');
+        const debouncer = SchemaChangeDebouncer.getInstance(5000); // 5 second debounce
+        
+        for (const event of events) {
+          await debouncer.addEvent(event);
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the update
+      console.error('[Schema Manager] Failed to detect/publish changes:', error);
+    }
+  }
+
+  /**
+   * Get organization ID from workspace
+   */
+  private async getOrganizationId(): Promise<string | null> {
+    try {
+      const workspaceDoc = await getDoc(doc(this.db, 'workspaces', this.workspaceId));
+      if (workspaceDoc.exists()) {
+        return (workspaceDoc.data() as any).organizationId || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('[Schema Manager] Failed to get organization ID:', error);
+      return null;
+    }
   }
 
   /**
@@ -278,6 +334,23 @@ export class SchemaManager {
     
     if (fieldIndex === -1) {
       throw new Error(`Field ${fieldId} not found in schema ${schemaId}`);
+    }
+
+    const currentField = schema.fields[fieldIndex];
+
+    // Track rename history if key or label changed
+    if ((updates.key && updates.key !== currentField.key) || 
+        (updates.label && updates.label !== currentField.label)) {
+      const { FieldRenameManager } = await import('./field-rename-manager');
+      
+      const updatedField = FieldRenameManager.addRenameRecord(
+        currentField,
+        updates.key || currentField.key,
+        updates.label || currentField.label,
+        userId
+      );
+      
+      updates = { ...updates, renameHistory: updatedField.renameHistory };
     }
 
     // Update field

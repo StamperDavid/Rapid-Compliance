@@ -1,0 +1,222 @@
+/**
+ * Field Type Conversion API - SERVER SIDE (Admin SDK Only)
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger/logger';
+import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
+import { FieldType } from '@/types/schema';
+
+/**
+ * GET /api/schema/[schemaId]/field/[fieldId]/convert-type
+ * Generate type conversion preview
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ schemaId: string; fieldId: string }> }
+) {
+  try {
+    const params = await context.params;
+    const searchParams = request.nextUrl.searchParams;
+    const organizationId = searchParams.get('organizationId');
+    const workspaceId = searchParams.get('workspaceId');
+    const oldType = searchParams.get('oldType') as FieldType;
+    const newType = searchParams.get('newType') as FieldType;
+    const fieldKey = searchParams.get('fieldKey');
+    
+    if (!organizationId || !workspaceId || !oldType || !newType || !fieldKey) {
+      return NextResponse.json(
+        { error: 'organizationId, workspaceId, oldType, newType, and fieldKey are required' },
+        { status: 400 }
+      );
+    }
+    
+    // Check if safe conversion
+    const isSafe = FieldTypeConverterServer.isSafeConversion(oldType, newType);
+    
+    // Generate preview using SERVER version (admin SDK)
+    const preview = await FieldTypeConverterServer.generateConversionPreview(
+      organizationId,
+      workspaceId,
+      params.schemaId,
+      fieldKey,
+      oldType,
+      newType,
+      10 // sample size
+    );
+    
+    return NextResponse.json({
+      success: true,
+      isSafe,
+      preview: preview.preview,
+      totalRecords: preview.totalRecords,
+      estimatedSuccess: preview.estimatedSuccess,
+      estimatedFailures: preview.estimatedFailures,
+      successRate: preview.totalRecords > 0
+        ? Math.round((preview.estimatedSuccess / preview.totalRecords) * 100)
+        : 0,
+    });
+    
+  } catch (error) {
+    logger.error('[Type Conversion API] GET failed', error, {
+      file: 'route.ts',
+    });
+    
+    return NextResponse.json(
+      { error: 'Failed to generate conversion preview' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * POST /api/schema/[schemaId]/field/[fieldId]/convert-type
+ * Execute field type conversion on all records
+ */
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ schemaId: string; fieldId: string }> }
+) {
+  try {
+    const params = await context.params;
+    const body = await request.json();
+    const { organizationId, workspaceId, fieldKey, oldType, newType } = body;
+    
+    // Validate required fields
+    if (!organizationId || !workspaceId || !fieldKey || !oldType || !newType) {
+      return NextResponse.json(
+        { error: 'Missing required fields: organizationId, workspaceId, fieldKey, oldType, newType' },
+        { status: 400 }
+      );
+    }
+    
+    logger.info('[Type Conversion] Starting conversion', {
+      schemaId: params.schemaId,
+      fieldId: params.fieldId,
+      fieldKey,
+      oldType,
+      newType,
+      file: 'route.ts'
+    });
+    
+    // Import admin SDK
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const db = getFirestore();
+    
+    // Get schema to get schema name
+    const schemaRef = db
+      .collection('organizations').doc(organizationId)
+      .collection('workspaces').doc(workspaceId)
+      .collection('schemas').doc(params.schemaId);
+    
+    const schemaDoc = await schemaRef.get();
+    
+    if (!schemaDoc.exists) {
+      return NextResponse.json(
+        { error: 'Schema not found' },
+        { status: 404 }
+      );
+    }
+    
+    const schemaData = schemaDoc.data();
+    const schemaName = schemaData?.name;
+    
+    if (!schemaName) {
+      return NextResponse.json(
+        { error: 'Schema name not found' },
+        { status: 400 }
+      );
+    }
+    
+    // Get all records
+    const recordsRef = db
+      .collection('organizations').doc(organizationId)
+      .collection('workspaces').doc(workspaceId)
+      .collection('entities').doc(schemaName)
+      .collection('records');
+    
+    const snapshot = await recordsRef.get();
+    
+    logger.info('[Type Conversion] Found records to convert', {
+      totalRecords: snapshot.size,
+      file: 'route.ts'
+    });
+    
+    // Process records in batches (Firestore limit: 500 operations per batch)
+    const BATCH_SIZE = 500;
+    let successCount = 0;
+    let failureCount = 0;
+    const failedRecords: { id: string; error: string }[] = [];
+    
+    // Split records into batches
+    const allDocs = snapshot.docs;
+    for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
+      const batchDocs = allDocs.slice(i, i + BATCH_SIZE);
+      const batch = db.batch();
+      
+      for (const doc of batchDocs) {
+        const data = doc.data();
+        const oldValue = data[fieldKey];
+        const conversion = FieldTypeConverterServer.convertValue(oldValue, oldType as FieldType, newType as FieldType);
+        
+        if (conversion.success) {
+          batch.update(doc.ref, { [fieldKey]: conversion.value });
+          successCount++;
+        } else {
+          failureCount++;
+          failedRecords.push({
+            id: doc.id,
+            error: conversion.message || 'Conversion failed'
+          });
+        }
+      }
+      
+      // Commit batch
+      await batch.commit();
+      
+      logger.info('[Type Conversion] Batch committed', {
+        batchNumber: Math.floor(i / BATCH_SIZE) + 1,
+        batchSize: batchDocs.length,
+        file: 'route.ts'
+      });
+    }
+    
+    // Update field type in schema metadata
+    const updatedFields = schemaData.fields.map((f: any) => 
+      f.id === params.fieldId ? { ...f, type: newType } : f
+    );
+    
+    await schemaRef.update({ 
+      fields: updatedFields,
+      updatedAt: new Date().toISOString()
+    });
+    
+    logger.info('[Type Conversion] Conversion complete', {
+      successCount,
+      failureCount,
+      totalRecords: snapshot.size,
+      file: 'route.ts'
+    });
+    
+    return NextResponse.json({
+      success: true,
+      successCount,
+      failureCount,
+      totalRecords: snapshot.size,
+      failedRecords: failedRecords.slice(0, 10), // Return first 10 failures
+    });
+    
+  } catch (error) {
+    logger.error('[Type Conversion] Execution failed', error, {
+      file: 'route.ts',
+    });
+    
+    return NextResponse.json(
+      { 
+        error: 'Conversion failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}

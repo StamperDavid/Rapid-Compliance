@@ -27,8 +27,15 @@ export async function POST(
     // Get webhook URL from request
     const webhookUrl = request.url;
     
+    // Parse query parameters from URL
+    const url = new URL(request.url);
+    const queryParams: Record<string, string> = {};
+    url.searchParams.forEach((value, key) => {
+      queryParams[key] = value;
+    });
+    
     // Handle webhook
-    await handleWebhook(webhookUrl, method, headers, body);
+    await handleWebhook(webhookUrl, method, headers, body, queryParams);
     
     return NextResponse.json({
       success: true,

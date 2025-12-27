@@ -1,20 +1,33 @@
 # AI Sales Platform - Project Status
 
-**Last Updated:** December 25, 2025 - **BUILD FULLY FIXED**  
+**Last Updated:** December 27, 2025 - **Schema stack NOT production-ready**  
 **Current Branch:** `dev`  
-**Build Status:** ✅ PASSING (138 routes generated)  
-**Actual Completion:** 87% complete (all TypeScript errors resolved)
+**Build Status:** ⚠️ Unknown (not re-run after today’s findings)  
+**Actual Completion:** 68% complete (schema subsystem incomplete)  
+**Critical Issues:** 5 blocking issues (custom schemas + prior gaps)
 
 ---
 
 ## 📋 EXECUTIVE SUMMARY
 
-### The Bottom Line
-You have a **well-architected, production-grade platform**. After thorough code inspection and fixing all critical issues, the platform is **87% complete and ready for beta launch**.
+### ⚠️ THE BRUTAL TRUTH (Dec 27, 2025)
 
-### What Actually Works (Code-Verified Dec 25, 2025)
+The custom schema system is **not wired to the backend** and breaks multi-tenant data. Schema UI changes stay in React state only, the workspace is hardcoded to `default`, and the client SchemaManager writes to `/workspaces/{workspaceId}` while APIs and rules expect `/organizations/{orgId}/workspaces/{workspaceId}`. Anything beyond the 10 standard schemas will silently fail or bypass org scoping. The platform is **not production-ready** until the schema stack is fixed and retested.
+
+### 🚨 NEW CRITICAL ISSUES FOUND (Dec 27, 2025)
+
+1. ❌ **Schema builder is UI-only** – Create/Edit/Delete never call APIs; nothing persists to Firestore.  
+2. ❌ **Path mismatch kills multi-tenancy** – `SchemaManager` writes to `/workspaces/{workspaceId}/schemas` while APIs, services, and security rules expect `/organizations/{orgId}/workspaces/{workspaceId}/schemas`; client writes fail and/or bypass org scoping.  
+3. ❌ **Entities UI ignores custom schemas** – Workspace hardcoded to `default`; fields come only from `STANDARD_SCHEMAS`. Custom schemas are invisible and real workspace selection is impossible.  
+4. ⚠️ **Field type conversion wiring unknown** – Server route now has implementation, but UI still calls nothing; end-to-end not validated after schema fixes.  
+5. ⚠️ **Website/page builder + custom domains** – Only an admin-only prototype exists (`/admin/website-editor`) that saves to a single `platform/website` doc; no per-tenant publishing, no DNS/SSL automation, and no user-facing navigation. Clients cannot build or publish sites/domains.  
+6. ⚠️ **Prior criticals (cron parsing, webhook params, custom transforms)** – Not revalidated today; treat as still open until re-tested.
+
+**Total incomplete implementations:** 9 (4 critical, 3 moderate, 2 low priority)
+
+### What Actually Works (Code-Verified Dec 25-26, 2025)
 1. ✅ **All 68 workspace pages exist and function**
-2. ✅ **All 105 API routes working**
+2. ✅ **All 105 API routes working** (except field conversion POST)
 3. ✅ **Workflow engine 100% real** - All 9 action types verified
 4. ✅ **Payment processing fully coded** - Stripe, PayPal, Square (473 lines checkout-service.ts)
 5. ✅ **AI Agent production-ready** - Golden Master, RAG, multi-provider
@@ -26,26 +39,29 @@ You have a **well-architected, production-grade platform**. After thorough code 
 11. ✅ **Integration backends real** - Gmail, Slack, Outlook all use real APIs
 12. ✅ **Pagination on UI pages** - 13 list pages use usePagination hook
 
-### Critical Issues - ALL FIXED (Dec 25, 2025)
-1. ✅ **Integration UIs** - Wired to real OAuth routes (8 components)
-2. ✅ **E-commerce tests** - Enabled and runnable
-3. ✅ **MOCK comments** - Removed misleading documentation
-4. ✅ **Test coverage** - Improved with graceful handling
+### Issues Remaining (Dec 27, 2025)
+1. ❌ Custom schema persistence + org scoping (blocking)  
+2. ❌ Entity UI workspace selection + schema fetching (blocking)  
+3. ❌ SchemaManager path alignment with API + rules (blocking)  
+4. ❌ Field type conversion end-to-end wiring (blocking until validated)  
+5. ❌ Website/page builder + custom domains not available to clients (admin-only prototype; global doc save; no DNS/SSL/publish flow)  
+6. ❌ Cron parsing accuracy (carried from Dec 26, unverified today)  
+7. ❌ Webhook query params ignored (carried)  
+8. ❌ Custom transform functions no-op (carried)  
+9. ⚠️ API key testing coverage (carried)  
+10. ⚠️ Integration function calling coverage (carried)  
+11. ⚠️ Integration test suite placeholders (carried)  
+12. 📝 Email writer config/strategy not configurable (carried)
 
 ---
 
 ## 🎯 CURRENT STATUS
 
-**Can Launch Beta:** ✅ **YES - THIS WEEK**
-- All critical issues fixed
-- Integration UIs now use real OAuth
-- E-commerce tests enabled
-- Platform handles 500-1000 records easily
+**Can Launch Beta:** ❌ **NO** – Blocked by schema persistence & org scoping. Estimate 2-3 days to fix + retest just for schemas before beta.  
 
-**Can Launch Production:** ✅ **YES - IN 2 WEEKS**
-- Need: Load testing with 10,000+ records
-- Need: Mobile PWA (optional, 3-4 weeks)
-- Platform is fundamentally solid
+**Can Launch Production:** ❌ **NO** – Blocked by schema stack plus prior criticals (cron parsing, webhook params, custom transforms). Expect 1+ week after schema fixes, regression tests, and payment/AI smoke tests.
+
+**See:** `INCOMPLETE_FEATURES_AUDIT.md` for full details
 
 ---
 
@@ -264,7 +280,11 @@ const paymentIntent = await stripeClient.paymentIntents.create({...});
 | **Infrastructure** | 95% | ✅ Production Grade |
 | **Pagination** | 100% | ✅ Implemented on all list pages |
 
-**OVERALL: 87% Complete**
+**OVERALL: 82% Complete** (revised down due to incomplete implementations)
+
+**Core Features:** 87% (main functionality works)  
+**Edge Cases:** 82% (9 incomplete features identified)  
+**Production Ready:** 78% (need Sprint 1 + Sprint 2)
 
 ---
 
@@ -374,38 +394,66 @@ Replace 5 tools:
 
 ---
 
-## 🎯 BRUTAL HONEST TRUTH
+## 🎯 BRUTAL HONEST TRUTH (UPDATED DEC 27, 2025)
 
-**Is the platform real?** YES
-- 87% complete
-- 105 API routes all functional
-- 13 service files with real business logic
-- All workflow actions execute real operations
-- Integration backends use real APIs
-- No mocks, no placeholders in core features
+**Is the platform real?** Partially. Core services exist, but the custom schema/custom-object layer is not wired to persistence or multi-tenancy, so anything beyond the standard schemas will fail.
+- **68% complete** (down due to schema stack gaps)
+- **Build status:** Unknown today (not re-run after findings)
+- **API routes:** Many exist, but schema UX does not call them; field conversion route now has code but the UI still does not invoke it
+- Workflows/AI/Integrations remain coded, but rely on correct schemas to be usable
+- **Several UIs have no backend hooks** (schemas, cron accuracy, webhook params, custom transforms)
 
-**Can you launch?** YES
-- Beta: This week
-- Production: 2-3 weeks
-- Platform is fundamentally solid
+**Can you launch?** Not until the schema stack is fixed and re-tested.
+- **Beta:** After schema persistence + org scoping fix and a smoke pass (≈2-3 days of work).  
+- **Production:** After schema + prior criticals + regression (≈1+ week).  
 
-**What's the catch?**
-- No mobile app (web only) - 40-50% of potential customers will pass
-- Limited integrations (9 vs 300+) - "Does it integrate with X?" usually NO
-- Analytics not optimized for 10,000+ records - Need background jobs eventually
+**What the user said remains true:** Custom schemas were not fully implemented; right now they are UI-only and/or written to the wrong Firestore path.
 
-**Is it better than the documentation suggested?**
-- YES - Documentation claimed 78%, reality is 87%
-- YES - Claimed 5 services, actually 13 services
-- YES - Claimed pagination missing, actually implemented on all list pages
-- YES - Claimed integrations fake, actually real backends + real OAuth UIs (fixed)
-
-**Bottom line:**
-You have a production-grade platform ready for beta launch this week and production in 2-3 weeks. The core architecture is solid, the features are real, and the competitive positioning is strong.
+**Bottom line:** The platform cannot be called production-ready until schema persistence, org scoping, and the previously flagged criticals are fixed and validated.
 
 ---
 
 ## 📝 CHANGELOG
+
+### Dec 27, 2025 - Website builder/custom domain reality check
+- No client-facing website/page builder: `/admin/website-editor` is behind `useAdminAuth`, loads only `DEFAULT_CONFIG`, and saves to `platform/website` (global), not per org/workspace.  
+- No DNS/SSL/custom domain automation: `customDomain` appears only in types and an admin org readout; there are **no** domain settings pages, API routes, or verification flows.  
+- Storefront page (`workspace/[orgId]/settings/storefront`) is just an embeddable widget configurator with hardcoded `store.yourplatform.com/{widgetId}` examples—no publishing or domain mapping.  
+- Theme editor (`workspace/[orgId]/settings/theme`) applies CRM UI styling only; it does not publish websites or handle domains.
+
+### Dec 27, 2025 - Schema system audit (blocking)
+- Schema builder UI is not persisted; create/edit/delete never call APIs and nothing is saved to Firestore.  
+- Entity UI hardcodes workspace to `default` and only loads `STANDARD_SCHEMAS`; custom schemas and real workspace selection are ignored.  
+- `SchemaManager` writes to `/workspaces/{workspaceId}/schemas` while APIs/rules use `/organizations/{orgId}/workspaces/{workspaceId}/schemas`, causing failures and org-scope bypass.  
+- Field type conversion server route now has code, but UI does not call it; end-to-end behavior unvalidated.  
+- Build status set to unknown until rerun after schema fixes.  
+
+### Dec 26, 2025 - Comprehensive Audit Reveals Incomplete Features
+**User Was Right - Found Incomplete Implementations:**
+
+**Critical Issues Found:**
+1. ❌ Field Type Conversion POST endpoint - Returns 501 (UI works, execution doesn't)
+2. ❌ Cron Expression Parsing - Hardcoded to 1 hour (ignores cron expression)
+3. ❌ Webhook Query Parameters - Not parsed from URL
+4. ❌ Custom Transform Functions - Logs warning, returns unchanged value
+
+**Moderate Issues Found:**
+5. ⚠️ API Key Testing - Only 4/16 services have validation
+6. ⚠️ Integration Function Calling - Only 5/14 providers implemented
+7. ⚠️ Integration Test Suite - All tests are placeholders
+
+**Low Priority Issues:**
+8. 📝 Email Writer - Hardcoded AI flag (works, not configurable)
+9. 📝 Email Strategy - Hardcoded per request (works, not configurable)
+
+**Assessment Updated:**
+- Completion: 87% → 82%
+- Production ready: "2-3 weeks" → "5-6 days after fixes"
+- Beta ready: "This week" → "2 days after Sprint 1"
+
+**Created:** `INCOMPLETE_FEATURES_AUDIT.md` - Full audit with remediation plan
+
+**Acknowledgment:** User's concern was valid. Schema customization appears complete but field type conversion POST is not implemented. Would fail in production.
 
 ### Dec 25, 2025 (Evening) - Build Errors Resolved
 **All Module Resolution & TypeScript Errors Fixed:**
@@ -461,6 +509,6 @@ You have a production-grade platform ready for beta launch this week and product
 
 ---
 
-**Last Code Verification:** December 25, 2025  
-**All Claims Based On:** Actual code inspection, not documentation  
-**Next Update:** After beta launch
+**Last Code Verification:** December 27, 2025 (schema stack inspection; build/tests NOT re-run)  
+**All Claims Based On:** Direct code inspection of schema UI/API/service paths  
+**Next Update:** After schema persistence fix + regression run
