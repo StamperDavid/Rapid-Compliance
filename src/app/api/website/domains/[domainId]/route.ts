@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { getUserIdentifier } from '@/lib/server-auth';
 
 /**
  * DELETE /api/website/domains/[domainId]

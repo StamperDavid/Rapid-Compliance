@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
@@ -21,6 +22,7 @@ import { useEditorHistory } from '@/hooks/useEditorHistory';
 export default function PageEditorPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const orgId = params.orgId as string;
   const pageId = searchParams.get('pageId'); // If editing existing page
 
@@ -134,8 +136,8 @@ export default function PageEditorPage() {
       version: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: 'current-user', // TODO: Get from auth
-      lastEditedBy: 'current-user',
+      createdBy: user?.email || user?.displayName || 'anonymous',
+      lastEditedBy: user?.email || user?.displayName || 'anonymous',
     };
 
     setPage(newPage);
@@ -163,7 +165,7 @@ export default function PageEditorPage() {
           page: {
             ...page,
             updatedAt: new Date().toISOString(),
-            lastEditedBy: 'current-user', // TODO: Get from auth
+            lastEditedBy: user?.email || user?.displayName || 'anonymous',
           },
         }),
       });
@@ -204,7 +206,7 @@ export default function PageEditorPage() {
             thumbnail: 'https://via.placeholder.com/400x300/6c757d/ffffff?text=' + encodeURIComponent(templateName),
             content: page.content,
             isPublic: false,
-            createdBy: 'current-user', // TODO: Get from auth
+            createdBy: user?.email || user?.displayName || 'anonymous',
           },
         }),
       });

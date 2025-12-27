@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       version: 1,
       createdAt: now,
       updatedAt: now,
-      createdBy: 'system', // TODO: Use actual user ID
+      createdBy: user,
       lastEditedBy: 'system',
     };
 

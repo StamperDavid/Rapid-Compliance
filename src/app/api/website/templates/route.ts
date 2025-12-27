@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { getUserIdentifier } from '@/lib/server-auth';
 import { PageTemplate } from '@/types/website';
 
 /**
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
       isPublic: template.isPublic || false,
       isPremium: false,
       createdAt: new Date().toISOString(),
-      createdBy: template.createdBy || 'current-user', // TODO: Get from auth
+      createdBy: await getUserIdentifier(),
       usageCount: 0,
     };
 

@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
 import { PageTemplate } from '@/types/website';
 import { allTemplates } from '@/lib/website-builder/page-templates';
@@ -16,6 +17,7 @@ import { allTemplates } from '@/lib/website-builder/page-templates';
 export default function TemplateBrowserPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const orgId = params.orgId as string;
 
   const [templates, setTemplates] = useState<PageTemplate[]>([]);
@@ -92,8 +94,8 @@ export default function TemplateBrowserPage() {
             version: 1,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            createdBy: 'current-user', // TODO: Get from auth
-            lastEditedBy: 'current-user',
+            createdBy: user?.email || user?.displayName || 'anonymous',
+            lastEditedBy: user?.email || user?.displayName || 'anonymous',
           },
         }),
       });

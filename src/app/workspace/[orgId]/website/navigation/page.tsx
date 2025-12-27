@@ -9,11 +9,13 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
 import { Navigation, NavItem, Page } from '@/types/website';
 
 export default function NavigationManagementPage() {
   const params = useParams();
+  const { user } = useAuth();
   const orgId = params.orgId as string;
 
   const [navigation, setNavigation] = useState<Navigation | null>(null);
@@ -86,7 +88,7 @@ export default function NavigationManagementPage() {
           navigation: {
             ...navigation,
             updatedAt: new Date().toISOString(),
-            updatedBy: 'current-user', // TODO: Get from auth
+            updatedBy: user?.email || user?.displayName || 'anonymous',
           },
         }),
       });

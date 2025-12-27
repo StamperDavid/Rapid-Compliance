@@ -104,7 +104,7 @@ export async function POST(
       postId: params.postId,
       postTitle: postData.title,
       scheduledFor: scheduledFor || null,
-      performedBy: 'system', // TODO: Use actual user
+      performedBy,
       performedAt: now,
       organizationId,
     });
@@ -202,7 +202,7 @@ export async function DELETE(
       type: 'blog_post_unpublished',
       postId: params.postId,
       postTitle: postData.title,
-      performedBy: 'system', // TODO: Use actual user
+      performedBy,
       performedAt: now,
       organizationId,
     });

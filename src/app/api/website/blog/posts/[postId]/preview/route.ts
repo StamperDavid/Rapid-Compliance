@@ -78,7 +78,7 @@ export async function POST(
       organizationId,
       createdAt: new Date().toISOString(),
       expiresAt: expiresAt.toISOString(),
-      createdBy: 'system', // TODO: Use actual user
+      createdBy: createdBy,
     });
 
     // Generate preview URL

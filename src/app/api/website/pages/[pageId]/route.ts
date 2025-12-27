@@ -149,7 +149,7 @@ export async function PUT(
       organizationId: existingData.organizationId, // ← Keep original orgId
       id: params.pageId,
       updatedAt: now,
-      lastEditedBy: 'system', // TODO: Use actual user ID
+      lastEditedBy: user,
       version: (existingData.version || 1) + 1,
     };
 

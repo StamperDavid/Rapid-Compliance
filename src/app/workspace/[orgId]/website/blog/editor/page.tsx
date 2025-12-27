@@ -17,6 +17,7 @@ export default function BlogPostEditorPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const orgId = params.orgId as string;
   const postId = searchParams.get('postId');
 
@@ -85,7 +86,7 @@ export default function BlogPostEditorPage() {
       views: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: 'current-user', // TODO: Get from auth
+      createdBy: user?.email || user?.displayName || 'anonymous',
       lastEditedBy: 'current-user',
       author: 'current-user',
       authorName: 'Current User',
@@ -116,7 +117,7 @@ export default function BlogPostEditorPage() {
             ...post,
             tags,
             updatedAt: new Date().toISOString(),
-            lastEditedBy: 'current-user', // TODO: Get from auth
+            lastEditedBy: user?.email || user?.displayName || 'anonymous',
           },
         }),
       });
