@@ -438,13 +438,16 @@ export default function LandingPage() {
 
       {/* BYOK: Zero AI Markup */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900">
-        <div className="max-w-5xl mx-auto">
+          <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               BYOK: We Don't Markup Your AI Costs
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Most AI platforms mark up tokens by 300-500%. We don't. You pay OpenAI/Anthropic directly at cost.
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-4">
+              Most AI platforms mark up tokens by 300-500%. We don't. You connect your own API key and pay the AI provider directly at cost.
+            </p>
+            <p className="text-lg text-indigo-300 max-w-2xl mx-auto">
+              💡 <span className="font-semibold">We recommend OpenRouter</span> - one key gives you access to GPT-4, Claude, Gemini, and 200+ models
             </p>
           </div>
 
@@ -500,7 +503,7 @@ export default function LandingPage() {
                     <span className="text-gray-300">AI Usage <span className="text-xs text-green-400">(0% markup)</span></span>
                     <span className="text-white font-semibold">$100/mo</span>
                   </div>
-                  <div className="text-xs text-green-300/70">(You pay OpenAI directly at cost)</div>
+                  <div className="text-xs text-green-300/70">(You pay OpenRouter/OpenAI directly at cost)</div>
                 </div>
                 <div className="border-t border-green-700/50 pt-4 mt-4 flex justify-between items-center">
                   <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>

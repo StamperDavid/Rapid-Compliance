@@ -105,8 +105,9 @@ All tiers include ALL features - no gating, no limits. You only pay based on you
 
 ## Key Differentiator: BYOK (Bring Your Own Keys)
 - We don't markup AI tokens
-- Connect your own OpenAI, Anthropic, or OpenRouter API keys
-- Pay raw market rates for AI compute
+- Connect your own API key (we recommend OpenRouter - one key for all AI models)
+- Pay raw market rates for AI compute directly to the provider
+- Optional: Use OpenAI or Anthropic keys directly if preferred
 - Complete pricing transparency
 
 ## Free Trial

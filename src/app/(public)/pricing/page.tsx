@@ -63,22 +63,27 @@ function FallbackContent() {
                   <p className="text-green-300 font-semibold">Zero AI Token Markup. 100% Transparent.</p>
                 </div>
               </div>
-              <p className="text-white/90 text-lg leading-relaxed">
-                Connect your own OpenAI, Anthropic, or OpenRouter API keys and pay them directly at <span className="font-bold text-green-300">raw market rates</span>. 
+              <p className="text-white/90 text-lg leading-relaxed mb-4">
+                Connect your own API key and pay the AI provider directly at <span className="font-bold text-green-300">raw market rates</span>. 
                 We don't touch your AI costs—that's your direct relationship with the provider. No hidden fees. No markup. Just honest pricing.
               </p>
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-indigo-500/20 border border-indigo-500/40 rounded-lg p-4 mb-4">
+                <p className="text-indigo-200 text-sm">
+                  💡 <span className="font-bold">We recommend OpenRouter</span> - One key gives you access to GPT-4, Claude, Gemini, Llama, and 200+ models. Simpler than managing multiple provider keys.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center gap-2 text-white/80">
-                  <span className="text-green-400 text-lg">✓</span>
-                  <span>OpenAI GPT-4 at cost</span>
+                  <span className="text-green-400 text-lg font-bold">⭐</span>
+                  <span><span className="font-semibold text-green-300">OpenRouter</span> (Recommended)</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/80">
                   <span className="text-green-400 text-lg">✓</span>
-                  <span>Anthropic Claude at cost</span>
+                  <span>OpenAI Direct (Optional)</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/80">
                   <span className="text-green-400 text-lg">✓</span>
-                  <span>OpenRouter at cost</span>
+                  <span>Anthropic Direct (Optional)</span>
                 </div>
               </div>
             </div>
@@ -279,15 +284,15 @@ function FallbackContent() {
                 <div className="flex items-start gap-3 mb-4">
                   <div className="bg-green-500 rounded-full w-8 h-8 flex items-center justify-center text-white font-bold flex-shrink-0">2</div>
                   <div>
-                    <h4 className="font-bold text-white mb-1">AI Usage Bill (From OpenAI/Anthropic)</h4>
-                    <p className="text-gray-300 text-sm">Your actual AI token usage at raw market rates. Typically $50-200/month for most businesses.</p>
+                    <h4 className="font-bold text-white mb-1">AI Usage Bill (From Your Provider)</h4>
+                    <p className="text-gray-300 text-sm">Your actual AI token usage at raw market rates. Typically $50-200/month for most businesses. We recommend OpenRouter for simplicity (one key, all models).</p>
                   </div>
                 </div>
               </div>
             </div>
             <div className="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
               <p className="text-gray-300 text-sm text-center">
-                <span className="font-bold text-white">Why two bills?</span> Because we don't touch your AI costs. You connect your own API keys and pay providers directly—giving you complete control and zero markup.
+                <span className="font-bold text-white">Why two bills?</span> Because we don't touch your AI costs. You connect your own API key (we recommend OpenRouter for simplicity) and pay the provider directly—giving you complete control and zero markup.
               </p>
             </div>
           </div>
