@@ -148,6 +148,7 @@ export async function POST(
 
     const versionData = versionDoc.data();
     const now = admin.firestore.Timestamp.now();
+    const performedBy = await getUserIdentifier();
 
     // Restore the version content
     await pageRef.update({
@@ -157,7 +158,7 @@ export async function POST(
       slug: versionData?.slug || '',
       status: 'draft', // Restored versions become drafts
       updatedAt: now,
-      lastEditedBy: 'system', // TODO: Use actual user
+      lastEditedBy: performedBy,
       version: (pageData.version || 1) + 1,
     });
 
