@@ -184,9 +184,9 @@ function FallbackContent() {
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-6">
               You pay TWO costs: our platform fee + your own AI usage. We show you exactly what you'll spend vs. competitors who hide AI markups.
             </p>
-            <div className="inline-block bg-yellow-500/20 border border-yellow-500/40 rounded-lg px-6 py-3">
-              <p className="text-yellow-300 font-semibold">⚠️ Important: You'll receive TWO bills each month</p>
-              <p className="text-yellow-200/80 text-sm mt-1">1. Our platform ($400-1,250) • 2. OpenAI/Anthropic (your usage at cost)</p>
+            <div className="inline-block bg-indigo-500/20 border border-indigo-500/40 rounded-lg px-6 py-3">
+              <p className="text-indigo-300 font-semibold">💡 How Billing Works</p>
+              <p className="text-indigo-200/80 text-sm mt-1">You get ONE monthly bill from us ($400-1,250). For AI, you prepay credits with OpenRouter (or your chosen provider) which deduct as you use them.</p>
             </div>
           </div>
 
@@ -284,15 +284,15 @@ function FallbackContent() {
                 <div className="flex items-start gap-3 mb-4">
                   <div className="bg-green-500 rounded-full w-8 h-8 flex items-center justify-center text-white font-bold flex-shrink-0">2</div>
                   <div>
-                    <h4 className="font-bold text-white mb-1">AI Usage Bill (From Your Provider)</h4>
-                    <p className="text-gray-300 text-sm">Your actual AI token usage at raw market rates. Typically $50-200/month for most businesses. We recommend OpenRouter for simplicity (one key, all models).</p>
+                    <h4 className="font-bold text-white mb-1">AI Credits (Prepaid to Your Provider)</h4>
+                    <p className="text-gray-300 text-sm">You prepay credits with OpenRouter (or your chosen provider). Usage deducts from your balance at raw market rates. Typically $50-200/month for most businesses. No monthly AI bill—just top up as needed.</p>
                   </div>
                 </div>
               </div>
             </div>
             <div className="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
               <p className="text-gray-300 text-sm text-center">
-                <span className="font-bold text-white">Why two bills?</span> Because we don't touch your AI costs. You connect your own API key (we recommend OpenRouter for simplicity) and pay the provider directly—giving you complete control and zero markup.
+                <span className="font-bold text-white">How it works:</span> You get ONE monthly bill from us for the platform. For AI, you prepay credits with OpenRouter (recommended) and usage deducts at cost. No AI bills, no surprises, complete control.
               </p>
             </div>
           </div>
