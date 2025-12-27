@@ -31,19 +31,25 @@ export async function GET(request: NextRequest) {
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    let query = db
+    const pagesRef = db
       .collection('organizations')
       .doc(organizationId) // ← SCOPED to this org only
       .collection('website')
       .doc('pages')
       .collection('items');
 
-    // Filter by status if provided
+    // Build query with optional status filter
+    let snapshot;
     if (status) {
-      query = query.where('status', '==', status);
+      snapshot = await pagesRef
+        .where('status', '==', status)
+        .orderBy('updatedAt', 'desc')
+        .get();
+    } else {
+      snapshot = await pagesRef
+        .orderBy('updatedAt', 'desc')
+        .get();
     }
-
-    const snapshot = await query.orderBy('updatedAt', 'desc').get();
 
     const pages = snapshot.docs.map(doc => ({
       id: doc.id,
