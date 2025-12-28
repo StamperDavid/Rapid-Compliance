@@ -67,11 +67,7 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processStripePayment(request, defaultProvider);
     
     case 'square':
-      // return processSquarePayment(request, defaultProvider);
-      return {
-        success: false,
-        error: 'Square payment provider not yet implemented',
-      };
+      return processSquarePayment(request, defaultProvider);
     
     case 'paypal':
       return processPayPalPayment(request, defaultProvider);
@@ -80,25 +76,9 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       const { processAuthorizeNetPayment } = await import('./payment-providers');
       return processAuthorizeNetPayment(request, defaultProvider);
     
-    case 'braintree':
-      // const { processBraintreePayment } = await import('./payment-providers');
-      // return processBraintreePayment(request, defaultProvider);
-      return {
-        success: false,
-        error: 'Braintree payment provider not yet implemented',
-      };
-    
     case '2checkout':
       const { process2CheckoutPayment } = await import('./payment-providers');
       return process2CheckoutPayment(request, defaultProvider);
-    
-    case 'razorpay':
-      // const { processRazorpayPayment } = await import('./payment-providers');
-      // return processRazorpayPayment(request, defaultProvider);
-      return {
-        success: false,
-        error: 'Razorpay payment provider not yet implemented',
-      };
     
     case 'mollie':
       const { processMolliePayment } = await import('./payment-providers');

@@ -38,6 +38,9 @@ interface StorefrontConfig {
     stripeEnabled: boolean;
     paypalEnabled: boolean;
     squareEnabled: boolean;
+    authorizenetEnabled: boolean;
+    twocheckoutEnabled: boolean;
+    mollieEnabled: boolean;
     autoCreateOrder: boolean;
     autoCreateInvoice: boolean;
     autoRecordPayment: boolean;
@@ -75,6 +78,9 @@ const DEFAULT_CONFIG: StorefrontConfig = {
     stripeEnabled: true,
     paypalEnabled: false,
     squareEnabled: false,
+    authorizenetEnabled: false,
+    twocheckoutEnabled: false,
+    mollieEnabled: false,
     autoCreateOrder: true,
     autoCreateInvoice: true,
     autoRecordPayment: true,
@@ -459,6 +465,39 @@ export default function StorefrontSettingsPage() {
                         />
                         <span style={{ fontSize: '0.875rem', color: '#fff' }}>⬛ Square</span>
                         <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: 'auto' }}>Square Payments</span>
+                      </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={config.paymentProcessing.authorizenetEnabled}
+                          onChange={(e) => updateConfig(['paymentProcessing', 'authorizenetEnabled'], e.target.checked)}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: '#fff' }}>🔒 Authorize.Net</span>
+                        <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: 'auto' }}>Trusted payment gateway</span>
+                      </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={config.paymentProcessing.twocheckoutEnabled}
+                          onChange={(e) => updateConfig(['paymentProcessing', 'twocheckoutEnabled'], e.target.checked)}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: '#fff' }}>✓✓ 2Checkout (Verifone)</span>
+                        <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: 'auto' }}>Global payment platform</span>
+                      </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={config.paymentProcessing.mollieEnabled}
+                          onChange={(e) => updateConfig(['paymentProcessing', 'mollieEnabled'], e.target.checked)}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: '#fff' }}>🇪🇺 Mollie</span>
+                        <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: 'auto' }}>Popular in Europe</span>
                       </label>
                     </div>
                   </div>

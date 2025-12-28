@@ -126,15 +126,7 @@ function calculateAuthorizeNetFee(amount: number): number {
  * NOTE: Disabled - requires 'braintree' package installation
  * To enable: npm install braintree
  */
-export async function processBraintreePayment(
-  request: PaymentRequest,
-  providerConfig: any
-): Promise<PaymentResult> {
-  return {
-    success: false,
-    error: 'Braintree payment provider not installed. Install with: npm install braintree',
-  };
-}
+// Braintree removed - not needed for production
 
 
 /**
@@ -252,15 +244,7 @@ function calculate2CheckoutFee(amount: number): number {
  * NOTE: Disabled - requires 'razorpay' package installation
  * To enable: npm install razorpay
  */
-export async function processRazorpayPayment(
-  request: PaymentRequest,
-  providerConfig: any
-): Promise<PaymentResult> {
-  return {
-    success: false,
-    error: 'Razorpay payment provider not installed. Install with: npm install razorpay',
-  };
-}
+// Razorpay removed - not needed for production
 
 
 /**
