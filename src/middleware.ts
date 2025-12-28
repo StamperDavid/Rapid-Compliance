@@ -112,9 +112,11 @@ export async function middleware(request: NextRequest) {
   // Get the base domain from environment
   const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000';
   const isLocalhost = hostname.includes('localhost');
+  const isVercelDeployment = hostname.includes('.vercel.app');
 
   // CASE 1: Custom Domain (e.g., www.acme.com)
-  if (!hostname.includes(baseDomain) && !isLocalhost) {
+  // Skip middleware for Vercel preview/production deployments
+  if (!hostname.includes(baseDomain) && !isLocalhost && !isVercelDeployment) {
     // Force HTTPS for custom domains in production
     const protocol = request.headers.get('x-forwarded-proto');
     if (protocol === 'http' && process.env.NODE_ENV === 'production') {
