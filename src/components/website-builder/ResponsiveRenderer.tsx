@@ -192,7 +192,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
   };
 
   const getResponsiveStyle = (): React.CSSProperties => {
-    const baseStyle: any = { ...widget.style } || {};
+    const baseStyle: any = { ...(widget.style || {}) };
     
     // Convert Spacing objects to CSS strings
     if (baseStyle.padding && typeof baseStyle.padding === 'object') {
