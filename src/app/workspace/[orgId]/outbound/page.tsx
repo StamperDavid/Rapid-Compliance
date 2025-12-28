@@ -29,38 +29,12 @@ export default function OutboundHomePage() {
       status: 'Available',
       color: '#10b981',
     },
-    {
-      icon: '🤖',
-      title: 'AI Reply Handler',
-      description: 'Automatically respond to prospect emails with AI',
-      href: `/workspace/${orgId}/outbound/replies`,
-      status: 'Coming Soon',
-      color: '#f59e0b',
-    },
-    {
-      icon: '📅',
-      title: 'Meeting Scheduler',
-      description: 'Autonomous meeting booking and calendar management',
-      href: `/workspace/${orgId}/outbound/meetings`,
-      status: 'Coming Soon',
-      color: '#f59e0b',
-    },
-    {
-      icon: '🔍',
-      title: 'Prospect Finder',
-      description: 'Find and enrich prospects automatically',
-      href: `/workspace/${orgId}/outbound/prospects`,
-      status: 'Coming Soon',
-      color: '#f59e0b',
-    },
-    {
-      icon: '📱',
-      title: 'Multi-Channel',
-      description: 'LinkedIn + SMS + Email outreach coordination',
-      href: `/workspace/${orgId}/outbound/multi-channel`,
-      status: 'Coming Soon',
-      color: '#f59e0b',
-    },
+    // Removed "Coming Soon" features to avoid confusion in production
+    // - AI Reply Handler
+    // - Meeting Scheduler
+    // - Prospect Finder
+    // - Multi-Channel
+    // These can be added back when fully implemented
   ];
 
   return (

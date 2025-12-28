@@ -1177,56 +1177,10 @@ export default function AgentTrainingPage() {
                     Rate each criterion AND explain why. The AI learns from your explanations, not just numbers.
                   </p>
 
-                  {/* Criteria Customization Panel */}
-                  {showCriteriaEditor && (
-                    <div style={{
-                      padding: '1rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
-                      borderRadius: '0.5rem',
-                      marginBottom: '1.5rem'
-                    }}>
-                      <h4 style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#fff', marginBottom: '1rem' }}>
-                        Customize Sales Criteria
-                      </h4>
-                      <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '1rem' }}>
-                        Add, edit, or remove criteria that matter most to your sales process. Each criterion should be specific and measurable.
-                      </p>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input
-                          type="text"
-                          placeholder="e.g., Follow-up Speed"
-                          style={{
-                            flex: 1,
-                            padding: '0.5rem',
-                            backgroundColor: '#0a0a0a',
-                            border: '1px solid #333',
-                            borderRadius: '0.375rem',
-                            color: '#fff',
-                            fontSize: '0.75rem'
-                          }}
-                        />
-                        <button
-                          onClick={() => alert('Custom criteria feature coming soon! For now, use the default 6 criteria.')}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: primaryColor,
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                            fontWeight: '600'
-                          }}
-                        >
-                          Add
-                        </button>
-                      </div>
-                      <p style={{ fontSize: '0.7rem', color: '#666', marginTop: '0.75rem', fontStyle: 'italic' }}>
-                        💡 Tip: Focus on 4-8 criteria max. Too many dilutes the feedback quality.
-                      </p>
-                    </div>
-                  )}
+                  {/* Criteria Customization Panel - Hidden until fully implemented */}
+                  {/* Removed "coming soon" custom criteria editor to avoid confusion in production */}
+                  {/* The default 6 criteria are sufficient for now */}
+                  {/* Can be added back when custom criteria functionality is fully implemented */}
 
                   {/* Score Sliders */}
                   <div style={{ marginBottom: '1.5rem', maxHeight: '500px', overflowY: 'auto' }}>
