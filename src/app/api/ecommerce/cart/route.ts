@@ -8,6 +8,8 @@ import {
   applyDiscountCode,
   removeDiscountCode,
 } from '@/lib/ecommerce/cart-service';
+
+export const dynamic = 'force-dynamic';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';

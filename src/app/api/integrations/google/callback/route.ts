@@ -9,6 +9,8 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   // Rate limiting
   const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/google/callback');
