@@ -36,9 +36,18 @@ export default function EmailTemplatesPage() {
   const [selectedSmsTemplate, setSelectedSmsTemplate] = useState('order-shipped');
   const [smsContent, setSmsContent] = useState('');
   const [showSmsCustomTrigger, setShowSmsCustomTrigger] = useState(false);
+  const [showFilterBuilder, setShowFilterBuilder] = useState(false);
 
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+
+  // Contact fields for filter builder
+  const contactFields: Array<{ key: string; label: string; type: string; options?: string[] }> = STANDARD_SCHEMAS.contacts.fields.map(field => ({
+    key: field.key,
+    label: field.label,
+    type: field.type,
+    options: ('options' in field && field.options) ? field.options as string[] : undefined
+  }));
 
   const baseTemplates = [
     { id: 'welcome', name: 'Welcome Email', description: 'Sent when a new contact is added', icon: '👋', type: 'automated' },
@@ -129,15 +138,39 @@ Best regards,
     scheduledTime: ''
   });
 
-  // Simulate estimating recipients based on filters
+  // Estimate recipients based on filters
   React.useEffect(() => {
-    if (campaignFilters.length > 0) {
-      // In real implementation, this would query the backend
-      setEstimatedRecipients(Math.floor(Math.random() * 2000) + 500);
-    } else {
-      setEstimatedRecipients(0);
+    async function updateEstimatedRecipients() {
+      if (campaignFilters.length === 0) {
+        setEstimatedRecipients(0);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/contacts/count', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId: orgId,
+            workspaceId: 'default',
+            filters: campaignFilters
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setEstimatedRecipients(data.count || 0);
+        } else {
+          setEstimatedRecipients(0);
+        }
+      } catch (error) {
+        console.error('Error estimating recipients:', error);
+        setEstimatedRecipients(0);
+      }
     }
-  }, [campaignFilters]);
+
+    updateEstimatedRecipients();
+  }, [campaignFilters, orgId]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
@@ -2034,11 +2067,84 @@ Best regards,
               </div>
               
               <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', padding: '1rem' }}>
-                <p style={{ color: '#999' }}>Filter configuration coming soon. Build custom audience filters for targeted campaigns.</p>
-                
-                {campaignFilters.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: '#666', fontSize: '0.875rem' }}>
-                    No filters set - campaign will be sent to all contacts
+                {campaignFilters.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem' }}>
+                    <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                      No filters set - campaign will be sent to all contacts
+                    </p>
+                    <button
+                      onClick={() => setShowFilterBuilder(true)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: primaryColor,
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        fontWeight: '500'
+                      }}
+                    >
+                      + Add Filter
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {campaignFilters.map((filter, index) => (
+                      <div 
+                        key={filter.id || index}
+                        style={{ 
+                          padding: '0.75rem',
+                          backgroundColor: '#1a1a1a',
+                          border: '1px solid #333',
+                          borderRadius: '0.375rem',
+                          marginBottom: '0.5rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '0.875rem', color: '#fff', marginBottom: '0.25rem' }}>
+                            {filter.name || 'Filter'}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                            {filter.groups.reduce((total, group) => total + group.conditions.length, 0)} condition(s)
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setCampaignFilters(filters => filters.filter((_, i) => i !== index));
+                          }}
+                          style={{
+                            padding: '0.375rem 0.75rem',
+                            backgroundColor: 'transparent',
+                            color: '#ef4444',
+                            border: '1px solid #ef4444',
+                            borderRadius: '0.25rem',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => setShowFilterBuilder(true)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: 'transparent',
+                        color: primaryColor,
+                        border: `1px solid ${primaryColor}`,
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        marginTop: '0.5rem'
+                      }}
+                    >
+                      + Add Another Filter
+                    </button>
                   </div>
                 )}
               </div>
@@ -2385,6 +2491,22 @@ Best regards,
                 {uploadedAssets.length > 0 ? `${uploadedAssets.length} asset${uploadedAssets.length !== 1 ? 's' : ''} in your library` : 'Upload images to get started'}
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Builder Modal */}
+      {showFilterBuilder && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ width: '100%', maxWidth: '900px' }}>
+            <FilterBuilder
+              fields={contactFields}
+              onApply={(filter: ViewFilter) => {
+                setCampaignFilters([...campaignFilters, filter]);
+                setShowFilterBuilder(false);
+              }}
+              onClose={() => setShowFilterBuilder(false)}
+            />
           </div>
         </div>
       )}
