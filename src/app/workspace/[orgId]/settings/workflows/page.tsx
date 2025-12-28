@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,44 +16,84 @@ export default function WorkflowsPage() {
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Partial<Workflow> | null>(null);
   const [workflowsList, setWorkflowsList] = useState<any[]>([]);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
-  const workflows = [
-    {
-      id: 1,
-      name: 'Auto-assign Hot Leads',
-      description: 'Automatically assign leads with score > 80 to sales team',
-      trigger: 'contact.created',
-      active: true,
-      runsToday: 12
-    },
-    {
-      id: 2,
-      name: 'Payment Reminder',
-      description: 'Send reminder emails 3 days before invoice due date',
-      trigger: 'schedule.daily',
-      active: true,
-      runsToday: 45
-    },
-    {
-      id: 3,
-      name: 'Deal Won Notification',
-      description: 'Notify team in Slack when a deal is marked as won',
-      trigger: 'deal.won',
-      active: true,
-      runsToday: 3
-    },
-    {
-      id: 4,
-      name: 'Inactive Contact Cleanup',
-      description: 'Archive contacts with no activity for 365 days',
-      trigger: 'schedule.weekly',
-      active: false,
-      runsToday: 0
+  // Load workflows from API
+  useEffect(() => {
+    loadWorkflows();
+  }, [orgId]);
+
+  async function loadWorkflows() {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { getCurrentUser } = await import('@/lib/auth/auth-service');
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) {
+        throw new Error('Not authenticated');
+      }
+
+      const token = await currentUser.getIdToken();
+
+      const response = await fetch(`/api/workflows?organizationId=${orgId}&workspaceId=default`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load workflows');
+      }
+
+      const data = await response.json();
+      setWorkflowsList(data.workflows || []);
+    } catch (error: any) {
+      console.error('Error loading workflows:', error);
+      setError(error.message);
+      setWorkflowsList([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  }
+
+  async function toggleWorkflowStatus(workflowId: string, currentStatus: string) {
+    try {
+      const { getCurrentUser } = await import('@/lib/auth/auth-service');
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) return;
+
+      const token = await currentUser.getIdToken();
+      const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+
+      const response = await fetch(`/api/workflows/${workflowId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          organizationId: orgId,
+          workspaceId: 'default',
+          status: newStatus,
+        }),
+      });
+
+      if (response.ok) {
+        loadWorkflows(); // Reload to get fresh data
+      } else {
+        throw new Error('Failed to update workflow status');
+      }
+    } catch (error: any) {
+      console.error('Error toggling workflow status:', error);
+      alert('Failed to update workflow status');
+    }
+  }
 
   return (
     <>
@@ -103,42 +143,69 @@ export default function WorkflowsPage() {
               </div>
             </div>
 
+            {loading && (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                Loading workflows...
+              </div>
+            )}
+
+            {error && (
+              <div style={{ backgroundColor: '#4c1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', padding: '1rem', color: '#fca5a5', marginBottom: '1rem' }}>
+                Error: {error}
+              </div>
+            )}
+
+            {!loading && !error && workflowsList.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+                <p style={{ marginBottom: '1rem' }}>No workflows yet. Create your first workflow to get started!</p>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
-              {workflowsList.map(workflow => (
-                <div key={workflow.id} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>{workflow.name}</h3>
-                      <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>{workflow.description}</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                        <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.375rem', color: '#ccc' }}>
-                          Trigger: {workflow.trigger}
-                        </span>
-                        <span style={{ padding: '0.25rem 0.75rem', backgroundColor: workflow.active ? '#0f4c0f' : '#4c4c4c', color: workflow.active ? '#4ade80' : '#999', borderRadius: '9999px', fontWeight: '600' }}>
-                          {workflow.active ? 'Active' : 'Inactive'}
-                        </span>
+              {!loading && workflowsList.map(workflow => {
+                const isActive = workflow.status === 'active';
+                const triggerDisplay = workflow.trigger?.type || 'N/A';
+                const runsToday = workflow.stats?.totalRuns || 0;
+                
+                return (
+                  <div key={workflow.id} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>{workflow.name}</h3>
+                        <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>{workflow.description || 'No description'}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                          <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.375rem', color: '#ccc' }}>
+                            Trigger: {triggerDisplay}
+                          </span>
+                          <span style={{ padding: '0.25rem 0.75rem', backgroundColor: isActive ? '#0f4c0f' : '#4c4c4c', color: isActive ? '#4ade80' : '#999', borderRadius: '9999px', fontWeight: '600' }}>
+                            {isActive ? 'Active' : workflow.status || 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid #333' }}>
+                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Total runs: <span style={{ color: primaryColor, fontWeight: '600' }}>{runsToday}</span></div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button 
+                          onClick={() => {
+                            setEditingWorkflow(workflow as any);
+                            setShowBuilder(true);
+                          }}
+                          style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => toggleWorkflowStatus(workflow.id, workflow.status)}
+                          style={{ padding: '0.5rem 1rem', backgroundColor: isActive ? '#4c3d0f' : primaryColor, color: isActive ? '#fbbf24' : '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
+                        >
+                          {isActive ? 'Pause' : 'Activate'}
+                        </button>
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid #333' }}>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Runs today: <span style={{ color: primaryColor, fontWeight: '600' }}>{workflow.runsToday}</span></div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button 
-                        onClick={() => {
-                          setEditingWorkflow(workflow as any);
-                          setShowBuilder(true);
-                        }}
-                        style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
-                      >
-                        Edit
-                      </button>
-                      <button onClick={() => alert(`Workflow ${workflow.active ? 'paused' : 'activated'}`)} style={{ padding: '0.5rem 1rem', backgroundColor: workflow.active ? '#4c3d0f' : primaryColor, color: workflow.active ? '#fbbf24' : '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}>
-                        {workflow.active ? 'Pause' : 'Activate'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -146,27 +213,48 @@ export default function WorkflowsPage() {
       {showBuilder && (
         <WorkflowBuilder
           workflow={editingWorkflow}
-          onSave={(workflow) => {
-            // MOCK: Save workflow (will be replaced with API call)
-            if (editingWorkflow && (editingWorkflow as any).id) {
-              // Update existing
-              setWorkflowsList(workflowsList.map(w => 
-                (w as any).id === (editingWorkflow as any).id 
-                  ? { ...w, ...workflow } as any
-                  : w
-              ));
-            } else {
-              // Create new
-              const newWorkflow = {
-                ...workflow,
-                id: workflowsList.length + 1,
-                active: true,
-                runsToday: 0,
-              };
-              setWorkflowsList([...workflowsList, newWorkflow as any]);
+          onSave={async (workflow) => {
+            try {
+              const { getCurrentUser } = await import('@/lib/auth/auth-service');
+              const currentUser = getCurrentUser();
+              
+              if (!currentUser) {
+                throw new Error('Not authenticated');
+              }
+
+              const token = await currentUser.getIdToken();
+              const isEditing = editingWorkflow && (editingWorkflow as any).id;
+              const endpoint = isEditing 
+                ? `/api/workflows/${(editingWorkflow as any).id}`
+                : '/api/workflows';
+              
+              const method = isEditing ? 'PUT' : 'POST';
+              
+              const response = await fetch(endpoint, {
+                method,
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  organizationId: orgId,
+                  workspaceId: 'default',
+                  workflow,
+                }),
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to save workflow');
+              }
+              
+              // Reload workflows to get fresh data
+              await loadWorkflows();
+              setShowBuilder(false);
+              setEditingWorkflow(null);
+            } catch (error: any) {
+              console.error('Error saving workflow:', error);
+              alert(`Failed to save workflow: ${error.message}`);
             }
-            setShowBuilder(false);
-            setEditingWorkflow(null);
           }}
           onCancel={() => {
             setShowBuilder(false);
