@@ -151,8 +151,8 @@ export async function recompileAgentKnowledge(
     // Get all schemas for this workspace
     const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
     const schemas = await FirestoreService.getAll(schemasPath, [
-      { field: 'status', operator: '==', value: 'active' },
-    ]);
+      where('status', '==', 'active'),
+    ] as any);
     
     // Recompile system prompt with updated schema information
     const updatedSystemPrompt = await compileSystemPromptWithSchemas(
