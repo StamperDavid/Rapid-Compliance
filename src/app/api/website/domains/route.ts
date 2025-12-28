@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/domains
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
       
       // CRITICAL: Verify organizationId matches
       if (data.organizationId !== organizationId) {
-        console.error('[SECURITY] Domain organizationId mismatch!', {
+        logger.error('[SECURITY] Domain organizationId mismatch!', new Error('Organization mismatch'), {
+          route: '/api/website/domains',
           requested: organizationId,
           actual: data.organizationId,
           domainId: doc.id,
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
       domains,
     });
   } catch (error: any) {
-    console.error('[Domains API] GET error:', error);
+    logger.error('[Domains API] GET error', error, { route: '/api/website/domains' });
     return NextResponse.json(
       { error: 'Failed to fetch domains', details: error.message },
       { status: 500 }
@@ -157,7 +159,7 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 });
   } catch (error: any) {
-    console.error('[Domains API] POST error:', error);
+    logger.error('[Domains API] POST error', error, { route: '/api/website/domains' });
     return NextResponse.json(
       { error: 'Failed to add domain', details: error.message },
       { status: 500 }

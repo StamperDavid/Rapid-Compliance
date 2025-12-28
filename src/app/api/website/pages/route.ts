@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/pages
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
       pages,
     });
   } catch (error: any) {
-    console.error('[Website Pages API] GET error:', error);
+    logger.error('[Website Pages API] GET error', error, { route: '/api/website/pages' });
     return NextResponse.json(
       { error: 'Failed to fetch pages', details: error.message },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
       page: pageData,
     });
   } catch (error: any) {
-    console.error('[Website Pages API] POST error:', error);
+    logger.error('[Website Pages API] POST error', error, { route: '/api/website/pages' });
     return NextResponse.json(
       { error: 'Failed to create page', details: error.message },
       { status: 500 }

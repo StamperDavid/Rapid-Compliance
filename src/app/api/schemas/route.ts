@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 function slugify(value: string) {
   return value
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, schemas });
   } catch (error: any) {
-    console.error('[Schemas API][GET] Failed to list schemas', error);
+    logger.error('[Schemas API][GET] Failed to list schemas', error, { route: '/api/schemas' });
     return NextResponse.json(
       { error: 'Failed to fetch schemas', details: error.message },
       { status: 500 }
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, schema: newSchema });
   } catch (error: any) {
-    console.error('[Schemas API][POST] Failed to create schema', error);
+    logger.error('[Schemas API][POST] Failed to create schema', error, { route: '/api/schemas' });
     return NextResponse.json(
       { error: 'Failed to create schema', details: error.message },
       { status: 500 }
