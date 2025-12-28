@@ -183,12 +183,13 @@ export async function middleware(request: NextRequest) {
   // CASE 2: Subdomain (e.g., acme.yourplatform.com)
   const subdomain = hostname.split('.')[0];
 
-  // Skip if on main domain (no subdomain)
+  // Skip if on main domain (no subdomain) or Vercel deployment
   if (
     !subdomain ||
     subdomain === 'www' ||
     subdomain === baseDomain.split('.')[0] ||
-    isLocalhost
+    isLocalhost ||
+    isVercelDeployment
   ) {
     return NextResponse.next();
   }
