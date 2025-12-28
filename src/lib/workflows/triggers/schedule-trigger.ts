@@ -5,9 +5,9 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, ScheduleTrigger } from '@/types/workflow';
-import { executeWorkflow } from '../workflow-engine'
+import { executeWorkflow } from '../workflow-engine';
 import { logger } from '@/lib/logger/logger';
-import parser from 'cron-parser';
+const cronParser = require('cron-parser');
 
 /**
  * Register schedule trigger
@@ -76,7 +76,7 @@ function calculateNextRun(schedule: ScheduleTrigger['schedule']): string {
       const cronExpression = schedule.cron!;
       
       // Validate and parse cron expression
-      const interval = parser.parseExpression(cronExpression, {
+      const interval = cronParser.parseExpression(cronExpression, {
         currentDate: now,
         tz: 'UTC' // Or get from organization settings
       });
