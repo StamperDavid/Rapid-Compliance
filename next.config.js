@@ -20,7 +20,7 @@ const nextConfig = {
   // Disable static optimization for auth-dependent pages
   experimental: {
     missingSuspenseWithCSRBailout: false,
-    optimizeCss: true, // Enable CSS optimization
+    // optimizeCss: true, // Disabled - requires critters package
     optimizePackageImports: ['lucide-react', 'recharts'], // Tree-shake large packages
   },
   

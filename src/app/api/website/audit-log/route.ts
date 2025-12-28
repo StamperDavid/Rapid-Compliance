@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/website/audit-log
  * Get audit log entries for an organization
