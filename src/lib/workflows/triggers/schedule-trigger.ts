@@ -193,7 +193,7 @@ export async function unregisterScheduleTrigger(
  */
 export function validateCronExpression(cron: string): { valid: boolean; error?: string } {
   try {
-    parser.parseExpression(cron);
+    cronParser.parseExpression(cron);
     return { valid: true };
   } catch (error) {
     return { 
