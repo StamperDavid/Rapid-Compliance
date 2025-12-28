@@ -202,6 +202,10 @@ export interface WidgetStyle {
   margin?: Spacing;
   width?: string;
   height?: string;
+  maxWidth?: string;
+  maxHeight?: string;
+  minWidth?: string;
+  minHeight?: string;
   display?: 'block' | 'inline-block' | 'flex' | 'grid';
   flexDirection?: 'row' | 'column';
   alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';

@@ -370,6 +370,23 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
   },
 
+  'modal': {
+    label: 'Modal',
+    description: 'Popup modal dialog',
+    icon: '🗖',
+    category: 'content',
+    defaultData: {
+      title: 'Modal Title',
+      content: 'Modal content goes here',
+      buttonText: 'Open Modal',
+    },
+    defaultStyle: {
+      padding: { top: '2rem', right: '2rem', bottom: '2rem', left: '2rem' },
+      backgroundColor: '#ffffff',
+      borderRadius: '8px',
+    },
+  },
+
   'tabs': {
     label: 'Tabs',
     description: 'Tabbed content',

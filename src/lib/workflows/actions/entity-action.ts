@@ -4,8 +4,9 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction } from '@/types/workflow'
-import { logger } from '@/lib/logger/logger';;
+import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction } from '@/types/workflow';
+import type { Schema } from '@/types/schema';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Execute create entity action
@@ -18,14 +19,16 @@ export async function executeCreateEntityAction(
 ): Promise<any> {
   // Get schema for field resolution
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
-  const schema = await FS.get(
+  const schemaData = await FS.get(
     `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
     action.schemaId
   );
   
-  if (!schema) {
+  if (!schemaData) {
     throw new Error(`Schema ${action.schemaId} not found`);
   }
+  
+  const schema = schemaData as Schema;
   
   // Build entity data from field mappings with dynamic field resolution
   const entityData: Record<string, any> = {};
@@ -112,16 +115,17 @@ export async function executeUpdateEntityAction(
 ): Promise<any> {
   // Get schema
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
-  const schema = await FS.get(
+  const schemaData = await FS.get(
     `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
     action.schemaId
   );
   
-  if (!schema) {
+  if (!schemaData) {
     throw new Error(`Schema ${action.schemaId} not found`);
   }
   
-  const entityName = (schema as any).name || action.schemaId;
+  const schema = schemaData as Schema;
+  const entityName = schema.name || action.schemaId;
   const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
   
   // Determine which record(s) to update
@@ -216,16 +220,17 @@ export async function executeDeleteEntityAction(
 ): Promise<any> {
   // Get schema
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
-  const schema = await FS.get(
+  const schemaData = await FS.get(
     `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
     action.schemaId
   );
   
-  if (!schema) {
+  if (!schemaData) {
     throw new Error(`Schema ${action.schemaId} not found`);
   }
   
-  const entityName = (schema as any).name || action.schemaId;
+  const schema = schemaData as Schema;
+  const entityName = schema.name || action.schemaId;
   const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
   
   // Determine which record(s) to delete
