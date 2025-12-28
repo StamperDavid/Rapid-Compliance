@@ -5,6 +5,7 @@
 
 import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
+import { where } from 'firebase/firestore';
 
 /**
  * Schema types that are relevant to AI agent knowledge
