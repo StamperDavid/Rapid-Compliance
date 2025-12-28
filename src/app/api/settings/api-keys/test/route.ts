@@ -45,8 +45,24 @@ export async function GET(request: NextRequest) {
       case 'openai':
         return await testOpenAI(apiKey);
       
+      case 'anthropic':
+        return await testAnthropic(apiKey);
+      
+      case 'gemini':
+        return await testGemini(apiKey);
+      
+      case 'openrouter':
+        return await testOpenRouter(apiKey);
+      
       case 'sendgrid':
         return await testSendGrid(apiKey);
+      
+      case 'resend':
+        return await testResend(apiKey);
+      
+      case 'twilio_account_sid':
+      case 'twilio_auth_token':
+        return await testTwilio(apiKeys);
       
       case 'google_client_id':
       case 'google_client_secret':
@@ -55,6 +71,31 @@ export async function GET(request: NextRequest) {
       case 'stripe_publishable':
       case 'stripe_secret':
         return await testStripe(apiKeys);
+      
+      case 'paypal_client_id':
+      case 'paypal_client_secret':
+        return await testPayPal(apiKeys);
+      
+      case 'square_access_token':
+        return await testSquare(apiKey);
+      
+      case 'quickbooks_client_id':
+      case 'quickbooks_client_secret':
+        return await testQuickBooks(apiKeys);
+      
+      case 'xero_client_id':
+      case 'xero_client_secret':
+        return await testXero(apiKeys);
+      
+      case 'slack_token':
+        return await testSlack(apiKey);
+      
+      case 'teams_webhook_url':
+        return await testTeams(apiKey);
+      
+      case 'zoom_api_key':
+      case 'zoom_api_secret':
+        return await testZoom(apiKeys);
       
       default:
         return NextResponse.json({
@@ -203,6 +244,413 @@ async function testStripe(apiKeys: any): Promise<NextResponse> {
       error: error.message,
     });
   }
+}
+
+/**
+ * Test Anthropic API key
+ */
+async function testAnthropic(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Anthropic API key is valid and working!',
+      });
+    } else {
+      const error = await response.json();
+      return NextResponse.json({
+        success: false,
+        error: error.error?.message || 'Invalid API key',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test Google Gemini API key
+ */
+async function testGemini(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`,
+      {
+        method: 'GET',
+      }
+    );
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Gemini API key is valid and working!',
+      });
+    } else {
+      const error = await response.json();
+      return NextResponse.json({
+        success: false,
+        error: error.error?.message || 'Invalid API key',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test OpenRouter API key
+ */
+async function testOpenRouter(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/auth/key', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'OpenRouter API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid OpenRouter API key',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test Resend API key
+ */
+async function testResend(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://api.resend.com/domains', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Resend API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid Resend API key',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test Twilio credentials
+ */
+async function testTwilio(apiKeys: any): Promise<NextResponse> {
+  const accountSid = apiKeys.twilio_account_sid;
+  const authToken = apiKeys.twilio_auth_token;
+
+  if (!accountSid || !authToken) {
+    return NextResponse.json({
+      success: false,
+      error: 'Both Twilio Account SID and Auth Token are required',
+    }, { status: 400 });
+  }
+
+  try {
+    // Test Twilio API
+    const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}.json`,
+      {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Twilio credentials are valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid Twilio credentials',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test PayPal credentials
+ */
+async function testPayPal(apiKeys: any): Promise<NextResponse> {
+  const clientId = apiKeys.paypal_client_id;
+  const clientSecret = apiKeys.paypal_client_secret;
+
+  if (!clientId || !clientSecret) {
+    return NextResponse.json({
+      success: false,
+      error: 'Both PayPal Client ID and Client Secret are required',
+    }, { status: 400 });
+  }
+
+  try {
+    // Get OAuth token from PayPal
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const response = await fetch('https://api-m.sandbox.paypal.com/v1/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'PayPal credentials are valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid PayPal credentials',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test Square access token
+ */
+async function testSquare(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://connect.squareupsandbox.com/v2/locations', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Square-Version': '2023-12-13',
+      },
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Square access token is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid Square access token',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test QuickBooks credentials
+ */
+async function testQuickBooks(apiKeys: any): Promise<NextResponse> {
+  const clientId = apiKeys.quickbooks_client_id;
+  const clientSecret = apiKeys.quickbooks_client_secret;
+
+  if (!clientId || !clientSecret) {
+    return NextResponse.json({
+      success: false,
+      error: 'Both QuickBooks Client ID and Client Secret are required',
+    }, { status: 400 });
+  }
+
+  // Basic validation for QuickBooks OAuth credentials
+  if (!clientId || clientId.length < 10) {
+    return NextResponse.json({
+      success: false,
+      error: 'QuickBooks Client ID appears invalid',
+    }, { status: 400 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: 'QuickBooks credentials saved! (Full test requires user authorization)',
+  });
+}
+
+/**
+ * Test Xero credentials
+ */
+async function testXero(apiKeys: any): Promise<NextResponse> {
+  const clientId = apiKeys.xero_client_id;
+  const clientSecret = apiKeys.xero_client_secret;
+
+  if (!clientId || !clientSecret) {
+    return NextResponse.json({
+      success: false,
+      error: 'Both Xero Client ID and Client Secret are required',
+    }, { status: 400 });
+  }
+
+  // Basic validation for Xero OAuth credentials
+  if (!clientId || clientId.length < 10) {
+    return NextResponse.json({
+      success: false,
+      error: 'Xero Client ID appears invalid',
+    }, { status: 400 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: 'Xero credentials saved! (Full test requires user authorization)',
+  });
+}
+
+/**
+ * Test Slack token
+ */
+async function testSlack(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://slack.com/api/auth.test', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      return NextResponse.json({
+        success: true,
+        message: `Slack token is valid! Connected to: ${data.team}`,
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: data.error || 'Invalid Slack token',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test Microsoft Teams webhook URL
+ */
+async function testTeams(webhookUrl: string): Promise<NextResponse> {
+  try {
+    // Send a test message to the webhook
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: 'AI Sales Platform: Test message - your Teams webhook is configured correctly!',
+      }),
+    });
+
+    if (response.ok || response.status === 200) {
+      return NextResponse.json({
+        success: true,
+        message: 'Teams webhook URL is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid Teams webhook URL',
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+    }, { status: 400 });
+  }
+}
+
+/**
+ * Test Zoom credentials
+ */
+async function testZoom(apiKeys: any): Promise<NextResponse> {
+  const apiKey = apiKeys.zoom_api_key;
+  const apiSecret = apiKeys.zoom_api_secret;
+
+  if (!apiKey || !apiSecret) {
+    return NextResponse.json({
+      success: false,
+      error: 'Both Zoom API Key and API Secret are required',
+    }, { status: 400 });
+  }
+
+  // Basic validation for Zoom credentials
+  if (!apiKey || apiKey.length < 10 || !apiSecret || apiSecret.length < 10) {
+    return NextResponse.json({
+      success: false,
+      error: 'Zoom credentials appear invalid',
+    }, { status: 400 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: 'Zoom credentials saved! (Full test requires generating JWT token)',
+  });
 }
 
 
