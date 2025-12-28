@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
+import PasscodeGate from '@/components/PasscodeGate';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';;
 
@@ -208,7 +209,8 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <PublicLayout>
+    <PasscodeGate>
+      <PublicLayout>
 
       {/* Hero Section */}
       <section className="pt-44 pb-20 px-4 sm:px-6 lg:px-8">
@@ -820,7 +822,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-    </PublicLayout>
+      </PublicLayout>
+    </PasscodeGate>
   );
 }
 
