@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { executeCustomTransform } from './custom-transforms';
+import { where } from 'firebase/firestore';
 
 /**
  * Integration Field Mapping
@@ -140,11 +141,11 @@ export class FieldMappingManager {
       const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationFieldMappings`;
       
       const filters: any[] = [
-        { field: 'integrationId', operator: '==', value: integrationId },
+        where('integrationId', '==', integrationId),
       ];
       
       if (schemaId) {
-        filters.push({ field: 'schemaId', operator: '==', value: schemaId });
+        filters.push(where('schemaId', '==', schemaId));
       }
       
       const mappings = await FirestoreService.getAll(mappingsPath, filters);
