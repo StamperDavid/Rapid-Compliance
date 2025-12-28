@@ -11,8 +11,6 @@ export class SchemaChangeEventPublisherServer {
    * Publish schema change event (SERVER SIDE with admin SDK)
    */
   static async publishEvent(event: SchemaChangeEvent): Promise<void> {
-    const db = getFirestore();
-    
     await db
       .collection('organizations')
       .doc(event.organizationId)
@@ -41,8 +39,6 @@ export class SchemaChangeEventPublisherServer {
     organizationId: string,
     eventId: string
   ): Promise<void> {
-    const db = getFirestore();
-    
     await db
       .collection('organizations')
       .doc(organizationId)
