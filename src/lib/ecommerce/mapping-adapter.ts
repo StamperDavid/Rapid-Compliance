@@ -390,8 +390,11 @@ export async function getEcommerceFieldValue(
     return undefined;
   }
   
+  // Handle both string and object field mappings
+  const actualFieldKey = typeof fieldKey === 'string' ? fieldKey : Object.keys(fieldKey)[0];
+  
   // Use field resolver for flexible value retrieval
-  return FieldResolver.getFieldValue(product, fieldKey, schema);
+  return FieldResolver.getFieldValue(product, actualFieldKey, schema);
 }
 
 
