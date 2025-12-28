@@ -16,11 +16,12 @@ export async function validateWorkflowsForSchema(
 ): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { where } = await import('firebase/firestore');
     
     // Get all workflows for this workspace
     const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/workflows`;
     const workflows = await FirestoreService.getAll(workflowsPath, [
-      { field: 'status', operator: '==', value: 'active' },
+      where('status', '==', 'active'),
     ]);
     
     if (workflows.length === 0) {

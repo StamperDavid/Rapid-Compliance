@@ -573,15 +573,16 @@ export class SchemaChangeEventPublisher {
   ): Promise<SchemaChangeEvent[]> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { where } = await import('firebase/firestore');
       
       const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
       
       const filters: any[] = [
-        { field: 'processed', operator: '==', value: false },
+        where('processed', '==', false),
       ];
       
       if (schemaId) {
-        filters.push({ field: 'schemaId', operator: '==', value: schemaId });
+        filters.push(where('schemaId', '==', schemaId));
       }
       
       const events = await FirestoreService.getAll(eventPath, filters);

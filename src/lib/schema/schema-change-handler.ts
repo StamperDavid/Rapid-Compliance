@@ -261,6 +261,7 @@ export async function getSchemaChangeImpactSummary(
 }> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { where } = await import('firebase/firestore');
     
     const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
     
@@ -269,7 +270,7 @@ export async function getSchemaChangeImpactSummary(
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
     const events = await FirestoreService.getAll(eventsPath, [
-      { field: 'schemaId', operator: '==', value: schemaId },
+      where('schemaId', '==', schemaId),
     ]);
     
     const schemaEvents = events as SchemaChangeEvent[];

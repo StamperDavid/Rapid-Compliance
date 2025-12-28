@@ -4,8 +4,9 @@
  */
 
 import type { TrainingExample } from '@/types/fine-tuning';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { where } from 'firebase/firestore';
 
 /**
  * Collect training example from a conversation
@@ -193,7 +194,7 @@ export async function getTrainingExamples(
   status?: TrainingExample['status']
 ): Promise<TrainingExample[]> {
   const filters = status
-    ? [{ field: 'status', operator: '==', value: status }]
+    ? [where('status', '==', status)]
     : [];
   
   const examples = await FirestoreService.getAll(

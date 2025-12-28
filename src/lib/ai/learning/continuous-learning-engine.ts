@@ -7,8 +7,9 @@ import type { ContinuousLearningConfig, TrainingExample } from '@/types/fine-tun
 import { collectTrainingExample, getTrainingDataStats } from '../fine-tuning/data-collector';
 import { createOpenAIFineTuningJob } from '../fine-tuning/openai-tuner';
 import { createVertexAIFineTuningJob } from '../fine-tuning/vertex-tuner';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { logger } from '@/lib/logger/logger';
+import { where } from 'firebase/firestore';
 
 /**
  * Process conversation feedback and trigger learning
@@ -133,7 +134,7 @@ async function triggerFineTuning(
   // Get approved examples
   const examples = await FirestoreService.getAll(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
-    [{ field: 'status', operator: '==', value: 'approved' }] as any
+    [where('status', '==', 'approved')] as any
   ) as TrainingExample[];
   
   if (examples.length === 0) {
