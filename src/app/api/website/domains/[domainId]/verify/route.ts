@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { promises as dns } from 'dns';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * POST /api/website/domains/[domainId]/verify
@@ -111,7 +112,11 @@ export async function POST(
           }
         }
       } catch (vercelError) {
-        console.error('[Domain Verify] Vercel integration error:', vercelError);
+        logger.error('Vercel integration error during domain verification', vercelError, {
+          route: '/api/website/domains/[domainId]/verify',
+          domainId,
+          organizationId
+        });
         // Continue even if Vercel API fails
       }
 
@@ -135,7 +140,10 @@ export async function POST(
       }, { status: 400 });
     }
   } catch (error: any) {
-    console.error('[Domain Verify API] Error:', error);
+    logger.error('Domain verification error', error, {
+      route: '/api/website/domains/[domainId]/verify',
+      domainId: error.domainId
+    });
     return NextResponse.json(
       { error: 'Failed to verify domain', details: error.message },
       { status: 500 }

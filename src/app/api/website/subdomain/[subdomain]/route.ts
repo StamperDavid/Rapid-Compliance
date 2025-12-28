@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/subdomain/[subdomain]
@@ -38,7 +39,10 @@ export async function GET(
       subdomain,
     });
   } catch (error: any) {
-    console.error('[Subdomain Lookup API] Error:', error);
+    logger.error('Subdomain lookup error', error, {
+      route: '/api/website/subdomain/[subdomain]',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to lookup subdomain', details: error.message },
       { status: 500 }

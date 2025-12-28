@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { Page } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Sitemap] Generation error:', error);
+    logger.error('Sitemap generation error', error, {
+      route: '/api/website/sitemap.xml',
+      method: 'GET'
+    });
     return new NextResponse('Failed to generate sitemap', { status: 500 });
   }
 }

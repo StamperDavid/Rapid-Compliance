@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
+import { logger } from '@/lib/logger/logger';
 
 export async function GET(
   req: NextRequest,
@@ -41,7 +42,10 @@ export async function GET(
     // Return empty if neither exists
     return NextResponse.json({ persona: null, onboarding: null });
   } catch (error) {
-    console.error('Error fetching persona:', error);
+    logger.error('Error fetching persona', error, { 
+      route: '/api/workspace/[orgId]/agent/persona',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch persona' },
       { status: 500 }
@@ -77,7 +81,10 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error saving persona:', error);
+    logger.error('Error saving persona', error, { 
+      route: '/api/workspace/[orgId]/agent/persona',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to save persona' },
       { status: 500 }

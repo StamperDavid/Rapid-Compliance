@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/blog/categories
@@ -49,7 +50,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ categories: data.categories || [] });
   } catch (error) {
-    console.error('[Blog Categories API] GET error:', error);
+    logger.error('Failed to fetch blog categories', error, {
+      route: '/api/website/blog/categories',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch categories' },
       { status: 500 }
@@ -98,7 +102,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ categories });
   } catch (error) {
-    console.error('[Blog Categories API] POST error:', error);
+    logger.error('Failed to save blog categories', error, {
+      route: '/api/website/blog/categories',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to save categories' },
       { status: 500 }

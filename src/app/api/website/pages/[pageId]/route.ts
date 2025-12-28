@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/pages/[pageId]
@@ -55,7 +56,9 @@ export async function GET(
 
     // CRITICAL: Double-check organizationId matches
     if (pageData?.organizationId !== organizationId) {
-      console.error('[SECURITY] organizationId mismatch!', {
+      logger.error('[SECURITY] organizationId mismatch', new Error('Cross-org page access attempt'), {
+        route: '/api/website/pages/[pageId]',
+        method: 'GET',
         requested: organizationId,
         actual: pageData?.organizationId,
         pageId: params.pageId,
@@ -71,7 +74,10 @@ export async function GET(
       page: { id: doc.id, ...pageData },
     });
   } catch (error: any) {
-    console.error('[Website Pages API] GET error:', error);
+    logger.error('Failed to fetch page', error, {
+      route: '/api/website/pages/[pageId]',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch page', details: error.message },
       { status: 500 }
@@ -130,7 +136,9 @@ export async function PUT(
 
     // CRITICAL: Verify organizationId matches
     if (existingData?.organizationId !== organizationId) {
-      console.error('[SECURITY] Attempted cross-org page update!', {
+      logger.error('[SECURITY] Attempted cross-org page update', new Error('Cross-org page update attempt'), {
+        route: '/api/website/pages/[pageId]',
+        method: 'PUT',
         requested: organizationId,
         actual: existingData?.organizationId,
         pageId: params.pageId,
@@ -161,7 +169,10 @@ export async function PUT(
       page: updatedData,
     });
   } catch (error: any) {
-    console.error('[Website Pages API] PUT error:', error);
+    logger.error('Failed to update page', error, {
+      route: '/api/website/pages/[pageId]',
+      method: 'PUT'
+    });
     return NextResponse.json(
       { error: 'Failed to update page', details: error.message },
       { status: 500 }
@@ -220,7 +231,9 @@ export async function DELETE(
 
     // CRITICAL: Verify organizationId matches
     if (pageData?.organizationId !== organizationId) {
-      console.error('[SECURITY] Attempted cross-org page deletion!', {
+      logger.error('[SECURITY] Attempted cross-org page deletion', new Error('Cross-org page delete attempt'), {
+        route: '/api/website/pages/[pageId]',
+        method: 'DELETE',
         requested: organizationId,
         actual: pageData?.organizationId,
         pageId: params.pageId,
@@ -238,7 +251,10 @@ export async function DELETE(
       message: 'Page deleted successfully',
     });
   } catch (error: any) {
-    console.error('[Website Pages API] DELETE error:', error);
+    logger.error('Failed to delete page', error, {
+      route: '/api/website/pages/[pageId]',
+      method: 'DELETE'
+    });
     return NextResponse.json(
       { error: 'Failed to delete page', details: error.message },
       { status: 500 }

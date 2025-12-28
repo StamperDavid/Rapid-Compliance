@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * DELETE /api/website/domains/[domainId]
@@ -51,7 +52,9 @@ export async function DELETE(
 
     // CRITICAL: Verify organizationId matches
     if (domainData?.organizationId !== organizationId) {
-      console.error('[SECURITY] Attempted cross-org domain deletion!', {
+      logger.error('[SECURITY] Attempted cross-org domain deletion', new Error('Cross-org domain delete attempt'), {
+        route: '/api/website/domains/[domainId]',
+        method: 'DELETE',
         requested: organizationId,
         actual: domainData?.organizationId,
         domainId,
@@ -67,7 +70,11 @@ export async function DELETE(
       const { removeVercelDomain } = await import('@/lib/vercel-domains');
       await removeVercelDomain(domainId);
     } catch (vercelError) {
-      console.error('[Domain Delete] Vercel integration error:', vercelError);
+      logger.error('Vercel integration error during domain deletion', vercelError, {
+        route: '/api/website/domains/[domainId]',
+        domainId,
+        organizationId
+      });
       // Continue even if Vercel API fails
     }
 
@@ -100,7 +107,10 @@ export async function DELETE(
       message: 'Domain removed successfully',
     });
   } catch (error: any) {
-    console.error('[Domain API] DELETE error:', error);
+    logger.error('Failed to remove domain', error, {
+      route: '/api/website/domains/[domainId]',
+      method: 'DELETE'
+    });
     return NextResponse.json(
       { error: 'Failed to remove domain', details: error.message },
       { status: 500 }

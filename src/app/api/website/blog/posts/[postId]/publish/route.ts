@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * POST /api/website/blog/posts/[postId]/publish
@@ -50,7 +51,9 @@ export async function POST(
 
     // CRITICAL: Verify organizationId matches
     if (postData?.organizationId !== organizationId) {
-      console.error('[SECURITY] organizationId mismatch on blog publish!', {
+      logger.error('[SECURITY] organizationId mismatch on blog publish', new Error('Cross-org blog publish attempt'), {
+        route: '/api/website/blog/posts/[postId]/publish',
+        method: 'POST',
         requested: organizationId,
         actual: postData?.organizationId,
         postId: params.postId,
@@ -121,7 +124,10 @@ export async function POST(
         : 'Post published successfully',
     });
   } catch (error: any) {
-    console.error('[Blog Post Publish API] Error:', error);
+    logger.error('Failed to publish blog post', error, {
+      route: '/api/website/blog/posts/[postId]/publish',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to publish post', details: error.message },
       { status: 500 }
@@ -171,7 +177,9 @@ export async function DELETE(
 
     // CRITICAL: Verify organizationId matches
     if (postData?.organizationId !== organizationId) {
-      console.error('[SECURITY] organizationId mismatch on blog unpublish!', {
+      logger.error('[SECURITY] organizationId mismatch on blog unpublish', new Error('Cross-org blog unpublish attempt'), {
+        route: '/api/website/blog/posts/[postId]/publish',
+        method: 'DELETE',
         requested: organizationId,
         actual: postData?.organizationId,
         postId: params.postId,
@@ -215,7 +223,10 @@ export async function DELETE(
       message: 'Post unpublished successfully',
     });
   } catch (error: any) {
-    console.error('[Blog Post Unpublish API] Error:', error);
+    logger.error('Failed to unpublish blog post', error, {
+      route: '/api/website/blog/posts/[postId]/publish',
+      method: 'DELETE'
+    });
     return NextResponse.json(
       { error: 'Failed to unpublish post', details: error.message },
       { status: 500 }

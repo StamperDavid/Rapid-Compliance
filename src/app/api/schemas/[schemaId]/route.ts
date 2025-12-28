@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 export async function GET(
   request: NextRequest,
@@ -38,7 +39,10 @@ export async function GET(
 
     return NextResponse.json({ success: true, schema: { id: docSnap.id, ...docSnap.data() } });
   } catch (error: any) {
-    console.error('[Schema API][GET] Failed to fetch schema', error);
+    logger.error('Failed to fetch schema', error, {
+      route: '/api/schemas/[schemaId]',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch schema', details: error.message },
       { status: 500 }
@@ -85,7 +89,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('[Schema API][DELETE] Failed to delete schema', error);
+    logger.error('Failed to delete schema', error, {
+      route: '/api/schemas/[schemaId]',
+      method: 'DELETE'
+    });
     return NextResponse.json(
       { error: 'Failed to delete schema', details: error.message },
       { status: 500 }

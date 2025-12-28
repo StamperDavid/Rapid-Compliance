@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +67,10 @@ export async function GET(request: NextRequest) {
       { status: 403 }
     );
   } catch (error: any) {
-    console.error('[Preview Validate API] Error:', error);
+    logger.error('Preview token validation error', error, {
+      route: '/api/website/preview/validate',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to validate token', details: error.message },
       { status: 500 }

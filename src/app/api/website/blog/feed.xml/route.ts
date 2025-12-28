@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { BlogPost } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,7 +100,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[RSS Feed] Generation error:', error);
+    logger.error('RSS feed generation error', error, {
+      route: '/api/website/blog/feed.xml',
+      method: 'GET'
+    });
     return new NextResponse('Failed to generate RSS feed', { status: 500 });
   }
 }

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { BlogPost } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/blog/posts
@@ -64,7 +65,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ posts });
   } catch (error) {
-    console.error('[Blog Posts API] GET error:', error);
+    logger.error('Failed to fetch blog posts', error, {
+      route: '/api/website/blog/posts',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch posts' },
       { status: 500 }
@@ -119,7 +123,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ post: postData }, { status: 201 });
   } catch (error) {
-    console.error('[Blog Posts API] POST error:', error);
+    logger.error('Failed to create blog post', error, {
+      route: '/api/website/blog/posts',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to create post' },
       { status: 500 }

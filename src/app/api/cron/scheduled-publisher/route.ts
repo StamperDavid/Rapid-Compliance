@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runScheduledPublisher } from '@/lib/scheduled-publisher';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 seconds max execution
@@ -23,12 +24,18 @@ export async function GET(request: NextRequest) {
     // If CRON_SECRET is set, require authentication
     if (cronSecret) {
       if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-        console.error('[Cron] Unauthorized access attempt');
+        logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
+          route: '/api/cron/scheduled-publisher',
+          method: 'GET'
+        });
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }
 
-    console.log('[Cron] Starting scheduled publisher...');
+    logger.info('Starting scheduled publisher', {
+      route: '/api/cron/scheduled-publisher',
+      method: 'GET'
+    });
 
     const result = await runScheduledPublisher();
 
@@ -38,7 +45,10 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('[Cron] Scheduled publisher error:', error);
+    logger.error('Scheduled publisher error', error, {
+      route: '/api/cron/scheduled-publisher',
+      method: 'GET'
+    });
     return NextResponse.json(
       {
         success: false,

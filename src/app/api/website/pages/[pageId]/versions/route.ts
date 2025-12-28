@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse} from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/pages/[pageId]/versions
@@ -73,7 +74,10 @@ export async function GET(
       lastPublishedVersion: pageData.lastPublishedVersion,
     });
   } catch (error: any) {
-    console.error('[Page Versions API] GET error:', error);
+    logger.error('Failed to fetch page versions', error, {
+      route: '/api/website/pages/[pageId]/versions',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch versions', details: error.message },
       { status: 500 }
@@ -185,7 +189,10 @@ export async function POST(
       message: `Version ${versionData?.version} restored successfully`,
     });
   } catch (error: any) {
-    console.error('[Page Versions API] POST error:', error);
+    logger.error('Failed to restore page version', error, {
+      route: '/api/website/pages/[pageId]/versions',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to restore version', details: error.message },
       { status: 500 }

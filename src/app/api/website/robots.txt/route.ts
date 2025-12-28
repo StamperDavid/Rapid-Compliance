@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +78,10 @@ Sitemap: https://${host}/sitemap.xml`;
       },
     });
   } catch (error) {
-    console.error('[Robots.txt] Generation error:', error);
+    logger.error('Robots.txt generation error', error, {
+      route: '/api/website/robots.txt',
+      method: 'GET'
+    });
     return new NextResponse('Failed to generate robots.txt', { status: 500 });
   }
 }

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,7 +60,9 @@ export async function GET(request: NextRequest) {
       
       // CRITICAL: Double-check organizationId matches
       if (data.organizationId !== organizationId) {
-        console.error('[SECURITY] Audit log organizationId mismatch!', {
+        logger.error('[SECURITY] Audit log organizationId mismatch', new Error('Audit log cross-org access'), {
+          route: '/api/website/audit-log',
+          method: 'GET',
           requested: organizationId,
           actual: data.organizationId,
           entryId: doc.id,
@@ -83,7 +86,10 @@ export async function GET(request: NextRequest) {
       count: entries.length,
     });
   } catch (error: any) {
-    console.error('[Audit Log API] GET error:', error);
+    logger.error('Failed to fetch audit log', error, {
+      route: '/api/website/audit-log',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch audit log', details: error.message },
       { status: 500 }

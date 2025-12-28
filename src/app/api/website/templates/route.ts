@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { PageTemplate } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/templates
@@ -50,7 +51,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ templates });
   } catch (error) {
-    console.error('[Templates API] GET error:', error);
+    logger.error('Failed to fetch templates', error, {
+      route: '/api/website/templates',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch templates' },
       { status: 500 }
@@ -112,7 +116,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ template: templateData }, { status: 201 });
   } catch (error) {
-    console.error('[Templates API] POST error:', error);
+    logger.error('Failed to create template', error, {
+      route: '/api/website/templates',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to create template' },
       { status: 500 }
@@ -168,7 +175,10 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[Templates API] DELETE error:', error);
+    logger.error('Failed to delete template', error, {
+      route: '/api/website/templates',
+      method: 'DELETE'
+    });
     return NextResponse.json(
       { error: 'Failed to delete template' },
       { status: 500 }

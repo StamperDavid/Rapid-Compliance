@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/settings
@@ -66,7 +67,10 @@ export async function GET(request: NextRequest) {
       settings,
     });
   } catch (error: any) {
-    console.error('[Website Settings API] GET error:', error);
+    logger.error('Failed to fetch website settings', error, {
+      route: '/api/website/settings',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch settings', details: error.message },
       { status: 500 }
@@ -126,7 +130,10 @@ export async function POST(request: NextRequest) {
       settings: settingsData,
     });
   } catch (error: any) {
-    console.error('[Website Settings API] POST error:', error);
+    logger.error('Failed to update website settings', error, {
+      route: '/api/website/settings',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to update settings', details: error.message },
       { status: 500 }
@@ -195,7 +202,10 @@ export async function PUT(request: NextRequest) {
       settings: settingsData,
     });
   } catch (error: any) {
-    console.error('[Website Settings API] PUT error:', error);
+    logger.error('Failed to update website settings', error, {
+      route: '/api/website/settings',
+      method: 'PUT'
+    });
     return NextResponse.json(
       { error: 'Failed to update settings', details: error.message },
       { status: 500 }

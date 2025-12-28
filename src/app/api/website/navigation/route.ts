@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { Navigation } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/navigation
@@ -53,7 +54,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ navigation: navigationData });
   } catch (error) {
-    console.error('[Navigation API] GET error:', error);
+    logger.error('Failed to fetch navigation', error, {
+      route: '/api/website/navigation',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch navigation' },
       { status: 500 }
@@ -105,7 +109,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ navigation: navigationData });
   } catch (error) {
-    console.error('[Navigation API] POST error:', error);
+    logger.error('Failed to save navigation', error, {
+      route: '/api/website/navigation',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to save navigation' },
       { status: 500 }

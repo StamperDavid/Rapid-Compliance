@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * POST /api/website/blog/posts/[postId]/preview
@@ -94,7 +95,10 @@ export async function POST(
       expiresAt: expiresAt.toISOString(),
     });
   } catch (error: any) {
-    console.error('[Blog Post Preview API] POST error:', error);
+    logger.error('Failed to generate blog post preview', error, {
+      route: '/api/website/blog/posts/[postId]/preview',
+      method: 'POST'
+    });
     return NextResponse.json(
       { error: 'Failed to generate preview', details: error.message },
       { status: 500 }
@@ -205,7 +209,10 @@ export async function GET(
       isPreview: true,
     });
   } catch (error: any) {
-    console.error('[Blog Post Preview API] GET error:', error);
+    logger.error('Failed to fetch blog post preview', error, {
+      route: '/api/website/blog/posts/[postId]/preview',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch preview', details: error.message },
       { status: 500 }

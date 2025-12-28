@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { BlogPost } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/blog/posts/:postId
@@ -64,7 +65,10 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('[Blog Post API] GET error:', error);
+    logger.error('Failed to fetch blog post', error, {
+      route: '/api/website/blog/posts/[postId]',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to fetch post' },
       { status: 500 }
@@ -134,7 +138,10 @@ export async function PUT(
 
     return NextResponse.json({ post: updatedPost });
   } catch (error) {
-    console.error('[Blog Post API] PUT error:', error);
+    logger.error('Failed to update blog post', error, {
+      route: '/api/website/blog/posts/[postId]',
+      method: 'PUT'
+    });
     return NextResponse.json(
       { error: 'Failed to update post' },
       { status: 500 }
@@ -195,7 +202,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('[Blog Post API] DELETE error:', error);
+    logger.error('Failed to delete blog post', error, {
+      route: '/api/website/blog/posts/[postId]',
+      method: 'DELETE'
+    });
     return NextResponse.json(
       { error: 'Failed to delete post' },
       { status: 500 }

@@ -8,6 +8,7 @@ import { db, admin } from '@/lib/firebase-admin';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
 import { SchemaChangeEventPublisherServer } from '@/lib/schema/server/schema-change-publisher-server';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * POST /api/schemas/[schemaId]/update
@@ -83,7 +84,10 @@ export async function POST(
     });
     
   } catch (error: any) {
-    console.error('[Schema Update API] Error:', error);
+    logger.error('Failed to update schema', error, {
+      route: '/api/schemas/[schemaId]/update',
+      method: 'POST'
+    });
     
     return NextResponse.json(
       { error: 'Failed to update schema', details: error.message },

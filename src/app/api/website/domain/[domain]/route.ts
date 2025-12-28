@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/website/domain/[domain]
@@ -80,7 +81,10 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    console.error('[Domain Lookup API] Error:', error);
+    logger.error('Domain lookup error', error, {
+      route: '/api/website/domain/[domain]',
+      method: 'GET'
+    });
     return NextResponse.json(
       { error: 'Failed to lookup domain', details: error.message },
       { status: 500 }
