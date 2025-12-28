@@ -166,18 +166,20 @@ async function handleFieldDeletion(
   
   // Get schema for field resolution
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  const schema = await FirestoreService.get(
+  const schemaData = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
     schemaId
   );
   
-  if (!schema) {
+  if (!schemaData) {
     logger.error('[E-Commerce Adapter] Schema not found', {
       file: 'mapping-adapter.ts',
       schemaId,
     });
     return false;
   }
+  
+  const schema: Schema = schemaData as Schema;
   
   // Try to find replacement fields for critical mappings
   const criticalMappings = {
@@ -192,7 +194,7 @@ async function handleFieldDeletion(
     
     if (currentMapping === deletedFieldKey) {
       // Try to find an alternative field
-      const resolved = await FieldResolver.resolveField(schema as any, {
+      const resolved = await FieldResolver.resolveField(schema, {
         aliases: alternatives,
       });
       
@@ -238,15 +240,17 @@ export async function validateEcommerceMappings(
   try {
     // Get product schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const schema = await FirestoreService.get(
+    const schemaData = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       config.productSchema
     );
     
-    if (!schema) {
+    if (!schemaData) {
       errors.push(`Product schema '${config.productSchema}' not found`);
       return { valid: false, errors, warnings };
     }
+    
+    const schema: Schema = schemaData as Schema;
     
     // Validate required mappings
     const requiredMappings: (keyof ProductFieldMappings)[] = [
@@ -319,14 +323,16 @@ export async function autoConfigureEcommerceMappings(
   try {
     // Get schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const schema = await FirestoreService.get(
+    const schemaData = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       schemaId
     );
     
-    if (!schema) {
+    if (!schemaData) {
       throw new Error(`Schema ${schemaId} not found`);
     }
+    
+    const schema: Schema = schemaData as Schema;
     
     // Try to auto-detect common fields
     const fieldMappings = {
