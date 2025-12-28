@@ -11,8 +11,17 @@ import { executeStripeFunction } from './payment/stripe';
 import { executeCalendlyFunction } from './scheduling/calendly';
 import { executeShopifyFunction } from './ecommerce/shopify';
 import { executeSalesforceFunction } from './crm/salesforce';
-import { executeHubSpotFunction } from './crm/hubspot'
-import { logger } from '@/lib/logger/logger';;
+import { executeHubSpotFunction } from './crm/hubspot';
+import { executeGmailFunction } from './email/gmail';
+import { executeOutlookFunction } from './email/outlook';
+import { executeSlackFunction } from './messaging/slack';
+import { executeTeamsFunction } from './messaging/teams';
+import { executeQuickBooksFunction } from './accounting/quickbooks';
+import { executeXeroFunction } from './accounting/xero';
+import { executePayPalFunction } from './payment/paypal';
+import { executeSquareFunction } from './payment/square';
+import { executeZoomFunction } from './video/zoom';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Execute a function call from the AI agent
@@ -79,6 +88,80 @@ export async function executeFunctionCall(
         
       case 'hubspot':
         result = await executeHubSpotFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'gmail':
+      case 'google':
+        result = await executeGmailFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'outlook':
+      case 'microsoft':
+        result = await executeOutlookFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'slack':
+        result = await executeSlackFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'teams':
+        result = await executeTeamsFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'quickbooks':
+        result = await executeQuickBooksFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'xero':
+        result = await executeXeroFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'paypal':
+        result = await executePayPalFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'square':
+        result = await executeSquareFunction(
+          request.functionName,
+          request.parameters,
+          integration
+        );
+        break;
+        
+      case 'zoom':
+        result = await executeZoomFunction(
           request.functionName,
           request.parameters,
           integration
@@ -222,6 +305,84 @@ function formatResultForAI(functionName: string, result: any): string {
   // Salesforce/HubSpot
   if (functionName === 'createSalesforceLead' || functionName === 'createHubSpotContact') {
     return `I've saved your information. Our sales team will reach out to you shortly!`;
+  }
+  
+  // Gmail
+  if (functionName === 'sendEmail') {
+    return `Email sent successfully to ${result.id ? 'recipient' : 'the contact'}!`;
+  }
+  if (functionName === 'searchEmails') {
+    return `Found ${Array.isArray(result) ? result.length : 0} emails matching your search.`;
+  }
+  if (functionName === 'getEmail') {
+    return `Retrieved email successfully.`;
+  }
+  
+  // Outlook
+  if (functionName === 'getCalendar') {
+    return `Found ${Array.isArray(result) ? result.length : 0} calendar events.`;
+  }
+  if (functionName === 'createCalendarEvent') {
+    return `Calendar event created successfully!`;
+  }
+  
+  // Slack
+  if (functionName === 'sendMessage') {
+    return `Message sent to Slack channel successfully!`;
+  }
+  if (functionName === 'createChannel') {
+    return `Slack channel "${result.name || 'new channel'}" created successfully!`;
+  }
+  if (functionName === 'listChannels') {
+    return `Found ${Array.isArray(result) ? result.length : 0} Slack channels.`;
+  }
+  
+  // Teams
+  if (functionName === 'listTeams') {
+    return `Found ${Array.isArray(result) ? result.length : 0} teams.`;
+  }
+  
+  // QuickBooks
+  if (functionName === 'createInvoice') {
+    return `Invoice created successfully in QuickBooks!`;
+  }
+  if (functionName === 'createCustomer') {
+    return `Customer created successfully in QuickBooks!`;
+  }
+  if (functionName === 'getCustomer') {
+    return `Found ${Array.isArray(result) ? result.length : 0} customers in QuickBooks.`;
+  }
+  
+  // Xero
+  if (functionName === 'listInvoices') {
+    return `Found ${Array.isArray(result) ? result.length : 0} invoices in Xero.`;
+  }
+  
+  // PayPal
+  if (functionName === 'createPayment') {
+    return `Payment link created: ${result.approvalUrl || 'Payment initiated'}`;
+  }
+  if (functionName === 'getTransaction') {
+    return `Retrieved transaction details for order ${result.id || 'ID'}.`;
+  }
+  
+  // Square
+  if (functionName === 'processPayment') {
+    return `Payment processed successfully! Receipt: ${result.receiptUrl || 'Payment ID: ' + result.paymentId}`;
+  }
+  if (functionName === 'createCustomer') {
+    return `Customer created successfully in Square!`;
+  }
+  
+  // Zoom
+  if (functionName === 'createMeeting') {
+    return `Zoom meeting created! Join URL: ${result.joinUrl}`;
+  }
+  if (functionName === 'getRecordings') {
+    return `Found ${Array.isArray(result) ? result.length : 0} Zoom recordings.`;
+  }
+  if (functionName === 'cancelMeeting') {
+    return `Zoom meeting cancelled successfully.`;
   }
   
   // Default
