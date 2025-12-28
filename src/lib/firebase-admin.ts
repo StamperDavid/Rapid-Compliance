@@ -12,8 +12,18 @@ if (!admin.apps.length) {
   try {
     let credential;
     
-    // In production, use service account from environment
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    // Check for individual environment variables (Vercel format)
+    if (process.env.FIREBASE_ADMIN_PROJECT_ID && 
+        process.env.FIREBASE_ADMIN_CLIENT_EMAIL && 
+        process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+      credential = admin.credential.cert({
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      });
+    }
+    // In production, use service account from environment (JSON blob)
+    else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
       credential = admin.credential.cert(serviceAccount);
     } 
