@@ -214,8 +214,8 @@ export class FieldMappingManager {
       // Get all field mappings for this schema
       const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/integrationFieldMappings`;
       const mappings = await FirestoreService.getAll(mappingsPath, [
-        { field: 'schemaId', operator: '==', value: event.schemaId },
-      ]);
+        where('schemaId', '==', event.schemaId),
+      ] as any);
       
       if (mappings.length === 0) {
         logger.info('[Field Mapper] No field mappings found for schema', {
