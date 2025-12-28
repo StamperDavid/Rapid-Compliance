@@ -6,6 +6,8 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { getTierForRecordCount, VOLUME_TIERS } from '@/types/subscription';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
 });

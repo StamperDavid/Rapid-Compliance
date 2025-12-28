@@ -10,6 +10,8 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 // Twilio status mappings
 const TWILIO_STATUS_MAP = {
   'queued': 'queued',

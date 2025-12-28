@@ -24,6 +24,10 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', 'recharts'], // Tree-shake large packages
   },
   
+  // Skip pre-rendering for API routes (all are dynamic)
+  skipTrailingSlashRedirect: true,
+  skipMiddlewareUrlNormalize: true,
+  
   // Headers for caching and security
   async headers() {
     return [
