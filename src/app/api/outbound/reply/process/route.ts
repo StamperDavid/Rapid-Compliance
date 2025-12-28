@@ -14,6 +14,7 @@ import {
   EmailReply,
   ProspectContext 
 } from '@/lib/outbound/reply-handler';
+import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -65,14 +66,26 @@ export async function POST(request: NextRequest) {
     let sent = false;
     if (canAutoSend && suggestedResponse) {
       try {
-        // TODO: Send email using email service
-        // await sendEmail({
-        //   to: emailReply.from,
-        //   subject: suggestedResponse.subject,
-        //   body: suggestedResponse.body,
-        // });
+        await sendEmail({
+          to: emailReply.from,
+          subject: `Re: ${emailReply.subject || 'Your inquiry'}`,
+          html: suggestedResponse.body,
+          text: suggestedResponse.body,
+          from: emailReply.to,
+          metadata: {
+            organizationId: orgId,
+            type: 'reply_handler',
+            inReplyTo: emailReply.messageId,
+            references: emailReply.messageId,
+          }
+        });
         
-        logger.info('Auto-sent reply', { route: '/api/outbound/reply/process', to: emailReply.from });
+        logger.info('Auto-sent reply', { 
+          route: '/api/outbound/reply/process', 
+          to: emailReply.from,
+          subject: suggestedResponse.subject,
+          inReplyTo: emailReply.messageId
+        });
         sent = true;
       } catch (error) {
         logger.error('Failed to auto-send reply', error, { route: '/api/outbound/reply/process' });
