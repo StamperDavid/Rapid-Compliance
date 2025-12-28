@@ -65,7 +65,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          orgId: 'platform-admin',
+          orgId: 'platform',
           customerId: `demo_${Date.now()}`,
         }),
       });
