@@ -113,10 +113,11 @@ export async function middleware(request: NextRequest) {
   const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000';
   const isLocalhost = hostname.includes('localhost');
   const isVercelDeployment = hostname.includes('.vercel.app');
+  const isPlatformDomain = hostname.includes('salesvelocity.ai');
 
   // CASE 1: Custom Domain (e.g., www.acme.com)
-  // Skip middleware for Vercel preview/production deployments
-  if (!hostname.includes(baseDomain) && !isLocalhost && !isVercelDeployment) {
+  // Skip middleware for Vercel preview/production deployments and main platform domain
+  if (!hostname.includes(baseDomain) && !isLocalhost && !isVercelDeployment && !isPlatformDomain) {
     // Force HTTPS for custom domains in production
     const protocol = request.headers.get('x-forwarded-proto');
     if (protocol === 'http' && process.env.NODE_ENV === 'production') {
