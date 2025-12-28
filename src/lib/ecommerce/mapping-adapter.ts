@@ -7,6 +7,7 @@ import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { EcommerceConfig, ProductFieldMappings } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
+import { Schema } from '@/types/schema';
 
 /**
  * Adapt e-commerce mappings to schema changes
