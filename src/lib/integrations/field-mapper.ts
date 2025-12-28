@@ -7,7 +7,6 @@ import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { executeCustomTransform } from './custom-transforms';
-import { where } from 'firebase/firestore';
 
 /**
  * Integration Field Mapping
@@ -137,6 +136,7 @@ export class FieldMappingManager {
   ): Promise<IntegrationFieldMapping | null> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { where } = await import('firebase/firestore');
       
       const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationFieldMappings`;
       
@@ -211,6 +211,7 @@ export class FieldMappingManager {
   ): Promise<void> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { where } = await import('firebase/firestore');
       
       // Get all field mappings for this schema
       const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${event.organizationId}/integrationFieldMappings`;
