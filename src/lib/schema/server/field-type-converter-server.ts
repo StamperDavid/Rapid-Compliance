@@ -51,8 +51,6 @@ export class FieldTypeConverterServer {
     estimatedSuccess: number;
     estimatedFailures: number;
   }> {
-    const db = getFirestore();
-    
     // Get schema
     const schemaDoc = await db
       .collection('organizations')
