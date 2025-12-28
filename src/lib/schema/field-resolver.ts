@@ -176,22 +176,6 @@ export class FieldResolver {
   }
   
   /**
-   * Resolve field with fallback to common aliases
-   */
-  static async resolveFieldWithCommonAliases(
-    schema: Schema,
-    fieldReference: string
-  ): Promise<ResolvedField | null> {
-    const commonAliases = this.getCommonAliases(fieldReference);
-    
-    return this.resolveField(schema, {
-      name: fieldReference,
-      key: fieldReference,
-      aliases: commonAliases,
-    });
-  }
-  
-  /**
    * Get field value from entity record using flexible resolution
    */
   static getFieldValue(
