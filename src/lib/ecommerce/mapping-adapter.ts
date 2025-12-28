@@ -192,7 +192,7 @@ async function handleFieldDeletion(
     
     if (currentMapping === deletedFieldKey) {
       // Try to find an alternative field
-      const resolved = await FieldResolver.resolveField(schema, {
+      const resolved = await FieldResolver.resolveField(schema as any, {
         aliases: alternatives,
       });
       
