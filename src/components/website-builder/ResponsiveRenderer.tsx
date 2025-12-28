@@ -185,15 +185,43 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
 }
 
 function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: string }) {
+  const convertSpacing = (spacing?: any): string => {
+    if (!spacing) return '0';
+    if (typeof spacing === 'string') return spacing;
+    return `${spacing.top || 0} ${spacing.right || 0} ${spacing.bottom || 0} ${spacing.left || 0}`;
+  };
+
   const getResponsiveStyle = (): React.CSSProperties => {
-    const baseStyle = widget.style || {};
+    const baseStyle: any = { ...widget.style } || {};
+    
+    // Convert Spacing objects to CSS strings
+    if (baseStyle.padding && typeof baseStyle.padding === 'object') {
+      baseStyle.padding = convertSpacing(baseStyle.padding);
+    }
+    if (baseStyle.margin && typeof baseStyle.margin === 'object') {
+      baseStyle.margin = convertSpacing(baseStyle.margin);
+    }
     
     // Apply responsive overrides
     if (breakpoint === 'mobile' && widget.responsive?.mobile) {
-      return { ...baseStyle, ...widget.responsive.mobile };
+      const mobileStyle: any = { ...widget.responsive.mobile };
+      if (mobileStyle.padding && typeof mobileStyle.padding === 'object') {
+        mobileStyle.padding = convertSpacing(mobileStyle.padding);
+      }
+      if (mobileStyle.margin && typeof mobileStyle.margin === 'object') {
+        mobileStyle.margin = convertSpacing(mobileStyle.margin);
+      }
+      return { ...baseStyle, ...mobileStyle };
     }
     if (breakpoint === 'tablet' && widget.responsive?.tablet) {
-      return { ...baseStyle, ...widget.responsive.tablet };
+      const tabletStyle: any = { ...widget.responsive.tablet };
+      if (tabletStyle.padding && typeof tabletStyle.padding === 'object') {
+        tabletStyle.padding = convertSpacing(tabletStyle.padding);
+      }
+      if (tabletStyle.margin && typeof tabletStyle.margin === 'object') {
+        tabletStyle.margin = convertSpacing(tabletStyle.margin);
+      }
+      return { ...baseStyle, ...tabletStyle };
     }
     
     return baseStyle;
