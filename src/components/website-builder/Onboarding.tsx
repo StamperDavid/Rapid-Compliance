@@ -117,7 +117,7 @@ export function WebsiteBuilderOnboarding({ organizationId, onComplete }: Onboard
       ),
     },
     {
-      title: 'You're All Set! 🎊',
+      title: "You're All Set! 🎊",
       description: 'Your website is ready to customize',
       content: (
         <div style={{ textAlign: 'center', padding: '40px 20px' }}>
