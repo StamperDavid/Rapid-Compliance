@@ -39,7 +39,7 @@ export class FieldTypeConverter {
    * Check if type conversion is "safe" (auto-convertible)
    */
   static isSafeConversion(oldType: FieldType, newType: FieldType): boolean {
-    const safeConversions: Record<FieldType, FieldType[]> = {
+    const safeConversions: Partial<Record<FieldType, FieldType[]>> = {
       'number': ['currency', 'percent'],
       'currency': ['number', 'percent'],
       'percent': ['number', 'currency'],
