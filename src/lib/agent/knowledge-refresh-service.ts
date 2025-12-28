@@ -134,8 +134,8 @@ export async function recompileAgentKnowledge(
     // Get current Golden Master
     const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/goldenMasters`;
     const goldenMasters = await FirestoreService.getAll(goldenMastersPath, [
-      { field: 'status', operator: '==', value: 'active' },
-    ]);
+      where('status', '==', 'active'),
+    ] as any);
     
     if (goldenMasters.length === 0) {
       logger.warn('[AI Agent Refresh] No active Golden Master found', {
