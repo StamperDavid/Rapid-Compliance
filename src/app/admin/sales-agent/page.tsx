@@ -116,21 +116,28 @@ export default function AdminSalesAgentPage() {
       {/* Main Actions */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
         <ActionCard
+          title="🎭 Agent Persona"
+          description="Configure comprehensive expert persona: identity, cognitive logic, knowledge, and execution rules"
+          href="/admin/sales-agent/persona"
+          buttonText="View Persona"
+          buttonColor={primaryColor}
+        />
+        <ActionCard
           title="🎓 Training Center"
           description="Train your sales agent on objection handling, pricing, feature explanations, and more"
           href="/admin/sales-agent/training"
           buttonText="Start Training"
-          buttonColor={primaryColor}
+          buttonColor="#10b981"
         />
         <ActionCard
           title="📚 Knowledge Base"
           description="Manage platform features, pricing, case studies, and competitive intelligence"
           href="/admin/sales-agent/knowledge"
           buttonText="Manage Knowledge"
-          buttonColor="#10b981"
+          buttonColor="#f59e0b"
         />
         <ActionCard
-          title="🎭 Live Demo Mode"
+          title="🚀 Live Demo Mode"
           description="Use the agent to give live demos to prospects - watch it in action"
           href="/admin/sales-agent/demo"
           buttonText="Start Demo"

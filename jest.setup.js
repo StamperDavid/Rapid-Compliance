@@ -45,9 +45,14 @@ jest.mock('next/navigation', () => ({
 // This is CRITICAL - Admin SDK bypasses Firestore security rules, allowing tests to write to dev database
 jest.mock('@/lib/db/firestore-service', () => {
   const { AdminFirestoreService } = jest.requireActual('@/lib/db/admin-firestore-service');
+  const actualModule = jest.requireActual('@/lib/db/firestore-service');
   return {
     FirestoreService: AdminFirestoreService,
-    COLLECTIONS: jest.requireActual('@/lib/db/firestore-service').COLLECTIONS,
+    COLLECTIONS: actualModule.COLLECTIONS,
+    RecordService: actualModule.RecordService,
+    WorkflowService: actualModule.WorkflowService,
+    EmailCampaignService: actualModule.EmailCampaignService,
+    LeadNurturingService: actualModule.LeadNurturingService,
   };
 });
 

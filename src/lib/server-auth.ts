@@ -49,3 +49,4 @@ export async function getUserIdentifier(): Promise<string> {
   return user.displayName || user.email || user.uid;
 }
 
+

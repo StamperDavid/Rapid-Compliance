@@ -36,6 +36,10 @@ export async function POST(request: NextRequest) {
 
     // Handle different webhook events
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
       case 'customer.subscription.trial_will_end':
         await handleTrialWillEnd(event.data.object as Stripe.Subscription);
         break;
@@ -67,6 +71,67 @@ export async function POST(request: NextRequest) {
       { error: 'Webhook processing failed' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Checkout session completed - Process e-commerce order
+ */
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  try {
+    const organizationId = session.metadata?.organizationId;
+    const workspaceId = session.metadata?.workspaceId || 'default';
+    
+    if (!organizationId) {
+      logger.error('[Stripe Webhook] Missing organizationId in checkout session metadata');
+      return;
+    }
+
+    logger.info('[Stripe Webhook] Processing checkout session', {
+      sessionId: session.id,
+      organizationId,
+      workspaceId,
+    });
+
+    // Parse metadata
+    const cartId = session.metadata?.cartId;
+    const customerData = session.metadata?.customer ? JSON.parse(session.metadata.customer) : null;
+    const shippingAddress = session.metadata?.shippingAddress ? JSON.parse(session.metadata.shippingAddress) : null;
+    const billingAddress = session.metadata?.billingAddress ? JSON.parse(session.metadata.billingAddress) : null;
+    const shippingMethodId = session.metadata?.shippingMethodId;
+
+    if (!cartId || !customerData) {
+      logger.error('[Stripe Webhook] Missing required data in checkout session metadata', {
+        hasCartId: !!cartId,
+        hasCustomer: !!customerData,
+      });
+      return;
+    }
+
+    // Build checkout data
+    const checkoutData = {
+      cartId,
+      workspaceId,
+      customer: customerData,
+      shippingAddress: shippingAddress || billingAddress,
+      billingAddress: billingAddress || shippingAddress,
+      shippingMethodId,
+      paymentMethod: 'card',
+      paymentToken: session.payment_intent as string,
+    };
+
+    // Process checkout (creates order, updates inventory, sends email)
+    const { processCheckout } = await import('@/lib/ecommerce/checkout-service');
+    const order = await processCheckout(checkoutData);
+
+    logger.info('[Stripe Webhook] Checkout session completed successfully', {
+      sessionId: session.id,
+      orderId: order.id,
+      organizationId,
+      amount: session.amount_total,
+    });
+  } catch (error) {
+    logger.error('[Stripe Webhook] Error processing checkout session:', error);
   }
 }
 

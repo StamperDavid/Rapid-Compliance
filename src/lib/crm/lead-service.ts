@@ -167,6 +167,12 @@ export async function createLead(
       }
     }
 
+    // Clean undefined values from enrichmentData (Firestore doesn't allow undefined)
+    const cleanEnrichmentData = enrichmentData ? 
+      Object.fromEntries(
+        Object.entries(enrichmentData).filter(([_, v]) => v !== undefined)
+      ) : null;
+
     const lead: Lead = {
       ...data,
       id: leadId,
@@ -174,7 +180,7 @@ export async function createLead(
       workspaceId,
       status: data.status || 'new',
       score: enrichedScore,
-      enrichmentData,
+      ...(cleanEnrichmentData && { enrichmentData: cleanEnrichmentData }),
       createdAt: now,
       updatedAt: now,
     };

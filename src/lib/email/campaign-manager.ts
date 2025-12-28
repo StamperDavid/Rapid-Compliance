@@ -86,29 +86,30 @@ export interface CampaignStats {
 export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<EmailCampaign> {
   const campaignId = `campaign_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
+  // Build campaign object, excluding undefined values (Firestore doesn't allow undefined)
   const fullCampaign: EmailCampaign = {
     id: campaignId,
     name: campaign.name || 'Untitled Campaign',
     organizationId: campaign.organizationId!,
-    workspaceId: campaign.workspaceId,
+    workspaceId: campaign.workspaceId || 'default',
     type: campaign.type || 'broadcast',
     subject: campaign.subject!,
-    subjectB: campaign.subjectB,
+    ...(campaign.subjectB !== undefined && { subjectB: campaign.subjectB }),
     htmlContent: campaign.htmlContent!,
-    htmlContentB: campaign.htmlContentB,
-    textContent: campaign.textContent,
+    ...(campaign.htmlContentB !== undefined && { htmlContentB: campaign.htmlContentB }),
+    ...(campaign.textContent !== undefined && { textContent: campaign.textContent }),
     fromEmail: campaign.fromEmail!,
     fromName: campaign.fromName!,
-    replyTo: campaign.replyTo,
+    ...(campaign.replyTo !== undefined && { replyTo: campaign.replyTo }),
     recipientList: campaign.recipientList || [],
-    segmentCriteria: campaign.segmentCriteria,
-    scheduledFor: campaign.scheduledFor,
+    ...(campaign.segmentCriteria !== undefined && { segmentCriteria: campaign.segmentCriteria }),
+    ...(campaign.scheduledFor !== undefined && { scheduledFor: campaign.scheduledFor }),
     sendImmediately: campaign.sendImmediately ?? false,
-    abTest: campaign.abTest,
+    ...(campaign.abTest !== undefined && { abTest: campaign.abTest }),
     trackOpens: campaign.trackOpens ?? true,
     trackClicks: campaign.trackClicks ?? true,
     trackConversions: campaign.trackConversions ?? false,
-    conversionGoal: campaign.conversionGoal,
+    ...(campaign.conversionGoal !== undefined && { conversionGoal: campaign.conversionGoal }),
     status: 'draft',
     sentCount: 0,
     deliveredCount: 0,
@@ -120,17 +121,25 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
     createdAt: new Date(),
     updatedAt: new Date(),
     createdBy: campaign.createdBy || 'system',
-  };
+  } as EmailCampaign;
 
-  // Store campaign in Firestore
+  // Store campaign in Firestore (remove undefined values)
   const { EmailCampaignService } = await import('@/lib/db/firestore-service');
-  await EmailCampaignService.set(fullCampaign.organizationId, campaignId, {
+  const campaignData: any = {
     ...fullCampaign,
     createdAt: fullCampaign.createdAt.toISOString(),
     updatedAt: fullCampaign.updatedAt.toISOString(),
-    scheduledFor: fullCampaign.scheduledFor?.toISOString(),
-    sentAt: fullCampaign.sentAt?.toISOString(),
-  });
+  };
+  
+  // Only add optional date fields if they exist
+  if (fullCampaign.scheduledFor) {
+    campaignData.scheduledFor = fullCampaign.scheduledFor.toISOString();
+  }
+  if (fullCampaign.sentAt) {
+    campaignData.sentAt = fullCampaign.sentAt.toISOString();
+  }
+  
+  await EmailCampaignService.set(fullCampaign.organizationId, campaignId, campaignData);
 
   return fullCampaign;
 }

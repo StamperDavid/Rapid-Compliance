@@ -52,7 +52,8 @@ describe('LeadService', () => {
         status: 'new' as const,
       };
 
-      const lead = await createLead(testOrgId, leadData, testWorkspaceId);
+      // Disable auto-enrichment to test default score behavior
+      const lead = await createLead(testOrgId, leadData, testWorkspaceId, { autoEnrich: false });
       testLeadId = lead.id;
 
       expect(lead).toBeDefined();
@@ -62,7 +63,7 @@ describe('LeadService', () => {
       expect(lead.email).toBe('john.doe@example.com');
       expect(lead.organizationId).toBe(testOrgId);
       expect(lead.workspaceId).toBe(testWorkspaceId);
-      expect(lead.score).toBe(50); // Default score
+      expect(lead.score).toBe(50); // Default score (without enrichment)
       expect(lead.createdAt).toBeDefined();
     });
 
@@ -287,6 +288,7 @@ describe('LeadService', () => {
     });
   });
 });
+
 
 
 

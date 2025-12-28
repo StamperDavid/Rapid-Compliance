@@ -50,7 +50,7 @@ export default function ShoppingCartPage() {
       const sessionId = localStorage.getItem('cartSessionId') || `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
       
-      const cartData = await getOrCreateCart(sessionId, 'default');
+      const cartData = await getOrCreateCart(sessionId, 'default', orgId);
       setCart(cartData as unknown as Cart);
     } catch (error) {
       logger.error('Error loading cart:', error, { file: 'page.tsx' });
@@ -65,7 +65,7 @@ export default function ShoppingCartPage() {
     try {
       setUpdating(true);
       const sessionId = localStorage.getItem('cartSessionId')!;
-      await updateCartItemQuantity(sessionId, 'default', itemId, newQuantity);
+      await updateCartItemQuantity(sessionId, 'default', orgId, itemId, newQuantity);
       await loadCart();
     } catch (error) {
       logger.error('Error updating quantity:', error, { file: 'page.tsx' });
@@ -81,7 +81,7 @@ export default function ShoppingCartPage() {
     try {
       setUpdating(true);
       const sessionId = localStorage.getItem('cartSessionId')!;
-      await removeFromCart(sessionId, 'default', itemId);
+      await removeFromCart(sessionId, 'default', orgId, itemId);
       await loadCart();
     } catch (error) {
       logger.error('Error removing item:', error, { file: 'page.tsx' });
@@ -347,6 +347,7 @@ export default function ShoppingCartPage() {
     </div>
   );
 }
+
 
 
 

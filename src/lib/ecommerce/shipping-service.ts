@@ -20,13 +20,14 @@ export interface ShippingCalculation {
  */
 export async function calculateShipping(
   workspaceId: string,
+  organizationId: string,
   cart: Cart,
   address: Address,
   methodId?: string
 ): Promise<ShippingCalculation> {
   // Get e-commerce config
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   

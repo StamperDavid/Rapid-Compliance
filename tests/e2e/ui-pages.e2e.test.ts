@@ -16,7 +16,7 @@ describe('E-Commerce UI Integration', () => {
   const testWorkspaceId = 'default';
 
   it('should create cart (products page → cart service)', async () => {
-    const cart = await getOrCreateCart(testSessionId, testWorkspaceId);
+    const cart = await getOrCreateCart(testSessionId, testWorkspaceId, testOrgId);
     
     expect(cart).toBeDefined();
     expect(cart.sessionId).toBe(testSessionId);
@@ -25,7 +25,7 @@ describe('E-Commerce UI Integration', () => {
   }, 10000);
 
   it('should add product to cart (product detail → cart service)', async () => {
-    const cart = await addToCart(testSessionId, testWorkspaceId, 'test-product-1', 2);
+    const cart = await addToCart(testSessionId, testWorkspaceId, testOrgId, 'test-product-1', 2);
     
     expect(cart.items).toHaveLength(1);
     expect(cart.items[0].quantity).toBe(2);
@@ -33,7 +33,7 @@ describe('E-Commerce UI Integration', () => {
 
   it('should process checkout (checkout page → checkout service)', async () => {
     // First add item to cart
-    await addToCart(testSessionId, testWorkspaceId, 'test-product-1', 1);
+    await addToCart(testSessionId, testWorkspaceId, testOrgId, 'test-product-1', 1);
     
     const order = await processCheckout({
       sessionId: testSessionId,

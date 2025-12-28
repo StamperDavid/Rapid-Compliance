@@ -710,6 +710,7 @@ export interface Cart {
   id: string;
   sessionId: string;
   userId?: string; // If logged in
+  organizationId: string;
   workspaceId: string;
   
   // Items

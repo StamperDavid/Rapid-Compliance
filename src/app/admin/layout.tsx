@@ -89,6 +89,7 @@ export default function AdminLayout({
           </NavSection>
           
           <NavSection title="Sales Agent Tools">
+            <NavLink href="/admin/sales-agent/persona" icon="🎭" tooltip="Configure comprehensive expert persona: identity, cognitive logic, knowledge, and execution rules">Agent Persona</NavLink>
             <NavLink href="/admin/sales-agent/training" icon="🎓" tooltip="Train your sales agent on objection handling, pricing, and demos">Training Center</NavLink>
             <NavLink href="/admin/sales-agent/knowledge" icon="📚" tooltip="Manage platform knowledge base, features, and pricing information">Knowledge Base</NavLink>
           </NavSection>

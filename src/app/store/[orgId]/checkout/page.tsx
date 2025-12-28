@@ -42,7 +42,7 @@ export default function CheckoutPage() {
         return;
       }
       
-      const cartData = await getOrCreateCart(sessionId, 'default');
+      const cartData = await getOrCreateCart(sessionId, 'default', orgId);
       if (!cartData.items || cartData.items.length === 0) {
         router.push(`/store/${orgId}/cart`);
         return;

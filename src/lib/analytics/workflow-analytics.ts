@@ -43,6 +43,7 @@ export interface WorkflowAnalytics {
  * Get workflow analytics
  */
 export async function getWorkflowAnalytics(
+  organizationId: string,
   workspaceId: string,
   workflowId: string,
   startDate: Date,
@@ -50,7 +51,7 @@ export async function getWorkflowAnalytics(
 ): Promise<WorkflowAnalytics> {
   // Get workflow
   const workflow = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
     workflowId
   );
   
@@ -60,7 +61,7 @@ export async function getWorkflowAnalytics(
   
   // Get executions in period
   const executions = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/workflowExecutions`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
     [
       where('workflowId', '==', workflowId),
       where('startedAt', '>=', Timestamp.fromDate(startDate)),
@@ -182,13 +183,14 @@ function calculateExecutionsByDay(executions: any[], startDate: Date, endDate: D
  * Get all workflows analytics summary
  */
 export async function getAllWorkflowsAnalytics(
+  organizationId: string,
   workspaceId: string,
   startDate: Date,
   endDate: Date
 ): Promise<Array<{ workflowId: string; workflowName: string; executions: number; successRate: number }>> {
   // Get all workflows
   const workflows = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
     [where('status', '==', 'active')]
   );
   
@@ -196,7 +198,7 @@ export async function getAllWorkflowsAnalytics(
   const analytics = await Promise.all(
     workflows.map(async (workflow: any) => {
       const executions = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/workflowExecutions`,
+        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
         [
           where('workflowId', '==', workflow.id),
           where('startedAt', '>=', Timestamp.fromDate(startDate)),
@@ -218,6 +220,7 @@ export async function getAllWorkflowsAnalytics(
   
   return analytics.sort((a, b) => b.executions - a.executions);
 }
+
 
 
 

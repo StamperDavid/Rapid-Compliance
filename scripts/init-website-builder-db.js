@@ -196,3 +196,4 @@ async function createGlobalCollections() {
 // Run initialization
 initializeWebsiteBuilder();
 
+

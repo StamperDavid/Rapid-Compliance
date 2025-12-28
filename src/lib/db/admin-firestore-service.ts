@@ -50,19 +50,43 @@ export class AdminFirestoreService {
       for (const constraint of constraints) {
         const constraintData = constraint as any;
         
+        if (!constraintData || !constraintData.type) {
+          continue;
+        }
+        
         if (constraintData.type === 'where') {
+          // Client SDK stores these as _field, _op, _value (underscore-prefixed)
+          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
+          const op = constraintData._op || constraintData.opStr;
+          const value = constraintData._value !== undefined ? constraintData._value : constraintData.value;
+          
+          if (!fieldPath || !op) {
+            continue;
+          }
+          
           query = query.where(
-            constraintData.fieldPath,
-            constraintData.opStr as FirebaseFirestore.WhereFilterOp,
-            constraintData.value
+            fieldPath,
+            op as FirebaseFirestore.WhereFilterOp,
+            value
           );
         } else if (constraintData.type === 'orderBy') {
+          // Client SDK stores these as _field, _direction
+          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
+          const direction = constraintData._direction || constraintData.directionStr;
+          
+          if (!fieldPath) {
+            continue;
+          }
+          
           query = query.orderBy(
-            constraintData.fieldPath,
-            constraintData.directionStr as FirebaseFirestore.OrderByDirection
+            fieldPath,
+            direction as FirebaseFirestore.OrderByDirection
           );
         } else if (constraintData.type === 'limit') {
-          query = query.limit(constraintData.limit);
+          const limitValue = constraintData._limit || constraintData.limit;
+          if (limitValue) {
+            query = query.limit(limitValue);
+          }
         }
       }
       
@@ -74,6 +98,96 @@ export class AdminFirestoreService {
       }));
     } catch (error) {
       logger.error('[Admin Firestore] Error getting documents from ${collectionPath}:', error, { file: 'admin-firestore-service.ts' });
+      throw error;
+    }
+  }
+
+  /**
+   * Get documents with pagination
+   */
+  static async getAllPaginated(
+    collectionPath: string,
+    constraints: QueryConstraint[] = [],
+    pageSize: number = 50,
+    lastDoc?: any
+  ): Promise<{
+    data: any[];
+    lastDoc: any | null;
+    hasMore: boolean;
+  }> {
+    try {
+      let query: FirebaseFirestore.Query = adminDb.collection(collectionPath);
+      
+      
+      // Apply constraints (where, orderBy, limit)
+      for (const constraint of constraints) {
+        const constraintData = constraint as any;
+        
+        // Skip invalid constraints
+        if (!constraintData || !constraintData.type) {
+          continue;
+        }
+        
+        if (constraintData.type === 'where') {
+          // Client SDK stores these as _field, _op, _value (underscore-prefixed)
+          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
+          const op = constraintData._op || constraintData.opStr;
+          const value = constraintData._value !== undefined ? constraintData._value : constraintData.value;
+          
+          if (!fieldPath || !op) {
+            continue;
+          }
+          
+          query = query.where(
+            fieldPath,
+            op as FirebaseFirestore.WhereFilterOp,
+            value
+          );
+        } else if (constraintData.type === 'orderBy') {
+          // Client SDK stores these as _field, _direction
+          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
+          const direction = constraintData._direction || constraintData.directionStr;
+          
+          if (!fieldPath) {
+            continue;
+          }
+          
+          query = query.orderBy(
+            fieldPath,
+            direction as FirebaseFirestore.OrderByDirection
+          );
+        } else if (constraintData.type === 'limit') {
+          // Skip limit constraint - we'll apply pageSize below
+          continue;
+        }
+      }
+      
+      // Apply pagination
+      if (lastDoc) {
+        query = query.startAfter(lastDoc);
+      }
+      
+      // Fetch pageSize + 1 to determine if there are more pages
+      query = query.limit(pageSize + 1);
+      
+      const snapshot = await query.get();
+      const docs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      
+      // Determine if there are more pages
+      const hasMore = docs.length > pageSize;
+      const data = hasMore ? docs.slice(0, pageSize) : docs;
+      const newLastDoc = data.length > 0 ? snapshot.docs[data.length - 1] : null;
+      
+      return {
+        data,
+        lastDoc: newLastDoc,
+        hasMore,
+      };
+    } catch (error) {
+      logger.error('[Admin Firestore] Error getting paginated documents from ${collectionPath}:', error, { file: 'admin-firestore-service.ts' });
       throw error;
     }
   }
@@ -177,6 +291,8 @@ export class AdminFirestoreService {
 
 // Export singleton instance
 export default AdminFirestoreService;
+
+
 
 
 

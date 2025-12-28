@@ -22,10 +22,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { orgId, customerInfo } = body;
+    const { orgId, workspaceId = 'default', customerInfo, shippingAddress, billingAddress, shippingMethodId } = body;
 
     if (!orgId) {
       return errors.badRequest('Organization ID required');
+    }
+
+    if (!customerInfo || !customerInfo.email) {
+      return errors.badRequest('Customer information required');
     }
 
     // Get Stripe API key
@@ -60,17 +64,28 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity,
     }));
 
-    // Create checkout session
+    // Create checkout session with complete metadata for webhook processing
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/cancel`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/${orgId}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/${orgId}/cart`,
       customer_email: customerInfo.email,
       metadata: {
         organizationId: orgId,
+        workspaceId: workspaceId,
         userId: authResult.user.uid,
+        cartId: authResult.user.uid, // Cart ID is the user ID
+        customer: JSON.stringify({
+          email: customerInfo.email,
+          firstName: customerInfo.firstName || '',
+          lastName: customerInfo.lastName || '',
+          phone: customerInfo.phone || '',
+        }),
+        shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : JSON.stringify({}),
+        billingAddress: billingAddress ? JSON.stringify(billingAddress) : JSON.stringify({}),
+        shippingMethodId: shippingMethodId || '',
       },
     });
 

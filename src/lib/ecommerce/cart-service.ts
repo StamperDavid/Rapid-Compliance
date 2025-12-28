@@ -13,11 +13,12 @@ import { Timestamp } from 'firebase/firestore';
 export async function getOrCreateCart(
   sessionId: string,
   workspaceId: string,
+  organizationId: string,
   userId?: string
 ): Promise<Cart> {
   // Try to get existing cart
   const existingCart = await FirestoreService.get<Cart>(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/carts`,
     sessionId
   );
   
@@ -26,13 +27,13 @@ export async function getOrCreateCart(
     const expiresAt = existingCart.expiresAt as any;
     if (expiresAt && new Date(expiresAt.toDate?.() || expiresAt) < new Date()) {
       // Cart expired, create new one
-      return createCart(sessionId, workspaceId, userId);
+      return createCart(sessionId, workspaceId, organizationId, userId);
     }
     return existingCart;
   }
   
   // Create new cart
-  return createCart(sessionId, workspaceId, userId);
+  return createCart(sessionId, workspaceId, organizationId, userId);
 }
 
 /**
@@ -41,6 +42,7 @@ export async function getOrCreateCart(
 async function createCart(
   sessionId: string,
   workspaceId: string,
+  organizationId: string,
   userId?: string
 ): Promise<Cart> {
   const now = Timestamp.now();
@@ -50,7 +52,8 @@ async function createCart(
   const cart: Cart = {
     id: sessionId,
     sessionId,
-    userId,
+    ...(userId && { userId }), // Only include userId if defined
+    organizationId,
     workspaceId,
     items: [],
     subtotal: 0,
@@ -66,7 +69,7 @@ async function createCart(
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/carts`,
     sessionId,
     {
       ...cart,
@@ -86,15 +89,16 @@ async function createCart(
 export async function addToCart(
   sessionId: string,
   workspaceId: string,
+  organizationId: string,
   productId: string,
   quantity: number = 1,
   variantId?: string,
   variantOptions?: Record<string, string>
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
   
   // Get product details (from CRM entity)
-  const product = await getProduct(workspaceId, productId);
+  const product = await getProduct(workspaceId, productId, organizationId);
   if (!product) {
     throw new Error('Product not found');
   }
@@ -145,9 +149,10 @@ export async function addToCart(
 export async function removeFromCart(
   sessionId: string,
   workspaceId: string,
+  organizationId: string,
   itemId: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
   
   cart.items = cart.items.filter(item => item.id !== itemId);
   
@@ -166,14 +171,15 @@ export async function removeFromCart(
 export async function updateCartItemQuantity(
   sessionId: string,
   workspaceId: string,
+  organizationId: string,
   itemId: string,
   quantity: number
 ): Promise<Cart> {
   if (quantity <= 0) {
-    return removeFromCart(sessionId, workspaceId, itemId);
+    return removeFromCart(sessionId, workspaceId, organizationId, itemId);
   }
   
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
   
   const item = cart.items.find(i => i.id === itemId);
   if (!item) {
@@ -198,12 +204,13 @@ export async function updateCartItemQuantity(
 export async function applyDiscountCode(
   sessionId: string,
   workspaceId: string,
+  organizationId: string,
   code: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
   
   // Get discount code
-  const discount = await getDiscountCode(workspaceId, code);
+  const discount = await getDiscountCode(workspaceId, organizationId, code);
   if (!discount) {
     throw new Error('Invalid discount code');
   }
@@ -244,9 +251,10 @@ export async function applyDiscountCode(
 export async function removeDiscountCode(
   sessionId: string,
   workspaceId: string,
+  organizationId: string,
   code: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId, workspaceId, organizationId);
   
   cart.discountCodes = cart.discountCodes.filter(dc => dc.code !== code);
   
@@ -287,7 +295,7 @@ async function recalculateCartTotals(cart: Cart): Promise<void> {
  */
 async function saveCart(cart: Cart): Promise<void> {
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${cart.workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${cart.organizationId}/workspaces/${cart.workspaceId}/carts`,
     cart.id,
     {
       ...cart,
@@ -306,11 +314,22 @@ async function saveCart(cart: Cart): Promise<void> {
 /**
  * Get product from CRM
  */
-async function getProduct(workspaceId: string, productId: string): Promise<any> {
-  // Get e-commerce config to find product schema
-  const orgId = workspaceId.split('/')[0]; // Extract org ID from path if needed
+async function getProduct(workspaceId: string, productId: string, organizationId?: string): Promise<any> {
+  // Determine organization ID
+  // Try to extract from workspaceId path first (e.g., "org-123/workspaces/default")
+  let orgId = organizationId;
+  if (!orgId && workspaceId.includes('/')) {
+    orgId = workspaceId.split('/')[0];
+  }
+  
+  // If no orgId available, try to get it from the product path stored in cart
+  // For now, throw error if we can't determine orgId
+  if (!orgId) {
+    throw new Error('Organization ID required to fetch product. Please provide organizationId parameter.');
+  }
+  
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   
@@ -320,9 +339,9 @@ async function getProduct(workspaceId: string, productId: string): Promise<any> 
   
   const productSchema = (ecommerceConfig as any).productSchema;
   
-  // Get product entity
+  // Get product entity from records collection
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/entities/${productSchema}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/${workspaceId}/entities/${productSchema}/records`,
     productId
   );
   
@@ -346,10 +365,10 @@ async function getProduct(workspaceId: string, productId: string): Promise<any> 
 /**
  * Get discount code
  */
-async function getDiscountCode(workspaceId: string, code: string): Promise<any> {
+async function getDiscountCode(workspaceId: string, organizationId: string, code: string): Promise<any> {
   const { where } = await import('firebase/firestore');
   const discounts = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/discountCodes`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/discountCodes`,
     [where('code', '==', code.toUpperCase())]
   );
   
@@ -419,13 +438,15 @@ function calculateDiscountAmount(discount: any, cart: Cart): number {
  */
 export async function clearCart(
   sessionId: string,
-  workspaceId: string
+  workspaceId: string,
+  organizationId: string
 ): Promise<void> {
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/carts`,
     sessionId
   );
 }
+
 
 
 

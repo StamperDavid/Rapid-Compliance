@@ -136,3 +136,4 @@ export function getOptimalFormat(): 'webp' | 'jpeg' {
   return supportsWebP() ? 'webp' : 'jpeg';
 }
 
+

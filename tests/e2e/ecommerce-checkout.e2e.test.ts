@@ -108,15 +108,15 @@ describe('E-Commerce Checkout E2E', () => {
 
   describe('Cart Management', () => {
     it('should create a cart', async () => {
-      const workspaceId = `${testOrgId}/workspaces/${testWorkspaceId}`;
-      const cart = await getOrCreateCart(null, workspaceId);
+      const sessionId = `test-session-${Date.now()}`;
+      const cart = await getOrCreateCart(sessionId, testWorkspaceId, testOrgId);
       
       expect(cart).toBeDefined();
-      expect(cart.id).toBeDefined();
+      expect(cart.sessionId).toBe(sessionId);
       expect(cart.items).toEqual([]);
       expect(cart.subtotal).toBe(0);
       
-      testCartId = cart.id;
+      testCartId = cart.sessionId;
       console.log(`✅ Cart created: ${testCartId}`);
     });
 
@@ -124,11 +124,7 @@ describe('E-Commerce Checkout E2E', () => {
       expect(testCartId).toBeDefined();
       expect(testProductId).toBeDefined();
       
-      const workspaceId = `${testOrgId}/workspaces/${testWorkspaceId}`;
-      const cart = await addToCart(testCartId, workspaceId, {
-        productId: testProductId,
-        quantity: 2,
-      });
+      const cart = await addToCart(testCartId, testWorkspaceId, testOrgId, testProductId, 2);
 
       expect(cart.items.length).toBe(1);
       expect(cart.items[0].productId).toBe(testProductId);

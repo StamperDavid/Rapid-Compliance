@@ -670,3 +670,4 @@ const sectionHeadingStyle: React.CSSProperties = {
   letterSpacing: '0.5px',
 };
 
+

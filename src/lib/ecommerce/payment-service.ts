@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger/logger';;
 
 export interface PaymentRequest {
   workspaceId: string;
+  organizationId: string;
   amount: number; // In cents
   currency: string;
   paymentMethod: string;
@@ -39,7 +40,7 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
   // Get e-commerce config to determine payment provider
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${request.workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${request.organizationId}/workspaces/${request.workspaceId}/ecommerce`,
     'config'
   );
   
@@ -452,6 +453,7 @@ export function calculateRazorpayFee(amount: number): number {
  */
 export async function refundPayment(
   workspaceId: string,
+  organizationId: string,
   transactionId: string,
   amount?: number
 ): Promise<PaymentResult> {
@@ -461,7 +463,7 @@ export async function refundPayment(
   // Find order with this transaction ID
   const { where } = await import('firebase/firestore');
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/orders`,
     [where('payment.transactionId', '==', transactionId)]
   );
   

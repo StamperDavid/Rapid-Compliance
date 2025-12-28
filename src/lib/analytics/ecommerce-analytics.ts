@@ -47,13 +47,14 @@ export interface EcommerceAnalytics {
  * Get e-commerce analytics
  */
 export async function getEcommerceAnalytics(
+  organizationId: string,
   workspaceId: string,
   startDate: Date,
   endDate: Date
 ): Promise<EcommerceAnalytics> {
   // Get orders in period
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/orders`,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
@@ -64,7 +65,7 @@ export async function getEcommerceAnalytics(
   
   // Get carts (for abandonment rate)
   const carts = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/*/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/carts`,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
@@ -224,6 +225,7 @@ function calculateRevenueByDay(orders: any[], startDate: Date, endDate: Date): a
     }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 }
+
 
 
 

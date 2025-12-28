@@ -1,787 +1,987 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
-import { logger } from '@/lib/logger/logger';;
+
+interface AgentPersona {
+  // Core Identity & Expert Role
+  agentName: string;
+  professionalTitle: string;
+  coreMission: string;
+  targetKnowledgeDomain: string;
+  userExpertiseLevel: string;
+  
+  // Cognitive & Reasoning Logic
+  reasoningFramework: string;
+  responseComplexityIndex: number;
+  uncertaintyHandlingProtocol: string;
+  internalThoughtVerification: string;
+  
+  // Knowledge & RAG Integration
+  federatedRAGTags: string[];
+  knowledgeSourceHierarchy: string[];
+  sourceAuthorityWeighting: string;
+  contextRetrievalDepth: number;
+  
+  // Learning & Adaptation Loops
+  feedbackIntegrationStrategy: string;
+  dynamicToneRegister: string;
+  successfulStrategyMemory: string;
+  knowledgeObsolescenceTimer: string;
+  
+  // Functional & Tactical Execution
+  toolAuthorization: ToolAuthorization[];
+  mandatoryOutputFormatting: string;
+  securityDataFilter: string;
+  
+  // Training Refinements (modified by training sessions)
+  verbosityControl: {
+    maxResponseLength: number;
+    preferBulletPoints: boolean;
+    avoidRepetition: boolean;
+    conversationalPacing: 'concise' | 'balanced' | 'detailed';
+  };
+  accuracyRules: string[];
+  brandAlignmentNotes: string;
+  trainingInsights: TrainingInsight[];
+}
+
+interface ToolAuthorization {
+  tool: string;
+  permissions: string;
+  canExecuteAutonomously: boolean;
+}
+
+interface TrainingInsight {
+  date: string;
+  issue: string;
+  adjustment: string;
+  category: 'verbosity' | 'accuracy' | 'brand-alignment' | 'tone';
+}
 
 export default function AgentPersonaPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
-  const [activeTab, setActiveTab] = useState<'knowledge' | 'personality' | 'capabilities' | 'model'>('knowledge');
-  
-  // Model selection state (ensemble removed for MVP - use proven single model + RAG)
-  const [selectedModel, setSelectedModel] = useState('gpt-4-turbo');
-  const [modelConfig, setModelConfig] = useState({
-    temperature: 0.7,
-    maxTokens: 2048,
-    topP: 0.9,
-  });
-  const [saveLoading, setSaveLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState<'core' | 'cognitive' | 'knowledge' | 'learning' | 'execution' | 'training'>('core');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Load configuration from Firestore
-  React.useEffect(() => {
-    const loadConfig = async () => {
+  // Persona state - this is auto-generated from onboarding, then refined by training
+  const [persona, setPersona] = useState<AgentPersona>({
+    // Core Identity (AUTO-GENERATED from onboarding)
+    agentName: '',
+    professionalTitle: '',
+    coreMission: '',
+    targetKnowledgeDomain: '',
+    userExpertiseLevel: '',
+    
+    // Cognitive & Reasoning Logic
+    reasoningFramework: '',
+    responseComplexityIndex: 7,
+    uncertaintyHandlingProtocol: '',
+    internalThoughtVerification: '',
+    
+    // Knowledge & RAG Integration
+    federatedRAGTags: [],
+    knowledgeSourceHierarchy: [],
+    sourceAuthorityWeighting: '',
+    contextRetrievalDepth: 3,
+    
+    // Learning & Adaptation
+    feedbackIntegrationStrategy: '',
+    dynamicToneRegister: '',
+    successfulStrategyMemory: '',
+    knowledgeObsolescenceTimer: '',
+    
+    // Tactical Execution
+    toolAuthorization: [],
+    mandatoryOutputFormatting: '',
+    securityDataFilter: '',
+    
+    // Training Refinements (MODIFIED by training sessions)
+    verbosityControl: {
+      maxResponseLength: 500,
+      preferBulletPoints: true,
+      avoidRepetition: true,
+      conversationalPacing: 'balanced'
+    },
+    accuracyRules: [],
+    brandAlignmentNotes: '',
+    trainingInsights: []
+  });
+
+  useEffect(() => {
+    const loadPersona = async () => {
       try {
-        const response = await fetch(`/api/agent/config?orgId=${orgId}`);
+        // Load persona from Firestore (or auto-generate from onboarding if first time)
+        const response = await fetch(`/api/workspace/${orgId}/agent/persona`);
         if (response.ok) {
           const data = await response.json();
-          if (data.selectedModel) {
-            setSelectedModel(data.selectedModel);
-          }
-          if (data.modelConfig) {
-            setModelConfig(data.modelConfig);
+          if (data.persona) {
+            setPersona(data.persona);
+          } else if (data.onboarding) {
+            // Auto-generate from onboarding data
+            const generated = generatePersonaFromOnboarding(data.onboarding);
+            setPersona(generated);
           }
         }
       } catch (error) {
-        logger.error('Failed to load config:', error, { file: 'page.tsx' });
+        console.error('Error loading persona:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    loadConfig();
+    
+    loadPersona();
   }, [orgId]);
 
-  // Save model configuration
-  const handleSaveModelSettings = async () => {
-    setSaveLoading(true);
-    setSaveSuccess(false);
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      const response = await fetch(`/api/agent/config`, {
+      const response = await fetch(`/api/workspace/${orgId}/agent/persona`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          orgId,
-          selectedModel,
-          modelConfig,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(persona)
       });
-
+      
       if (response.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        alert('Failed to save AI settings');
       }
     } catch (error) {
-      logger.error('Error saving AI settings:', error, { file: 'page.tsx' });
-      alert('Error saving AI settings');
+      console.error('Error saving persona:', error);
     } finally {
-      setSaveLoading(false);
+      setSaving(false);
     }
   };
 
-
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const bgPaper = '#1a1a1a';
+  const borderColor = '#333';
 
-  // Mock data - will be replaced with real data from Firestore
-  const [documents, setDocuments] = useState([
-    { id: '1', name: 'Product Catalog 2024.pdf', type: 'document', uploadedAt: '2024-11-20', status: 'processed' },
-    { id: '2', name: 'Pricing Guide.xlsx', type: 'document', uploadedAt: '2024-11-18', status: 'processed' }
-  ]);
-
-  const [urls, setUrls] = useState([
-    { id: '1', url: 'https://example.com/company-info', title: 'Company Overview', lastScraped: '2024-11-20' },
-    { id: '2', url: 'https://example.com/faq', title: 'FAQ Page', lastScraped: '2024-11-19' }
-  ]);
-
-  const [customInstructions, setCustomInstructions] = useState(
-    'You are a professional sales and customer service agent. Always be helpful, courteous, and aim to close sales while providing excellent support.'
-  );
-
-  const [personality, setPersonality] = useState({
-    tone: 'professional',
-    verbosity: 'balanced',
-    formality: 'professional',
-    useEmojis: false,
-    useBulletPoints: true
-  });
+  if (loading) {
+    return (
+      <div style={{ padding: '2rem', backgroundColor: '#000', minHeight: '100vh', color: '#fff' }}>
+        <div>Loading persona...</div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: '2rem', overflowY: 'auto' }}>
+    <div style={{ padding: '2rem', overflowY: 'auto', backgroundColor: '#000', minHeight: '100vh' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-          <Link href={`/workspace/${orgId}/settings/ai-agents`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-            ← Back to AI Agent
+          <Link 
+            href={`/workspace/${orgId}/settings/ai-agents`} 
+            style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '0.5rem', 
+              color: primaryColor, 
+              fontSize: '0.875rem', 
+              fontWeight: '500', 
+              textDecoration: 'none', 
+              marginBottom: '1.5rem' 
+            }}
+          >
+            ← Back to AI Agents
           </Link>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem', marginTop: '1rem' }}>Agent Persona</h1>
-          <p style={{ color: '#666', fontSize: '0.875rem' }}>Configure your AI agent's knowledge base and personality</p>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+            <div>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                🎭 Expert Agent Persona
+              </h1>
+              <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                Comprehensive persona auto-generated from your onboarding, refined through training
+              </p>
+            </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: saveSuccess ? '#10b981' : primaryColor,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.6 : 1
+              }}
+            >
+              {saving ? 'Saving...' : saveSuccess ? '✓ Saved!' : 'Save Persona'}
+            </button>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #333' }}>
-              {[
-                { id: 'model', label: 'AI Model', icon: '🤖' },
-                { id: 'knowledge', label: 'Knowledge Base', icon: '📚' },
-                { id: 'personality', label: 'Personality', icon: '🎭' },
-                { id: 'capabilities', label: 'Capabilities', icon: '⚡' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  style={{
-                    padding: '1rem 1.5rem',
-                    backgroundColor: 'transparent',
-                    color: activeTab === tab.id ? primaryColor : '#999',
-                    border: 'none',
-                    borderBottom: `3px solid ${activeTab === tab.id ? primaryColor : 'transparent'}`,
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+        {/* Persona Summary Card */}
+        {persona.agentName && (
+          <div style={{
+            backgroundColor: bgPaper,
+            border: `1px solid ${borderColor}`,
+            borderRadius: '0.75rem',
+            padding: '1.5rem',
+            marginBottom: '2rem'
+          }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#fff' }}>
+              {persona.agentName}
             </div>
-
-            {/* AI Model Tab */}
-            {activeTab === 'model' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Hero Section */}
-                <div style={{ backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: '1px solid #667eea', borderRadius: '1rem', padding: '2rem', background: `linear-gradient(135deg, ${primaryColor}22 0%, ${primaryColor}11 100%)` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '2.5rem' }}>🤖</span>
-                    <div>
-                      <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>AI Model Selection</h2>
-                      <p style={{ fontSize: '0.875rem', color: '#999' }}>Choose the perfect AI model for your use case with RAG-enhanced responses</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
-                    <div style={{ backgroundColor: '#0a0a0a66', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: primaryColor }}>7+</div>
-                      <div style={{ fontSize: '0.75rem', color: '#999' }}>AI Models</div>
-                    </div>
-                    <div style={{ backgroundColor: '#0a0a0a66', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: primaryColor }}>RAG</div>
-                      <div style={{ fontSize: '0.75rem', color: '#999' }}>Knowledge Enhanced</div>
-                    </div>
-                    <div style={{ backgroundColor: '#0a0a0a66', borderRadius: '0.5rem', padding: '1rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: primaryColor }}>&lt;2s</div>
-                      <div style={{ fontSize: '0.75rem', color: '#999' }}>Response Time</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Model Selection */}
-                {true && (
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                    <div style={{ marginBottom: '2rem' }}>
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Choose AI Model</h2>
-                      <p style={{ fontSize: '0.875rem', color: '#666' }}>Select the AI model that best fits your needs for quality, speed, and cost.</p>
-                    </div>
-
-                    {/* Model Cards */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                    {/* Google Gemini */}
-                    <div style={{ backgroundColor: '#0a0a0a', border: `2px solid ${selectedModel.startsWith('gemini') ? primaryColor : '#222'}`, borderRadius: '0.75rem', padding: '1.5rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setSelectedModel('gemini-2.0-flash-exp')}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '1.5rem' }}>🌟</span>
-                          <div>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>Gemini Flash</h3>
-                            <p style={{ fontSize: '0.75rem', color: '#666' }}>Fast & Affordable</p>
-                          </div>
-                        </div>
-                        {selectedModel === 'gemini-2.0-flash-exp' && <span style={{ color: primaryColor, fontSize: '1.25rem' }}>✓</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Speed:</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map(i => <div key={i} style={{ width: '8px', height: '8px', backgroundColor: i <= 5 ? '#10b981' : '#333', borderRadius: '2px' }} />)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Quality:</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map(i => <div key={i} style={{ width: '8px', height: '8px', backgroundColor: i <= 4 ? '#3b82f6' : '#333', borderRadius: '2px' }} />)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Cost:</span>
-                          <span style={{ color: '#10b981', fontWeight: '600' }}>$0.0001/1K tokens</span>
-                        </div>
-                      </div>
-                      <p style={{ fontSize: '0.75rem', color: '#999', lineHeight: '1.4' }}>Best for high-volume conversations where speed matters. Latest model from Google.</p>
-                    </div>
-
-                    {/* GPT-4 */}
-                    <div style={{ backgroundColor: '#0a0a0a', border: `2px solid ${selectedModel === 'gpt-4' ? primaryColor : '#222'}`, borderRadius: '0.75rem', padding: '1.5rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setSelectedModel('gpt-4')}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '1.5rem' }}>🚀</span>
-                          <div>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>GPT-4</h3>
-                            <p style={{ fontSize: '0.75rem', color: '#666' }}>Best Quality</p>
-                          </div>
-                        </div>
-                        {selectedModel === 'gpt-4' && <span style={{ color: primaryColor, fontSize: '1.25rem' }}>✓</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Speed:</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map(i => <div key={i} style={{ width: '8px', height: '8px', backgroundColor: i <= 3 ? '#10b981' : '#333', borderRadius: '2px' }} />)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Quality:</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map(i => <div key={i} style={{ width: '8px', height: '8px', backgroundColor: i <= 5 ? '#3b82f6' : '#333', borderRadius: '2px' }} />)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Cost:</span>
-                          <span style={{ color: '#f59e0b', fontWeight: '600' }}>$0.03/1K tokens</span>
-                        </div>
-                      </div>
-                      <p style={{ fontSize: '0.75rem', color: '#999', lineHeight: '1.4' }}>OpenAI's most capable model. Best for complex reasoning and high-stakes conversations.</p>
-                    </div>
-
-                    {/* Claude 3.5 Sonnet */}
-                    <div style={{ backgroundColor: '#0a0a0a', border: `2px solid ${selectedModel === 'claude-3.5-sonnet' ? primaryColor : '#222'}`, borderRadius: '0.75rem', padding: '1.5rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => setSelectedModel('claude-3.5-sonnet')}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span style={{ fontSize: '1.5rem' }}>🎨</span>
-                          <div>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 'bold', color: '#fff' }}>Claude 3.5</h3>
-                            <p style={{ fontSize: '0.75rem', color: '#666' }}>Creative & Balanced</p>
-                          </div>
-                        </div>
-                        {selectedModel === 'claude-3.5-sonnet' && <span style={{ color: primaryColor, fontSize: '1.25rem' }}>✓</span>}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Speed:</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map(i => <div key={i} style={{ width: '8px', height: '8px', backgroundColor: i <= 4 ? '#10b981' : '#333', borderRadius: '2px' }} />)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Quality:</span>
-                          <div style={{ display: 'flex', gap: '2px' }}>
-                            {[1,2,3,4,5].map(i => <div key={i} style={{ width: '8px', height: '8px', backgroundColor: i <= 5 ? '#3b82f6' : '#333', borderRadius: '2px' }} />)}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                          <span style={{ color: '#999' }}>Cost:</span>
-                          <span style={{ color: '#f59e0b', fontWeight: '600' }}>$0.003/1K tokens</span>
-                        </div>
-                      </div>
-                      <p style={{ fontSize: '0.75rem', color: '#999', lineHeight: '1.4' }}>Anthropic's latest model. Excellent for creative writing and nuanced conversations.</p>
-                    </div>
-                  </div>
-
-                  {/* Show all models dropdown */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
-                      Or choose from all available models:
-                    </label>
-                    <select 
-                      value={selectedModel}
-                      onChange={(e) => setSelectedModel(e.target.value)}
-                      style={{ 
-                        width: '100%', 
-                        padding: '0.75rem', 
-                        backgroundColor: '#0a0a0a', 
-                        border: '1px solid #333', 
-                        borderRadius: '0.5rem', 
-                        color: '#fff',
-                        fontSize: '0.875rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <optgroup label="Google Gemini">
-                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Fastest, Cheapest)</option>
-                        <option value="gemini-pro">Gemini Pro (Balanced)</option>
-                      </optgroup>
-                      <optgroup label="OpenAI">
-                        <option value="gpt-4">GPT-4 (Best Quality)</option>
-                        <option value="gpt-4-turbo">GPT-4 Turbo (Fast + Quality)</option>
-                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Affordable)</option>
-                      </optgroup>
-                      <optgroup label="Anthropic">
-                        <option value="claude-3.5-sonnet">Claude 3.5 Sonnet (Latest)</option>
-                        <option value="claude-3-opus">Claude 3 Opus (Best Reasoning)</option>
-                      </optgroup>
-                    </select>
-                  </div>
-
-                  {/* Advanced Model Configuration */}
-                  <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Advanced Configuration</h2>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                      {/* Temperature */}
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>Temperature</label>
-                          <span style={{ fontSize: '0.875rem', color: primaryColor, fontWeight: '600' }}>{modelConfig.temperature}</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="0" 
-                          max="2" 
-                          step="0.1" 
-                          value={modelConfig.temperature}
-                          onChange={(e) => setModelConfig({...modelConfig, temperature: parseFloat(e.target.value)})}
-                          style={{ width: '100%' }}
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
-                          <span>Precise (0.0)</span>
-                          <span>Creative (2.0)</span>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.5rem' }}>Higher values make output more random and creative. Lower values make it more focused and deterministic.</p>
-                      </div>
-
-                      {/* Max Tokens */}
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>Max Response Length</label>
-                          <span style={{ fontSize: '0.875rem', color: primaryColor, fontWeight: '600' }}>{modelConfig.maxTokens} tokens</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="256" 
-                          max="4096" 
-                          step="256" 
-                          value={modelConfig.maxTokens}
-                          onChange={(e) => setModelConfig({...modelConfig, maxTokens: parseInt(e.target.value)})}
-                          style={{ width: '100%' }}
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
-                          <span>Short (256)</span>
-                          <span>Long (4096)</span>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.5rem' }}>Maximum length of the AI's response. ~4 tokens = 3 words.</p>
-                      </div>
-
-                      {/* Top P */}
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>Top P (Nucleus Sampling)</label>
-                          <span style={{ fontSize: '0.875rem', color: primaryColor, fontWeight: '600' }}>{modelConfig.topP}</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="0" 
-                          max="1" 
-                          step="0.05" 
-                          value={modelConfig.topP}
-                          onChange={(e) => setModelConfig({...modelConfig, topP: parseFloat(e.target.value)})}
-                          style={{ width: '100%' }}
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#666', marginTop: '0.5rem' }}>
-                          <span>Focused (0.0)</span>
-                          <span>Diverse (1.0)</span>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.5rem' }}>Controls diversity via nucleus sampling. Alternative to temperature.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Save Button */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
-                    {saveSuccess && (
-                      <span style={{ color: '#10b981', fontSize: '0.875rem', fontWeight: '600' }}>
-                        ✓ Saved successfully!
-                      </span>
-                    )}
-                    <button style={{ padding: '0.75rem 2rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
-                      Test Configuration
-                    </button>
-                    <button 
-                      onClick={handleSaveModelSettings}
-                      disabled={saveLoading}
-                      style={{ 
-                        padding: '0.75rem 2rem', 
-                        backgroundColor: saveLoading ? '#666' : primaryColor, 
-                        color: '#fff', 
-                        border: 'none', 
-                        borderRadius: '0.5rem', 
-                        cursor: saveLoading ? 'not-allowed' : 'pointer', 
-                        fontSize: '0.875rem', 
-                        fontWeight: '600' 
-                      }}
-                    >
-                      {saveLoading ? 'Saving...' : 'Save Model Settings'}
-                    </button>
-                  </div>
-                </div>
-                )}
+            <div style={{ fontSize: '1.125rem', color: '#999', marginBottom: '1rem' }}>
+              {persona.professionalTitle}
+            </div>
+            {persona.coreMission && (
+              <div style={{ fontSize: '0.875rem', color: '#ccc', lineHeight: '1.6' }}>
+                <strong style={{ color: primaryColor }}>Mission:</strong> {persona.coreMission}
               </div>
             )}
+          </div>
+        )}
 
-            {/* Knowledge Base Tab */}
-            {activeTab === 'knowledge' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Documents Section */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <div>
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>Documents</h2>
-                      <p style={{ fontSize: '0.875rem', color: '#666' }}>Upload product catalogs, pricing sheets, manuals, etc.</p>
-                    </div>
-                    <button style={{ 
-                      padding: '0.75rem 1.5rem', 
-                      backgroundColor: primaryColor, 
-                      color: '#fff', 
-                      border: 'none', 
-                      borderRadius: '0.5rem', 
-                      cursor: 'pointer', 
-                      fontSize: '0.875rem', 
-                      fontWeight: '600' 
-                    }}>
-                      + Upload Document
-                    </button>
-                  </div>
+        {/* Section Navigation */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          marginBottom: '2rem',
+          borderBottom: `1px solid ${borderColor}`,
+          overflowX: 'auto'
+        }}>
+          {[
+            { id: 'core', label: 'Core Identity', icon: '🎯' },
+            { id: 'cognitive', label: 'Reasoning Logic', icon: '🧠' },
+            { id: 'knowledge', label: 'Knowledge & RAG', icon: '📚' },
+            { id: 'learning', label: 'Learning Loops', icon: '🔄' },
+            { id: 'execution', label: 'Execution Rules', icon: '⚡' },
+            { id: 'training', label: 'Training Refinements', icon: '🎓', badge: persona.trainingInsights?.length || 0 }
+          ].map((section) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id as any)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: activeSection === section.id ? `2px solid ${primaryColor}` : '2px solid transparent',
+                color: activeSection === section.id ? '#fff' : '#666',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+                position: 'relative'
+              }}
+            >
+              {section.icon} {section.label}
+              {section.badge && section.badge > 0 ? (
+                <span style={{
+                  position: 'absolute',
+                  top: '0.5rem',
+                  right: '0.5rem',
+                  backgroundColor: primaryColor,
+                  color: '#fff',
+                  fontSize: '0.625rem',
+                  padding: '0.125rem 0.375rem',
+                  borderRadius: '999px',
+                  fontWeight: '700'
+                }}>
+                  {section.badge}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {documents.map((doc) => (
-                      <div key={doc.id} style={{ 
-                        backgroundColor: '#0a0a0a', 
-                        border: '1px solid #222', 
-                        borderRadius: '0.5rem', 
-                        padding: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{ fontSize: '1.5rem' }}>📄</div>
-                          <div>
-                            <div style={{ color: '#fff', fontWeight: '500', fontSize: '0.875rem' }}>{doc.name}</div>
-                            <div style={{ color: '#666', fontSize: '0.75rem' }}>Uploaded {doc.uploadedAt}</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <span style={{ 
-                            padding: '0.25rem 0.75rem', 
-                            backgroundColor: '#0f4c0f', 
-                            color: '#4ade80', 
-                            borderRadius: '9999px', 
-                            fontSize: '0.75rem',
-                            fontWeight: '600'
-                          }}>
-                            {doc.status}
-                          </span>
-                          <button style={{ color: '#ef4444', fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer' }}>
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {/* Core Identity Section */}
+        {activeSection === 'core' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <SectionHeader
+              title="I. Core Identity & Expert Role"
+              description="Auto-generated from your onboarding form"
+              badge="FROM ONBOARDING"
+            />
 
-                {/* URLs Section */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <div>
-                      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>URLs</h2>
-                      <p style={{ fontSize: '0.875rem', color: '#666' }}>Add web pages for the agent to learn from</p>
-                    </div>
-                    <button style={{ 
-                      padding: '0.75rem 1.5rem', 
-                      backgroundColor: primaryColor, 
-                      color: '#fff', 
-                      border: 'none', 
-                      borderRadius: '0.5rem', 
-                      cursor: 'pointer', 
-                      fontSize: '0.875rem', 
-                      fontWeight: '600' 
-                    }}>
-                      + Add URL
-                    </button>
-                  </div>
+            <FormField
+              label="Agent Name & Professional Title"
+              value={`${persona.agentName} | ${persona.professionalTitle}`}
+              onChange={() => {}}
+              helpText="✓ Auto-generated from: Company name + Industry from onboarding"
+              readonly
+            />
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {urls.map((url) => (
-                      <div key={url.id} style={{ 
-                        backgroundColor: '#0a0a0a', 
-                        border: '1px solid #222', 
-                        borderRadius: '0.5rem', 
-                        padding: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                          <div style={{ fontSize: '1.5rem' }}>🔗</div>
-                          <div>
-                            <div style={{ color: '#fff', fontWeight: '500', fontSize: '0.875rem' }}>{url.title}</div>
-                            <div style={{ color: '#666', fontSize: '0.75rem' }}>{url.url}</div>
-                            <div style={{ color: '#666', fontSize: '0.75rem' }}>Last scraped {url.lastScraped}</div>
-                          </div>
-                        </div>
-                        <button style={{ color: '#ef4444', fontSize: '0.875rem', background: 'none', border: 'none', cursor: 'pointer' }}>
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <FormField
+              label="Core Mission & Moral Imperative"
+              value={persona.coreMission}
+              onChange={(v) => setPersona({ ...persona, coreMission: v })}
+              multiline
+              rows={4}
+              helpText="The 'North Star' guiding every decision. From: Company mission statement"
+            />
 
-                {/* Custom Instructions */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Custom Instructions</h2>
-                  <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
-                    Additional instructions and context for your AI agent
-                  </p>
-                  <textarea
-                    value={customInstructions}
-                    onChange={(e) => setCustomInstructions(e.target.value)}
-                    placeholder="Enter custom instructions for your agent..."
-                    rows={8}
+            <FormField
+              label="Target Knowledge Domain"
+              value={persona.targetKnowledgeDomain}
+              onChange={(v) => setPersona({ ...persona, targetKnowledgeDomain: v })}
+              helpText="✓ Auto-populated from: Products & services you listed in onboarding"
+            />
+
+            <FormField
+              label="Assumed User Expertise Level"
+              value={persona.userExpertiseLevel}
+              onChange={(v) => setPersona({ ...persona, userExpertiseLevel: v })}
+              multiline
+              rows={2}
+              helpText="✓ From: Target customer profile in onboarding"
+            />
+          </div>
+        )}
+
+        {/* Cognitive & Reasoning Logic Section */}
+        {activeSection === 'cognitive' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <SectionHeader
+              title="II. Cognitive & Reasoning Logic"
+              description="How your agent thinks and makes decisions"
+            />
+
+            <FormField
+              label="Domain-Specific Reasoning Framework"
+              value={persona.reasoningFramework}
+              onChange={(v) => setPersona({ ...persona, reasoningFramework: v })}
+              placeholder="e.g., The Challenger Sale + MEDDPICC"
+              helpText="✓ Set from: Sales methodology selected in onboarding"
+            />
+
+            <FormField
+              label="Response Complexity Index (RCI)"
+              value={persona.responseComplexityIndex.toString()}
+              onChange={(v) => setPersona({ ...persona, responseComplexityIndex: parseInt(v) || 1 })}
+              type="number"
+              min={1}
+              max={10}
+              helpText="1-10 scale. 1 = Simple explanations, 10 = Deep technical detail. From: Target audience sophistication"
+            />
+
+            <FormField
+              label="Uncertainty Handling Protocol"
+              value={persona.uncertaintyHandlingProtocol}
+              onChange={(v) => setPersona({ ...persona, uncertaintyHandlingProtocol: v })}
+              multiline
+              rows={3}
+              helpText="How the agent admits it doesn't know something (prevents hallucinations)"
+              placeholder='e.g., "I want to ensure 100% accuracy—let me pull the exact information from our knowledge base."'
+            />
+
+            <FormField
+              label="Internal Thought Verification Loop"
+              value={persona.internalThoughtVerification}
+              onChange={(v) => setPersona({ ...persona, internalThoughtVerification: v })}
+              multiline
+              rows={4}
+              helpText="Agent's self-check before responding"
+              placeholder='e.g., "Before responding: (1) Does this address a pain point? (2) Am I creating urgency? (3) Is my tone appropriate?"'
+            />
+          </div>
+        )}
+
+        {/* Knowledge & RAG Section */}
+        {activeSection === 'knowledge' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <SectionHeader
+              title="III. Knowledge & RAG Integration"
+              description="What your agent knows and how it retrieves information"
+              badge="FROM UPLOADS & INTEGRATIONS"
+            />
+
+            <div style={{
+              backgroundColor: bgPaper,
+              border: `1px solid ${borderColor}`,
+              borderRadius: '0.75rem',
+              padding: '1.5rem'
+            }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+                Federated RAG Routing Tags
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                {persona.federatedRAGTags?.length > 0 ? persona.federatedRAGTags.map((tag, idx) => (
+                  <div
+                    key={idx}
                     style={{
-                      width: '100%',
-                      padding: '1rem',
+                      padding: '0.5rem 1rem',
                       backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
+                      border: `1px solid ${primaryColor}`,
                       borderRadius: '0.5rem',
-                      color: '#fff',
-                      fontSize: '0.875rem',
-                      resize: 'vertical',
+                      fontSize: '0.75rem',
+                      color: primaryColor,
                       fontFamily: 'monospace'
                     }}
-                  />
-                  <button style={{ 
-                    marginTop: '1rem',
-                    padding: '0.75rem 1.5rem', 
-                    backgroundColor: primaryColor, 
-                    color: '#fff', 
-                    border: 'none', 
-                    borderRadius: '0.5rem', 
-                    cursor: 'pointer', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '600' 
-                  }}>
-                    Save Instructions
-                  </button>
-                </div>
-
-                {/* CRM Data Sources */}
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>CRM Data Sources</h2>
-                  <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '1.5rem' }}>
-                    Select which CRM objects the agent can access for information
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {Object.entries(STANDARD_SCHEMAS).slice(0, 4).map(([key, schema]) => (
-                      <label key={key} style={{ 
-                        backgroundColor: '#0a0a0a', 
-                        border: '1px solid #222', 
-                        borderRadius: '0.5rem', 
-                        padding: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '1rem',
-                        cursor: 'pointer'
-                      }}>
-                        <input type="checkbox" defaultChecked style={{ width: '20px', height: '20px' }} />
-                        <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ color: '#fff', fontWeight: '500', fontSize: '0.875rem' }}>{schema.pluralName}</div>
-                          <div style={{ color: '#666', fontSize: '0.75rem' }}>Allow agent to access {schema.pluralName.toLowerCase()} data</div>
-                        </div>
-                      </label>
-                    ))}
+                  >
+                    {tag}
                   </div>
-                </div>
+                )) : (
+                  <div style={{ color: '#666', fontSize: '0.875rem' }}>
+                    No RAG tags yet. Will be generated from your product categories and documents.
+                  </div>
+                )}
               </div>
-            )}
-
-            {/* Personality Tab */}
-            {activeTab === 'personality' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Personality Settings</h2>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                    {/* Tone */}
-                    <div>
-                      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                        Tone
-                      </label>
-                      <select
-                        value={personality.tone}
-                        onChange={(e) => setPersonality({ ...personality, tone: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
-                          borderRadius: '0.5rem',
-                          color: '#fff',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        <option value="professional">Professional</option>
-                        <option value="friendly">Friendly</option>
-                        <option value="enthusiastic">Enthusiastic</option>
-                        <option value="empathetic">Empathetic</option>
-                        <option value="technical">Technical</option>
-                      </select>
-                    </div>
-
-                    {/* Verbosity */}
-                    <div>
-                      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                        Verbosity
-                      </label>
-                      <select
-                        value={personality.verbosity}
-                        onChange={(e) => setPersonality({ ...personality, verbosity: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
-                          borderRadius: '0.5rem',
-                          color: '#fff',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        <option value="concise">Concise</option>
-                        <option value="balanced">Balanced</option>
-                        <option value="detailed">Detailed</option>
-                      </select>
-                    </div>
-
-                    {/* Formality */}
-                    <div>
-                      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                        Formality
-                      </label>
-                      <select
-                        value={personality.formality}
-                        onChange={(e) => setPersonality({ ...personality, formality: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          backgroundColor: '#0a0a0a',
-                          border: '1px solid #333',
-                          borderRadius: '0.5rem',
-                          color: '#fff',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        <option value="casual">Casual</option>
-                        <option value="professional">Professional</option>
-                        <option value="formal">Formal</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Response Style Options */}
-                  <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid #333' }}>
-                    <h3 style={{ color: '#ccc', fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>Response Style</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={personality.useEmojis}
-                          onChange={(e) => setPersonality({ ...personality, useEmojis: e.target.checked })}
-                          style={{ width: '20px', height: '20px' }}
-                        />
-                        <span style={{ color: '#ccc', fontSize: '0.875rem' }}>Use emojis in responses</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={personality.useBulletPoints}
-                          onChange={(e) => setPersonality({ ...personality, useBulletPoints: e.target.checked })}
-                          style={{ width: '20px', height: '20px' }}
-                        />
-                        <span style={{ color: '#ccc', fontSize: '0.875rem' }}>Use bullet points for clarity</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <button style={{ 
-                    marginTop: '2rem',
-                    width: '100%',
-                    padding: '1rem', 
-                    backgroundColor: primaryColor, 
-                    color: '#fff', 
-                    border: 'none', 
-                    borderRadius: '0.5rem', 
-                    cursor: 'pointer', 
-                    fontSize: '0.875rem', 
-                    fontWeight: '600' 
-                  }}>
-                    Save Personality Settings
-                  </button>
-                </div>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                ✓ Auto-generated from: Product categories + Document uploads
               </div>
-            )}
+            </div>
 
-            {/* Capabilities Tab */}
-            {activeTab === 'capabilities' && (
-              <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>Agent Capabilities</h2>
-                <p style={{ fontSize: '0.875rem', color: '#666', marginBottom: '2rem' }}>
-                  Control what your agent can do
-                </p>
+            <div style={{
+              backgroundColor: bgPaper,
+              border: `1px solid ${borderColor}`,
+              borderRadius: '0.75rem',
+              padding: '1.5rem'
+            }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+                Knowledge Source Hierarchy
+              </label>
+              <ol style={{ margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#ccc', lineHeight: '1.8' }}>
+                {persona.knowledgeSourceHierarchy?.length > 0 ? persona.knowledgeSourceHierarchy.map((source, idx) => (
+                  <li key={idx}>{source}</li>
+                )) : (
+                  <li style={{ color: '#666' }}>Will be populated from your knowledge sources</li>
+                )}
+              </ol>
+            </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {[
-                    { id: 'googleSearch', label: 'Google Search', description: 'Use Google Search for information not in knowledge base', icon: '🔍' },
-                    { id: 'vectorSearch', label: 'Knowledge Base Search', description: 'Search uploaded documents and URLs', icon: '📚' },
-                    { id: 'entityCRUD', label: 'CRM Operations', description: 'Read and create CRM records (e.g., create leads)', icon: '💼' },
-                    { id: 'sendEmail', label: 'Send Emails', description: 'Send emails to customers', icon: '📧' },
-                    { id: 'triggerWorkflows', label: 'Trigger Workflows', description: 'Activate automated workflows', icon: '⚡' }
-                  ].map((capability) => (
-                    <label key={capability.id} style={{ 
-                      backgroundColor: '#0a0a0a', 
-                      border: '1px solid #222', 
-                      borderRadius: '0.75rem', 
-                      padding: '1.5rem',
-                      display: 'flex',
-                      alignItems: 'start',
+            <FormField
+              label="Context Retrieval Depth"
+              value={persona.contextRetrievalDepth?.toString() || '3'}
+              onChange={(v) => setPersona({ ...persona, contextRetrievalDepth: parseInt(v) || 1 })}
+              type="number"
+              min={1}
+              max={10}
+              helpText="How many past interactions to remember (e.g., 3 = last 3 conversations with this customer)"
+            />
+          </div>
+        )}
+
+        {/* Learning & Adaptation Section */}
+        {activeSection === 'learning' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <SectionHeader
+              title="IV. Learning & Adaptation Loops"
+              description="How your agent improves from feedback and adapts to users"
+            />
+
+            <FormField
+              label="User Feedback Integration Strategy"
+              value={persona.feedbackIntegrationStrategy}
+              onChange={(v) => setPersona({ ...persona, feedbackIntegrationStrategy: v })}
+              multiline
+              rows={4}
+              helpText="How the agent learns from user reactions (thumbs up/down, corrections)"
+              placeholder="e.g., If user says 'Too expensive', tag as Price Objection and shift to Value Justification"
+            />
+
+            <FormField
+              label="Dynamic Tone Register"
+              value={persona.dynamicToneRegister}
+              onChange={(v) => setPersona({ ...persona, dynamicToneRegister: v })}
+              multiline
+              rows={3}
+              helpText="How the agent adapts its communication style"
+              placeholder='e.g., "Start professional. If user is casual, mirror their style. If frustrated, shift to empathetic problem-solving"'
+            />
+
+            <FormField
+              label="Successful Strategy Memory"
+              value={persona.successfulStrategyMemory}
+              onChange={(v) => setPersona({ ...persona, successfulStrategyMemory: v })}
+              multiline
+              rows={3}
+              helpText="Log successful conversation patterns for future use"
+            />
+          </div>
+        )}
+
+        {/* Functional & Tactical Execution Section */}
+        {activeSection === 'execution' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <SectionHeader
+              title="V. Functional & Tactical Execution"
+              description="What actions your agent can take"
+              badge="FROM INTEGRATIONS"
+            />
+
+            <div style={{
+              backgroundColor: bgPaper,
+              border: `1px solid ${borderColor}`,
+              borderRadius: '0.75rem',
+              padding: '1.5rem'
+            }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+                Tool/API Authorization Level
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {persona.toolAuthorization?.length > 0 ? persona.toolAuthorization.map((tool, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr auto',
                       gap: '1rem',
-                      cursor: 'pointer'
+                      padding: '1rem',
+                      backgroundColor: '#0a0a0a',
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: '0.5rem',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{tool.tool}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#666' }}>Permissions: {tool.permissions}</div>
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                      {tool.canExecuteAutonomously ? '✓ Autonomous' : '⚠ Requires Permission'}
+                    </div>
+                    <div style={{
+                      padding: '0.25rem 0.75rem',
+                      backgroundColor: tool.canExecuteAutonomously ? '#065f46' : '#7c2d12',
+                      color: '#fff',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.75rem',
+                      fontWeight: '600'
                     }}>
-                      <input type="checkbox" defaultChecked={capability.id === 'googleSearch' || capability.id === 'vectorSearch'} style={{ width: '20px', height: '20px', marginTop: '0.25rem' }} />
-                      <div style={{ fontSize: '1.5rem' }}>{capability.icon}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: '#fff', fontWeight: '600', fontSize: '0.875rem', marginBottom: '0.25rem' }}>{capability.label}</div>
-                        <div style={{ color: '#666', fontSize: '0.75rem' }}>{capability.description}</div>
+                      {tool.canExecuteAutonomously ? 'AUTO' : 'MANUAL'}
+                    </div>
+                  </div>
+                )) : (
+                  <div style={{ color: '#666', fontSize: '0.875rem', padding: '1rem' }}>
+                    No integrations configured yet. Add integrations in settings.
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '1rem' }}>
+                ✓ Auto-populated from: Integrations you configured in settings
+              </div>
+            </div>
+
+            <FormField
+              label="Mandatory Output Formatting"
+              value={persona.mandatoryOutputFormatting}
+              onChange={(v) => setPersona({ ...persona, mandatoryOutputFormatting: v })}
+              multiline
+              rows={4}
+              helpText="How the agent structures its responses"
+              placeholder="e.g., Use **bolded metrics**. End with 'Recommended Next Step'. Use bullet points for lists."
+            />
+
+            <FormField
+              label="Security & Data Classification Filter"
+              value={persona.securityDataFilter}
+              onChange={(v) => setPersona({ ...persona, securityDataFilter: v })}
+              multiline
+              rows={4}
+              helpText="What the agent must NEVER reveal"
+              placeholder='e.g., "NEVER reveal: pricing discounts to other clients, proprietary technical details, customer data"'
+            />
+          </div>
+        )}
+
+        {/* Training Refinements Section */}
+        {activeSection === 'training' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <SectionHeader
+              title="VI. Training Refinements"
+              description="Persona adjustments from training sessions"
+              badge="MODIFIED BY TRAINING"
+            />
+
+            <div style={{
+              backgroundColor: '#1e3a8a',
+              border: '1px solid #3b82f6',
+              borderRadius: '0.75rem',
+              padding: '1.5rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ fontSize: '0.875rem', color: '#93c5fd', marginBottom: '0.5rem', fontWeight: '600' }}>
+                💡 How Training Refines Your Persona
+              </div>
+              <div style={{ fontSize: '0.875rem', color: '#dbeafe', lineHeight: '1.6' }}>
+                As you train your agent, issues like "too verbose," "inaccurate," or "off-brand" are automatically
+                detected and used to update these settings. Your persona gets smarter with every training session.
+              </div>
+            </div>
+
+            {/* Verbosity Control */}
+            <div style={{
+              backgroundColor: bgPaper,
+              border: `1px solid ${borderColor}`,
+              borderRadius: '0.75rem',
+              padding: '1.5rem'
+            }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+                Verbosity Control <span style={{ color: '#f59e0b' }}>★ Modified by Training</span>
+              </label>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#999', display: 'block', marginBottom: '0.5rem' }}>
+                    Max Response Length (words)
+                  </label>
+                  <input
+                    type="number"
+                    value={persona.verbosityControl?.maxResponseLength || 500}
+                    onChange={(e) => setPersona({
+                      ...persona,
+                      verbosityControl: {
+                        ...persona.verbosityControl,
+                        maxResponseLength: parseInt(e.target.value) || 500
+                      }
+                    })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#999', display: 'block', marginBottom: '0.5rem' }}>
+                    Conversational Pacing
+                  </label>
+                  <select
+                    value={persona.verbosityControl?.conversationalPacing || 'balanced'}
+                    onChange={(e) => setPersona({
+                      ...persona,
+                      verbosityControl: {
+                        ...persona.verbosityControl,
+                        conversationalPacing: e.target.value as any
+                      }
+                    })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#0a0a0a',
+                      border: `1px solid ${borderColor}`,
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    <option value="concise">Concise (Brief answers)</option>
+                    <option value="balanced">Balanced (Moderate detail)</option>
+                    <option value="detailed">Detailed (Comprehensive)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#ccc', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={persona.verbosityControl?.preferBulletPoints || false}
+                    onChange={(e) => setPersona({
+                      ...persona,
+                      verbosityControl: {
+                        ...persona.verbosityControl,
+                        preferBulletPoints: e.target.checked
+                      }
+                    })}
+                    style={{ width: '1rem', height: '1rem' }}
+                  />
+                  Prefer Bullet Points
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#ccc', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={persona.verbosityControl?.avoidRepetition || false}
+                    onChange={(e) => setPersona({
+                      ...persona,
+                      verbosityControl: {
+                        ...persona.verbosityControl,
+                        avoidRepetition: e.target.checked
+                      }
+                    })}
+                    style={{ width: '1rem', height: '1rem' }}
+                  />
+                  Avoid Repetition
+                </label>
+              </div>
+            </div>
+
+            {/* Accuracy Rules */}
+            <FormField
+              label="Accuracy Rules"
+              value={persona.accuracyRules?.join('\n') || ''}
+              onChange={(v) => setPersona({ ...persona, accuracyRules: v.split('\n').filter(r => r.trim()) })}
+              multiline
+              rows={6}
+              helpText="One rule per line. These are added when training reveals inaccuracies."
+              placeholder="e.g.,&#10;- Always verify pricing from latest pricing sheet&#10;- Never speculate on competitor features&#10;- Cite sources for technical claims"
+            />
+
+            {/* Brand Alignment Notes */}
+            <FormField
+              label="Brand Alignment Notes"
+              value={persona.brandAlignmentNotes || ''}
+              onChange={(v) => setPersona({ ...persona, brandAlignmentNotes: v })}
+              multiline
+              rows={4}
+              helpText="Adjustments to keep agent aligned with your brand voice and values"
+              placeholder="e.g., 'Always emphasize trust and security. Avoid aggressive sales tactics. Use customer success stories when possible.'"
+            />
+
+            {/* Training Insights Log */}
+            {persona.trainingInsights && persona.trainingInsights.length > 0 && (
+              <div style={{
+                backgroundColor: bgPaper,
+                border: `1px solid ${borderColor}`,
+                borderRadius: '0.75rem',
+                padding: '1.5rem'
+              }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem', color: '#fff' }}>
+                  Training Insights History
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {persona.trainingInsights.map((insight, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '1rem',
+                        backgroundColor: '#0a0a0a',
+                        border: `1px solid ${borderColor}`,
+                        borderRadius: '0.5rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          color: '#999'
+                        }}>
+                          {new Date(insight.date).toLocaleDateString()}
+                        </span>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          padding: '0.125rem 0.5rem',
+                          backgroundColor: getCategoryColor(insight.category),
+                          borderRadius: '0.25rem',
+                          color: '#fff'
+                        }}>
+                          {insight.category}
+                        </span>
                       </div>
-                    </label>
+                      <div style={{ fontSize: '0.875rem', color: '#ccc', marginBottom: '0.25rem' }}>
+                        <strong>Issue:</strong> {insight.issue}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#10b981' }}>
+                        <strong>Adjustment:</strong> {insight.adjustment}
+                      </div>
+                    </div>
                   ))}
                 </div>
-
-                <button style={{ 
-                  marginTop: '2rem',
-                  width: '100%',
-                  padding: '1rem', 
-                  backgroundColor: primaryColor, 
-                  color: '#fff', 
-                  border: 'none', 
-                  borderRadius: '0.5rem', 
-                  cursor: 'pointer', 
-                  fontSize: '0.875rem', 
-                  fontWeight: '600' 
-                }}>
-                  Save Capabilities
-                </button>
               </div>
             )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
+function SectionHeader({ title, description, badge }: { title: string; description: string; badge?: string }) {
+  return (
+    <div style={{
+      borderLeft: '4px solid #6366f1',
+      paddingLeft: '1rem',
+      marginBottom: '0.5rem',
+      position: 'relative'
+    }}>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
+        {title}
+        {badge && (
+          <span style={{
+            marginLeft: '1rem',
+            fontSize: '0.625rem',
+            padding: '0.25rem 0.75rem',
+            backgroundColor: '#10b981',
+            color: '#fff',
+            borderRadius: '0.25rem',
+            fontWeight: '600',
+            verticalAlign: 'middle'
+          }}>
+            {badge}
+          </span>
+        )}
+      </h2>
+      <p style={{ fontSize: '0.875rem', color: '#666', margin: 0 }}>
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function FormField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  helpText,
+  multiline = false,
+  rows = 3,
+  type = 'text',
+  min,
+  max,
+  readonly = false
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  helpText?: string;
+  multiline?: boolean;
+  rows?: number;
+  type?: string;
+  min?: number;
+  max?: number;
+  readonly?: boolean;
+}) {
+  const bgPaper = '#1a1a1a';
+  const borderColor = '#333';
+
+  return (
+    <div style={{
+      backgroundColor: bgPaper,
+      border: `1px solid ${borderColor}`,
+      borderRadius: '0.75rem',
+      padding: '1.5rem'
+    }}>
+      <label style={{
+        display: 'block',
+        fontSize: '0.875rem',
+        fontWeight: '600',
+        marginBottom: '0.75rem',
+        color: '#fff'
+      }}>
+        {label}
+      </label>
+      
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={rows}
+          readOnly={readonly}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: readonly ? '#0f0f0f' : '#0a0a0a',
+            border: `1px solid ${borderColor}`,
+            borderRadius: '0.5rem',
+            color: readonly ? '#999' : '#fff',
+            fontSize: '0.875rem',
+            fontFamily: 'inherit',
+            resize: 'vertical',
+            lineHeight: '1.6',
+            cursor: readonly ? 'not-allowed' : 'text'
+          }}
+        />
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          min={min}
+          max={max}
+          readOnly={readonly}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: readonly ? '#0f0f0f' : '#0a0a0a',
+            border: `1px solid ${borderColor}`,
+            borderRadius: '0.5rem',
+            color: readonly ? '#999' : '#fff',
+            fontSize: '0.875rem',
+            fontFamily: 'inherit',
+            cursor: readonly ? 'not-allowed' : 'text'
+          }}
+        />
+      )}
+      
+      {helpText && (
+        <div style={{
+          marginTop: '0.5rem',
+          fontSize: '0.75rem',
+          color: '#666',
+          fontStyle: 'italic',
+          lineHeight: '1.4'
+        }}>
+          {helpText}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function getCategoryColor(category: string): string {
+  switch (category) {
+    case 'verbosity': return '#f59e0b';
+    case 'accuracy': return '#ef4444';
+    case 'brand-alignment': return '#8b5cf6';
+    case 'tone': return '#06b6d4';
+    default: return '#6366f1';
+  }
+}
+
+// This would be called when onboarding is complete
+function generatePersonaFromOnboarding(onboarding: any): AgentPersona {
+  return {
+    agentName: `${onboarding.companyName}-AI` || 'Your AI Agent',
+    professionalTitle: `Senior ${onboarding.industry || 'Business'} Consultant`,
+    coreMission: onboarding.companyDescription || '',
+    targetKnowledgeDomain: onboarding.products?.map((p: any) => p.category).join(', ') || '',
+    userExpertiseLevel: onboarding.targetCustomer || '',
+    reasoningFramework: onboarding.salesMethodology || 'Consultative Selling',
+    responseComplexityIndex: onboarding.brandVoice?.complexity || 7,
+    uncertaintyHandlingProtocol: `Never speculate. If uncertain, state: "I want to ensure 100% accuracy—let me pull the exact information from our knowledge base."`,
+    internalThoughtVerification: `Before responding: (1) Does this address a pain point? (2) Am I creating urgency? (3) Is my tone appropriate?`,
+    federatedRAGTags: onboarding.products?.map((p: any) => `DOMAIN: ${p.category.toUpperCase().replace(/ /g, '_')}`) || [],
+    knowledgeSourceHierarchy: [
+      '1. Internal Product Documentation',
+      '2. Customer Success Stories',
+      '3. Industry Reports',
+      '4. Web Search (last resort)'
+    ],
+    sourceAuthorityWeighting: 'Prioritize verified customer data and internal documentation.',
+    contextRetrievalDepth: 3,
+    feedbackIntegrationStrategy: 'Tag feedback type, adjust strategy, log successful pivots.',
+    dynamicToneRegister: 'Start professional. Mirror user style. Adapt based on sentiment.',
+    successfulStrategyMemory: 'Log conversation paths that result in qualified opportunities.',
+    knowledgeObsolescenceTimer: 'Industry data: 6 months. Technical specs: Real-time.',
+    toolAuthorization: onboarding.integrations?.map((i: any) => ({
+      tool: i.name,
+      permissions: i.permissions?.join('/') || 'Read Only',
+      canExecuteAutonomously: !i.requiresApproval
+    })) || [],
+    mandatoryOutputFormatting: 'Use bolded metrics. End with Recommended Next Step. Use bullet points for lists.',
+    securityDataFilter: 'NEVER reveal: customer data, pricing discounts to other clients, proprietary details.',
+    verbosityControl: {
+      maxResponseLength: 500,
+      preferBulletPoints: true,
+      avoidRepetition: true,
+      conversationalPacing: 'balanced'
+    },
+    accuracyRules: [],
+    brandAlignmentNotes: '',
+    trainingInsights: []
+  };
+}
