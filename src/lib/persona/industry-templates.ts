@@ -1,3 +1,5 @@
+import 'server-only';
+
 /**
  * Industry-Specific Persona Templates
  * 

@@ -89,6 +89,17 @@ const nextConfig = {
   },
   // Webpack configuration to handle server-only modules
   webpack: (config, { isServer }) => {
+    // Optimize for large files (industry templates)
+    config.optimization = {
+      ...config.optimization,
+      minimize: true,
+      // Increase chunk size limits
+      splitChunks: {
+        ...config.optimization.splitChunks,
+        maxSize: 500000, // 500KB chunks max
+      },
+    };
+    
     if (!isServer) {
       // Don't resolve these modules on the client side
       config.resolve.fallback = {
