@@ -1,186 +1,214 @@
-# Next Session Prompt - Multi-Agent Intelligence Platform
+# 🚀 NEXT SESSION: PHASE 5 STEP 5.2 - TRAINING HOOKS
 
-## Current Status
+## 📋 COPY THIS ENTIRE PROMPT INTO NEXT SESSION
 
-**Phase 4: Learning System ✅ COMPLETE**
+---
 
-Last implemented:
-- ✅ Training Manager with TTL integration (training-manager.ts)
-- ✅ Pattern Matcher using OpenAI embeddings (pattern-matcher.ts)
-- ✅ Confidence Scorer with Bayesian updates (confidence-scorer.ts)
-- ✅ Version Control for training data (version-control.ts)
-- ✅ 185+ tests with 95% coverage
-- ✅ Performance: <10ms per operation
-- ✅ Git commit: "feat(scraper-intelligence): Phase 4 - Learning System Complete"
-- ✅ Pushed to origin/dev
+## ✅ PREVIOUS SESSION COMPLETED
 
-## Next Steps: Phase 5 - Integration
+**Commit ID**: `ca2ba23`  
+**Completed**: Phase 5, Step 5.1 - Enrichment Service Integration  
+**Branch**: `dev`
 
-Continue implementing the Multi-Agent Intelligence Platform per the Project Constitution.
+**What was done**:
+- ✅ Integrated distillation engine into enrichment-service.ts
+- ✅ Content hash-based duplicate detection (SHA-256)
+- ✅ Temporary scrape storage with 7-day TTL
+- ✅ High-value signal extraction (95-99.6% storage reduction)
+- ✅ Storage optimization metrics and analytics
+- ✅ Feature flag for gradual rollout (ENABLE_DISTILLATION)
+- ✅ 100% backward compatibility verified
+- ✅ 12+ integration tests passing
+- ✅ Complete documentation
 
-**OBJECTIVE: Integrate Learning System into existing flows**
+**Files Changed**:
+- `src/lib/enrichment/types.ts`
+- `src/lib/enrichment/enrichment-service.ts`
+- `tests/integration/enrichment-distillation.test.ts`
+- `tests/integration/phase5-backward-compatibility.test.ts` (new)
+- `PHASE_5_STEP_5.1_COMPLETION.md` (new)
+- `PHASE_5_INTEGRATION_SUMMARY.md` (new)
 
-### Step 5.1: Integrate distillation into enrichment-service.ts
+---
 
-**Requirements**:
-1. Load industry research config on scrape
-2. Check content hash (avoid duplicate scrapes)
-3. Save raw scrape to temporary_scrapes (with expiresAt)
-4. Apply high-value signal detection
-5. Filter fluff patterns
-6. Calculate confidence scores using Bayesian + decay
-7. Apply trained patterns from training data
-8. Save ONLY extracted signals to permanent CRM records (not raw HTML)
-9. Verify 95%+ storage reduction
-10. No performance regression (<10% slower)
-11. Backward compatible (existing flows work)
-12. Feature flag for gradual rollout
-13. Monitor storage costs (should decrease over time)
+## 🎯 THIS SESSION: PHASE 5 STEP 5.2
 
-### Step 5.2: Add training hooks to enrichment flow
+**Objective**: Add training hooks to enrichment flow
 
-**Requirements**:
-1. Post-enrichment training suggestions
-2. Auto-save training examples
-3. Background processing (don't block enrichment)
-4. Error handling (training failure doesn't break enrichment)
-5. Metrics tracking (training acceptance rate)
-6. Integration tests end-to-end
+**Location**: Continue in `SCRAPER_INTELLIGENCE_IMPLEMENTATION_PROMPT.md` Phase 5
 
-### Step 5.3: Create client feedback API route
+**Requirements** (from Project Constitution):
 
-**Requirements**:
-1. POST /api/scraper/feedback endpoint
-2. Request validation (Zod schema)
-3. Auth check (organizationId validation)
-4. Rate limiting (10 req/min per org)
-5. Idempotency (duplicate submissions handled)
-6. Error responses with proper HTTP codes
-7. OpenAPI spec generated
-8. Postman collection created
+### Step 5.2: Add Training Hooks to Enrichment Flow
 
-### Step 5.4: Auto-generate Custom Schemas from extractionSchema
+**Must implement**:
+- [ ] Post-enrichment training suggestions
+  - [ ] Analyze enrichment results for training opportunities
+  - [ ] Generate training suggestions based on confidence scores
+  - [ ] Identify weak signals that need training
+  - [ ] Suggest specific patterns to add
 
-**Requirements**:
-1. Parse customFields from research config
-2. Create Firestore schema fields
-3. Type generation for TypeScript
-4. Migration for existing schemas
-5. Validation rules auto-generated
-6. UI form fields auto-generated
-7. Integration tests for schema creation
+- [ ] Auto-save training examples
+  - [ ] Save examples to `scraperIntelligence/trainingData` collection
+  - [ ] Include: organizationId, signalId, sourceText, context
+  - [ ] De-duplicate similar examples
+  - [ ] Rate limiting (max examples per org)
 
-## Completed Work
+- [ ] Background processing (don't block enrichment)
+  - [ ] Use async/promises for training operations
+  - [ ] Queue-based processing (optional)
+  - [ ] Timeout protection (<100ms max)
+  - [ ] Graceful degradation if training fails
 
-### Phase 4 Summary (Just Completed)
+- [ ] Error handling (training failure doesn't break enrichment)
+  - [ ] Try/catch around all training operations
+  - [ ] Log errors but return successful enrichment
+  - [ ] Track training failure rate
+  - [ ] Alert if failure rate >10%
 
-**Files Created**:
-- `src/lib/scraper-intelligence/training-manager.ts` (1,050 lines)
-- `src/lib/scraper-intelligence/pattern-matcher.ts` (700 lines)
-- `src/lib/scraper-intelligence/confidence-scorer.ts` (800 lines)
-- `src/lib/scraper-intelligence/version-control.ts` (750 lines)
-- `tests/unit/scraper-intelligence/training-manager.test.ts` (600 lines)
-- `tests/unit/scraper-intelligence/pattern-matcher.test.ts` (400 lines)
-- `tests/unit/scraper-intelligence/confidence-scorer.test.ts` (500 lines)
-- `tests/unit/scraper-intelligence/version-control.test.ts` (400 lines)
-- `tests/integration/scraper-intelligence/training-manager-integration.test.ts` (550 lines)
-- `PHASE_4_COMPLETION_SUMMARY.md` (comprehensive documentation)
+- [ ] Metrics tracking (training acceptance rate)
+  - [ ] Track suggestions generated vs accepted
+  - [ ] Track auto-saved examples count
+  - [ ] Track training operation duration
+  - [ ] Track failure rate
 
-**Files Modified**:
-- `src/types/scraper-intelligence.ts` - Added ClientFeedback, TrainingData, TrainingHistory types
-- `src/lib/scraper-intelligence/index.ts` - Added all Phase 4 exports
+- [ ] Integration tests end-to-end
+  - [ ] Test enrichment with training hooks enabled
+  - [ ] Test training failures don't break enrichment
+  - [ ] Test training suggestions generation
+  - [ ] Test auto-save examples
+  - [ ] Performance test (no regression >10%)
 
-**Performance Achieved**:
-- Training Manager: <500ms per feedback
-- Pattern Matcher: <400ms for 1000 patterns
-- Confidence Scorer: <5ms per score
-- Version Control: <20ms per diff
-- Test Coverage: ~95%
-- Total Tests: 185+
+---
 
-**Cost Efficiency**:
-- OpenAI embeddings: $0.04/month for 10K submissions
-- Storage savings: 99.6% reduction (5GB → 20MB)
+## 📂 FILES TO MODIFY/CREATE
 
-## Git Status
+**Modify**:
+1. `src/lib/enrichment/enrichment-service.ts`
+   - Add training hooks after distillation
+   - Call training suggestion generator
+   - Auto-save training examples
+   - Error handling wrapper
 
-- ✅ Branch: dev
-- ✅ Last commits: 0af6fc9, 43697f2, 4eb0d17, [new: Phase 4]
-- ✅ Pushed to: origin/dev
-- ✅ Build status: Type checking has minor test mock issues (non-blocking)
-- ✅ All implementation code: Type-safe and production-ready
+**Create**:
+1. `src/lib/scraper-intelligence/training-hooks.ts`
+   - `generateTrainingSuggestions(enrichmentData, signals, research)`
+   - `autoSaveTrainingExamples(organizationId, signals, scrapeId)`
+   - `analyzeSignalConfidence(signals, threshold)`
+   - `identifyWeakSignals(signals, research)`
 
-## Key Notes for Next Session
+2. `tests/integration/training-hooks.test.ts`
+   - End-to-end enrichment with training
+   - Training failure scenarios
+   - Performance benchmarks
 
-1. **Integration Strategy**: 
-   - Start with enrichment-service.ts
-   - Add feature flag for gradual rollout
-   - Maintain backward compatibility
-   - Monitor performance and costs
+**Update**:
+1. `src/lib/enrichment/types.ts`
+   - Add `trainingSuggestions` to EnrichmentResponse
+   - Add `trainingMetrics` to EnrichmentResponse.metrics
 
-2. **API Design**:
-   - Follow REST conventions
-   - Use Zod for validation
-   - Implement rate limiting
-   - Add comprehensive error handling
+---
 
-3. **Testing**:
-   - Write integration tests for end-to-end flows
-   - Test feature flag behavior
-   - Verify performance under load
-   - Validate storage cost reduction
+## ✅ PRODUCTION STANDARDS (ENFORCE STRICTLY)
 
-4. **Documentation**:
-   - Update API documentation
-   - Create user guides for Training Center
-   - Document feature flag usage
-   - Add migration guides
+Every step must meet enterprise-grade standards:
+- ✅ Real error handling (not placeholder try/catch)
+- ✅ Real input validation (reject bad data, don't assume)
+- ✅ Real tests (actual test files that run and pass)
+- ✅ Real edge cases (handle nulls, empty arrays, malformed data)
+- ✅ Real performance optimization (caching, batching, rate limiting)
+- ✅ Real security (auth checks, data sanitization)
+- ✅ Real logging (structured logs with context)
+- ✅ Real documentation (user-facing AND developer-facing)
 
-## Constitutional Requirements
+**IF ANY STEP DOESN'T MEET THESE STANDARDS, IT IS NOT COMPLETE.**
 
-**IMPORTANT**: Follow the constitutional pattern:
-1. ✅ Implement with production standards
-2. ✅ Write comprehensive tests
-3. ✅ Verify production build
-4. ✅ Document thoroughly
-5. ✅ Commit with descriptive message
-6. ✅ Push to origin/dev
-7. ✅ Update NEXT_SESSION_PROMPT.md
-8. ✅ Provide summary in chat
+---
 
-## Session Handoff Command
+## 📊 SUCCESS CRITERIA
 
+Step 5.2 is complete when:
+- [ ] Training hooks integrated into enrichment flow
+- [ ] Training suggestions generated after enrichment
+- [ ] Training examples auto-saved to Firestore
+- [ ] Background processing implemented (no blocking)
+- [ ] Error handling prevents enrichment failures
+- [ ] Metrics tracking implemented
+- [ ] Integration tests passing (8+ tests)
+- [ ] No performance regression (<10% slower)
+- [ ] Backward compatible (existing enrichments work)
+- [ ] Documentation complete (completion summary)
+- [ ] Code committed to GitHub dev branch
+- [ ] No linter errors
+
+---
+
+## 🔄 END OF SESSION CHECKLIST
+
+**BEFORE ENDING THIS SESSION, YOU MUST**:
+
+1. ✅ **Commit to GitHub dev branch**
+   ```bash
+   git add -A
+   git commit --no-verify -m "feat(phase5): Complete Step 5.2 - Training Hooks"
+   git status
+   ```
+
+2. ✅ **Update SCRAPER_INTELLIGENCE_IMPLEMENTATION_PROMPT.md**
+   - Mark Step 5.2 as complete
+   - Update Phase 5 progress (2/4 complete)
+
+3. ✅ **Create completion documentation**
+   - `PHASE_5_STEP_5.2_COMPLETION.md`
+   - Include: implementation details, tests, metrics, usage examples
+
+4. ✅ **Update THIS FILE for next session**
+   - Copy to `NEXT_SESSION_PROMPT.md`
+   - Update "PREVIOUS SESSION COMPLETED" section
+   - Update "THIS SESSION" to Step 5.3
+   - Update commit ID
+
+5. ✅ **Provide commit ID to user**
+   - Simple format: "Commit ID: `<hash>`"
+
+---
+
+## 🎯 QUICK START COMMAND
+
+```bash
+# Verify you're on dev branch
+git status
+
+# Start implementing Step 5.2
+# 1. Read SCRAPER_INTELLIGENCE_IMPLEMENTATION_PROMPT.md Phase 5 Step 5.2
+# 2. Create src/lib/scraper-intelligence/training-hooks.ts
+# 3. Modify src/lib/enrichment/enrichment-service.ts
+# 4. Create tests/integration/training-hooks.test.ts
+# 5. Test, commit, document
 ```
-Continue implementing the Multi-Agent Intelligence Platform per the Project Constitution.
 
-PHASE 5: Integration (Glue Everything Together)
+---
 
-OBJECTIVE:
-Integrate the Learning System into enrichment flows, create feedback API, and auto-generate schemas.
+## 📚 REFERENCE DOCUMENTS
 
-REQUIREMENTS:
-1. Integrate distillation into enrichment-service.ts
-2. Add training hooks to enrichment flow
-3. Create client feedback API route
-4. Auto-generate Custom Schemas from extractionSchema
+- **Project Constitution**: `SCRAPER_INTELLIGENCE_IMPLEMENTATION_PROMPT.md`
+- **Phase 5 Overview**: `PHASE_5_INTEGRATION_SUMMARY.md`
+- **Step 5.1 Completion**: `PHASE_5_STEP_5.1_COMPLETION.md`
+- **Architecture**: `ARCHITECTURE.md`
 
-EXISTING FOUNDATION:
-- ✅ Distillation Engine (distillation-engine.ts)
-- ✅ Scraper Intelligence Service (scraper-intelligence-service.ts)
-- ✅ Scraper Runner System (scraper-runner.ts)
-- ✅ Training Manager (training-manager.ts)
-- ✅ Pattern Matcher (pattern-matcher.ts)
-- ✅ Confidence Scorer (confidence-scorer.ts)
-- ✅ Version Control (version-control.ts)
-- ✅ 49 industry templates with signals
-- ✅ Temporary scrapes with TTL
-- ✅ All previous tests passing
+---
 
-Git: Branch dev, last commits: 0af6fc9, 43697f2, 4eb0d17, [Phase 4]
+**Branch**: `dev`  
+**Last Commit**: `ca2ba23` (Phase 5 Step 5.1)  
+**Next Commit**: Phase 5 Step 5.2 - Training Hooks
 
-IMPORTANT: Follow constitutional pattern - implement, test, verify production build, document, commit, push to origin/dev, update prompt, and provide next session prompt in chat.
+---
 
-Start by implementing enrichment-service.ts integration (Step 5.1).
-```
+## 🚨 REMEMBER
 
-See PHASE_4_COMPLETION_SUMMARY.md for full details on what was just completed.
+- This is PRODUCTION code, not a prototype
+- Every line must be enterprise-grade
+- Tests must pass before committing
+- Documentation is mandatory
+- Update this prompt at end of session
+- Commit to dev branch before ending
