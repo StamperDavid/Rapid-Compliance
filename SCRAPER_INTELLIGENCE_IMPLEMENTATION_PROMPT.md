@@ -14,8 +14,74 @@ Every step must meet enterprise-grade standards:
 - ✅ Real logging (structured logs with context, not console.log)
 - ✅ Real rollback strategy (version control, data migration support)
 - ✅ Real documentation (user-facing AND developer-facing)
+- ✅ **DISTILLATION & TTL ARCHITECTURE** (auto-delete raw data, save only signals)
 
 **IF ANY STEP DOESN'T MEET THESE STANDARDS, IT IS NOT COMPLETE.**
+
+---
+
+## 🔥 CRITICAL ARCHITECTURAL PRINCIPLE: DISTILLATION & TTL
+
+**The Problem:** Saving raw HTML/scrapes forever will bankrupt you at scale.
+- 1,000 clients × 100 scrapes/day × 500KB per scrape = 50GB/day = $1,500/month storage costs
+
+**The Solution:** Separate temporary "ore" from permanent "refined metal"
+
+### **The Three-Tier Data Model:**
+
+1. **The Ore (Raw Scrape)** - Temporary, auto-delete after 7 days
+   - Collection: `temporary_scrapes`
+   - Contains: Full HTML, raw markdown, metadata
+   - TTL: 7 days (Firestore TTL policy or Cloud Function cleanup)
+   - Purpose: Available for training/verification, then deleted
+
+2. **The Refined Metal (Extracted Signals)** - Permanent, saved to CRM
+   - Collection: `leads` or `companies` (existing CRM records)
+   - Contains: ONLY the high-value signals defined in Industry Blueprint
+   - Storage: ~2KB per lead vs 500KB raw HTML (250x reduction)
+   - Purpose: The actual business intelligence
+
+3. **The Heuristic (The Learning)** - Permanent, saved to templates
+   - Collection: `scraperIntelligence/trainingData`
+   - Contains: Client feedback on what's valuable
+   - Purpose: Improve extraction accuracy over time
+
+### **Implementation Requirements:**
+
+**Content Hashing:**
+```typescript
+const contentHash = crypto.createHash('sha256').update(rawHtml).digest('hex');
+// If hash matches existing record, only update lastSeen timestamp
+// Don't create duplicate scrapes
+```
+
+**TTL Field:**
+```typescript
+interface TemporaryScrape {
+  id: string;
+  orgId: string;
+  url: string;
+  rawContent: string;
+  contentHash: string;
+  createdAt: Date;
+  expiresAt: Date; // NOW + 7 days
+  lastSeen: Date;
+  scrapeCount: number; // How many times we've seen this content
+}
+```
+
+**Distillation Flow:**
+```
+1. Scrape website → Save to temporary_scrapes (with expiresAt)
+2. Extract high-value signals → Save to leads/companies (permanent)
+3. After 7 days → Firestore auto-deletes temporary_scrapes
+4. If client verifies in Training Center → Flag temporary_scrape for immediate deletion
+```
+
+**Cost Savings:**
+- **Before:** 1,000 scrapes × 500KB = 500MB stored forever
+- **After:** 1,000 scrapes × 2KB signals = 2MB stored permanently
+- **Savings:** 99.6% storage reduction
 
 ---
 
@@ -31,15 +97,30 @@ Every step must meet enterprise-grade standards:
   - [ ] No `any` types used
   - [ ] Unit tests written for type guards
   
-- [ ] **Step 1.2:** Create Firestore schema for ScraperIntelligence
+- [ ] **Step 1.2:** Create Firestore schema with Distillation & TTL Architecture
+  - [ ] `temporary_scrapes` collection created with TTL field
+  - [ ] `scraperIntelligence` collection for training data
+  - [ ] Firestore TTL policy configured (auto-delete after 7 days)
+  - [ ] Content hashing logic implemented
   - [ ] Schema documented in ARCHITECTURE.md
   - [ ] Migration script created for existing orgs
   - [ ] Firestore security rules updated
-  - [ ] Indexes defined for query performance
+  - [ ] Indexes defined for query performance (contentHash, expiresAt)
   - [ ] Collection structure validated
   - [ ] Rollback procedure documented
+  - [ ] Cost analysis documented (storage savings projection)
 
-- [ ] **Step 1.3:** Create scraper-intelligence service layer
+- [ ] **Step 1.3:** Implement Distillation Engine & Content Hashing
+  - [ ] Content hashing function (SHA-256)
+  - [ ] Duplicate detection logic (check hash before saving)
+  - [ ] Timestamp update logic (lastSeen instead of new record)
+  - [ ] Distillation service (extract signals → save permanently)
+  - [ ] TTL cleanup monitoring (Cloud Function or Firestore TTL)
+  - [ ] Storage cost calculator (estimate savings)
+  - [ ] Unit tests for hashing and duplicate detection
+  - [ ] Integration tests for distillation flow
+
+- [ ] **Step 1.4:** Create scraper-intelligence service layer
   - [ ] Full CRUD operations implemented
   - [ ] Error handling for all Firestore operations
   - [ ] Transaction support for atomic updates
@@ -69,14 +150,18 @@ Every step must meet enterprise-grade standards:
 - [ ] Validated against 5 real industry websites
 - [ ] Performance benchmarked (<2s per extraction)
 
-## **PHASE 3: INTELLIGENT EXTRACTION ENGINE** ⏳ Not Started
+## **PHASE 3: INTELLIGENT EXTRACTION ENGINE (Distillation Focus)** ⏳ Not Started
 
-- [ ] **Step 3.1:** Industry-aware AI extraction
+- [ ] **Step 3.1:** Industry-aware AI extraction with distillation
   - [ ] ai-extractor.ts enhanced with industry context
+  - [ ] Extract ONLY high-value signals (not full content)
+  - [ ] Save extracted signals to permanent CRM records
+  - [ ] Save raw scrape to temporary_scrapes (with TTL)
   - [ ] LLM prompts optimized for each industry
   - [ ] Token usage optimized (costs documented)
   - [ ] Fallback logic for AI failures
   - [ ] Extraction confidence scoring
+  - [ ] Verify distillation reduces storage by >95%
   - [ ] A/B test results vs baseline
   
 - [ ] **Step 3.2:** Keyword-based signal detection
@@ -105,14 +190,18 @@ Every step must meet enterprise-grade standards:
 
 ## **PHASE 4: LEARNING SYSTEM (Client Feedback)** ⏳ Not Started
 
-- [ ] **Step 4.1:** Training Manager (training-manager.ts)
+- [ ] **Step 4.1:** Training Manager with TTL Integration (training-manager.ts)
   - [ ] Client feedback submission endpoint
   - [ ] Feedback validation (reject malformed data)
+  - [ ] When client verifies extraction → Flag temporary_scrape for immediate deletion
+  - [ ] Move verified signals to permanent storage
+  - [ ] Update training data with client confirmation
   - [ ] Atomic updates (no partial writes)
   - [ ] Conflict resolution (concurrent edits)
   - [ ] Audit trail (who changed what when)
   - [ ] Rate limiting (prevent abuse)
   - [ ] Integration tests for all operations
+  - [ ] Verify temporary scrapes are deleted after verification
   - [ ] API documentation generated
 
 - [ ] **Step 4.2:** Pattern Matcher (pattern-matcher.ts)
@@ -145,15 +234,19 @@ Every step must meet enterprise-grade standards:
 
 ## **PHASE 5: INTEGRATION (Glue Everything Together)** ⏳ Not Started
 
-- [ ] **Step 5.1:** Integrate into enrichment-service.ts
+- [ ] **Step 5.1:** Integrate distillation into enrichment-service.ts
   - [ ] Load industry research config on scrape
+  - [ ] Check content hash (avoid duplicate scrapes)
+  - [ ] Save raw scrape to temporary_scrapes (with expiresAt)
   - [ ] Apply high-value signal detection
   - [ ] Filter fluff patterns
   - [ ] Calculate confidence scores
-  - [ ] Save extracted signals to Firestore
+  - [ ] Save ONLY extracted signals to permanent CRM records (not raw HTML)
+  - [ ] Verify 95%+ storage reduction
   - [ ] No performance regression (<10% slower)
   - [ ] Backward compatible (existing flows work)
   - [ ] Feature flag for gradual rollout
+  - [ ] Monitor storage costs (should decrease over time)
 
 - [ ] **Step 5.2:** Add training hooks to enrichment flow
   - [ ] Post-enrichment training suggestions
@@ -287,12 +380,16 @@ Every step must meet enterprise-grade standards:
   - [ ] Security audit completed
   - [ ] OWASP Top 10 mitigation verified
 
-- [ ] **Step 8.3:** Monitoring & observability
+- [ ] **Step 8.3:** Monitoring & observability (including TTL tracking)
   - [ ] Structured logging (JSON format)
   - [ ] Error tracking (Sentry integration)
   - [ ] Performance monitoring (metrics)
+  - [ ] Storage cost monitoring (Firestore usage trends)
+  - [ ] TTL cleanup verification (ensure scrapes are deleted after 7 days)
+  - [ ] Duplicate detection rate monitoring (hash collision tracking)
+  - [ ] Distillation efficiency metrics (storage reduction %)
   - [ ] Usage analytics (PostHog/Mixpanel)
-  - [ ] Alerting rules configured
+  - [ ] Alerting rules configured (cost spikes, TTL failures)
   - [ ] Dashboard created (Grafana/Datadog)
   - [ ] Runbook for common issues
   - [ ] On-call rotation defined
@@ -2201,6 +2298,792 @@ Ready to continue? Paste the updated prompt in a new session."
 ---
 
 END OF STEP 1.1 INSTRUCTIONS
+
+---
+
+# 🚦 STEP 1.2: CREATE FIRESTORE SCHEMA WITH DISTILLATION & TTL ARCHITECTURE
+
+## 📝 Detailed Implementation Instructions
+
+### Goal
+Create a two-tier data storage system: temporary scrapes (auto-delete after 7 days) and permanent signals (saved to CRM). This implements the "Distillation & TTL Architecture" for cost optimization.
+
+### Prerequisites
+- Step 1.1 completed (ResearchIntelligence types exist)
+- Read `src/lib/db/firestore-service.ts` to understand existing patterns
+- Review Firestore TTL documentation
+- Understand content hashing (SHA-256)
+
+### Implementation Steps
+
+#### 1. Create Temporary Scrapes Types
+
+**File:** `src/types/scraper-intelligence.ts` (ADD to existing file)
+
+```typescript
+/**
+ * Temporary scrape record (auto-deleted after 7 days)
+ * Stores raw HTML/content for verification, then discarded
+ */
+export interface TemporaryScrape {
+  /**
+   * Unique ID for this scrape
+   */
+  id: string;
+
+  /**
+   * Organization that initiated the scrape
+   */
+  organizationId: string;
+
+  /**
+   * Workspace context (if applicable)
+   */
+  workspaceId?: string;
+
+  /**
+   * URL that was scraped
+   */
+  url: string;
+
+  /**
+   * Raw HTML content
+   */
+  rawHtml: string;
+
+  /**
+   * Cleaned/processed content (markdown)
+   */
+  cleanedContent: string;
+
+  /**
+   * SHA-256 hash of rawHtml (for duplicate detection)
+   */
+  contentHash: string;
+
+  /**
+   * When this scrape was first created
+   */
+  createdAt: Date;
+
+  /**
+   * When this scrape was last seen (same content hash)
+   */
+  lastSeen: Date;
+
+  /**
+   * When this scrape expires and will be auto-deleted
+   * Set to createdAt + 7 days
+   */
+  expiresAt: Date;
+
+  /**
+   * How many times we've seen this exact content
+   */
+  scrapeCount: number;
+
+  /**
+   * Extracted metadata
+   */
+  metadata: {
+    title?: string;
+    description?: string;
+    author?: string;
+    keywords?: string[];
+  };
+
+  /**
+   * Size of rawHtml in bytes (for cost tracking)
+   */
+  sizeBytes: number;
+
+  /**
+   * Whether this has been verified by client in Training Center
+   */
+  verified: boolean;
+
+  /**
+   * If verified, when was it verified
+   */
+  verifiedAt?: Date;
+
+  /**
+   * Flag for immediate deletion (set when client verifies)
+   */
+  flaggedForDeletion: boolean;
+
+  /**
+   * Related lead/company ID (if extracted)
+   */
+  relatedRecordId?: string;
+}
+
+// Zod schema
+export const TemporaryScrapeSchema = z.object({
+  id: z.string().min(1),
+  organizationId: z.string().min(1),
+  workspaceId: z.string().optional(),
+  url: z.string().url(),
+  rawHtml: z.string(),
+  cleanedContent: z.string(),
+  contentHash: z.string().length(64), // SHA-256 is always 64 hex chars
+  createdAt: z.date(),
+  lastSeen: z.date(),
+  expiresAt: z.date(),
+  scrapeCount: z.number().int().positive(),
+  metadata: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    author: z.string().optional(),
+    keywords: z.array(z.string()).optional(),
+  }),
+  sizeBytes: z.number().int().positive(),
+  verified: z.boolean(),
+  verifiedAt: z.date().optional(),
+  flaggedForDeletion: z.boolean(),
+  relatedRecordId: z.string().optional(),
+});
+
+/**
+ * Extracted signal (saved permanently to CRM)
+ */
+export interface ExtractedSignal {
+  /**
+   * Which high-value signal was detected
+   */
+  signalId: string;
+
+  /**
+   * Label from the signal definition
+   */
+  signalLabel: string;
+
+  /**
+   * Where the signal was found (snippet of text)
+   */
+  sourceText: string;
+
+  /**
+   * Confidence score (0-100)
+   */
+  confidence: number;
+
+  /**
+   * Platform where it was found
+   */
+  platform: ScrapingPlatform;
+
+  /**
+   * When it was extracted
+   */
+  extractedAt: Date;
+
+  /**
+   * Source scrape ID (link to temporary_scrapes)
+   */
+  sourceScrapeId: string;
+}
+
+// Zod schema
+export const ExtractedSignalSchema = z.object({
+  signalId: z.string().min(1),
+  signalLabel: z.string().min(1),
+  sourceText: z.string().max(500), // Limit to 500 chars
+  confidence: z.number().min(0).max(100),
+  platform: z.enum([
+    'website',
+    'linkedin-jobs',
+    'linkedin-company',
+    'news',
+    'crunchbase',
+    'dns',
+    'google-business',
+    'social-media',
+  ]),
+  extractedAt: z.date(),
+  sourceScrapeId: z.string().min(1),
+});
+```
+
+**Requirements:**
+- [ ] Types added to existing scraper-intelligence.ts
+- [ ] Zod schemas defined
+- [ ] JSDoc comments comprehensive
+- [ ] contentHash field uses SHA-256 (64 chars)
+- [ ] expiresAt clearly documented as TTL field
+
+#### 2. Create Firestore Service for Temporary Scrapes
+
+**File:** `src/lib/scraper-intelligence/temporary-scrapes-service.ts` (CREATE)
+
+```typescript
+import { db } from '@/lib/db/firebase-admin';
+import { logger } from '@/lib/logger/logger';
+import crypto from 'crypto';
+import type { TemporaryScrape, ExtractedSignal } from '@/types/scraper-intelligence';
+
+const TEMPORARY_SCRAPES_COLLECTION = 'temporary_scrapes';
+const TTL_DAYS = 7;
+
+/**
+ * Calculate SHA-256 hash of content
+ */
+export function calculateContentHash(content: string): string {
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+/**
+ * Calculate expiration date (now + 7 days)
+ */
+export function calculateExpirationDate(): Date {
+  const now = new Date();
+  const expiration = new Date(now.getTime() + TTL_DAYS * 24 * 60 * 60 * 1000);
+  return expiration;
+}
+
+/**
+ * Save or update a temporary scrape with duplicate detection
+ */
+export async function saveTemporaryScrape(params: {
+  organizationId: string;
+  workspaceId?: string;
+  url: string;
+  rawHtml: string;
+  cleanedContent: string;
+  metadata: TemporaryScrape['metadata'];
+  relatedRecordId?: string;
+}): Promise<{ scrape: TemporaryScrape; isNew: boolean }> {
+  try {
+    const { organizationId, workspaceId, url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
+
+    // Calculate content hash
+    const contentHash = calculateContentHash(rawHtml);
+
+    // Check if this exact content already exists
+    const existing = await db
+      .collection(TEMPORARY_SCRAPES_COLLECTION)
+      .where('organizationId', '==', organizationId)
+      .where('contentHash', '==', contentHash)
+      .limit(1)
+      .get();
+
+    if (!existing.empty) {
+      // Duplicate found - just update lastSeen and scrapeCount
+      const doc = existing.docs[0];
+      const existingData = doc.data() as TemporaryScrape;
+
+      const updated: Partial<TemporaryScrape> = {
+        lastSeen: new Date(),
+        scrapeCount: existingData.scrapeCount + 1,
+      };
+
+      await doc.ref.update(updated);
+
+      logger.info(`Duplicate scrape detected for ${url}, updated lastSeen`, {
+        contentHash,
+        scrapeCount: existingData.scrapeCount + 1,
+      });
+
+      return {
+        scrape: { ...existingData, ...updated } as TemporaryScrape,
+        isNew: false,
+      };
+    }
+
+    // New content - create new temporary scrape
+    const now = new Date();
+    const newScrape: TemporaryScrape = {
+      id: db.collection(TEMPORARY_SCRAPES_COLLECTION).doc().id,
+      organizationId,
+      workspaceId,
+      url,
+      rawHtml,
+      cleanedContent,
+      contentHash,
+      createdAt: now,
+      lastSeen: now,
+      expiresAt: calculateExpirationDate(),
+      scrapeCount: 1,
+      metadata,
+      sizeBytes: Buffer.byteLength(rawHtml, 'utf8'),
+      verified: false,
+      flaggedForDeletion: false,
+      relatedRecordId,
+    };
+
+    await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(newScrape.id).set(newScrape);
+
+    logger.info(`New temporary scrape created for ${url}`, {
+      id: newScrape.id,
+      sizeBytes: newScrape.sizeBytes,
+      expiresAt: newScrape.expiresAt,
+    });
+
+    return { scrape: newScrape, isNew: true };
+  } catch (error: any) {
+    logger.error('Failed to save temporary scrape', error);
+    throw new Error(`Failed to save temporary scrape: ${error.message}`);
+  }
+}
+
+/**
+ * Flag a temporary scrape for immediate deletion (called after client verification)
+ */
+export async function flagScrapeForDeletion(scrapeId: string): Promise<void> {
+  try {
+    await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(scrapeId).update({
+      flaggedForDeletion: true,
+      verified: true,
+      verifiedAt: new Date(),
+    });
+
+    logger.info(`Temporary scrape ${scrapeId} flagged for deletion`);
+  } catch (error: any) {
+    logger.error(`Failed to flag scrape for deletion`, error, { scrapeId });
+    throw new Error(`Failed to flag scrape for deletion: ${error.message}`);
+  }
+}
+
+/**
+ * Delete flagged scrapes immediately (called by cleanup job)
+ */
+export async function deleteFlaggedScrapes(organizationId: string): Promise<number> {
+  try {
+    const flagged = await db
+      .collection(TEMPORARY_SCRAPES_COLLECTION)
+      .where('organizationId', '==', organizationId)
+      .where('flaggedForDeletion', '==', true)
+      .limit(500) // Batch size
+      .get();
+
+    let deletedCount = 0;
+
+    for (const doc of flagged.docs) {
+      await doc.ref.delete();
+      deletedCount++;
+    }
+
+    if (deletedCount > 0) {
+      logger.info(`Deleted ${deletedCount} flagged temporary scrapes`, { organizationId });
+    }
+
+    return deletedCount;
+  } catch (error: any) {
+    logger.error('Failed to delete flagged scrapes', error, { organizationId });
+    throw new Error(`Failed to delete flagged scrapes: ${error.message}`);
+  }
+}
+
+/**
+ * Get temporary scrape by ID
+ */
+export async function getTemporaryScrape(scrapeId: string): Promise<TemporaryScrape | null> {
+  try {
+    const doc = await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(scrapeId).get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    return doc.data() as TemporaryScrape;
+  } catch (error: any) {
+    logger.error('Failed to get temporary scrape', error, { scrapeId });
+    throw new Error(`Failed to get temporary scrape: ${error.message}`);
+  }
+}
+
+/**
+ * Get temporary scrapes for a URL (for training UI)
+ */
+export async function getTemporaryScrapesByUrl(
+  organizationId: string,
+  url: string
+): Promise<TemporaryScrape[]> {
+  try {
+    const docs = await db
+      .collection(TEMPORARY_SCRAPES_COLLECTION)
+      .where('organizationId', '==', organizationId)
+      .where('url', '==', url)
+      .orderBy('createdAt', 'desc')
+      .limit(10)
+      .get();
+
+    return docs.docs.map((doc) => doc.data() as TemporaryScrape);
+  } catch (error: any) {
+    logger.error('Failed to get temporary scrapes by URL', error, { organizationId, url });
+    throw new Error(`Failed to get temporary scrapes: ${error.message}`);
+  }
+}
+
+/**
+ * Calculate storage cost estimate
+ */
+export async function calculateStorageCost(organizationId: string): Promise<{
+  totalScrapes: number;
+  totalBytes: number;
+  estimatedMonthlyCostUSD: number;
+  projectedSavingsWithTTL: number;
+}> {
+  try {
+    const scrapes = await db
+      .collection(TEMPORARY_SCRAPES_COLLECTION)
+      .where('organizationId', '==', organizationId)
+      .get();
+
+    const totalBytes = scrapes.docs.reduce((sum, doc) => {
+      const data = doc.data() as TemporaryScrape;
+      return sum + data.sizeBytes;
+    }, 0);
+
+    // Firestore pricing: ~$0.18/GB/month
+    const costPerGB = 0.18;
+    const totalGB = totalBytes / (1024 * 1024 * 1024);
+    const estimatedMonthlyCostUSD = totalGB * costPerGB;
+
+    // Without TTL, this would grow indefinitely
+    // Estimate: 100 scrapes/day × 30 days = 3000 scrapes
+    // With TTL: only last 7 days = 700 scrapes
+    // Savings: 3000 - 700 = 2300 scrapes = 77% reduction
+    const projectedSavingsWithTTL = estimatedMonthlyCostUSD * 0.77;
+
+    return {
+      totalScrapes: scrapes.size,
+      totalBytes,
+      estimatedMonthlyCostUSD,
+      projectedSavingsWithTTL,
+    };
+  } catch (error: any) {
+    logger.error('Failed to calculate storage cost', error, { organizationId });
+    throw new Error(`Failed to calculate storage cost: ${error.message}`);
+  }
+}
+```
+
+**Requirements:**
+- [ ] Service file created with all CRUD operations
+- [ ] Content hashing implemented (SHA-256)
+- [ ] Duplicate detection logic works
+- [ ] TTL calculation correct (7 days)
+- [ ] Flagging for deletion implemented
+- [ ] Cost calculator implemented
+- [ ] All functions have error handling
+- [ ] Structured logging used
+
+#### 3. Create Firestore Indexes and Security Rules
+
+**File:** `firestore.indexes.json` (ADD to existing)
+
+```json
+{
+  "indexes": [
+    {
+      "collectionGroup": "temporary_scrapes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizationId", "order": "ASCENDING" },
+        { "fieldPath": "contentHash", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "temporary_scrapes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizationId", "order": "ASCENDING" },
+        { "fieldPath": "url", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "temporary_scrapes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "organizationId", "order": "ASCENDING" },
+        { "fieldPath": "flaggedForDeletion", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "temporary_scrapes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    }
+  ]
+}
+```
+
+**File:** `firestore.rules` (ADD to existing)
+
+```javascript
+match /temporary_scrapes/{scrapeId} {
+  // Only the owning organization can read their scrapes
+  allow read: if request.auth != null && 
+                 resource.data.organizationId == request.auth.token.organizationId;
+  
+  // Only the owning organization can create scrapes
+  allow create: if request.auth != null && 
+                   request.resource.data.organizationId == request.auth.token.organizationId;
+  
+  // Only the owning organization can update (for flagging)
+  allow update: if request.auth != null && 
+                   resource.data.organizationId == request.auth.token.organizationId;
+  
+  // Only the owning organization can delete
+  allow delete: if request.auth != null && 
+                   resource.data.organizationId == request.auth.token.organizationId;
+}
+```
+
+**Requirements:**
+- [ ] Indexes created for all query patterns
+- [ ] Security rules enforce organization isolation
+- [ ] Rules tested with Firestore emulator
+- [ ] No security vulnerabilities
+
+#### 4. Configure Firestore TTL Policy
+
+**Documentation: Create `docs/FIRESTORE_TTL_SETUP.md`**
+
+```markdown
+# Firestore TTL (Time-To-Live) Setup
+
+## Option 1: Firestore Native TTL (Recommended)
+
+Firestore supports automatic deletion based on a TTL field.
+
+### Setup Steps:
+
+1. **Enable TTL in Firebase Console:**
+   - Go to Firestore Database
+   - Click "TTL" tab
+   - Click "Create TTL Policy"
+   - Collection: `temporary_scrapes`
+   - TTL Field: `expiresAt`
+   - Click "Create"
+
+2. **Verify:**
+   ```bash
+   gcloud firestore fields ttls list --database='(default)'
+   ```
+
+3. **Monitor:**
+   - TTL deletions happen within 72 hours of expiration
+   - Check Firestore usage metrics
+
+## Option 2: Cloud Function Cleanup (Alternative)
+
+If TTL is not available in your region:
+
+**File:** `functions/src/cleanupExpiredScrapes.ts`
+
+```typescript
+import * as functions from 'firebase-functions';
+import { db } from './firebase-admin';
+
+export const cleanupExpiredScrapes = functions.pubsub
+  .schedule('every 24 hours')
+  .onRun(async () => {
+    const now = new Date();
+    
+    const expired = await db
+      .collection('temporary_scrapes')
+      .where('expiresAt', '<=', now)
+      .limit(500)
+      .get();
+    
+    let deletedCount = 0;
+    
+    for (const doc of expired.docs) {
+      await doc.ref.delete();
+      deletedCount++;
+    }
+    
+    console.log(`Deleted ${deletedCount} expired temporary scrapes`);
+    
+    return { deletedCount };
+  });
+```
+
+**Deploy:**
+```bash
+firebase deploy --only functions:cleanupExpiredScrapes
+```
+```
+
+**Requirements:**
+- [ ] TTL policy configured OR Cloud Function deployed
+- [ ] Documentation created
+- [ ] Monitoring set up to verify deletions
+- [ ] Cost savings verified
+
+#### 5. Write Tests
+
+**File:** `tests/unit/scraper-intelligence/temporary-scrapes.test.ts` (CREATE)
+
+```typescript
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import {
+  calculateContentHash,
+  calculateExpirationDate,
+  saveTemporaryScrape,
+  flagScrapeForDeletion,
+  calculateStorageCost,
+} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+
+describe('Temporary Scrapes Service', () => {
+  describe('calculateContentHash', () => {
+    it('should generate consistent SHA-256 hash', () => {
+      const content = '<html><body>Test</body></html>';
+      const hash1 = calculateContentHash(content);
+      const hash2 = calculateContentHash(content);
+      
+      expect(hash1).toBe(hash2);
+      expect(hash1).toHaveLength(64); // SHA-256 is 64 hex chars
+    });
+
+    it('should generate different hashes for different content', () => {
+      const content1 = '<html><body>Test 1</body></html>';
+      const content2 = '<html><body>Test 2</body></html>';
+      
+      const hash1 = calculateContentHash(content1);
+      const hash2 = calculateContentHash(content2);
+      
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('should be case-sensitive', () => {
+      const content1 = '<HTML><BODY>Test</BODY></HTML>';
+      const content2 = '<html><body>Test</body></html>';
+      
+      const hash1 = calculateContentHash(content1);
+      const hash2 = calculateContentHash(content2);
+      
+      expect(hash1).not.toBe(hash2);
+    });
+  });
+
+  describe('calculateExpirationDate', () => {
+    it('should set expiration to 7 days from now', () => {
+      const now = new Date();
+      const expiration = calculateExpirationDate();
+      
+      const diffMs = expiration.getTime() - now.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      
+      expect(diffDays).toBeCloseTo(7, 1); // Allow small time difference
+    });
+
+    it('should generate future dates', () => {
+      const now = new Date();
+      const expiration = calculateExpirationDate();
+      
+      expect(expiration.getTime()).toBeGreaterThan(now.getTime());
+    });
+  });
+
+  describe('Duplicate Detection', () => {
+    it('should detect duplicate content and update lastSeen', async () => {
+      // This would be an integration test with Firestore
+      // For unit test, we'd mock the Firestore calls
+      
+      const params = {
+        organizationId: 'test-org',
+        url: 'https://example.com',
+        rawHtml: '<html><body>Test</body></html>',
+        cleanedContent: 'Test',
+        metadata: { title: 'Test Page' },
+      };
+
+      // First save - should create new
+      const result1 = await saveTemporaryScrape(params);
+      expect(result1.isNew).toBe(true);
+      expect(result1.scrape.scrapeCount).toBe(1);
+
+      // Second save with same content - should update
+      const result2 = await saveTemporaryScrape(params);
+      expect(result2.isNew).toBe(false);
+      expect(result2.scrape.scrapeCount).toBe(2);
+      expect(result2.scrape.id).toBe(result1.scrape.id); // Same document
+    });
+
+    it('should create new document if content changes', async () => {
+      const params1 = {
+        organizationId: 'test-org',
+        url: 'https://example.com',
+        rawHtml: '<html><body>Test 1</body></html>',
+        cleanedContent: 'Test 1',
+        metadata: { title: 'Test Page' },
+      };
+
+      const params2 = {
+        ...params1,
+        rawHtml: '<html><body>Test 2</body></html>', // Different content
+      };
+
+      const result1 = await saveTemporaryScrape(params1);
+      const result2 = await saveTemporaryScrape(params2);
+
+      expect(result1.isNew).toBe(true);
+      expect(result2.isNew).toBe(true);
+      expect(result1.scrape.id).not.toBe(result2.scrape.id); // Different documents
+    });
+  });
+
+  describe('Storage Cost Calculation', () => {
+    it('should calculate storage costs correctly', async () => {
+      const result = await calculateStorageCost('test-org');
+      
+      expect(result.totalScrapes).toBeGreaterThanOrEqual(0);
+      expect(result.totalBytes).toBeGreaterThanOrEqual(0);
+      expect(result.estimatedMonthlyCostUSD).toBeGreaterThanOrEqual(0);
+      expect(result.projectedSavingsWithTTL).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should show significant savings with TTL', async () => {
+      const result = await calculateStorageCost('test-org');
+      
+      // Savings should be ~77% of total cost
+      if (result.estimatedMonthlyCostUSD > 0) {
+        const savingsPercentage = (result.projectedSavingsWithTTL / result.estimatedMonthlyCostUSD) * 100;
+        expect(savingsPercentage).toBeGreaterThan(70);
+        expect(savingsPercentage).toBeLessThan(80);
+      }
+    });
+  });
+});
+```
+
+**Requirements:**
+- [ ] Unit tests written for all functions
+- [ ] Integration tests for Firestore operations
+- [ ] Edge cases tested (empty content, huge content)
+- [ ] Duplicate detection tested
+- [ ] Cost calculations verified
+- [ ] All tests passing
+
+### ✅ Step 1.2 Acceptance Criteria
+
+Before moving to Step 1.3, verify ALL of the following:
+
+- [ ] TemporaryScrape type created with all fields
+- [ ] Content hashing implemented (SHA-256)
+- [ ] TTL field (expiresAt) set to 7 days from creation
+- [ ] Duplicate detection works (updates lastSeen instead of creating new doc)
+- [ ] Firestore service created with CRUD operations
+- [ ] Firestore indexes created
+- [ ] Security rules updated and tested
+- [ ] TTL policy configured OR cleanup Cloud Function deployed
+- [ ] Documentation created (FIRESTORE_TTL_SETUP.md)
+- [ ] Unit tests written and passing (>90% coverage)
+- [ ] Integration tests passing
+- [ ] Cost calculator works
+- [ ] Storage savings projections documented
+- [ ] No TypeScript errors
+- [ ] No ESLint errors
+
+---
+
+END OF STEP 1.2 INSTRUCTIONS
 
 ---
 
