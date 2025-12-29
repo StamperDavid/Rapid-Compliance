@@ -11,6 +11,9 @@
  * Progress: 50/50 (100%) ✅ COMPLETE
  */
 
+import type { ResearchIntelligence } from '@/types/scraper-intelligence';
+import { ResearchIntelligenceSchema } from '@/types/scraper-intelligence';
+
 export interface IndustryTemplate {
   id: string;
   name: string;
@@ -45,6 +48,18 @@ export interface IndustryTemplate {
     conversionRhythm: string;
     secondaryActions: string[];
   };
+
+  /**
+   * Research Intelligence (NEW)
+   * 
+   * Guides the web scraper on what data to extract, where to look,
+   * and how to score leads for this industry.
+   * 
+   * Optional for backward compatibility with existing templates.
+   * 
+   * @see ResearchIntelligence for full type definition
+   */
+  research?: ResearchIntelligence;
 }
 
 /**
@@ -2901,3 +2916,69 @@ export function getTemplateCount(): { total: number; byCategory: Record<string, 
   };
 }
 
+// ============================================================================
+// RESEARCH INTELLIGENCE HELPERS
+// ============================================================================
+
+/**
+ * Check if a template has research intelligence configured
+ */
+export function hasResearchIntelligence(template: IndustryTemplate): boolean {
+  return template.research !== undefined && template.research !== null;
+}
+
+/**
+ * Get research intelligence from template, or return null
+ */
+export function getResearchIntelligence(
+  template: IndustryTemplate
+): ResearchIntelligence | null {
+  return template.research ?? null;
+}
+
+/**
+ * Get industry template by ID
+ */
+export function getTemplateById(templateId: string): IndustryTemplate | null {
+  return INDUSTRY_TEMPLATES[templateId] ?? null;
+}
+
+/**
+ * Get research intelligence by industry ID
+ */
+export function getResearchIntelligenceById(
+  industryId: string
+): ResearchIntelligence | null {
+  const template = getTemplateById(industryId);
+  return template ? getResearchIntelligence(template) : null;
+}
+
+/**
+ * Get all templates that have research intelligence configured
+ */
+export function getTemplatesWithResearch(): IndustryTemplate[] {
+  return Object.values(INDUSTRY_TEMPLATES).filter(hasResearchIntelligence);
+}
+
+/**
+ * Validate research intelligence configuration
+ */
+export function validateResearchIntelligence(
+  research: unknown
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  try {
+    ResearchIntelligenceSchema.parse(research);
+    return { valid: true, errors: [] };
+  } catch (error: any) {
+    if (error.errors) {
+      error.errors.forEach((err: any) => {
+        errors.push(`${err.path.join('.')}: ${err.message}`);
+      });
+    } else {
+      errors.push(error.message || 'Unknown validation error');
+    }
+    return { valid: false, errors };
+  }
+}
