@@ -378,6 +378,16 @@ export async function enrichCompany(
     // Step 13: Cache the results
     await cacheEnrichment(domain, enrichmentData, organizationId, 7); // 7 day TTL
     
+    // Calculate storage metrics
+    const storageMetrics = distillationResult ? {
+      rawScrapeSize: distillationResult.storageReduction.rawSizeBytes,
+      signalsSize: distillationResult.storageReduction.signalsSizeBytes,
+      reductionPercent: distillationResult.storageReduction.reductionPercent,
+      temporaryScrapeId,
+      contentHash,
+      isDuplicate,
+    } : undefined;
+    
     // Step 14: Log cost for analytics (including storage savings from distillation)
     await logEnrichmentCost(organizationId, {
       organizationId,
@@ -397,16 +407,6 @@ export async function enrichCompany(
     logger.info('Enrichment ✅ SUCCESS for domain}', { file: 'enrichment-service.ts' });
     logger.info('  Cost: $${totalCost.toFixed(4)} | Saved: $${(0.75 - totalCost).toFixed(4)}', { file: 'enrichment-service.ts' });
     logger.info('  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms', { file: 'enrichment-service.ts' });
-    
-    // Calculate storage metrics
-    const storageMetrics = distillationResult ? {
-      rawScrapeSize: distillationResult.storageReduction.rawSizeBytes,
-      signalsSize: distillationResult.storageReduction.signalsSizeBytes,
-      reductionPercent: distillationResult.storageReduction.reductionPercent,
-      temporaryScrapeId,
-      contentHash,
-      isDuplicate,
-    } : undefined;
     
     if (distillationResult) {
       logger.info('  Signals: ${distillationResult.signals.length} detected | Lead Score: ${leadScore || 0}', { file: 'enrichment-service.ts' });
