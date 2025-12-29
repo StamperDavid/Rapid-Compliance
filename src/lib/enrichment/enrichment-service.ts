@@ -33,10 +33,24 @@ import { logger } from '@/lib/logger/logger';
 // NEW: Import distillation engine and industry templates
 import { distillScrape, calculateLeadScore } from '@/lib/scraper-intelligence/distillation-engine';
 import { getResearchIntelligenceById } from '@/lib/persona/industry-templates';
+import { 
+  saveTemporaryScrape, 
+  calculateContentHash,
+  getTemporaryScrapeByHash 
+} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+
+/**
+ * Feature flag for distillation engine
+ * Set to false to disable temporary scrape storage and signal extraction
+ * Default: true (enabled)
+ */
+const ENABLE_DISTILLATION = process.env.NEXT_PUBLIC_ENABLE_DISTILLATION !== 'false';
 
 /**
  * Main enrichment function (PRODUCTION READY)
  * This replaces all Clearbit calls with NO fake data
+ * 
+ * NEW in Phase 5: Integrated with temporary scrapes service for TTL architecture
  */
 export async function enrichCompany(
   request: EnrichmentRequest,
@@ -48,6 +62,7 @@ export async function enrichCompany(
     organizationId,
     companyName: request.companyName,
     domain: request.domain,
+    distillationEnabled: ENABLE_DISTILLATION,
   });
   
   try {
@@ -123,6 +138,7 @@ export async function enrichCompany(
           durationMs: Date.now() - startTime,
           dataPointsExtracted: countDataPoints(cached),
           confidenceScore: cached.confidence,
+          // No storage metrics for cache hits (no new scrape)
         },
       };
     }
@@ -156,11 +172,36 @@ export async function enrichCompany(
       );
     }
     
+    // Step 5a: Check content hash for duplicates (avoid re-processing same content)
+    let contentHash: string | undefined;
+    let temporaryScrapeId: string | undefined;
+    let isDuplicate = false;
+    let temporaryScrapeDoc = null;
+    
+    if (ENABLE_DISTILLATION && scrapedContent.rawHtml) {
+      contentHash = calculateContentHash(scrapedContent.rawHtml);
+      
+      // Check if we've already processed this exact content
+      const existingScrape = await getTemporaryScrapeByHash(organizationId, contentHash);
+      
+      if (existingScrape) {
+        isDuplicate = true;
+        temporaryScrapeId = existingScrape.id;
+        
+        logger.info('Content hash match - reusing existing scrape', {
+          domain,
+          contentHash,
+          temporaryScrapeId,
+          lastSeen: existingScrape.lastSeen,
+        });
+      }
+    }
+    
     // Step 6: Run distillation engine if industry template provided
     let distillationResult: Awaited<ReturnType<typeof distillScrape>> | null = null;
     let leadScore: number | undefined;
     
-    if (request.industryTemplateId && request.enableDistillation !== false) {
+    if (request.industryTemplateId && request.enableDistillation !== false && ENABLE_DISTILLATION) {
       try {
         const research = await getResearchIntelligenceById(request.industryTemplateId);
         
@@ -168,8 +209,44 @@ export async function enrichCompany(
           logger.info('Running distillation engine with industry research', {
             industryId: request.industryTemplateId,
             domain,
+            isDuplicate,
           });
           
+          // Step 6a: Save raw scrape to temporary_scrapes (with TTL) if not duplicate
+          if (!isDuplicate && scrapedContent.rawHtml) {
+            try {
+              const { scrape, isNew } = await saveTemporaryScrape({
+                organizationId,
+                url: website,
+                rawHtml: scrapedContent.rawHtml,
+                cleanedContent: scrapedContent.cleanedText,
+                metadata: {
+                  title: scrapedContent.title,
+                  description: scrapedContent.description,
+                  author: scrapedContent.metadata?.author,
+                  keywords: scrapedContent.metadata?.keywords,
+                  platform: 'website',
+                },
+              });
+              
+              temporaryScrapeId = scrape.id;
+              temporaryScrapeDoc = scrape;
+              
+              logger.info('Temporary scrape saved', {
+                temporaryScrapeId,
+                isNew,
+                expiresAt: scrape.expiresAt,
+                contentHash: scrape.contentHash,
+                size: scrapedContent.rawHtml.length,
+              });
+            } catch (saveError) {
+              logger.error('Failed to save temporary scrape, continuing with enrichment', saveError, {
+                domain,
+              });
+            }
+          }
+          
+          // Step 6b: Run distillation to extract signals
           distillationResult = await distillScrape({
             organizationId,
             url: website,
@@ -197,6 +274,7 @@ export async function enrichCompany(
             signalsDetected: distillationResult.signals.length,
             leadScore,
             storageReduction: distillationResult.storageReduction.reductionPercent,
+            temporaryScrapeId,
           });
         } else {
           logger.warn('Industry template has no research intelligence', {
@@ -314,15 +392,27 @@ export async function enrichCompany(
       savings: 0.75 - totalCost,
       durationMs: Date.now() - startTime,
       success: true,
+      storageMetrics,
     });
     
     logger.info('Enrichment ✅ SUCCESS for domain}', { file: 'enrichment-service.ts' });
     logger.info('  Cost: $${totalCost.toFixed(4)} | Saved: $${(0.75 - totalCost).toFixed(4)}', { file: 'enrichment-service.ts' });
     logger.info('  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms', { file: 'enrichment-service.ts' });
     
+    // Calculate storage metrics
+    const storageMetrics = distillationResult ? {
+      rawScrapeSize: distillationResult.storageReduction.rawSizeBytes,
+      signalsSize: distillationResult.storageReduction.signalsSizeBytes,
+      reductionPercent: distillationResult.storageReduction.reductionPercent,
+      temporaryScrapeId,
+      contentHash,
+      isDuplicate,
+    } : undefined;
+    
     if (distillationResult) {
       logger.info('  Signals: ${distillationResult.signals.length} detected | Lead Score: ${leadScore || 0}', { file: 'enrichment-service.ts' });
       logger.info('  Storage: ${distillationResult.storageReduction.reductionPercent}% reduction (${distillationResult.storageReduction.rawSizeBytes} → ${distillationResult.storageReduction.signalsSizeBytes} bytes)', { file: 'enrichment-service.ts' });
+      logger.info(`  Temporary Scrape: ${temporaryScrapeId || 'none'} | Duplicate: ${isDuplicate}`, { file: 'enrichment-service.ts' });
     }
     
     return {
@@ -338,6 +428,7 @@ export async function enrichCompany(
         durationMs: Date.now() - startTime,
         dataPointsExtracted: countDataPoints(enrichmentData),
         confidenceScore: enrichmentData.confidence,
+        storageMetrics,
       },
     };
   } catch (error: any) {
@@ -440,6 +531,7 @@ async function useBackupSources(
           durationMs: Date.now() - startTime,
           dataPointsExtracted: countDataPoints(enrichmentData),
           confidenceScore: 40,
+          // No storage metrics for backup sources (no scrape)
         },
       };
     }
@@ -651,6 +743,106 @@ export async function getEnrichmentAnalytics(
       averageCost: 0,
       averageDuration: 0,
       cacheHitRate: 0,
+    };
+  }
+}
+
+/**
+ * Get storage optimization analytics (NEW)
+ * 
+ * Tracks distillation engine efficiency and storage cost savings
+ * 
+ * @param organizationId - Organization to get analytics for
+ * @param days - Number of days to analyze (default: 30)
+ * @returns Storage metrics and cost savings
+ */
+export async function getStorageOptimizationAnalytics(
+  organizationId: string,
+  days: number = 30
+): Promise<{
+  totalScrapes: number;
+  scrapesWithDistillation: number;
+  duplicatesDetected: number;
+  totalRawBytes: number;
+  totalSignalsBytes: number;
+  averageReductionPercent: number;
+  estimatedStorageCostSavings: number; // USD per month
+  duplicateRate: number; // percentage
+}> {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    
+    const { where } = await import('firebase/firestore');
+    const logs = await FirestoreService.getAll<EnrichmentCostLog>(
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrichment-costs`,
+      [
+        where('timestamp', '>=', cutoffDate)
+      ]
+    );
+    
+    // Filter logs with storage metrics
+    const logsWithMetrics = logs.filter(log => log.storageMetrics);
+    
+    const totalScrapes = logs.length;
+    const scrapesWithDistillation = logsWithMetrics.length;
+    const duplicatesDetected = logsWithMetrics.filter(log => log.storageMetrics?.isDuplicate).length;
+    
+    const totalRawBytes = logsWithMetrics.reduce(
+      (sum, log) => sum + (log.storageMetrics?.rawScrapeSize || 0), 
+      0
+    );
+    const totalSignalsBytes = logsWithMetrics.reduce(
+      (sum, log) => sum + (log.storageMetrics?.signalsSize || 0), 
+      0
+    );
+    
+    const reductions = logsWithMetrics
+      .map(log => log.storageMetrics?.reductionPercent || 0)
+      .filter(r => r > 0);
+    const averageReductionPercent = reductions.length > 0
+      ? reductions.reduce((sum, r) => sum + r, 0) / reductions.length
+      : 0;
+    
+    // Estimate monthly storage cost savings
+    // Without distillation: totalRawBytes stored permanently
+    // With distillation: totalSignalsBytes stored permanently
+    const bytesSaved = totalRawBytes - totalSignalsBytes;
+    const gbSaved = bytesSaved / (1024 * 1024 * 1024);
+    const FIRESTORE_COST_PER_GB_MONTHLY = 0.18; // USD
+    const estimatedStorageCostSavings = gbSaved * FIRESTORE_COST_PER_GB_MONTHLY * (30 / days); // Extrapolate to monthly
+    
+    const duplicateRate = totalScrapes > 0 ? (duplicatesDetected / totalScrapes) * 100 : 0;
+    
+    logger.info('Storage optimization analytics calculated', {
+      organizationId,
+      days,
+      scrapesWithDistillation,
+      averageReductionPercent,
+      estimatedStorageCostSavings,
+    });
+    
+    return {
+      totalScrapes,
+      scrapesWithDistillation,
+      duplicatesDetected,
+      totalRawBytes,
+      totalSignalsBytes,
+      averageReductionPercent,
+      estimatedStorageCostSavings,
+      duplicateRate,
+    };
+  } catch (error) {
+    logger.error('[Enrichment] Error getting storage analytics:', error, { file: 'enrichment-service.ts' });
+    return {
+      totalScrapes: 0,
+      scrapesWithDistillation: 0,
+      duplicatesDetected: 0,
+      totalRawBytes: 0,
+      totalSignalsBytes: 0,
+      averageReductionPercent: 0,
+      estimatedStorageCostSavings: 0,
+      duplicateRate: 0,
     };
   }
 }

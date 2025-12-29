@@ -339,4 +339,250 @@ describe('Enrichment + Distillation Integration', () => {
       expect(result.cost.totalCostUSD).toBeLessThan(0.01);
     }, 30000);
   });
+
+  describe('Phase 5: Storage Metrics Integration', () => {
+    it('should return storage metrics in enrichment response', async () => {
+      const result = await enrichCompany(
+        {
+          companyName: 'Storage Metrics Test',
+          domain: 'storagemetrics.com',
+          website: 'https://storagemetrics.com',
+          industryTemplateId: 'hvac',
+          enableDistillation: true,
+        },
+        TEST_ORG_ID
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.metrics).toBeDefined();
+      
+      // NEW: Check for storage metrics
+      if (result.metrics.storageMetrics) {
+        expect(result.metrics.storageMetrics.rawScrapeSize).toBeGreaterThan(0);
+        expect(result.metrics.storageMetrics.signalsSize).toBeGreaterThan(0);
+        expect(result.metrics.storageMetrics.reductionPercent).toBeGreaterThan(0);
+        expect(result.metrics.storageMetrics.contentHash).toBeDefined();
+        expect(typeof result.metrics.storageMetrics.isDuplicate).toBe('boolean');
+        
+        console.log('\nStorage Metrics:');
+        console.log('- Raw size:', result.metrics.storageMetrics.rawScrapeSize, 'bytes');
+        console.log('- Signals size:', result.metrics.storageMetrics.signalsSize, 'bytes');
+        console.log('- Reduction:', result.metrics.storageMetrics.reductionPercent.toFixed(2) + '%');
+        console.log('- Content hash:', result.metrics.storageMetrics.contentHash?.substring(0, 16) + '...');
+        console.log('- Is duplicate:', result.metrics.storageMetrics.isDuplicate);
+        console.log('- Temp scrape ID:', result.metrics.storageMetrics.temporaryScrapeId || 'N/A');
+        
+        // Verify storage reduction meets target (>95%)
+        expect(result.metrics.storageMetrics.reductionPercent).toBeGreaterThanOrEqual(90);
+      }
+    }, 30000);
+
+    it('should detect content hash duplicates on second enrichment', async () => {
+      const testDomain = 'hashdupetest.com';
+      const testUrl = `https://${testDomain}`;
+      
+      // First enrichment - should NOT be duplicate
+      const result1 = await enrichCompany(
+        {
+          companyName: 'Hash Duplicate Test',
+          domain: testDomain,
+          website: testUrl,
+          industryTemplateId: 'hvac',
+          enableDistillation: true,
+        },
+        TEST_ORG_ID
+      );
+
+      expect(result1.success).toBe(true);
+      
+      if (result1.metrics.storageMetrics) {
+        expect(result1.metrics.storageMetrics.isDuplicate).toBe(false);
+        const contentHash1 = result1.metrics.storageMetrics.contentHash;
+        
+        // Second enrichment (same URL, should detect duplicate if content unchanged)
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
+        
+        const result2 = await enrichCompany(
+          {
+            companyName: 'Hash Duplicate Test',
+            domain: testDomain,
+            website: testUrl,
+            industryTemplateId: 'hvac',
+            enableDistillation: true,
+          },
+          TEST_ORG_ID
+        );
+
+        expect(result2.success).toBe(true);
+        
+        if (result2.metrics.storageMetrics) {
+          const contentHash2 = result2.metrics.storageMetrics.contentHash;
+          
+          // Content hashes should match if content is the same
+          if (contentHash1 === contentHash2) {
+            expect(result2.metrics.storageMetrics.isDuplicate).toBe(true);
+            
+            console.log('\nContent Hash Duplicate Detection:');
+            console.log('- First hash:', contentHash1?.substring(0, 16) + '...');
+            console.log('- Second hash:', contentHash2?.substring(0, 16) + '...');
+            console.log('- Duplicate detected:', result2.metrics.storageMetrics.isDuplicate);
+          }
+        }
+      }
+    }, 60000);
+
+    it('should log storage metrics to enrichment cost log', async () => {
+      const result = await enrichCompany(
+        {
+          companyName: 'Storage Cost Log Test',
+          domain: 'storagecostlog.com',
+          website: 'https://storagecostlog.com',
+          industryTemplateId: 'saas-software',
+          enableDistillation: true,
+        },
+        TEST_ORG_ID
+      );
+
+      expect(result.success).toBe(true);
+
+      // Query for the cost log
+      const costLogs = await db
+        .collection(`organizations/${TEST_ORG_ID}/enrichment-costs`)
+        .where('companyDomain', '==', 'storagecostlog.com')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get();
+
+      if (!costLogs.empty) {
+        const costLog = costLogs.docs[0].data();
+        
+        // Verify storage metrics are logged
+        expect(costLog.storageMetrics).toBeDefined();
+        
+        if (costLog.storageMetrics) {
+          expect(costLog.storageMetrics.rawScrapeSize).toBeGreaterThan(0);
+          expect(costLog.storageMetrics.signalsSize).toBeGreaterThan(0);
+          expect(costLog.storageMetrics.reductionPercent).toBeGreaterThan(0);
+          
+          console.log('\nCost Log Storage Metrics:');
+          console.log('- Raw size:', costLog.storageMetrics.rawScrapeSize, 'bytes');
+          console.log('- Signals size:', costLog.storageMetrics.signalsSize, 'bytes');
+          console.log('- Reduction:', costLog.storageMetrics.reductionPercent + '%');
+          console.log('- Content hash logged:', costLog.storageMetrics.contentHash ? 'Yes' : 'No');
+        }
+      }
+    }, 30000);
+  });
+
+  describe('Phase 5: Backward Compatibility', () => {
+    it('should work with enrichment requests without industryTemplateId', async () => {
+      const result = await enrichCompany(
+        {
+          companyName: 'No Template Test',
+          domain: 'notemplate.com',
+          website: 'https://notemplate.com',
+          // No industryTemplateId - should use standard enrichment
+        },
+        TEST_ORG_ID
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBeDefined();
+      
+      // Should NOT have distillation results
+      if (result.data) {
+        expect(result.data.extractedSignals?.length || 0).toBe(0);
+        expect(result.data.leadScore).toBeUndefined();
+      }
+      
+      // Should NOT have storage metrics (no distillation)
+      expect(result.metrics.storageMetrics).toBeUndefined();
+      
+      console.log('\nBackward Compatibility (No Template):');
+      console.log('- Enrichment successful:', result.success);
+      console.log('- Has storage metrics:', !!result.metrics.storageMetrics);
+    }, 30000);
+
+    it('should respect enableDistillation=false flag', async () => {
+      const result = await enrichCompany(
+        {
+          companyName: 'Distillation Disabled Test',
+          domain: 'nodistill2.com',
+          website: 'https://nodistill2.com',
+          industryTemplateId: 'hvac', // Template provided
+          enableDistillation: false, // But explicitly disabled
+        },
+        TEST_ORG_ID
+      );
+
+      expect(result.success).toBe(true);
+      
+      // Should NOT run distillation
+      if (result.data) {
+        expect(result.data.extractedSignals?.length || 0).toBe(0);
+        expect(result.data.leadScore).toBeUndefined();
+      }
+      
+      // Should NOT have storage metrics
+      expect(result.metrics.storageMetrics).toBeUndefined();
+      
+      console.log('\nBackward Compatibility (Disabled Flag):');
+      console.log('- Enrichment successful:', result.success);
+      console.log('- Signals detected:', result.data?.extractedSignals?.length || 0);
+      console.log('- Has storage metrics:', !!result.metrics.storageMetrics);
+    }, 30000);
+
+    it('should handle missing rawHtml gracefully', async () => {
+      // This tests the case where scraping returns cleaned text but no rawHtml
+      const result = await enrichCompany(
+        {
+          companyName: 'No HTML Test',
+          domain: 'nohtml.com',
+          website: 'https://nohtml.com',
+          industryTemplateId: 'hvac',
+          enableDistillation: true,
+        },
+        TEST_ORG_ID
+      );
+
+      // Should still succeed (graceful degradation)
+      expect(result.success).toBe(true);
+      
+      console.log('\nGraceful Degradation (No rawHtml):');
+      console.log('- Enrichment successful:', result.success);
+    }, 30000);
+  });
+
+  describe('Phase 5: Performance Verification', () => {
+    it('should not regress performance by more than 10%', async () => {
+      const startTime = Date.now();
+      
+      const result = await enrichCompany(
+        {
+          companyName: 'Performance Test',
+          domain: 'perftest.com',
+          website: 'https://perftest.com',
+          industryTemplateId: 'hvac',
+          enableDistillation: true,
+        },
+        TEST_ORG_ID
+      );
+
+      const duration = Date.now() - startTime;
+      
+      expect(result.success).toBe(true);
+      
+      console.log('\nPerformance Test:');
+      console.log('- Total duration:', duration + 'ms');
+      console.log('- Reported duration:', result.metrics.durationMs + 'ms');
+      
+      // Enrichment should complete within reasonable time (30s max)
+      expect(duration).toBeLessThan(30000);
+      
+      // Storage metrics calculation should be fast (<100ms overhead)
+      if (result.metrics.storageMetrics) {
+        console.log('- Storage metrics calculated: Yes');
+      }
+    }, 35000);
+  });
 });

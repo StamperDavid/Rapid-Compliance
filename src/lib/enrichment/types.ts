@@ -172,6 +172,19 @@ export interface EnrichmentResponse {
     durationMs: number;
     dataPointsExtracted: number;
     confidenceScore: number;
+    
+    /**
+     * Storage optimization metrics (NEW)
+     * Tracks distillation engine efficiency
+     */
+    storageMetrics?: {
+      rawScrapeSize: number; // bytes
+      signalsSize: number; // bytes
+      reductionPercent: number;
+      temporaryScrapeId?: string; // Reference to temporary_scrapes document
+      contentHash?: string; // SHA-256 hash for duplicate detection
+      isDuplicate: boolean; // Whether this was a cache hit on content hash
+    };
   };
 }
 
@@ -236,6 +249,19 @@ export interface EnrichmentCostLog {
   // Performance
   durationMs: number;
   success: boolean;
+  
+  /**
+   * Storage optimization tracking (NEW)
+   * Monitors distillation efficiency and cost savings
+   */
+  storageMetrics?: {
+    rawScrapeSize: number;
+    signalsSize: number;
+    reductionPercent: number;
+    temporaryScrapeId?: string;
+    contentHash?: string;
+    isDuplicate: boolean;
+  };
 }
 
 
