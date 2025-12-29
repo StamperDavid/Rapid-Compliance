@@ -254,6 +254,10 @@ export interface BaseModel {
   trainingScore: number; // 0-100, average across all training
   lastTrainingAt?: string; // ISO timestamp
   
+  // NEW: Industry Template Integration
+  sourceTemplateId?: string; // Reference to IndustryTemplate used
+  researchIntelligence?: any; // ResearchIntelligence from template (avoid circular dependency)
+  
   // Metadata
   createdAt: string;
   updatedAt: string;

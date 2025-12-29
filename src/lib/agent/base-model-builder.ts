@@ -1,5 +1,9 @@
 import { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import { MutationEngine } from '@/lib/services/mutation-engine';
+import { getIndustryTemplate } from '@/lib/persona/industry-templates';
+import { getMutationRules } from '@/lib/persona/templates/mutation-rules';
+import type { IndustryTemplate } from '@/lib/persona/templates/types';
 
 // Check if running on server or client
 const isServer = typeof window === 'undefined';
@@ -9,6 +13,12 @@ const isServer = typeof window === 'undefined';
 
 /**
  * Build a Base Model from onboarding data
+ * 
+ * Now supports industry template mutation:
+ * 1. Load industry template (genetic blueprint)
+ * 2. Apply mutations based on onboarding data (custom adjustments)
+ * 3. Use mutated template to build enhanced BaseModel
+ * 
  * This is what gets created AFTER onboarding, NOT a Golden Master
  */
 export async function buildBaseModel(params: {
@@ -17,18 +27,67 @@ export async function buildBaseModel(params: {
   organizationId: string;
   userId: string;
   workspaceId?: string;
+  industryTemplateId?: string; // NEW: Optional industry template for intelligent defaults
 }): Promise<BaseModel> {
-  const { onboardingData, knowledgeBase, organizationId, userId } = params;
+  const { onboardingData, knowledgeBase, organizationId, userId, industryTemplateId } = params;
 
-  // Generate agent persona from onboarding data
+  // NEW: Load and mutate industry template if provided
+  let mutatedTemplate: IndustryTemplate | null = null;
+  if (industryTemplateId) {
+    try {
+      logger.info('[buildBaseModel] Loading industry template', {
+        templateId: industryTemplateId,
+        businessName: onboardingData.businessName
+      });
+
+      const template = await getIndustryTemplate(industryTemplateId);
+      if (template) {
+        // Attach mutation rules to template
+        const mutationRules = getMutationRules(industryTemplateId);
+        const templateWithRules = {
+          ...template,
+          mutationRules
+        };
+
+        // Compile template with onboarding data using mutation engine
+        const engine = new MutationEngine();
+        mutatedTemplate = engine.compile(templateWithRules, onboardingData);
+
+        logger.info('[buildBaseModel] Template mutated successfully', {
+          templateId: industryTemplateId,
+          hasMutations: mutationRules.length > 0
+        });
+      } else {
+        logger.warn('[buildBaseModel] Industry template not found', {
+          templateId: industryTemplateId
+        });
+      }
+    } catch (error) {
+      logger.error('[buildBaseModel] Failed to load/mutate template', error, {
+        templateId: industryTemplateId
+      });
+      // Continue without template - fallback to basic onboarding
+    }
+  }
+
+  // Generate agent persona from onboarding data (enhanced with template if available)
   const agentPersona = {
-    name: onboardingData.agentName || '',
-    tone: onboardingData.communicationStyle || 'professional',
+    name: onboardingData.agentName || mutatedTemplate?.name || '',
+    tone: mutatedTemplate?.coreIdentity.tone || onboardingData.communicationStyle || 'professional',
     greeting: onboardingData.greetingMessage || 'Hi! How can I help you today?',
     closingMessage: onboardingData.closingMessage || 'Thanks for chatting! Feel free to reach out anytime.',
     personality: onboardingData.personalityTraits || [],
     objectives: onboardingData.objectives || [],
     escalationRules: onboardingData.escalationRules || [],
+    
+    // NEW: Include template-derived fields
+    ...(mutatedTemplate && {
+      cognitiveFramework: mutatedTemplate.cognitiveLogic.framework,
+      reasoning: mutatedTemplate.cognitiveLogic.reasoning,
+      decisionProcess: mutatedTemplate.cognitiveLogic.decisionProcess,
+      primaryAction: mutatedTemplate.tacticalExecution.primaryAction,
+      conversionRhythm: mutatedTemplate.tacticalExecution.conversionRhythm
+    })
   };
 
   // Build behavior configuration
@@ -42,11 +101,12 @@ export async function buildBaseModel(params: {
     idleTimeoutMinutes: onboardingData.idleTimeoutMinutes || 30,
   };
 
-  // Build system prompt (this is the "initial prompt" before training)
+  // Build system prompt (enhanced with template if available)
   const systemPrompt = buildSystemPrompt({
     businessContext: onboardingData,
     agentPersona,
     behaviorConfig,
+    template: mutatedTemplate, // NEW: Pass template for enhanced prompt
   });
 
   const baseModel: BaseModel = {
@@ -65,11 +125,23 @@ export async function buildBaseModel(params: {
     trainingScenarios: [],
     trainingScore: 0,
 
+    // NEW: Store template reference and research intelligence
+    ...(mutatedTemplate && {
+      sourceTemplateId: mutatedTemplate.id,
+      researchIntelligence: mutatedTemplate.research
+    }),
+
     // Metadata
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     createdBy: userId,
   };
+
+  logger.info('[buildBaseModel] BaseModel created successfully', {
+    baseModelId: baseModel.id,
+    hasTemplate: !!mutatedTemplate,
+    hasResearch: !!baseModel.researchIntelligence
+  });
 
   return baseModel;
 }
@@ -246,14 +318,15 @@ export async function addTrainingScenario(
 }
 
 /**
- * Build system prompt from configuration
+ * Build system prompt from configuration (enhanced with template support)
  */
 function buildSystemPrompt(params: {
   businessContext: OnboardingData;
   agentPersona: any;
   behaviorConfig: any;
+  template?: IndustryTemplate | null; // NEW: Optional template for enhancement
 }): string {
-  const { businessContext, agentPersona, behaviorConfig } = params;
+  const { businessContext, agentPersona, behaviorConfig, template } = params;
 
   const sections: string[] = [];
 
@@ -344,6 +417,24 @@ function buildSystemPrompt(params: {
   sections.push(`Discovery Questions Before Recommendation: ${behaviorConfig.questionFrequency}`);
   sections.push(`Proactive Level: ${behaviorConfig.proactiveLevel}/10`);
   sections.push('');
+
+  // NEW: Industry Template Enhancement
+  if (template) {
+    sections.push('## Industry-Specific Strategy');
+    sections.push(`Industry Framework: ${template.cognitiveLogic.framework}`);
+    sections.push(`Reasoning Approach: ${template.cognitiveLogic.reasoning}`);
+    sections.push(`Primary Action: ${template.tacticalExecution.primaryAction}`);
+    sections.push(`Conversion Rhythm: ${template.tacticalExecution.conversionRhythm}`);
+    sections.push('');
+
+    if (template.tacticalExecution.secondaryActions.length > 0) {
+      sections.push('Secondary Actions:');
+      template.tacticalExecution.secondaryActions.forEach(action => {
+        sections.push(`- ${action}`);
+      });
+      sections.push('');
+    }
+  }
 
   // Compliance
   if (businessContext.requiredDisclosures) {
