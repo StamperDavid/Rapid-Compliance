@@ -157,5 +157,7 @@ const sentryWebpackPluginOptions = {
   dryRun: !process.env.NEXT_PUBLIC_SENTRY_DSN && !process.env.SENTRY_DSN,
 };
 
-// Export config wrapped with Sentry
-module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions);
+// Export config - Skip Sentry wrapping if SKIP_SENTRY env var is set (for debugging builds)
+module.exports = process.env.SKIP_SENTRY === '1' 
+  ? nextConfig 
+  : withSentryConfig(nextConfig, sentryWebpackPluginOptions);
