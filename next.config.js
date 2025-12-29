@@ -89,17 +89,6 @@ const nextConfig = {
   },
   // Webpack configuration to handle server-only modules
   webpack: (config, { isServer }) => {
-    // Memory optimization: Reduce parallel processing to save memory
-    config.parallelism = 1;
-    
-    // Optimize module concatenation
-    config.optimization = {
-      ...config.optimization,
-      concatenateModules: true,
-      usedExports: true,
-      sideEffects: true,
-    };
-    
     if (!isServer) {
       // Don't resolve these modules on the client side
       config.resolve.fallback = {
