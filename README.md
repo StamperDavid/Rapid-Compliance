@@ -125,9 +125,13 @@ Open [http://localhost:3000](http://localhost:3000)
 - **[TESTING_RESULTS.md](./TESTING_RESULTS.md)** - Test results (98.1% pass rate)
 
 ### Start Here
+- **⭐ [ARCHITECTURE.md](./ARCHITECTURE.md)** ⭐ - **COMPLETE TECHNICAL SPECIFICATION (1000+ lines)**
+  - Zero-knowledge technical spec for sophisticated AI partners
+  - Complete data architecture, API surface, feature inventory
+  - Security, performance, extensibility details
+  - **READ THIS for complete system understanding**
 - **[HOW_TO_RUN.md](./HOW_TO_RUN.md)** - Local development quick start
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture and design
-- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** - Project status
+- **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** - Development journey & current status
 
 ### Technical Docs
 - **[COMPLETE_SITEMAP.md](./COMPLETE_SITEMAP.md)** - All 122 pages + 85 API routes
