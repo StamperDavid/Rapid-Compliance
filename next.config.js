@@ -149,6 +149,10 @@ const sentryWebpackPluginOptions = {
   // Don't automatically inject Sentry (we do it manually)
   autoInstrumentServerFunctions: false,
   
+  // CRITICAL: Disable Sentry webpack plugin entirely to prevent build hangs
+  disableServerWebpackPlugin: true,
+  disableClientWebpackPlugin: true,
+  
   // Disable upload of source maps if no DSN is configured
   dryRun: !process.env.NEXT_PUBLIC_SENTRY_DSN && !process.env.SENTRY_DSN,
 };
