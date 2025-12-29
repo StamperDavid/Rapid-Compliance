@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeWorkflow } from '@/lib/workflows/workflow-engine';
+import { executeWorkflowImpl as executeWorkflow } from '@/lib/workflows/workflow-engine';
 import { Workflow } from '@/types/workflow';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { workflowExecuteSchema, validateInput } from '@/lib/validation/schemas';
