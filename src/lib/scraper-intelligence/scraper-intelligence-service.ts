@@ -250,11 +250,11 @@ export async function getResearchIntelligence(
       },
     } as ResearchIntelligence;
 
-    // Validate with Zod
-    const validated = ResearchIntelligenceSchema.parse(research);
+    // Validate with Zod (this ensures type safety)
+    ResearchIntelligenceSchema.parse(research);
 
-    // Cache for future requests
-    researchCache.set(cacheKey, validated);
+    // Cache for future requests (use original typed object, not Zod result)
+    researchCache.set(cacheKey, research);
 
     logger.info('Research intelligence fetched', { organizationId, industryId });
 
