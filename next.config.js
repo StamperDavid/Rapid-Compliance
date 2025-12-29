@@ -149,7 +149,10 @@ const sentryWebpackPluginOptions = {
   // Don't automatically inject Sentry (we do it manually)
   autoInstrumentServerFunctions: false,
   
-  // CRITICAL: Disable Sentry webpack plugin entirely to prevent build hangs
+  // BEST PRACTICE: Disable webpack plugins to prevent OOM, but keep runtime instrumentation
+  // - Runtime error tracking still works (sentry.client.config.ts, sentry.server.config.ts)
+  // - Source maps can be uploaded separately via Sentry CLI in CI/CD if needed
+  // - Prevents build hangs and memory issues on large codebases
   disableServerWebpackPlugin: true,
   disableClientWebpackPlugin: true,
   
@@ -157,7 +160,5 @@ const sentryWebpackPluginOptions = {
   dryRun: !process.env.NEXT_PUBLIC_SENTRY_DSN && !process.env.SENTRY_DSN,
 };
 
-// Export config - Skip Sentry wrapping if SKIP_SENTRY env var is set (for debugging builds)
-module.exports = process.env.SKIP_SENTRY === '1' 
-  ? nextConfig 
-  : withSentryConfig(nextConfig, sentryWebpackPluginOptions);
+// Export config wrapped with Sentry (runtime instrumentation only, no webpack plugins)
+module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions);
