@@ -258,7 +258,7 @@ export async function getResearchIntelligence(
 
     logger.info('Research intelligence fetched', { organizationId, industryId });
 
-    return validated;
+    return research;
   } catch (error) {
     return handleFirestoreError(error, 'getResearchIntelligence', {
       organizationId,
