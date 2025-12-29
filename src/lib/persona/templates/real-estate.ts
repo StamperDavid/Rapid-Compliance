@@ -1,4 +1,3 @@
-import 'server-only';
 import type { IndustryTemplate } from './types';
 
 export const realEstateTemplates: Record<string, IndustryTemplate> = {

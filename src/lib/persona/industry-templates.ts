@@ -1,5 +1,3 @@
-import 'server-only';
-
 export type { IndustryTemplate } from './templates/types';
 import type { IndustryTemplate } from './templates/types';
 import type { ResearchIntelligence } from '@/types/scraper-intelligence';

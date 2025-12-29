@@ -1,4 +1,3 @@
-import 'server-only';
 import type { IndustryTemplate } from './types';
 
 export const healthcareTemplates: Record<string, IndustryTemplate> = {

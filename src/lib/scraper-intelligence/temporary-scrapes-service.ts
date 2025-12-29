@@ -1,5 +1,3 @@
-import 'server-only';
-
 /**
  * Temporary Scrapes Service
  * 

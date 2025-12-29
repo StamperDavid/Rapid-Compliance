@@ -1,5 +1,3 @@
-import 'server-only';
-
 import type { ResearchIntelligence } from '@/types/scraper-intelligence';
 
 export interface IndustryTemplate {
