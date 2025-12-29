@@ -150,4 +150,5 @@ const sentryWebpackPluginOptions = {
 };
 
 // Export config wrapped with Sentry (runtime instrumentation only, no webpack plugins)
+// Build trigger
 module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions);
