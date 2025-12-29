@@ -148,27 +148,33 @@ interface TemporaryScrape {
   - [x] Complete documentation (STEP_1_4_COMPLETION_SUMMARY.md)
   - [x] Code committed to GitHub (commit 4517733)
 
-## **PHASE 2: INDUSTRY INTELLIGENCE (10 Templates)** ⏳ Not Started
+## **PHASE 2: UPGRADE EXISTING TEMPLATES WITH RESEARCH INTELLIGENCE** ⏳ Not Started
 
-- [ ] **Step 2.1:** HVAC Research Intelligence
-- [ ] **Step 2.2:** B2B SaaS Research Intelligence
-- [ ] **Step 2.3:** Real Estate Research Intelligence
-- [ ] **Step 2.4:** Fitness/Wellness Research Intelligence
-- [ ] **Step 2.5:** Dental/Healthcare Research Intelligence
-- [ ] **Step 2.6:** E-commerce Research Intelligence
-- [ ] **Step 2.7:** Legal Services Research Intelligence
-- [ ] **Step 2.8:** Home Services Research Intelligence
-- [ ] **Step 2.9:** Restaurant/Hospitality Research Intelligence
-- [ ] **Step 2.10:** Professional Services Research Intelligence
+**Approach:** Add `research` property to existing 50 industry templates in `src/lib/persona/industry-templates.ts`
 
-**Each template must include:**
-- [ ] 15-25 high-value signals with real keywords
-- [ ] 20+ fluff patterns (tested against real websites)
-- [ ] 10+ scoring rules with clear logic
-- [ ] 5-10 custom fields with extraction logic
-- [ ] Scraping strategy optimized for industry
+**Priority Industries (10 templates to upgrade first):**
+
+- [ ] **Step 2.1:** HVAC (`hvac`) - Home services, high-value B2C
+- [ ] **Step 2.2:** SaaS Software (`saas-software`) - B2B, high growth potential
+- [ ] **Step 2.3:** Residential Real Estate (`residential-real-estate`) - High-value transactions
+- [ ] **Step 2.4:** Gyms/CrossFit (`gyms-crossfit`) - Wellness/fitness sector
+- [ ] **Step 2.5:** Dental Practices (`dental-practices`) - Healthcare sector
+- [ ] **Step 2.6:** E-commerce D2C (`ecommerce-d2c`) - Online retail
+- [ ] **Step 2.7:** Personal Injury Law (`law-personal-injury`) - Legal services
+- [ ] **Step 2.8:** Roofing (`roofing`) - Home services, seasonal
+- [ ] **Step 2.9:** Mexican Restaurant (`mexican-restaurant`) - Hospitality
+- [ ] **Step 2.10:** Digital Marketing (`digital-marketing`) - Professional services
+
+**Each template upgrade must include:**
+- [ ] 15-25 high-value signals with real keywords (e.g., "we're hiring", "new location")
+- [ ] 20+ fluff patterns (tested against real websites - copyright, cookie banners)
+- [ ] 10+ scoring rules with clear logic (e.g., "hiring + careers page = +25 points")
+- [ ] 5-10 custom fields with extraction logic (e.g., "number_of_locations", "hiring_count")
+- [ ] Scraping strategy optimized for industry (primary source, secondary sources, caching)
 - [ ] Validated against 5 real industry websites
 - [ ] Performance benchmarked (<2s per extraction)
+- [ ] Integration test passing with real Firestore
+- [ ] Added to existing template in `INDUSTRY_TEMPLATES` object
 
 ## **PHASE 3: INTELLIGENT EXTRACTION ENGINE (Distillation Focus)** ⏳ Not Started
 
