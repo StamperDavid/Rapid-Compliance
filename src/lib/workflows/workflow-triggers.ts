@@ -5,7 +5,7 @@
  */
 
 import { Workflow, WorkflowTrigger } from '@/types/workflow';
-import { executeWorkflow } from './workflow-engine';
+import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
 
 /**
  * Trigger workflow manually
