@@ -5,7 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, ScheduleTrigger } from '@/types/workflow';
-import { executeWorkflow } from '../workflow-engine';
+import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
 const cronParser = require('cron-parser');
 

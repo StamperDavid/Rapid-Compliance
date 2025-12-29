@@ -26,10 +26,11 @@ export interface WorkflowExecution {
 }
 
 /**
- * Execute workflow
+ * Execute workflow implementation
  * Executes workflows with real action implementations
+ * Renamed to Impl to avoid circular dependency with triggers
  */
-export async function executeWorkflow(
+export async function executeWorkflowImpl(
   workflow: Workflow,
   triggerData: any
 ): Promise<WorkflowExecution> {

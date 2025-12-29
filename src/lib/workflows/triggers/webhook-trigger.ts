@@ -5,7 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, WebhookTrigger } from '@/types/workflow';
-import { executeWorkflow } from '../workflow-engine';
+import { executeWorkflow } from '../workflow-executor';
 import crypto from 'crypto';
 
 /**

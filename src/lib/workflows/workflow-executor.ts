@@ -1,96 +1,21 @@
 /**
  * Workflow Executor
- * Executes workflows and manages workflow execution state
+ * Extracted to break circular dependencies between workflow-engine and triggers
  */
 
-import { logger } from '@/lib/logger/logger';
-import { executeWorkflow as engineExecuteWorkflow } from './workflow-engine';
+import { Workflow } from '@/types/workflow';
+import type { WorkflowExecution } from './workflow-engine';
 
 /**
- * Execute a workflow
- * This is the main entry point for workflow execution
+ * Execute workflow
+ * This is a minimal wrapper that delegates to the actual implementation
+ * Helps break circular dependencies
  */
 export async function executeWorkflow(
-  organizationId: string,
-  workflowId: string,
-  context: Record<string, any>
-): Promise<void> {
-  try {
-    logger.info('Executing workflow', {
-      organizationId,
-      workflowId,
-      contextKeys: Object.keys(context),
-    });
-
-    // Fetch the workflow
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const workflow = await FirestoreService.get<any>(
-      `organizations/${organizationId}/workflows`,
-      workflowId
-    );
-
-    if (!workflow) {
-      throw new Error(`Workflow ${workflowId} not found`);
-    }
-
-    // Execute the workflow with the provided context
-    await engineExecuteWorkflow(workflow, context);
-
-    logger.info('Workflow execution completed', { workflowId });
-  } catch (error: any) {
-    logger.error('Workflow execution failed', error, {
-      organizationId,
-      workflowId,
-    });
-    throw error;
-  }
+  workflow: Workflow,
+  triggerData: any
+): Promise<WorkflowExecution> {
+  // Dynamic import to avoid circular dependency
+  const { executeWorkflowImpl } = await import('./workflow-engine');
+  return executeWorkflowImpl(workflow, triggerData);
 }
-
-/**
- * Execute a workflow asynchronously (fire-and-forget)
- */
-export async function executeWorkflowAsync(
-  organizationId: string,
-  workflowId: string,
-  context: Record<string, any>
-): Promise<void> {
-  // Execute in background without waiting
-  executeWorkflow(organizationId, workflowId, context).catch((error) => {
-    logger.error('Async workflow execution failed', error, {
-      organizationId,
-      workflowId,
-    });
-  });
-}
-
-/**
- * Execute multiple workflows in parallel
- */
-export async function executeWorkflowsParallel(
-  organizationId: string,
-  workflows: Array<{ workflowId: string; context: Record<string, any> }>
-): Promise<void> {
-  try {
-    await Promise.all(
-      workflows.map(({ workflowId, context }) =>
-        executeWorkflow(organizationId, workflowId, context)
-      )
-    );
-  } catch (error: any) {
-    logger.error('Parallel workflow execution failed', error);
-    throw error;
-  }
-}
-
-/**
- * Execute multiple workflows sequentially
- */
-export async function executeWorkflowsSequential(
-  organizationId: string,
-  workflows: Array<{ workflowId: string; context: Record<string, any> }>
-): Promise<void> {
-  for (const { workflowId, context } of workflows) {
-    await executeWorkflow(organizationId, workflowId, context);
-  }
-}
-
