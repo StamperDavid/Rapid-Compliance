@@ -177,11 +177,8 @@ describe('Scraper Intelligence Service - Unit Tests', () => {
   });
 
   describe('Transaction Support', () => {
-    it('should handle transaction errors gracefully', async () => {
-      mockRunTransaction.mockRejectedValue(new Error('Transaction failed'));
-
-      // Transaction errors should be wrapped in ScraperIntelligenceError
-      // This is tested in integration tests with real Firestore
+    it('should have transaction support available', () => {
+      // Transaction errors are tested in integration tests with real Firestore
       expect(mockRunTransaction).toBeDefined();
     });
   });

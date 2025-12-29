@@ -3,6 +3,8 @@
  * Structured interfaces for company data extraction
  */
 
+import type { ExtractedSignal } from '@/types/scraper-intelligence';
+
 /**
  * Core company enrichment data structure
  * This is what we extract from ANY source (search + scrape)
@@ -49,6 +51,22 @@ export interface CompanyEnrichmentData {
   recentNews?: NewsItem[];
   hiringStatus?: 'actively-hiring' | 'hiring' | 'not-hiring' | 'unknown';
   jobPostings?: JobPosting[];
+  
+  /**
+   * High-value signals detected by distillation engine (NEW)
+   * These are permanent signals extracted from temporary scrapes
+   */
+  extractedSignals?: ExtractedSignal[];
+  
+  /**
+   * Lead score calculated from signals and scoring rules
+   */
+  leadScore?: number;
+  
+  /**
+   * Custom industry-specific fields
+   */
+  customFields?: Record<string, any>;
   
   // Metadata
   lastUpdated: Date;
@@ -113,11 +131,24 @@ export interface EnrichmentRequest {
   industry?: string;
   location?: string;
   
+  /**
+   * Industry template ID for intelligent signal extraction (NEW)
+   * If provided, uses research intelligence for that industry
+   * Examples: 'hvac', 'saas-software', 'residential-real-estate'
+   */
+  industryTemplateId?: string;
+  
   // Control what to enrich
   includeNews?: boolean;
   includeJobs?: boolean;
   includeTechStack?: boolean;
   includeSocial?: boolean;
+  
+  /**
+   * Enable distillation engine for signal extraction (NEW)
+   * Default: true if industryTemplateId is provided
+   */
+  enableDistillation?: boolean;
 }
 
 /**

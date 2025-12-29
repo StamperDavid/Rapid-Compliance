@@ -10,12 +10,20 @@ import { logger } from '@/lib/logger/logger';;
 /**
  * Extract structured company data from scraped content using AI
  * This uses OpenAI's structured outputs to guarantee the format
+ * 
+ * @param scrapedContent - Scraped website content
+ * @param companyName - Company name for context
+ * @param industryTemplateId - Optional industry template ID for better extraction
  */
 export async function extractCompanyData(
   scrapedContent: ScrapedContent,
-  companyName: string
+  companyName: string,
+  industryTemplateId?: string
 ): Promise<Partial<CompanyEnrichmentData>> {
-  logger.info('AI Extractor Extracting data for: companyName}', { file: 'ai-extractor.ts' });
+  logger.info('AI Extractor Extracting data for: companyName}', { 
+    file: 'ai-extractor.ts',
+    industry: industryTemplateId 
+  });
   
   try {
     // Get OpenAI API key
@@ -26,8 +34,8 @@ export async function extractCompanyData(
       return fallbackExtraction(scrapedContent, companyName);
     }
     
-    // Prepare the prompt
-    const prompt = buildExtractionPrompt(scrapedContent, companyName);
+    // Prepare the prompt (industry-aware if template provided)
+    const prompt = buildExtractionPrompt(scrapedContent, companyName, industryTemplateId);
     
     // Call OpenAI with structured output
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -137,13 +145,24 @@ export async function extractCompanyData(
 
 /**
  * Build extraction prompt
+ * 
+ * @param content - Scraped content
+ * @param companyName - Company name
+ * @param industryTemplateId - Optional industry for better context
  */
-function buildExtractionPrompt(content: ScrapedContent, companyName: string): string {
+function buildExtractionPrompt(
+  content: ScrapedContent, 
+  companyName: string,
+  industryTemplateId?: string
+): string {
+  // Industry-specific hints for better extraction
+  const industryContext = getIndustryContext(industryTemplateId);
+  
   return `Extract company information from the following website content for "${companyName}".
 
 Website: ${content.url}
 Title: ${content.title}
-Meta Description: ${content.description}
+Meta Description: ${content.description}${industryContext ? `\n\nIndustry Context: ${industryContext}` : ''}
 
 Content (first 3000 characters):
 ${content.cleanedText.substring(0, 3000)}
@@ -151,7 +170,7 @@ ${content.cleanedText.substring(0, 3000)}
 Extract the following information:
 - Company name (official name)
 - Description (1-2 sentence summary of what the company does)
-- Industry (e.g., SaaS, E-commerce, Manufacturing, Consulting)
+- Industry (e.g., SaaS, E-commerce, Manufacturing, Consulting${industryContext ? `, or ${industryContext}` : ''})
 - Company size (startup: <50, small: 50-200, medium: 200-1000, enterprise: 1000+)
 - Employee count (if mentioned)
 - Employee range (if mentioned, e.g., "50-200")
@@ -163,6 +182,28 @@ Extract the following information:
 - Contact phone
 
 Be factual and precise. If information is not available, use null.`;
+}
+
+/**
+ * Get industry-specific context for better AI extraction
+ */
+function getIndustryContext(industryTemplateId?: string): string | null {
+  if (!industryTemplateId) return null;
+  
+  const industryContextMap: Record<string, string> = {
+    'hvac': 'HVAC/Heating & Cooling services company',
+    'saas-software': 'Software-as-a-Service (SaaS) technology company',
+    'residential-real-estate': 'Residential real estate agency or agent',
+    'gyms-crossfit': 'Fitness gym or CrossFit facility',
+    'dental-practices': 'Dental practice or dentistry clinic',
+    'ecommerce-d2c': 'Direct-to-consumer e-commerce brand',
+    'law-personal-injury': 'Personal injury law firm',
+    'roofing': 'Roofing contractor or services company',
+    'mexican-restaurant': 'Mexican restaurant',
+    'digital-marketing': 'Digital marketing agency',
+  };
+  
+  return industryContextMap[industryTemplateId] || null;
 }
 
 /**

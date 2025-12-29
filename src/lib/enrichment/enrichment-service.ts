@@ -29,6 +29,10 @@ import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
+// NEW: Import distillation engine and industry templates
+import { distillScrape, calculateLeadScore } from '@/lib/scraper-intelligence/distillation-engine';
+import { getResearchIntelligenceById } from '@/lib/persona/industry-templates';
+
 /**
  * Main enrichment function (PRODUCTION READY)
  * This replaces all Clearbit calls with NO fake data
@@ -151,11 +155,70 @@ export async function enrichCompany(
       );
     }
     
-    // Step 6: Extract structured data with AI
-    aiTokens += 500;
-    const extractedData = await extractCompanyData(scrapedContent, companyIdentifier);
+    // Step 6: Run distillation engine if industry template provided
+    let distillationResult: Awaited<ReturnType<typeof distillScrape>> | null = null;
+    let leadScore: number | undefined;
     
-    // Step 7: Get additional data in parallel
+    if (request.industryTemplateId && request.enableDistillation !== false) {
+      try {
+        const research = getResearchIntelligenceById(request.industryTemplateId);
+        
+        if (research) {
+          logger.info('Running distillation engine with industry research', {
+            industryId: request.industryTemplateId,
+            domain,
+          });
+          
+          distillationResult = await distillScrape({
+            organizationId,
+            url: website,
+            rawHtml: scrapedContent.rawHtml || '',
+            cleanedContent: scrapedContent.cleanedText,
+            metadata: {
+              title: scrapedContent.title,
+              description: scrapedContent.description,
+              author: scrapedContent.metadata?.author,
+              keywords: scrapedContent.metadata?.keywords,
+            },
+            research,
+            platform: 'website',
+            relatedRecordId: undefined, // Will be set after we create the lead
+          });
+          
+          // Calculate lead score from detected signals
+          leadScore = calculateLeadScore(
+            distillationResult.signals,
+            research,
+            {} // Context can be enriched with custom fields later
+          );
+          
+          logger.info('Distillation complete', {
+            signalsDetected: distillationResult.signals.length,
+            leadScore,
+            storageReduction: distillationResult.storageReduction.reductionPercent,
+          });
+        } else {
+          logger.warn('Industry template has no research intelligence', {
+            industryId: request.industryTemplateId,
+          });
+        }
+      } catch (error) {
+        logger.error('Distillation failed, continuing with standard extraction', error, {
+          industryId: request.industryTemplateId,
+          domain,
+        });
+      }
+    }
+    
+    // Step 7: Extract structured data with AI
+    aiTokens += 500;
+    const extractedData = await extractCompanyData(
+      scrapedContent, 
+      companyIdentifier,
+      request.industryTemplateId // Pass industry for context
+    );
+    
+    // Step 8: Get additional data in parallel
     const [news, linkedin, techStack] = await Promise.all([
       request.includeNews !== false 
         ? searchCompanyNews(companyIdentifier, 3)
@@ -170,13 +233,13 @@ export async function enrichCompany(
     
     if (request.includeNews !== false) searchCalls++;
     
-    // Step 8: Compile enrichment data
+    // Step 9: Compile enrichment data (with distillation results)
     const enrichmentData: CompanyEnrichmentData = {
       name: extractedData.name || companyIdentifier,
       website: website,
       domain: domain,
       description: extractedData.description || scrapedContent.description,
-      industry: extractedData.industry || 'Unknown',
+      industry: extractedData.industry || request.industry || 'Unknown',
       size: extractedData.size || 'unknown',
       employeeCount: extractedData.employeeCount,
       employeeRange: extractedData.employeeRange,
@@ -193,12 +256,18 @@ export async function enrichCompany(
       recentNews: news,
       hiringStatus: 'unknown',
       jobPostings: [],
+      
+      // NEW: Include distillation results
+      extractedSignals: distillationResult?.signals || [],
+      leadScore: leadScore,
+      customFields: {}, // Can be populated from custom field extraction
+      
       lastUpdated: new Date(),
       dataSource: 'hybrid',
       confidence: 0, // Will be calculated by validation
     };
     
-    // Step 9: VALIDATE - NO FAKE DATA!
+    // Step 10: VALIDATE - NO FAKE DATA!
     const validation = await validateEnrichmentData(enrichmentData);
     
     enrichmentData.confidence = validation.confidence;
@@ -217,7 +286,7 @@ export async function enrichCompany(
       );
     }
     
-    // Step 10: Log warnings if any
+    // Step 11: Log warnings if any
     if (validation.warnings.length > 0) {
       logger.warn(`[Enrichment] Validation warnings for ${domain}`, { 
         warnings: validation.warnings,
@@ -225,13 +294,13 @@ export async function enrichCompany(
       });
     }
     
-    // Step 11: Calculate costs
+    // Step 12: Calculate costs
     const totalCost = calculateCost(searchCalls, scrapeCalls, aiTokens);
     
-    // Step 12: Cache the results
+    // Step 13: Cache the results
     await cacheEnrichment(domain, enrichmentData, organizationId, 7); // 7 day TTL
     
-    // Step 13: Log cost for analytics
+    // Step 14: Log cost for analytics (including storage savings from distillation)
     await logEnrichmentCost(organizationId, {
       organizationId,
       timestamp: new Date(),
@@ -249,6 +318,11 @@ export async function enrichCompany(
     logger.info('Enrichment ✅ SUCCESS for domain}', { file: 'enrichment-service.ts' });
     logger.info('  Cost: $${totalCost.toFixed(4)} | Saved: $${(0.75 - totalCost).toFixed(4)}', { file: 'enrichment-service.ts' });
     logger.info('  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms', { file: 'enrichment-service.ts' });
+    
+    if (distillationResult) {
+      logger.info('  Signals: ${distillationResult.signals.length} detected | Lead Score: ${leadScore || 0}', { file: 'enrichment-service.ts' });
+      logger.info('  Storage: ${distillationResult.storageReduction.reductionPercent}% reduction (${distillationResult.storageReduction.rawSizeBytes} → ${distillationResult.storageReduction.signalsSizeBytes} bytes)', { file: 'enrichment-service.ts' });
+    }
     
     return {
       success: true,
