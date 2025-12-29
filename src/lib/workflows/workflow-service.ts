@@ -247,7 +247,7 @@ export async function executeWorkflow(
     }
 
     // Execute via workflow engine
-    const { executeWorkflow: runEngine } = await import('./workflow-engine');
+    const { executeWorkflowImpl: runEngine } = await import('./workflow-engine');
     
     const result = await runEngine(workflow, context);
 
