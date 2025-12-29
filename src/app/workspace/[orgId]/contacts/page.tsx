@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getContacts } from '@/lib/crm/contact-service';
 import { usePagination } from '@/hooks/usePagination';
 
 export default function ContactsPage() {
@@ -11,14 +10,24 @@ export default function ContactsPage() {
   const orgId = params.orgId as string;
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch function with pagination using service layer
+  // Fetch function with pagination using API route
   const fetchContacts = useCallback(async (lastDoc?: any) => {
-    return await getContacts(
-      orgId,
-      'default',
-      undefined,
-      { pageSize: 50, lastDoc }
-    );
+    const searchParams = new URLSearchParams({
+      workspaceId: 'default',
+      pageSize: '50'
+    });
+    
+    if (lastDoc) {
+      searchParams.set('lastDoc', lastDoc);
+    }
+
+    const response = await fetch(`/api/workspace/${orgId}/contacts?${searchParams}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch contacts');
+    }
+    
+    return await response.json();
   }, [orgId]);
 
   const {
