@@ -7,6 +7,8 @@ import { usePagination } from '@/hooks/usePagination';
 interface Contact {
   id: string;
   name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   company?: string;
