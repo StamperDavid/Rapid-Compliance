@@ -32,8 +32,9 @@ import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
-// NEW: Import distillation engine (dynamic import for templates to reduce bundle size)
+// NEW: Import distillation engine and industry templates
 import { distillScrape, calculateLeadScore } from '@/lib/scraper-intelligence/distillation-engine';
+import { getResearchIntelligenceById } from '@/lib/persona/industry-templates';
 
 /**
  * Main enrichment function (PRODUCTION READY)
@@ -163,8 +164,6 @@ export async function enrichCompany(
     
     if (request.industryTemplateId && request.enableDistillation !== false) {
       try {
-        // Dynamic import to avoid loading entire 7000+ line templates file
-        const { getResearchIntelligenceById } = await import('@/lib/persona/industry-templates');
         const research = getResearchIntelligenceById(request.industryTemplateId);
         
         if (research) {
