@@ -201,7 +201,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-28'),
+        lastUpdated: '2025-12-28',
         version: 1,
         updatedBy: 'system',
         notes: 'Residential real estate intelligence - focuses on team growth, sales volume, market specialization, and tech capabilities'
@@ -340,7 +340,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Commercial real estate intelligence - focuses on portfolio size, transaction types, property specialization, and service breadth'
@@ -477,7 +477,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Property management intelligence - focuses on portfolio size, service breadth, technology adoption, and growth indicators'
@@ -614,7 +614,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Short-term rental intelligence - focuses on portfolio size, revenue optimization, guest experience, and professional management services'
@@ -752,7 +752,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Mortgage lending intelligence - focuses on team size, loan product diversity, processing speed, and multi-state capabilities'
@@ -889,7 +889,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Home staging intelligence - focuses on portfolio size, ROI demonstration, service diversity, and luxury market capabilities'
@@ -1026,7 +1026,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Interior design intelligence - focuses on portfolio depth, industry recognition, service breadth, and market specialization'
@@ -1164,7 +1164,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Architecture intelligence - focuses on firm size, project diversity, sustainability credentials, and industry recognition'
@@ -1301,7 +1301,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Construction & development intelligence - focuses on project volume, service diversity, certifications, and growth indicators'
@@ -1439,7 +1439,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Title & escrow intelligence - focuses on transaction volume, security features, service speed, and geographic reach'
@@ -1545,7 +1545,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         {key: 'accepts_insurance', label: 'Accepts Insurance', type: 'boolean', description: 'Insurance accepted', extractionHints: ['insurance', 'in-network'], required: false, defaultValue: false},
         {key: 'has_financing', label: 'Offers Financing', type: 'boolean', description: 'Payment plans', extractionHints: ['financing', 'carecredit'], required: false, defaultValue: false}
       ],
-      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Dental practice intelligence - growth, specialties, technology'}
+      metadata: {lastUpdated: '2025-12-28', version: 1, updatedBy: 'system', notes: 'Dental practice intelligence - growth, specialties, technology'}
     }
   },
   
@@ -1678,7 +1678,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Plastic surgery intelligence - focuses on credentials, facility quality, result portfolio, and service breadth'
@@ -1815,7 +1815,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Med-spa & aesthetics intelligence - focuses on service breadth, medical oversight, membership models, and multi-location growth'
@@ -1951,7 +1951,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Mental health therapy intelligence - focuses on accessibility, specializations, insurance acceptance, and practice growth'
@@ -2056,7 +2056,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         {key: 'has_youth_program', label: 'Youth Programs', type: 'boolean', description: 'Kids/teen programs', extractionHints: ['kids', 'youth', 'teens'], required: false, defaultValue: false},
         {key: 'location_count', label: 'Number of Locations', type: 'number', description: 'Gym locations', extractionHints: ['locations', 'facilities'], required: false, defaultValue: 1}
       ],
-      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Gym/CrossFit intelligence - growth, programs, amenities'}
+      metadata: {lastUpdated: '2025-12-28', version: 1, updatedBy: 'system', notes: 'Gym/CrossFit intelligence - growth, programs, amenities'}
     }
   },
   
@@ -2189,7 +2189,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Yoga & Pilates intelligence - focuses on class variety, instructor quality, membership models, and service diversification'
@@ -2326,7 +2326,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Chiropractic intelligence - focuses on practice size, service integration, accessibility, and specialized care offerings'
@@ -2463,7 +2463,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Personal training intelligence - focuses on results portfolio, certifications, service delivery models, and specializations'
@@ -2600,7 +2600,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Nutritional coaching intelligence - focuses on credentials, specializations, service delivery models, and B2B opportunities'
@@ -2737,7 +2737,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Veterinary practice intelligence - focuses on emergency capabilities, service breadth, practice size, and specialized care offerings'
@@ -3235,7 +3235,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-28'),
+        lastUpdated: '2025-12-28',
         version: 1,
         updatedBy: 'system',
         notes: 'SaaS industry research intelligence - focuses on funding, hiring, product launches, enterprise readiness, and platform capabilities'
@@ -3372,7 +3372,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Cybersecurity intelligence - focuses on certifications, compliance capabilities, service breadth, and incident response expertise'
@@ -3472,7 +3472,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         {key: 'is_google_partner', label: 'Google Partner', type: 'boolean', description: 'Google Partner status', extractionHints: ['google partner', 'premier partner'], required: false, defaultValue: false},
         {key: 'has_case_studies', label: 'Has Case Studies', type: 'boolean', description: 'Published case studies', extractionHints: ['case study', 'success story'], required: false, defaultValue: false}
       ],
-      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Digital marketing agency intelligence - growth, services, credentials'}
+      metadata: {lastUpdated: '2025-12-28', version: 1, updatedBy: 'system', notes: 'Digital marketing agency intelligence - growth, services, credentials'}
     }
   },
   
@@ -3605,7 +3605,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Recruitment & HR intelligence - focuses on placement volume, specializations, service breadth, and quality guarantees'
@@ -3742,7 +3742,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Logistics & freight intelligence - focuses on fleet size, service breadth, geographic coverage, and technology capabilities'
@@ -3879,7 +3879,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'FinTech intelligence - focuses on funding, user growth, regulatory compliance, product breadth, and platform capabilities'
@@ -4015,7 +4015,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Managed IT (MSP) intelligence - focuses on client volume, SLA guarantees, service breadth, and strategic IT capabilities'
@@ -4152,7 +4152,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'EdTech intelligence - focuses on user adoption, learning outcomes, course breadth, and enterprise readiness'
@@ -4246,7 +4246,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         {key: 'has_subscription', label: 'Subscription Model', type: 'boolean', description: 'Recurring revenue', extractionHints: ['subscription', 'subscribe'], required: false, defaultValue: false},
         {key: 'product_categories', label: 'Product Categories', type: 'array', description: 'Types of products', extractionHints: ['shop', 'products', 'collections'], required: false, defaultValue: []}
       ],
-      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'E-commerce intelligence - growth, business model, customer satisfaction'}
+      metadata: {lastUpdated: '2025-12-28', version: 1, updatedBy: 'system', notes: 'E-commerce intelligence - growth, business model, customer satisfaction'}
     }
   },
   
@@ -4379,7 +4379,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'BioTech intelligence - focuses on clinical progress, funding, regulatory milestones, IP strength, and commercialization readiness'
@@ -4520,7 +4520,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Solar energy intelligence - focuses on installation volume, battery storage, financing accessibility, and business growth'
@@ -5015,7 +5015,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-28'),
+        lastUpdated: '2025-12-28',
         version: 1,
         updatedBy: 'system',
         notes: 'HVAC industry research intelligence - focuses on growth indicators (hiring, expansion), service offerings (emergency, commercial, residential), and modern capabilities (smart home, online booking)'
@@ -5114,7 +5114,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         {key: 'has_financing', label: 'Offers Financing', type: 'boolean', description: 'Payment plans', extractionHints: ['financing', 'payment plans'], required: false, defaultValue: false},
         {key: 'roofing_types', label: 'Roof Types', type: 'array', description: 'Types of roofing', extractionHints: ['shingle', 'metal', 'tile', 'flat'], required: false, defaultValue: []}
       ],
-      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Roofing intelligence - insurance claims, storm damage, growth indicators'}
+      metadata: {lastUpdated: '2025-12-28', version: 1, updatedBy: 'system', notes: 'Roofing intelligence - insurance claims, storm damage, growth indicators'}
     }
   },
   
@@ -5247,7 +5247,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Landscaping & hardscaping intelligence - focuses on service breadth, design capabilities, portfolio quality, and business growth'
@@ -5384,7 +5384,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Plumbing intelligence - focuses on emergency capabilities, fleet size, service breadth, and recurring revenue models'
@@ -5521,7 +5521,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Pest control intelligence - focuses on recurring revenue models, service breadth, eco-friendly options, and response capabilities'
@@ -5658,7 +5658,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'House cleaning intelligence - focuses on recurring revenue models, trust indicators, service flexibility, and technology adoption'
@@ -5795,7 +5795,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Pool maintenance intelligence - focuses on route size, service breadth, equipment expertise, and recurring revenue models'
@@ -5932,7 +5932,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Electrical services intelligence - focuses on licensing, emergency capabilities, modern service offerings (EV, smart home), and safety expertise'
@@ -6069,7 +6069,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Home security intelligence - focuses on monitoring services, smart home integration, equipment variety, and business growth indicators'
@@ -6168,7 +6168,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         {key: 'case_types', label: 'Practice Areas', type: 'array', description: 'Types of cases', extractionHints: ['car accident', 'truck', 'malpractice'], required: false, defaultValue: []},
         {key: 'has_trial_experience', label: 'Trial Experience', type: 'boolean', description: 'Goes to trial', extractionHints: ['trial', 'courtroom'], required: false, defaultValue: false}
       ],
-      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Personal injury law intelligence - results, growth, trial capability'}
+      metadata: {lastUpdated: '2025-12-28', version: 1, updatedBy: 'system', notes: 'Personal injury law intelligence - results, growth, trial capability'}
     }
   },
   
@@ -6301,7 +6301,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Family law intelligence - focuses on experience, accessibility, mediation capabilities, and compassionate service delivery'
@@ -6438,7 +6438,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Accounting & tax intelligence - focuses on CPA credentials, service breadth, industry specialization, and strategic advisory capabilities'
@@ -6575,7 +6575,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Financial planning intelligence - focuses on credentials, fiduciary status, AUM size, service comprehensiveness, and client specialization'
@@ -6712,7 +6712,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Insurance agency intelligence - focuses on product breadth, carrier relationships, quoting capabilities, and agency size'
@@ -6849,7 +6849,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Business coaching intelligence - focuses on credentials, proven results, thought leadership, and scalable delivery models'
@@ -6985,7 +6985,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Travel & concierge intelligence - focuses on specialization, luxury positioning, service breadth, and industry recognition'
@@ -7122,7 +7122,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Event planning intelligence - focuses on portfolio depth, service breadth, event specialization, and vendor relationships'
@@ -7259,7 +7259,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       ],
 
       metadata: {
-        lastUpdated: new Date('2025-12-29'),
+        lastUpdated: '2025-12-29',
         version: 1,
         updatedBy: 'system',
         notes: 'Nonprofit & fundraising intelligence - focuses on impact metrics, transparency ratings, donor cultivation, and volunteer engagement'
@@ -7358,7 +7358,7 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         {key: 'has_bar', label: 'Full Bar', type: 'boolean', description: 'Liquor license', extractionHints: ['bar', 'margaritas', 'cocktails'], required: false, defaultValue: false},
         {key: 'seating_capacity', label: 'Seating Capacity', type: 'number', description: 'Number of seats', extractionHints: ['seats', 'capacity'], required: false, defaultValue: 0}
       ],
-      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Mexican restaurant intelligence - growth, services, customer experience'}
+      metadata: {lastUpdated: '2025-12-28', version: 1, updatedBy: 'system', notes: 'Mexican restaurant intelligence - growth, services, customer experience'}
     }
   }
   
@@ -7503,3 +7503,4 @@ export function validateResearchIntelligence(
     return { valid: false, errors };
   }
 }
+
