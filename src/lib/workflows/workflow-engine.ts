@@ -345,7 +345,7 @@ export async function testWorkflowExecution(
   workflow: Workflow,
   testData: any
 ): Promise<WorkflowExecution> {
-  return executeWorkflow(workflow, testData);
+  return executeWorkflowImpl(workflow, testData);
 }
 
 
