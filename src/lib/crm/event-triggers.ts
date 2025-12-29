@@ -166,13 +166,21 @@ async function executeTriggeredWorkflow(
       eventType: event.eventType,
     });
 
-    // Import workflow execution service
+    // Import workflow execution service and get workflow
     const { executeWorkflow } = await import('@/lib/workflows/workflow-executor');
+    const { getWorkflow } = await import('@/lib/workflows/workflow-service');
+    
+    // Load the workflow
+    const workflow = await getWorkflow(event.organizationId, rule.workflowId);
+    
+    if (!workflow) {
+      logger.error('Workflow not found for trigger', { workflowId: rule.workflowId });
+      return;
+    }
     
     // Execute the workflow with event context
     await executeWorkflow(
-      event.organizationId,
-      rule.workflowId,
+      workflow,
       {
         entityType: event.entityType,
         entityId: event.entityId,
