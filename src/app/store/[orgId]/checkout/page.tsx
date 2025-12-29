@@ -67,6 +67,7 @@ export default function CheckoutPage() {
       const cartId = localStorage.getItem('cartSessionId')!;
       const order = await processCheckout({
         cartId,
+        organizationId: orgId,
         workspaceId: 'default',
         customer: {
           email: formData.email,

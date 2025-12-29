@@ -27,42 +27,65 @@ function buildQueryConstraints(filters: ViewFilter[]): QueryConstraint[] {
 
         switch (operator) {
           case 'equals':
+          case 'is':
             constraints.push(where(field, '==', value));
             break;
-          case 'notEquals':
+          case 'not_equals':
+          case 'is_not':
             constraints.push(where(field, '!=', value));
             break;
           case 'contains':
+          case 'starts_with':
             // Firestore doesn't support contains, but we can use >= and <= for prefix match
             if (typeof value === 'string') {
               constraints.push(where(field, '>=', value));
               constraints.push(where(field, '<=', value + '\uf8ff'));
             }
             break;
-          case 'greaterThan':
+          case 'greater_than':
+          case 'is_after':
             constraints.push(where(field, '>', value));
             break;
-          case 'lessThan':
+          case 'less_than':
+          case 'is_before':
             constraints.push(where(field, '<', value));
             break;
-          case 'greaterThanOrEqual':
+          case 'greater_than_or_equal':
+          case 'is_on_or_after':
             constraints.push(where(field, '>=', value));
             break;
-          case 'lessThanOrEqual':
+          case 'less_than_or_equal':
+          case 'is_on_or_before':
             constraints.push(where(field, '<=', value));
             break;
-          case 'in':
+          case 'is_on':
+            // For date "is on" queries, we need to match the full day
+            constraints.push(where(field, '==', value));
+            break;
+          case 'has_any_of':
             if (Array.isArray(value)) {
               constraints.push(where(field, 'in', value));
             }
             break;
-          case 'notIn':
+          case 'has_none_of':
             if (Array.isArray(value)) {
               constraints.push(where(field, 'not-in', value));
             }
             break;
-          case 'arrayContains':
+          case 'is_exactly':
             constraints.push(where(field, 'array-contains', value));
+            break;
+          case 'is_checked':
+            constraints.push(where(field, '==', true));
+            break;
+          case 'is_not_checked':
+            constraints.push(where(field, '==', false));
+            break;
+          case 'is_empty':
+            constraints.push(where(field, '==', null));
+            break;
+          case 'is_not_empty':
+            constraints.push(where(field, '!=', null));
             break;
         }
       }

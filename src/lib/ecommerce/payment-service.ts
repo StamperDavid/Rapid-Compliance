@@ -52,9 +52,9 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
   }
   
   const paymentConfig = (ecommerceConfig as any).payments;
-  const defaultProvider = paymentConfig.providers?.find((p: any) => p.isDefault && p.enabled);
+  const defaultProvider = paymentConfig?.providers?.find((p: any) => p.isDefault && p.enabled);
   
-  if (!defaultProvider) {
+  if (!paymentConfig || !defaultProvider) {
     return {
       success: false,
       error: 'No payment provider configured',
@@ -101,7 +101,7 @@ async function processStripePayment(
 ): Promise<PaymentResult> {
   try {
     // Get Stripe API key
-    const orgId = request.workspaceId.split('/')[0]; // Extract org ID
+    const orgId = request.organizationId || request.workspaceId.split('/')[0]; // Use org ID directly or extract from workspace
     const stripeKey = await apiKeyService.getServiceKey(orgId, 'stripe');
     
     if (!stripeKey) {

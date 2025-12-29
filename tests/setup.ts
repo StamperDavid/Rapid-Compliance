@@ -14,20 +14,60 @@ Object.defineProperty(process.env, 'NODE_ENV', {
 // This uses Admin SDK which bypasses security rules
 jest.mock('@/lib/db/firestore-service', () => {
   const { AdminFirestoreService } = jest.requireActual('@/lib/db/admin-firestore-service');
-  return {
+  const actualModule = jest.requireActual('@/lib/db/firestore-service');
+  
+  // Re-export everything from the actual module but override FirestoreService
+  const mocked = {
+    ...actualModule,
     FirestoreService: AdminFirestoreService,
-    COLLECTIONS: jest.requireActual('@/lib/db/firestore-service').COLLECTIONS,
   };
+  
+  // Now recreate EmailCampaignService to use the mocked FirestoreService
+  mocked.EmailCampaignService = class EmailCampaignService {
+    static async get(orgId: string, campaignId: string) {
+      return AdminFirestoreService.get(
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        campaignId
+      );
+    }
+    
+    static async set(orgId: string, campaignId: string, data: any) {
+      return AdminFirestoreService.set(
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        campaignId,
+        data,
+        false
+      );
+    }
+    
+    static async getAll(orgId: string, filters: any[] = []) {
+      return AdminFirestoreService.getAll(
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        filters
+      );
+    }
+    
+    static async getAllPaginated(orgId: string, filters: any[] = [], pageSize: number = 50, lastVisible?: any) {
+      return AdminFirestoreService.getAllPaginated(
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        filters,
+        pageSize,
+        lastVisible
+      );
+    }
+    
+    static async delete(orgId: string, campaignId: string) {
+      return AdminFirestoreService.delete(
+        `${mocked.COLLECTIONS.ORGANIZATIONS}/${orgId}/${mocked.COLLECTIONS.EMAIL_CAMPAIGNS}`,
+        campaignId
+      );
+    }
+  };
+  
+  return mocked;
 });
 
-// Mock API Key Service
-jest.mock('@/lib/api-keys/api-key-service', () => ({
-  apiKeyService: {
-    getKeys: jest.fn(),
-    getServiceKey: jest.fn(),
-    saveKeys: jest.fn(),
-  },
-}));
+// No mocking of API Key Service - use real implementation for production readiness
 
 // Export common test utilities
 export const mockOrganizationId = 'test-org-123';

@@ -37,6 +37,16 @@ export async function calculateShipping(
   
   const shippingConfig = (ecommerceConfig as any).shipping;
   
+  // If no shipping config, return default shipping
+  if (!shippingConfig) {
+    return {
+      cost: 0,
+      methodId: 'default',
+      methodName: 'Standard Shipping',
+      estimatedDelivery: calculateEstimatedDelivery(5, 7),
+    };
+  }
+  
   // Check for free shipping
   if (shippingConfig.freeShipping?.enabled) {
     const minAmount = shippingConfig.freeShipping.minOrderAmount || 0;

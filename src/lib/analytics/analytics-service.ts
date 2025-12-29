@@ -100,7 +100,7 @@ export async function getSalesForecast(
   period: 'month' | 'quarter' | 'year'
 ): Promise<SalesForecast> {
   // Get open deals
-  const openDeals = await getOpenDeals(workspaceId);
+  const openDeals = await getOpenDeals(workspaceId, organizationId);
   
   // Calculate weighted forecast
   const forecastedRevenue = calculateWeightedForecast(openDeals);
@@ -139,7 +139,7 @@ export async function getWinLossAnalysis(
   endDate: Date
 ): Promise<WinLossAnalysis> {
   // Get won and lost deals
-  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
+  const deals = await getDealsInPeriod(workspaceId, organizationId, startDate, endDate);
   const won = deals.filter(d => d.status === 'won' || d.stage === 'closed_won');
   const lost = deals.filter(d => d.status === 'lost' || d.stage === 'closed_lost');
   
@@ -166,7 +166,7 @@ export async function getWinLossAnalysis(
   const bySalesRep = analyzeWinLossByRep(won, lost);
   
   // Trends
-  const trends = await calculateWinLossTrends(workspaceId, startDate, endDate);
+  const trends = await calculateWinLossTrends(workspaceId, organizationId, startDate, endDate);
   
   return {
     period,
@@ -896,8 +896,8 @@ function analyzeWinLossByRep(wonDeals: any[], lostDeals: any[]): any[] {
   }));
 }
 
-async function calculateWinLossTrends(workspaceId: string, startDate: Date, endDate: Date): Promise<any[]> {
-  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
+async function calculateWinLossTrends(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<any[]> {
+  const deals = await getDealsInPeriod(workspaceId, organizationId, startDate, endDate);
   
   // Group by week
   const trends: any[] = [];

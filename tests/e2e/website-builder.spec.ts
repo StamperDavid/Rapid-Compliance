@@ -63,7 +63,7 @@ test.describe('Website Builder E2E', () => {
     await expect(page.locator('[data-widget-type="heading"]').nth(1)).toBeVisible();
 
     // Edit widget content
-    await page.click('[data-widget-type="heading"]').nth(1);
+    await page.locator('[data-widget-type="heading"]').nth(1).click();
     await page.fill('[name="widgetContent"]', 'Welcome to Our Site');
 
     // Save changes

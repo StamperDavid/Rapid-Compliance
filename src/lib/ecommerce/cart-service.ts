@@ -106,8 +106,8 @@ export async function addToCart(
   // Check if item already in cart
   const existingItemIndex = cart.items.findIndex(
     item => item.productId === productId && 
-            item.variantId === variantId &&
-            JSON.stringify(item.variantOptions) === JSON.stringify(variantOptions)
+            (item.variantId || null) === (variantId || null) &&
+            JSON.stringify(item.variantOptions || {}) === JSON.stringify(variantOptions || {})
   );
   
   if (existingItemIndex >= 0) {
@@ -122,8 +122,8 @@ export async function addToCart(
       productId,
       productName: product.name,
       sku: product.sku,
-      variantId,
-      variantOptions,
+      ...(variantId && { variantId }), // Only include if defined
+      ...(variantOptions && { variantOptions }), // Only include if defined
       price: product.price,
       quantity,
       subtotal: product.price * quantity,
@@ -302,10 +302,25 @@ async function saveCart(cart: Cart): Promise<void> {
       createdAt: (cart.createdAt as any).toDate?.()?.toISOString() || cart.createdAt,
       updatedAt: (cart.updatedAt as any).toDate?.()?.toISOString() || cart.updatedAt,
       expiresAt: (cart.expiresAt as any).toDate?.()?.toISOString() || cart.expiresAt,
-      items: cart.items.map(item => ({
-        ...item,
-        addedAt: (item.addedAt as any).toDate?.()?.toISOString() || item.addedAt,
-      })),
+      items: cart.items.map(item => {
+        const serializedItem: any = {
+          id: item.id,
+          productId: item.productId,
+          productName: item.productName,
+          sku: item.sku,
+          price: item.price,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+          addedAt: (item.addedAt as any).toDate?.()?.toISOString() || item.addedAt,
+        };
+        
+        // Only include optional fields if they are defined
+        if (item.variantId !== undefined) serializedItem.variantId = item.variantId;
+        if (item.variantOptions !== undefined) serializedItem.variantOptions = item.variantOptions;
+        if (item.image !== undefined) serializedItem.image = item.image;
+        
+        return serializedItem;
+      }),
     },
     false
   );

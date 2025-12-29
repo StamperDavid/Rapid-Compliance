@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { getOrCreateCart } from './cart-service';
+import { getOrCreateCart, clearCart } from './cart-service';
 import type { Cart, Order, Address, OrderPayment, OrderShipping } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 import { processPayment } from './payment-service';
@@ -465,11 +465,4 @@ async function sendOrderConfirmation(workspaceId: string, organizationId: string
   });
 }
 
-/**
- * Clear cart (helper)
- */
-async function clearCart(cartId: string, workspaceId: string): Promise<void> {
-  const { clearCart } = await import('./cart-service');
-  await clearCart(cartId, workspaceId);
-}
 

@@ -77,7 +77,7 @@ describe('E-Commerce Checkout E2E', () => {
     );
 
     // Create test product
-    testProductId = await createProduct(testOrgId, {
+    const product = await createProduct(testOrgId, {
       name: 'Test Product',
       description: 'A test product for checkout',
       sku: 'TEST-001',
@@ -87,6 +87,7 @@ describe('E-Commerce Checkout E2E', () => {
       trackInventory: true,
       category: 'Test',
     }, testWorkspaceId);
+    testProductId = product.id;
 
     console.log(`✅ Test product created: ${testProductId}`);
   }, 30000);
@@ -95,7 +96,7 @@ describe('E-Commerce Checkout E2E', () => {
     // Cleanup: Delete test data
     try {
       if (testCartId) {
-        await clearCart(testCartId, `${testOrgId}/workspaces/${testWorkspaceId}`);
+        await clearCart(testCartId, testWorkspaceId, testOrgId);
       }
       
       // Note: Leave test org for manual inspection if needed
@@ -146,11 +147,10 @@ describe('E-Commerce Checkout E2E', () => {
       
       expect(testCartId).toBeDefined();
       
-      const workspaceId = `${testOrgId}/workspaces/${testWorkspaceId}`;
-      
       const checkoutData = {
         cartId: testCartId,
-        workspaceId,
+        organizationId: testOrgId,
+        workspaceId: testWorkspaceId,
         customer: {
           email: 'test@example.com',
           firstName: 'Test',
@@ -158,17 +158,21 @@ describe('E-Commerce Checkout E2E', () => {
           phone: '+1-555-0100',
         },
         billingAddress: {
-          line1: '123 Test St',
+          firstName: 'Test',
+          lastName: 'Customer',
+          address1: '123 Test St',
           city: 'Test City',
           state: 'CA',
-          postalCode: '90210',
+          zip: '90210',
           country: 'US',
         },
         shippingAddress: {
-          line1: '123 Test St',
+          firstName: 'Test',
+          lastName: 'Customer',
+          address1: '123 Test St',
           city: 'Test City',
           state: 'CA',
-          postalCode: '90210',
+          zip: '90210',
           country: 'US',
         },
         paymentMethod: 'card',
@@ -208,29 +212,33 @@ describe('E-Commerce Checkout E2E', () => {
     it('should validate cart before checkout', async () => {
       // Test with empty cart
       const emptyCartId = `cart-empty-${Date.now()}`;
-      const workspaceId = `${testOrgId}/workspaces/${testWorkspaceId}`;
       
       await expect(async () => {
         await processCheckout({
           cartId: emptyCartId,
-          workspaceId,
+          organizationId: testOrgId,
+          workspaceId: testWorkspaceId,
           customer: {
             email: 'test@example.com',
             firstName: 'Test',
             lastName: 'User',
           },
           billingAddress: {
-            line1: '123 Test St',
+            firstName: 'Test',
+            lastName: 'User',
+            address1: '123 Test St',
             city: 'Test City',
             state: 'CA',
-            postalCode: '90210',
+            zip: '90210',
             country: 'US',
           },
           shippingAddress: {
-            line1: '123 Test St',
+            firstName: 'Test',
+            lastName: 'User',
+            address1: '123 Test St',
             city: 'Test City',
             state: 'CA',
-            postalCode: '90210',
+            zip: '90210',
             country: 'US',
           },
           paymentMethod: 'card',

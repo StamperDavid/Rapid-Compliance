@@ -38,7 +38,8 @@ export async function calculateTax(
   
   const taxConfig = (ecommerceConfig as any).tax;
   
-  if (!taxConfig.enabled) {
+  // If no tax config or tax not enabled, return zero tax
+  if (!taxConfig || !taxConfig.enabled) {
     return {
       amount: 0,
       rate: 0,

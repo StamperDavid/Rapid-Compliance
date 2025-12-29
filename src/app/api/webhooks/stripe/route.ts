@@ -111,6 +111,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     // Build checkout data
     const checkoutData = {
       cartId,
+      organizationId,
       workspaceId,
       customer: customerData,
       shippingAddress: shippingAddress || billingAddress,

@@ -58,7 +58,8 @@ describe('Payment Integration Tests', () => {
       // Or configure via API keys for test org
       
       const request = {
-        workspaceId: `${testOrgId}/workspaces/${testWorkspaceId}`,
+        organizationId: testOrgId,
+        workspaceId: testWorkspaceId,
         amount: 100,
         currency: 'USD',
         paymentMethod: 'card',
@@ -94,7 +95,8 @@ describe('Payment Integration Tests', () => {
 
     it('should handle payment failure gracefully', async () => {
       const request = {
-        workspaceId: `${testOrgId}/workspaces/${testWorkspaceId}`,
+        organizationId: testOrgId,
+        workspaceId: testWorkspaceId,
         amount: 100,
         currency: 'USD',
         paymentMethod: 'card',
@@ -129,7 +131,8 @@ describe('Payment Integration Tests', () => {
       }, false);
 
       const request = {
-        workspaceId: `${unconfiguredOrgId}/workspaces/default`,
+        organizationId: unconfiguredOrgId,
+        workspaceId: 'default',
         amount: 100,
         currency: 'USD',
         paymentMethod: 'card',

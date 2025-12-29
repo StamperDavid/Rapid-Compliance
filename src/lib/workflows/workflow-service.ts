@@ -100,7 +100,7 @@ export async function getWorkflow(
  */
 export async function createWorkflow(
   organizationId: string,
-  data: Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'stats'>,
+  data: Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>,
   createdBy: string,
   workspaceId: string = 'default'
 ): Promise<Workflow> {

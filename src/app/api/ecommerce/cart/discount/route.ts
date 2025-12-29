@@ -10,6 +10,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 const discountSchema = z.object({
   sessionId: z.string(),
   workspaceId: z.string(),
+  organizationId: z.string(),
   code: z.string(),
 });
 
@@ -39,9 +40,9 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', errorDetails);
     }
 
-    const { sessionId, workspaceId, code } = validation.data;
+    const { sessionId, workspaceId, organizationId, code } = validation.data;
 
-    const cart = await applyDiscountCode(sessionId, workspaceId, code);
+    const cart = await applyDiscountCode(sessionId, workspaceId, organizationId, code);
 
     return NextResponse.json({
       success: true,
@@ -69,16 +70,17 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId') || request.headers.get('x-session-id');
     const workspaceId = searchParams.get('workspaceId');
+    const organizationId = searchParams.get('organizationId');
     const code = searchParams.get('code');
 
-    if (!sessionId || !workspaceId || !code) {
+    if (!sessionId || !workspaceId || !organizationId || !code) {
       return NextResponse.json(
-        { success: false, error: 'sessionId, workspaceId, and code required' },
+        { success: false, error: 'sessionId, workspaceId, organizationId, and code required' },
         { status: 400 }
       );
     }
 
-    const cart = await removeDiscountCode(sessionId, workspaceId, code);
+    const cart = await removeDiscountCode(sessionId, workspaceId, organizationId, code);
 
     return NextResponse.json({
       success: true,

@@ -28,6 +28,11 @@ class APIKeyService {
   async getKeys(organizationId: string): Promise<APIKeysConfig | null> {
     const now = Date.now();
     
+    // In test mode, always bypass cache to ensure fresh data
+    if (process.env.NODE_ENV === 'test') {
+      return await this.fetchKeysFromFirestore(organizationId);
+    }
+    
     // Return cached keys if still valid
     if (this.keysCache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
       if (this.keysCache.organizationId === organizationId) {
