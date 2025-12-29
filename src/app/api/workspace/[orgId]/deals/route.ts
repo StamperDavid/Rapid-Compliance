@@ -10,10 +10,9 @@ export async function GET(
     const workspaceId = searchParams.get('workspaceId') || 'default';
     const stage = searchParams.get('stage');
     const pageSize = parseInt(searchParams.get('pageSize') || '100');
-    const lastDocId = searchParams.get('lastDoc');
 
     const filters = stage && stage !== 'all' ? { stage } : undefined;
-    const pagination = { pageSize, lastDoc: lastDocId };
+    const pagination = { pageSize };
 
     const result = await getDeals(params.orgId, workspaceId, filters, pagination);
 
