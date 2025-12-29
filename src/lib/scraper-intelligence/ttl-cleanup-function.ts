@@ -1,0 +1,306 @@
+/**
+ * TTL Cleanup Cloud Function
+ * 
+ * Handles automatic deletion of expired temporary scrapes.
+ * This is a fallback for when Firestore native TTL is not available.
+ * 
+ * DEPLOYMENT:
+ * - Firebase Cloud Functions (scheduled)
+ * - Runs daily at 3:00 AM UTC
+ * - Processes all organizations in batches
+ * 
+ * MONITORING:
+ * - Logs deletion counts
+ * - Tracks storage savings
+ * - Alerts on failures
+ */
+
+import * as functions from 'firebase-functions';
+import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
+import { 
+  deleteExpiredScrapes, 
+  deleteFlaggedScrapes,
+  getStorageStats 
+} from './temporary-scrapes-service';
+
+/**
+ * Scheduled function to clean up expired temporary scrapes
+ * 
+ * Runs daily at 3:00 AM UTC
+ * Processes all organizations sequentially
+ */
+export const cleanupExpiredScrapesDaily = functions.pubsub
+  .schedule('0 3 * * *') // 3:00 AM UTC daily
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    logger.info('Starting daily TTL cleanup job');
+
+    const startTime = Date.now();
+    let totalDeleted = 0;
+    let totalOrganizations = 0;
+    let totalErrors = 0;
+
+    try {
+      // Get all organizations
+      const orgsSnapshot = await db.collection('organizations').get();
+      totalOrganizations = orgsSnapshot.size;
+
+      logger.info(`Processing ${totalOrganizations} organizations`);
+
+      // Process each organization
+      for (const orgDoc of orgsSnapshot.docs) {
+        const orgId = orgDoc.id;
+
+        try {
+          // Delete expired scrapes
+          const expiredCount = await deleteExpiredScrapes(orgId);
+          
+          // Delete flagged scrapes
+          const flaggedCount = await deleteFlaggedScrapes(orgId);
+
+          const totalOrgDeleted = expiredCount + flaggedCount;
+          totalDeleted += totalOrgDeleted;
+
+          if (totalOrgDeleted > 0) {
+            logger.info('Cleanup complete for organization', {
+              organizationId: orgId,
+              expiredDeleted: expiredCount,
+              flaggedDeleted: flaggedCount,
+              total: totalOrgDeleted,
+            });
+
+            // Log storage stats after cleanup
+            const stats = await getStorageStats(orgId);
+            logger.info('Post-cleanup storage stats', {
+              organizationId: orgId,
+              ...stats,
+            });
+          }
+        } catch (error) {
+          totalErrors++;
+          logger.error('Cleanup failed for organization', error, {
+            organizationId: orgId,
+          });
+          // Continue with next organization
+        }
+      }
+
+      const durationMs = Date.now() - startTime;
+
+      logger.info('Daily TTL cleanup job completed', {
+        totalOrganizations,
+        totalDeleted,
+        totalErrors,
+        durationMs,
+        avgTimePerOrg: Math.round(durationMs / totalOrganizations),
+      });
+
+      // Return metrics for monitoring
+      return {
+        success: true,
+        totalOrganizations,
+        totalDeleted,
+        totalErrors,
+        durationMs,
+      };
+    } catch (error) {
+      logger.error('Daily TTL cleanup job failed', error);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        totalOrganizations,
+        totalDeleted,
+        totalErrors,
+        durationMs: Date.now() - startTime,
+      };
+    }
+  });
+
+/**
+ * HTTP-triggered cleanup function for manual execution
+ * 
+ * Useful for:
+ * - Testing
+ * - One-off cleanups
+ * - Forcing cleanup for specific organization
+ * 
+ * SECURITY: Requires admin authentication
+ */
+export const cleanupExpiredScrapesManual = functions.https.onCall(
+  async (data, context) => {
+    // Verify authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be authenticated to run cleanup'
+      );
+    }
+
+    // Verify admin privileges
+    if (!context.auth.token.admin && !context.auth.token.superAdmin) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Must be admin to run cleanup'
+      );
+    }
+
+    const { organizationId } = data;
+
+    logger.info('Manual cleanup triggered', {
+      organizationId: organizationId || 'all',
+      triggeredBy: context.auth.uid,
+    });
+
+    try {
+      if (organizationId) {
+        // Cleanup specific organization
+        const expiredCount = await deleteExpiredScrapes(organizationId);
+        const flaggedCount = await deleteFlaggedScrapes(organizationId);
+        const totalDeleted = expiredCount + flaggedCount;
+
+        logger.info('Manual cleanup complete', {
+          organizationId,
+          expiredDeleted: expiredCount,
+          flaggedDeleted: flaggedCount,
+          total: totalDeleted,
+        });
+
+        return {
+          success: true,
+          organizationId,
+          expiredDeleted: expiredCount,
+          flaggedDeleted: flaggedCount,
+          totalDeleted,
+        };
+      } else {
+        // Cleanup all organizations
+        const orgsSnapshot = await db.collection('organizations').get();
+        let totalDeleted = 0;
+
+        for (const orgDoc of orgsSnapshot.docs) {
+          const orgId = orgDoc.id;
+          const expiredCount = await deleteExpiredScrapes(orgId);
+          const flaggedCount = await deleteFlaggedScrapes(orgId);
+          totalDeleted += expiredCount + flaggedCount;
+        }
+
+        logger.info('Manual cleanup complete (all organizations)', {
+          totalOrganizations: orgsSnapshot.size,
+          totalDeleted,
+        });
+
+        return {
+          success: true,
+          totalOrganizations: orgsSnapshot.size,
+          totalDeleted,
+        };
+      }
+    } catch (error) {
+      logger.error('Manual cleanup failed', error, {
+        organizationId: organizationId || 'all',
+      });
+
+      throw new functions.https.HttpsError(
+        'internal',
+        error instanceof Error ? error.message : 'Cleanup failed'
+      );
+    }
+  }
+);
+
+/**
+ * Monitor storage usage and send alerts
+ * 
+ * Runs every 6 hours to check for storage anomalies:
+ * - Unexpectedly high storage usage
+ * - TTL deletions not working
+ * - Organizations exceeding quotas
+ */
+export const monitorStorageUsage = functions.pubsub
+  .schedule('0 */6 * * *') // Every 6 hours
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    logger.info('Starting storage monitoring');
+
+    try {
+      const orgsSnapshot = await db.collection('organizations').get();
+      const alerts: Array<{
+        organizationId: string;
+        issue: string;
+        severity: 'warning' | 'critical';
+      }> = [];
+
+      for (const orgDoc of orgsSnapshot.docs) {
+        const orgId = orgDoc.id;
+
+        try {
+          const stats = await getStorageStats(orgId);
+
+          // Alert if too many scrapes (TTL might not be working)
+          if (stats.totalScrapes > 1000) {
+            alerts.push({
+              organizationId: orgId,
+              issue: `High scrape count: ${stats.totalScrapes} (expected <700 with 7-day TTL)`,
+              severity: 'warning',
+            });
+          }
+
+          // Alert if average size is very large (might be storing videos/images)
+          if (stats.averageSizeBytes > 1024 * 1024) {
+            // > 1MB average
+            alerts.push({
+              organizationId: orgId,
+              issue: `Large average scrape size: ${Math.round(stats.averageSizeBytes / 1024)}KB`,
+              severity: 'warning',
+            });
+          }
+
+          // Alert if oldest scrape is > 10 days (TTL not working)
+          if (stats.oldestScrape) {
+            const ageInDays =
+              (Date.now() - stats.oldestScrape.getTime()) / (1000 * 60 * 60 * 24);
+
+            if (ageInDays > 10) {
+              alerts.push({
+                organizationId: orgId,
+                issue: `Oldest scrape is ${Math.round(ageInDays)} days old (TTL may not be working)`,
+                severity: 'critical',
+              });
+            }
+          }
+        } catch (error) {
+          logger.error('Failed to get storage stats', error, {
+            organizationId: orgId,
+          });
+        }
+      }
+
+      // Log all alerts
+      if (alerts.length > 0) {
+        logger.warn('Storage monitoring alerts', {
+          totalAlerts: alerts.length,
+          criticalAlerts: alerts.filter((a) => a.severity === 'critical').length,
+          alerts,
+        });
+
+        // TODO: Send alerts to Slack/email/monitoring system
+        // For now, just log them
+      } else {
+        logger.info('Storage monitoring: No issues detected');
+      }
+
+      return {
+        success: true,
+        alertCount: alerts.length,
+        alerts,
+      };
+    } catch (error) {
+      logger.error('Storage monitoring failed', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });

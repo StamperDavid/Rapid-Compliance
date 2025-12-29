@@ -156,7 +156,12 @@ export async function saveTemporaryScrape(params: {
       relatedRecordId,
     };
 
-    await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(newScrape.id).set(newScrape);
+    // Filter out undefined values for Firestore
+    const cleanData = Object.fromEntries(
+      Object.entries(newScrape).filter(([_, v]) => v !== undefined)
+    );
+
+    await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(newScrape.id).set(cleanData);
 
     logger.info('New temporary scrape created', {
       id: newScrape.id,
