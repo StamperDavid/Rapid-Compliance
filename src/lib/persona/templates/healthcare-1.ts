@@ -750,3 +750,4 @@ export const healthcareTemplates1: Record<string, IndustryTemplate> = {
     }
   }
 };
+

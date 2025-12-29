@@ -1147,4 +1147,3 @@ export const healthcareTemplates3: Record<string, IndustryTemplate> = {
   
   // ============================================
 };
-};

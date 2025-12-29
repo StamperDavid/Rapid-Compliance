@@ -1416,3 +1416,4 @@ export const homeServicesTemplates1: Record<string, IndustryTemplate> = {
     }
   }
 };
+

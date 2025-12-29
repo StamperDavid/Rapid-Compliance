@@ -506,4 +506,3 @@ export const homeServicesTemplates3: Record<string, IndustryTemplate> = {
     }
   }
 };
-};

@@ -1047,3 +1047,4 @@ export const healthcareTemplates2: Record<string, IndustryTemplate> = {
     }
   }
 };
+
