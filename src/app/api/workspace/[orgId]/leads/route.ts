@@ -10,10 +10,9 @@ export async function GET(
     const workspaceId = searchParams.get('workspaceId') || 'default';
     const status = searchParams.get('status');
     const pageSize = parseInt(searchParams.get('pageSize') || '50');
-    const lastDocId = searchParams.get('lastDoc');
 
     const filters = status && status !== 'all' ? { status } : undefined;
-    const pagination = { pageSize, lastDoc: lastDocId };
+    const pagination = { pageSize };
 
     const result = await getLeads(params.orgId, workspaceId, filters, pagination);
 
