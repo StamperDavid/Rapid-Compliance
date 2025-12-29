@@ -148,22 +148,22 @@ interface TemporaryScrape {
   - [x] Complete documentation (STEP_1_4_COMPLETION_SUMMARY.md)
   - [x] Code committed to GitHub (commit 4517733)
 
-## **PHASE 2: UPGRADE EXISTING TEMPLATES WITH RESEARCH INTELLIGENCE** ⏳ Not Started
+## **PHASE 2: UPGRADE EXISTING TEMPLATES WITH RESEARCH INTELLIGENCE** ✅ COMPLETE (10/10 Templates)
 
 **Approach:** Add `research` property to existing 50 industry templates in `src/lib/persona/industry-templates.ts`
 
-**Priority Industries (10 templates to upgrade first):**
+**Priority Industries (10 templates upgraded):**
 
-- [ ] **Step 2.1:** HVAC (`hvac`) - Home services, high-value B2C
-- [ ] **Step 2.2:** SaaS Software (`saas-software`) - B2B, high growth potential
-- [ ] **Step 2.3:** Residential Real Estate (`residential-real-estate`) - High-value transactions
-- [ ] **Step 2.4:** Gyms/CrossFit (`gyms-crossfit`) - Wellness/fitness sector
-- [ ] **Step 2.5:** Dental Practices (`dental-practices`) - Healthcare sector
-- [ ] **Step 2.6:** E-commerce D2C (`ecommerce-d2c`) - Online retail
-- [ ] **Step 2.7:** Personal Injury Law (`law-personal-injury`) - Legal services
-- [ ] **Step 2.8:** Roofing (`roofing`) - Home services, seasonal
-- [ ] **Step 2.9:** Mexican Restaurant (`mexican-restaurant`) - Hospitality
-- [ ] **Step 2.10:** Digital Marketing (`digital-marketing`) - Professional services
+- [x] **Step 2.1:** HVAC (`hvac`) - Home services, high-value B2C ✅
+- [x] **Step 2.2:** SaaS Software (`saas-software`) - B2B, high growth potential ✅
+- [x] **Step 2.3:** Residential Real Estate (`residential-real-estate`) - High-value transactions ✅
+- [x] **Step 2.4:** Gyms/CrossFit (`gyms-crossfit`) - Wellness/fitness sector ✅
+- [x] **Step 2.5:** Dental Practices (`dental-practices`) - Healthcare sector ✅
+- [x] **Step 2.6:** E-commerce D2C (`ecommerce-d2c`) - Online retail ✅
+- [x] **Step 2.7:** Personal Injury Law (`law-personal-injury`) - Legal services ✅
+- [x] **Step 2.8:** Roofing (`roofing`) - Home services, seasonal ✅
+- [x] **Step 2.9:** Mexican Restaurant (`mexican-restaurant`) - Hospitality ✅
+- [x] **Step 2.10:** Digital Marketing (`digital-marketing`) - Professional services ✅
 
 **Each template upgrade must include:**
 - [ ] 15-25 high-value signals with real keywords (e.g., "we're hiring", "new location")
