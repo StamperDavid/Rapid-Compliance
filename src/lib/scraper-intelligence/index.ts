@@ -105,3 +105,81 @@ export {
   logError,
   ScraperErrorHandler,
 } from './error-handler';
+
+// Training Manager
+export {
+  submitFeedback,
+  getTrainingData,
+  getAllTrainingData,
+  deactivateTrainingData,
+  activateTrainingData,
+  getTrainingHistory,
+  rollbackTrainingData,
+  getFeedbackForScrape,
+  getUnprocessedFeedback,
+  getTrainingAnalytics,
+  resetRateLimiter,
+  TrainingManagerError,
+} from './training-manager';
+
+// Pattern Matcher
+export {
+  generateEmbedding,
+  generateEmbeddingsBatch,
+  cosineSimilarity,
+  findSimilarPatterns,
+  findBestMatch,
+  clearEmbeddingCache,
+  getCacheStats as getEmbeddingCacheStats,
+  getCostMetrics,
+  resetCostTracking,
+  preGenerateEmbeddings,
+  calculateThreshold,
+  PatternMatcherError,
+} from './pattern-matcher';
+
+export type { PatternMatch, EmbeddingCache, CostMetrics } from './pattern-matcher';
+
+// Confidence Scorer
+export {
+  calculateBayesianConfidence,
+  calculateCredibleInterval,
+  calculateDecayFactor,
+  applyTimeDecay,
+  reinforcementUpdate,
+  aggregateConfidences,
+  detectOutliers,
+  filterOutliers,
+  calculateComprehensiveConfidence,
+  calculateSignalConfidence,
+  batchCalculateConfidences,
+  calculateSuccessRate,
+  getConfidenceGrade,
+  calculateConfidenceTrend,
+  ConfidenceScorerError,
+} from './confidence-scorer';
+
+export type { ConfidenceScore, MultiSourceScore } from './confidence-scorer';
+
+// Version Control
+export {
+  generateDiff,
+  compareVersions,
+  createBranch,
+  mergeBranch,
+  listBranches,
+  generateChangelog,
+  validateIntegrity,
+  recoverFromHistory,
+  exportChangelogToMarkdown,
+  VersionControlError,
+} from './version-control';
+
+export type {
+  DiffEntry,
+  VersionDiff,
+  Branch,
+  MergeResult,
+  Changelog,
+  ChangelogEntry,
+} from './version-control';

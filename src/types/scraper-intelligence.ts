@@ -756,3 +756,377 @@ export function isExtractedSignal(value: unknown): value is ExtractedSignal {
     return false;
   }
 }
+
+// ============================================================================
+// LEARNING SYSTEM - TRAINING DATA & FEEDBACK
+// ============================================================================
+
+/**
+ * Feedback types for training the extraction system
+ */
+export type FeedbackType = 
+  | 'correct'        // Extraction was correct
+  | 'incorrect'      // Extraction was wrong
+  | 'missing'        // Should have extracted but didn't
+  | 'false_positive' // Extracted something that shouldn't be
+  | 'low_confidence'; // Correct but confidence too low
+
+/**
+ * Client feedback on an extraction
+ * Used to improve extraction accuracy over time
+ */
+export interface ClientFeedback {
+  /**
+   * Unique ID for this feedback
+   */
+  id: string;
+
+  /**
+   * Organization that submitted the feedback
+   */
+  organizationId: string;
+
+  /**
+   * User who submitted the feedback
+   */
+  userId: string;
+
+  /**
+   * Type of feedback
+   */
+  feedbackType: FeedbackType;
+
+  /**
+   * The signal that was extracted (or should have been)
+   */
+  signalId: string;
+
+  /**
+   * The source scrape this feedback is about
+   */
+  sourceScrapeId: string;
+
+  /**
+   * The text snippet this feedback relates to
+   */
+  sourceText: string;
+
+  /**
+   * If incorrect, what should it have been
+   */
+  correctedValue?: string;
+
+  /**
+   * Additional notes from the user
+   */
+  notes?: string;
+
+  /**
+   * Confidence score assigned by the user (0-100)
+   */
+  userConfidence?: number;
+
+  /**
+   * When the feedback was submitted
+   */
+  submittedAt: Date;
+
+  /**
+   * Whether this feedback has been processed into training data
+   */
+  processed: boolean;
+
+  /**
+   * When it was processed
+   */
+  processedAt?: Date;
+
+  /**
+   * Metadata for tracking
+   */
+  metadata?: {
+    /**
+     * URL where the extraction occurred
+     */
+    url?: string;
+
+    /**
+     * Industry template used
+     */
+    industry?: string;
+
+    /**
+     * Original confidence score from system
+     */
+    systemConfidence?: number;
+  };
+}
+
+// Zod schema for ClientFeedback
+export const ClientFeedbackSchema = z.object({
+  id: z.string().min(1),
+  organizationId: z.string().min(1),
+  userId: z.string().min(1),
+  feedbackType: z.enum(['correct', 'incorrect', 'missing', 'false_positive', 'low_confidence']),
+  signalId: z.string().min(1),
+  sourceScrapeId: z.string().min(1),
+  sourceText: z.string().max(1000),
+  correctedValue: z.string().optional(),
+  notes: z.string().max(500).optional(),
+  userConfidence: z.number().min(0).max(100).optional(),
+  submittedAt: z.date(),
+  processed: z.boolean(),
+  processedAt: z.date().optional(),
+  metadata: z.object({
+    url: z.string().url().optional(),
+    industry: z.string().optional(),
+    systemConfidence: z.number().min(0).max(100).optional(),
+  }).optional(),
+});
+
+/**
+ * Training data record - the refined learning from client feedback
+ * Stored permanently to improve extraction accuracy
+ */
+export interface TrainingData {
+  /**
+   * Unique ID for this training record
+   */
+  id: string;
+
+  /**
+   * Organization this training belongs to
+   */
+  organizationId: string;
+
+  /**
+   * Signal ID this training is for
+   */
+  signalId: string;
+
+  /**
+   * Pattern that was learned
+   */
+  pattern: string;
+
+  /**
+   * Type of pattern (keyword, regex, embedding)
+   */
+  patternType: 'keyword' | 'regex' | 'embedding';
+
+  /**
+   * Embedding vector (if patternType is 'embedding')
+   * Stored as array of numbers for vector similarity search
+   */
+  embedding?: number[];
+
+  /**
+   * Confidence score for this pattern (0-100)
+   * Updated using Bayesian inference from feedback
+   */
+  confidence: number;
+
+  /**
+   * Number of positive confirmations
+   */
+  positiveCount: number;
+
+  /**
+   * Number of negative confirmations
+   */
+  negativeCount: number;
+
+  /**
+   * Total number of times this pattern was seen
+   */
+  seenCount: number;
+
+  /**
+   * When this training was created
+   */
+  createdAt: Date;
+
+  /**
+   * When this training was last updated
+   */
+  lastUpdatedAt: Date;
+
+  /**
+   * When this pattern was last seen in feedback
+   */
+  lastSeenAt: Date;
+
+  /**
+   * Version number for rollback support
+   */
+  version: number;
+
+  /**
+   * Whether this pattern is currently active
+   */
+  active: boolean;
+
+  /**
+   * Metadata for tracking
+   */
+  metadata?: {
+    /**
+     * Industry this pattern is specific to
+     */
+    industry?: string;
+
+    /**
+     * Platform this pattern works best on
+     */
+    platform?: ScrapingPlatform;
+
+    /**
+     * Example text snippets
+     */
+    examples?: string[];
+
+    /**
+     * Tags for categorization
+     */
+    tags?: string[];
+  };
+}
+
+// Zod schema for TrainingData
+export const TrainingDataSchema = z.object({
+  id: z.string().min(1),
+  organizationId: z.string().min(1),
+  signalId: z.string().min(1),
+  pattern: z.string().min(1),
+  patternType: z.enum(['keyword', 'regex', 'embedding']),
+  embedding: z.array(z.number()).optional(),
+  confidence: z.number().min(0).max(100),
+  positiveCount: z.number().int().min(0),
+  negativeCount: z.number().int().min(0),
+  seenCount: z.number().int().min(0),
+  createdAt: z.date(),
+  lastUpdatedAt: z.date(),
+  lastSeenAt: z.date(),
+  version: z.number().int().positive(),
+  active: z.boolean(),
+  metadata: z.object({
+    industry: z.string().optional(),
+    platform: z.enum([
+      'website',
+      'linkedin-jobs',
+      'linkedin-company',
+      'news',
+      'crunchbase',
+      'dns',
+      'google-business',
+      'social-media',
+    ]).optional(),
+    examples: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
+  }).optional(),
+});
+
+/**
+ * Training history record for audit trail
+ */
+export interface TrainingHistory {
+  /**
+   * Unique ID for this history entry
+   */
+  id: string;
+
+  /**
+   * Training data ID this history entry is for
+   */
+  trainingDataId: string;
+
+  /**
+   * Organization ID
+   */
+  organizationId: string;
+
+  /**
+   * User who made the change
+   */
+  userId: string;
+
+  /**
+   * What changed
+   */
+  changeType: 'created' | 'updated' | 'deleted' | 'activated' | 'deactivated';
+
+  /**
+   * Previous value (for rollback)
+   */
+  previousValue?: TrainingData;
+
+  /**
+   * New value
+   */
+  newValue?: TrainingData;
+
+  /**
+   * Reason for change
+   */
+  reason?: string;
+
+  /**
+   * When the change occurred
+   */
+  changedAt: Date;
+
+  /**
+   * Version after this change
+   */
+  version: number;
+}
+
+// Zod schema for TrainingHistory
+export const TrainingHistorySchema = z.object({
+  id: z.string().min(1),
+  trainingDataId: z.string().min(1),
+  organizationId: z.string().min(1),
+  userId: z.string().min(1),
+  changeType: z.enum(['created', 'updated', 'deleted', 'activated', 'deactivated']),
+  previousValue: TrainingDataSchema.optional(),
+  newValue: TrainingDataSchema.optional(),
+  reason: z.string().optional(),
+  changedAt: z.date(),
+  version: z.number().int().positive(),
+});
+
+/**
+ * Type guard for ClientFeedback
+ */
+export function isClientFeedback(value: unknown): value is ClientFeedback {
+  try {
+    ClientFeedbackSchema.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Type guard for TrainingData
+ */
+export function isTrainingData(value: unknown): value is TrainingData {
+  try {
+    TrainingDataSchema.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Type guard for TrainingHistory
+ */
+export function isTrainingHistory(value: unknown): value is TrainingHistory {
+  try {
+    TrainingHistorySchema.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
