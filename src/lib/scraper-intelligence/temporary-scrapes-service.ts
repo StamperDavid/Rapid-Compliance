@@ -1,3 +1,5 @@
+'use server';
+
 /**
  * Temporary Scrapes Service
  * 
