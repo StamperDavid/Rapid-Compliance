@@ -225,7 +225,6 @@ export async function enrichCompany(
                   description: scrapedContent.description,
                   author: scrapedContent.metadata?.author,
                   keywords: scrapedContent.metadata?.keywords,
-                  platform: 'website',
                 },
               });
               
