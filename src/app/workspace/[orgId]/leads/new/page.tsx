@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createLead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
 import DuplicateWarning from '@/components/DuplicateWarning';
 import type { DuplicateDetectionResult } from '@/lib/crm/duplicate-detection';
@@ -80,7 +79,20 @@ export default function NewLeadPage() {
 
     try {
       setSaving(true);
-      await createLead(orgId, lead, 'default', { autoEnrich: true });
+      
+      const response = await fetch(`/api/workspace/${orgId}/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceId: 'default',
+          leadData: { ...lead, autoEnrich: true }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create lead');
+      }
+      
       router.push(`/workspace/${orgId}/leads`);
     } catch (error) {
       logger.error('Error creating lead:', error, { file: 'page.tsx' });

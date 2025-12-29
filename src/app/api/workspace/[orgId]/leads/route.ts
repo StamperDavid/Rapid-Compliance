@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLeads } from '@/lib/crm/lead-service';
+import { getLeads, createLead } from '@/lib/crm/lead-service';
 
 export async function GET(
   request: NextRequest,
@@ -22,6 +22,27 @@ export async function GET(
     console.error('Failed to fetch leads:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch leads' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { orgId: string } }
+) {
+  try {
+    const body = await request.json();
+    const workspaceId = body.workspaceId || 'default';
+    const leadData = body.leadData;
+
+    const result = await createLead(params.orgId, workspaceId, leadData);
+
+    return NextResponse.json(result);
+  } catch (error: any) {
+    console.error('Failed to create lead:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to create lead' },
       { status: 500 }
     );
   }
