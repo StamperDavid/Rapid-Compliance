@@ -4,6 +4,17 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePagination } from '@/hooks/usePagination';
 
+interface Contact {
+  id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  companyName?: string;
+  title?: string;
+  isVIP?: boolean;
+}
+
 export default function ContactsPage() {
   const params = useParams();
   const router = useRouter();
@@ -37,7 +48,7 @@ export default function ContactsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchContacts });
+  } = usePagination<Contact>({ fetchFn: fetchContacts });
 
   // Initial load
   useEffect(() => {
