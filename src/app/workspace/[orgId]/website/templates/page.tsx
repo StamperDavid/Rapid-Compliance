@@ -12,7 +12,6 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
 import { PageTemplate } from '@/types/website';
-import { allTemplates } from '@/lib/website-builder/page-templates';
 
 export default function TemplateBrowserPage() {
   const params = useParams();
@@ -46,7 +45,8 @@ export default function TemplateBrowserPage() {
     try {
       setLoading(true);
       
-      // Load platform templates
+      // Load platform templates dynamically (prevents OOM during build)
+      const { allTemplates } = await import('@/lib/website-builder/page-templates');
       setTemplates(allTemplates);
 
       // Load custom templates for this org
