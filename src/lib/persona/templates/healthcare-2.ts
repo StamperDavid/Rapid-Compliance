@@ -1045,5 +1045,5 @@ export const healthcareTemplates2: Record<string, IndustryTemplate> = {
         notes: 'SaaS industry research intelligence - focuses on funding, hiring, product launches, enterprise readiness, and platform capabilities'
       }
     }
-  },
-  
+  }
+};

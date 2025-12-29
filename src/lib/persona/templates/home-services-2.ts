@@ -1053,5 +1053,5 @@ export const homeServicesTemplates2: Record<string, IndustryTemplate> = {
         notes: 'Business coaching intelligence - focuses on credentials, proven results, thought leadership, and scalable delivery models'
       }
     }
-  },
-  
+  }
+};

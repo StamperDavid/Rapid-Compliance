@@ -1414,5 +1414,5 @@ export const homeServicesTemplates1: Record<string, IndustryTemplate> = {
         notes: 'Pool maintenance intelligence - focuses on route size, service breadth, equipment expertise, and recurring revenue models'
       }
     }
-  },
-  
+  }
+};

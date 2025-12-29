@@ -748,5 +748,5 @@ export const healthcareTemplates1: Record<string, IndustryTemplate> = {
         notes: 'Yoga & Pilates intelligence - focuses on class variety, instructor quality, membership models, and service diversification'
       }
     }
-  },
-  
+  }
+};
