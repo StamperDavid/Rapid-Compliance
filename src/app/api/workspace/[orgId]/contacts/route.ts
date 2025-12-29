@@ -8,11 +8,11 @@ export async function GET(
   try {
     const { searchParams } = new URL(request.url);
     const workspaceId = searchParams.get('workspaceId') || 'default';
-    const type = searchParams.get('type');
+    const company = searchParams.get('company');
     const pageSize = parseInt(searchParams.get('pageSize') || '50');
     const lastDocId = searchParams.get('lastDoc');
 
-    const filters = type && type !== 'all' ? { type } : undefined;
+    const filters = company ? { company } : undefined;
     const pagination = { pageSize, lastDoc: lastDocId };
 
     const result = await getContacts(params.orgId, workspaceId, filters, pagination);
