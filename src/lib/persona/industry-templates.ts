@@ -123,6 +123,89 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Pre-approval referral',
         'Home valuation request'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {
+        primarySource: 'website',
+        secondarySources: ['linkedin-company', 'google-business'],
+        frequency: 'per-lead',
+        timeoutMs: 30000,
+        enableCaching: true,
+        cacheTtlSeconds: 300
+      },
+
+      highValueSignals: [
+        {id: 'hiring_agents', label: 'Hiring Real Estate Agents', description: 'Recruiting new agents', keywords: ["hiring agents", "join our team", "agent positions", "real estate careers", "agent recruitment"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'top_producer', label: 'Top Producer', description: 'High sales volume or awards', keywords: ["top producer", "top agent", "million dollar", "sales leader", "award winning"], priority: 'CRITICAL', action: 'increase-score', scoreBoost: 40, platform: 'website'},
+        {id: 'new_listings', label: 'New Listings', description: 'Recently added properties', keywords: ["new listing", "just listed", "coming soon", "recently added"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'},
+        {id: 'luxury_homes', label: 'Luxury Market', description: 'Specializes in luxury real estate', keywords: ["luxury homes", "luxury real estate", "high-end", "estates", "million dollar homes"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 25, platform: 'website'},
+        {id: 'first_time_buyers', label: 'First-Time Buyers', description: 'Focuses on first-time homebuyers', keywords: ["first time", "first-time buyers", "first home", "buyer assistance"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 12, platform: 'website'},
+        {id: 'virtual_tours', label: 'Virtual Tours', description: 'Offers 3D or virtual property tours', keywords: ["virtual tour", "3d tour", "matterport", "video walkthrough"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: 'buyer_representation', label: 'Buyer Representation', description: 'Represents buyers', keywords: ["buyer agent", "buyer representation", "helping buyers", "buyer services"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 10, platform: 'website'},
+        {id: 'seller_representation', label: 'Seller Representation', description: 'Represents sellers', keywords: ["listing agent", "seller representation", "selling your home", "list your property"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 10, platform: 'website'},
+        {id: 'relocation_specialist', label: 'Relocation Services', description: 'Assists with relocations', keywords: ["relocation", "moving to", "relocating", "corporate relocation"], priority: 'LOW', action: 'add-to-segment', scoreBoost: 8, platform: 'website'},
+        {id: 'investment_properties', label: 'Investment Properties', description: 'Specializes in investment real estate', keywords: ["investment properties", "rental properties", "fix and flip", "investor friendly"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 20, platform: 'website'},
+        {id: 'team_size', label: 'Large Team', description: 'Multiple agents on team', keywords: ["team of", "agents", "real estate team"], regexPattern: '(\\d+)\\s*(agents?|realtors?)', priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'},
+        {id: 'areas_served', label: 'Multiple Service Areas', description: 'Serves multiple cities/neighborhoods', keywords: ["serving", "areas served", "neighborhoods", "communities"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'},
+        {id: 'years_experience', label: 'Experience Level', description: 'Years in real estate', keywords: ["years of experience", "since", "established"], regexPattern: '(\\d+)\\+?\\s*years?', priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'},
+        {id: 'certifications', label: 'Professional Designations', description: 'Has certifications (CRS, ABR, etc)', keywords: ["crs", "abr", "gri", "srs", "certified", "accredited"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'sold_count', label: 'Sales Volume', description: 'Number of homes sold', keywords: ["homes sold", "sales", "transactions"], regexPattern: '(\\d+)\\s*(homes?|properties)\\s*sold', priority: 'HIGH', action: 'increase-score', scoreBoost: 20, platform: 'website'},
+        {id: 'mls_access', label: 'MLS Access', description: 'Has MLS search capability', keywords: ["mls", "multiple listing", "search homes", "property search"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'market_reports', label: 'Market Reports', description: 'Provides market analysis', keywords: ["market report", "market analysis", "market trends", "neighborhood stats"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'home_valuation', label: 'Home Valuation Tool', description: 'Offers property valuation', keywords: ["home value", "property valuation", "what\'s my home worth", "cma"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'}
+      ],
+
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright notices', context: 'footer'},
+        {id: 'all_rights', pattern: 'all rights reserved', description: 'Rights statement', context: 'footer'},
+        {id: 'equal_housing', pattern: 'equal housing opportunity', description: 'Fair housing logo', context: 'footer'},
+        {id: 'realtor_logo', pattern: 'realtor®|realtors®', description: 'REALTOR trademark', context: 'all'},
+        {id: 'mls_disclaimer', pattern: 'mls.*disclaimer|data.*deemed reliable', description: 'MLS disclaimers', context: 'footer'},
+        {id: 'privacy_policy', pattern: 'privacy policy', description: 'Privacy link', context: 'footer'},
+        {id: 'terms', pattern: 'terms (of use|and conditions)', description: 'Terms link', context: 'footer'},
+        {id: 'cookie_notice', pattern: 'we use cookies', description: 'Cookie banner', context: 'all'},
+        {id: 'social_media', pattern: 'follow (us|me) on', description: 'Social links', context: 'footer'},
+        {id: 'contact_us', pattern: '^contact( us)?$', description: 'Contact link', context: 'header'},
+        {id: 'about_us', pattern: '^about( us| me)?$', description: 'About link', context: 'header'},
+        {id: 'testimonials', pattern: '^testimonials$|^reviews$', description: 'Testimonials link', context: 'header'},
+        {id: 'blog', pattern: '^blog$', description: 'Blog link', context: 'header'},
+        {id: 'search_homes', pattern: '^search homes$|^listings$', description: 'Search link', context: 'header'},
+        {id: 'back_to_top', pattern: 'back to top', description: 'Back to top link', context: 'footer'},
+        {id: 'site_map', pattern: 'site ?map', description: 'Sitemap link', context: 'footer'},
+        {id: 'accessibility', pattern: 'accessibility', description: 'Accessibility link', context: 'footer'},
+        {id: 'dmca', pattern: 'dmca', description: 'DMCA notice', context: 'footer'},
+        {id: 'idx_disclaimer', pattern: 'idx|internet data exchange', description: 'IDX disclaimer', context: 'footer'},
+        {id: 'powered_by', pattern: 'powered by|website by', description: 'Attribution', context: 'footer'}
+      ],
+
+      scoringRules: [
+        {id: 'top_producer_hiring', name: 'Growing Top Team', description: 'Top producer hiring agents', condition: 'signals.some(s => s.signalId === "top_producer") && signals.some(s => s.signalId === "hiring_agents")', scoreBoost: 25, priority: 1, enabled: true},
+        {id: 'luxury_investment', name: 'Luxury & Investment', description: 'Serves luxury and investment markets', condition: 'signals.some(s => s.signalId === "luxury_homes") && signals.some(s => s.signalId === "investment_properties")', scoreBoost: 20, priority: 2, enabled: true},
+        {id: 'full_service_agent', name: 'Full Service', description: 'Represents both buyers and sellers', condition: 'signals.some(s => s.signalId === "buyer_representation") && signals.some(s => s.signalId === "seller_representation")', scoreBoost: 15, priority: 3, enabled: true},
+        {id: 'tech_forward', name: 'Tech-Forward Agent', description: 'Uses virtual tours and modern tools', condition: 'signals.some(s => s.signalId === "virtual_tours") && signals.some(s => s.signalId === "mls_access")', scoreBoost: 10, priority: 4, enabled: true},
+        {id: 'established_team', name: 'Established Team', description: 'Large team with experience', condition: 'signals.some(s => s.signalId === "team_size") && signals.some(s => s.signalId === "years_experience")', scoreBoost: 15, priority: 5, enabled: true},
+        {id: 'high_volume', name: 'High Volume Producer', description: 'High sales count with multiple areas', condition: 'signals.some(s => s.signalId === "sold_count") && signals.some(s => s.signalId === "areas_served")', scoreBoost: 20, priority: 6, enabled: true},
+        {id: 'certified_professional', name: 'Certified Professional', description: 'Has certifications and experience', condition: 'signals.some(s => s.signalId === "certifications") && signals.some(s => s.signalId === "years_experience")', scoreBoost: 10, priority: 7, enabled: true}
+      ],
+
+      customFields: [
+        {key: 'team_size', label: 'Number of Agents', type: 'number', description: 'Size of agent team', extractionHints: ['agents', 'team of', 'realtors'], required: false, defaultValue: 1},
+        {key: 'areas_served', label: 'Service Areas', type: 'array', description: 'Cities/neighborhoods served', extractionHints: ['serving', 'areas', 'neighborhoods'], required: false, defaultValue: []},
+        {key: 'years_experience', label: 'Years in Business', type: 'number', description: 'Years of experience', extractionHints: ['years', 'since', 'established'], required: false, defaultValue: 0},
+        {key: 'specialization', label: 'Market Specialization', type: 'string', description: 'Luxury, first-time, investment, etc', extractionHints: ['specialize', 'focus', 'expert in'], required: false, defaultValue: 'general'},
+        {key: 'homes_sold_annual', label: 'Annual Sales Volume', type: 'number', description: 'Homes sold per year', extractionHints: ['homes sold', 'transactions', 'sales'], required: false, defaultValue: 0},
+        {key: 'has_virtual_tours', label: 'Offers Virtual Tours', type: 'boolean', description: 'Whether 3D/virtual tours available', extractionHints: ['virtual', '3d tour', 'matterport'], required: false, defaultValue: false},
+        {key: 'certifications', label: 'Professional Certifications', type: 'array', description: 'CRS, ABR, GRI, etc', extractionHints: ['certified', 'designation', 'accredited'], required: false, defaultValue: []},
+        {key: 'buyer_or_seller', label: 'Buyer/Seller Focus', type: 'string', description: 'Buyer, seller, or both', extractionHints: ['buyer agent', 'listing agent', 'both'], required: false, defaultValue: 'both'}
+      ],
+
+      metadata: {
+        lastUpdated: new Date('2025-12-28'),
+        version: 1,
+        updatedBy: 'system',
+        notes: 'Residential real estate intelligence - focuses on team growth, sales volume, market specialization, and tech capabilities'
+      }
     }
   },
   
@@ -681,6 +764,49 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Emergency triage (pain level assessment)',
         'Office tour scheduling'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {primarySource: 'website', secondarySources: ['linkedin-jobs', 'google-business'], frequency: 'per-lead', timeoutMs: 30000, enableCaching: true, cacheTtlSeconds: 300},
+      highValueSignals: [
+        {id: 'hiring_hygienists', label: 'Hiring Dental Staff', description: 'Recruiting hygienists or assistants', keywords: ["hiring", "dental hygienist", "dental assistant", "join our team"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'new_location', label: 'New Practice/Location', description: 'Opening new office', keywords: ["new location", "opening", "second office", "expanding"], priority: 'CRITICAL', action: 'increase-score', scoreBoost: 40, platform: 'website'},
+        {id: 'emergency_dentistry', label: 'Emergency Services', description: 'Same-day/emergency appointments', keywords: ["emergency", "same day", "walk-in", "urgent care"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 15, platform: 'website'},
+        {id: 'cosmetic_dentistry', label: 'Cosmetic Services', description: 'Veneers, whitening, etc', keywords: ["cosmetic", "veneers", "whitening", "smile makeover"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 20, platform: 'website'},
+        {id: 'orthodontics', label: 'Orthodontics', description: 'Braces or Invisalign', keywords: ["invisalign", "braces", "orthodontics", "clear aligners"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 15, platform: 'website'},
+        {id: 'sedation_dentistry', label: 'Sedation Options', description: 'Offers sedation for anxiety', keywords: ["sedation", "iv sedation", "nitrous", "sleep dentistry"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'},
+        {id: 'implants', label: 'Dental Implants', description: 'Implant dentistry', keywords: ["implants", "dental implants", "all-on-4"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 20, platform: 'website'},
+        {id: 'pediatric', label: 'Pediatric Dentistry', description: 'Treats children', keywords: ["pediatric", "kids", "children", "family dentist"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 12, platform: 'website'},
+        {id: 'financing', label: 'Financing Available', description: 'Payment plans offered', keywords: ["financing", "payment plans", "carecredit", "0% interest"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: 'new_patient_special', label: 'New Patient Offer', description: 'Special for new patients', keywords: ["new patient", "special", "discount", "first visit"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'insurance_accepted', label: 'Insurance Accepted', description: 'Accepts dental insurance', keywords: ["insurance", "in-network", "we accept", "insurance plans"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'weekend_hours', label: 'Weekend Availability', description: 'Saturday/Sunday hours', keywords: ["saturday", "sunday", "weekend", "open weekends"], priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'},
+        {id: 'digital_technology', label: 'Modern Technology', description: 'Digital X-rays, 3D scanning', keywords: ["digital", "3d", "cerec", "laser", "cone beam"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'}
+      ],
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright', context: 'footer'},
+        {id: 'privacy', pattern: 'privacy (policy|notice)', description: 'Privacy link', context: 'footer'},
+        {id: 'hipaa', pattern: 'hipaa', description: 'HIPAA notice', context: 'footer'},
+        {id: 'cookies', pattern: 'cookies', description: 'Cookie notice', context: 'all'},
+        {id: 'social', pattern: 'follow us', description: 'Social links', context: 'footer'},
+        {id: 'contact', pattern: '^contact( us)?$', description: 'Contact link', context: 'header'},
+        {id: 'about', pattern: '^about( us)?$', description: 'About link', context: 'header'},
+        {id: 'services', pattern: '^services$', description: 'Services link', context: 'header'},
+        {id: 'back_top', pattern: 'back to top', description: 'Back link', context: 'footer'}
+      ],
+      scoringRules: [
+        {id: 'growing_practice', name: 'Growing Practice', description: 'Expanding + hiring', condition: 'signals.some(s => s.signalId === "new_location") && signals.some(s => s.signalId === "hiring_hygienists")', scoreBoost: 25, priority: 1, enabled: true},
+        {id: 'full_service', name: 'Full Service', description: 'General + cosmetic + implants', condition: 'signals.some(s => s.signalId === "cosmetic_dentistry") && signals.some(s => s.signalId === "implants")', scoreBoost: 20, priority: 2, enabled: true},
+        {id: 'modern_tech', name: 'Technology Leader', description: 'Digital tech + sedation', condition: 'signals.some(s => s.signalId === "digital_technology") && signals.some(s => s.signalId === "sedation_dentistry")', scoreBoost: 15, priority: 3, enabled: true}
+      ],
+      customFields: [
+        {key: 'staff_count', label: 'Number of Dentists', type: 'number', description: 'Practice size', extractionHints: ['dentists', 'providers', 'doctors'], required: false, defaultValue: 1},
+        {key: 'specialties', label: 'Specialties', type: 'array', description: 'Services offered', extractionHints: ['cosmetic', 'implants', 'orthodontics'], required: false, defaultValue: []},
+        {key: 'has_sedation', label: 'Offers Sedation', type: 'boolean', description: 'Sedation available', extractionHints: ['sedation', 'iv', 'nitrous'], required: false, defaultValue: false},
+        {key: 'accepts_insurance', label: 'Accepts Insurance', type: 'boolean', description: 'Insurance accepted', extractionHints: ['insurance', 'in-network'], required: false, defaultValue: false},
+        {key: 'has_financing', label: 'Offers Financing', type: 'boolean', description: 'Payment plans', extractionHints: ['financing', 'carecredit'], required: false, defaultValue: false}
+      ],
+      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Dental practice intelligence - growth, specialties, technology'}
     }
   },
   
@@ -901,6 +1027,52 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Membership options comparison',
         'Community event invitation'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {primarySource: 'website', secondarySources: ['linkedin-jobs', 'google-business'], frequency: 'per-lead', timeoutMs: 30000, enableCaching: true, cacheTtlSeconds: 300},
+      highValueSignals: [
+        {id: 'hiring_coaches', label: 'Hiring Coaches/Trainers', description: 'Recruiting fitness professionals', keywords: ["hiring coaches", "join our team", "trainer positions", "coach wanted"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'new_location', label: 'New Location Opening', description: 'Expanding to new facility', keywords: ["new location", "opening soon", "grand opening", "second location"], priority: 'CRITICAL', action: 'increase-score', scoreBoost: 40, platform: 'website'},
+        {id: 'free_trial', label: 'Free Trial Offer', description: 'Offers trial membership', keywords: ["free trial", "free week", "no sweat intro", "try us free"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'personal_training', label: 'Personal Training', description: 'Offers 1-on-1 training', keywords: ["personal training", "one-on-one", "1:1", "private sessions"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 12, platform: 'website'},
+        {id: 'group_classes', label: 'Group Fitness Classes', description: 'Offers group classes', keywords: ["group classes", "class schedule", "group fitness", "wod"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 10, platform: 'website'},
+        {id: 'nutrition_coaching', label: 'Nutrition Coaching', description: 'Provides nutrition guidance', keywords: ["nutrition coaching", "meal plans", "nutrition counseling", "diet"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: 'competition_team', label: 'Competition Team', description: 'Has competitive athletes', keywords: ["competition team", "athletes", "compete", "games"], priority: 'LOW', action: 'add-to-segment', scoreBoost: 8, platform: 'website'},
+        {id: 'youth_programs', label: 'Youth/Kids Programs', description: 'Offers kids fitness', keywords: ["kids", "youth", "teens", "children"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 12, platform: 'website'},
+        {id: 'online_training', label: 'Online/Virtual Training', description: 'Virtual training options', keywords: ["online", "virtual", "remote", "app"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: '24_7_access', label: '24/7 Access', description: 'Round-the-clock access', keywords: ["24/7", "24 hour", "always open", "anytime"], priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'},
+        {id: 'shower_facilities', label: 'Amenities', description: 'Showers, lockers, etc', keywords: ["showers", "locker rooms", "sauna", "amenities"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'certified_coaches', label: 'Certified Coaches', description: 'Staff certifications', keywords: ["certified", "credentials", "cf-l1", "cf-l2", "nasm", "issa"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'member_results', label: 'Success Stories', description: 'Transformation stories', keywords: ["transformations", "success stories", "results", "before and after"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'equipment_quality', label: 'Premium Equipment', description: 'High-quality equipment', keywords: ["rogue", "assault bike", "concept2", "equipment"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'community_events', label: 'Community Events', description: 'Hosts community activities', keywords: ["community", "events", "charity", "fundraiser"], priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'}
+      ],
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright', context: 'footer'},
+        {id: 'privacy', pattern: 'privacy policy', description: 'Privacy link', context: 'footer'},
+        {id: 'terms', pattern: 'terms', description: 'Terms link', context: 'footer'},
+        {id: 'cookies', pattern: 'cookies', description: 'Cookie notice', context: 'all'},
+        {id: 'social', pattern: 'follow us', description: 'Social links', context: 'footer'},
+        {id: 'contact', pattern: '^contact$', description: 'Contact link', context: 'header'},
+        {id: 'about', pattern: '^about$', description: 'About link', context: 'header'},
+        {id: 'schedule', pattern: '^schedule$', description: 'Schedule link', context: 'header'},
+        {id: 'pricing', pattern: '^pricing$', description: 'Pricing link', context: 'header'},
+        {id: 'back_top', pattern: 'back to top', description: 'Back link', context: 'footer'}
+      ],
+      scoringRules: [
+        {id: 'expansion_hiring', name: 'Rapid Growth', description: 'New location + hiring', condition: 'signals.some(s => s.signalId === "new_location") && signals.some(s => s.signalId === "hiring_coaches")', scoreBoost: 25, priority: 1, enabled: true},
+        {id: 'full_service_gym', name: 'Full Service', description: 'Group classes + personal training + nutrition', condition: 'signals.some(s => s.signalId === "group_classes") && signals.some(s => s.signalId === "personal_training") && signals.some(s => s.signalId === "nutrition_coaching")', scoreBoost: 20, priority: 2, enabled: true},
+        {id: 'family_friendly', name: 'Family Focus', description: 'Youth programs with community events', condition: 'signals.some(s => s.signalId === "youth_programs") && signals.some(s => s.signalId === "community_events")', scoreBoost: 15, priority: 3, enabled: true}
+      ],
+      customFields: [
+        {key: 'coach_count', label: 'Number of Coaches', type: 'number', description: 'Size of coaching staff', extractionHints: ['coaches', 'trainers', 'staff'], required: false, defaultValue: 0},
+        {key: 'membership_types', label: 'Membership Options', type: 'array', description: 'Types of memberships', extractionHints: ['unlimited', 'punch card', 'drop-in'], required: false, defaultValue: []},
+        {key: 'has_nutrition', label: 'Offers Nutrition', type: 'boolean', description: 'Nutrition coaching available', extractionHints: ['nutrition', 'meal plans'], required: false, defaultValue: false},
+        {key: 'has_youth_program', label: 'Youth Programs', type: 'boolean', description: 'Kids/teen programs', extractionHints: ['kids', 'youth', 'teens'], required: false, defaultValue: false},
+        {key: 'location_count', label: 'Number of Locations', type: 'number', description: 'Gym locations', extractionHints: ['locations', 'facilities'], required: false, defaultValue: 1}
+      ],
+      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Gym/CrossFit intelligence - growth, programs, amenities'}
     }
   },
   
@@ -1235,6 +1407,445 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Pricing comparison',
         'Implementation timeline estimate'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {
+        primarySource: 'website',
+        secondarySources: ['linkedin-company', 'linkedin-jobs', 'crunchbase', 'news'],
+        frequency: 'weekly',
+        timeoutMs: 30000,
+        enableCaching: true,
+        cacheTtlSeconds: 600
+      },
+
+      highValueSignals: [
+        {
+          id: 'funding_announcement',
+          label: 'Recent Funding',
+          description: 'Company raised funding recently',
+          keywords: ["raised", "funding round", "series a", "series b", "seed round", "investment", "venture capital"],
+          priority: 'CRITICAL',
+          action: 'trigger-workflow',
+          scoreBoost: 50,
+          platform: 'news',
+          examples: ["Raised $10M Series A", "Closed seed round"]
+        },
+        {
+          id: 'hiring_engineers',
+          label: 'Hiring Engineering Team',
+          description: 'Actively hiring software engineers',
+          keywords: ["software engineer", "backend engineer", "frontend engineer", "full stack", "devops", "engineering positions"],
+          priority: 'HIGH',
+          action: 'increase-score',
+          scoreBoost: 30,
+          platform: 'linkedin-jobs'
+        },
+        {
+          id: 'product_launch',
+          label: 'Product Launch',
+          description: 'Recently launched new product or feature',
+          keywords: ["launching", "new feature", "product update", "now available", "introducing", "announcing"],
+          priority: 'HIGH',
+          action: 'increase-score',
+          scoreBoost: 25,
+          platform: 'any',
+          examples: ["Launching AI-powered analytics", "New integration available"]
+        },
+        {
+          id: 'api_available',
+          label: 'API Available',
+          description: 'Offers API for integrations',
+          keywords: ["api", "developer docs", "rest api", "graphql", "webhooks", "api documentation"],
+          priority: 'MEDIUM',
+          action: 'add-to-segment',
+          scoreBoost: 15,
+          platform: 'website'
+        },
+        {
+          id: 'integrations',
+          label: 'Third-Party Integrations',
+          description: 'Integrates with other platforms',
+          keywords: ["integrations", "works with", "connects to", "zapier", "slack", "salesforce", "hubspot"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 12,
+          platform: 'website'
+        },
+        {
+          id: 'enterprise_tier',
+          label: 'Enterprise Plan',
+          description: 'Offers enterprise pricing tier',
+          keywords: ["enterprise", "custom pricing", "contact sales", "dedicated support", "sla"],
+          priority: 'HIGH',
+          action: 'add-to-segment',
+          scoreBoost: 20,
+          platform: 'website'
+        },
+        {
+          id: 'free_trial',
+          label: 'Free Trial Available',
+          description: 'Offers free trial period',
+          keywords: ["free trial", "14-day trial", "30-day trial", "try free", "no credit card"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 5,
+          platform: 'website'
+        },
+        {
+          id: 'soc2_compliant',
+          label: 'SOC 2 Compliant',
+          description: 'Has SOC 2 certification',
+          keywords: ["soc 2", "soc2", "security certified", "compliance", "gdpr", "hipaa"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 15,
+          platform: 'website'
+        },
+        {
+          id: 'customer_testimonials',
+          label: 'Customer Testimonials',
+          description: 'Has customer success stories',
+          keywords: ["customer stories", "case studies", "testimonials", "success stories", "customer reviews"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 8,
+          platform: 'website'
+        },
+        {
+          id: 'white_label',
+          label: 'White Label Option',
+          description: 'Offers white-label solution',
+          keywords: ["white label", "rebrand", "custom branding", "private label"],
+          priority: 'MEDIUM',
+          action: 'add-to-segment',
+          scoreBoost: 18,
+          platform: 'website'
+        },
+        {
+          id: 'multi_language',
+          label: 'Multi-Language Support',
+          description: 'Supports multiple languages',
+          keywords: ["multi-language", "multilingual", "international", "languages supported"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 8,
+          platform: 'website'
+        },
+        {
+          id: 'mobile_app',
+          label: 'Mobile App',
+          description: 'Has iOS/Android mobile apps',
+          keywords: ["mobile app", "ios app", "android app", "app store", "google play"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 10,
+          platform: 'website'
+        },
+        {
+          id: 'team_size',
+          label: 'Team Size',
+          description: 'Company employee count',
+          keywords: ["team of", "employees", "growing team"],
+          regexPattern: '(\\d+)\\+?\\s*(employees?|team members?|people)',
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 12,
+          platform: 'any'
+        },
+        {
+          id: 'customer_count',
+          label: 'Customer Count',
+          description: 'Number of customers or users',
+          keywords: ["customers", "users", "businesses", "companies"],
+          regexPattern: '(\\d+[kKmM]?)\\+?\\s*(customers?|users?|businesses?)',
+          priority: 'HIGH',
+          action: 'increase-score',
+          scoreBoost: 20,
+          platform: 'website'
+        },
+        {
+          id: 'uptime_sla',
+          label: 'Uptime Guarantee',
+          description: 'Guarantees uptime percentage',
+          keywords: ["uptime", "99.9%", "availability", "sla guarantee"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 5,
+          platform: 'website'
+        },
+        {
+          id: 'data_export',
+          label: 'Data Export',
+          description: 'Allows data export',
+          keywords: ["export data", "download data", "csv export", "data portability"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 5,
+          platform: 'website'
+        },
+        {
+          id: 'marketplace',
+          label: 'App Marketplace',
+          description: 'Has marketplace for extensions',
+          keywords: ["marketplace", "app store", "extensions", "plugins", "add-ons"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 12,
+          platform: 'website'
+        },
+        {
+          id: 'analytics_dashboard',
+          label: 'Analytics/Reporting',
+          description: 'Offers analytics or reporting features',
+          keywords: ["analytics", "reporting", "dashboard", "insights", "metrics"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 8,
+          platform: 'website'
+        },
+        {
+          id: 'automation_features',
+          label: 'Automation Capabilities',
+          description: 'Offers workflow automation',
+          keywords: ["automation", "workflow", "triggers", "automated", "auto-sync"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 12,
+          platform: 'website'
+        },
+        {
+          id: 'awards_recognition',
+          label: 'Industry Awards',
+          description: 'Won industry awards or recognition',
+          keywords: ["award", "leader", "gartner", "forrester", "g2", "capterra", "best software"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 15,
+          platform: 'website'
+        }
+      ],
+
+      fluffPatterns: [
+        { id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright notices', context: 'footer' },
+        { id: 'all_rights', pattern: 'all rights reserved', description: 'Rights statement', context: 'footer' },
+        { id: 'privacy_policy', pattern: 'privacy policy', description: 'Privacy policy link', context: 'footer' },
+        { id: 'terms_of_service', pattern: 'terms of service', description: 'TOS link', context: 'footer' },
+        { id: 'cookie_notice', pattern: 'we use cookies', description: 'Cookie banner', context: 'all' },
+        { id: 'cookie_settings', pattern: 'cookie (settings|preferences)', description: 'Cookie controls', context: 'all' },
+        { id: 'gdpr_notice', pattern: 'gdpr|data protection', description: 'GDPR notice', context: 'footer' },
+        { id: 'social_links', pattern: 'follow us|connect with us', description: 'Social media links', context: 'footer' },
+        { id: 'nav_home', pattern: '^home$', description: 'Home nav link', context: 'header' },
+        { id: 'nav_about', pattern: '^about( us)?$', description: 'About nav link', context: 'header' },
+        { id: 'nav_contact', pattern: '^contact( us)?$', description: 'Contact nav link', context: 'header' },
+        { id: 'nav_pricing', pattern: '^pricing$', description: 'Pricing nav link', context: 'header' },
+        { id: 'nav_login', pattern: '^(log ?in|sign in)$', description: 'Login link', context: 'header' },
+        { id: 'nav_signup', pattern: '^(sign up|get started)$', description: 'Signup link', context: 'header' },
+        { id: 'newsletter_signup', pattern: 'subscribe to (our )?newsletter', description: 'Newsletter CTA', context: 'all' },
+        { id: 'unsubscribe', pattern: 'unsubscribe', description: 'Unsubscribe link', context: 'footer' },
+        { id: 'site_search', pattern: 'search (our site|docs)', description: 'Search box', context: 'header' },
+        { id: 'help_center', pattern: 'help center|support center', description: 'Help link', context: 'header' },
+        { id: 'documentation', pattern: '^docs?$|^documentation$', description: 'Docs link', context: 'header' },
+        { id: 'blog_link', pattern: '^blog$', description: 'Blog link', context: 'header' },
+        { id: 'careers_link', pattern: '^careers$|^jobs$', description: 'Careers link', context: 'footer' },
+        { id: 'status_page', pattern: 'system status|service status', description: 'Status page link', context: 'footer' },
+        { id: 'security', pattern: 'security overview', description: 'Security link', context: 'footer' },
+        { id: 'compliance', pattern: 'compliance', description: 'Compliance link', context: 'footer' },
+        { id: 'back_to_top', pattern: 'back to top|scroll to top', description: 'Back to top link', context: 'footer' }
+      ],
+
+      scoringRules: [
+        {
+          id: 'recent_funding_with_hiring',
+          name: 'Funding + Hiring',
+          description: 'Recently funded and actively hiring',
+          condition: 'signals.some(s => s.signalId === "funding_announcement") && signals.some(s => s.signalId === "hiring_engineers")',
+          scoreBoost: 30,
+          priority: 1,
+          enabled: true
+        },
+        {
+          id: 'product_market_fit',
+          name: 'Strong Product-Market Fit',
+          description: 'Large customer base with testimonials',
+          condition: 'signals.some(s => s.signalId === "customer_count") && signals.some(s => s.signalId === "customer_testimonials")',
+          scoreBoost: 20,
+          priority: 2,
+          enabled: true
+        },
+        {
+          id: 'enterprise_ready',
+          name: 'Enterprise Ready',
+          description: 'SOC 2 compliant with enterprise tier',
+          condition: 'signals.some(s => s.signalId === "soc2_compliant") && signals.some(s => s.signalId === "enterprise_tier")',
+          scoreBoost: 25,
+          priority: 3,
+          enabled: true
+        },
+        {
+          id: 'platform_play',
+          name: 'Platform Strategy',
+          description: 'Has API, integrations, and marketplace',
+          condition: 'signals.some(s => s.signalId === "api_available") && signals.some(s => s.signalId === "integrations") && signals.some(s => s.signalId === "marketplace")',
+          scoreBoost: 25,
+          priority: 4,
+          enabled: true
+        },
+        {
+          id: 'product_momentum',
+          name: 'Product Momentum',
+          description: 'Recent product launch with growing team',
+          condition: 'signals.some(s => s.signalId === "product_launch") && signals.some(s => s.signalId === "team_size")',
+          scoreBoost: 15,
+          priority: 5,
+          enabled: true
+        },
+        {
+          id: 'global_expansion',
+          name: 'Global Expansion',
+          description: 'Multi-language with mobile apps',
+          condition: 'signals.some(s => s.signalId === "multi_language") && signals.some(s => s.signalId === "mobile_app")',
+          scoreBoost: 15,
+          priority: 6,
+          enabled: true
+        },
+        {
+          id: 'automation_leader',
+          name: 'Automation Leader',
+          description: 'Strong automation and analytics features',
+          condition: 'signals.some(s => s.signalId === "automation_features") && signals.some(s => s.signalId === "analytics_dashboard")',
+          scoreBoost: 12,
+          priority: 7,
+          enabled: true
+        },
+        {
+          id: 'partner_program',
+          name: 'Partner-Friendly',
+          description: 'White label option with API',
+          condition: 'signals.some(s => s.signalId === "white_label") && signals.some(s => s.signalId === "api_available")',
+          scoreBoost: 18,
+          priority: 8,
+          enabled: true
+        },
+        {
+          id: 'industry_leader',
+          name: 'Industry Recognition',
+          description: 'Award-winning with large customer base',
+          condition: 'signals.some(s => s.signalId === "awards_recognition") && signals.some(s => s.signalId === "customer_count")',
+          scoreBoost: 20,
+          priority: 9,
+          enabled: true
+        },
+        {
+          id: 'reliable_infrastructure',
+          name: 'Reliable Infrastructure',
+          description: 'High uptime with data export',
+          condition: 'signals.some(s => s.signalId === "uptime_sla") && signals.some(s => s.signalId === "data_export")',
+          scoreBoost: 10,
+          priority: 10,
+          enabled: true
+        }
+      ],
+
+      customFields: [
+        {
+          key: 'funding_amount',
+          label: 'Funding Amount Raised',
+          type: 'string',
+          description: 'Amount raised in latest funding round',
+          extractionHints: ['raised', 'million', 'funding', 'series'],
+          required: false,
+          defaultValue: ''
+        },
+        {
+          key: 'customer_count',
+          label: 'Number of Customers',
+          type: 'number',
+          description: 'Total customer or user count',
+          extractionHints: ['customers', 'users', 'businesses'],
+          required: false,
+          defaultValue: 0
+        },
+        {
+          key: 'team_size',
+          label: 'Team Size',
+          type: 'number',
+          description: 'Number of employees',
+          extractionHints: ['team of', 'employees', 'growing team'],
+          required: false,
+          defaultValue: 0
+        },
+        {
+          key: 'has_api',
+          label: 'Has Public API',
+          type: 'boolean',
+          description: 'Whether API is available',
+          extractionHints: ['api', 'developer', 'rest api'],
+          required: false,
+          defaultValue: false
+        },
+        {
+          key: 'integration_count',
+          label: 'Number of Integrations',
+          type: 'number',
+          description: 'How many third-party integrations',
+          extractionHints: ['integrations', 'works with', 'connects'],
+          required: false,
+          defaultValue: 0
+        },
+        {
+          key: 'has_free_trial',
+          label: 'Offers Free Trial',
+          type: 'boolean',
+          description: 'Whether free trial is available',
+          extractionHints: ['free trial', 'try free', 'no credit card'],
+          required: false,
+          defaultValue: false
+        },
+        {
+          key: 'compliance_certifications',
+          label: 'Compliance Certifications',
+          type: 'array',
+          description: 'List of certifications (SOC 2, GDPR, HIPAA)',
+          extractionHints: ['soc 2', 'gdpr', 'hipaa', 'certified'],
+          required: false,
+          defaultValue: []
+        },
+        {
+          key: 'pricing_model',
+          label: 'Pricing Model',
+          type: 'string',
+          description: 'Subscription, usage-based, or custom',
+          extractionHints: ['pricing', 'per user', 'per month', 'custom pricing'],
+          required: false,
+          defaultValue: 'unknown'
+        },
+        {
+          key: 'has_mobile_app',
+          label: 'Has Mobile Apps',
+          type: 'boolean',
+          description: 'Whether iOS/Android apps exist',
+          extractionHints: ['mobile app', 'ios', 'android'],
+          required: false,
+          defaultValue: false
+        },
+        {
+          key: 'target_company_size',
+          label: 'Target Company Size',
+          type: 'string',
+          description: 'SMB, Mid-Market, or Enterprise',
+          extractionHints: ['small business', 'enterprise', 'startups'],
+          required: false,
+          defaultValue: 'unknown'
+        }
+      ],
+
+      metadata: {
+        lastUpdated: new Date('2025-12-28'),
+        version: 1,
+        updatedBy: 'system',
+        notes: 'SaaS industry research intelligence - focuses on funding, hiring, product launches, enterprise readiness, and platform capabilities'
+      }
     }
   },
   
@@ -1345,6 +1956,47 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Content strategy assessment',
         'Case study showcase'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {primarySource: 'website', secondarySources: ['linkedin-company', 'linkedin-jobs'], frequency: 'weekly', timeoutMs: 30000, enableCaching: true, cacheTtlSeconds: 600},
+      highValueSignals: [
+        {id: 'hiring', label: 'Hiring Marketing Team', description: 'Growing team', keywords: ["hiring", "join our team", "careers", "we're growing"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'new_clients', label: 'Client Wins', description: 'New client announcements', keywords: ["new client", "welcome", "latest client", "proud to announce"], priority: 'HIGH', action: 'increase-score', scoreBoost: 25, platform: 'website'},
+        {id: 'awards', label: 'Industry Awards', description: 'Recognition and awards', keywords: ["award", "top agency", "best", "recognized"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'},
+        {id: 'case_studies', label: 'Case Studies', description: 'Published case studies', keywords: ["case study", "success story", "results", "roi"], priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'},
+        {id: 'certifications', label: 'Platform Certifications', description: 'Google/Meta partner status', keywords: ["google partner", "meta partner", "certified", "premier partner"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'},
+        {id: 'services_seo', label: 'SEO Services', description: 'Offers SEO', keywords: ["seo", "search engine optimization", "organic search"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 10, platform: 'website'},
+        {id: 'services_ppc', label: 'PPC/Paid Ads', description: 'Paid advertising services', keywords: ["ppc", "google ads", "facebook ads", "paid advertising"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 10, platform: 'website'},
+        {id: 'services_social', label: 'Social Media Management', description: 'Social media services', keywords: ["social media", "content creation", "community management"], priority: 'LOW', action: 'add-to-segment', scoreBoost: 8, platform: 'website'},
+        {id: 'services_content', label: 'Content Marketing', description: 'Content strategy', keywords: ["content marketing", "blog", "content creation"], priority: 'LOW', action: 'add-to-segment', scoreBoost: 8, platform: 'website'},
+        {id: 'industry_niche', label: 'Industry Specialization', description: 'Niche expertise', keywords: ["specialize", "expert in", "focus on"], regexPattern: '(specialize|expert)\\s+in\\s+([A-Za-z]+)', priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 15, platform: 'website'},
+        {id: 'team_size', label: 'Team Size', description: 'Agency headcount', keywords: ["team of", "employees"], regexPattern: '(\\d+)\\+?\\s*(team members?|employees?)', priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'}
+      ],
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright', context: 'footer'},
+        {id: 'privacy', pattern: 'privacy policy', description: 'Privacy link', context: 'footer'},
+        {id: 'terms', pattern: 'terms', description: 'Terms link', context: 'footer'},
+        {id: 'cookies', pattern: 'cookies', description: 'Cookie notice', context: 'all'},
+        {id: 'social', pattern: 'follow us', description: 'Social links', context: 'footer'},
+        {id: 'contact', pattern: '^contact$', description: 'Contact link', context: 'header'},
+        {id: 'about', pattern: '^about$', description: 'About link', context: 'header'},
+        {id: 'portfolio', pattern: '^portfolio$|^work$', description: 'Portfolio link', context: 'header'},
+        {id: 'back_top', pattern: 'back to top', description: 'Back link', context: 'footer'}
+      ],
+      scoringRules: [
+        {id: 'growth_mode', name: 'Growth Mode', description: 'Hiring + new clients', condition: 'signals.some(s => s.signalId === "hiring") && signals.some(s => s.signalId === "new_clients")', scoreBoost: 25, priority: 1, enabled: true},
+        {id: 'full_service', name: 'Full Service Agency', description: 'SEO + PPC + Social', condition: 'signals.some(s => s.signalId === "services_seo") && signals.some(s => s.signalId === "services_ppc") && signals.some(s => s.signalId === "services_social")', scoreBoost: 20, priority: 2, enabled: true},
+        {id: 'credibility', name: 'High Credibility', description: 'Awards + certifications + case studies', condition: 'signals.some(s => s.signalId === "awards") && signals.some(s => s.signalId === "certifications") && signals.some(s => s.signalId === "case_studies")', scoreBoost: 20, priority: 3, enabled: true}
+      ],
+      customFields: [
+        {key: 'team_size', label: 'Agency Size', type: 'number', description: 'Number of employees', extractionHints: ['team of', 'employees'], required: false, defaultValue: 0},
+        {key: 'services_offered', label: 'Services', type: 'array', description: 'Service offerings', extractionHints: ['seo', 'ppc', 'social', 'content'], required: false, defaultValue: []},
+        {key: 'industry_specialization', label: 'Industry Focus', type: 'string', description: 'Target industries', extractionHints: ['specialize', 'expert in'], required: false, defaultValue: 'general'},
+        {key: 'is_google_partner', label: 'Google Partner', type: 'boolean', description: 'Google Partner status', extractionHints: ['google partner', 'premier partner'], required: false, defaultValue: false},
+        {key: 'has_case_studies', label: 'Has Case Studies', type: 'boolean', description: 'Published case studies', extractionHints: ['case study', 'success story'], required: false, defaultValue: false}
+      ],
+      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Digital marketing agency intelligence - growth, services, credentials'}
     }
   },
   
@@ -1675,6 +2327,41 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Similar items recommendation',
         'Wishlist creation'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {primarySource: 'website', secondarySources: ['linkedin-jobs', 'crunchbase'], frequency: 'weekly', timeoutMs: 30000, enableCaching: true, cacheTtlSeconds: 600},
+      highValueSignals: [
+        {id: 'hiring', label: 'Hiring E-commerce Team', description: 'Growing team', keywords: ["hiring", "join our team", "careers"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'new_product_launch', label: 'Product Launch', description: 'New product releases', keywords: ["new", "launching", "just launched", "introducing"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'},
+        {id: 'subscription_model', label: 'Subscription Service', description: 'Recurring revenue model', keywords: ["subscription", "monthly", "subscribe and save", "recurring"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 25, platform: 'website'},
+        {id: 'wholesale', label: 'Wholesale Program', description: 'B2B wholesale', keywords: ["wholesale", "bulk orders", "business", "reseller"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 15, platform: 'website'},
+        {id: 'free_shipping', label: 'Free Shipping', description: 'Free shipping offers', keywords: ["free shipping", "shipping included", "free delivery"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'reviews', label: 'Customer Reviews', description: 'Customer testimonials', keywords: ["reviews", "testimonials", "rated", "stars"], regexPattern: '(\\d+)\\+?\\s*(reviews?|ratings?)', priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'},
+        {id: 'international_shipping', label: 'Ships Internationally', description: 'Global shipping', keywords: ["international", "worldwide", "global shipping"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: 'returns_policy', label: 'Easy Returns', description: 'Customer-friendly returns', keywords: ["free returns", "easy returns", "money back", "satisfaction guaranteed"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'sustainability', label: 'Sustainable/Eco-Friendly', description: 'Eco-conscious brand', keywords: ["sustainable", "eco-friendly", "organic", "recycled"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 12, platform: 'website'},
+        {id: 'mobile_app', label: 'Mobile App', description: 'Shopping app available', keywords: ["app", "download", "ios", "android"], priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'}
+      ],
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright', context: 'footer'},
+        {id: 'privacy', pattern: 'privacy policy', description: 'Privacy', context: 'footer'},
+        {id: 'terms', pattern: 'terms', description: 'Terms', context: 'footer'},
+        {id: 'cookies', pattern: 'cookies', description: 'Cookies', context: 'all'},
+        {id: 'social', pattern: 'follow us', description: 'Social', context: 'footer'},
+        {id: 'newsletter', pattern: 'newsletter|subscribe', description: 'Newsletter', context: 'all'},
+        {id: 'back_top', pattern: 'back to top', description: 'Back', context: 'footer'}
+      ],
+      scoringRules: [
+        {id: 'subscription_business', name: 'Subscription Model', description: 'Recurring revenue + growing', condition: 'signals.some(s => s.signalId === "subscription_model") && signals.some(s => s.signalId === "hiring")', scoreBoost: 30, priority: 1, enabled: true},
+        {id: 'b2b_expansion', name: 'B2B Expansion', description: 'Wholesale + international', condition: 'signals.some(s => s.signalId === "wholesale") && signals.some(s => s.signalId === "international_shipping")', scoreBoost: 20, priority: 2, enabled: true}
+      ],
+      customFields: [
+        {key: 'review_count', label: 'Number of Reviews', type: 'number', description: 'Customer reviews', extractionHints: ['reviews', 'ratings'], required: false, defaultValue: 0},
+        {key: 'has_subscription', label: 'Subscription Model', type: 'boolean', description: 'Recurring revenue', extractionHints: ['subscription', 'subscribe'], required: false, defaultValue: false},
+        {key: 'product_categories', label: 'Product Categories', type: 'array', description: 'Types of products', extractionHints: ['shop', 'products', 'collections'], required: false, defaultValue: []}
+      ],
+      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'E-commerce intelligence - growth, business model, customer satisfaction'}
     }
   },
   
@@ -1844,6 +2531,446 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Financing application',
         'System upgrade consultation'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {
+        primarySource: 'website',
+        secondarySources: ['linkedin-jobs', 'google-business'],
+        frequency: 'per-lead',
+        timeoutMs: 30000,
+        enableCaching: true,
+        cacheTtlSeconds: 300
+      },
+
+      highValueSignals: [
+        {
+          id: 'hiring',
+          label: 'Actively Hiring',
+          description: 'Company is hiring technicians or service staff',
+          keywords: ["we're hiring", "now hiring", "join our team", "careers", "technician wanted", "hvac jobs", "apply now"],
+          priority: 'HIGH',
+          action: 'increase-score',
+          scoreBoost: 25,
+          platform: 'any',
+          examples: ["We're hiring HVAC technicians!", "Join our growing team"]
+        },
+        {
+          id: 'expansion',
+          label: 'Business Expansion',
+          description: 'Opening new locations or expanding service area',
+          keywords: ["new location", "expanding", "growth", "opening soon", "now serving", "service area expansion"],
+          priority: 'CRITICAL',
+          action: 'increase-score',
+          scoreBoost: 40,
+          platform: 'website',
+          examples: ["Now serving Phoenix metro area", "Opening our 5th location"]
+        },
+        {
+          id: 'emergency_service',
+          label: '24/7 Emergency Service',
+          description: 'Offers emergency HVAC services',
+          keywords: ["24/7", "emergency service", "same day", "emergency repair", "after hours"],
+          priority: 'MEDIUM',
+          action: 'add-to-segment',
+          scoreBoost: 15,
+          platform: 'website'
+        },
+        {
+          id: 'commercial_focus',
+          label: 'Commercial HVAC',
+          description: 'Serves commercial/industrial clients',
+          keywords: ["commercial hvac", "industrial", "retail", "office buildings", "commercial clients"],
+          priority: 'HIGH',
+          action: 'add-to-segment',
+          scoreBoost: 20,
+          platform: 'website'
+        },
+        {
+          id: 'residential_focus',
+          label: 'Residential HVAC',
+          description: 'Primarily residential services',
+          keywords: ["residential", "homeowners", "home comfort", "family owned"],
+          priority: 'MEDIUM',
+          action: 'add-to-segment',
+          scoreBoost: 10,
+          platform: 'website'
+        },
+        {
+          id: 'financing_available',
+          label: 'Financing Options',
+          description: 'Offers financing for equipment',
+          keywords: ["financing available", "payment plans", "0% apr", "low monthly payments", "credit options"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 10,
+          platform: 'website'
+        },
+        {
+          id: 'maintenance_plans',
+          label: 'Maintenance Plans',
+          description: 'Offers recurring maintenance programs',
+          keywords: ["maintenance plan", "service agreement", "tune-up plan", "preventive maintenance", "annual service"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 15,
+          platform: 'website'
+        },
+        {
+          id: 'certifications',
+          label: 'Industry Certifications',
+          description: 'Has NATE, EPA, or other certifications',
+          keywords: ["nate certified", "epa certified", "licensed", "bonded", "insured", "carrier certified", "trane certified"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 5,
+          platform: 'website'
+        },
+        {
+          id: 'energy_efficiency',
+          label: 'Energy Efficiency Focus',
+          description: 'Emphasizes energy-efficient solutions',
+          keywords: ["energy star", "high efficiency", "seer rating", "energy savings", "rebates", "utility savings"],
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 10,
+          platform: 'website'
+        },
+        {
+          id: 'smart_home',
+          label: 'Smart Home Integration',
+          description: 'Offers smart thermostat installation',
+          keywords: ["smart thermostat", "nest", "ecobee", "wifi thermostat", "smart home", "iot"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 8,
+          platform: 'website'
+        },
+        {
+          id: 'fleet_size',
+          label: 'Large Fleet',
+          description: 'Has multiple service vehicles',
+          keywords: ["fleet of", "trucks", "service vehicles", "team of technicians"],
+          regexPattern: '(\\d+)\\s*(trucks?|vehicles?|vans?)',
+          priority: 'HIGH',
+          action: 'increase-score',
+          scoreBoost: 20,
+          platform: 'website'
+        },
+        {
+          id: 'years_experience',
+          label: 'Established Business',
+          description: 'Long-standing company',
+          keywords: ["years of experience", "established", "since", "family owned"],
+          regexPattern: '(\\d+)\\+?\\s*years?\\s*(of\\s*)?(experience|in business)',
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 10,
+          platform: 'website'
+        },
+        {
+          id: 'awards',
+          label: 'Industry Awards',
+          description: 'Has won industry awards or recognition',
+          keywords: ["award winning", "best of", "top rated", "angie's list", "homeadvisor", "bbb a+"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 5,
+          platform: 'website'
+        },
+        {
+          id: 'new_equipment',
+          label: 'New Equipment Sales',
+          description: 'Sells and installs new HVAC systems',
+          keywords: ["new installation", "system replacement", "new hvac", "equipment sales"],
+          priority: 'MEDIUM',
+          action: 'add-to-segment',
+          scoreBoost: 12,
+          platform: 'website'
+        },
+        {
+          id: 'repair_service',
+          label: 'Repair Services',
+          description: 'Offers HVAC repair services',
+          keywords: ["repair", "service call", "fix", "troubleshoot", "diagnostic"],
+          priority: 'MEDIUM',
+          action: 'add-to-segment',
+          scoreBoost: 10,
+          platform: 'website'
+        },
+        {
+          id: 'indoor_air_quality',
+          label: 'Indoor Air Quality',
+          description: 'Specializes in air quality solutions',
+          keywords: ["indoor air quality", "air purification", "humidifier", "dehumidifier", "air filtration", "uv light"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 8,
+          platform: 'website'
+        },
+        {
+          id: 'ductwork',
+          label: 'Ductwork Services',
+          description: 'Offers duct cleaning or replacement',
+          keywords: ["duct cleaning", "ductwork", "air duct", "duct repair", "duct sealing"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 5,
+          platform: 'website'
+        },
+        {
+          id: 'online_booking',
+          label: 'Online Scheduling',
+          description: 'Has online booking capability',
+          keywords: ["schedule online", "book now", "online appointment", "instant booking"],
+          priority: 'LOW',
+          action: 'increase-score',
+          scoreBoost: 5,
+          platform: 'website'
+        },
+        {
+          id: 'job_postings',
+          label: 'Active Job Postings',
+          description: 'Has job listings on LinkedIn',
+          keywords: ["hvac technician", "service technician", "installer", "comfort advisor"],
+          priority: 'HIGH',
+          action: 'increase-score',
+          scoreBoost: 30,
+          platform: 'linkedin-jobs'
+        },
+        {
+          id: 'service_area_multiple',
+          label: 'Multi-City Service Area',
+          description: 'Services multiple cities or regions',
+          keywords: ["serving", "service area", "we serve", "covering"],
+          regexPattern: 'serv(e|ing)\\s+([A-Z][a-z]+\\s*,\\s*){2,}',
+          priority: 'MEDIUM',
+          action: 'increase-score',
+          scoreBoost: 15,
+          platform: 'website'
+        }
+      ],
+
+      fluffPatterns: [
+        { id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright notices', context: 'footer' },
+        { id: 'all_rights', pattern: 'all rights reserved', description: 'Rights statement', context: 'footer' },
+        { id: 'privacy_policy', pattern: 'privacy policy', description: 'Privacy policy link', context: 'footer' },
+        { id: 'terms_conditions', pattern: 'terms (and|&) conditions', description: 'Terms link', context: 'footer' },
+        { id: 'cookie_notice', pattern: 'we use cookies', description: 'Cookie banner', context: 'all' },
+        { id: 'cookie_accept', pattern: '(accept|decline)\\s+(all\\s+)?cookies', description: 'Cookie buttons', context: 'all' },
+        { id: 'cookie_policy', pattern: 'cookie policy', description: 'Cookie policy link', context: 'footer' },
+        { id: 'social_media', pattern: 'follow us on (facebook|twitter|instagram|linkedin)', description: 'Social media links', context: 'footer' },
+        { id: 'back_to_top', pattern: 'back to top', description: 'Back to top link', context: 'footer' },
+        { id: 'site_map', pattern: 'site ?map', description: 'Sitemap link', context: 'footer' },
+        { id: 'contact_us_footer', pattern: 'contact us', description: 'Contact link in footer', context: 'footer' },
+        { id: 'about_us_footer', pattern: 'about us', description: 'About link in footer', context: 'footer' },
+        { id: 'nav_menu', pattern: '(home|services|about|contact|gallery)\\s*\\|', description: 'Navigation menu', context: 'header' },
+        { id: 'skip_to_content', pattern: 'skip to (main )?content', description: 'Accessibility link', context: 'header' },
+        { id: 'search_box', pattern: 'search\\s*(our site)?', description: 'Search box placeholder', context: 'header' },
+        { id: 'phone_call', pattern: 'click to call', description: 'Click to call button', context: 'all' },
+        { id: 'get_quote', pattern: 'get (a |your )?free quote', description: 'Generic quote CTA', context: 'all' },
+        { id: 'testimonial_star', pattern: '★{3,5}', description: 'Star ratings', context: 'all' },
+        { id: 'read_more', pattern: 'read more|learn more', description: 'Read more links', context: 'all' },
+        { id: 'accessibility', pattern: 'accessibility statement', description: 'Accessibility link', context: 'footer' },
+        { id: 'california_privacy', pattern: 'california privacy rights', description: 'CCPA notice', context: 'footer' },
+        { id: 'gdpr', pattern: 'gdpr|general data protection', description: 'GDPR notice', context: 'footer' },
+        { id: 'powered_by', pattern: 'powered by|built by|designed by', description: 'Attribution', context: 'footer' },
+        { id: 'login', pattern: 'customer (login|portal)', description: 'Login link', context: 'header' },
+        { id: 'spam_protection', pattern: 'this site is protected by recaptcha', description: 'reCAPTCHA notice', context: 'footer' }
+      ],
+
+      scoringRules: [
+        {
+          id: 'hiring_with_careers_page',
+          name: 'Hiring + Careers Page',
+          description: 'Boost if actively hiring and has dedicated careers page',
+          condition: 'signals.some(s => s.signalId === "hiring") && url.includes("/careers")',
+          scoreBoost: 15,
+          priority: 1,
+          enabled: true
+        },
+        {
+          id: 'expansion_with_multiple_locations',
+          name: 'Expansion + Multi-Location',
+          description: 'High growth indicator if expanding and already multi-location',
+          condition: 'signals.some(s => s.signalId === "expansion") && signals.some(s => s.signalId === "service_area_multiple")',
+          scoreBoost: 25,
+          priority: 2,
+          enabled: true
+        },
+        {
+          id: 'commercial_with_fleet',
+          name: 'Commercial + Large Fleet',
+          description: 'Strong B2B prospect if commercial focus with large fleet',
+          condition: 'signals.some(s => s.signalId === "commercial_focus") && signals.some(s => s.signalId === "fleet_size")',
+          scoreBoost: 20,
+          priority: 3,
+          enabled: true
+        },
+        {
+          id: 'established_with_awards',
+          name: 'Established + Award-Winning',
+          description: 'Premium prospect if long-standing and award-winning',
+          condition: 'signals.some(s => s.signalId === "years_experience") && signals.some(s => s.signalId === "awards")',
+          scoreBoost: 15,
+          priority: 4,
+          enabled: true
+        },
+        {
+          id: 'full_service_provider',
+          name: 'Full Service Provider',
+          description: 'Offers new equipment, repair, and maintenance',
+          condition: 'signals.some(s => s.signalId === "new_equipment") && signals.some(s => s.signalId === "repair_service") && signals.some(s => s.signalId === "maintenance_plans")',
+          scoreBoost: 20,
+          priority: 5,
+          enabled: true
+        },
+        {
+          id: 'modern_tech_stack',
+          name: 'Modern Technology',
+          description: 'Offers smart home and online booking',
+          condition: 'signals.some(s => s.signalId === "smart_home") && signals.some(s => s.signalId === "online_booking")',
+          scoreBoost: 10,
+          priority: 6,
+          enabled: true
+        },
+        {
+          id: 'premium_services',
+          name: 'Premium Service Offerings',
+          description: 'Offers IAQ, ductwork, and energy efficiency',
+          condition: 'signals.some(s => s.signalId === "indoor_air_quality") && signals.some(s => s.signalId === "energy_efficiency")',
+          scoreBoost: 12,
+          priority: 7,
+          enabled: true
+        },
+        {
+          id: 'emergency_certified',
+          name: 'Emergency + Certified',
+          description: '24/7 service with industry certifications',
+          condition: 'signals.some(s => s.signalId === "emergency_service") && signals.some(s => s.signalId === "certifications")',
+          scoreBoost: 10,
+          priority: 8,
+          enabled: true
+        },
+        {
+          id: 'financing_and_maintenance',
+          name: 'Financing + Maintenance Plans',
+          description: 'Customer-friendly payment and service options',
+          condition: 'signals.some(s => s.signalId === "financing_available") && signals.some(s => s.signalId === "maintenance_plans")',
+          scoreBoost: 10,
+          priority: 9,
+          enabled: true
+        },
+        {
+          id: 'linkedin_activity',
+          name: 'Active on LinkedIn',
+          description: 'Has recent job postings on LinkedIn',
+          condition: 'signals.some(s => s.signalId === "job_postings" && s.platform === "linkedin-jobs")',
+          scoreBoost: 20,
+          priority: 10,
+          enabled: true
+        }
+      ],
+
+      customFields: [
+        {
+          key: 'hiring_count',
+          label: 'Number of Open Positions',
+          type: 'number',
+          description: 'Count of active job openings',
+          extractionHints: ['hiring', 'positions', 'openings', 'join our team'],
+          required: false,
+          defaultValue: 0
+        },
+        {
+          key: 'service_area_cities',
+          label: 'Service Area Cities',
+          type: 'array',
+          description: 'List of cities in service area',
+          extractionHints: ['serving', 'service area', 'we serve', 'covering'],
+          required: false,
+          defaultValue: []
+        },
+        {
+          key: 'years_in_business',
+          label: 'Years in Business',
+          type: 'number',
+          description: 'How long company has been operating',
+          extractionHints: ['years of experience', 'since', 'established'],
+          required: false,
+          defaultValue: 0
+        },
+        {
+          key: 'fleet_size',
+          label: 'Number of Service Vehicles',
+          type: 'number',
+          description: 'Size of service vehicle fleet',
+          extractionHints: ['trucks', 'vehicles', 'fleet', 'service vans'],
+          required: false,
+          defaultValue: 0
+        },
+        {
+          key: 'has_emergency_service',
+          label: 'Offers 24/7 Emergency',
+          type: 'boolean',
+          description: 'Whether company offers emergency service',
+          extractionHints: ['24/7', 'emergency', 'after hours'],
+          required: false,
+          defaultValue: false
+        },
+        {
+          key: 'has_financing',
+          label: 'Offers Financing',
+          type: 'boolean',
+          description: 'Whether financing is available',
+          extractionHints: ['financing', 'payment plans', '0% apr'],
+          required: false,
+          defaultValue: false
+        },
+        {
+          key: 'certifications',
+          label: 'Industry Certifications',
+          type: 'array',
+          description: 'List of certifications (NATE, EPA, etc)',
+          extractionHints: ['certified', 'licensed', 'bonded', 'insured'],
+          required: false,
+          defaultValue: []
+        },
+        {
+          key: 'primary_focus',
+          label: 'Primary Business Focus',
+          type: 'string',
+          description: 'Residential, Commercial, or Both',
+          extractionHints: ['residential', 'commercial', 'homeowners', 'business'],
+          required: false,
+          defaultValue: 'unknown'
+        },
+        {
+          key: 'has_maintenance_plans',
+          label: 'Offers Maintenance Plans',
+          type: 'boolean',
+          description: 'Whether recurring maintenance programs offered',
+          extractionHints: ['maintenance plan', 'service agreement', 'tune-up'],
+          required: false,
+          defaultValue: false
+        },
+        {
+          key: 'location_count',
+          label: 'Number of Locations',
+          type: 'number',
+          description: 'How many physical locations',
+          extractionHints: ['locations', 'offices', 'branches'],
+          required: false,
+          defaultValue: 1
+        }
+      ],
+
+      metadata: {
+        lastUpdated: new Date('2025-12-28'),
+        version: 1,
+        updatedBy: 'system',
+        notes: 'HVAC industry research intelligence - focuses on growth indicators (hiring, expansion), service offerings (emergency, commercial, residential), and modern capabilities (smart home, online booking)'
+      }
     }
   },
   
@@ -1899,6 +3026,46 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Material selection consultation',
         'Financing pre-approval'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {primarySource: 'website', secondarySources: ['linkedin-jobs', 'google-business'], frequency: 'per-lead', timeoutMs: 30000, enableCaching: true, cacheTtlSeconds: 300},
+      highValueSignals: [
+        {id: 'hiring', label: 'Hiring Roofers', description: 'Recruiting roofing crews', keywords: ["hiring", "join our team", "roofer wanted", "crew positions"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'storm_chasing', label: 'Storm Damage Services', description: 'Storm damage specialist', keywords: ["storm damage", "hail damage", "wind damage", "emergency repair"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 25, platform: 'website'},
+        {id: 'insurance_claims', label: 'Insurance Claims Help', description: 'Assists with insurance', keywords: ["insurance", "claims assistance", "work with insurance", "free inspection"], priority: 'CRITICAL', action: 'increase-score', scoreBoost: 40, platform: 'website'},
+        {id: 'financing', label: 'Financing Available', description: 'Offers payment plans', keywords: ["financing", "payment plans", "0% apr", "no money down"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'},
+        {id: 'warranty', label: 'Warranty Offered', description: 'Warranty on workmanship', keywords: ["lifetime warranty", "year warranty", "guaranteed"], regexPattern: '(\\d+)[-\\s]year warranty', priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: 'free_inspection', label: 'Free Inspections', description: 'No-cost roof inspection', keywords: ["free inspection", "free estimate", "no obligation"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'certifications', label: 'Manufacturer Certified', description: 'Factory certified installer', keywords: ["certified", "owens corning", "gaf", "certainteed", "manufacturer"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'},
+        {id: 'emergency_service', label: 'Emergency Services', description: '24/7 emergency repairs', keywords: ["emergency", "24/7", "emergency repair", "immediate response"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'},
+        {id: 'commercial_roofing', label: 'Commercial Roofing', description: 'Commercial projects', keywords: ["commercial", "flat roof", "tpo", "epdm"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 20, platform: 'website'},
+        {id: 'metal_roofing', label: 'Metal Roofing', description: 'Metal roof specialist', keywords: ["metal roof", "standing seam", "metal roofing"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 10, platform: 'website'},
+        {id: 'years_experience', label: 'Years in Business', description: 'Established company', keywords: ["years", "since", "established"], regexPattern: '(\\d+)\\+?\\s*years?', priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'}
+      ],
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright', context: 'footer'},
+        {id: 'privacy', pattern: 'privacy policy', description: 'Privacy link', context: 'footer'},
+        {id: 'terms', pattern: 'terms', description: 'Terms link', context: 'footer'},
+        {id: 'cookies', pattern: 'cookies', description: 'Cookie notice', context: 'all'},
+        {id: 'social', pattern: 'follow us', description: 'Social links', context: 'footer'},
+        {id: 'contact', pattern: '^contact$', description: 'Contact link', context: 'header'},
+        {id: 'about', pattern: '^about$', description: 'About link', context: 'header'},
+        {id: 'back_top', pattern: 'back to top', description: 'Back link', context: 'footer'}
+      ],
+      scoringRules: [
+        {id: 'insurance_specialist', name: 'Insurance Specialist', description: 'Storm damage + insurance claims', condition: 'signals.some(s => s.signalId === "storm_chasing") && signals.some(s => s.signalId === "insurance_claims")', scoreBoost: 30, priority: 1, enabled: true},
+        {id: 'growing_company', name: 'Growing Company', description: 'Hiring + certifications', condition: 'signals.some(s => s.signalId === "hiring") && signals.some(s => s.signalId === "certifications")', scoreBoost: 25, priority: 2, enabled: true},
+        {id: 'full_service', name: 'Full Service', description: 'Residential + commercial + emergency', condition: 'signals.some(s => s.signalId === "commercial_roofing") && signals.some(s => s.signalId === "emergency_service")', scoreBoost: 20, priority: 3, enabled: true}
+      ],
+      customFields: [
+        {key: 'crew_count', label: 'Number of Crews', type: 'number', description: 'Size of roofing crews', extractionHints: ['crews', 'teams'], required: false, defaultValue: 0},
+        {key: 'warranty_years', label: 'Warranty Length', type: 'number', description: 'Years of warranty', extractionHints: ['warranty', 'guaranteed'], required: false, defaultValue: 0},
+        {key: 'handles_insurance', label: 'Works with Insurance', type: 'boolean', description: 'Insurance claims help', extractionHints: ['insurance', 'claims'], required: false, defaultValue: false},
+        {key: 'has_financing', label: 'Offers Financing', type: 'boolean', description: 'Payment plans', extractionHints: ['financing', 'payment plans'], required: false, defaultValue: false},
+        {key: 'roofing_types', label: 'Roof Types', type: 'array', description: 'Types of roofing', extractionHints: ['shingle', 'metal', 'tile', 'flat'], required: false, defaultValue: []}
+      ],
+      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Roofing intelligence - insurance claims, storm damage, growth indicators'}
     }
   },
   
@@ -2343,6 +3510,42 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Case timeline explanation',
         'Zero-fee guarantee emphasis'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {primarySource: 'website', secondarySources: ['linkedin-company'], frequency: 'per-lead', timeoutMs: 30000, enableCaching: true, cacheTtlSeconds: 300},
+      highValueSignals: [
+        {id: 'hiring_attorneys', label: 'Hiring Attorneys', description: 'Recruiting lawyers', keywords: ["hiring", "attorney positions", "join our firm", "careers"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'new_office', label: 'New Office Location', description: 'Expanding locations', keywords: ["new office", "opening", "expanding", "second location"], priority: 'CRITICAL', action: 'increase-score', scoreBoost: 40, platform: 'website'},
+        {id: 'results_millions', label: 'Million Dollar Results', description: 'High-value verdicts/settlements', keywords: ["million", "recovered", "verdict", "settlement"], regexPattern: '\\$(\\d+)\\s*(million|M)', priority: 'CRITICAL', action: 'increase-score', scoreBoost: 45, platform: 'website'},
+        {id: 'no_fee_guarantee', label: 'No Win No Fee', description: 'Contingency basis', keywords: ["no fee", "free consultation", "contingency", "no upfront cost"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'case_types', label: 'Multiple Case Types', description: 'Handles various injuries', keywords: ["car accident", "truck accident", "slip and fall", "medical malpractice", "wrongful death"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 12, platform: 'website'},
+        {id: 'trial_experience', label: 'Trial Attorneys', description: 'Courtroom experience', keywords: ["trial", "courtroom", "litigation", "jury"], priority: 'HIGH', action: 'increase-score', scoreBoost: 20, platform: 'website'},
+        {id: 'awards', label: 'Legal Awards', description: 'Recognition and awards', keywords: ["super lawyers", "best lawyers", "martindale", "avvo"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'},
+        {id: 'years_experience', label: 'Years of Experience', description: 'Firm longevity', keywords: ["years", "since", "experience"], regexPattern: '(\\d+)\\+?\\s*years?', priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'},
+        {id: '24_7_availability', label: '24/7 Availability', description: 'Always available', keywords: ["24/7", "24 hours", "always available"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: 'bilingual', label: 'Bilingual Services', description: 'Spanish or other languages', keywords: ["spanish", "bilingual", "hablamos español"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 12, platform: 'website'}
+      ],
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright', context: 'footer'},
+        {id: 'disclaimer', pattern: 'attorney advertising|disclaimer', description: 'Legal disclaimer', context: 'all'},
+        {id: 'privacy', pattern: 'privacy policy', description: 'Privacy', context: 'footer'},
+        {id: 'terms', pattern: 'terms', description: 'Terms', context: 'footer'},
+        {id: 'cookies', pattern: 'cookies', description: 'Cookies', context: 'all'},
+        {id: 'social', pattern: 'follow us', description: 'Social', context: 'footer'},
+        {id: 'back_top', pattern: 'back to top', description: 'Back', context: 'footer'}
+      ],
+      scoringRules: [
+        {id: 'big_results_growing', name: 'High-Value Growing Firm', description: 'Million dollar results + hiring', condition: 'signals.some(s => s.signalId === "results_millions") && signals.some(s => s.signalId === "hiring_attorneys")', scoreBoost: 35, priority: 1, enabled: true},
+        {id: 'trial_ready', name: 'Trial-Ready Firm', description: 'Trial experience + awards', condition: 'signals.some(s => s.signalId === "trial_experience") && signals.some(s => s.signalId === "awards")', scoreBoost: 25, priority: 2, enabled: true}
+      ],
+      customFields: [
+        {key: 'attorney_count', label: 'Number of Attorneys', type: 'number', description: 'Firm size', extractionHints: ['attorneys', 'lawyers'], required: false, defaultValue: 1},
+        {key: 'total_recovered', label: 'Total Recovered', type: 'string', description: 'Amount recovered for clients', extractionHints: ['recovered', 'million', 'billion'], required: false, defaultValue: ''},
+        {key: 'case_types', label: 'Practice Areas', type: 'array', description: 'Types of cases', extractionHints: ['car accident', 'truck', 'malpractice'], required: false, defaultValue: []},
+        {key: 'has_trial_experience', label: 'Trial Experience', type: 'boolean', description: 'Goes to trial', extractionHints: ['trial', 'courtroom'], required: false, defaultValue: false}
+      ],
+      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Personal injury law intelligence - results, growth, trial capability'}
     }
   },
   
@@ -2838,6 +4041,46 @@ export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
         'Catering inquiry',
         'Party package booking'
       ]
+    },
+
+    research: {
+      scrapingStrategy: {primarySource: 'website', secondarySources: ['google-business'], frequency: 'per-lead', timeoutMs: 30000, enableCaching: true, cacheTtlSeconds: 300},
+      highValueSignals: [
+        {id: 'hiring', label: 'Hiring Staff', description: 'Recruiting servers/cooks', keywords: ["hiring", "now hiring", "join our team", "server wanted", "cook wanted"], priority: 'HIGH', action: 'increase-score', scoreBoost: 30, platform: 'any'},
+        {id: 'new_location', label: 'New Location', description: 'Opening new restaurant', keywords: ["new location", "opening soon", "second location", "coming soon"], priority: 'CRITICAL', action: 'increase-score', scoreBoost: 40, platform: 'website'},
+        {id: 'catering', label: 'Catering Services', description: 'Offers catering', keywords: ["catering", "events", "party packages", "group orders"], priority: 'HIGH', action: 'add-to-segment', scoreBoost: 20, platform: 'website'},
+        {id: 'happy_hour', label: 'Happy Hour', description: 'Daily happy hour specials', keywords: ["happy hour", "daily specials", "drink specials"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 10, platform: 'website'},
+        {id: 'delivery', label: 'Delivery Service', description: 'Offers delivery', keywords: ["delivery", "door dash", "uber eats", "grubhub", "we deliver"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'},
+        {id: 'bar_full', label: 'Full Bar', description: 'Full bar with liquor license', keywords: ["full bar", "margaritas", "tequila", "cocktails", "cantina"], priority: 'MEDIUM', action: 'add-to-segment', scoreBoost: 15, platform: 'website'},
+        {id: 'live_entertainment', label: 'Live Entertainment', description: 'Music or events', keywords: ["live music", "mariachi", "entertainment", "events"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 12, platform: 'website'},
+        {id: 'patio', label: 'Outdoor Seating', description: 'Patio or outdoor dining', keywords: ["patio", "outdoor", "al fresco", "terrace"], priority: 'LOW', action: 'increase-score', scoreBoost: 8, platform: 'website'},
+        {id: 'family_owned', label: 'Family Owned', description: 'Family-run restaurant', keywords: ["family owned", "family recipe", "authentic", "traditional"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
+        {id: 'awards', label: 'Awards/Recognition', description: 'Best of awards', keywords: ["best", "award", "top rated", "voted"], priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'},
+        {id: 'multiple_locations', label: 'Multiple Locations', description: 'Chain or franchise', keywords: ["locations", "visit us at"], regexPattern: '(\\d+)\\s*locations?', priority: 'MEDIUM', action: 'increase-score', scoreBoost: 15, platform: 'website'}
+      ],
+      fluffPatterns: [
+        {id: 'copyright', pattern: '©\\s*\\d{4}', description: 'Copyright', context: 'footer'},
+        {id: 'privacy', pattern: 'privacy', description: 'Privacy', context: 'footer'},
+        {id: 'terms', pattern: 'terms', description: 'Terms', context: 'footer'},
+        {id: 'cookies', pattern: 'cookies', description: 'Cookies', context: 'all'},
+        {id: 'social', pattern: 'follow us', description: 'Social', context: 'footer'},
+        {id: 'menu', pattern: '^menu$', description: 'Menu link', context: 'header'},
+        {id: 'contact', pattern: '^contact$', description: 'Contact', context: 'header'},
+        {id: 'hours', pattern: '^hours$', description: 'Hours', context: 'header'},
+        {id: 'back_top', pattern: 'back to top', description: 'Back', context: 'footer'}
+      ],
+      scoringRules: [
+        {id: 'expanding', name: 'Growing Chain', description: 'Multiple locations + hiring', condition: 'signals.some(s => s.signalId === "multiple_locations") && signals.some(s => s.signalId === "hiring")', scoreBoost: 25, priority: 1, enabled: true},
+        {id: 'full_service', name: 'Full Service', description: 'Catering + delivery + bar', condition: 'signals.some(s => s.signalId === "catering") && signals.some(s => s.signalId === "delivery") && signals.some(s => s.signalId === "bar_full")', scoreBoost: 20, priority: 2, enabled: true}
+      ],
+      customFields: [
+        {key: 'location_count', label: 'Number of Locations', type: 'number', description: 'Restaurant locations', extractionHints: ['locations', 'visit us at'], required: false, defaultValue: 1},
+        {key: 'has_catering', label: 'Offers Catering', type: 'boolean', description: 'Catering services', extractionHints: ['catering', 'events'], required: false, defaultValue: false},
+        {key: 'has_delivery', label: 'Delivery Available', type: 'boolean', description: 'Delivery service', extractionHints: ['delivery', 'doordash'], required: false, defaultValue: false},
+        {key: 'has_bar', label: 'Full Bar', type: 'boolean', description: 'Liquor license', extractionHints: ['bar', 'margaritas', 'cocktails'], required: false, defaultValue: false},
+        {key: 'seating_capacity', label: 'Seating Capacity', type: 'number', description: 'Number of seats', extractionHints: ['seats', 'capacity'], required: false, defaultValue: 0}
+      ],
+      metadata: {lastUpdated: new Date('2025-12-28'), version: 1, updatedBy: 'system', notes: 'Mexican restaurant intelligence - growth, services, customer experience'}
     }
   }
   
