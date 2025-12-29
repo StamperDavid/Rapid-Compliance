@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getDeals } from '@/lib/crm/deal-service';
 import { usePagination } from '@/hooks/usePagination';
 
 const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
@@ -13,14 +12,24 @@ export default function DealsPage() {
   const orgId = params.orgId as string;
   const [view, setView] = useState<'pipeline' | 'list'>('pipeline');
 
-  // Fetch function with pagination using service layer
+  // Fetch function with pagination using API route
   const fetchDeals = useCallback(async (lastDoc?: any) => {
-    return await getDeals(
-      orgId,
-      'default',
-      undefined, // No filters for now
-      { pageSize: 100, lastDoc } // Larger page size for pipeline view
-    );
+    const searchParams = new URLSearchParams({
+      workspaceId: 'default',
+      pageSize: '100'
+    });
+    
+    if (lastDoc) {
+      searchParams.set('lastDoc', lastDoc);
+    }
+
+    const response = await fetch(`/api/workspace/${orgId}/deals?${searchParams}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch deals');
+    }
+    
+    return await response.json();
   }, [orgId]);
 
   const {
