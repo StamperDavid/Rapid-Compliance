@@ -228,6 +228,14 @@ Each template needs 1-3 mutation rules based on common variations:
 
 ## 🚀 PROMPT FOR NEXT SESSION
 
+**IMPORTANT META-INSTRUCTION:** 
+At the END of each context window, you MUST prepare the next session's prompt and provide it in your summary response. Do NOT make the user remind you. Include:
+1. Current progress status
+2. What was completed this session
+3. What's next (with options)
+4. Key context files
+5. Copy-paste ready prompt text
+
 **Start with this:**
 
 "Continue implementing the Multi-Agent Intelligence Platform. Phase 1 (Mutation Engine) is 70% complete - the framework works perfectly (9/9 tests passing) but needs mutation rules for the remaining 39 templates.
