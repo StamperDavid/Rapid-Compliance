@@ -35,19 +35,28 @@ export {
   getDistillationStats,
 } from './distillation-engine';
 
-// Temporary Scrapes
+// Discovery Archive (formerly Temporary Scrapes)
 export {
-  saveTemporaryScrape,
-  getTemporaryScrape,
-  getTemporaryScrapesByUrl,
-  deleteExpiredScrapes,
-  flagScrapeForDeletion,
-  deleteFlaggedScrapes,
+  saveToDiscoveryArchive,
+  getFromDiscoveryArchive,
+  getFromDiscoveryArchiveByHash,
+  getFromDiscoveryArchiveByUrl,
+  deleteExpiredArchiveEntries,
+  flagArchiveEntryForDeletion,
+  deleteFlaggedArchiveEntries,
   calculateContentHash,
   calculateExpirationDate,
   calculateStorageCost,
   getStorageStats,
-} from './temporary-scrapes-service';
+  // Backward compatibility (deprecated)
+  saveTemporaryScrape,
+  getTemporaryScrape,
+  getTemporaryScrapeByHash,
+  getTemporaryScrapesByUrl,
+  deleteExpiredScrapes,
+  flagScrapeForDeletion,
+  deleteFlaggedScrapes,
+} from './discovery-archive-service';
 
 // Scraper Runner
 export {

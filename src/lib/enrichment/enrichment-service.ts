@@ -37,7 +37,7 @@ import {
   saveTemporaryScrape, 
   calculateContentHash,
   getTemporaryScrapeByHash 
-} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+} from '@/lib/scraper-intelligence/discovery-archive-service';
 
 /**
  * Feature flag for distillation engine

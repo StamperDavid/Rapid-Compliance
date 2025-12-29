@@ -116,6 +116,7 @@ export interface APIKeysConfig {
   
   // Prospect Research & Enrichment
   enrichment?: {
+    /** @deprecated Use native discovery-engine.ts instead. Will be removed in future release. */
     clearbitApiKey?: string;
     crunchbaseApiKey?: string;
     builtWithApiKey?: string;

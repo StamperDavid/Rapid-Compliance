@@ -20,7 +20,7 @@ import {
   getStorageStats,
   calculateContentHash,
   calculateExpirationDate,
-} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+} from '@/lib/scraper-intelligence/discovery-archive-service';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
 
 // ============================================================================

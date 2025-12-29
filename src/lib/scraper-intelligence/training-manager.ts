@@ -25,7 +25,7 @@ import {
   ClientFeedbackSchema,
   TrainingDataSchema,
 } from '@/types/scraper-intelligence';
-import { flagScrapeForDeletion, getTemporaryScrape } from './temporary-scrapes-service';
+import { flagScrapeForDeletion, getTemporaryScrape } from './discovery-archive-service';
 
 // ============================================================================
 // CONSTANTS

@@ -24,7 +24,7 @@ import type {
 } from '@/types/scraper-intelligence';
 import { ResearchIntelligenceSchema, ExtractedSignalSchema } from '@/types/scraper-intelligence';
 import { distillScrape, calculateLeadScore, detectHighValueSignals } from './distillation-engine';
-import { getTemporaryScrape, getTemporaryScrapesByUrl } from './temporary-scrapes-service';
+import { getTemporaryScrape, getTemporaryScrapesByUrl } from './discovery-archive-service';
 
 // ============================================================================
 // CONSTANTS

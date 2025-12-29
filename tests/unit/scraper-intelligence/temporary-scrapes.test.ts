@@ -17,7 +17,7 @@ import {
   getTemporaryScrapesByUrl,
   calculateStorageCost,
   getStorageStats,
-} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+} from '@/lib/scraper-intelligence/discovery-archive-service';
 
 // ============================================================================
 // UNIT TESTS (No Firestore dependency)

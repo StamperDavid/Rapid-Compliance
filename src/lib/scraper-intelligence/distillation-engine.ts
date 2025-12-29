@@ -29,7 +29,7 @@ import {
   calculateMaxScore 
 } from '@/types/scraper-intelligence';
 import { logger } from '@/lib/logger/logger';
-import { saveTemporaryScrape } from './temporary-scrapes-service';
+import { saveTemporaryScrape } from './discovery-archive-service';
 
 // ============================================================================
 // SIGNAL DETECTION

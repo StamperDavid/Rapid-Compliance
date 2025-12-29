@@ -1,7 +1,17 @@
 /**
  * Clearbit API Service
- * Company enrichment and prospect research
- * https://clearbit.com/docs
+ * 
+ * @deprecated This service is DEPRECATED per Hunter-Closer directive.
+ * Use native discovery-engine.ts instead for 100% native data acquisition.
+ * 
+ * Migration path:
+ * - Instead of: enrichCompanyByDomain(domain, orgId)
+ * - Use: discoverCompany(domain, orgId) from @/lib/services/discovery-engine
+ * 
+ * Deprecation reason: Third-party data dependency violates Hunter-Closer mandate.
+ * Our native discovery engine builds a proprietary 30-day cache moat.
+ * 
+ * This file will be removed in a future release.
  */
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
@@ -120,11 +130,19 @@ export interface ClearbitPerson {
 
 /**
  * Get company information by domain
+ * 
+ * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function enrichCompanyByDomain(
   domain: string,
   organizationId: string
 ): Promise<ClearbitCompany | null> {
+  logger.warn('[DEPRECATED] enrichCompanyByDomain is deprecated. Use discovery-engine.ts instead.', {
+    domain,
+    organizationId,
+    migration: 'Import discoverCompany from @/lib/services/discovery-engine',
+  });
+  
   try {
     const apiKey = await getClearbitApiKey(organizationId);
     
@@ -164,11 +182,18 @@ export async function enrichCompanyByDomain(
 
 /**
  * Get company information by name (fuzzy search)
+ * 
+ * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function searchCompanyByName(
   companyName: string,
   organizationId: string
 ): Promise<ClearbitCompany | null> {
+  logger.warn('[DEPRECATED] searchCompanyByName is deprecated. Use discovery-engine.ts instead.', {
+    companyName,
+    organizationId,
+  });
+  
   try {
     const apiKey = await getClearbitApiKey(organizationId);
     
@@ -217,11 +242,18 @@ export async function searchCompanyByName(
 
 /**
  * Enrich person by email
+ * 
+ * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function enrichPersonByEmail(
   email: string,
   organizationId: string
 ): Promise<ClearbitPerson | null> {
+  logger.warn('[DEPRECATED] enrichPersonByEmail is deprecated. Use discovery-engine.ts instead.', {
+    email,
+    organizationId,
+  });
+  
   try {
     const apiKey = await getClearbitApiKey(organizationId);
     
@@ -259,6 +291,8 @@ export async function enrichPersonByEmail(
 
 /**
  * Combined enrichment (person + company)
+ * 
+ * @deprecated Use discoverCompany() from @/lib/services/discovery-engine instead
  */
 export async function enrichProspect(
   email: string,
@@ -267,6 +301,11 @@ export async function enrichProspect(
   person: ClearbitPerson | null;
   company: ClearbitCompany | null;
 }> {
+  logger.warn('[DEPRECATED] enrichProspect is deprecated. Use discovery-engine.ts instead.', {
+    email,
+    organizationId,
+  });
+  
   try {
     const apiKey = await getClearbitApiKey(organizationId);
     

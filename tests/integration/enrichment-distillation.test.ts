@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { enrichCompany } from '@/lib/enrichment/enrichment-service';
-import { getTemporaryScrape } from '@/lib/scraper-intelligence/temporary-scrapes-service';
+import { getTemporaryScrape } from '@/lib/scraper-intelligence/discovery-archive-service';
 
 // Import Firestore admin instance
 import admin from 'firebase-admin';

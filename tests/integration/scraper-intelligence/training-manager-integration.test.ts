@@ -23,7 +23,7 @@ import {
 import {
   saveTemporaryScrape,
   getTemporaryScrape,
-} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+} from '@/lib/scraper-intelligence/discovery-archive-service';
 import type { ClientFeedback, TrainingData } from '@/types/scraper-intelligence';
 
 describe('Training Manager Integration Tests', () => {

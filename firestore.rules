@@ -797,11 +797,12 @@ service cloud.firestore {
     }
     
     // ========================================
-    // SCRAPER INTELLIGENCE - TEMPORARY SCRAPES
+    // SCRAPER INTELLIGENCE - DISCOVERY ARCHIVE
     // ========================================
     
-    // Temporary scrapes (auto-deleted after 7 days via TTL)
-    match /temporary_scrapes/{scrapeId} {
+    // Discovery Archive (auto-deleted after 30 days via TTL)
+    // This is our proprietary "moat" - replaces third-party data APIs
+    match /discoveryArchive/{scrapeId} {
       // Super admins have FULL access
       allow read, write: if isSuperAdmin();
       

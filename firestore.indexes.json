@@ -139,7 +139,7 @@
       ]
     },
     {
-      "collectionGroup": "temporary_scrapes",
+      "collectionGroup": "discoveryArchive",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "organizationId", "order": "ASCENDING" },
@@ -147,7 +147,7 @@
       ]
     },
     {
-      "collectionGroup": "temporary_scrapes",
+      "collectionGroup": "discoveryArchive",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "organizationId", "order": "ASCENDING" },
@@ -156,7 +156,7 @@
       ]
     },
     {
-      "collectionGroup": "temporary_scrapes",
+      "collectionGroup": "discoveryArchive",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "organizationId", "order": "ASCENDING" },
@@ -164,7 +164,7 @@
       ]
     },
     {
-      "collectionGroup": "temporary_scrapes",
+      "collectionGroup": "discoveryArchive",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "organizationId", "order": "ASCENDING" },
@@ -172,7 +172,7 @@
       ]
     },
     {
-      "collectionGroup": "temporary_scrapes",
+      "collectionGroup": "discoveryArchive",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "expiresAt", "order": "ASCENDING" }

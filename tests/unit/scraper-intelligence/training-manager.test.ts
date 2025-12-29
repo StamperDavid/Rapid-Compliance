@@ -41,7 +41,7 @@ import {
   resetRateLimiter,
   TrainingManagerError,
 } from '@/lib/scraper-intelligence/training-manager';
-import { flagScrapeForDeletion, getTemporaryScrape } from '@/lib/scraper-intelligence/temporary-scrapes-service';
+import { flagScrapeForDeletion, getTemporaryScrape } from '@/lib/scraper-intelligence/discovery-archive-service';
 
 describe('Training Manager', () => {
   beforeEach(() => {

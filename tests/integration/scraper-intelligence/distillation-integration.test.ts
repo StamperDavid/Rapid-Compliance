@@ -13,7 +13,7 @@ import {
   getTemporaryScrape,
   deleteFlaggedScrapes,
   deleteExpiredScrapes,
-} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+} from '@/lib/scraper-intelligence/discovery-archive-service';
 import type {
   ResearchIntelligence,
   ScrapingPlatform,
