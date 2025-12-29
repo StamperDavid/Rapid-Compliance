@@ -360,6 +360,50 @@ export async function getTemporaryScrape(scrapeId: string): Promise<TemporaryScr
 }
 
 /**
+ * Get temporary scrape by content hash
+ * 
+ * @param organizationId - Organization ID
+ * @param contentHash - SHA-256 content hash
+ * @returns Scrape object or null if not found
+ * @throws Error if Firestore operation fails
+ */
+export async function getTemporaryScrapeByHash(
+  organizationId: string,
+  contentHash: string
+): Promise<TemporaryScrape | null> {
+  try {
+    const docs = await db
+      .collection(TEMPORARY_SCRAPES_COLLECTION)
+      .where('organizationId', '==', organizationId)
+      .where('contentHash', '==', contentHash)
+      .limit(1)
+      .get();
+
+    if (docs.empty) {
+      return null;
+    }
+
+    const raw = docs.docs[0].data();
+    return {
+      id: docs.docs[0].id,
+      ...raw,
+      createdAt: toDate(raw.createdAt),
+      lastSeen: toDate(raw.lastSeen),
+      expiresAt: toDate(raw.expiresAt),
+      verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
+    } as TemporaryScrape;
+  } catch (error) {
+    logger.error('Failed to get temporary scrape by hash', error, {
+      organizationId,
+      contentHash: contentHash.substring(0, 16),
+    });
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to get temporary scrape by hash: ${errorMessage}`);
+  }
+}
+
+/**
  * Get temporary scrapes for a URL (for training UI)
  * 
  * Returns most recent scrapes for a URL, ordered by creation date.
