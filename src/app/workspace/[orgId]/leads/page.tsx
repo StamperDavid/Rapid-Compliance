@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getLeads } from '@/lib/crm/lead-service';
 import { usePagination } from '@/hooks/usePagination';
 
 export default function LeadsPage() {
@@ -11,14 +10,28 @@ export default function LeadsPage() {
   const orgId = params.orgId as string;
   const [filter, setFilter] = useState('all');
 
-  // Fetch function with pagination using service layer
+  // Fetch function with pagination using API route
   const fetchLeads = useCallback(async (lastDoc?: any) => {
-    return await getLeads(
-      orgId,
-      'default',
-      filter !== 'all' ? { status: filter } : undefined,
-      { pageSize: 50, lastDoc }
-    );
+    const searchParams = new URLSearchParams({
+      workspaceId: 'default',
+      pageSize: '50',
+    });
+    
+    if (filter !== 'all') {
+      searchParams.set('status', filter);
+    }
+    
+    if (lastDoc) {
+      searchParams.set('lastDoc', lastDoc);
+    }
+
+    const response = await fetch(`/api/workspace/${orgId}/leads?${searchParams}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch leads');
+    }
+    
+    return await response.json();
   }, [orgId, filter]);
 
   const {
