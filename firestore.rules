@@ -796,6 +796,36 @@ service cloud.firestore {
       allow create, delete: if isSuperAdmin();
     }
     
+    // ========================================
+    // SCRAPER INTELLIGENCE - TEMPORARY SCRAPES
+    // ========================================
+    
+    // Temporary scrapes (auto-deleted after 7 days via TTL)
+    match /temporary_scrapes/{scrapeId} {
+      // Super admins have FULL access
+      allow read, write: if isSuperAdmin();
+      
+      // Only the owning organization can read their scrapes
+      allow read: if isAuthenticated() 
+                 && resource.data.organizationId == getUserOrgId();
+      
+      // Only the owning organization can create scrapes
+      // Validate organizationId matches on create
+      allow create: if isAuthenticated() 
+                   && request.resource.data.organizationId == getUserOrgId();
+      
+      // Only the owning organization can update (for flagging)
+      // Cannot change organizationId after creation
+      allow update: if isAuthenticated() 
+                   && resource.data.organizationId == getUserOrgId()
+                   && request.resource.data.organizationId == resource.data.organizationId;
+      
+      // Only the owning organization can delete
+      // (Manual deletion is rare - TTL handles most deletions)
+      allow delete: if isAuthenticated() 
+                   && resource.data.organizationId == getUserOrgId();
+    }
+    
     // Default: Deny all other access
     match /{document=**} {
       allow read, write: if false;

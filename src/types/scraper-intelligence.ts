@@ -530,3 +530,229 @@ export function getFluffRegexes(research: ResearchIntelligence): RegExp[] {
     })
     .filter((regex): regex is RegExp => regex !== null);
 }
+
+// ============================================================================
+// DISTILLATION & TTL ARCHITECTURE
+// ============================================================================
+
+/**
+ * Temporary scrape record (auto-deleted after 7 days)
+ * Stores raw HTML/content for verification, then discarded
+ * 
+ * This implements the "Distillation Architecture" to prevent storage cost explosion:
+ * - Raw scrapes are temporary (7 day TTL)
+ * - Only extracted signals are saved permanently
+ * - Content hashing prevents duplicate storage
+ * - 95%+ storage cost reduction vs storing raw HTML forever
+ */
+export interface TemporaryScrape {
+  /**
+   * Unique ID for this scrape
+   */
+  id: string;
+
+  /**
+   * Organization that initiated the scrape
+   */
+  organizationId: string;
+
+  /**
+   * Workspace context (if applicable)
+   */
+  workspaceId?: string;
+
+  /**
+   * URL that was scraped
+   */
+  url: string;
+
+  /**
+   * Raw HTML content
+   */
+  rawHtml: string;
+
+  /**
+   * Cleaned/processed content (markdown)
+   */
+  cleanedContent: string;
+
+  /**
+   * SHA-256 hash of rawHtml (for duplicate detection)
+   * Always 64 hex characters
+   */
+  contentHash: string;
+
+  /**
+   * When this scrape was first created
+   */
+  createdAt: Date;
+
+  /**
+   * When this scrape was last seen (same content hash)
+   * Updated when duplicate content is scraped
+   */
+  lastSeen: Date;
+
+  /**
+   * When this scrape expires and will be auto-deleted
+   * Set to createdAt + 7 days
+   */
+  expiresAt: Date;
+
+  /**
+   * How many times we've seen this exact content
+   * Incremented when duplicate content is scraped
+   */
+  scrapeCount: number;
+
+  /**
+   * Extracted metadata
+   */
+  metadata: {
+    title?: string;
+    description?: string;
+    author?: string;
+    keywords?: string[];
+  };
+
+  /**
+   * Size of rawHtml in bytes (for cost tracking)
+   */
+  sizeBytes: number;
+
+  /**
+   * Whether this has been verified by client in Training Center
+   */
+  verified: boolean;
+
+  /**
+   * If verified, when was it verified
+   */
+  verifiedAt?: Date;
+
+  /**
+   * Flag for immediate deletion (set when client verifies)
+   * Cleanup job deletes these immediately
+   */
+  flaggedForDeletion: boolean;
+
+  /**
+   * Related lead/company ID (if extracted)
+   */
+  relatedRecordId?: string;
+}
+
+// Zod schema for TemporaryScrape
+export const TemporaryScrapeSchema = z.object({
+  id: z.string().min(1),
+  organizationId: z.string().min(1),
+  workspaceId: z.string().optional(),
+  url: z.string().url(),
+  rawHtml: z.string(),
+  cleanedContent: z.string(),
+  contentHash: z.string().length(64), // SHA-256 is always 64 hex chars
+  createdAt: z.date(),
+  lastSeen: z.date(),
+  expiresAt: z.date(),
+  scrapeCount: z.number().int().positive(),
+  metadata: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    author: z.string().optional(),
+    keywords: z.array(z.string()).optional(),
+  }),
+  sizeBytes: z.number().int().positive(),
+  verified: z.boolean(),
+  verifiedAt: z.date().optional(),
+  flaggedForDeletion: z.boolean(),
+  relatedRecordId: z.string().optional(),
+});
+
+/**
+ * Extracted signal (saved permanently to CRM)
+ * 
+ * This is the "refined metal" from the "ore" of raw scrapes.
+ * Only high-value signals are saved permanently (~2KB vs 500KB raw HTML).
+ */
+export interface ExtractedSignal {
+  /**
+   * Which high-value signal was detected
+   */
+  signalId: string;
+
+  /**
+   * Label from the signal definition
+   */
+  signalLabel: string;
+
+  /**
+   * Where the signal was found (snippet of text)
+   * Limited to 500 chars to save space
+   */
+  sourceText: string;
+
+  /**
+   * Confidence score (0-100)
+   */
+  confidence: number;
+
+  /**
+   * Platform where it was found
+   */
+  platform: ScrapingPlatform;
+
+  /**
+   * When it was extracted
+   */
+  extractedAt: Date;
+
+  /**
+   * Source scrape ID (link to temporary_scrapes)
+   * This link becomes broken after 7 days when temp scrape is deleted
+   */
+  sourceScrapeId: string;
+}
+
+// Zod schema for ExtractedSignal
+export const ExtractedSignalSchema = z.object({
+  signalId: z.string().min(1),
+  signalLabel: z.string().min(1),
+  sourceText: z.string().max(500), // Limit to 500 chars
+  confidence: z.number().min(0).max(100),
+  platform: z.enum([
+    'website',
+    'linkedin-jobs',
+    'linkedin-company',
+    'news',
+    'crunchbase',
+    'dns',
+    'google-business',
+    'social-media',
+  ]),
+  extractedAt: z.date(),
+  sourceScrapeId: z.string().min(1),
+});
+
+/**
+ * Type guard for TemporaryScrape
+ */
+export function isTemporaryScrape(value: unknown): value is TemporaryScrape {
+  try {
+    TemporaryScrapeSchema.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Type guard for ExtractedSignal
+ */
+export function isExtractedSignal(value: unknown): value is ExtractedSignal {
+  try {
+    ExtractedSignalSchema.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
