@@ -4,17 +4,15 @@ import type { ResearchIntelligence } from '@/types/scraper-intelligence';
 import { ResearchIntelligenceSchema } from '@/types/scraper-intelligence';
 
 // Import split template files
-// TEMPORARILY COMMENTED OUT TO TEST BUILD
-// import { realEstateTemplates } from './templates/real-estate';
-// import { healthcareTemplates } from './templates/healthcare';
-// import { homeServicesTemplates } from './templates/home-services';
+import { realEstateTemplates } from './templates/real-estate';
+import { healthcareTemplates } from './templates/healthcare';
+import { homeServicesTemplates } from './templates/home-services';
 
 // Merge all templates
 export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
-  // TEMPORARILY EMPTY TO TEST BUILD
-  // ...realEstateTemplates,
-  // ...healthcareTemplates,
-  // ...homeServicesTemplates,
+  ...realEstateTemplates,
+  ...healthcareTemplates,
+  ...homeServicesTemplates,
 };
 
 // Helper functions
