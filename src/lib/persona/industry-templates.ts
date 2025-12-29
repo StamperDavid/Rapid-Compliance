@@ -3,16 +3,24 @@ import type { IndustryTemplate } from './templates/types';
 import type { ResearchIntelligence } from '@/types/scraper-intelligence';
 import { ResearchIntelligenceSchema } from '@/types/scraper-intelligence';
 
-// Import split template files
+// Import split template files (split into smaller chunks for webpack)
 import { realEstateTemplates } from './templates/real-estate';
-import { healthcareTemplates } from './templates/healthcare';
-import { homeServicesTemplates } from './templates/home-services';
+import { healthcareTemplates1 } from './templates/healthcare-1';
+import { healthcareTemplates2 } from './templates/healthcare-2';
+import { healthcareTemplates3 } from './templates/healthcare-3';
+import { homeServicesTemplates1 } from './templates/home-services-1';
+import { homeServicesTemplates2 } from './templates/home-services-2';
+import { homeServicesTemplates3 } from './templates/home-services-3';
 
 // Merge all templates
 export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
   ...realEstateTemplates,
-  ...healthcareTemplates,
-  ...homeServicesTemplates,
+  ...healthcareTemplates1,
+  ...healthcareTemplates2,
+  ...healthcareTemplates3,
+  ...homeServicesTemplates1,
+  ...homeServicesTemplates2,
+  ...homeServicesTemplates3,
 };
 
 // Helper functions

@@ -3,7 +3,7 @@ const { withSentryConfig } = require('@sentry/nextjs');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: false, // Temporarily disabled to speed up build
+  swcMinify: true,
   
   // Image optimization
   images: {
