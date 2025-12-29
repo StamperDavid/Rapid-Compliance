@@ -789,7 +789,72 @@ export class SequenceEngine {
     organizationId: string,
     updates: Partial<SequenceStep>
   ): Promise<void> {
-    // TODO: Implement step analytics updates
+    try {
+      // Find the sequence that contains this step
+      const sequencesPath = `organizations/${organizationId}/sequences`;
+      const sequences = await FirestoreService.getAll<OutboundSequence>(sequencesPath);
+      
+      let targetSequence: OutboundSequence | null = null;
+      let targetStepIndex = -1;
+      
+      for (const sequence of sequences) {
+        const stepIndex = sequence.steps.findIndex(s => s.id === stepId);
+        if (stepIndex !== -1) {
+          targetSequence = sequence;
+          targetStepIndex = stepIndex;
+          break;
+        }
+      }
+      
+      if (!targetSequence || targetStepIndex === -1) {
+        logger.warn('Step not found for analytics update', { stepId, organizationId });
+        return;
+      }
+      
+      // Get the current step
+      const step = targetSequence.steps[targetStepIndex];
+      
+      // Update analytics fields with increments
+      const updatedStep = {
+        ...step,
+        sent: (step.sent || 0) + (updates.sent || 0),
+        delivered: (step.delivered || 0) + (updates.delivered || 0),
+        opened: (step.opened || 0) + (updates.opened || 0),
+        clicked: (step.clicked || 0) + (updates.clicked || 0),
+        replied: (step.replied || 0) + (updates.replied || 0),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      // Update the step in the sequence
+      targetSequence.steps[targetStepIndex] = updatedStep;
+      
+      // Save the updated sequence
+      const sequencePath = `organizations/${organizationId}/sequences`;
+      await FirestoreService.update(sequencePath, targetSequence.id, {
+        steps: targetSequence.steps,
+        updatedAt: new Date().toISOString(),
+      });
+      
+      logger.info('Step analytics updated', {
+        stepId,
+        organizationId,
+        updates,
+        newValues: {
+          sent: updatedStep.sent,
+          delivered: updatedStep.delivered,
+          opened: updatedStep.opened,
+          clicked: updatedStep.clicked,
+          replied: updatedStep.replied,
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to update step analytics', error as Error, {
+        stepId,
+        organizationId,
+        updates,
+      });
+      // Don't throw - analytics updates shouldn't break the main flow
+    }
   }
 
   /**

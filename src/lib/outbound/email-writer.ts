@@ -13,6 +13,7 @@ export interface EmailGenerationRequest {
   tone: EmailTone;
   valueProposition?: string;
   cta?: string; // Call to action
+  organizationId?: string; // For checking AI usage settings
 }
 
 export type EmailTemplate = 'AIDA' | 'PAS' | 'BAB' | 'custom';
@@ -114,8 +115,8 @@ async function buildAIDAEmail(
 ): Promise<string> {
   const { valueProposition = 'increase sales productivity', cta = 'book a 15-minute call' } = request;
   
-  // Use AI to generate if available, otherwise use template
-  const useAI = true; // TODO: Make this configurable
+  // Use AI to generate if enabled for this organization
+  const useAI = await shouldUseAI(request.organizationId);
   
   if (useAI) {
     return await generateWithAI(request, tokens, 'AIDA');
@@ -140,7 +141,7 @@ async function buildPASEmail(
   request: EmailGenerationRequest,
   tokens: Record<string, string>
 ): Promise<string> {
-  if (await shouldUseAI()) {
+  if (await shouldUseAI(request.organizationId)) {
     return await generateWithAI(request, tokens, 'PAS');
   }
 
@@ -160,7 +161,7 @@ async function buildBABEmail(
   request: EmailGenerationRequest,
   tokens: Record<string, string>
 ): Promise<string> {
-  if (await shouldUseAI()) {
+  if (await shouldUseAI(request.organizationId)) {
     return await generateWithAI(request, tokens, 'BAB');
   }
 
@@ -341,12 +342,43 @@ function calculatePersonalizationScore(
 }
 
 /**
- * Check if we should use AI or template
+ * Check if we should use AI or template based on organization settings
  */
-async function shouldUseAI(): Promise<boolean> {
-  // For now, always try AI first
-  // TODO: Make this configurable per organization
-  return true;
+async function shouldUseAI(organizationId?: string): Promise<boolean> {
+  // If no organizationId provided, default to true
+  if (!organizationId) {
+    return true;
+  }
+  
+  try {
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    
+    // Get organization document
+    const orgDoc = await FirestoreService.get<any>(
+      'organizations',
+      organizationId
+    );
+    
+    if (!orgDoc) {
+      // Organization not found, default to true
+      return true;
+    }
+    
+    // Check if AI email generation is enabled
+    // Settings structure: settings.emailGeneration.useAI (default: true)
+    const useAI = orgDoc.settings?.emailGeneration?.useAI;
+    
+    // Default to true if setting doesn't exist (backwards compatible)
+    return useAI !== false;
+  } catch (error) {
+    const { logger } = await import('@/lib/logger/logger');
+    logger.warn('Failed to check AI setting, defaulting to true', {
+      organizationId,
+      error: (error as Error).message,
+    });
+    // On error, default to true
+    return true;
+  }
 }
 
 /**
