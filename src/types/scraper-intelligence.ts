@@ -411,9 +411,9 @@ export interface ResearchIntelligence {
    */
   metadata: {
     /**
-     * Last updated timestamp
+     * Last updated timestamp (ISO 8601 string format)
      */
-    lastUpdated: Date;
+    lastUpdated: string;
 
     /**
      * Version number (for migration)
@@ -440,7 +440,7 @@ export const ResearchIntelligenceSchema = z.object({
   scoringRules: z.array(ScoringRuleSchema),
   customFields: z.array(CustomFieldSchema),
   metadata: z.object({
-    lastUpdated: z.date(),
+    lastUpdated: z.string(),
     version: z.number().int().positive(),
     updatedBy: z.enum(['system', 'user']),
     notes: z.string().optional(),
