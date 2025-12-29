@@ -38,7 +38,6 @@ export async function executeConditionalAction(
   }
   
   // Execute actions in sequence
-  const { executeWorkflow } = await import('@/lib/workflows/workflow-engine');
   const results = [];
   
   for (const subAction of actionsToExecute) {
