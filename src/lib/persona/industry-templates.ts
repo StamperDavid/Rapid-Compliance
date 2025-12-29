@@ -3,34 +3,72 @@ import type { IndustryTemplate } from './templates/types';
 import type { ResearchIntelligence } from '@/types/scraper-intelligence';
 import { ResearchIntelligenceSchema } from '@/types/scraper-intelligence';
 
-// Import split template files (split into smaller chunks for webpack)
-import { realEstateTemplates } from './templates/real-estate';
-import { healthcareTemplates1 } from './templates/healthcare-1';
-import { healthcareTemplates2 } from './templates/healthcare-2';
-import { healthcareTemplates3 } from './templates/healthcare-3';
-import { homeServicesTemplates1 } from './templates/home-services-1';
-import { homeServicesTemplates2 } from './templates/home-services-2';
-import { homeServicesTemplates3 } from './templates/home-services-3';
+// Lazy-loaded templates cache to avoid OOM during build
+let templatesCache: Record<string, IndustryTemplate> | null = null;
 
-// Merge all templates
-export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
-  ...realEstateTemplates,
-  ...healthcareTemplates1,
-  ...healthcareTemplates2,
-  ...healthcareTemplates3,
-  ...homeServicesTemplates1,
-  ...homeServicesTemplates2,
-  ...homeServicesTemplates3,
-};
+/**
+ * Dynamically load all templates (lazy-loaded to avoid webpack OOM)
+ */
+async function loadTemplates(): Promise<Record<string, IndustryTemplate>> {
+  if (templatesCache) {
+    return templatesCache;
+  }
 
-// Helper functions
-export function getIndustryOptions(): Array<{ 
+  // Dynamic imports - loaded only when needed, not during webpack build
+  const [
+    { realEstateTemplates },
+    { healthcareTemplates1 },
+    { healthcareTemplates2 },
+    { healthcareTemplates3 },
+    { homeServicesTemplates1 },
+    { homeServicesTemplates2 },
+    { homeServicesTemplates3 },
+  ] = await Promise.all([
+    import('./templates/real-estate'),
+    import('./templates/healthcare-1'),
+    import('./templates/healthcare-2'),
+    import('./templates/healthcare-3'),
+    import('./templates/home-services-1'),
+    import('./templates/home-services-2'),
+    import('./templates/home-services-3'),
+  ]);
+
+  templatesCache = {
+    ...realEstateTemplates,
+    ...healthcareTemplates1,
+    ...healthcareTemplates2,
+    ...healthcareTemplates3,
+    ...homeServicesTemplates1,
+    ...homeServicesTemplates2,
+    ...homeServicesTemplates3,
+  };
+
+  return templatesCache;
+}
+
+/**
+ * Synchronously get templates (throws if not loaded yet)
+ * @deprecated Use async functions instead
+ */
+export function getTemplatesSync(): Record<string, IndustryTemplate> {
+  if (!templatesCache) {
+    throw new Error('Templates not loaded. Call loadTemplates() first or use async functions.');
+  }
+  return templatesCache;
+}
+
+// Export for backward compatibility (will be empty until loaded)
+export const INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {};
+
+// Helper functions (async to support lazy loading)
+export async function getIndustryOptions(): Promise<Array<{ 
   value: string; 
   label: string; 
   description: string;
   category: string;
-}> {
-  return Object.entries(INDUSTRY_TEMPLATES).map(([id, template]) => ({
+}>> {
+  const templates = await loadTemplates();
+  return Object.entries(templates).map(([id, template]) => ({
     value: id,
     label: template.name,
     description: template.description,
@@ -41,44 +79,49 @@ export function getIndustryOptions(): Array<{
 /**
  * Get template by industry ID
  */
-export function getIndustryTemplate(industryId: string): IndustryTemplate | null {
-  return INDUSTRY_TEMPLATES[industryId] || null;
+export async function getIndustryTemplate(industryId: string): Promise<IndustryTemplate | null> {
+  const templates = await loadTemplates();
+  return templates[industryId] || null;
 }
 
 /**
  * Get templates by category
  */
-export function getTemplatesByCategory(category: string): IndustryTemplate[] {
-  return Object.values(INDUSTRY_TEMPLATES).filter(t => t.category === category);
+export async function getTemplatesByCategory(category: string): Promise<IndustryTemplate[]> {
+  const templates = await loadTemplates();
+  return Object.values(templates).filter(t => t.category === category);
 }
 
 /**
  * Get all categories
  */
-export function getCategories(): string[] {
-  const categories = new Set(Object.values(INDUSTRY_TEMPLATES).map(t => t.category));
+export async function getCategories(): Promise<string[]> {
+  const templates = await loadTemplates();
+  const categories = new Set(Object.values(templates).map(t => t.category));
   return Array.from(categories).sort();
 }
 
 /**
  * Check if an industry has a specialized template
  */
-export function hasTemplate(industryId: string): boolean {
-  return industryId in INDUSTRY_TEMPLATES;
+export async function hasTemplate(industryId: string): Promise<boolean> {
+  const templates = await loadTemplates();
+  return industryId in templates;
 }
 
 /**
  * Get template count
  */
-export function getTemplateCount(): { total: number; byCategory: Record<string, number> } {
+export async function getTemplateCount(): Promise<{ total: number; byCategory: Record<string, number> }> {
+  const templates = await loadTemplates();
   const byCategory: Record<string, number> = {};
   
-  Object.values(INDUSTRY_TEMPLATES).forEach(template => {
+  Object.values(templates).forEach(template => {
     byCategory[template.category] = (byCategory[template.category] || 0) + 1;
   });
   
   return {
-    total: Object.keys(INDUSTRY_TEMPLATES).length,
+    total: Object.keys(templates).length,
     byCategory
   };
 }
@@ -106,25 +149,27 @@ export function getResearchIntelligence(
 /**
  * Get industry template by ID
  */
-export function getTemplateById(templateId: string): IndustryTemplate | null {
-  return INDUSTRY_TEMPLATES[templateId] ?? null;
+export async function getTemplateById(templateId: string): Promise<IndustryTemplate | null> {
+  const templates = await loadTemplates();
+  return templates[templateId] ?? null;
 }
 
 /**
  * Get research intelligence by industry ID
  */
-export function getResearchIntelligenceById(
+export async function getResearchIntelligenceById(
   industryId: string
-): ResearchIntelligence | null {
-  const template = getTemplateById(industryId);
+): Promise<ResearchIntelligence | null> {
+  const template = await getTemplateById(industryId);
   return template ? getResearchIntelligence(template) : null;
 }
 
 /**
  * Get all templates that have research intelligence configured
  */
-export function getTemplatesWithResearch(): IndustryTemplate[] {
-  return Object.values(INDUSTRY_TEMPLATES).filter(hasResearchIntelligence);
+export async function getTemplatesWithResearch(): Promise<IndustryTemplate[]> {
+  const templates = await loadTemplates();
+  return Object.values(templates).filter(hasResearchIntelligence);
 }
 
 /**

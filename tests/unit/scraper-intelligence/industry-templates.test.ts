@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, beforeAll } from '@jest/globals';
 import {
   hasResearchIntelligence,
   getResearchIntelligence,
@@ -6,12 +6,17 @@ import {
   getResearchIntelligenceById,
   getTemplatesWithResearch,
   validateResearchIntelligence,
-  INDUSTRY_TEMPLATES,
+  getTemplatesSync,
   type IndustryTemplate,
 } from '@/lib/persona/industry-templates';
 import type { ResearchIntelligence } from '@/types/scraper-intelligence';
 
 describe('Industry Template Research Intelligence Helpers', () => {
+  // Preload templates before running tests
+  beforeAll(async () => {
+    await getTemplateById('residential-real-estate'); // Force template loading
+  });
+
   describe('hasResearchIntelligence', () => {
     it('should return false for templates without research', () => {
       const template: IndustryTemplate = {
@@ -152,35 +157,35 @@ describe('Industry Template Research Intelligence Helpers', () => {
   });
 
   describe('getTemplateById', () => {
-    it('should return null for non-existent template', () => {
-      expect(getTemplateById('non-existent-id')).toBeNull();
+    it('should return null for non-existent template', async () => {
+      expect(await getTemplateById('non-existent-id')).toBeNull();
     });
 
-    it('should return template if it exists', () => {
+    it('should return template if it exists', async () => {
       // Assuming 'residential-real-estate' exists in INDUSTRY_TEMPLATES
-      const template = getTemplateById('residential-real-estate');
+      const template = await getTemplateById('residential-real-estate');
       expect(template).not.toBeNull();
       expect(template?.id).toBe('residential-real-estate');
     });
   });
 
   describe('getResearchIntelligenceById', () => {
-    it('should return null for non-existent template', () => {
-      expect(getResearchIntelligenceById('non-existent')).toBeNull();
+    it('should return null for non-existent template', async () => {
+      expect(await getResearchIntelligenceById('non-existent')).toBeNull();
     });
 
-    it('should return null for template without research', () => {
+    it('should return null for template without research', async () => {
       // Most existing templates won't have research yet
-      const template = getTemplateById('residential-real-estate');
+      const template = await getTemplateById('residential-real-estate');
       if (template && !template.research) {
-        expect(getResearchIntelligenceById('residential-real-estate')).toBeNull();
+        expect(await getResearchIntelligenceById('residential-real-estate')).toBeNull();
       }
     });
   });
 
   describe('getTemplatesWithResearch', () => {
-    it('should return only templates with research', () => {
-      const templatesWithResearch = getTemplatesWithResearch();
+    it('should return only templates with research', async () => {
+      const templatesWithResearch = await getTemplatesWithResearch();
       
       templatesWithResearch.forEach((template) => {
         expect(template.research).toBeDefined();
@@ -188,9 +193,9 @@ describe('Industry Template Research Intelligence Helpers', () => {
       });
     });
 
-    it('should return empty array if no templates have research', () => {
+    it('should return empty array if no templates have research', async () => {
       // Initially, no templates will have research
-      const templatesWithResearch = getTemplatesWithResearch();
+      const templatesWithResearch = await getTemplatesWithResearch();
       expect(Array.isArray(templatesWithResearch)).toBe(true);
     });
   });
@@ -298,9 +303,10 @@ describe('Industry Template Research Intelligence Helpers', () => {
   });
 
   describe('Backward Compatibility', () => {
-    it('should not break existing templates', () => {
-      // All 50 existing templates should still load
-      const allTemplates = Object.values(INDUSTRY_TEMPLATES);
+    it('should not break existing templates', async () => {
+      // Force loading and get all templates
+      await getTemplateById('residential-real-estate');
+      const allTemplates = Object.values(getTemplatesSync());
       expect(allTemplates.length).toBeGreaterThanOrEqual(49);
 
       // Each template should have required fields

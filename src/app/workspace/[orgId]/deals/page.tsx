@@ -6,6 +6,16 @@ import { usePagination } from '@/hooks/usePagination';
 
 const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
 
+interface Deal {
+  id: string;
+  name: string;
+  company?: string;
+  companyName?: string;
+  value?: number;
+  stage?: string;
+  probability?: number;
+}
+
 export default function DealsPage() {
   const params = useParams();
   const router = useRouter();
@@ -39,7 +49,7 @@ export default function DealsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchDeals });
+  } = usePagination<Deal>({ fetchFn: fetchDeals });
 
   // Initial load
   useEffect(() => {

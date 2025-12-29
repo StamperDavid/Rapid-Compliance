@@ -162,7 +162,7 @@ export async function enrichCompany(
     
     if (request.industryTemplateId && request.enableDistillation !== false) {
       try {
-        const research = getResearchIntelligenceById(request.industryTemplateId);
+        const research = await getResearchIntelligenceById(request.industryTemplateId);
         
         if (research) {
           logger.info('Running distillation engine with industry research', {

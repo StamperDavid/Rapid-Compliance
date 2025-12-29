@@ -4,6 +4,19 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePagination } from '@/hooks/usePagination';
 
+interface Lead {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  companyName?: string;
+  email?: string;
+  phone?: string;
+  score?: number;
+  status?: string;
+}
+
 export default function LeadsPage() {
   const params = useParams();
   const router = useRouter();
@@ -41,7 +54,7 @@ export default function LeadsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchLeads });
+  } = usePagination<Lead>({ fetchFn: fetchLeads });
 
   // Refresh when filter changes
   useEffect(() => {
