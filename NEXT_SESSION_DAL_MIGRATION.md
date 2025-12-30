@@ -1,87 +1,84 @@
-# 🔄 DAL MIGRATION - SESSION 3 CONTINUATION PROMPT
+# 🔄 DAL MIGRATION - SESSION 4 CONTINUATION PROMPT
 
 **Copy and paste this entire prompt to start the next session:**
 
 ---
 
-You're continuing the Data Access Layer (DAL) migration for an AI Sales Platform. This is **Session 3** of the migration effort.
+You're continuing the Data Access Layer (DAL) migration for an AI Sales Platform. This is **Session 4** of the migration effort.
 
 ## 📍 CURRENT STATE
 
 **Branch:** `dev`  
-**Last Commit:** `75eadf2` - "docs: add comprehensive Session 2 DAL migration summary"  
+**Last Commit:** `0bcf57b` - "docs: add comprehensive Session 3 DAL migration summary"  
 **Last Push:** Successfully pushed to GitHub `origin/dev`
 
 ### Progress Summary
 - ✅ **Session 1:** Created Admin DAL + migrated 11 API routes
 - ✅ **Session 2:** Migrated 10 website builder routes (pages, blog, navigation, templates)
+- ✅ **Session 3:** Migrated 12 website builder routes (domains, public routes, lookups)
 - 📊 **Total Progress:**
   - Client SDK: 4/4 files ✅ COMPLETE
-  - Admin SDK: 21/44 files ✅ (~48% complete)
-  - Remaining: ~23 API routes
+  - Admin SDK: 33/44 files ✅ (~75% complete)
+  - Remaining: ~11 API routes
 
-### Files Migrated in Session 2
-1. `src/app/api/website/pages/[pageId]/route.ts` ✅
-2. `src/app/api/website/templates/route.ts` ✅
-3. `src/app/api/website/navigation/route.ts` ✅
-4. `src/app/api/website/pages/[pageId]/preview/route.ts` ✅
-5. `src/app/api/website/pages/[pageId]/publish/route.ts` ✅
-6. `src/app/api/website/pages/[pageId]/versions/route.ts` ✅
-7. `src/app/api/website/blog/posts/route.ts` ✅
-8. `src/app/api/website/blog/posts/[postId]/route.ts` ✅
-9. `src/app/api/website/blog/categories/route.ts` ✅
+### Files Migrated in Session 3
+1. `src/app/api/website/domains/[domainId]/route.ts` ✅
+2. `src/app/api/website/domains/[domainId]/verify/route.ts` ✅
+3. `src/app/api/website/blog/posts/[postId]/publish/route.ts` ✅
+4. `src/app/api/website/blog/posts/[postId]/preview/route.ts` ✅
+5. `src/app/api/website/sitemap.xml/route.ts` ✅
+6. `src/app/api/website/robots.txt/route.ts` ✅
+7. `src/app/api/website/blog/feed.xml/route.ts` ✅
+8. `src/app/api/website/subdomain/[subdomain]/route.ts` ✅
+9. `src/app/api/website/domain/[domain]/route.ts` ✅
+10. `src/app/api/website/preview/validate/route.ts` ✅
+11. `src/app/api/website/audit-log/route.ts` ✅
 
 ---
 
-## 🎯 YOUR MISSION - SESSION 3
+## 🎯 YOUR MISSION - SESSION 4
 
-Continue migrating API routes to use the Admin DAL. You have three strategic options:
+Continue migrating the remaining API routes to use the Admin DAL. You have two strategic options:
 
-### **Option A: Complete Website Builder Routes** (Recommended)
-Finish the remaining ~12 website routes for consistency:
-- `src/app/api/website/domains/[domainId]/route.ts`
-- `src/app/api/website/domains/[domainId]/verify/route.ts`
-- `src/app/api/website/blog/posts/[postId]/publish/route.ts`
-- `src/app/api/website/blog/posts/[postId]/preview/route.ts`
-- `src/app/api/website/blog/feed.xml/route.ts`
-- `src/app/api/website/sitemap.xml/route.ts`
-- `src/app/api/website/robots.txt/route.ts`
-- `src/app/api/website/subdomain/[subdomain]/route.ts`
-- `src/app/api/website/domain/[domain]/route.ts`
-- `src/app/api/website/preview/validate/route.ts`
-- `src/app/api/website/audit-log/route.ts`
-
-### **Option B: Migrate Sequence/Workflow Routes**
-Move to different feature areas:
-- Sequence analytics and execution routes
-- Workflow CRUD and webhook routes
+### **Option A: Complete Remaining API Routes** (Recommended)
+Finish the final ~11 API routes to complete Phase 3:
+- Lead scoring routes (3 files) - may use service layer
+- Sequence analytics/execution routes (2 files)
+- Workflow CRUD/webhook routes (4 files) - may use service layer
 - Discovery queue routes
+- Other misc routes
 
-### **Option C: Tackle Service Layer**
+**NOTE:** Website builder routes are 100% COMPLETE! ✅
+
+### **Option B: Tackle Service Layer**
 Migrate the deferred service files (harder, use Admin SDK + deep nesting):
 - `src/lib/services/lead-scoring-engine.ts`
 - `src/lib/services/sequencer.ts`
 - `src/lib/crm/lead-service.ts`
+
+### **Goal: Complete Phase 3** 🎯
+Session 4 should aim to migrate all remaining API routes and complete Phase 3!
 
 ---
 
 ## 🔑 QUICK START CHECKLIST
 
 **Before you begin:**
-1. [ ] Read `DAL_MIGRATION_SESSION_2_SUMMARY.md` for Session 2 context
-2. [ ] Read `DAL_MIGRATION_SESSION_SUMMARY.md` for Session 1 context (if needed)
-3. [ ] Check `REFACTOR_TASK.md` for the current tracker state
-4. [ ] Confirm you're on branch `dev` with latest changes
+1. [ ] Read `DAL_MIGRATION_SESSION_3_SUMMARY.md` for Session 3 context
+2. [ ] Read `DAL_MIGRATION_SESSION_2_SUMMARY.md` for Session 2 context (if needed)
+3. [ ] Read `DAL_MIGRATION_SESSION_SUMMARY.md` for Session 1 context (if needed)
+4. [ ] Check `REFACTOR_TASK.md` for the current tracker state
+5. [ ] Confirm you're on branch `dev` with latest changes
 
 **Then:**
-1. [ ] Pick your strategic approach (A, B, or C above)
+1. [ ] Pick your strategic approach (A or B above)
 2. [ ] Read the first file you plan to migrate
 3. [ ] Start migrating using the established patterns
 4. [ ] Commit after each file: `git commit --no-verify -m "refactor(dal): migrate [filename]"`
 5. [ ] Update `REFACTOR_TASK.md` periodically
 6. [ ] Push to GitHub when done: `git push origin dev`
-7. [ ] Create Session 3 summary document
-8. [ ] Prepare prompt for Session 4
+7. [ ] Create Session 4 summary document
+8. [ ] Prepare prompt for Session 5 (if needed)
 
 ---
 
@@ -226,19 +223,21 @@ git push origin dev
 
 ## 🎯 SUCCESS CRITERIA
 
-**Session 3 is complete when:**
-- [ ] At least 8-10 more files migrated
+**Session 4 is complete when:**
+- [ ] All remaining API routes migrated (target: ~11 files)
+- [ ] Phase 3 (API Routes) 100% complete
 - [ ] All commits pushed to GitHub dev branch
 - [ ] `REFACTOR_TASK.md` updated with progress
-- [ ] Session 3 summary document created
-- [ ] Session 4 continuation prompt prepared
+- [ ] Session 4 summary document created
+- [ ] Session 5 continuation prompt prepared (if service layer remains)
 - [ ] No linter errors introduced
 - [ ] All security patterns preserved
 
 ---
 
-**Ready to continue? Start by reading the Session 2 summary, then pick your approach and begin migrating! 🚀**
+**Ready to continue? Start by reading the Session 3 summary, then pick your approach and begin migrating! 🚀**
 
-**Current commit:** `75eadf2`  
+**Current commit:** `0bcf57b`  
 **Branch:** `dev`  
-**Status:** ✅ Ready for Session 3
+**Status:** ✅ Ready for Session 4
+**Progress:** 75% of Admin SDK complete (33/44 files)
