@@ -4,7 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -17,6 +18,10 @@ export async function GET(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -35,13 +40,10 @@ export async function GET(
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    const pageRef = db
-      .collection('organizations')
-      .doc(organizationId) // ← SCOPED to this org
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId);
+    const pageRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}',
+      { orgId: organizationId, pageId: params.pageId }
+    );
 
     const doc = await pageRef.get();
 
@@ -94,6 +96,10 @@ export async function PUT(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const params = await context.params;
     const body = await request.json();
     const { organizationId, page } = body;
@@ -115,13 +121,10 @@ export async function PUT(
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    const pageRef = db
-      .collection('organizations')
-      .doc(organizationId) // ← SCOPED to this org
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId);
+    const pageRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}',
+      { orgId: organizationId, pageId: params.pageId }
+    );
 
     const existingDoc = await pageRef.get();
 
@@ -149,7 +152,6 @@ export async function PUT(
       );
     }
 
-    const now = admin.firestore.Timestamp.now();
     const performedBy = await getUserIdentifier();
 
     // CRITICAL: Cannot change organizationId
@@ -157,7 +159,7 @@ export async function PUT(
       ...page,
       organizationId: existingData.organizationId, // ← Keep original orgId
       id: params.pageId,
-      updatedAt: now,
+      updatedAt: FieldValue.serverTimestamp(),
       lastEditedBy: performedBy,
       version: (existingData.version || 1) + 1,
     };
@@ -189,6 +191,10 @@ export async function DELETE(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -210,13 +216,10 @@ export async function DELETE(
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    const pageRef = db
-      .collection('organizations')
-      .doc(organizationId) // ← SCOPED to this org
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId);
+    const pageRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}',
+      { orgId: organizationId, pageId: params.pageId }
+    );
 
     const doc = await pageRef.get();
 
