@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -18,11 +18,16 @@ export async function GET(
   context: { params: Promise<{ subdomain: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const subdomain = params.subdomain.toLowerCase();
 
     // Query global subdomain registry
-    const subdomainDoc = await db.collection('subdomains').doc(subdomain).get();
+    const subdomainRef = adminDal.getNestedDocRef('subdomains/{subdomain}', { subdomain });
+    const subdomainDoc = await subdomainRef.get();
 
     if (!subdomainDoc.exists) {
       return NextResponse.json(
