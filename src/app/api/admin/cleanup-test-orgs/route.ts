@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { 
   verifyAdminRequest, 
   createErrorResponse, 
@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
   }
   
   try {
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+    
     const { dryRun = true } = await request.json().catch(() => ({ dryRun: true }));
     
     // Test organization patterns to identify
@@ -35,8 +39,8 @@ export async function POST(request: NextRequest) {
       'Pagination Test Org',
     ];
     
-    // Fetch all organizations
-    const orgsSnapshot = await adminDb.collection('organizations').get();
+    // Fetch all organizations using Admin DAL
+    const orgsSnapshot = await adminDal.safeGetDocs('ORGANIZATIONS');
     
     const testOrgs: any[] = [];
     const realOrgs: any[] = [];
@@ -118,12 +122,12 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Actually delete test organizations
+    // Actually delete test organizations using batch
     let deletedCount = 0;
-    const batch = adminDb.batch();
+    const batch = adminDal.batch();
     
     for (const org of testOrgs) {
-      const orgRef = adminDb.collection('organizations').doc(org.id);
+      const orgRef = adminDal.getCollection('ORGANIZATIONS').doc(org.id);
       batch.delete(orgRef);
       deletedCount++;
       
