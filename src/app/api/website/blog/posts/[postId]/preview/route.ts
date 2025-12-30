@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
@@ -19,6 +19,10 @@ export async function POST(
   context: { params: Promise<{ postId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const body = await request.json();
     const { organizationId, expiresIn } = body; // expiresIn in hours, default 24
@@ -31,13 +35,10 @@ export async function POST(
       );
     }
 
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(params.postId);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId: params.postId }
+    );
 
     const doc = await postRef.get();
 
@@ -67,13 +68,10 @@ export async function POST(
     // Store preview token
     const performedBy = await getUserIdentifier();
     
-    const tokenRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('preview-tokens')
-      .collection('tokens')
-      .doc(previewToken);
+    const tokenRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/preview-tokens/tokens/{token}',
+      { orgId: organizationId, token: previewToken }
+    );
 
     await tokenRef.set({
       postId: params.postId,
@@ -115,6 +113,10 @@ export async function GET(
   context: { params: Promise<{ postId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -136,13 +138,10 @@ export async function GET(
     }
 
     // Verify preview token
-    const tokenRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('preview-tokens')
-      .collection('tokens')
-      .doc(token);
+    const tokenRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/preview-tokens/tokens/{token}',
+      { orgId: organizationId, token }
+    );
 
     const tokenDoc = await tokenRef.get();
 
@@ -173,13 +172,10 @@ export async function GET(
     }
 
     // Get the post data
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(params.postId);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId: params.postId }
+    );
 
     const doc = await postRef.get();
 
