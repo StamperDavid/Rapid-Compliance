@@ -12,12 +12,12 @@
 ## 📊 PROGRESS OVERVIEW
 
 - **Phase 1 (Auth & Signup):** 2/2 ✅ COMPLETE
-- **Phase 2 (Core Services):** 0/5 ✗
+- **Phase 2 (Core Services):** 1/3 ⚡ (2 files deferred for Admin DAL)
 - **Phase 3 (API Routes):** 0/12 ✗
 - **Phase 4 (Integrations):** 0/8 ✗
 - **Phase 5 (Advanced Features):** 0/10 ✗
 
-**Total:** 2/37 files migrated (5.4%)
+**Total:** 3/37 files migrated (8.1%)
 
 ---
 
@@ -45,9 +45,15 @@
 
 - [ ] `src/lib/services/lead-scoring-engine.ts` ⏸️ ADMIN SDK (needs Admin DAL)
 - [ ] `src/lib/services/sequencer.ts` ⏸️ ADMIN SDK (needs Admin DAL)
-- [ ] `src/lib/agent/base-model-builder.ts` ⚡ NEXT (Client SDK)
-- [ ] `src/lib/crm/lead-service.ts` (Client SDK)
-- [ ] `src/lib/outbound/meeting-scheduler.ts` (Mixed SDK)
+- [x] `src/lib/agent/base-model-builder.ts` ✅ (commit d2fc783)
+  - Migrated client-side setDoc → dal.safeSetDoc
+  - Migrated client-side getDocs → dal.safeGetDocs  
+  - Migrated client-side updateDoc → dal.safeUpdateDoc
+  - Migrated client-side getDoc → dal.safeGetDoc
+  - Added BASE_MODELS to collections registry
+  - Server-side (Admin SDK) operations left as-is
+- [ ] `src/lib/crm/lead-service.ts` ⏸️ NESTED PATHS (needs workspace sub-collection support in DAL)
+- [ ] `src/lib/outbound/meeting-scheduler.ts` ⚡ NEXT (Mixed SDK)
 
 ---
 
@@ -207,6 +213,7 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 
 **Last Updated:** Dec 30, 2025
 **Current Phase:** Phase 2 - Core Services
-**Next File:** `src/lib/services/lead-scoring-engine.ts`
-**Last Commit:** 986f17e
+**Next File:** `src/lib/crm/lead-service.ts`
+**Last Commit:** d2fc783
 **Phase 1:** ✅ COMPLETE (2/2 files)
+**Deferred:** 2 files need Admin DAL (lead-scoring-engine, sequencer)

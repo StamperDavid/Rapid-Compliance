@@ -68,6 +68,7 @@ export const COLLECTIONS = {
   SCHEMAS: `${PREFIX}schemas`,
   API_KEYS: `${PREFIX}apiKeys`,
   AUDIT_LOGS: `${PREFIX}auditLogs`,
+  INTEGRATIONS: `${PREFIX}integrations`,
   
   // ========================================
   // WEBSITE BUILDER COLLECTIONS

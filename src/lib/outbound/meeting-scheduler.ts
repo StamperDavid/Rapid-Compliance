@@ -374,12 +374,13 @@ function getMeetingDescription(type: string): string {
 
 async function getHostDetails(userId: string): Promise<{ name: string; email: string }> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { dal } = await import('@/lib/firebase/dal');
     
-    // Get user from Firestore
-    const user = await FirestoreService.get(COLLECTIONS.USERS, userId) as any;
+    // Get user from Firestore using DAL
+    const userDoc = await dal.safeGetDoc('USERS', userId);
     
-    if (user) {
+    if (userDoc.exists()) {
+      const user = userDoc.data() as any;
       return {
         name: user.name || user.displayName || 'Sales Team',
         email: user.email || 'sales@company.com',
@@ -462,11 +463,14 @@ async function getMeetingById(
   meetingId: string,
   organizationId: string
 ): Promise<ScheduledMeeting | null> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  return await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/meetings`,
-    meetingId
-  ) as ScheduledMeeting | null;
+  const { db } = await import('@/lib/firebase/config');
+  const { doc, getDoc } = await import('firebase/firestore');
+  const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+  
+  const meetingPath = getOrgSubCollection(organizationId, 'meetings');
+  const meetingDoc = await getDoc(doc(db, meetingPath, meetingId));
+  
+  return meetingDoc.exists() ? (meetingDoc.data() as ScheduledMeeting) : null;
 }
 
 async function createCalendarEvent(meeting: ScheduledMeeting): Promise<{ id: string; link: string }> {
@@ -580,23 +584,21 @@ async function sendCalendarInvite(meeting: ScheduledMeeting): Promise<void> {
 
 async function getCalendarTokens(userId: string): Promise<{ access_token: string; refresh_token?: string } | null> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { dal } = await import('@/lib/firebase/dal');
     const { where } = await import('firebase/firestore');
     
-    const integration = await FirestoreService.getAll(
-      COLLECTIONS.INTEGRATIONS,
-      [
-        where('userId', '==', userId),
-        where('provider', '==', 'google'),
-        where('type', '==', 'calendar'),
-        where('status', '==', 'active'),
-      ]
+    const snapshot = await dal.safeGetDocs('INTEGRATIONS',
+      where('userId', '==', userId),
+      where('provider', '==', 'google'),
+      where('type', '==', 'calendar'),
+      where('status', '==', 'active')
     );
 
-    if (integration && integration.length > 0) {
+    if (!snapshot.empty) {
+      const integration = snapshot.docs[0].data();
       return {
-        access_token: integration[0].credentials.access_token,
-        refresh_token: integration[0].credentials.refresh_token,
+        access_token: integration.credentials.access_token,
+        refresh_token: integration.credentials.refresh_token,
       };
     }
 
@@ -616,11 +618,13 @@ async function sendMeetingUpdate(
     const { sendEmail } = await import('@/lib/integrations/sendgrid-service');
     
     // Get organization settings for email templates
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const orgSettings = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${meeting.organizationId}/settings`,
-      'email'
-    ) as any;
+    const { db } = await import('@/lib/firebase/config');
+    const { doc, getDoc } = await import('firebase/firestore');
+    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+    
+    const settingsPath = getOrgSubCollection(meeting.organizationId, 'settings');
+    const settingsDoc = await getDoc(doc(db, settingsPath, 'email'));
+    const orgSettings = settingsDoc.exists() ? settingsDoc.data() : null;
     
     const companyName = orgSettings?.companyName || 'Our Team';
     const replyTo = orgSettings?.replyToEmail || meeting.host.email;
