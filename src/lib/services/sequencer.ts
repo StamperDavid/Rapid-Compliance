@@ -20,9 +20,9 @@
  * - Analytics
  */
 
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS } from '@/lib/sms/sms-service';
 import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
@@ -138,6 +138,10 @@ export async function createSequence(params: {
   createdBy: string;
 }): Promise<Sequence> {
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     const { organizationId, name, description, steps, createdBy } = params;
 
     // Validate steps
@@ -145,7 +149,7 @@ export async function createSequence(params: {
 
     const now = new Date();
     const sequence: Sequence = {
-      id: db.collection('sequences').doc().id,
+      id: adminDal.getCollection('SEQUENCES').doc().id,
       organizationId,
       name,
       ...(description && { description }), // Only include if defined
@@ -162,7 +166,7 @@ export async function createSequence(params: {
       },
     };
 
-    await db.collection('sequences').doc(sequence.id).set({
+    await adminDal.safeSetDoc('SEQUENCES', sequence.id, {
       ...sequence,
       createdAt: Timestamp.fromDate(sequence.createdAt),
       updatedAt: Timestamp.fromDate(sequence.updatedAt),
@@ -186,7 +190,11 @@ export async function createSequence(params: {
  */
 export async function getSequence(sequenceId: string): Promise<Sequence | null> {
   try {
-    const doc = await db.collection('sequences').doc(sequenceId).get();
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    const doc = await adminDal.safeGetDoc('SEQUENCES', sequenceId);
     
     if (!doc.exists) {
       return null;
@@ -216,12 +224,16 @@ export async function updateSequence(
   updates: Partial<Omit<Sequence, 'id' | 'organizationId' | 'createdAt'>>
 ): Promise<void> {
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     const updateData: any = {
       ...updates,
       updatedAt: Timestamp.now(),
     };
 
-    await db.collection('sequences').doc(sequenceId).update(updateData);
+    await adminDal.safeUpdateDoc('SEQUENCES', sequenceId, updateData);
 
     logger.info('Sequence updated', { sequenceId });
   } catch (error) {
@@ -235,11 +247,15 @@ export async function updateSequence(
  */
 export async function listSequences(organizationId: string): Promise<Sequence[]> {
   try {
-    const snapshot = await db
-      .collection('sequences')
-      .where('organizationId', '==', organizationId)
-      .orderBy('createdAt', 'desc')
-      .get();
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    const snapshot = await adminDal.safeQuery('SEQUENCES', (ref) =>
+      ref
+        .where('organizationId', '==', organizationId)
+        .orderBy('createdAt', 'desc')
+    );
 
     return snapshot.docs.map((doc) => {
       const data = doc.data();
@@ -281,14 +297,18 @@ export async function enrollInSequence(params: {
       throw new Error(`Sequence is not active: ${sequenceId}`);
     }
 
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     // Check if already enrolled
-    const existing = await db
-      .collection('sequenceEnrollments')
-      .where('sequenceId', '==', sequenceId)
-      .where('leadId', '==', leadId)
-      .where('status', '==', 'active')
-      .limit(1)
-      .get();
+    const existing = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
+      ref
+        .where('sequenceId', '==', sequenceId)
+        .where('leadId', '==', leadId)
+        .where('status', '==', 'active')
+        .limit(1)
+    );
 
     if (!existing.empty) {
       throw new Error(`Lead already enrolled in sequence: ${leadId}`);
@@ -301,7 +321,7 @@ export async function enrollInSequence(params: {
     const nextExecutionAt = new Date(now.getTime() + firstStep.delayHours * 60 * 60 * 1000);
 
     const enrollment: SequenceEnrollment = {
-      id: db.collection('sequenceEnrollments').doc().id,
+      id: adminDal.getCollection('SEQUENCE_ENROLLMENTS').doc().id,
       sequenceId,
       leadId,
       organizationId,
@@ -313,14 +333,14 @@ export async function enrollInSequence(params: {
       metadata,
     };
 
-    await db.collection('sequenceEnrollments').doc(enrollment.id).set({
+    await adminDal.safeSetDoc('SEQUENCE_ENROLLMENTS', enrollment.id, {
       ...enrollment,
       enrolledAt: Timestamp.fromDate(enrollment.enrolledAt),
       nextExecutionAt: Timestamp.fromDate(nextExecutionAt),
     });
 
     // Update sequence stats
-    await db.collection('sequences').doc(sequenceId).update({
+    await adminDal.safeUpdateDoc('SEQUENCES', sequenceId, {
       'stats.totalEnrolled': (sequence.stats.totalEnrolled || 0) + 1,
       'stats.activeEnrollments': (sequence.stats.activeEnrollments || 0) + 1,
     });
@@ -344,8 +364,12 @@ export async function enrollInSequence(params: {
  */
 export async function executeSequenceStep(enrollmentId: string): Promise<void> {
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     // Get enrollment
-    const enrollmentDoc = await db.collection('sequenceEnrollments').doc(enrollmentId).get();
+    const enrollmentDoc = await adminDal.safeGetDoc('SEQUENCE_ENROLLMENTS', enrollmentId);
     if (!enrollmentDoc.exists) {
       throw new Error(`Enrollment not found: ${enrollmentId}`);
     }
@@ -431,13 +455,13 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
       updates.nextExecutionAt = null;
 
       // Update sequence stats
-      await db.collection('sequences').doc(enrollment.sequenceId).update({
+      await adminDal.safeUpdateDoc('SEQUENCES', enrollment.sequenceId, {
         'stats.activeEnrollments': Math.max(0, (sequence.stats.activeEnrollments || 0) - 1),
         'stats.completedEnrollments': (sequence.stats.completedEnrollments || 0) + 1,
       });
     }
 
-    await db.collection('sequenceEnrollments').doc(enrollmentId).update(updates);
+    await adminDal.safeUpdateDoc('SEQUENCE_ENROLLMENTS', enrollmentId, updates);
 
     logger.info('Sequence step executed', {
       enrollmentId,
@@ -461,10 +485,14 @@ export async function handleCondition(params: {
   metadata?: Record<string, any>;
 }): Promise<void> {
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     const { enrollmentId, conditionType, metadata = {} } = params;
 
     // Get enrollment
-    const enrollmentDoc = await db.collection('sequenceEnrollments').doc(enrollmentId).get();
+    const enrollmentDoc = await adminDal.safeGetDoc('SEQUENCE_ENROLLMENTS', enrollmentId);
     if (!enrollmentDoc.exists) {
       throw new Error(`Enrollment not found: ${enrollmentId}`);
     }
@@ -509,7 +537,7 @@ export async function handleCondition(params: {
       if (nextStep) {
         const nextExecutionAt = new Date(Date.now() + nextStep.delayHours * 60 * 60 * 1000);
         
-        await db.collection('sequenceEnrollments').doc(enrollmentId).update({
+        await adminDal.safeUpdateDoc('SEQUENCE_ENROLLMENTS', enrollmentId, {
           currentStepIndex: condition.nextStepIndex,
           nextExecutionAt: Timestamp.fromDate(nextExecutionAt),
         });
@@ -531,7 +559,7 @@ export async function handleCondition(params: {
     }
 
     // Store condition trigger in metadata
-    await db.collection('sequenceEnrollments').doc(enrollmentId).update({
+    await adminDal.safeUpdateDoc('SEQUENCE_ENROLLMENTS', enrollmentId, {
       [`metadata.conditions.${conditionType}`]: {
         triggeredAt: Timestamp.now(),
         ...metadata,
@@ -548,16 +576,21 @@ export async function handleCondition(params: {
  */
 export async function stopEnrollment(enrollmentId: string, reason?: string): Promise<void> {
   try {
-    await db.collection('sequenceEnrollments').doc(enrollmentId).update({
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    await adminDal.safeUpdateDoc('SEQUENCE_ENROLLMENTS', enrollmentId, {
       status: 'stopped',
       completedAt: Timestamp.now(),
       'metadata.stopReason': reason || 'Manual stop',
     });
 
     // Get enrollment to update sequence stats
-    const enrollment = (await db.collection('sequenceEnrollments').doc(enrollmentId).get()).data();
+    const enrollmentDoc = await adminDal.safeGetDoc('SEQUENCE_ENROLLMENTS', enrollmentId);
+    const enrollment = enrollmentDoc.data();
     if (enrollment) {
-      await db.collection('sequences').doc(enrollment.sequenceId).update({
+      await adminDal.safeUpdateDoc('SEQUENCES', enrollment.sequenceId, {
         'stats.activeEnrollments': Math.max(0, (enrollment.stats?.activeEnrollments || 0) - 1),
       });
     }
@@ -611,30 +644,36 @@ function validateSequenceSteps(steps: SequenceStep[]): void {
  */
 async function getLeadData(leadId: string, organizationId: string): Promise<any> {
   try {
-    // Try to find the lead in any workspace
-    const orgsRef = db.collection('organizations').doc(organizationId);
-    const workspacesSnapshot = await orgsRef.collection('workspaces').get();
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    // Get all workspaces for this organization
+    const workspacesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/workspaces',
+      { orgId: organizationId }
+    );
+    const workspacesSnapshot = await workspacesRef.get();
     
     for (const workspaceDoc of workspacesSnapshot.docs) {
-      const leadDoc = await workspaceDoc.ref
-        .collection('entities')
-        .doc('leads')
-        .collection('records')
-        .doc(leadId)
-        .get();
+      // Check leads collection
+      const leadRef = adminDal.getNestedCollection(
+        'organizations/{orgId}/workspaces/{wsId}/entities/leads/records',
+        { orgId: organizationId, wsId: workspaceDoc.id }
+      ).doc(leadId);
       
+      const leadDoc = await leadRef.get();
       if (leadDoc.exists) {
         return { id: leadDoc.id, ...leadDoc.data() };
       }
       
       // Also check contacts collection
-      const contactDoc = await workspaceDoc.ref
-        .collection('entities')
-        .doc('contacts')
-        .collection('records')
-        .doc(leadId)
-        .get();
+      const contactRef = adminDal.getNestedCollection(
+        'organizations/{orgId}/workspaces/{wsId}/entities/contacts/records',
+        { orgId: organizationId, wsId: workspaceDoc.id }
+      ).doc(leadId);
       
+      const contactDoc = await contactRef.get();
       if (contactDoc.exists) {
         return { id: contactDoc.id, ...contactDoc.data() };
       }
@@ -652,12 +691,16 @@ async function getLeadData(leadId: string, organizationId: string): Promise<any>
  */
 async function loadTemplate(templateId: string, organizationId: string): Promise<any> {
   try {
-    const templateDoc = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('templates')
-      .doc(templateId)
-      .get();
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    const templatesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/templates',
+      { orgId: organizationId }
+    );
+    
+    const templateDoc = await templatesRef.doc(templateId).get();
     
     if (templateDoc.exists) {
       return { id: templateDoc.id, ...templateDoc.data() };
@@ -958,7 +1001,11 @@ async function executeChannelAction(step: SequenceStep, enrollment: SequenceEnro
  * Complete enrollment
  */
 async function completeEnrollment(enrollmentId: string): Promise<void> {
-  await db.collection('sequenceEnrollments').doc(enrollmentId).update({
+  if (!adminDal) {
+    throw new Error('Admin DAL not initialized');
+  }
+
+  await adminDal.safeUpdateDoc('SEQUENCE_ENROLLMENTS', enrollmentId, {
     status: 'completed',
     completedAt: Timestamp.now(),
   });
@@ -976,16 +1023,20 @@ async function completeEnrollment(enrollmentId: string): Promise<void> {
  */
 export async function processDueSequenceSteps(organizationId: string): Promise<number> {
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     const now = new Date();
 
     // Find all enrollments that are due for execution
-    const dueEnrollments = await db
-      .collection('sequenceEnrollments')
-      .where('organizationId', '==', organizationId)
-      .where('status', '==', 'active')
-      .where('nextExecutionAt', '<=', Timestamp.fromDate(now))
-      .limit(100) // Process in batches
-      .get();
+    const dueEnrollments = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
+      ref
+        .where('organizationId', '==', organizationId)
+        .where('status', '==', 'active')
+        .where('nextExecutionAt', '<=', Timestamp.fromDate(now))
+        .limit(100) // Process in batches
+    );
 
     logger.info('Processing due sequence steps', {
       organizationId,
