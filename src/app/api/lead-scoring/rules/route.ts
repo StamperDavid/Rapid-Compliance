@@ -8,9 +8,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, db } from '@/lib/firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import adminApp from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import { Timestamp } from 'firebase-admin/firestore';
 import type { ScoringRules } from '@/types/lead-scoring';
 import { DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
 
@@ -21,6 +23,13 @@ import { DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
  */
 export async function GET(req: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -30,7 +39,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
@@ -43,12 +52,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Get all scoring rules for organization
-    const snapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('scoringRules')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const rulesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/scoringRules',
+      { orgId: organizationId }
+    );
+    const snapshot = await rulesRef.orderBy('createdAt', 'desc').get();
 
     const rules = snapshot.docs.map((doc) => {
       const data = doc.data();
@@ -81,6 +89,13 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -90,7 +105,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await getAuth(adminApp).verifyIdToken(token);
     const userId = decodedToken.uid;
 
     const body = await req.json();
@@ -104,18 +119,17 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date();
-    const rulesId = db.collection('organizations').doc().id;
+    const rulesId = adminDal.generateId();
 
     // If this is set to active, deactivate all other rules
     if (rulesData.isActive) {
-      const existingSnapshot = await db
-        .collection('organizations')
-        .doc(organizationId)
-        .collection('scoringRules')
-        .where('isActive', '==', true)
-        .get();
+      const rulesRef = adminDal.getNestedCollection(
+        'organizations/{orgId}/scoringRules',
+        { orgId: organizationId }
+      );
+      const existingSnapshot = await rulesRef.where('isActive', '==', true).get();
 
-      const batch = db.batch();
+      const batch = adminDal.batch();
       existingSnapshot.docs.forEach((doc) => {
         batch.update(doc.ref, { isActive: false });
       });
@@ -134,16 +148,16 @@ export async function POST(req: NextRequest) {
       createdBy: userId,
     };
 
-    await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('scoringRules')
-      .doc(rulesId)
-      .set({
-        ...rules,
-        createdAt: Timestamp.fromDate(now),
-        updatedAt: Timestamp.fromDate(now),
-      });
+    const rulesDocRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/scoringRules/{rulesId}',
+      { orgId: organizationId, rulesId }
+    );
+
+    await rulesDocRef.set({
+      ...rules,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
 
     logger.info('Created scoring rules', {
       rulesId,
@@ -173,6 +187,13 @@ export async function POST(req: NextRequest) {
  */
 export async function PUT(req: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -182,7 +203,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    await auth.verifyIdToken(token);
+    await getAuth(adminApp).verifyIdToken(token);
 
     const body = await req.json();
     const { organizationId, rulesId, ...updates } = body;
@@ -196,14 +217,13 @@ export async function PUT(req: NextRequest) {
 
     // If setting to active, deactivate others
     if (updates.isActive) {
-      const existingSnapshot = await db
-        .collection('organizations')
-        .doc(organizationId)
-        .collection('scoringRules')
-        .where('isActive', '==', true)
-        .get();
+      const rulesRef = adminDal.getNestedCollection(
+        'organizations/{orgId}/scoringRules',
+        { orgId: organizationId }
+      );
+      const existingSnapshot = await rulesRef.where('isActive', '==', true).get();
 
-      const batch = db.batch();
+      const batch = adminDal.batch();
       existingSnapshot.docs.forEach((doc) => {
         if (doc.id !== rulesId) {
           batch.update(doc.ref, { isActive: false });
@@ -212,15 +232,15 @@ export async function PUT(req: NextRequest) {
       await batch.commit();
     }
 
-    await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('scoringRules')
-      .doc(rulesId)
-      .update({
-        ...updates,
-        updatedAt: Timestamp.now(),
-      });
+    const rulesDocRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/scoringRules/{rulesId}',
+      { orgId: organizationId, rulesId }
+    );
+
+    await rulesDocRef.update({
+      ...updates,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
 
     logger.info('Updated scoring rules', { rulesId, organizationId });
 
@@ -245,6 +265,13 @@ export async function PUT(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -254,7 +281,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    await auth.verifyIdToken(token);
+    await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
@@ -267,12 +294,12 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('scoringRules')
-      .doc(rulesId)
-      .delete();
+    const rulesDocRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/scoringRules/{rulesId}',
+      { orgId: organizationId, rulesId }
+    );
+
+    await rulesDocRef.delete();
 
     logger.info('Deleted scoring rules', { rulesId, organizationId });
 
