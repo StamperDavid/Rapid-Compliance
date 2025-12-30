@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse} from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -18,6 +19,10 @@ export async function GET(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -31,13 +36,10 @@ export async function GET(
     }
 
     // Verify the page belongs to this org
-    const pageRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId);
+    const pageRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}',
+      { orgId: organizationId, pageId: params.pageId }
+    );
 
     const pageDoc = await pageRef.get();
 
@@ -94,6 +96,10 @@ export async function POST(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const params = await context.params;
     const body = await request.json();
     const { organizationId, versionId } = body;
@@ -113,13 +119,10 @@ export async function POST(
       );
     }
 
-    const pageRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId);
+    const pageRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}',
+      { orgId: organizationId, pageId: params.pageId }
+    );
 
     const pageDoc = await pageRef.get();
 
@@ -151,7 +154,7 @@ export async function POST(
     }
 
     const versionData = versionDoc.data();
-    const now = admin.firestore.Timestamp.now();
+    const now = FieldValue.serverTimestamp();
     const performedBy = await getUserIdentifier();
 
     // Restore the version content
@@ -167,12 +170,10 @@ export async function POST(
     });
 
     // Create audit log entry
-    const auditRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('audit-log')
-      .collection('entries');
+    const auditRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/audit-log/entries',
+      { orgId: organizationId }
+    );
 
     await auditRef.add({
       type: 'page_version_restored',
