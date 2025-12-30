@@ -3,7 +3,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
 export async function GET(
@@ -11,6 +12,13 @@ export async function GET(
   context: { params: Promise<{ schemaId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
@@ -23,15 +31,8 @@ export async function GET(
       );
     }
 
-    const docRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('schemas')
-      .doc(params.schemaId);
-
-    const docSnap = await docRef.get();
+    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    const docSnap = await schemasCollection.doc(params.schemaId).get();
 
     if (!docSnap.exists) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
@@ -55,6 +56,13 @@ export async function DELETE(
   context: { params: Promise<{ schemaId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
@@ -67,16 +75,9 @@ export async function DELETE(
       );
     }
 
-    const now = admin.firestore.Timestamp.now();
-
-    const docRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('schemas')
-      .doc(params.schemaId);
-
+    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    const docRef = schemasCollection.doc(params.schemaId);
+    
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
       return NextResponse.json({ error: 'Schema not found' }, { status: 404 });
@@ -84,7 +85,7 @@ export async function DELETE(
 
     await docRef.update({
       status: 'archived',
-      updatedAt: now,
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return NextResponse.json({ success: true });

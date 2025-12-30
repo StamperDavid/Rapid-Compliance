@@ -3,7 +3,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
 function slugify(value: string) {
@@ -25,6 +26,13 @@ function buildFieldId(key: string) {
 
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
     const workspaceId = searchParams.get('workspaceId');
@@ -36,14 +44,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const snapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('schemas')
-      .where('status', '==', 'active')
-      .get();
+    const snapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref) => {
+      return adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas')
+        .where('status', '==', 'active');
+    });
 
     const schemas = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
@@ -59,6 +63,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    
     const body = await request.json();
     const { organizationId, workspaceId, schema, userId } = body || {};
 
@@ -69,7 +80,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const now = admin.firestore.Timestamp.now();
+    const now = FieldValue.serverTimestamp();
     const schemaId = schema.id || buildSchemaId(schema.name);
 
     const fields = (schema.fields || []).map((field: any) => ({
@@ -128,26 +139,12 @@ export async function POST(request: NextRequest) {
       version: 1,
     };
 
-    const schemaRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('schemas')
-      .doc(schemaId);
-
-    await schemaRef.set(newSchema);
+    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    await schemasCollection.doc(schemaId).set(newSchema);
 
     // Initialize entity collection metadata
-    const metadataRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('entities')
-      .doc(schemaId)
-      .collection('_metadata')
-      .doc('info');
+    const entitiesCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'entities');
+    const metadataRef = entitiesCollection.doc(schemaId).collection('_metadata').doc('info');
 
     await metadataRef.set({
       schemaId,

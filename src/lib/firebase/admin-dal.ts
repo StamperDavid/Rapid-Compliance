@@ -24,7 +24,7 @@ import {
   FieldValue,
 } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS, getCollection, getOrgSubCollection } from './collections';
+import { COLLECTIONS, getCollection, getOrgSubCollection, getPrefix } from './collections';
 import { logger } from '@/lib/logger/logger';
 
 interface WriteOptions {
@@ -68,6 +68,16 @@ export class FirestoreAdminDAL {
   getOrgCollection(orgId: string, subCollection: string): CollectionReference {
     const path = getOrgSubCollection(orgId, subCollection);
     return this.db.collection(path);
+  }
+  
+  /**
+   * Get a workspace sub-collection reference
+   * Usage: adminDal.getWorkspaceCollection('org123', 'workspace456', 'schemas')
+   */
+  getWorkspaceCollection(orgId: string, workspaceId: string, subCollection: string): CollectionReference {
+    const orgCollection = COLLECTIONS.ORGANIZATIONS;
+    const prefix = getPrefix();
+    return this.db.collection(`${orgCollection}/${orgId}/${prefix}workspaces/${workspaceId}/${prefix}${subCollection}`);
   }
   
   // ========================================
