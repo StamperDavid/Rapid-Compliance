@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -14,6 +14,10 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
 
@@ -26,11 +30,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get categories document
-    const categoriesRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('blog-categories');
+    const categoriesRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/blog-categories',
+      { orgId: organizationId }
+    );
 
     const categoriesDoc = await categoriesRef.get();
 
@@ -67,6 +70,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, categories } = body;
 
@@ -86,11 +93,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Save categories
-    const categoriesRef = db
-      .collection('organizations')
-      .doc(organizationId) // CRITICAL: Scoped to org
-      .collection('website')
-      .doc('blog-categories');
+    const categoriesRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/blog-categories',
+      { orgId: organizationId }
+    );
 
     const categoriesData = {
       organizationId, // CRITICAL: Set org ownership
