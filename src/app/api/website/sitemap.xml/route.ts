@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { Page } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -13,6 +13,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return new NextResponse('Server configuration error', { status: 500 });
+    }
+
     // Extract domain or subdomain from request
     const host = request.headers.get('host') || '';
     
@@ -21,7 +25,7 @@ export async function GET(request: NextRequest) {
     let baseUrl = '';
 
     // Check if custom domain
-    const domainsSnapshot = await db.collectionGroup('website').get();
+    const domainsSnapshot = await adminDal.getCollection('ORGANIZATIONS').collectionGroup('website').get();
     for (const doc of domainsSnapshot.docs) {
       const data = doc.data();
       if (data.customDomain === host && data.customDomainVerified) {
@@ -34,7 +38,7 @@ export async function GET(request: NextRequest) {
     // If not custom domain, check subdomain
     if (!organizationId) {
       const subdomain = host.split('.')[0];
-      const orgsSnapshot = await db.collection('organizations').get();
+      const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
       
       for (const orgDoc of orgsSnapshot.docs) {
         const settingsDoc = await orgDoc.ref
@@ -56,14 +60,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all published pages for this org
-    const pagesSnapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('pages')
-      .where('status', '==', 'published')
-      .get();
+    const pagesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/config/pages',
+      { orgId: organizationId }
+    );
+    const pagesSnapshot = await pagesRef.where('status', '==', 'published').get();
 
     const pages: Page[] = [];
     pagesSnapshot.forEach((doc) => {
