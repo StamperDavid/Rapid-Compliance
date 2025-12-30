@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { 
   verifyAdminRequest, 
   createErrorResponse, 
@@ -48,23 +49,27 @@ export async function GET(request: NextRequest) {
   }
   
   try {
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+    
     const { searchParams } = new URL(request.url);
     const pageSize = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
-    // Build query with pagination
-    let query = adminDb
-      .collection('organizations')
-      .orderBy('createdAt', 'desc');
-    
-    // Add cursor if provided
-    if (startAfter) {
-      const cursorDate = new Date(startAfter);
-      query = query.startAfter(cursorDate);
-    }
-    
-    // Fetch one extra to check if there are more results
-    const orgsSnapshot = await query.limit(pageSize + 1).get();
+    // Build query with pagination using Admin DAL
+    const orgsSnapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref) => {
+      let query = ref.orderBy('createdAt', 'desc');
+      
+      // Add cursor if provided
+      if (startAfter) {
+        const cursorDate = new Date(startAfter);
+        query = query.startAfter(cursorDate);
+      }
+      
+      // Fetch one extra to check if there are more results
+      return query.limit(pageSize + 1);
+    });
     
     const hasMore = orgsSnapshot.docs.length > pageSize;
     const docs = hasMore ? orgsSnapshot.docs.slice(0, pageSize) : orgsSnapshot.docs;
@@ -133,6 +138,10 @@ export async function POST(request: NextRequest) {
   }
   
   try {
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+    
     const body = await request.json();
     
     // Validate required fields
@@ -151,13 +160,16 @@ export async function POST(request: NextRequest) {
       status: body.status || 'active',
       industry: body.industry || null,
       billingEmail: body.billingEmail || null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       createdBy: authResult.user.uid,
       settings: body.settings || {},
     };
     
-    await adminDb.collection('organizations').doc(orgId).set(orgData);
+    await adminDal.safeSetDoc('ORGANIZATIONS', orgId, orgData, {
+      audit: true,
+      userId: authResult.user.uid,
+    });
     
     logger.info('Admin created organization', {
       route: '/api/admin/organizations',
@@ -168,9 +180,16 @@ export async function POST(request: NextRequest) {
     
     return createSuccessResponse({
       id: orgId,
-      ...orgData,
-      createdAt: orgData.createdAt.toISOString(),
-      updatedAt: orgData.updatedAt.toISOString(),
+      name: body.name.trim(),
+      slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+      plan: body.plan || 'starter',
+      status: body.status || 'active',
+      industry: body.industry || null,
+      billingEmail: body.billingEmail || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: authResult.user.uid,
+      settings: body.settings || {},
     });
     
   } catch (error: any) {

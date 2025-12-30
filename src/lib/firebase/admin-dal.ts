@@ -1,0 +1,453 @@
+/**
+ * Admin Data Access Layer (Admin DAL)
+ * Safe wrapper for all Firebase Admin SDK Firestore operations
+ * 
+ * CRITICAL FEATURES:
+ * - Automatic environment-aware collection naming
+ * - Dry-run mode for testing
+ * - Audit logging for compliance
+ * - Production delete protection
+ * - Organization-scoped access verification (coming soon)
+ * 
+ * IMPORTANT: This is for server-side (API routes) only!
+ * For client-side operations, use @/lib/firebase/dal
+ */
+
+import { 
+  Firestore,
+  CollectionReference,
+  DocumentReference,
+  DocumentData,
+  WriteResult,
+  DocumentSnapshot,
+  QuerySnapshot,
+  FieldValue,
+} from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebase/admin';
+import { COLLECTIONS, getCollection, getOrgSubCollection } from './collections';
+import { logger } from '@/lib/logger/logger';
+
+interface WriteOptions {
+  /** If true, logs the operation but doesn't execute it */
+  dryRun?: boolean;
+  /** If true, creates an audit log entry */
+  audit?: boolean;
+  /** User ID performing the operation (for audit trail) */
+  userId?: string;
+  /** Organization ID context (for access control) */
+  organizationId?: string;
+}
+
+export class FirestoreAdminDAL {
+  private db: Firestore;
+  
+  constructor(firestoreInstance: Firestore) {
+    if (!firestoreInstance) {
+      throw new Error('FirestoreAdminDAL requires a valid Firestore instance. Make sure Firebase Admin is initialized.');
+    }
+    this.db = firestoreInstance;
+  }
+  
+  // ========================================
+  // COLLECTION REFERENCES
+  // ========================================
+  
+  /**
+   * Get a collection reference with environment-aware naming
+   * Usage: adminDal.getCollection('ORGANIZATIONS')
+   */
+  getCollection(collectionName: keyof typeof COLLECTIONS): CollectionReference {
+    const name = COLLECTIONS[collectionName];
+    return this.db.collection(name);
+  }
+  
+  /**
+   * Get an organization sub-collection reference
+   * Usage: adminDal.getOrgCollection('org123', 'records')
+   */
+  getOrgCollection(orgId: string, subCollection: string): CollectionReference {
+    const path = getOrgSubCollection(orgId, subCollection);
+    return this.db.collection(path);
+  }
+  
+  // ========================================
+  // SAFE WRITE OPERATIONS
+  // ========================================
+  
+  /**
+   * Safe setDoc with environment awareness and audit logging
+   * 
+   * @example
+   * await adminDal.safeSetDoc('ORGANIZATIONS', 'org123', {
+   *   name: 'Acme Inc',
+   *   createdAt: FieldValue.serverTimestamp()
+   * }, { audit: true, userId: 'user123' });
+   */
+  async safeSetDoc<T extends DocumentData>(
+    collectionName: keyof typeof COLLECTIONS,
+    docId: string,
+    data: T,
+    options?: WriteOptions & { merge?: boolean }
+  ): Promise<WriteResult | void> {
+    const collectionRef = COLLECTIONS[collectionName];
+    
+    // Dry run mode - log without executing
+    if (options?.dryRun) {
+      logger.info('[DRY RUN] Would write to Firestore (Admin)', {
+        collection: collectionRef,
+        docId,
+        data,
+        merge: options?.merge,
+        file: 'admin-dal.ts'
+      });
+      return;
+    }
+    
+    // TODO: Add organization-scoped access check
+    // if (options?.organizationId) {
+    //   await this.verifyOrgAccess(options.userId, options.organizationId);
+    // }
+    
+    const docRef = this.db.collection(collectionRef).doc(docId);
+    
+    logger.info('✍️ Writing to Firestore (Admin)', {
+      collection: collectionRef,
+      docId,
+      env: process.env.NODE_ENV,
+      userId: options?.userId,
+      file: 'admin-dal.ts'
+    });
+    
+    const writeResult = options?.merge 
+      ? await docRef.set(data, { merge: true })
+      : await docRef.set(data);
+    
+    if (options?.audit) {
+      await this.logAudit('CREATE', collectionRef, docId, data, options?.userId);
+    }
+    
+    return writeResult;
+  }
+  
+  /**
+   * Safe updateDoc with environment awareness and audit logging
+   * 
+   * @example
+   * await adminDal.safeUpdateDoc('ORGANIZATIONS', 'org123', {
+   *   name: 'Updated Name',
+   *   updatedAt: FieldValue.serverTimestamp()
+   * }, { audit: true, userId: 'user123' });
+   */
+  async safeUpdateDoc<T extends DocumentData>(
+    collectionName: keyof typeof COLLECTIONS,
+    docId: string,
+    data: Partial<T>,
+    options?: WriteOptions
+  ): Promise<WriteResult | void> {
+    const collectionRef = COLLECTIONS[collectionName];
+    
+    // Dry run mode
+    if (options?.dryRun) {
+      logger.info('[DRY RUN] Would update Firestore (Admin)', {
+        collection: collectionRef,
+        docId,
+        data,
+        file: 'admin-dal.ts'
+      });
+      return;
+    }
+    
+    const docRef = this.db.collection(collectionRef).doc(docId);
+    
+    logger.info('📝 Updating Firestore (Admin)', {
+      collection: collectionRef,
+      docId,
+      env: process.env.NODE_ENV,
+      userId: options?.userId,
+      file: 'admin-dal.ts'
+    });
+    
+    const writeResult = await docRef.update(data);
+    
+    if (options?.audit) {
+      await this.logAudit('UPDATE', collectionRef, docId, data, options?.userId);
+    }
+    
+    return writeResult;
+  }
+  
+  /**
+   * Safe deleteDoc with environment awareness and production protection
+   * 
+   * @example
+   * await adminDal.safeDeleteDoc('ORGANIZATIONS', 'org123', {
+   *   audit: true,
+   *   userId: 'user123'
+   * });
+   */
+  async safeDeleteDoc(
+    collectionName: keyof typeof COLLECTIONS,
+    docId: string,
+    options?: WriteOptions
+  ): Promise<WriteResult | void> {
+    const collectionRef = COLLECTIONS[collectionName];
+    
+    // Dry run mode
+    if (options?.dryRun) {
+      logger.info('[DRY RUN] Would delete from Firestore (Admin)', {
+        collection: collectionRef,
+        docId,
+        file: 'admin-dal.ts'
+      });
+      return;
+    }
+    
+    // CRITICAL: Production delete protection
+    if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_PROD_DELETES) {
+      throw new Error(
+        '🚨 Production deletes require ALLOW_PROD_DELETES=true environment variable. ' +
+        'This is a safety measure to prevent accidental data loss.'
+      );
+    }
+    
+    const docRef = this.db.collection(collectionRef).doc(docId);
+    
+    logger.warn('🗑️ Deleting from Firestore (Admin)', {
+      collection: collectionRef,
+      docId,
+      env: process.env.NODE_ENV,
+      userId: options?.userId,
+      file: 'admin-dal.ts'
+    });
+    
+    const writeResult = await docRef.delete();
+    
+    if (options?.audit) {
+      await this.logAudit('DELETE', collectionRef, docId, {}, options?.userId);
+    }
+    
+    return writeResult;
+  }
+  
+  /**
+   * Safe addDoc (auto-generated ID)
+   * 
+   * @example
+   * const docRef = await adminDal.safeAddDoc('LEADS', {
+   *   email: 'john@example.com',
+   *   createdAt: FieldValue.serverTimestamp()
+   * }, { audit: true, userId: 'user123' });
+   */
+  async safeAddDoc<T extends DocumentData>(
+    collectionName: keyof typeof COLLECTIONS,
+    data: T,
+    options?: WriteOptions
+  ): Promise<DocumentReference> {
+    const collectionRef = COLLECTIONS[collectionName];
+    
+    // Dry run mode
+    if (options?.dryRun) {
+      logger.info('[DRY RUN] Would add to Firestore (Admin)', {
+        collection: collectionRef,
+        data,
+        file: 'admin-dal.ts'
+      });
+      // Return a fake doc ref in dry run mode
+      return this.db.collection(collectionRef).doc('dry-run-doc-id');
+    }
+    
+    const colRef = this.db.collection(collectionRef);
+    
+    logger.info('➕ Adding to Firestore (Admin)', {
+      collection: collectionRef,
+      env: process.env.NODE_ENV,
+      userId: options?.userId,
+      file: 'admin-dal.ts'
+    });
+    
+    const docRef = await colRef.add(data);
+    
+    if (options?.audit) {
+      await this.logAudit('CREATE', collectionRef, docRef.id, data, options?.userId);
+    }
+    
+    return docRef;
+  }
+  
+  // ========================================
+  // SAFE READ OPERATIONS
+  // ========================================
+  
+  /**
+   * Safe getDoc with logging
+   */
+  async safeGetDoc<T extends DocumentData = DocumentData>(
+    collectionName: keyof typeof COLLECTIONS,
+    docId: string
+  ): Promise<DocumentSnapshot<T>> {
+    const collectionRef = COLLECTIONS[collectionName];
+    const docRef = this.db.collection(collectionRef).doc(docId);
+    
+    logger.debug('📖 Reading from Firestore (Admin)', {
+      collection: collectionRef,
+      docId,
+      file: 'admin-dal.ts'
+    });
+    
+    return await docRef.get() as DocumentSnapshot<T>;
+  }
+  
+  /**
+   * Safe getDocs with query support
+   * 
+   * @example
+   * const snapshot = await adminDal.safeGetDocs('ORGANIZATIONS');
+   * 
+   * @example with query
+   * const snapshot = await adminDal.safeGetDocs('ORGANIZATIONS', (ref) => 
+   *   ref.where('status', '==', 'active').limit(10)
+   * );
+   */
+  async safeGetDocs<T extends DocumentData = DocumentData>(
+    collectionName: keyof typeof COLLECTIONS,
+    queryFn?: (ref: CollectionReference) => FirebaseFirestore.Query
+  ): Promise<QuerySnapshot<T>> {
+    const collectionRef = COLLECTIONS[collectionName];
+    const colRef = this.db.collection(collectionRef);
+    
+    logger.debug('📚 Querying Firestore (Admin)', {
+      collection: collectionRef,
+      hasQuery: !!queryFn,
+      file: 'admin-dal.ts'
+    });
+    
+    const query = queryFn ? queryFn(colRef) : colRef;
+    return await query.get() as QuerySnapshot<T>;
+  }
+  
+  /**
+   * Safe query with direct query builder
+   * Use this when you need more control over the query
+   * 
+   * @example
+   * const snapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref) => 
+   *   ref.where('tier', '==', 'tier1')
+   *      .where('status', '==', 'active')
+   *      .orderBy('createdAt', 'desc')
+   *      .limit(10)
+   * );
+   */
+  async safeQuery<T extends DocumentData = DocumentData>(
+    collectionName: keyof typeof COLLECTIONS,
+    queryFn: (ref: CollectionReference) => FirebaseFirestore.Query
+  ): Promise<QuerySnapshot<T>> {
+    return this.safeGetDocs<T>(collectionName, queryFn);
+  }
+  
+  // ========================================
+  // BATCH OPERATIONS
+  // ========================================
+  
+  /**
+   * Get a batch writer for multiple operations
+   * 
+   * @example
+   * const batch = adminDal.batch();
+   * batch.set(adminDal.getCollection('ORGANIZATIONS').doc('org1'), { name: 'Org 1' });
+   * batch.update(adminDal.getCollection('USERS').doc('user1'), { status: 'active' });
+   * await batch.commit();
+   */
+  batch() {
+    return this.db.batch();
+  }
+  
+  /**
+   * Run a transaction
+   * 
+   * @example
+   * await adminDal.runTransaction(async (transaction) => {
+   *   const orgRef = adminDal.getCollection('ORGANIZATIONS').doc('org123');
+   *   const orgDoc = await transaction.get(orgRef);
+   *   
+   *   if (orgDoc.exists) {
+   *     transaction.update(orgRef, { count: orgDoc.data().count + 1 });
+   *   }
+   * });
+   */
+  runTransaction<T>(
+    updateFunction: (transaction: FirebaseFirestore.Transaction) => Promise<T>
+  ) {
+    return this.db.runTransaction(updateFunction);
+  }
+  
+  // ========================================
+  // AUDIT LOGGING
+  // ========================================
+  
+  /**
+   * Log an audit trail entry
+   * In a production system, this would write to an audit log collection
+   */
+  private async logAudit(
+    action: 'CREATE' | 'UPDATE' | 'DELETE',
+    collection: string,
+    docId: string,
+    data: any,
+    userId?: string
+  ): Promise<void> {
+    const auditEntry = {
+      action,
+      collection,
+      docId,
+      userId: userId || 'system',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV,
+      // Only log data preview for sensitive operations
+      dataPreview: action === 'DELETE' ? null : Object.keys(data).join(', ')
+    };
+    
+    logger.info('📋 Audit Log (Admin)', auditEntry);
+    
+    // TODO: Implement actual audit log storage
+    // await this.db.collection(COLLECTIONS.AUDIT_LOGS).add(auditEntry);
+  }
+  
+  // ========================================
+  // ACCESS CONTROL (Coming Soon)
+  // ========================================
+  
+  /**
+   * Verify that a user has access to an organization
+   * This will be implemented as part of the security enhancement
+   */
+  private async verifyOrgAccess(
+    userId: string | undefined,
+    organizationId: string
+  ): Promise<void> {
+    // TODO: Implement organization-scoped access control
+    // For now, just log the check
+    logger.debug('🔒 Verifying org access (Admin)', {
+      userId,
+      organizationId,
+      file: 'admin-dal.ts'
+    });
+  }
+}
+
+// ========================================
+// SINGLETON INSTANCE
+// ========================================
+
+/**
+ * Singleton Admin DAL instance
+ * Import this in your API routes: import { adminDal } from '@/lib/firebase/admin-dal'
+ * 
+ * IMPORTANT: Only use this on the server-side (API routes, server actions)
+ * For client-side operations, use @/lib/firebase/dal
+ */
+export const adminDal = adminDb ? new FirestoreAdminDAL(adminDb) : null;
+
+/**
+ * Export the class for custom instances if needed
+ */
+export default FirestoreAdminDAL;

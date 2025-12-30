@@ -287,13 +287,19 @@ const fieldsRef = collection(
 
 ## 6️⃣ **API ROUTE PATTERNS**
 
-### 🛣️ **Typical API Route Before/After**
+### 🛣️ **Client SDK vs Admin SDK**
+
+**CRITICAL:** API routes use Firebase **Admin SDK**, not Client SDK!
+
+- **Client SDK** (`firebase/firestore`) → Use `dal` from `@/lib/firebase/dal`
+- **Admin SDK** (`firebase-admin/firestore`) → Use `adminDal` from `@/lib/firebase/admin-dal`
+
+### 🛣️ **Admin SDK API Route Before/After**
 
 #### ❌ **OLD:** `src/app/api/organizations/[orgId]/route.ts`
 
 ```typescript
-import { db } from '@/lib/firebase/config';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase/admin';
 
 export async function GET(
   request: NextRequest,
@@ -301,10 +307,10 @@ export async function GET(
 ) {
   const { orgId } = params;
   
-  // ❌ Direct database access
-  const orgDoc = await getDoc(doc(db, 'organizations', orgId));
+  // ❌ Direct Admin SDK access
+  const orgDoc = await adminDb!.collection('organizations').doc(orgId).get();
   
-  if (!orgDoc.exists()) {
+  if (!orgDoc.exists) {
     return new Response('Not found', { status: 404 });
   }
   
@@ -318,10 +324,10 @@ export async function PATCH(
   const { orgId } = params;
   const body = await request.json();
   
-  // ❌ No audit trail
-  await updateDoc(doc(db, 'organizations', orgId), {
+  // ❌ No audit trail, no environment awareness
+  await adminDb!.collection('organizations').doc(orgId).update({
     ...body,
-    updatedAt: serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
   
   return Response.json({ success: true });
@@ -331,15 +337,18 @@ export async function PATCH(
 #### ✅ **NEW:**
 
 ```typescript
-import { dal } from '@/lib/firebase/dal';
-import { serverTimestamp } from 'firebase/firestore';
-import { verifyOrgAccess } from '@/lib/middleware/org-guard'; // Phase 4
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { orgId: string } }
 ) {
   const { orgId } = params;
+  
+  if (!adminDal) {
+    return new Response('Server configuration error', { status: 500 });
+  }
   
   // ✅ TODO: Verify user has access (Phase 4)
   // const userId = await getUserIdFromAuth(request);
@@ -348,10 +357,10 @@ export async function GET(
   //   return new Response('Unauthorized', { status: 403 });
   // }
   
-  // ✅ Use DAL for reads
-  const orgDoc = await dal.safeGetDoc('ORGANIZATIONS', orgId);
+  // ✅ Use Admin DAL for reads
+  const orgDoc = await adminDal.safeGetDoc('ORGANIZATIONS', orgId);
   
-  if (!orgDoc.exists()) {
+  if (!orgDoc.exists) {
     return new Response('Not found', { status: 404 });
   }
   
@@ -365,13 +374,17 @@ export async function PATCH(
   const { orgId } = params;
   const body = await request.json();
   
-  // ✅ TODO: Verify user has access (Phase 4)
+  if (!adminDal) {
+    return new Response('Server configuration error', { status: 500 });
+  }
+  
+  // ✅ TODO: Extract userId from request
   // const userId = await getUserIdFromAuth(request);
   
-  // ✅ Use DAL with audit trail
-  await dal.safeUpdateDoc('ORGANIZATIONS', orgId, {
+  // ✅ Use Admin DAL with audit trail
+  await adminDal.safeUpdateDoc('ORGANIZATIONS', orgId, {
     ...body,
-    updatedAt: serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   }, {
     audit: true,
     // userId: userId, // Uncomment when auth is ready
@@ -379,6 +392,26 @@ export async function PATCH(
   
   return Response.json({ success: true });
 }
+```
+
+### 📝 **Admin SDK Import Patterns**
+
+#### ❌ **OLD:**
+```typescript
+import { adminDb } from '@/lib/firebase/admin';
+import admin from 'firebase-admin';
+
+// Using serverTimestamp
+updatedAt: admin.firestore.FieldValue.serverTimestamp()
+```
+
+#### ✅ **NEW:**
+```typescript
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
+
+// Using serverTimestamp
+updatedAt: FieldValue.serverTimestamp()
 ```
 
 ---
