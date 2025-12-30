@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +16,10 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
     const type = searchParams.get('type'); // Filter by event type
@@ -31,13 +35,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('audit-log')
-      .collection('entries')
-      .orderBy('performedAt', 'desc');
+    const auditRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/audit-log/entries',
+      { orgId: organizationId }
+    );
+    let query = auditRef.orderBy('performedAt', 'desc');
 
     // Apply filters if specified
     if (type) {
