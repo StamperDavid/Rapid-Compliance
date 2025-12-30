@@ -28,6 +28,8 @@ import {
 } from '@/lib/scraper-intelligence/discovery-archive-service';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
+import type { WorkflowState } from '@/types/workflow-state';
+import { createWorkflowState } from '@/types/workflow-state';
 
 // ============================================================================
 // TYPES
@@ -93,6 +95,9 @@ export interface DiscoveredCompany {
     source: 'discovery-engine';
     confidence: number;
   };
+  
+  // Workflow state tracking
+  workflow: WorkflowState;
 }
 
 export interface DiscoveryResult {
@@ -145,6 +150,9 @@ export interface DiscoveredPerson {
     confidence: number;
     methods: string[]; // How we found this data (e.g., 'linkedin', 'company-website', 'github')
   };
+  
+  // Workflow state tracking
+  workflow: WorkflowState;
 }
 
 export interface PersonDiscoveryResult {
@@ -573,6 +581,9 @@ async function synthesizeLeadObject(
         source: 'discovery-engine',
         confidence: calculateConfidence(rawData, synthesized),
       },
+      
+      // Initialize workflow state
+      workflow: createWorkflowState('discovery', 'completed'),
     };
 
     logger.info('LLM synthesis complete', {
@@ -604,6 +615,7 @@ async function synthesizeLeadObject(
         source: 'discovery-engine',
         confidence: 0.5,
       },
+      workflow: createWorkflowState('discovery', 'completed'),
     };
   }
 }
@@ -1151,6 +1163,7 @@ async function discoverPersonData(
         confidence: calculatePersonConfidence(personData, discoveryMethods),
         methods: discoveryMethods,
       },
+      workflow: createWorkflowState('discovery', 'completed'),
     };
 
     return finalPerson;
@@ -1169,6 +1182,7 @@ async function discoverPersonData(
         confidence: 0.1,
         methods: discoveryMethods,
       },
+      workflow: createWorkflowState('discovery', 'failed'),
     };
   } finally {
     await controller.close();

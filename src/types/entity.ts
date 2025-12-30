@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
+import type { WorkflowState } from './workflow-state';
 
 /**
  * Entity Record
@@ -39,6 +40,9 @@ export interface EntityMetadata {
   // AI metadata
   aiGenerated?: boolean;
   aiLastProcessedAt?: Timestamp;
+  
+  // Workflow state (for automation pipeline)
+  workflow?: WorkflowState;
 }
 
 /**
