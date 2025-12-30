@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
 export async function GET(req: NextRequest) {
   try {
-    if (!adminDb) {
+    if (!adminDal) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    // Get the platform sales agent persona from Firestore
-    const personaDoc = await adminDb
-      .collection('admin')
-      .doc('platform-sales-agent')
-      .collection('config')
-      .doc('persona')
-      .get();
+    // Get the platform sales agent persona from Firestore using nested doc reference
+    const personaDocRef = adminDal.getNestedDocRef('admin/platform-sales-agent/config/persona');
+    const personaDoc = await personaDocRef.get();
 
     if (!personaDoc.exists) {
       return NextResponse.json({ error: 'Persona not found' }, { status: 404 });
@@ -35,23 +32,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!adminDb) {
+    if (!adminDal) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
     const personaData = await req.json();
 
-    // Save the persona to Firestore
-    await adminDb
-      .collection('admin')
-      .doc('platform-sales-agent')
-      .collection('config')
-      .doc('persona')
-      .set({
-        ...personaData,
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'admin' // In production, use actual admin user ID
-      }, { merge: true });
+    // Save the persona to Firestore using nested doc reference
+    const personaDocRef = adminDal.getNestedDocRef('admin/platform-sales-agent/config/persona');
+    
+    await personaDocRef.set({
+      ...personaData,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: 'admin' // In production, use actual admin user ID
+    }, { merge: true });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -80,6 +80,41 @@ export class FirestoreAdminDAL {
     return this.db.collection(`${orgCollection}/${orgId}/${prefix}workspaces/${workspaceId}/${prefix}${subCollection}`);
   }
   
+  /**
+   * Get a nested collection reference with a custom path
+   * Usage: adminDal.getNestedCollection('organizations/{orgId}/ai-agents/default/config/persona', { orgId: 'org123' })
+   * This is useful for deep nested collections that don't fit standard patterns
+   */
+  getNestedCollection(pathTemplate: string, params?: Record<string, string>): CollectionReference {
+    let path = pathTemplate;
+    
+    // Replace parameters in path
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        path = path.replace(`{${key}}`, value);
+      }
+    }
+    
+    return this.db.collection(path);
+  }
+  
+  /**
+   * Get a nested document reference with a custom path
+   * Usage: adminDal.getNestedDocRef('organizations/{orgId}/ai-agents/default/config/persona', { orgId: 'org123' })
+   */
+  getNestedDocRef(pathTemplate: string, params?: Record<string, string>): DocumentReference {
+    let path = pathTemplate;
+    
+    // Replace parameters in path
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        path = path.replace(`{${key}}`, value);
+      }
+    }
+    
+    return this.db.doc(path);
+  }
+  
   // ========================================
   // SAFE WRITE OPERATIONS
   // ========================================
