@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { 
   verifyAdminRequest, 
   createErrorResponse, 
@@ -29,6 +29,10 @@ export async function DELETE(
   }
   
   try {
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+    
     const { orgId } = params;
     
     if (!orgId) {
@@ -36,7 +40,7 @@ export async function DELETE(
     }
     
     // Check if organization exists
-    const orgDoc = await adminDb.collection('organizations').doc(orgId).get();
+    const orgDoc = await adminDal.safeGetDoc('ORGANIZATIONS', orgId);
     
     if (!orgDoc.exists) {
       return createErrorResponse('Organization not found', 404);
@@ -46,7 +50,10 @@ export async function DELETE(
     const orgName = orgData?.name || 'Unknown';
     
     // Delete the organization
-    await adminDb.collection('organizations').doc(orgId).delete();
+    await adminDal.safeDeleteDoc('ORGANIZATIONS', orgId, {
+      audit: true,
+      userId: authResult.user.uid,
+    });
     
     logger.info('Admin deleted organization', {
       route: '/api/admin/organizations/[orgId]',
