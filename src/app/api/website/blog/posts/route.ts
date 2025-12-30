@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -15,6 +15,10 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const status = searchParams.get('status');
@@ -29,14 +33,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Get posts collection
-    let query = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts');
+    const postsRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/config/blog-posts',
+      { orgId: organizationId }
+    );
 
     // Apply filters
+    let query = postsRef;
     if (status) {
       query = query.where('status', '==', status) as any;
     }
@@ -82,6 +85,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, post } = body;
 
@@ -111,13 +118,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Save to Firestore
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId) // CRITICAL: Scoped to org
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(postData.id);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId: postData.id }
+    );
 
     await postRef.set(postData);
 
