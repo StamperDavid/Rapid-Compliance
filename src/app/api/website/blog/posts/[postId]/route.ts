@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -18,6 +18,10 @@ export async function GET(
   { params }: { params: { postId: string } }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const postId = params.postId;
@@ -31,13 +35,10 @@ export async function GET(
     }
 
     // Get post document
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(postId);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId }
+    );
 
     const postDoc = await postRef.get();
 
@@ -85,6 +86,10 @@ export async function PUT(
   { params }: { params: { postId: string } }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, post } = body;
     const postId = params.postId;
@@ -98,13 +103,10 @@ export async function PUT(
     }
 
     // Get existing post
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(postId);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId }
+    );
 
     const existingPost = await postRef.get();
 
@@ -158,6 +160,10 @@ export async function DELETE(
   { params }: { params: { postId: string } }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const postId = params.postId;
@@ -171,13 +177,10 @@ export async function DELETE(
     }
 
     // Get post to verify ownership
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(postId);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId }
+    );
 
     const postDoc = await postRef.get();
 
