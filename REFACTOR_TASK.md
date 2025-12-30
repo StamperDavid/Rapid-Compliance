@@ -12,13 +12,14 @@
 ## 📊 PROGRESS OVERVIEW
 
 - **Phase 1 (Auth & Signup):** 2/2 ✅ COMPLETE
-- **Phase 2 (Core Services):** 2/2 ✅ COMPLETE (3 files deferred)
-- **Phase 3 (API Routes):** 0/12 ✗
+- **Phase 2 (Core Services):** 2/2 ✅ COMPLETE (3 deferred)
+- **Phase 3 (API Routes):** 0/0 ⏸️ ALL DEFERRED (44 files need Admin DAL)
 - **Phase 4 (Integrations):** 0/8 ✗
 - **Phase 5 (Advanced Features):** 0/10 ✗
 
-**Total:** 4/37 files migrated (10.8%)
-**Deferred:** 3 files (2 Admin SDK, 1 nested paths)
+**Client SDK Migrated:** 4 files ✅
+**Admin SDK Deferred:** 46 files ⏸️
+**Nested Paths Deferred:** 1 file ⏸️
 
 ---
 
@@ -62,32 +63,20 @@
 
 ---
 
-## 🌐 PHASE 3: API Routes (CURRENT)
-**Backend endpoints**
+## 🌐 PHASE 3: API Routes
+**Backend endpoints - ALL use Admin SDK**
 
-### Admin Routes
-- [ ] `src/app/api/admin/organizations/route.ts` ⚡ NEXT
-- [ ] `src/app/api/admin/organizations/[orgId]/route.ts`
+⏸️ **ALL 44 API route files use Admin SDK and need Admin DAL**
+- Admin routes (organizations, users, cleanup, etc.)
+- Lead scoring routes
+- Sequence routes  
+- Workflow routes
+- Website builder routes
+- Schema routes
+- Health check routes
+- And more...
 
-### Organization Routes
-- [ ] `src/app/api/organizations/[orgId]/route.ts`
-- [ ] `src/app/api/organizations/[orgId]/users/route.ts`
-
-### Schema Routes
-- [ ] `src/app/api/schemas/route.ts`
-- [ ] `src/app/api/schemas/[schemaId]/route.ts`
-- [ ] `src/app/api/schemas/[schemaId]/update/route.ts`
-
-### Sequence Routes
-- [ ] `src/app/api/sequences/route.ts`
-- [ ] `src/app/api/sequences/[sequenceId]/route.ts`
-
-### Lead Routes
-- [ ] `src/app/api/leads/route.ts`
-- [ ] `src/app/api/leads/[leadId]/route.ts`
-
-### Other Routes
-- [ ] `src/app/api/billing/subscribe/route.ts`
+**Status:** Deferred - requires Admin DAL implementation
 
 ---
 
@@ -217,9 +206,46 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 ---
 
 **Last Updated:** Dec 30, 2025
-**Current Phase:** Phase 3 - API Routes
-**Next File:** `src/app/api/admin/organizations/route.ts`
-**Last Commit:** 3ec0fcf
-**Phase 1:** ✅ COMPLETE (2/2 files)
+**Current Phase:** Discovery Complete - Summary Below
+**Last Commit:** 62a3c3d
+
+---
+
+## 🎯 MIGRATION SUMMARY
+
+### ✅ **Completed (4 files)**
+1. `src/app/(public)/signup/page.tsx` - Client SDK ✅
+2. `src/lib/auth/auth-service.ts` - Client SDK ✅
+3. `src/lib/agent/base-model-builder.ts` - Client SDK (client-side ops) ✅
+4. `src/lib/outbound/meeting-scheduler.ts` - Client SDK ✅
+
+### ⏸️ **Deferred - Needs Admin DAL (46 files)**
+- **Core Services (2):**
+  - `src/lib/services/lead-scoring-engine.ts`
+  - `src/lib/services/sequencer.ts`
+- **All API Routes (44):**
+  - All files in `src/app/api/**/*.ts` use Admin SDK
+
+### ⏸️ **Deferred - Needs Workspace Sub-Collection Support (1 file)**
+- `src/lib/crm/lead-service.ts` - Uses deep nested paths
+
+### 📈 **Collections Added to Registry**
+- `BASE_MODELS` - For AI agent base models
+- `INTEGRATIONS` - For third-party integrations
+
+### 🔑 **Key Findings**
+1. **Client SDK Migration:** Successfully migrated all client-side code (4 files)
+2. **Admin SDK Gap:** 46 files require Admin DAL (not yet implemented)
+3. **Nested Paths:** 1 file needs enhanced sub-collection support
+4. **Total Firestore Operations Migrated:** ~15 operations across 4 files
+
+### 🚀 **Next Steps**
+1. **Option A:** Create Admin DAL for server-side code (46 files)
+2. **Option B:** Continue with remaining client-side integrations/features
+3. **Option C:** Enhance DAL to support workspace sub-collections (1 file)
+
+---
+
+**Phase 1:** ✅ COMPLETE (2/2 Client SDK files)
 **Phase 2:** ✅ COMPLETE (2/2 Client SDK files)
-**Deferred:** 3 files (lead-scoring-engine, sequencer, lead-service)
+**Phase 3:** ⏸️ ALL DEFERRED (44 Admin SDK files)
