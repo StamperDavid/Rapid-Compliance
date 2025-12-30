@@ -39,8 +39,17 @@ export default function LeadScoringDashboard({ params }: LeadScoringDashboardPro
     try {
       setLoading(true);
 
-      const token = await user?.getIdToken();
-      if (!token) return;
+      // Get Firebase auth token
+      const { getCurrentUser } = await import('@/lib/auth/auth-service');
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) {
+        logger.info('No authenticated user, skipping API calls');
+        setLoading(false);
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
 
       // Load analytics
       const analyticsRes = await fetch(
