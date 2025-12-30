@@ -4,9 +4,9 @@
  */
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getStorage, FirebaseStorage, connectStorageEmulator } from 'firebase/storage'
+import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage'
 import { logger } from '@/lib/logger/logger';;
 
 // Firebase config from environment variables
@@ -43,18 +43,14 @@ if (typeof window === 'undefined') {
   }
 }
 
-// Check if using emulator
-const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
-
 // Initialize Firebase (singleton pattern)
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
-let emulatorsConnected = false;
 
 function initializeFirebase() {
-  if (!isFirebaseConfigured && !useEmulator) {
+  if (!isFirebaseConfigured) {
     return;
   }
 
@@ -68,20 +64,6 @@ function initializeFirebase() {
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
-    
-    // Connect to emulators if enabled (only once)
-    if (useEmulator && !emulatorsConnected) {
-      try {
-        connectFirestoreEmulator(db, 'localhost', 8080);
-        connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-        connectStorageEmulator(storage, 'localhost', 9199);
-        emulatorsConnected = true;
-      } catch (error: any) {
-        if (error.message?.includes('already been called')) {
-          emulatorsConnected = true;
-        }
-      }
-    }
   } catch (error) {
     if (process.env.NODE_ENV === 'production') {
       throw error;
@@ -90,7 +72,7 @@ function initializeFirebase() {
 }
 
 // Initialize Firebase on client and server
-if (isFirebaseConfigured || useEmulator) {
+if (isFirebaseConfigured) {
   initializeFirebase();
 }
 

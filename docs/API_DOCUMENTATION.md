@@ -438,7 +438,6 @@ GET /api/leads?orgId=org_123&limit=50&cursor=eyJpZCI6ImxlYWRfMTIzIn0
 ### Test Environment:
 ```
 Base URL: http://localhost:3000
-Firebase: Emulators (Firestore: 8080, Auth: 9099)
 ```
 
 ### Test Accounts:
@@ -450,8 +449,6 @@ Org: Varies (created during seeding)
 
 ### Running Tests:
 ```bash
-# Start emulators
-npm run firebase:emulators
 
 # Seed test data
 npm run seed:e2e

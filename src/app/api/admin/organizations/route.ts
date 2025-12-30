@@ -21,6 +21,7 @@ interface OrganizationData {
   updatedAt: string | null;
   createdBy?: string;
   settings?: Record<string, unknown>;
+  isTest?: boolean;
 }
 
 /**
@@ -82,6 +83,7 @@ export async function GET(request: NextRequest) {
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
         createdBy: data.createdBy,
         settings: data.settings,
+        isTest: data.isTest || false,
       };
     });
     

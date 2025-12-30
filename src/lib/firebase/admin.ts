@@ -21,27 +21,7 @@ function initializeAdmin() {
     return adminApp;
   }
 
-  // For Firebase Emulator
-  if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
-    try {
-      adminApp = admin.initializeApp({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'demo-ai-sales-platform',
-      });
-
-      // Set emulator host
-      process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
-      process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
-
-      logger.info('🔥 Firebase Admin initialized for emulator', { file: 'admin.ts' });
-      return adminApp;
-    } catch (error: any) {
-      if (error.code === 'app/duplicate-app') {
-        adminApp = admin.app();
-        return adminApp;
-      }
-      throw error;
-    }
-  }
+  // Emulator support removed - tests use real dev database with cleanup
 
   // For production/development - use service account
   try {

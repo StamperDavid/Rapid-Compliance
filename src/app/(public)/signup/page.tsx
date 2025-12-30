@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase/config'
+import { serverTimestamp } from 'firebase/firestore';
+import { auth } from '@/lib/firebase/config'
+import { dal } from '@/lib/firebase/dal';
 import { logger } from '@/lib/logger/logger';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
@@ -111,7 +112,7 @@ export default function SignupPage() {
         file: 'page.tsx' 
       });
       
-      if (!auth || !db) {
+      if (!auth) {
         throw new Error('Firebase not initialized');
       }
 
@@ -153,8 +154,8 @@ export default function SignupPage() {
 
       const { customerId, subscriptionId } = await subscriptionResponse.json();
 
-      // Create organization document in Firestore
-      await setDoc(doc(db, 'organizations', orgId), {
+      // Create organization document in Firestore using DAL
+      await dal.safeSetDoc('ORGANIZATIONS', orgId, {
         name: formData.companyName,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -168,17 +169,25 @@ export default function SignupPage() {
         status: formData.startTrial ? 'trialing' : 'active',
         stripeCustomerId: customerId,
         subscriptionId: subscriptionId,
+      }, {
+        audit: true,
+        userId: user.uid,
+        organizationId: orgId,
       });
       logger.info('Organization created with subscription', { orgId, subscriptionId, file: 'page.tsx' });
 
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      // Create user document in Firestore using DAL
+      await dal.safeSetDoc('USERS', user.uid, {
         email: formData.email,
         organizationId: orgId,
         role: 'owner',
         name: formData.companyName,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      }, {
+        audit: true,
+        userId: user.uid,
+        organizationId: orgId,
       });
       logger.info('User document created', { file: 'page.tsx' });
 

@@ -23,13 +23,14 @@ describe('Pagination Stress Testing', () => {
   beforeAll(async () => {
     console.log('Setting up test data for pagination validation...');
     
-    // Create test organization
+    // Create test organization with isTest flag to prevent production pollution
     await FirestoreService.set(
       'organizations',
       testOrgId,
       {
         id: testOrgId,
-        name: 'Pagination Test Org',
+        name: '[TEST] Pagination Test Org',
+        isTest: true, // Mark as test to prevent pollution
         createdAt: now(),
       },
       false
@@ -88,10 +89,19 @@ describe('Pagination Stress Testing', () => {
   afterAll(async () => {
     console.log('Cleaning up test data...');
     
-    // Note: In production, you'd use batch deletes or admin SDK
-    // For now, we'll leave the test data (can be manually cleaned)
-    
-    console.log('Cleanup complete (test org can be manually removed)');
+    try {
+      // Delete the test organization
+      await FirestoreService.delete('organizations', testOrgId);
+      
+      // Note: Firestore subcollections (leads, deals, etc.) are NOT automatically deleted
+      // They will be orphaned but won't appear in the admin UI since the parent org is gone
+      // For a thorough cleanup, use the cleanup script: node scripts/cleanup-test-orgs.js
+      
+      console.log('✅ Test organization deleted successfully');
+    } catch (error) {
+      console.warn('⚠️  Failed to delete test organization:', error);
+      console.log('   Run cleanup script manually: node scripts/cleanup-test-orgs.js');
+    }
   });
 
   it('should paginate leads without crashing (200 records)', async () => {

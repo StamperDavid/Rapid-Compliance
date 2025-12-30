@@ -138,8 +138,6 @@ service cloud.firestore {
 ## Development vs Production
 
 ### Development
-- Admin SDK uses emulator when `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true`
-- Set `FIRESTORE_EMULATOR_HOST=localhost:8080`
 
 ### Production (Vercel/Cloud)
 - Admin SDK uses service account credentials
@@ -189,11 +187,8 @@ service cloud.firestore {
 
 ### Local Development
 ```bash
-# Start emulators
-firebase emulators:start
 
 # Set environment variable
-NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true npm run dev
 ```
 
 ### Production Deployment

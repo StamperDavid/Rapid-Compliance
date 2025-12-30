@@ -8,79 +8,136 @@ import type { Organization } from '@/types/organization'
 import { logger } from '@/lib/logger/logger';;
 
 export default function OrganizationsPage() {
-  const { adminUser, hasPermission } = useAdminAuth();
+  const { adminUser, hasPermission, isSuperAdmin } = useAdminAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<'NOT_LOGGED_IN' | 'NOT_SUPER_ADMIN' | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'trial' | 'suspended'>('all');
   const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'pro' | 'enterprise'>('all');
+  const [showTestOrgs, setShowTestOrgs] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'preview' | 'cleaning' | 'done'>('idle');
+  const [cleanupData, setCleanupData] = useState<any>(null);
+
+  const loadOrganizations = async (cursor: string | null = null, append: boolean = false) => {
+    try {
+      setLoading(true);
+      logger.info('🔍 Loading organizations...', { cursor, page: currentPage, file: 'page.tsx' });
+      const { auth } = await import('@/lib/firebase/config');
+      
+      const currentUser = auth.currentUser;
+      let orgs: any[] = [];
+      
+      if (!currentUser) {
+        logger.warn('🔍 No authenticated user', { file: 'page.tsx' });
+        setAuthError('NOT_LOGGED_IN');
+        setLoading(false);
+        return;
+      }
+      
+      // Use API route to fetch data (bypasses Firestore rules)
+      const token = await currentUser.getIdToken();
+      
+      // Build URL with pagination params
+      const params = new URLSearchParams({
+        limit: pageSize.toString(),
+      });
+      if (cursor) {
+        params.append('startAfter', cursor);
+      }
+      
+      const response = await fetch(`/api/admin/organizations?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        orgs = data.organizations || [];
+        setHasMore(data.pagination?.hasMore || false);
+        setNextCursor(data.pagination?.nextCursor || null);
+        logger.info('🔍 Organizations loaded via API', { 
+          count: orgs.length, 
+          hasMore: data.pagination?.hasMore,
+          file: 'page.tsx' 
+        });
+      } else if (response.status === 403) {
+        logger.error('🔍 Not authorized as super_admin', new Error('🔍 Not authorized as super_admin'), { file: 'page.tsx' });
+        setAuthError('NOT_SUPER_ADMIN');
+        setLoading(false);
+        return;
+      } else {
+        const errorText = await response.text();
+        logger.error('🔍 API error', new Error(errorText), { status: response.status, file: 'page.tsx' });
+      }
+      
+      // Convert to Organization type
+      const organizations = orgs.map((org: any) => ({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        plan: org.plan,
+        planLimits: org.planLimits,
+        billingEmail: org.billingEmail,
+        branding: org.branding || {},
+        settings: org.settings,
+        createdAt: org.createdAt,
+        updatedAt: org.updatedAt,
+        createdBy: org.createdBy,
+        status: org.status,
+        trialEndsAt: org.trialEndsAt,
+        isTest: org.isTest || false,
+      }));
+      
+      if (append) {
+        setOrganizations(prev => [...prev, ...organizations]);
+      } else {
+        setOrganizations(organizations);
+      }
+      setLoading(false);
+    } catch (error) {
+      logger.error('Failed to load organizations:', error, { file: 'page.tsx' });
+      setOrganizations([]);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadOrganizations() {
-      try {
-        setLoading(true);
-        logger.info('🔍 Loading organizations...', { file: 'page.tsx' });
-        const { auth } = await import('@/lib/firebase/config');
-        
-        const currentUser = auth.currentUser;
-        let orgs: any[] = [];
-        
-        if (!currentUser) {
-          logger.warn('🔍 No authenticated user', { file: 'page.tsx' });
-          setAuthError('NOT_LOGGED_IN');
-          setLoading(false);
-          return;
-        }
-        
-        // Use API route to fetch data (bypasses Firestore rules)
-        const token = await currentUser.getIdToken();
-        
-        const response = await fetch('/api/admin/organizations', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          orgs = data.organizations || [];
-          logger.info('🔍 Organizations loaded via API', { count: orgs.length, file: 'page.tsx' });
-        } else if (response.status === 403) {
-          logger.error('🔍 Not authorized as super_admin', new Error('🔍 Not authorized as super_admin'), { file: 'page.tsx' });
-          setAuthError('NOT_SUPER_ADMIN');
-          setLoading(false);
-          return;
-        } else {
-          const errorText = await response.text();
-          logger.error('🔍 API error', new Error(errorText), { status: response.status, file: 'page.tsx' });
-        }
-        
-        // Convert to Organization type
-        const organizations = orgs.map((org: any) => ({
-          id: org.id,
-          name: org.name,
-          slug: org.slug,
-          plan: org.plan,
-          planLimits: org.planLimits,
-          billingEmail: org.billingEmail,
-          branding: org.branding || {},
-          settings: org.settings,
-          createdAt: org.createdAt,
-          updatedAt: org.updatedAt,
-          createdBy: org.createdBy,
-          status: org.status,
-          trialEndsAt: org.trialEndsAt,
-        }));
-        
-        setOrganizations(organizations);
-        setLoading(false);
-      } catch (error) {
-        logger.error('Failed to load organizations:', error, { file: 'page.tsx' });
-        setOrganizations([]);
-        setLoading(false);
-      }
-    }
-    
     loadOrganizations();
+    
+    // Auto-cleanup if URL has ?cleanup=true
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('cleanup') === 'true') {
+      // Auto-run cleanup after page loads
+      setTimeout(async () => {
+        try {
+          const { auth } = await import('@/lib/firebase/config');
+          const token = await auth.currentUser?.getIdToken();
+          
+          if (token) {
+            const response = await fetch('/api/admin/cleanup-test-orgs', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ dryRun: false })
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              alert(`✅ Cleanup complete! Deleted ${result.deleted} test organizations.`);
+              window.location.href = '/admin/organizations'; // Remove query param and reload
+            }
+          }
+        } catch (error) {
+          console.error('Auto-cleanup error:', error);
+        }
+      }, 2000);
+    }
   }, []);
 
   const filteredOrgs = organizations.filter(org => {
@@ -89,8 +146,136 @@ export default function OrganizationsPage() {
       (org.billingEmail || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || org.status === filterStatus;
     const matchesPlan = filterPlan === 'all' || org.plan === filterPlan;
-    return matchesSearch && matchesStatus && matchesPlan;
+    const matchesTestFilter = showTestOrgs || !(org as any).isTest;
+    return matchesSearch && matchesStatus && matchesPlan && matchesTestFilter;
   });
+
+  const handleNextPage = () => {
+    if (hasMore && nextCursor) {
+      setCurrentPage(prev => prev + 1);
+      loadOrganizations(nextCursor);
+    }
+  };
+
+  const handlePrevPage = () => {
+    // For previous page, we need to reload from the start
+    // This is a limitation of cursor-based pagination
+    // A more sophisticated solution would cache previous cursors
+    if (currentPage > 1) {
+      setCurrentPage(1);
+      loadOrganizations();
+    }
+  };
+
+  const handleCleanupPreview = async () => {
+    try {
+      setCleanupStatus('preview');
+      const { auth } = await import('@/lib/firebase/config');
+      const token = await auth.currentUser?.getIdToken();
+      
+      if (!token) {
+        alert('Not authenticated');
+        return;
+      }
+
+      const response = await fetch('/api/admin/cleanup-test-orgs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ dryRun: true })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCleanupData(data);
+      } else {
+        alert('Failed to preview cleanup');
+        setCleanupStatus('idle');
+      }
+    } catch (error) {
+      console.error('Cleanup preview error:', error);
+      alert('Error previewing cleanup');
+      setCleanupStatus('idle');
+    }
+  };
+
+  const handleCleanupExecute = async () => {
+    if (!confirm(`Are you sure you want to delete ${cleanupData?.analysis?.testOrganizations || 0} test organizations? This cannot be undone!`)) {
+      return;
+    }
+
+    try {
+      setCleanupStatus('cleaning');
+      const { auth } = await import('@/lib/firebase/config');
+      const token = await auth.currentUser?.getIdToken();
+      
+      if (!token) {
+        alert('Not authenticated');
+        return;
+      }
+
+      const response = await fetch('/api/admin/cleanup-test-orgs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ dryRun: false })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCleanupData(data);
+        setCleanupStatus('done');
+        // Reload organizations
+        loadOrganizations();
+      } else {
+        alert('Failed to cleanup organizations');
+        setCleanupStatus('preview');
+      }
+    } catch (error) {
+      console.error('Cleanup execution error:', error);
+      alert('Error cleaning up organizations');
+      setCleanupStatus('preview');
+    }
+  };
+
+  const handleDeleteOrganization = async (orgId: string, orgName: string) => {
+    if (!confirm(`Are you sure you want to DELETE "${orgName}"?\n\nThis will permanently delete:\n- The organization\n- All its workspaces\n- All its data\n- All its users\n\nThis action CANNOT be undone!`)) {
+      return;
+    }
+
+    try {
+      const { auth } = await import('@/lib/firebase/config');
+      const token = await auth.currentUser?.getIdToken();
+      
+      if (!token) {
+        alert('Not authenticated');
+        return;
+      }
+
+      const response = await fetch(`/api/admin/organizations/${orgId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (response.ok) {
+        alert(`Successfully deleted "${orgName}"`);
+        // Reload organizations
+        loadOrganizations();
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete organization: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Delete organization error:', error);
+      alert('Error deleting organization');
+    }
+  };
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
@@ -211,6 +396,28 @@ export default function OrganizationsPage() {
             <option value="enterprise">Enterprise</option>
           </select>
         </Tooltip>
+        <Tooltip content="Show or hide test organizations created by automated tests">
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.625rem 1rem',
+            backgroundColor: bgPaper,
+            border: `1px solid ${borderColor}`,
+            borderRadius: '0.5rem',
+            color: '#fff',
+            fontSize: '0.875rem',
+            cursor: 'pointer'
+          }}>
+            <input
+              type="checkbox"
+              checked={showTestOrgs}
+              onChange={(e) => setShowTestOrgs(e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            Show Test Orgs
+          </label>
+        </Tooltip>
       </div>
 
       {/* Stats */}
@@ -229,92 +436,222 @@ export default function OrganizationsPage() {
         </Tooltip>
       </div>
 
+      {/* Cleanup Tool (Super Admin Only) */}
+      {isSuperAdmin() && (
+        <div style={{
+          marginBottom: '2rem',
+          padding: '1rem',
+          backgroundColor: '#1a1a1a',
+          border: '1px solid #333',
+          borderRadius: '0.5rem'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
+                🧹 Test Organization Cleanup
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: '#666' }}>
+                Remove test organizations created by automated tests
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {cleanupStatus === 'idle' && (
+                <button
+                  onClick={handleCleanupPreview}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#6366f1',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Preview Cleanup
+                </button>
+              )}
+              {cleanupStatus === 'preview' && cleanupData && (
+                <>
+                  <span style={{ color: '#fbbf24', fontSize: '0.875rem', alignSelf: 'center' }}>
+                    Found {cleanupData.analysis.testOrganizations} test org(s)
+                  </span>
+                  <button
+                    onClick={handleCleanupExecute}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#ef4444',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Delete Test Orgs
+                  </button>
+                  <button
+                    onClick={() => setCleanupStatus('idle')}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#374151',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+              {cleanupStatus === 'cleaning' && (
+                <span style={{ color: '#fbbf24', fontSize: '0.875rem', alignSelf: 'center' }}>
+                  Cleaning up...
+                </span>
+              )}
+              {cleanupStatus === 'done' && cleanupData && (
+                <>
+                  <span style={{ color: '#10b981', fontSize: '0.875rem', alignSelf: 'center' }}>
+                    ✅ Deleted {cleanupData.deleted} org(s)!
+                  </span>
+                  <button
+                    onClick={() => setCleanupStatus('idle')}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#374151',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Close
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Preview Details */}
+          {cleanupStatus === 'preview' && cleanupData && cleanupData.testOrgsToDelete.length > 0 && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              backgroundColor: '#0a0a0a',
+              borderRadius: '0.375rem',
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
+              <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>
+                Test organizations to be deleted:
+              </p>
+              {cleanupData.testOrgsToDelete.map((org: any, i: number) => (
+                <div key={i} style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>
+                  {i + 1}. {org.name} ({org.reason})
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Organizations Table */}
       {loading ? (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
           Loading organizations...
         </div>
       ) : (
-        <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Organization</th>
-                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Plan</th>
-                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Status</th>
-                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Created</th>
-                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Billing Email</th>
-                <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrgs.map((org) => (
-                <tr key={org.id} style={{ borderBottom: `1px solid ${borderColor}` }}>
-                  <td style={{ padding: '1rem' }}>
-                    <div>
-                      <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{org.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#666' }}>{org.slug}</div>
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      backgroundColor: org.plan === 'enterprise' ? '#7c3aed' : org.plan === 'pro' ? '#6366f1' : '#6b7280',
-                      color: '#fff',
-                      textTransform: 'uppercase'
-                    }}>
-                      {org.plan}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      backgroundColor: org.status === 'active' ? '#065f46' : org.status === 'trial' ? '#78350f' : '#7f1d1d',
-                      color: org.status === 'active' ? '#10b981' : org.status === 'trial' ? '#f59e0b' : '#ef4444',
-                      textTransform: 'uppercase'
-                    }}>
-                      {org.status}
-                    </span>
-                    {org.trialEndsAt && (
-                      <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                        Trial ends: {new Date(org.trialEndsAt as any).toLocaleDateString()}
+        <>
+          <div style={{ 
+            backgroundColor: bgPaper, 
+            border: `1px solid ${borderColor}`, 
+            borderRadius: '0.75rem', 
+            overflow: 'hidden',
+            maxHeight: '70vh',
+            overflowY: 'auto'
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, backgroundColor: bgPaper, zIndex: 10 }}>
+                <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                  <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Organization</th>
+                  <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Plan</th>
+                  <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Status</th>
+                  <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Created</th>
+                  <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Billing Email</th>
+                  <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrgs.map((org) => (
+                  <tr key={org.id} style={{ 
+                    borderBottom: `1px solid ${borderColor}`,
+                    backgroundColor: (org as any).isTest ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
+                  }}>
+                    <td style={{ padding: '1rem' }}>
+                      <div>
+                        <div style={{ fontWeight: '600', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {org.name}
+                          {(org as any).isTest && (
+                            <span style={{
+                              fontSize: '0.625rem',
+                              padding: '0.125rem 0.375rem',
+                              backgroundColor: '#fbbf24',
+                              color: '#000',
+                              borderRadius: '0.25rem',
+                              fontWeight: '700'
+                            }}>
+                              TEST
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#666' }}>{org.slug}</div>
                       </div>
-                    )}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
-                    {new Date(org.createdAt as any).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
-                    {org.billingEmail}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <Tooltip content={`View details for ${org.name}: users, workspaces, usage, billing, and settings`}>
-                        <Link
-                          href={`/admin/organizations/${org.id}`}
-                          style={{
-                            padding: '0.375rem 0.75rem',
-                            backgroundColor: 'transparent',
-                            border: `1px solid ${borderColor}`,
-                            borderRadius: '0.375rem',
-                            color: '#fff',
-                            textDecoration: 'none',
-                            fontSize: '0.75rem'
-                          }}
-                        >
-                          View
-                        </Link>
-                      </Tooltip>
-                      {hasPermission('canEditOrganizations') && (
-                        <Tooltip content={`Edit ${org.name}: change plan, update settings, modify limits, or suspend/activate`}>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: org.plan === 'enterprise' ? '#7c3aed' : org.plan === 'pro' ? '#6366f1' : '#6b7280',
+                        color: '#fff',
+                        textTransform: 'uppercase'
+                      }}>
+                        {org.plan}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: org.status === 'active' ? '#065f46' : org.status === 'trial' ? '#78350f' : '#7f1d1d',
+                        color: org.status === 'active' ? '#10b981' : org.status === 'trial' ? '#f59e0b' : '#ef4444',
+                        textTransform: 'uppercase'
+                      }}>
+                        {org.status}
+                      </span>
+                      {org.trialEndsAt && (
+                        <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                          Trial ends: {new Date(org.trialEndsAt as any).toLocaleDateString()}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
+                      {new Date(org.createdAt as any).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
+                      {org.billingEmail}
+                    </td>
+                    <td style={{ padding: '1rem', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                        <Tooltip content={`View details for ${org.name}: users, workspaces, usage, billing, and settings`}>
                           <Link
-                            href={`/admin/organizations/${org.id}/edit`}
+                            href={`/admin/organizations/${org.id}`}
                             style={{
                               padding: '0.375rem 0.75rem',
                               backgroundColor: 'transparent',
@@ -325,22 +662,108 @@ export default function OrganizationsPage() {
                               fontSize: '0.75rem'
                             }}
                           >
-                            Edit
+                            View
                           </Link>
                         </Tooltip>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredOrgs.length === 0 && (
-            <div style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>
-              No organizations found
+                        {hasPermission('canEditOrganizations') && (
+                          <Tooltip content={`Edit ${org.name}: change plan, update settings, modify limits, or suspend/activate`}>
+                            <Link
+                              href={`/admin/organizations/${org.id}/edit`}
+                              style={{
+                                padding: '0.375rem 0.75rem',
+                                backgroundColor: 'transparent',
+                                border: `1px solid ${borderColor}`,
+                                borderRadius: '0.375rem',
+                                color: '#fff',
+                                textDecoration: 'none',
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              Edit
+                            </Link>
+                          </Tooltip>
+                        )}
+                        {hasPermission('canDeleteOrganizations') && (
+                          <Tooltip content={`Delete ${org.name} permanently. This cannot be undone!`}>
+                            <button
+                              onClick={() => handleDeleteOrganization(org.id, org.name)}
+                              style={{
+                                padding: '0.375rem 0.75rem',
+                                backgroundColor: 'transparent',
+                                border: '1px solid #7f1d1d',
+                                borderRadius: '0.375rem',
+                                color: '#ef4444',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredOrgs.length === 0 && (
+              <div style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>
+                No organizations found
+              </div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          <div style={{
+            marginTop: '1.5rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ fontSize: '0.875rem', color: '#666' }}>
+              Page {currentPage} • Showing {filteredOrgs.length} organization{filteredOrgs.length !== 1 ? 's' : ''}
             </div>
-          )}
-        </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Tooltip content="Go to first page">
+                <button
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: currentPage === 1 ? '#1a1a1a' : primaryColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: '0.375rem',
+                    color: currentPage === 1 ? '#666' : '#fff',
+                    fontSize: '0.875rem',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPage === 1 ? 0.5 : 1
+                  }}
+                >
+                  ← First Page
+                </button>
+              </Tooltip>
+              <Tooltip content={hasMore ? "Load next page" : "No more organizations"}>
+                <button
+                  onClick={handleNextPage}
+                  disabled={!hasMore}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: !hasMore ? '#1a1a1a' : primaryColor,
+                    border: `1px solid ${borderColor}`,
+                    borderRadius: '0.375rem',
+                    color: !hasMore ? '#666' : '#fff',
+                    fontSize: '0.875rem',
+                    cursor: !hasMore ? 'not-allowed' : 'pointer',
+                    opacity: !hasMore ? 0.5 : 1
+                  }}
+                >
+                  Next Page →
+                </button>
+              </Tooltip>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

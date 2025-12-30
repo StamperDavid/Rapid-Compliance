@@ -3,21 +3,24 @@
  * Real integration tests for payment processing (uses test mode)
  */
 
-import { describe, it, expect, beforeAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { processPayment, calculateStripeFee, calculatePayPalFee } from '@/lib/ecommerce/payment-service';
 import { FirestoreService } from '@/lib/db/firestore-service';
 
 describe('Payment Integration Tests', () => {
   const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
+  const createdOrgIds: string[] = [];
 
   beforeAll(async () => {
-    // Create test organization
+    // Create test organization with isTest flag to prevent production pollution
     await FirestoreService.set('organizations', testOrgId, {
       id: testOrgId,
-      name: 'Test Payment Org',
+      name: '[TEST] Payment Org',
+      isTest: true, // Mark as test to prevent pollution
       createdAt: new Date().toISOString(),
     }, false);
+    createdOrgIds.push(testOrgId);
 
     // Configure e-commerce with Stripe test mode
     await FirestoreService.set(
@@ -37,6 +40,23 @@ describe('Payment Integration Tests', () => {
       },
       false
     );
+  });
+
+  afterAll(async () => {
+    console.log('Cleaning up test organizations...');
+    
+    try {
+      // Delete all test organizations created during this test
+      for (const orgId of createdOrgIds) {
+        await FirestoreService.delete('organizations', orgId);
+        console.log(`✅ Deleted test organization: ${orgId}`);
+      }
+      
+      console.log('✅ Test cleanup complete');
+    } catch (error) {
+      console.warn('⚠️  Failed to delete some test organizations:', error);
+      console.log('   Run cleanup script manually: node scripts/cleanup-test-orgs.js');
+    }
   });
 
   describe('Fee Calculations (Always Works)', () => {
@@ -127,8 +147,10 @@ describe('Payment Integration Tests', () => {
       const unconfiguredOrgId = `unconfigured-${Date.now()}`;
       await FirestoreService.set('organizations', unconfiguredOrgId, {
         id: unconfiguredOrgId,
-        name: 'Unconfigured Org',
+        name: '[TEST] Unconfigured Org',
+        isTest: true, // Mark as test
       }, false);
+      createdOrgIds.push(unconfiguredOrgId); // Track for cleanup
 
       const request = {
         organizationId: unconfiguredOrgId,

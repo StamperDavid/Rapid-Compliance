@@ -20,7 +20,6 @@
     "test:all": "npm run test && npm run test:e2e && npm run test:playwright",
     "firebase:init": "firebase init",
     "firebase:deploy": "firebase deploy",
-    "firebase:emulators": "firebase emulators:start",
     "seed:test-orgs": "tsx scripts/seed-test-organizations.ts",
     "seed:quick": "tsx scripts/seed-test-organizations.ts",
     "seed:e2e": "node scripts/seed-e2e-test-data.js",
@@ -37,6 +36,8 @@
     "deploy:health": "node scripts/test-production-health.js",
     "deploy:cron-secret": "node scripts/generate-cron-secret.js",
     "deploy:check": "npm run type-check && npm run test && npm run deploy:verify-env",
+    "cleanup:test-orgs": "node scripts/cleanup-test-orgs.js",
+    "cleanup:test-orgs:auto": "AUTO_CONFIRM=true node scripts/cleanup-test-orgs.js",
     "prepare": "husky"
   },
   "dependencies": {

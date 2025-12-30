@@ -37,6 +37,9 @@ export interface Organization {
   // Status
   status: 'active' | 'suspended' | 'trial';
   trialEndsAt?: Timestamp;
+  
+  // Testing flag (to prevent test data pollution)
+  isTest?: boolean;
 }
 
 export interface PlanLimits {
