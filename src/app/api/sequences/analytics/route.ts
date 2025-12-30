@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -107,6 +107,13 @@ interface AnalyticsSummary {
 
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     // Verify authentication
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
@@ -197,10 +204,8 @@ async function getSequencePerformance(
 ): Promise<SequencePerformance | null> {
   try {
     // Try native Hunter-Closer sequencer first
-    const nativeSeqDoc = await db
-      .collection('sequences')
-      .doc(sequenceId)
-      .get();
+    const nativeSeqRef = adminDal.getNestedDocRef('sequences/{sequenceId}', { sequenceId });
+    const nativeSeqDoc = await nativeSeqRef.get();
 
     if (nativeSeqDoc.exists) {
       const data = nativeSeqDoc.data();
@@ -212,12 +217,11 @@ async function getSequencePerformance(
     }
 
     // Fallback to legacy OutboundSequence system
-    const legacySeqDoc = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('sequences')
-      .doc(sequenceId)
-      .get();
+    const legacySeqRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/sequences/{sequenceId}',
+      { orgId: organizationId, sequenceId }
+    );
+    const legacySeqDoc = await legacySeqRef.get();
 
     if (!legacySeqDoc.exists) {
       return null;
@@ -247,8 +251,8 @@ async function getAllSequencePerformances(
     const performances: SequencePerformance[] = [];
 
     // Fetch native Hunter-Closer sequences
-    const nativeSeqsSnap = await db
-      .collection('sequences')
+    const nativeSeqsRef = adminDal.getCollection('SEQUENCES');
+    const nativeSeqsSnap = await nativeSeqsRef
       .where('organizationId', '==', organizationId)
       .get();
 
@@ -258,11 +262,11 @@ async function getAllSequencePerformances(
     }
 
     // Fetch legacy OutboundSequences
-    const legacySeqsSnap = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('sequences')
-      .get();
+    const legacySeqsRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/sequences',
+      { orgId: organizationId }
+    );
+    const legacySeqsSnap = await legacySeqsRef.get();
 
     for (const doc of legacySeqsSnap.docs) {
       const data = doc.data();
