@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -18,6 +18,10 @@ export async function DELETE(
   context: { params: Promise<{ domainId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -31,13 +35,10 @@ export async function DELETE(
       );
     }
 
-    const domainRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('custom-domains')
-      .doc(domainId);
+    const domainRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/custom-domains/{domainId}',
+      { orgId: organizationId, domainId }
+    );
 
     const doc = await domainRef.get();
 
@@ -82,17 +83,16 @@ export async function DELETE(
     await domainRef.delete();
 
     // Delete from global domains collection
-    await db.collection('custom-domains').doc(domainId).delete();
+    const globalDomainRef = adminDal.getNestedDocRef('custom-domains/{domainId}', { domainId });
+    await globalDomainRef.delete();
 
     // Create audit log
     const performedBy = await getUserIdentifier();
     
-    const auditRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('audit-log')
-      .collection('entries');
+    const auditRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/audit-log/entries',
+      { orgId: organizationId }
+    );
 
     await auditRef.add({
       type: 'domain_removed',
