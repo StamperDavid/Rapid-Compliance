@@ -1,0 +1,507 @@
+/**
+ * Sequence Analytics API
+ * 
+ * Aggregates performance metrics from:
+ * 1. Native Hunter-Closer sequencer (src/lib/services/sequencer.ts)
+ * 2. Legacy OutboundSequence system (for backward compatibility)
+ * 
+ * Provides comprehensive analytics for sequence performance monitoring.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requireOrganization } from '@/lib/auth/api-auth';
+import { db } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface SequencePerformance {
+  sequenceId: string;
+  sequenceName: string;
+  isActive: boolean;
+  channel: 'email' | 'linkedin' | 'phone' | 'sms' | 'multi-channel';
+  
+  // Enrollment metrics
+  totalEnrolled: number;
+  activeEnrollments: number;
+  completedEnrollments: number;
+  
+  // Engagement metrics
+  totalSent: number;
+  totalDelivered: number;
+  totalOpened: number;
+  totalClicked: number;
+  totalReplied: number;
+  
+  // Conversion rates
+  deliveryRate: number;
+  openRate: number;
+  clickRate: number;
+  replyRate: number;
+  
+  // Step-by-step breakdown
+  stepPerformance: StepPerformance[];
+  
+  // Timeline
+  createdAt: Date;
+  lastExecutedAt?: Date;
+}
+
+interface StepPerformance {
+  stepId: string;
+  stepIndex: number;
+  channel: 'email' | 'linkedin' | 'phone' | 'sms';
+  action: string;
+  
+  sent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  replied: number;
+  
+  // Conversion funnel
+  deliveryRate: number;
+  openRate: number;
+  clickRate: number;
+  replyRate: number;
+}
+
+interface AnalyticsSummary {
+  // Overall performance
+  totalSequences: number;
+  activeSequences: number;
+  totalEnrollments: number;
+  activeEnrollments: number;
+  
+  // Aggregate engagement
+  totalSent: number;
+  totalDelivered: number;
+  totalOpened: number;
+  totalClicked: number;
+  totalReplied: number;
+  
+  // Average rates
+  avgDeliveryRate: number;
+  avgOpenRate: number;
+  avgClickRate: number;
+  avgReplyRate: number;
+  
+  // Top performers
+  topSequencesByReplyRate: Array<{ id: string; name: string; replyRate: number }>;
+  topSequencesByEngagement: Array<{ id: string; name: string; engagementScore: number }>;
+  
+  // Channel breakdown
+  channelPerformance: {
+    email: { sent: number; delivered: number; opened: number; replied: number };
+    linkedin: { sent: number; delivered: number; opened: number; replied: number };
+    sms: { sent: number; delivered: number; replied: number };
+    phone: { sent: number; replied: number };
+  };
+}
+
+// ============================================================================
+// GET ANALYTICS
+// ============================================================================
+
+export async function GET(request: NextRequest) {
+  try {
+    // Verify authentication
+    const authResult = await requireOrganization(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const { user } = authResult;
+    const organizationId = user.organizationId!;
+    const { searchParams } = new URL(request.url);
+    const sequenceId = searchParams.get('sequenceId');
+
+    logger.info('[Analytics API] Fetching analytics', {
+      organizationId,
+      sequenceId: sequenceId || 'all',
+    });
+
+    // If specific sequence requested, return detailed analytics
+    if (sequenceId) {
+      const performance = await getSequencePerformance(organizationId, sequenceId);
+      if (!performance) {
+        return NextResponse.json(
+          { error: 'Sequence not found' },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json({ performance });
+    }
+
+    // Otherwise, return summary analytics for all sequences
+    const [performances, summary] = await Promise.all([
+      getAllSequencePerformances(organizationId),
+      getAnalyticsSummary(organizationId),
+    ]);
+
+    return NextResponse.json({
+      summary,
+      sequences: performances,
+    });
+
+  } catch (error) {
+    logger.error('[Analytics API] Error fetching analytics', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch analytics' },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Get performance metrics for a specific sequence
+ */
+async function getSequencePerformance(
+  organizationId: string,
+  sequenceId: string
+): Promise<SequencePerformance | null> {
+  try {
+    // Try native Hunter-Closer sequencer first
+    const nativeSeqDoc = await db
+      .collection('sequences')
+      .doc(sequenceId)
+      .get();
+
+    if (nativeSeqDoc.exists) {
+      const data = nativeSeqDoc.data();
+      if (!data || data.organizationId !== organizationId) {
+        return null;
+      }
+
+      return buildNativeSequencePerformance(sequenceId, data);
+    }
+
+    // Fallback to legacy OutboundSequence system
+    const legacySeqDoc = await db
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('sequences')
+      .doc(sequenceId)
+      .get();
+
+    if (!legacySeqDoc.exists) {
+      return null;
+    }
+
+    const legacyData = legacySeqDoc.data();
+    if (!legacyData) {
+      return null;
+    }
+
+    return buildLegacySequencePerformance(sequenceId, legacyData);
+
+  } catch (error) {
+    logger.error('[Analytics] Error fetching sequence performance', error, { sequenceId });
+    throw error;
+  }
+}
+
+/**
+ * Get performance for all sequences in an organization
+ */
+async function getAllSequencePerformances(
+  organizationId: string
+): Promise<SequencePerformance[]> {
+  try {
+    const performances: SequencePerformance[] = [];
+
+    // Fetch native Hunter-Closer sequences
+    const nativeSeqsSnap = await db
+      .collection('sequences')
+      .where('organizationId', '==', organizationId)
+      .get();
+
+    for (const doc of nativeSeqsSnap.docs) {
+      const data = doc.data();
+      performances.push(buildNativeSequencePerformance(doc.id, data));
+    }
+
+    // Fetch legacy OutboundSequences
+    const legacySeqsSnap = await db
+      .collection('organizations')
+      .doc(organizationId)
+      .collection('sequences')
+      .get();
+
+    for (const doc of legacySeqsSnap.docs) {
+      const data = doc.data();
+      performances.push(buildLegacySequencePerformance(doc.id, data));
+    }
+
+    return performances;
+
+  } catch (error) {
+    logger.error('[Analytics] Error fetching all performances', error);
+    throw error;
+  }
+}
+
+/**
+ * Build performance object from native Hunter-Closer sequence
+ */
+function buildNativeSequencePerformance(
+  sequenceId: string,
+  data: any
+): SequencePerformance {
+  const stats = data.stats || {
+    totalEnrolled: 0,
+    activeEnrollments: 0,
+    completedEnrollments: 0,
+    responseRate: 0,
+  };
+
+  // Aggregate step metrics
+  const stepPerformance: StepPerformance[] = (data.steps || []).map((step: any) => {
+    const sent = step.metrics?.sent || 0;
+    const delivered = step.metrics?.delivered || 0;
+    const opened = step.metrics?.opened || 0;
+    const clicked = step.metrics?.clicked || 0;
+    const replied = step.metrics?.replied || 0;
+
+    return {
+      stepId: step.id,
+      stepIndex: step.stepIndex,
+      channel: step.channel,
+      action: step.action,
+      sent,
+      delivered,
+      opened,
+      clicked,
+      replied,
+      deliveryRate: sent > 0 ? (delivered / sent) * 100 : 0,
+      openRate: delivered > 0 ? (opened / delivered) * 100 : 0,
+      clickRate: delivered > 0 ? (clicked / delivered) * 100 : 0,
+      replyRate: delivered > 0 ? (replied / delivered) * 100 : 0,
+    };
+  });
+
+  // Calculate totals
+  const totalSent = stepPerformance.reduce((sum, step) => sum + step.sent, 0);
+  const totalDelivered = stepPerformance.reduce((sum, step) => sum + step.delivered, 0);
+  const totalOpened = stepPerformance.reduce((sum, step) => sum + step.opened, 0);
+  const totalClicked = stepPerformance.reduce((sum, step) => sum + step.clicked, 0);
+  const totalReplied = stepPerformance.reduce((sum, step) => sum + step.replied, 0);
+
+  // Determine primary channel
+  const channelCounts = stepPerformance.reduce((acc, step) => {
+    acc[step.channel] = (acc[step.channel] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const primaryChannel = Object.entries(channelCounts).length > 1 
+    ? 'multi-channel' 
+    : (Object.keys(channelCounts)[0] as any) || 'email';
+
+  return {
+    sequenceId,
+    sequenceName: data.name,
+    isActive: data.isActive,
+    channel: primaryChannel,
+    totalEnrolled: stats.totalEnrolled,
+    activeEnrollments: stats.activeEnrollments,
+    completedEnrollments: stats.completedEnrollments,
+    totalSent,
+    totalDelivered,
+    totalOpened,
+    totalClicked,
+    totalReplied,
+    deliveryRate: totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0,
+    openRate: totalDelivered > 0 ? (totalOpened / totalDelivered) * 100 : 0,
+    clickRate: totalDelivered > 0 ? (totalClicked / totalDelivered) * 100 : 0,
+    replyRate: totalDelivered > 0 ? (totalReplied / totalDelivered) * 100 : 0,
+    stepPerformance,
+    createdAt: data.createdAt?.toDate() || new Date(),
+    lastExecutedAt: data.lastExecutedAt?.toDate(),
+  };
+}
+
+/**
+ * Build performance object from legacy OutboundSequence
+ */
+function buildLegacySequencePerformance(
+  sequenceId: string,
+  data: any
+): SequencePerformance {
+  const analytics = data.analytics || {};
+  
+  // Build step performance from legacy steps
+  const stepPerformance: StepPerformance[] = (data.steps || []).map((step: any, index: number) => {
+    const sent = step.sent || 0;
+    const delivered = step.delivered || 0;
+    const opened = step.opened || 0;
+    const clicked = step.clicked || 0;
+    const replied = step.replied || 0;
+
+    return {
+      stepId: step.id,
+      stepIndex: index,
+      channel: mapLegacyStepType(step.type),
+      action: step.subject || step.body?.substring(0, 50) || 'Email',
+      sent,
+      delivered,
+      opened,
+      clicked,
+      replied,
+      deliveryRate: sent > 0 ? (delivered / sent) * 100 : 0,
+      openRate: delivered > 0 ? (opened / delivered) * 100 : 0,
+      clickRate: delivered > 0 ? (clicked / delivered) * 100 : 0,
+      replyRate: delivered > 0 ? (replied / delivered) * 100 : 0,
+    };
+  });
+
+  return {
+    sequenceId,
+    sequenceName: data.name,
+    isActive: data.status === 'active',
+    channel: 'email', // Legacy system is email-only
+    totalEnrolled: analytics.totalEnrolled || 0,
+    activeEnrollments: analytics.activeProspects || 0,
+    completedEnrollments: analytics.completedProspects || 0,
+    totalSent: analytics.totalSent || 0,
+    totalDelivered: analytics.totalDelivered || 0,
+    totalOpened: analytics.totalOpened || 0,
+    totalClicked: analytics.totalClicked || 0,
+    totalReplied: analytics.totalReplied || 0,
+    deliveryRate: analytics.deliveryRate || 0,
+    openRate: analytics.openRate || 0,
+    clickRate: analytics.clickRate || 0,
+    replyRate: analytics.replyRate || 0,
+    stepPerformance,
+    createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+    lastExecutedAt: analytics.lastRun ? new Date(analytics.lastRun) : undefined,
+  };
+}
+
+/**
+ * Map legacy step types to channels
+ */
+function mapLegacyStepType(type: string): 'email' | 'linkedin' | 'phone' | 'sms' {
+  if (type.includes('linkedin')) return 'linkedin';
+  if (type.includes('sms')) return 'sms';
+  if (type.includes('call') || type.includes('phone')) return 'phone';
+  return 'email';
+}
+
+/**
+ * Get summary analytics across all sequences
+ */
+async function getAnalyticsSummary(
+  organizationId: string
+): Promise<AnalyticsSummary> {
+  try {
+    const performances = await getAllSequencePerformances(organizationId);
+
+    const activeSequences = performances.filter(p => p.isActive).length;
+    
+    // Aggregate metrics
+    let totalSent = 0;
+    let totalDelivered = 0;
+    let totalOpened = 0;
+    let totalClicked = 0;
+    let totalReplied = 0;
+    let totalEnrollments = 0;
+    let activeEnrollments = 0;
+
+    const channelPerformance = {
+      email: { sent: 0, delivered: 0, opened: 0, replied: 0 },
+      linkedin: { sent: 0, delivered: 0, opened: 0, replied: 0 },
+      sms: { sent: 0, delivered: 0, replied: 0 },
+      phone: { sent: 0, replied: 0 },
+    };
+
+    for (const perf of performances) {
+      totalSent += perf.totalSent;
+      totalDelivered += perf.totalDelivered;
+      totalOpened += perf.totalOpened;
+      totalClicked += perf.totalClicked;
+      totalReplied += perf.totalReplied;
+      totalEnrollments += perf.totalEnrolled;
+      activeEnrollments += perf.activeEnrollments;
+
+      // Aggregate by channel
+      for (const step of perf.stepPerformance) {
+        if (step.channel === 'email') {
+          channelPerformance.email.sent += step.sent;
+          channelPerformance.email.delivered += step.delivered;
+          channelPerformance.email.opened += step.opened;
+          channelPerformance.email.replied += step.replied;
+        } else if (step.channel === 'linkedin') {
+          channelPerformance.linkedin.sent += step.sent;
+          channelPerformance.linkedin.delivered += step.delivered;
+          channelPerformance.linkedin.opened += step.opened;
+          channelPerformance.linkedin.replied += step.replied;
+        } else if (step.channel === 'sms') {
+          channelPerformance.sms.sent += step.sent;
+          channelPerformance.sms.delivered += step.delivered;
+          channelPerformance.sms.replied += step.replied;
+        } else if (step.channel === 'phone') {
+          channelPerformance.phone.sent += step.sent;
+          channelPerformance.phone.replied += step.replied;
+        }
+      }
+    }
+
+    // Calculate averages
+    const avgDeliveryRate = totalSent > 0 ? (totalDelivered / totalSent) * 100 : 0;
+    const avgOpenRate = totalDelivered > 0 ? (totalOpened / totalDelivered) * 100 : 0;
+    const avgClickRate = totalDelivered > 0 ? (totalClicked / totalDelivered) * 100 : 0;
+    const avgReplyRate = totalDelivered > 0 ? (totalReplied / totalDelivered) * 100 : 0;
+
+    // Top performers by reply rate
+    const topSequencesByReplyRate = performances
+      .filter(p => p.totalDelivered > 0)
+      .sort((a, b) => b.replyRate - a.replyRate)
+      .slice(0, 5)
+      .map(p => ({
+        id: p.sequenceId,
+        name: p.sequenceName,
+        replyRate: p.replyRate,
+      }));
+
+    // Top performers by engagement score (composite)
+    const topSequencesByEngagement = performances
+      .filter(p => p.totalDelivered > 0)
+      .map(p => ({
+        id: p.sequenceId,
+        name: p.sequenceName,
+        engagementScore: (p.openRate * 0.3) + (p.clickRate * 0.3) + (p.replyRate * 0.4),
+      }))
+      .sort((a, b) => b.engagementScore - a.engagementScore)
+      .slice(0, 5);
+
+    return {
+      totalSequences: performances.length,
+      activeSequences,
+      totalEnrollments,
+      activeEnrollments,
+      totalSent,
+      totalDelivered,
+      totalOpened,
+      totalClicked,
+      totalReplied,
+      avgDeliveryRate,
+      avgOpenRate,
+      avgClickRate,
+      avgReplyRate,
+      topSequencesByReplyRate,
+      topSequencesByEngagement,
+      channelPerformance,
+    };
+
+  } catch (error) {
+    logger.error('[Analytics] Error building summary', error);
+    throw error;
+  }
+}

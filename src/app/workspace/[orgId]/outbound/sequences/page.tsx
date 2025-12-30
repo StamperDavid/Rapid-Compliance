@@ -170,21 +170,40 @@ export default function EmailSequencesPage() {
                   {loading ? 'Loading...' : `${sequences.length} sequences • ${enrollments.filter(e => e.status === 'active').length} active enrollments`}
                 </p>
               </div>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#6366f1',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                }}
-              >
-                + Create Sequence
-              </button>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <Link
+                  href={`/workspace/${orgId}/sequences/analytics`}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#222',
+                    color: '#fff',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    textDecoration: 'none',
+                    display: 'inline-block',
+                  }}
+                >
+                  📊 View Analytics
+                </Link>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#6366f1',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                  }}
+                >
+                  + Create Sequence
+                </button>
+              </div>
             </div>
           </div>
 
