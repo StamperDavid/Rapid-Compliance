@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   handleAPIError,
   validateOrgId,
@@ -24,6 +25,10 @@ export async function POST(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return errorResponse('Server configuration error', 500, 'SERVER_ERROR');
+    }
+    
     const params = await context.params;
     const body = await request.json();
     const { organizationId, scheduledFor } = body;
@@ -31,13 +36,10 @@ export async function POST(
     // CRITICAL: Validate organizationId
     const validOrgId = validateOrgId(organizationId);
 
-    const pageRef = db
-      .collection('organizations')
-      .doc(validOrgId)
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId);
+    const pageRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}',
+      { orgId: validOrgId, pageId: params.pageId }
+    );
 
     const doc = await pageRef.get();
 
@@ -52,20 +54,15 @@ export async function POST(
       verifyOrgOwnership(pageData.organizationId, validOrgId, 'page');
     }
 
-    const now = admin.firestore.Timestamp.now();
+    const now = FieldValue.serverTimestamp();
     const currentVersion = pageData.version || 1;
     const performedBy = await getUserIdentifier();
 
     // Create version snapshot before publishing
-    const versionRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId)
-      .collection('versions')
-      .doc(`v${currentVersion}`);
+    const versionRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}/versions/{version}',
+      { orgId: organizationId, pageId: params.pageId, version: `v${currentVersion}` }
+    );
 
     await versionRef.set({
       version: currentVersion,
@@ -100,19 +97,17 @@ export async function POST(
     } else {
       // Publish immediately
       updateData.status = 'published';
-      updateData.publishedAt = now.toDate().toISOString();
-      updateData.scheduledFor = admin.firestore.FieldValue.delete();
+      updateData.publishedAt = new Date().toISOString();
+      updateData.scheduledFor = FieldValue.delete();
     }
 
     await pageRef.update(updateData);
 
     // Create audit log entry
-    const auditRef = db
-      .collection('organizations')
-      .doc(validOrgId)
-      .collection('website')
-      .doc('audit-log')
-      .collection('entries');
+    const auditRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/audit-log/entries',
+      { orgId: validOrgId }
+    );
 
     await auditRef.add({
       type: scheduledFor ? 'page_scheduled' : 'page_published',
@@ -151,6 +146,10 @@ export async function DELETE(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return errorResponse('Server configuration error', 500, 'SERVER_ERROR');
+    }
+    
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -158,13 +157,10 @@ export async function DELETE(
     // CRITICAL: Validate organizationId
     const validOrgId = validateOrgId(organizationId);
 
-    const pageRef = db
-      .collection('organizations')
-      .doc(validOrgId)
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(params.pageId);
+    const pageRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/pages/items/{pageId}',
+      { orgId: validOrgId, pageId: params.pageId }
+    );
 
     const doc = await pageRef.get();
 
@@ -179,24 +175,22 @@ export async function DELETE(
       verifyOrgOwnership(pageData.organizationId, validOrgId, 'page');
     }
 
-    const now = admin.firestore.Timestamp.now();
+    const now = FieldValue.serverTimestamp();
     const performedBy = await getUserIdentifier();
 
     // Unpublish - revert to draft
     await pageRef.update({
       status: 'draft',
-      scheduledFor: admin.firestore.FieldValue.delete(),
+      scheduledFor: FieldValue.delete(),
       updatedAt: now,
       lastEditedBy: performedBy,
     });
 
     // Create audit log entry
-    const auditRef = db
-      .collection('organizations')
-      .doc(validOrgId)
-      .collection('website')
-      .doc('audit-log')
-      .collection('entries');
+    const auditRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/audit-log/entries',
+      { orgId: validOrgId }
+    );
 
     await auditRef.add({
       type: 'page_unpublished',
