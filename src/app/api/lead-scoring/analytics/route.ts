@@ -7,7 +7,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, db } from '@/lib/firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import adminApp from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
 
@@ -18,6 +20,13 @@ import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/ty
  */
 export async function GET(req: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
@@ -27,7 +36,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    await auth.verifyIdToken(token);
+    await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
@@ -54,11 +63,11 @@ export async function GET(req: NextRequest) {
     });
 
     // Get all lead scores in date range
-    const snapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('leadScores')
-      .get();
+    const scoresRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/leadScores',
+      { orgId: organizationId }
+    );
+    const snapshot = await scoresRef.get();
 
     const scores = snapshot.docs
       .map((doc) => {
