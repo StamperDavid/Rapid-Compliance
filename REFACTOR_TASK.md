@@ -67,7 +67,7 @@
 ## 🌐 PHASE 3: API Routes (Admin DAL)
 **Backend endpoints - ALL use Admin SDK**
 
-### ✅ **Migrated (13 files)**
+### ✅ **Migrated (21 files)**
 1. `src/app/api/admin/organizations/route.ts` ✅ (GET, POST)
 2. `src/app/api/admin/organizations/[orgId]/route.ts` ✅ (DELETE)
 3. `src/app/api/admin/users/route.ts` ✅ (GET, PATCH)
@@ -79,15 +79,25 @@
 9. `src/app/api/workspace/[orgId]/agent/persona/route.ts` ✅ (GET, POST)
 10. `src/app/api/website/settings/route.ts` ✅ (GET, POST, PUT)
 11. `src/app/api/website/pages/route.ts` ✅ (GET, POST)
+12. `src/app/api/website/domains/route.ts` ✅ (GET, POST)
+13. `src/app/api/website/pages/[pageId]/route.ts` ✅ (GET, PUT, DELETE)
+14. `src/app/api/website/templates/route.ts` ✅ (GET, POST, DELETE)
+15. `src/app/api/website/navigation/route.ts` ✅ (GET, POST)
+16. `src/app/api/website/pages/[pageId]/preview/route.ts` ✅ (GET, POST)
+17. `src/app/api/website/pages/[pageId]/publish/route.ts` ✅ (POST, DELETE)
+18. `src/app/api/website/pages/[pageId]/versions/route.ts` ✅ (GET, POST)
+19. `src/app/api/website/blog/posts/route.ts` ✅ (GET, POST)
+20. `src/app/api/website/blog/posts/[postId]/route.ts` ✅ (GET, PUT, DELETE)
+21. `src/app/api/website/blog/categories/route.ts` ✅ (GET, POST)
 
-### ⏳ **Remaining (31 files)**
+### ⏳ **Remaining (23 files)**
 - Lead scoring routes (3 files - but use service layer)
 - Sequence routes (2 files)
 - Workflow routes (4 files - use service layer)
-- Website builder routes (20+ files)
+- Website builder routes (~14 files remaining)
 - And more...
 
-**Status:** 🔄 In Progress - Admin DAL created, migrations ongoing
+**Status:** 🔄 In Progress - 21 files migrated in Session 2
 
 ---
 
@@ -218,7 +228,8 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 
 **Last Updated:** Dec 30, 2025
 **Current Phase:** Phase 3 - Admin DAL Migration (In Progress)
-**Last Commit:** a1f5844
+**Last Commit:** b9f73be
+**Session:** 2
 
 ---
 
@@ -230,7 +241,7 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 3. `src/lib/agent/base-model-builder.ts` ✅
 4. `src/lib/outbound/meeting-scheduler.ts` ✅
 
-### ✅ **Admin SDK Completed (13 files)**
+### ✅ **Admin SDK Completed (21 files)**
 1. `src/app/api/admin/organizations/route.ts` ✅
 2. `src/app/api/admin/organizations/[orgId]/route.ts` ✅
 3. `src/app/api/admin/users/route.ts` ✅
@@ -242,6 +253,16 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 9. `src/app/api/workspace/[orgId]/agent/persona/route.ts` ✅
 10. `src/app/api/website/settings/route.ts` ✅
 11. `src/app/api/website/pages/route.ts` ✅
+12. `src/app/api/website/domains/route.ts` ✅
+13. `src/app/api/website/pages/[pageId]/route.ts` ✅
+14. `src/app/api/website/templates/route.ts` ✅
+15. `src/app/api/website/navigation/route.ts` ✅
+16. `src/app/api/website/pages/[pageId]/preview/route.ts` ✅
+17. `src/app/api/website/pages/[pageId]/publish/route.ts` ✅
+18. `src/app/api/website/pages/[pageId]/versions/route.ts` ✅
+19. `src/app/api/website/blog/posts/route.ts` ✅
+20. `src/app/api/website/blog/posts/[postId]/route.ts` ✅
+21. `src/app/api/website/blog/categories/route.ts` ✅
 
 ### 🔄 **Admin DAL Infrastructure Created**
 - `src/lib/firebase/admin-dal.ts` - Complete Admin DAL implementation
@@ -269,10 +290,11 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 
 ### 🔑 **Key Achievements**
 1. ✅ **Created Admin DAL** - Complete server-side DAL with all features
-2. ✅ **Migrated 13 API routes** - Including complex nested collections
+2. ✅ **Migrated 21 API routes** - Including complex nested collections
 3. ✅ **Added nested path helpers** - For deep collections like ai-agents/config
 4. ✅ **Workspace helper** - For workspace-scoped collections
-5. ✅ **Total Firestore Operations Migrated:** ~50+ operations across 17 files
+5. ✅ **Total Firestore Operations Migrated:** ~80+ operations across 25 files
+6. ✅ **Session 2 Complete** - Migrated 10 website builder routes systematically
 
 ### 🚀 **Next Steps**
 1. Continue migrating remaining API routes (31 files)
