@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -35,6 +35,13 @@ interface SequenceExecution {
 
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     // Verify authentication
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
@@ -82,9 +89,8 @@ async function getRecentExecutions(
     const executions: SequenceExecution[] = [];
 
     // Fetch native Hunter-Closer sequence enrollments
-    let nativeQuery = db
-      .collection('sequenceEnrollments')
-      .where('organizationId', '==', organizationId);
+    const enrollmentsRef = adminDal.getCollection('SEQUENCE_ENROLLMENTS');
+    let nativeQuery = enrollmentsRef.where('organizationId', '==', organizationId);
 
     if (sequenceId) {
       nativeQuery = nativeQuery.where('sequenceId', '==', sequenceId);
@@ -103,7 +109,8 @@ async function getRecentExecutions(
       // Get sequence name
       let sequenceName = 'Unknown Sequence';
       try {
-        const seqDoc = await db.collection('sequences').doc(data.sequenceId).get();
+        const seqRef = adminDal.getNestedDocRef('sequences/{sequenceId}', { sequenceId: data.sequenceId });
+        const seqDoc = await seqRef.get();
         if (seqDoc.exists) {
           sequenceName = seqDoc.data()?.name || sequenceName;
         }
@@ -114,7 +121,8 @@ async function getRecentExecutions(
       // Get lead name
       let leadName: string | undefined;
       try {
-        const leadDoc = await db.collection('leads').doc(data.leadId).get();
+        const leadRef = adminDal.getNestedDocRef('leads/{leadId}', { leadId: data.leadId });
+        const leadDoc = await leadRef.get();
         if (leadDoc.exists) {
           const leadData = leadDoc.data();
           leadName = leadData?.name || leadData?.email;
@@ -166,10 +174,11 @@ async function getRecentExecutions(
     }
 
     // Fetch legacy OutboundSequence enrollments for backward compatibility
-    const legacyEnrollmentsSnap = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('sequenceEnrollments')
+    const legacyEnrollmentsRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/sequenceEnrollments',
+      { orgId: organizationId }
+    );
+    const legacyEnrollmentsSnap = await legacyEnrollmentsRef
       .orderBy('enrolledAt', 'desc')
       .limit(limit)
       .get();
@@ -181,12 +190,11 @@ async function getRecentExecutions(
       // Get sequence name
       let sequenceName = 'Unknown Sequence';
       try {
-        const seqDoc = await db
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('sequences')
-          .doc(data.sequenceId)
-          .get();
+        const seqRef = adminDal.getNestedDocRef(
+          'organizations/{orgId}/sequences/{sequenceId}',
+          { orgId: organizationId, sequenceId: data.sequenceId }
+        );
+        const seqDoc = await seqRef.get();
         if (seqDoc.exists) {
           sequenceName = seqDoc.data()?.name || sequenceName;
         }

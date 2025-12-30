@@ -43,6 +43,7 @@ export const COLLECTIONS = {
   // AUTOMATION COLLECTIONS
   // ========================================
   SEQUENCES: `${PREFIX}sequences`,
+  SEQUENCE_ENROLLMENTS: `${PREFIX}sequenceEnrollments`,
   CAMPAIGNS: `${PREFIX}campaigns`,
   WORKFLOWS: `${PREFIX}workflows`,
   
