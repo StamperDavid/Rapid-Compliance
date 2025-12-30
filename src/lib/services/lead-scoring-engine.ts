@@ -33,10 +33,8 @@ import type {
   StoredLeadScore,
   SeniorityLevel,
   Department,
-  SCORE_GRADE_THRESHOLDS,
-  PRIORITY_THRESHOLDS,
-  DEFAULT_SCORING_RULES,
 } from '@/types/lead-scoring';
+import { DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
 
 // ============================================================================
 // CONSTANTS
