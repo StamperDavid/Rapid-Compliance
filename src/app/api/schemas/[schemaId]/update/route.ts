@@ -4,7 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
 import { SchemaChangeEventPublisherServer } from '@/lib/schema/server/schema-change-publisher-server';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
@@ -19,6 +20,13 @@ export async function POST(
   context: { params: Promise<{ schemaId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    
     const params = await context.params;
     const body = await request.json();
     const { organizationId, workspaceId, updates, userId } = body;
@@ -30,16 +38,9 @@ export async function POST(
       );
     }
     
-    
-    // Get current schema
-    const schemaDoc = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('schemas')
-      .doc(params.schemaId)
-      .get();
+    // Get current schema using Admin DAL
+    const schemasCollection = adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas');
+    const schemaDoc = await schemasCollection.doc(params.schemaId).get();
     
     if (!schemaDoc.exists) {
       return NextResponse.json(
@@ -69,11 +70,11 @@ export async function POST(
       }
     }
     
-    // Update schema
+    // Update schema using Admin DAL
     await schemaDoc.ref.update({
       ...updates,
       version: (oldSchema?.version || 1) + 1,
-      updatedAt: admin.firestore.Timestamp.now(),
+      updatedAt: FieldValue.serverTimestamp(),
       updatedBy: userId,
     });
     
