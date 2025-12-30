@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -14,6 +15,10 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
 
@@ -25,13 +30,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const snapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('custom-domains')
-      .get();
+    const domainsRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/config/custom-domains',
+      { orgId: organizationId }
+    );
+    const snapshot = await domainsRef.get();
 
     const domains = snapshot.docs.map(doc => {
       const data = doc.data();
@@ -72,6 +75,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, domain } = body;
 
@@ -100,7 +107,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if domain already exists (across all organizations)
-    const allOrgsSnapshot = await db.collectionGroup('custom-domains')
+    // Note: Collection group queries still use the underlying db
+    const allOrgsSnapshot = await adminDal.getCollection('ORGANIZATIONS')
+      .collectionGroup('custom-domains')
       .where('__name__', '==', domain)
       .limit(1)
       .get();
@@ -111,8 +120,6 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-
-    const now = new Date().toISOString();
 
     // Determine verification method based on domain
     const isApex = !domain.includes('www.');
@@ -130,25 +137,23 @@ export async function POST(request: NextRequest) {
       sslEnabled: false,
       sslStatus: 'pending' as const,
       status: 'pending' as const,
-      createdAt: now,
-      lastCheckedAt: now,
+      createdAt: FieldValue.serverTimestamp(),
+      lastCheckedAt: FieldValue.serverTimestamp(),
     };
 
     // Save domain using domain name as document ID
-    const domainRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('custom-domains')
-      .doc(domain);
-
+    const domainsRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/config/custom-domains',
+      { orgId: organizationId }
+    );
+    const domainRef = domainsRef.doc(domain);
     await domainRef.set(domainData);
 
     // Also save to global domains collection for quick lookup
-    await db.collection('custom-domains').doc(domain).set({
+    const globalDomainsRef = adminDal.getNestedCollection('custom-domains');
+    await globalDomainsRef.doc(domain).set({
       organizationId,
-      createdAt: now,
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     return NextResponse.json({

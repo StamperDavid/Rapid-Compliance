@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { adminAuth } from '@/lib/firebase/admin';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -46,8 +47,12 @@ export async function POST(request: NextRequest) {
     
     const userId = decodedToken.uid;
     
-    // Get user document to check role
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+    
+    // Get user document to check role using Admin DAL
+    const userDoc = await adminDal.safeGetDoc('USERS', userId);
     
     if (!userDoc.exists) {
       return createErrorResponse('User not found in database', 403);
