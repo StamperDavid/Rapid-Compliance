@@ -4,7 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -13,6 +14,10 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
 
@@ -30,12 +35,10 @@ export async function GET(request: NextRequest) {
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    const settingsRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('settings');
-
+    const settingsRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/settings',
+      { orgId: organizationId }
+    );
     const doc = await settingsRef.get();
 
     if (!doc.exists) {
@@ -84,6 +87,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, settings } = body;
 
@@ -102,25 +109,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const settingsRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('settings');
-
-    const now = admin.firestore.Timestamp.now();
+    const settingsRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/settings',
+      { orgId: organizationId }
+    );
 
     // CRITICAL: Ensure organizationId is in the data
     const settingsData = {
       ...settings,
       organizationId, // Force correct organizationId
-      updatedAt: now,
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
     // If creating for first time, add createdAt
     const existingDoc = await settingsRef.get();
     if (!existingDoc.exists) {
-      settingsData.createdAt = now;
+      settingsData.createdAt = FieldValue.serverTimestamp();
     }
 
     await settingsRef.set(settingsData, { merge: true });
@@ -147,6 +151,10 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, settings } = body;
 
@@ -174,25 +182,22 @@ export async function PUT(request: NextRequest) {
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    const settingsRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('settings');
-
-    const now = admin.firestore.Timestamp.now();
+    const settingsRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/settings',
+      { orgId: organizationId }
+    );
 
     // CRITICAL: Ensure organizationId is in the data
     const settingsData = {
       ...settings,
       organizationId, // Force correct organizationId
-      updatedAt: now,
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
     // If creating for first time, add createdAt
     const existingDoc = await settingsRef.get();
     if (!existingDoc.exists) {
-      settingsData.createdAt = now;
+      settingsData.createdAt = FieldValue.serverTimestamp();
     }
 
     await settingsRef.set(settingsData, { merge: true });

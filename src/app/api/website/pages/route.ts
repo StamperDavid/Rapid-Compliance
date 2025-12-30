@@ -4,7 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -14,6 +15,10 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
     const status = searchParams.get('status'); // Filter by status
@@ -32,12 +37,10 @@ export async function GET(request: NextRequest) {
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    const pagesRef = db
-      .collection('organizations')
-      .doc(organizationId) // ← SCOPED to this org only
-      .collection('website')
-      .doc('pages')
-      .collection('items');
+    const pagesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/pages/items',
+      { orgId: organizationId }
+    );
 
     // Build query with optional status filter
     let snapshot;
@@ -76,6 +79,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, page } = body;
 
@@ -111,7 +118,6 @@ export async function POST(request: NextRequest) {
     //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     // }
 
-    const now = admin.firestore.Timestamp.now();
     const performedBy = await getUserIdentifier();
     const pageId = page.id || `page_${Date.now()}`;
 
@@ -124,19 +130,18 @@ export async function POST(request: NextRequest) {
       content: page.content || [],
       seo: page.seo || {},
       version: 1,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       createdBy: performedBy,
       lastEditedBy: performedBy,
     };
 
     // Check if slug already exists for this org
-    const existingPageQuery = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('pages')
-      .collection('items')
+    const pagesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/pages/items',
+      { orgId: organizationId }
+    );
+    const existingPageQuery = await pagesRef
       .where('slug', '==', page.slug)
       .limit(1)
       .get();
@@ -148,14 +153,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pageRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('pages')
-      .collection('items')
-      .doc(pageId);
-
+    const pageRef = pagesRef.doc(pageId);
     await pageRef.set(pageData);
 
     return NextResponse.json({
