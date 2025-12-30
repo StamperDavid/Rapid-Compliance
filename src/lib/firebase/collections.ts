@@ -60,6 +60,7 @@ export const COLLECTIONS = {
   TRAINING_DATA: `${PREFIX}trainingData`,
   FINE_TUNING_JOBS: `${PREFIX}fineTuningJobs`,
   AB_TESTS: `${PREFIX}abTests`,
+  BASE_MODELS: `${PREFIX}baseModels`,
   
   // ========================================
   // SYSTEM COLLECTIONS

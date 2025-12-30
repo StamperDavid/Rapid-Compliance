@@ -167,14 +167,17 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
     });
     logger.info('[saveBaseModel] Successfully saved to baseModels collection', { file: 'base-model-builder.ts' });
   } else {
-    // Client-side: Use Client SDK (follows security rules)
-    const { db } = await import('@/lib/firebase/config');
-    const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-    const docRef = doc(db, 'baseModels', baseModel.id);
-    await setDoc(docRef, {
+    // Client-side: Use Client SDK with DAL (follows security rules)
+    const { dal } = await import('@/lib/firebase/dal');
+    const { serverTimestamp } = await import('firebase/firestore');
+    await dal.safeSetDoc('BASE_MODELS', baseModel.id, {
       ...baseModel,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+    }, {
+      audit: true,
+      userId: baseModel.createdBy,
+      organizationId: baseModel.orgId,
     });
     logger.info('[saveBaseModel] Successfully saved to baseModels collection (client)', { file: 'base-model-builder.ts' });
   }
@@ -197,15 +200,14 @@ export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
     logger.info('[getBaseModel] Found base models', { count: baseModels.length, file: 'base-model-builder.ts' });
     return baseModels.length > 0 ? (baseModels[0] as BaseModel) : null;
   } else {
-    // Client-side: Use Client SDK
-    const { db } = await import('@/lib/firebase/config');
-    const { collection, query, where, getDocs } = await import('firebase/firestore');
-    const q = query(
-      collection(db, 'baseModels'),
+    // Client-side: Use DAL
+    const { dal } = await import('@/lib/firebase/dal');
+    const { where } = await import('firebase/firestore');
+    
+    const snapshot = await dal.safeGetDocs('BASE_MODELS',
       where('orgId', '==', orgId)
     );
     
-    const snapshot = await getDocs(q);
     logger.info('[getBaseModel] Client query found base models', { 
       count: snapshot.docs.length,
       file: 'base-model-builder.ts' 
@@ -250,13 +252,16 @@ export async function updateBaseModel(
       updatedAt: new Date().toISOString(),
     });
   } else {
-    // Client-side: Use Client SDK
-    const { db } = await import('@/lib/firebase/config');
-    const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-    const docRef = doc(db, 'baseModels', baseModelId);
-    await updateDoc(docRef, {
+    // Client-side: Use DAL
+    const { dal } = await import('@/lib/firebase/dal');
+    const { serverTimestamp } = await import('firebase/firestore');
+    await dal.safeUpdateDoc('BASE_MODELS', baseModelId, {
       ...updates,
       updatedAt: serverTimestamp(),
+    }, {
+      audit: true,
+      userId: 'system-update', // No userId available in this context
+      organizationId: orgId,
     });
   }
 }
@@ -291,11 +296,10 @@ export async function addTrainingScenario(
       updatedAt: new Date().toISOString(),
     });
   } else {
-    // Client-side: Use Client SDK
-    const { db } = await import('@/lib/firebase/config');
-    const { doc, getDoc, updateDoc, serverTimestamp } = await import('firebase/firestore');
-    const docRef = doc(db, 'baseModels', baseModelId);
-    const docSnap = await getDoc(docRef);
+    // Client-side: Use DAL
+    const { dal } = await import('@/lib/firebase/dal');
+    const { serverTimestamp } = await import('firebase/firestore');
+    const docSnap = await dal.safeGetDoc('BASE_MODELS', baseModelId);
     
     if (!docSnap.exists()) {
       throw new Error('Base model not found');
@@ -308,11 +312,15 @@ export async function addTrainingScenario(
     const totalScore = current.trainingScore * current.trainingScenarios.length + score;
     const newScore = totalScore / scenarios.length;
     
-    await updateDoc(docRef, {
+    await dal.safeUpdateDoc('BASE_MODELS', baseModelId, {
       trainingScenarios: scenarios,
       trainingScore: newScore,
       status: newScore >= 80 ? 'ready' : 'training',
       updatedAt: serverTimestamp(),
+    }, {
+      audit: true,
+      userId: 'system-training', // No userId available in this context
+      organizationId: current.orgId,
     });
   }
 }

@@ -11,40 +11,43 @@
 
 ## 📊 PROGRESS OVERVIEW
 
-- **Phase 1 (Auth & Signup):** 1/2 ⚡
+- **Phase 1 (Auth & Signup):** 2/2 ✅ COMPLETE
 - **Phase 2 (Core Services):** 0/5 ✗
 - **Phase 3 (API Routes):** 0/12 ✗
 - **Phase 4 (Integrations):** 0/8 ✗
 - **Phase 5 (Advanced Features):** 0/10 ✗
 
-**Total:** 1/37 files migrated (2.7%)
+**Total:** 2/37 files migrated (5.4%)
 
 ---
 
-## 🎯 PHASE 1: Auth & Signup (CURRENT)
+## ✅ PHASE 1: Auth & Signup (COMPLETE)
 **Critical path - user registration and authentication**
 
-- [x] `src/app/(public)/signup/page.tsx` ✅ DONE (commit 3ef3e81)
+- [x] `src/app/(public)/signup/page.tsx` ✅ (commit 3ef3e81)
   - Migrated organization creation to `dal.safeSetDoc('ORGANIZATIONS', ...)`
   - Migrated user creation to `dal.safeSetDoc('USERS', ...)`
   - Added audit logging with userId from Firebase Auth
   - Removed unused imports (setDoc, doc, db)
   
-- [ ] `src/lib/auth/auth-service.ts` ⚡ IN PROGRESS
-  - Lines 68-79: Uses old FirestoreService abstraction
-  - Lines 200, 231-234: Uses old FirestoreService
-  - Need to migrate to DAL with proper audit trails
+- [x] `src/lib/auth/auth-service.ts` ✅ (commit 986f17e)
+  - Replaced FirestoreService.set → dal.safeSetDoc
+  - Replaced FirestoreService.get → dal.safeGetDoc
+  - Replaced FirestoreService.update → dal.safeUpdateDoc
+  - Fixed COLLECTIONS import to use new location
+  - Switched from ISO strings to serverTimestamp()
+  - Added audit logging with userId
 
 ---
 
-## 🔧 PHASE 2: Core Services
+## 🔧 PHASE 2: Core Services (CURRENT)
 **High-priority business logic**
 
-- [ ] `src/lib/services/lead-scoring-engine.ts`
-- [ ] `src/lib/services/sequencer.ts`
-- [ ] `src/lib/agent/base-model-builder.ts`
-- [ ] `src/lib/crm/lead-service.ts`
-- [ ] `src/lib/outbound/meeting-scheduler.ts`
+- [ ] `src/lib/services/lead-scoring-engine.ts` ⏸️ ADMIN SDK (needs Admin DAL)
+- [ ] `src/lib/services/sequencer.ts` ⏸️ ADMIN SDK (needs Admin DAL)
+- [ ] `src/lib/agent/base-model-builder.ts` ⚡ NEXT (Client SDK)
+- [ ] `src/lib/crm/lead-service.ts` (Client SDK)
+- [ ] `src/lib/outbound/meeting-scheduler.ts` (Mixed SDK)
 
 ---
 
@@ -203,6 +206,7 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 ---
 
 **Last Updated:** Dec 30, 2025
-**Current Phase:** Phase 1 - Auth & Signup
-**Next File:** `src/lib/auth/auth-service.ts`
-**Last Commit:** 3ef3e81
+**Current Phase:** Phase 2 - Core Services
+**Next File:** `src/lib/services/lead-scoring-engine.ts`
+**Last Commit:** 986f17e
+**Phase 1:** ✅ COMPLETE (2/2 files)
