@@ -26,9 +26,10 @@ if (!isFirebaseConfigured || !auth) {
     logger.warn('Firebase Auth is not configured. Authentication features will be disabled.', { file: 'auth-service.ts' });
   }
 }
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { dal } from '@/lib/firebase/dal';
+import { COLLECTIONS } from '@/lib/firebase/collections';
+import { serverTimestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
 
 export interface AuthUser {
   uid: string;
@@ -63,20 +64,18 @@ export async function signUp(
       await sendEmailVerification(userCredential.user);
     }
     
-    // Create user document in Firestore
+    // Create user document in Firestore using DAL
     if (userCredential.user) {
-      await FirestoreService.set(
-        COLLECTIONS.USERS,
-        userCredential.user.uid,
-        {
-          email: userCredential.user.email,
-          displayName: displayName || userCredential.user.displayName,
-          emailVerified: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        false
-      );
+      await dal.safeSetDoc('USERS', userCredential.user.uid, {
+        email: userCredential.user.email,
+        displayName: displayName || userCredential.user.displayName,
+        emailVerified: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, {
+        audit: true,
+        userId: userCredential.user.uid,
+      });
     }
     
     return userCredential;
@@ -196,8 +195,9 @@ export function onAuthStateChange(
 
   return onAuthStateChanged(auth, async (user) => {
     if (user) {
-      // Load user profile from Firestore
-      const userProfile = await FirestoreService.get(COLLECTIONS.USERS, user.uid);
+      // Load user profile from Firestore using DAL
+      const userDoc = await dal.safeGetDoc('USERS', user.uid);
+      const userProfile = userDoc.exists() ? userDoc.data() : null;
       
       callback({
         uid: user.uid,
@@ -227,10 +227,13 @@ export async function updateUserProfile(updates: {
     
     await updateProfile(user, updates);
     
-    // Also update Firestore
-    await FirestoreService.update(COLLECTIONS.USERS, user.uid, {
+    // Also update Firestore using DAL
+    await dal.safeUpdateDoc('USERS', user.uid, {
       ...updates,
-      updatedAt: new Date().toISOString(),
+      updatedAt: serverTimestamp(),
+    }, {
+      audit: true,
+      userId: user.uid,
     });
   } catch (error: any) {
     logger.error('Error updating profile:', error, { file: 'auth-service.ts' });
