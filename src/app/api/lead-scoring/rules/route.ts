@@ -182,7 +182,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    await adminAuth.verifyIdToken(token);
+    await auth.verifyIdToken(token);
 
     const body = await req.json();
     const { organizationId, rulesId, ...updates } = body;
