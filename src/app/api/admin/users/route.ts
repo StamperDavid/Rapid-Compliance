@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { 
   verifyAdminRequest, 
   createErrorResponse, 
@@ -45,27 +46,33 @@ export async function GET(request: NextRequest) {
   }
   
   try {
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+    
     // Parse query params for filtering and pagination
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const pageSize = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
-    // Build query
-    let query = adminDb.collection('users').orderBy('createdAt', 'desc');
-    
-    if (organizationId) {
-      query = query.where('organizationId', '==', organizationId);
-    }
-    
-    // Add cursor if provided
-    if (startAfter) {
-      const cursorDate = new Date(startAfter);
-      query = query.startAfter(cursorDate);
-    }
-    
-    // Fetch one extra to check if there are more results
-    const usersSnapshot = await query.limit(pageSize + 1).get();
+    // Build query using Admin DAL
+    const usersSnapshot = await adminDal.safeQuery('USERS', (ref) => {
+      let query = ref.orderBy('createdAt', 'desc');
+      
+      if (organizationId) {
+        query = query.where('organizationId', '==', organizationId);
+      }
+      
+      // Add cursor if provided
+      if (startAfter) {
+        const cursorDate = new Date(startAfter);
+        query = query.startAfter(cursorDate);
+      }
+      
+      // Fetch one extra to check if there are more results
+      return query.limit(pageSize + 1);
+    });
     
     const hasMore = usersSnapshot.docs.length > pageSize;
     const docs = hasMore ? usersSnapshot.docs.slice(0, pageSize) : usersSnapshot.docs;
@@ -130,6 +137,10 @@ export async function PATCH(request: NextRequest) {
   }
   
   try {
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+    
     const body = await request.json();
     
     if (!body.userId || typeof body.userId !== 'string') {
@@ -150,10 +161,13 @@ export async function PATCH(request: NextRequest) {
       return createErrorResponse('No valid update fields provided', 400);
     }
     
-    updates.updatedAt = new Date();
+    updates.updatedAt = FieldValue.serverTimestamp();
     updates.updatedBy = authResult.user.uid;
     
-    await adminDb.collection('users').doc(body.userId).update(updates);
+    await adminDal.safeUpdateDoc('USERS', body.userId, updates, {
+      audit: true,
+      userId: authResult.user.uid,
+    });
     
     logger.info('Admin updated user', {
       route: '/api/admin/users',
