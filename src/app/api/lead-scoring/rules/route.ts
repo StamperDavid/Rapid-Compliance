@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, db } from '@/lib/firebase-admin';
+import { auth, db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { ScoringRules } from '@/types/lead-scoring';
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decodedToken = await adminAuth.verifyIdToken(token);
+    const decodedToken = await auth.verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decodedToken = await adminAuth.verifyIdToken(token);
+    const decodedToken = await auth.verifyIdToken(token);
     const userId = decodedToken.uid;
 
     const body = await req.json();

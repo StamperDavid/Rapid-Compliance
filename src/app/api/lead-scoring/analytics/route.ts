@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, db } from '@/lib/firebase-admin';
+import { auth, db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
 
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    await adminAuth.verifyIdToken(token);
+    await auth.verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
