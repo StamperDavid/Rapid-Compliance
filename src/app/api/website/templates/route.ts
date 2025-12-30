@@ -5,7 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
@@ -16,6 +17,10 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
 
@@ -28,12 +33,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get custom templates for this org
-    const templatesRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('templates');
+    const templatesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/config/templates',
+      { orgId: organizationId }
+    );
 
     const snapshot = await templatesRef.get();
     const templates: PageTemplate[] = [];
@@ -68,6 +71,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const body = await request.json();
     const { organizationId, template } = body;
 
@@ -104,13 +111,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Save to Firestore
-    const templateRef = db
-      .collection('organizations')
-      .doc(organizationId) // CRITICAL: Scoped to org
-      .collection('website')
-      .doc('config')
-      .collection('templates')
-      .doc(templateData.id);
+    const templateRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/templates/{templateId}',
+      { orgId: organizationId, templateId: templateData.id }
+    );
 
     await templateRef.set(templateData);
 
@@ -133,6 +137,10 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
     const templateId = searchParams.get('templateId');
@@ -146,13 +154,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete template
-    const templateRef = db
-      .collection('organizations')
-      .doc(organizationId) // CRITICAL: Scoped to org
-      .collection('website')
-      .doc('config')
-      .collection('templates')
-      .doc(templateId);
+    const templateRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/templates/{templateId}',
+      { orgId: organizationId, templateId }
+    );
 
     // Verify template belongs to this org
     const templateDoc = await templateRef.get();
