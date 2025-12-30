@@ -7,7 +7,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { calculateLeadScore, calculateLeadScoresBatch } from '@/lib/services/lead-scoring-engine';
 import type { LeadScoreRequest, BatchLeadScoreRequest } from '@/types/lead-scoring';
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await getAuth(adminApp).verifyIdToken(token);
     const userId = decodedToken.uid;
 
     // Parse request body
