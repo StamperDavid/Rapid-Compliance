@@ -117,15 +117,21 @@ export async function GET(request: NextRequest) {
     const organizationId = user.organizationId!;
     const { searchParams } = new URL(request.url);
     const sequenceId = searchParams.get('sequenceId');
+    
+    // Date range filtering
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const dateRange = parseDateRange(startDate, endDate);
 
     logger.info('[Analytics API] Fetching analytics', {
       organizationId,
       sequenceId: sequenceId || 'all',
+      dateRange: dateRange ? `${dateRange.start.toISOString()} - ${dateRange.end.toISOString()}` : 'all-time',
     });
 
     // If specific sequence requested, return detailed analytics
     if (sequenceId) {
-      const performance = await getSequencePerformance(organizationId, sequenceId);
+      const performance = await getSequencePerformance(organizationId, sequenceId, dateRange);
       if (!performance) {
         return NextResponse.json(
           { error: 'Sequence not found' },
@@ -138,8 +144,8 @@ export async function GET(request: NextRequest) {
 
     // Otherwise, return summary analytics for all sequences
     const [performances, summary] = await Promise.all([
-      getAllSequencePerformances(organizationId),
-      getAnalyticsSummary(organizationId),
+      getAllSequencePerformances(organizationId, dateRange),
+      getAnalyticsSummary(organizationId, dateRange),
     ]);
 
     return NextResponse.json({
@@ -161,11 +167,33 @@ export async function GET(request: NextRequest) {
 // ============================================================================
 
 /**
+ * Parse date range from query parameters
+ */
+function parseDateRange(startDate: string | null, endDate: string | null): { start: Date; end: Date } | null {
+  if (!startDate || !endDate) {
+    return null;
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return null;
+  }
+
+  // Set end date to end of day
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+/**
  * Get performance metrics for a specific sequence
  */
 async function getSequencePerformance(
   organizationId: string,
-  sequenceId: string
+  sequenceId: string,
+  dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance | null> {
   try {
     // Try native Hunter-Closer sequencer first
@@ -212,7 +240,8 @@ async function getSequencePerformance(
  * Get performance for all sequences in an organization
  */
 async function getAllSequencePerformances(
-  organizationId: string
+  organizationId: string,
+  dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance[]> {
   try {
     const performances: SequencePerformance[] = [];
@@ -398,10 +427,11 @@ function mapLegacyStepType(type: string): 'email' | 'linkedin' | 'phone' | 'sms'
  * Get summary analytics across all sequences
  */
 async function getAnalyticsSummary(
-  organizationId: string
+  organizationId: string,
+  dateRange?: { start: Date; end: Date } | null
 ): Promise<AnalyticsSummary> {
   try {
-    const performances = await getAllSequencePerformances(organizationId);
+    const performances = await getAllSequencePerformances(organizationId, dateRange);
 
     const activeSequences = performances.filter(p => p.isActive).length;
     

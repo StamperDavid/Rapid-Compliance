@@ -18,6 +18,15 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
+import { DateRangeFilter, DateRange } from '@/components/analytics/DateRangeFilter';
+import {
+  exportSequencePerformanceToCSV,
+  exportSummaryToCSV,
+  exportChannelPerformanceToCSV,
+  exportStepPerformanceToCSV,
+} from '@/lib/utils/csv-export';
+import { ABTestComparison } from '@/components/analytics/ABTestComparison';
+import { PerformanceTrendsChart, generateTrendDataFromAnalytics } from '@/components/analytics/PerformanceTrendsChart';
 
 // ============================================================================
 // TYPES
@@ -115,6 +124,18 @@ export default function SequenceAnalyticsPage() {
   const [recentExecutions, setRecentExecutions] = useState<SequenceExecution[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState<'overview' | 'sequences' | 'channels' | 'monitoring'>('overview');
+  
+  // A/B test comparison state
+  const [showABTest, setShowABTest] = useState(false);
+  const [abTestSequences, setABTestSequences] = useState<[SequencePerformance | null, SequencePerformance | null]>([null, null]);
+  
+  // Date range filter (default to last 30 days)
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    return { startDate, endDate, preset: '30d' };
+  });
 
   // Load analytics data
   useEffect(() => {
@@ -124,7 +145,14 @@ export default function SequenceAnalyticsPage() {
       try {
         setLoading(true);
         
-        const response = await fetch(`/api/sequences/analytics`, {
+        // Build query params with date range
+        const params = new URLSearchParams();
+        if (dateRange) {
+          params.set('startDate', dateRange.startDate.toISOString());
+          params.set('endDate', dateRange.endDate.toISOString());
+        }
+        
+        const response = await fetch(`/api/sequences/analytics?${params.toString()}`, {
           headers: {
             'x-organization-id': orgId,
           },
@@ -177,7 +205,7 @@ export default function SequenceAnalyticsPage() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [orgId]);
+  }, [orgId, dateRange]);
 
   if (loading) {
     return (
@@ -208,14 +236,107 @@ export default function SequenceAnalyticsPage() {
           <Link href={`/workspace/${orgId}/outbound/sequences`} style={{ color: '#6366f1', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
             ← Back to Sequences
           </Link>
-          <div style={{ marginTop: '1rem' }}>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
-              📊 Sequence Analytics
-            </h1>
-            <p style={{ color: '#666', fontSize: '0.875rem' }}>
-              Performance insights across all omni-channel sequences
-            </p>
+          <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+                📊 Sequence Analytics
+              </h1>
+              <p style={{ color: '#666', fontSize: '0.875rem' }}>
+                Performance insights across all omni-channel sequences
+              </p>
+            </div>
+            
+            {/* Export Buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              {activeView === 'overview' && summary && (
+                <>
+                  <button
+                    onClick={() => exportSummaryToCSV(summary, dateRange)}
+                    style={{
+                      padding: '0.75rem 1.25rem',
+                      backgroundColor: '#1a1a1a',
+                      color: '#fff',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    📥 Export Summary
+                  </button>
+                  <button
+                    onClick={() => exportSequencePerformanceToCSV(sequences)}
+                    style={{
+                      padding: '0.75rem 1.25rem',
+                      backgroundColor: '#1a1a1a',
+                      color: '#fff',
+                      border: '1px solid #333',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    📊 Export All Sequences
+                  </button>
+                </>
+              )}
+              
+              {activeView === 'sequences' && (
+                <button
+                  onClick={() => exportSequencePerformanceToCSV(sequences)}
+                  style={{
+                    padding: '0.75rem 1.25rem',
+                    backgroundColor: '#1a1a1a',
+                    color: '#fff',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  📥 Export Sequences
+                </button>
+              )}
+              
+              {activeView === 'channels' && summary && (
+                <button
+                  onClick={() => exportChannelPerformanceToCSV(summary.channelPerformance)}
+                  style={{
+                    padding: '0.75rem 1.25rem',
+                    backgroundColor: '#1a1a1a',
+                    color: '#fff',
+                    border: '1px solid #333',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  📥 Export Channels
+                </button>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Date Range Filter */}
+        <div style={{ marginBottom: '2rem' }}>
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
         </div>
 
         {/* View Tabs */}
@@ -330,6 +451,14 @@ export default function SequenceAnalyticsPage() {
               />
             </div>
 
+            {/* Performance Trends */}
+            <div style={{ marginBottom: '2rem' }}>
+              <PerformanceTrendsChart
+                data={generateTrendDataFromAnalytics(sequences, dateRange)}
+                title="📈 Performance Trends Over Time"
+              />
+            </div>
+
             {/* Top Performers */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
               <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
@@ -426,22 +555,125 @@ export default function SequenceAnalyticsPage() {
                 onBack={() => setSelectedSequence(null)}
               />
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                {sequences.map((seq) => (
-                  <div
-                    key={seq.sequenceId}
-                    style={{
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
-                      borderRadius: '1rem',
-                      padding: '1.5rem',
-                      cursor: 'pointer',
-                      transition: 'border-color 0.2s',
-                    }}
-                    onClick={() => setSelectedSequence(seq)}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = '#6366f1'}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#333'}
-                  >
+              <>
+                {/* A/B Test Comparison Banner */}
+                {sequences.length >= 2 && (
+                  <div style={{
+                    backgroundColor: '#1a1a2e',
+                    border: '1px solid #6366f1',
+                    borderRadius: '0.75rem',
+                    padding: '1rem 1.5rem',
+                    marginBottom: '1.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                    <div>
+                      <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
+                        🆚 Compare Sequences
+                      </h3>
+                      <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                        {abTestSequences[0] && abTestSequences[1] ? (
+                          <>Comparing: <strong style={{ color: '#6366f1' }}>{abTestSequences[0].sequenceName}</strong> vs <strong style={{ color: '#6366f1' }}>{abTestSequences[1].sequenceName}</strong></>
+                        ) : abTestSequences[0] || abTestSequences[1] ? (
+                          <>Select one more sequence to compare</>
+                        ) : (
+                          <>Click on two sequences below to compare them side by side</>
+                        )}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      {abTestSequences[0] && abTestSequences[1] && (
+                        <button
+                          onClick={() => setShowABTest(true)}
+                          style={{
+                            padding: '0.75rem 1.25rem',
+                            backgroundColor: '#6366f1',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                          }}
+                        >
+                          View Comparison
+                        </button>
+                      )}
+                      {(abTestSequences[0] || abTestSequences[1]) && (
+                        <button
+                          onClick={() => setABTestSequences([null, null])}
+                          style={{
+                            padding: '0.75rem 1.25rem',
+                            backgroundColor: '#1a1a1a',
+                            color: '#999',
+                            border: '1px solid #333',
+                            borderRadius: '0.5rem',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                          }}
+                        >
+                          Clear Selection
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                  {sequences.map((seq) => {
+                    const isSelectedForAB = abTestSequences[0]?.sequenceId === seq.sequenceId || abTestSequences[1]?.sequenceId === seq.sequenceId;
+                    
+                    return (
+                    <div
+                      key={seq.sequenceId}
+                      style={{
+                        backgroundColor: '#0a0a0a',
+                        border: `2px solid ${isSelectedForAB ? '#6366f1' : '#333'}`,
+                        borderRadius: '1rem',
+                        padding: '1.5rem',
+                        cursor: 'pointer',
+                        transition: 'border-color 0.2s',
+                        position: 'relative',
+                      }}
+                      onClick={(e) => {
+                        // Check if shift key is pressed for A/B test selection
+                        if (e.shiftKey) {
+                          e.preventDefault();
+                          if (abTestSequences[0]?.sequenceId === seq.sequenceId) {
+                            setABTestSequences([null, abTestSequences[1]]);
+                          } else if (abTestSequences[1]?.sequenceId === seq.sequenceId) {
+                            setABTestSequences([abTestSequences[0], null]);
+                          } else if (!abTestSequences[0]) {
+                            setABTestSequences([seq, abTestSequences[1]]);
+                          } else if (!abTestSequences[1]) {
+                            setABTestSequences([abTestSequences[0], seq]);
+                          } else {
+                            setABTestSequences([seq, abTestSequences[1]]);
+                          }
+                        } else {
+                          setSelectedSequence(seq);
+                        }
+                      }}
+                      onMouseEnter={(e) => !isSelectedForAB && (e.currentTarget.style.borderColor = '#6366f1')}
+                      onMouseLeave={(e) => !isSelectedForAB && (e.currentTarget.style.borderColor = '#333')}
+                    >
+                      {isSelectedForAB && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '0.75rem',
+                          right: '0.75rem',
+                          backgroundColor: '#6366f1',
+                          color: '#fff',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                        }}>
+                          {abTestSequences[0]?.sequenceId === seq.sequenceId ? 'A' : 'B'}
+                        </div>
+                      )}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                       <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff' }}>
                         {seq.sequenceName}
@@ -475,16 +707,34 @@ export default function SequenceAnalyticsPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <MetricPill label="Open" value={`${seq.openRate.toFixed(1)}%`} />
-                      <MetricPill label="Click" value={`${seq.clickRate.toFixed(1)}%`} />
-                      <MetricPill label="Reply" value={`${seq.replyRate.toFixed(1)}%`} highlight={seq.replyRate > 5} />
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <MetricPill label="Open" value={`${seq.openRate.toFixed(1)}%`} />
+                        <MetricPill label="Click" value={`${seq.clickRate.toFixed(1)}%`} />
+                        <MetricPill label="Reply" value={`${seq.replyRate.toFixed(1)}%`} highlight={seq.replyRate > 5} />
+                      </div>
+                      
+                      {/* Hint for A/B test */}
+                      {!isSelectedForAB && (
+                        <div style={{ marginTop: '1rem', padding: '0.5rem', backgroundColor: '#111', borderRadius: '0.25rem', fontSize: '0.75rem', color: '#666', textAlign: 'center' }}>
+                          Hold Shift + Click to select for A/B test
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  );
+                })}
+                </div>
+              </>
             )}
           </div>
+        )}
+        
+        {/* A/B Test Comparison Modal */}
+        {showABTest && abTestSequences[0] && abTestSequences[1] && (
+          <ABTestComparison
+            sequenceA={abTestSequences[0]}
+            sequenceB={abTestSequences[1]}
+            onClose={() => setShowABTest(false)}
+          />
         )}
 
         {/* Channel Breakdown Tab */}
