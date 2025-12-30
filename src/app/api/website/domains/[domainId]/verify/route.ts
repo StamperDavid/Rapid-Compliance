@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { promises as dns } from 'dns';
 import { logger } from '@/lib/logger/logger';
 
@@ -18,6 +18,10 @@ export async function POST(
   context: { params: Promise<{ domainId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const body = await request.json();
     const { organizationId } = body;
@@ -31,13 +35,10 @@ export async function POST(
       );
     }
 
-    const domainRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('custom-domains')
-      .doc(domainId);
+    const domainRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/custom-domains/{domainId}',
+      { orgId: organizationId, domainId }
+    );
 
     const doc = await domainRef.get();
 
@@ -78,12 +79,10 @@ export async function POST(
       });
 
       // Create audit log
-      const auditRef = db
-        .collection('organizations')
-        .doc(organizationId)
-        .collection('website')
-        .doc('audit-log')
-        .collection('entries');
+      const auditRef = adminDal.getNestedCollection(
+        'organizations/{orgId}/website/audit-log/entries',
+        { orgId: organizationId }
+      );
 
       await auditRef.add({
         type: 'domain_verified',
