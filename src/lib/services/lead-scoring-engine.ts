@@ -17,9 +17,9 @@
  * 4. Engagement (0-10 points) - Email opens, clicks, replies
  */
 
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson } from './discovery-engine';
 import type { DiscoveredCompany, DiscoveredPerson } from './discovery-engine';
 import type {
@@ -84,6 +84,11 @@ export async function calculateLeadScore(
   request: LeadScoreRequest
 ): Promise<LeadScore> {
   try {
+    // Safety check for Admin DAL
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     const { leadId, organizationId, scoringRulesId, forceRescore, discoveryData } = request;
 
     logger.info('Calculating lead score', {
@@ -855,12 +860,16 @@ async function calculateEngagement(
   let points = 0;
 
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     // Get sequence enrollments for this lead
-    const enrollments = await db
-      .collection('sequenceEnrollments')
-      .where('leadId', '==', leadId)
-      .where('organizationId', '==', organizationId)
-      .get();
+    const enrollments = await adminDal.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
+      ref
+        .where('leadId', '==', leadId)
+        .where('organizationId', '==', organizationId)
+    );
 
     let hasEmailOpened = false;
     let hasEmailClicked = false;
@@ -1051,29 +1060,36 @@ async function getDiscoveryData(
  */
 async function getLeadData(leadId: string, organizationId: string): Promise<any> {
   try {
-    const orgsRef = db.collection('organizations').doc(organizationId);
-    const workspacesSnapshot = await orgsRef.collection('workspaces').get();
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    // Get all workspaces for this organization
+    const workspacesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/workspaces',
+      { orgId: organizationId }
+    );
+    const workspacesSnapshot = await workspacesRef.get();
 
     for (const workspaceDoc of workspacesSnapshot.docs) {
-      const leadDoc = await workspaceDoc.ref
-        .collection('entities')
-        .doc('leads')
-        .collection('records')
-        .doc(leadId)
-        .get();
-
+      // Check leads collection
+      const leadRef = adminDal.getNestedCollection(
+        'organizations/{orgId}/workspaces/{wsId}/entities/leads/records',
+        { orgId: organizationId, wsId: workspaceDoc.id }
+      ).doc(leadId);
+      
+      const leadDoc = await leadRef.get();
       if (leadDoc.exists) {
         return { id: leadDoc.id, ...leadDoc.data() };
       }
 
       // Also check contacts
-      const contactDoc = await workspaceDoc.ref
-        .collection('entities')
-        .doc('contacts')
-        .collection('records')
-        .doc(leadId)
-        .get();
-
+      const contactRef = adminDal.getNestedCollection(
+        'organizations/{orgId}/workspaces/{wsId}/entities/contacts/records',
+        { orgId: organizationId, wsId: workspaceDoc.id }
+      ).doc(leadId);
+      
+      const contactDoc = await contactRef.get();
       if (contactDoc.exists) {
         return { id: contactDoc.id, ...contactDoc.data() };
       }
@@ -1094,14 +1110,18 @@ async function getScoringRules(
   scoringRulesId?: string
 ): Promise<ScoringRules | null> {
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    const scoringRulesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/scoringRules',
+      { orgId: organizationId }
+    );
+
     // If specific rules requested
     if (scoringRulesId) {
-      const doc = await db
-        .collection('organizations')
-        .doc(organizationId)
-        .collection('scoringRules')
-        .doc(scoringRulesId)
-        .get();
+      const doc = await scoringRulesRef.doc(scoringRulesId).get();
 
       if (doc.exists) {
         const data = doc.data()!;
@@ -1114,10 +1134,7 @@ async function getScoringRules(
     }
 
     // Otherwise get active rules
-    const snapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('scoringRules')
+    const snapshot = await scoringRulesRef
       .where('isActive', '==', true)
       .limit(1)
       .get();
@@ -1143,8 +1160,12 @@ async function getScoringRules(
  * Create default scoring rules for organization
  */
 async function createDefaultScoringRules(organizationId: string): Promise<ScoringRules> {
+  if (!adminDal) {
+    throw new Error('Admin DAL not initialized');
+  }
+
   const now = new Date();
-  const rulesId = db.collection('organizations').doc().id;
+  const rulesId = adminDal.getCollection('ORGANIZATIONS').doc().id;
 
   const rules: ScoringRules = {
     id: rulesId,
@@ -1155,16 +1176,16 @@ async function createDefaultScoringRules(organizationId: string): Promise<Scorin
     createdBy: 'system',
   };
 
-  await db
-    .collection('organizations')
-    .doc(organizationId)
-    .collection('scoringRules')
-    .doc(rulesId)
-    .set({
-      ...rules,
-      createdAt: Timestamp.fromDate(now),
-      updatedAt: Timestamp.fromDate(now),
-    });
+  const scoringRulesRef = adminDal.getNestedCollection(
+    'organizations/{orgId}/scoringRules',
+    { orgId: organizationId }
+  );
+
+  await scoringRulesRef.doc(rulesId).set({
+    ...rules,
+    createdAt: Timestamp.fromDate(now),
+    updatedAt: Timestamp.fromDate(now),
+  });
 
   logger.info('Created default scoring rules', { organizationId, rulesId });
 
@@ -1179,12 +1200,16 @@ async function getCachedScore(
   organizationId: string
 ): Promise<LeadScore | null> {
   try {
-    const doc = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('leadScores')
-      .doc(leadId)
-      .get();
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    const leadScoresRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/leadScores',
+      { orgId: organizationId }
+    );
+    
+    const doc = await leadScoresRef.doc(leadId).get();
 
     if (!doc.exists) {
       return null;
@@ -1232,6 +1257,10 @@ async function cacheScore(
   person: DiscoveredPerson | null
 ): Promise<void> {
   try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
     const storedScore: Omit<StoredLeadScore, 'id'> = {
       ...score,
       leadId,
@@ -1244,23 +1273,23 @@ async function cacheScore(
       },
     };
 
-    await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('leadScores')
-      .doc(leadId)
-      .set({
-        ...storedScore,
-        metadata: {
-          ...storedScore.metadata,
-          scoredAt: Timestamp.fromDate(storedScore.metadata.scoredAt),
-          expiresAt: Timestamp.fromDate(storedScore.metadata.expiresAt),
-        },
-        snapshot: {
-          ...storedScore.snapshot,
-          discoveredAt: Timestamp.fromDate(storedScore.snapshot.discoveredAt),
-        },
-      });
+    const leadScoresRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/leadScores',
+      { orgId: organizationId }
+    );
+
+    await leadScoresRef.doc(leadId).set({
+      ...storedScore,
+      metadata: {
+        ...storedScore.metadata,
+        scoredAt: Timestamp.fromDate(storedScore.metadata.scoredAt),
+        expiresAt: Timestamp.fromDate(storedScore.metadata.expiresAt),
+      },
+      snapshot: {
+        ...storedScore.snapshot,
+        discoveredAt: Timestamp.fromDate(storedScore.snapshot.discoveredAt),
+      },
+    });
 
     logger.info('Cached lead score', { leadId, score: score.totalScore });
   } catch (error) {
