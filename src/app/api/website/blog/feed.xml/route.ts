@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
@@ -13,6 +13,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return new NextResponse('Server configuration error', { status: 500 });
+    }
+
     // Extract domain or subdomain from request
     const host = request.headers.get('host') || '';
     
@@ -23,7 +27,7 @@ export async function GET(request: NextRequest) {
     let siteDescription = 'Latest blog posts';
 
     // Check if custom domain
-    const domainsSnapshot = await db.collectionGroup('website').get();
+    const domainsSnapshot = await adminDal.getCollection('ORGANIZATIONS').collectionGroup('website').get();
     for (const doc of domainsSnapshot.docs) {
       const data = doc.data();
       if (data.customDomain === host && data.customDomainVerified) {
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
     // If not custom domain, check subdomain
     if (!organizationId) {
       const subdomain = host.split('.')[0];
-      const orgsSnapshot = await db.collection('organizations').get();
+      const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
       
       for (const orgDoc of orgsSnapshot.docs) {
         const settingsDoc = await orgDoc.ref
@@ -62,14 +66,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all published blog posts for this org
-    const postsSnapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .where('status', '==', 'published')
-      .get();
+    const postsRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/config/blog-posts',
+      { orgId: organizationId }
+    );
+    const postsSnapshot = await postsRef.where('status', '==', 'published').get();
 
     const posts: BlogPost[] = [];
     postsSnapshot.forEach((doc) => {
