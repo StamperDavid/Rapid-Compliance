@@ -32,6 +32,11 @@
     "security:audit": "node scripts/security-audit.js",
     "security:rate-limit": "node scripts/rate-limit-stress-test.js",
     "security:all": "npm run security:audit && npm run security:rate-limit",
+    "deploy:verify-env": "node scripts/verify-env-vars.js",
+    "deploy:firebase": "node scripts/deploy-firebase-rules.js",
+    "deploy:health": "node scripts/test-production-health.js",
+    "deploy:cron-secret": "node scripts/generate-cron-secret.js",
+    "deploy:check": "npm run type-check && npm run test && npm run deploy:verify-env",
     "prepare": "husky"
   },
   "dependencies": {
