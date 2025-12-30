@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +15,10 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const { searchParams } = request.nextUrl;
     const token = searchParams.get('token');
 
@@ -27,16 +31,13 @@ export async function GET(request: NextRequest) {
 
     // Search for the token across all organizations
     // This is safe because the token is cryptographically secure
-    const orgsSnapshot = await db.collection('organizations').get();
+    const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
 
     for (const orgDoc of orgsSnapshot.docs) {
-      const tokenRef = db
-        .collection('organizations')
-        .doc(orgDoc.id)
-        .collection('website')
-        .doc('preview-tokens')
-        .collection('tokens')
-        .doc(token);
+      const tokenRef = adminDal.getNestedDocRef(
+        'organizations/{orgId}/website/preview-tokens/tokens/{token}',
+        { orgId: orgDoc.id, token }
+      );
 
       const tokenDoc = await tokenRef.get();
 
