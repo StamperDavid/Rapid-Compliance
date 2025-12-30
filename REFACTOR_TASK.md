@@ -12,12 +12,13 @@
 ## 📊 PROGRESS OVERVIEW
 
 - **Phase 1 (Auth & Signup):** 2/2 ✅ COMPLETE
-- **Phase 2 (Core Services):** 1/3 ⚡ (2 files deferred for Admin DAL)
+- **Phase 2 (Core Services):** 2/2 ✅ COMPLETE (3 files deferred)
 - **Phase 3 (API Routes):** 0/12 ✗
 - **Phase 4 (Integrations):** 0/8 ✗
 - **Phase 5 (Advanced Features):** 0/10 ✗
 
-**Total:** 3/37 files migrated (8.1%)
+**Total:** 4/37 files migrated (10.8%)
+**Deferred:** 3 files (2 Admin SDK, 1 nested paths)
 
 ---
 
@@ -40,7 +41,7 @@
 
 ---
 
-## 🔧 PHASE 2: Core Services (CURRENT)
+## ✅ PHASE 2: Core Services (COMPLETE)
 **High-priority business logic**
 
 - [ ] `src/lib/services/lead-scoring-engine.ts` ⏸️ ADMIN SDK (needs Admin DAL)
@@ -53,15 +54,19 @@
   - Added BASE_MODELS to collections registry
   - Server-side (Admin SDK) operations left as-is
 - [ ] `src/lib/crm/lead-service.ts` ⏸️ NESTED PATHS (needs workspace sub-collection support in DAL)
-- [ ] `src/lib/outbound/meeting-scheduler.ts` ⚡ NEXT (Mixed SDK)
+- [x] `src/lib/outbound/meeting-scheduler.ts` ✅ (commit 3ec0fcf)
+  - Migrated FirestoreService.get(USERS) → dal.safeGetDoc
+  - Migrated FirestoreService.getAll(INTEGRATIONS) → dal.safeGetDocs
+  - Migrated org sub-collection reads to use getOrgSubCollection helper
+  - Added INTEGRATIONS to collections registry
 
 ---
 
-## 🌐 PHASE 3: API Routes
+## 🌐 PHASE 3: API Routes (CURRENT)
 **Backend endpoints**
 
 ### Admin Routes
-- [ ] `src/app/api/admin/organizations/route.ts`
+- [ ] `src/app/api/admin/organizations/route.ts` ⚡ NEXT
 - [ ] `src/app/api/admin/organizations/[orgId]/route.ts`
 
 ### Organization Routes
@@ -212,8 +217,9 @@ await dal.safeSetDoc('ORGANIZATIONS', orgId, {
 ---
 
 **Last Updated:** Dec 30, 2025
-**Current Phase:** Phase 2 - Core Services
-**Next File:** `src/lib/crm/lead-service.ts`
-**Last Commit:** d2fc783
+**Current Phase:** Phase 3 - API Routes
+**Next File:** `src/app/api/admin/organizations/route.ts`
+**Last Commit:** 3ec0fcf
 **Phase 1:** ✅ COMPLETE (2/2 files)
-**Deferred:** 2 files need Admin DAL (lead-scoring-engine, sequencer)
+**Phase 2:** ✅ COMPLETE (2/2 Client SDK files)
+**Deferred:** 3 files (lead-scoring-engine, sequencer, lead-service)
