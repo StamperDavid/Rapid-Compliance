@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -17,11 +17,16 @@ export async function GET(
   context: { params: Promise<{ domain: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const domain = decodeURIComponent(params.domain);
 
     // Check global domains collection for fast lookup
-    const globalDomainDoc = await db.collection('custom-domains').doc(domain).get();
+    const globalDomainRef = adminDal.getNestedDocRef('custom-domains/{domain}', { domain });
+    const globalDomainDoc = await globalDomainRef.get();
 
     if (!globalDomainDoc.exists) {
       return NextResponse.json(
@@ -41,13 +46,10 @@ export async function GET(
     }
 
     // Verify domain is verified
-    const domainRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('custom-domains')
-      .doc(domain);
+    const domainRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/custom-domains/{domain}',
+      { orgId: organizationId, domain }
+    );
 
     const domainDoc = await domainRef.get();
 
