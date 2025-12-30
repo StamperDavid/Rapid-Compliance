@@ -254,7 +254,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    await adminAuth.verifyIdToken(token);
+    await auth.verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
