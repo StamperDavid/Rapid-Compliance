@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 
 /**
  * GET /api/schema/[schemaId]/field/[fieldId]/rename-history
@@ -17,6 +17,13 @@ export async function GET(
   context: { params: Promise<{ schemaId: string; fieldId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
@@ -30,14 +37,11 @@ export async function GET(
     }
     
     // Get schema
-    const schemaDoc = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('schemas')
-      .doc(params.schemaId)
-      .get();
+    const schemaRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/workspaces/{workspaceId}/schemas/{schemaId}',
+      { orgId: organizationId, workspaceId, schemaId: params.schemaId }
+    );
+    const schemaDoc = await schemaRef.get();
     
     if (!schemaDoc.exists) {
       return NextResponse.json(
