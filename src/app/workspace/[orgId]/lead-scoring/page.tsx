@@ -7,7 +7,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/auth/auth-context';
+import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
 import { LeadScoreCard } from '@/components/lead-scoring/LeadScoreCard';
 import type { StoredLeadScore, LeadScoreAnalytics } from '@/types/lead-scoring';
