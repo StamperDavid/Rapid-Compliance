@@ -11,6 +11,20 @@
 
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import type { LaunchOptions } from 'playwright';
+import { logger } from '@/lib/logger/logger';
+
+export interface ProxyConfig {
+  server: string; // e.g., 'http://proxy.example.com:8080'
+  username?: string;
+  password?: string;
+  bypass?: string; // Comma-separated domains to bypass proxy
+}
+
+export interface BrowserControllerOptions extends LaunchOptions {
+  proxy?: ProxyConfig;
+  proxyList?: ProxyConfig[]; // For rotation
+  rotateProxyOnError?: boolean; // Automatically rotate to next proxy on failure
+}
 
 export interface HighValueArea {
   type: 'footer' | 'header' | 'navigation' | 'team' | 'career' | 'press' | 'contact';
@@ -57,23 +71,41 @@ export interface TechStackItem {
 }
 
 /**
- * Universal Browser Agent with stealth capabilities
+ * Universal Browser Agent with stealth capabilities and proxy rotation
  */
 export class BrowserController {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
   private page: Page | null = null;
   private currentUrl: string = '';
+  private currentProxyIndex: number = 0;
+  private proxyList: ProxyConfig[] = [];
+  private rotateProxyOnError: boolean = false;
+  private requestFailureCount: number = 0;
+  private readonly MAX_FAILURES_BEFORE_ROTATION = 3;
+  
   private userAgents: string[] = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   ];
 
-  constructor(private options?: LaunchOptions) {}
+  constructor(private options?: BrowserControllerOptions) {
+    // Setup proxy rotation if provided
+    if (options?.proxyList && options.proxyList.length > 0) {
+      this.proxyList = options.proxyList;
+      this.rotateProxyOnError = options.rotateProxyOnError || false;
+      logger.info('Proxy rotation enabled', {
+        proxyCount: this.proxyList.length,
+        rotateOnError: this.rotateProxyOnError,
+      });
+    } else if (options?.proxy) {
+      this.proxyList = [options.proxy];
+    }
+  }
 
   /**
-   * Launch browser with stealth configuration
+   * Launch browser with stealth configuration and optional proxy
    */
   async launch(): Promise<void> {
     if (this.browser) {
@@ -81,6 +113,17 @@ export class BrowserController {
     }
 
     try {
+      // Get current proxy configuration
+      const currentProxy = this.getCurrentProxy();
+      
+      if (currentProxy) {
+        logger.info('Launching browser with proxy', {
+          proxyServer: currentProxy.server,
+          proxyIndex: this.currentProxyIndex,
+          totalProxies: this.proxyList.length,
+        });
+      }
+
       // Launch with stealth settings
       this.browser = await chromium.launch({
         headless: true,
@@ -92,11 +135,12 @@ export class BrowserController {
           '--no-sandbox',
           '--disable-web-security',
           '--disable-features=IsolateOrigins,site-per-process',
+          ...(this.options?.args || []),
         ],
       });
 
-      // Create context with stealth settings
-      this.context = await this.browser.newContext({
+      // Create context with stealth settings and proxy
+      const contextOptions: any = {
         userAgent: this.getRandomUserAgent(),
         viewport: { width: 1920, height: 1080 },
         locale: 'en-US',
@@ -107,7 +151,19 @@ export class BrowserController {
           'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Encoding': 'gzip, deflate, br',
         },
-      });
+      };
+
+      // Add proxy configuration if available
+      if (currentProxy) {
+        contextOptions.proxy = {
+          server: currentProxy.server,
+          username: currentProxy.username,
+          password: currentProxy.password,
+          bypass: currentProxy.bypass,
+        };
+      }
+
+      this.context = await this.browser.newContext(contextOptions);
 
       // Add stealth scripts to hide automation
       await this.context.addInitScript(() => {
@@ -140,6 +196,42 @@ export class BrowserController {
       });
 
       this.page = await this.context.newPage();
+
+      // Setup request monitoring for proxy rotation
+      if (this.rotateProxyOnError && this.page) {
+        this.page.on('requestfailed', async (request) => {
+          const failure = request.failure();
+          logger.warn('Request failed', {
+            url: request.url(),
+            error: failure?.errorText,
+            currentProxy: this.getCurrentProxy()?.server,
+          });
+
+          this.requestFailureCount++;
+
+          // Rotate proxy if too many failures
+          if (this.requestFailureCount >= this.MAX_FAILURES_BEFORE_ROTATION) {
+            logger.info('Too many request failures, rotating proxy');
+            await this.rotateProxy();
+          }
+        });
+
+        this.page.on('response', (response) => {
+          // Reset failure count on successful responses
+          if (response.status() < 400) {
+            this.requestFailureCount = 0;
+          } else if (response.status() === 429 || response.status() === 403) {
+            // Rate limited or blocked - rotate immediately
+            logger.warn('Rate limited or blocked, rotating proxy', {
+              status: response.status(),
+              url: response.url(),
+            });
+            this.rotateProxy().catch((err) => {
+              logger.error('Failed to rotate proxy', err);
+            });
+          }
+        });
+      }
     } catch (error) {
       throw new Error(`Failed to launch browser: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -685,6 +777,116 @@ export class BrowserController {
   }
 
   /**
+   * Get current proxy configuration
+   */
+  private getCurrentProxy(): ProxyConfig | null {
+    if (this.proxyList.length === 0) {
+      return null;
+    }
+    return this.proxyList[this.currentProxyIndex];
+  }
+
+  /**
+   * Rotate to next proxy in the list
+   */
+  async rotateProxy(): Promise<void> {
+    if (this.proxyList.length <= 1) {
+      logger.debug('Cannot rotate proxy - only one or zero proxies available');
+      return;
+    }
+
+    // Move to next proxy (circular rotation)
+    this.currentProxyIndex = (this.currentProxyIndex + 1) % this.proxyList.length;
+    this.requestFailureCount = 0;
+
+    const newProxy = this.getCurrentProxy();
+    logger.info('Rotating to next proxy', {
+      proxyIndex: this.currentProxyIndex,
+      proxyServer: newProxy?.server,
+      totalProxies: this.proxyList.length,
+    });
+
+    // Close current browser and context
+    if (this.browser) {
+      await this.close();
+    }
+
+    // Relaunch with new proxy
+    await this.launch();
+  }
+
+  /**
+   * Manually set proxy by index
+   */
+  async setProxyByIndex(index: number): Promise<void> {
+    if (index < 0 || index >= this.proxyList.length) {
+      throw new Error(`Invalid proxy index: ${index}. Available: 0-${this.proxyList.length - 1}`);
+    }
+
+    this.currentProxyIndex = index;
+    this.requestFailureCount = 0;
+
+    logger.info('Manually setting proxy', {
+      proxyIndex: index,
+      proxyServer: this.getCurrentProxy()?.server,
+    });
+
+    // Relaunch with new proxy
+    if (this.browser) {
+      await this.close();
+      await this.launch();
+    }
+  }
+
+  /**
+   * Get current proxy status
+   */
+  getProxyStatus(): {
+    currentIndex: number;
+    totalProxies: number;
+    currentProxy: ProxyConfig | null;
+    failureCount: number;
+  } {
+    return {
+      currentIndex: this.currentProxyIndex,
+      totalProxies: this.proxyList.length,
+      currentProxy: this.getCurrentProxy(),
+      failureCount: this.requestFailureCount,
+    };
+  }
+
+  /**
+   * Add proxy to rotation list
+   */
+  addProxy(proxy: ProxyConfig): void {
+    this.proxyList.push(proxy);
+    logger.info('Added proxy to rotation list', {
+      proxyServer: proxy.server,
+      totalProxies: this.proxyList.length,
+    });
+  }
+
+  /**
+   * Remove proxy from rotation list
+   */
+  removeProxy(index: number): void {
+    if (index < 0 || index >= this.proxyList.length) {
+      throw new Error(`Invalid proxy index: ${index}`);
+    }
+
+    const removed = this.proxyList.splice(index, 1);
+    logger.info('Removed proxy from rotation list', {
+      proxyServer: removed[0]?.server,
+      totalProxies: this.proxyList.length,
+    });
+
+    // Adjust current index if needed
+    if (this.currentProxyIndex >= this.proxyList.length) {
+      this.currentProxyIndex = Math.max(0, this.proxyList.length - 1);
+    }
+  }
+
+  /**
    * Get current page (for advanced usage)
    */
   getPage(): Page | null {
@@ -702,6 +904,31 @@ export class BrowserController {
 /**
  * Factory function to create BrowserController instance
  */
-export function createBrowserController(options?: LaunchOptions): BrowserController {
+export function createBrowserController(options?: BrowserControllerOptions): BrowserController {
   return new BrowserController(options);
+}
+
+/**
+ * Helper function to create a BrowserController with proxy rotation
+ * 
+ * @example
+ * ```typescript
+ * const controller = createBrowserControllerWithProxies([
+ *   { server: 'http://proxy1.example.com:8080', username: 'user1', password: 'pass1' },
+ *   { server: 'http://proxy2.example.com:8080', username: 'user2', password: 'pass2' },
+ * ], {
+ *   rotateOnError: true,
+ *   headless: true,
+ * });
+ * ```
+ */
+export function createBrowserControllerWithProxies(
+  proxies: ProxyConfig[],
+  options?: Omit<BrowserControllerOptions, 'proxyList'>
+): BrowserController {
+  return new BrowserController({
+    ...options,
+    proxyList: proxies,
+    rotateProxyOnError: options?.rotateProxyOnError !== false, // Default to true
+  });
 }
