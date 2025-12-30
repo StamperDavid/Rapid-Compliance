@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -18,6 +18,10 @@ export async function POST(
   context: { params: Promise<{ postId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const body = await request.json();
     const { organizationId, scheduledFor } = body;
@@ -30,13 +34,10 @@ export async function POST(
       );
     }
 
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(params.postId);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId: params.postId }
+    );
 
     const doc = await postRef.get();
 
@@ -97,12 +98,10 @@ export async function POST(
     await postRef.update(updateData);
 
     // Create audit log entry
-    const auditRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('audit-log')
-      .collection('entries');
+    const auditRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/audit-log/entries',
+      { orgId: organizationId }
+    );
 
     await auditRef.add({
       type: scheduledFor ? 'blog_post_scheduled' : 'blog_post_published',
@@ -144,6 +143,10 @@ export async function DELETE(
   context: { params: Promise<{ postId: string }> }
 ) {
   try {
+    if (!adminDal) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -156,13 +159,10 @@ export async function DELETE(
       );
     }
 
-    const postRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('config')
-      .collection('blog-posts')
-      .doc(params.postId);
+    const postRef = adminDal.getNestedDocRef(
+      'organizations/{orgId}/website/config/blog-posts/{postId}',
+      { orgId: organizationId, postId: params.postId }
+    );
 
     const doc = await postRef.get();
 
@@ -202,12 +202,10 @@ export async function DELETE(
     });
 
     // Create audit log entry
-    const auditRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('website')
-      .doc('audit-log')
-      .collection('entries');
+    const auditRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/website/audit-log/entries',
+      { orgId: organizationId }
+    );
 
     await auditRef.add({
       type: 'blog_post_unpublished',
