@@ -3,7 +3,7 @@
  * Manages CRUD operations for global industry templates in Firestore
  */
 
-import { db } from '@/lib/firebase/firebase-admin';
+import { db } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import { logger } from '@/lib/logger/logger';
