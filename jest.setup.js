@@ -5,6 +5,36 @@ config({ path: '.env.local' })
 // Set NODE_ENV to test
 process.env.NODE_ENV = 'test'
 
+// 🛡️ PROTECTION: Block tests from running against PRODUCTION
+// DEV database (ai-sales-platform-dev) is correct for tests
+// PROD database (ai-sales-platform-4f5e4) must NEVER have tests run against it
+const PRODUCTION_PROJECT_ID = 'ai-sales-platform-4f5e4';
+const DEV_PROJECT_ID = 'ai-sales-platform-dev';
+
+const currentProjectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+// Block if hitting PRODUCTION
+if (currentProjectId && currentProjectId.includes(PRODUCTION_PROJECT_ID)) {
+  console.error('\n❌ ========================================');
+  console.error('❌ TESTS BLOCKED - PRODUCTION DATABASE');
+  console.error('❌ ========================================\n');
+  console.error(`Current: ${currentProjectId}`);
+  console.error(`Production: ${PRODUCTION_PROJECT_ID}`);
+  console.error('\nTests must use DEV database, not PROD!');
+  console.error('❌ ========================================\n');
+  process.exit(1);
+}
+
+// Verify we're using DEV
+if (!currentProjectId || (!currentProjectId.includes(DEV_PROJECT_ID) && currentProjectId !== 'demo-ai-sales-platform')) {
+  console.warn('\n⚠️  WARNING: Tests may not be using DEV database');
+  console.warn(`   Current Project: ${currentProjectId || 'NOT SET'}`);
+  console.warn(`   Expected: ${DEV_PROJECT_ID}\n`);
+}
+
+console.log('✅ Test environment: DEV database');
+console.log(`   Project ID: ${currentProjectId}\n`);
+
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'

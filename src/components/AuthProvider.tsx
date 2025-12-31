@@ -49,16 +49,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const userProfile = await dbModule.FirestoreService.get(dbModule.COLLECTIONS.USERS, authUser.uid);
               
-              // Get user's organization membership
-              const orgMemberships = await dbModule.FirestoreService.getAll(dbModule.COLLECTIONS.ORGANIZATIONS, []);
-              const defaultOrg = orgMemberships[0] || { id: 'demo', name: 'Demo Organization' };
+              // Use organizationId from user profile (set during account creation)
+              const organizationId = userProfile?.organizationId || 'demo';
               
               setUser({
                 id: authUser.uid,
                 email: authUser.email || '',
-                displayName: authUser.displayName || userProfile?.displayName || 'User',
+                displayName: authUser.displayName || userProfile?.displayName || userProfile?.name || 'User',
                 role: (userProfile?.role as UserRole) || 'admin',
-                organizationId: userProfile?.currentOrganizationId || defaultOrg.id,
+                organizationId: organizationId,
                 workspaceId: userProfile?.currentWorkspaceId,
               });
             } catch (error) {

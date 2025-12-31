@@ -1,9 +1,12 @@
 /**
  * Seed Test Data for Website Builder
  * Creates 2 test organizations with pages for multi-tenant testing
+ * 
+ * ⚠️ PROTECTED: This script will NOT run against production
  */
 
 const admin = require('firebase-admin');
+const { requireProductionProtection } = require('./PRODUCTION_PROTECTION');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -22,6 +25,9 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 async function seedWebsiteTestData() {
+  // PRODUCTION PROTECTION - Will exit if running against production
+  await requireProductionProtection(admin.app().options.projectId, 'seed-website-test-data.js');
+  
   console.log('\n🌱 Seeding Website Builder Test Data...\n');
 
   try {

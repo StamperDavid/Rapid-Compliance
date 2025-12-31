@@ -14,12 +14,11 @@ const IS_DEV = ENV === 'development';
 // In test mode, all collections are prefixed with 'test_'
 const TEST_PREFIX = IS_TEST ? 'test_' : '';
 
-// Prefix for dev collections (optional - set USE_PROD_DB=true to disable)
-// In dev mode, collections are prefixed with 'dev_' unless explicitly using prod
-const DEV_PREFIX = IS_DEV && !process.env.USE_PROD_DB ? 'dev_' : '';
+// No dev prefix - use separate Firebase projects for isolation
+const DEV_PREFIX = '';
 
-// Final prefix - test takes priority over dev
-const PREFIX = TEST_PREFIX || DEV_PREFIX;
+// Final prefix - only test prefix is used
+const PREFIX = TEST_PREFIX;
 
 /**
  * Centralized Collection Registry
@@ -83,6 +82,11 @@ export const COLLECTIONS = {
   // ========================================
   ANALYTICS_EVENTS: `${PREFIX}analyticsEvents`,
   REPORTS: `${PREFIX}reports`,
+  
+  // ========================================
+  // TEMPLATE MANAGEMENT COLLECTIONS
+  // ========================================
+  GLOBAL_TEMPLATES: `${PREFIX}globalTemplates`,
 } as const;
 
 /**

@@ -1,9 +1,13 @@
 /**
  * Comprehensive Test Data Seeding Script
  * Creates 10 fully populated test companies with realistic CRM data
+ * 
+ * ⚠️ PROTECTED: This script will NOT run against production
+ * ⚠️ This script REQUIRES Firebase emulators to be running
  */
 
 const admin = require('firebase-admin');
+const { requireProductionProtection } = require('./PRODUCTION_PROTECTION');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -11,6 +15,11 @@ if (!admin.apps.length) {
     projectId: 'demo-ai-sales-platform',
   });
 }
+
+// PRODUCTION PROTECTION CHECK (async IIFE at module load)
+(async () => {
+  await requireProductionProtection('demo-ai-sales-platform', 'seed-complete-data.js');
+})();
 
 // Connect to emulators
 process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';

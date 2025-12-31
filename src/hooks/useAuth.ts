@@ -50,20 +50,15 @@ export function useAuth() {
             // Load user profile from Firestore to get role and organization
             const userProfile = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
             
-            // Get user's organization membership
-            const orgMemberships = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, [
-              // In production, would query by userId in members array
-            ]);
-            
-            // For now, use first organization or default
-            const defaultOrg = orgMemberships[0] || { id: 'demo', name: 'Demo Organization' };
+            // Use organizationId from user profile (set during account creation)
+            const organizationId = userProfile?.organizationId || 'demo';
             
             setUser({
               id: authUser.uid,
               email: authUser.email || '',
-              displayName: authUser.displayName || userProfile?.displayName || 'User',
-              role: (userProfile?.role as UserRole) || 'admin', // Default to admin instead of employee
-              organizationId: userProfile?.currentOrganizationId || defaultOrg.id,
+              displayName: authUser.displayName || userProfile?.displayName || userProfile?.name || 'User',
+              role: (userProfile?.role as UserRole) || 'admin',
+              organizationId: organizationId,
               workspaceId: userProfile?.currentWorkspaceId,
             });
           } catch (error) {
