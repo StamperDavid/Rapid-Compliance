@@ -4,6 +4,7 @@
  */
 
 import { db } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import { logger } from '@/lib/logger/logger';
@@ -102,7 +103,7 @@ export async function saveGlobalTemplate(
       createdAt: existingDoc.exists
         ? existingDoc.data()?.createdAt
         : now,
-      updatedAt: db.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       createdBy: existingDoc.exists
         ? existingDoc.data()?.createdBy || userId
         : userId,
