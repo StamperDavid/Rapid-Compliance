@@ -78,9 +78,11 @@ export function BasicInfoSection({ template, onUpdate, disabled, errors }: Basic
             <Select
               value={template.category}
               onValueChange={val => onUpdate({ category: val })}
-              disabled={disabled}
             >
-              <SelectTrigger className={errors['category'] ? 'border-destructive' : ''}>
+              <SelectTrigger 
+                className={errors['category'] ? 'border-destructive' : ''}
+                disabled={disabled}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
