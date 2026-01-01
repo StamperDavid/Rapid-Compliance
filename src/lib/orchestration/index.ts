@@ -37,13 +37,17 @@
 export { SignalCoordinator } from './SignalCoordinator';
 export { default as DefaultSignalCoordinator } from './SignalCoordinator';
 
-// Factory functions for easy instantiation
+// Server-side factory (for API routes, server components, server actions)
 export { 
-  getSignalCoordinator,
   getServerSignalCoordinator,
+  resetServerCoordinator,
+} from './coordinator-factory-server';
+
+// Client-side factory (for client components, browser code)
+export { 
   getClientSignalCoordinator,
-  resetCoordinators,
-} from './coordinator-factory';
+  resetClientCoordinator,
+} from './coordinator-factory-client';
 
 // Types and interfaces
 export type {

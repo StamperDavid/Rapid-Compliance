@@ -27,7 +27,7 @@ import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS } from '@/lib/sms/sms-service';
 import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
 import { initiateCall } from '@/lib/voice/twilio-service';
-import { getServerSignalCoordinator } from '@/lib/orchestration';
+import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { SalesSignal } from '@/lib/orchestration/types';
 
 // ============================================================================

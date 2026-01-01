@@ -30,7 +30,7 @@ import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
 import type { WorkflowState } from '@/types/workflow-state';
 import { createWorkflowState } from '@/types/workflow-state';
-import { getSignalCoordinator } from '@/lib/orchestration';
+import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { Timestamp } from 'firebase/firestore';
 
 // ============================================================================
@@ -1417,7 +1417,7 @@ async function emitDiscoverySignals(
   fromCache: boolean
 ): Promise<void> {
   try {
-    const coordinator = getSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
 
     // Signal 1: website.discovered - Always emit when company is discovered
     await coordinator.emitSignal({
@@ -1520,7 +1520,7 @@ async function emitPersonDiscoverySignals(
   fromCache: boolean
 ): Promise<void> {
   try {
-    const coordinator = getSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
 
     // Signal: lead.discovered
     await coordinator.emitSignal({

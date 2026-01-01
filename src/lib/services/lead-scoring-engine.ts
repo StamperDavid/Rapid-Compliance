@@ -22,7 +22,7 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson } from './discovery-engine';
 import type { DiscoveredCompany, DiscoveredPerson } from './discovery-engine';
-import { getServerSignalCoordinator } from '@/lib/orchestration';
+import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type {
   LeadScore,
   LeadScoreReason,
