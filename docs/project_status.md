@@ -301,7 +301,7 @@ CRM Deal Service → [deal.created, deal.won, deal.lost] → Signal Bus
 
 | Date | Commit | Description |
 |------|--------|-------------|
-| 2026-01-01 | TBD | feat: phase 2 step 2.1 - Onboarding Prefill Engine (Exception-Based Validation) |
+| 2026-01-01 | 07aa008 | feat: phase 2 step 2.1 - Onboarding Prefill Engine (Exception-Based Validation) |
 | 2025-12-31 | 0d4ec9e | feat: phase 1 step 1.3 - Complete DAL Refactor (Environment Isolation) - 17 files refactored |
 | 2025-12-31 | 4e14db5 | docs: update continuation prompt with build fix details |
 | 2025-12-31 | fec631d | fix: split coordinator factory into separate client/server modules |
