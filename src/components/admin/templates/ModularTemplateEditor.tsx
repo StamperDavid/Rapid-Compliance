@@ -245,7 +245,7 @@ export function ModularTemplateEditor({
           <div className="flex-1 space-y-6">
             {/* Basic Information */}
             {sections.find(s => s.id === 'basic-info')?.visible && (
-              <div ref={el => (sectionRefs.current['basic-info'] = el)}>
+              <div ref={el => { sectionRefs.current['basic-info'] = el; }}>
                 <BasicInfoSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -257,7 +257,7 @@ export function ModularTemplateEditor({
 
             {/* Web Scraper */}
             {sections.find(s => s.id === 'scraper')?.visible && (
-              <div ref={el => (sectionRefs.current['scraper'] = el)}>
+              <div ref={el => { sectionRefs.current['scraper'] = el; }}>
                 <ScraperSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -271,7 +271,7 @@ export function ModularTemplateEditor({
 
             {/* CRM Fields */}
             {sections.find(s => s.id === 'crm-fields')?.visible && (
-              <div ref={el => (sectionRefs.current['crm-fields'] = el)}>
+              <div ref={el => { sectionRefs.current['crm-fields'] = el; }}>
                 <CRMFieldsSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
