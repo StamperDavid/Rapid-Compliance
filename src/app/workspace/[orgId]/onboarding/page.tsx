@@ -3,7 +3,13 @@
 import React, { useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import type { PrefillResult, FieldConfidence } from '@/lib/onboarding/types';
+import { 
+  PrefillStatusBanner, 
+  PrefillLoadingState,
+  PrefilledFieldWrapper 
+} from '@/components/onboarding/PrefillIndicator';
 
 // Move components OUTSIDE to prevent re-creation on every render
 function TextInputField({ label, field, placeholder, required, formData, updateField }: any) {
@@ -217,9 +223,48 @@ export default function OnboardingWizard() {
 
   const totalSteps = 24;
 
-  const updateField = useCallback((field: string, value: any) => {
+  const updateField = useCallback((field: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
+
+  // Type guard to check if a field can accept string values from prefill
+  const isStringField = (field: string): boolean => {
+    const stringFields = [
+      'businessName', 'industry', 'website', 'faqPageUrl', 'companySize',
+      'businessLocation', 'contactEmail', 'contactPhone',
+      'problemSolved', 'uniqueValue', 'whyBuy', 'whyNotBuy',
+      'primaryOffering', 'priceRange', 'targetCustomer', 'customerDemographics',
+      'topProducts', 'productComparison', 'seasonalOfferings', 'whoShouldNotBuy',
+      'pricingStrategy', 'discountPolicy', 'volumeDiscounts', 'firstTimeBuyerIncentive', 'financingOptions',
+      'geographicCoverage', 'deliveryTimeframes', 'inventoryConstraints', 'capacityLimitations',
+      'returnPolicy', 'warrantyTerms', 'cancellationPolicy', 'satisfactionGuarantee',
+      'successMetrics', 'escalationRules',
+      'typicalSalesFlow', 'qualificationCriteria', 'discoveryQuestions', 'closingStrategy',
+      'commonObjections', 'priceObjections', 'timeObjections', 'competitorObjections',
+      'supportScope', 'technicalSupport', 'orderTracking', 'complaintResolution',
+      'tone', 'agentName', 'greeting', 'closingMessage', 'responseLength',
+      'faqs', 'requiredDisclosures', 'industryRegulations', 'prohibitedTopics',
+      'conversationFlowLogic', 'industryTemplate',
+      'priceObjectionStrategy', 'competitorObjectionStrategy', 'timingObjectionStrategy',
+      'authorityObjectionStrategy', 'needObjectionStrategy',
+      'angryCustomerApproach', 'confusedCustomerApproach', 'readyToBuySignals',
+      'disengagementSignals', 'frustratedCustomerApproach',
+      'budgetQualificationQuestions', 'timelineQuestions', 'authorityQuestions',
+      'needIdentificationQuestions', 'painPointQuestions',
+      'assumptiveCloseConditions', 'urgencyCreationTactics', 'trialCloseTriggers', 'softCloseApproaches',
+      'prohibitedBehaviors', 'behavioralBoundaries', 'mustAlwaysMention', 'neverMention',
+      'technicalCapabilities',
+    ];
+    return stringFields.includes(field);
+  };
+
+  // Type guard to check if a field can accept string array values from prefill
+  const isStringArrayField = (field: string): boolean => {
+    const stringArrayFields = [
+      'socialMediaUrls', 'secondaryObjectives', 'urls', 'competitorUrls', 'selectedTrainingMetrics'
+    ];
+    return stringArrayFields.includes(field);
+  };
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -237,6 +282,195 @@ export default function OnboardingWizard() {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState('');
+  
+  // Prefill state
+  const [isPrefilling, setIsPrefilling] = useState(false);
+  const [prefillResult, setPrefillResult] = useState<PrefillResult | null>(null);
+  const [confirmedFields, setConfirmedFields] = useState<Set<string>>(new Set());
+  const [rejectedFields, setRejectedFields] = useState<Set<string>>(new Set());
+
+  // Prefill onboarding data from website
+  const handlePrefill = async () => {
+    if (!formData.website) {
+      alert('Please enter your website URL first');
+      return;
+    }
+
+    setIsPrefilling(true);
+    try {
+      const response = await fetch('/api/onboarding/prefill', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          websiteUrl: formData.website,
+          organizationId: orgId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to prefill data');
+      }
+
+      const result: PrefillResult = await response.json();
+      setPrefillResult(result);
+
+      // Auto-apply high-confidence fields (type-safe)
+      setFormData(prev => {
+        const updatedFormData = { ...prev };
+        for (const [fieldName, fieldConfidence] of Object.entries(result.fieldConfidences)) {
+          if (fieldConfidence.suggestedAction === 'auto-fill' && fieldConfidence.value) {
+            const value = fieldConfidence.value;
+            
+            // Type-safe assignment: only assign to compatible fields
+            if (Array.isArray(value) && isStringArrayField(fieldName)) {
+              // Assign string array to string array fields
+              updatedFormData[fieldName as keyof typeof updatedFormData] = value as never;
+            } else if (typeof value === 'string' && isStringField(fieldName)) {
+              // Assign string to string fields
+              updatedFormData[fieldName as keyof typeof updatedFormData] = value as never;
+            } else {
+              // Log warning for incompatible field types (shouldn't happen with proper prefill engine)
+              logger.warn('Prefill field type mismatch', {
+                fieldName,
+                valueType: Array.isArray(value) ? 'array' : typeof value,
+                expectedType: 'string or string[]',
+              });
+            }
+          }
+        }
+        return updatedFormData;
+      });
+
+      logger.info('Prefill complete', {
+        organizationId: orgId,
+        overallConfidence: result.overallConfidence,
+        fieldsPrefilledCount: Object.keys(result.fieldConfidences).length,
+      });
+    } catch (error) {
+      logger.error('Prefill failed', error, { organizationId: orgId });
+      alert('Failed to analyze website. You can still continue with manual entry.');
+    } finally {
+      setIsPrefilling(false);
+    }
+  };
+
+  const handleConfirmField = (fieldName: string) => {
+    setConfirmedFields(prev => new Set([...prev, fieldName]));
+  };
+
+  const handleRejectField = (fieldName: string) => {
+    setRejectedFields(prev => new Set([...prev, fieldName]));
+  };
+
+  const handleStartFresh = () => {
+    setPrefillResult(null);
+    setConfirmedFields(new Set());
+    setRejectedFields(new Set());
+    // Reset form to initial state
+    setFormData({
+      businessName: '',
+      industry: '',
+      website: formData.website, // Keep the website URL
+      faqPageUrl: '',
+      socialMediaUrls: [],
+      companySize: '',
+      problemSolved: '',
+      uniqueValue: '',
+      whyBuy: '',
+      whyNotBuy: '',
+      primaryOffering: '',
+      priceRange: '',
+      targetCustomer: '',
+      customerDemographics: '',
+      topProducts: '',
+      productComparison: '',
+      seasonalOfferings: '',
+      whoShouldNotBuy: '',
+      pricingStrategy: '',
+      discountPolicy: '',
+      volumeDiscounts: '',
+      firstTimeBuyerIncentive: '',
+      financingOptions: '',
+      geographicCoverage: '',
+      deliveryTimeframes: '',
+      inventoryConstraints: '',
+      capacityLimitations: '',
+      returnPolicy: '',
+      warrantyTerms: '',
+      cancellationPolicy: '',
+      satisfactionGuarantee: '',
+      primaryObjective: 'sales',
+      secondaryObjectives: [],
+      successMetrics: '',
+      escalationRules: '',
+      typicalSalesFlow: '',
+      qualificationCriteria: '',
+      discoveryQuestions: '',
+      closingStrategy: '',
+      commonObjections: '',
+      priceObjections: '',
+      timeObjections: '',
+      competitorObjections: '',
+      supportScope: '',
+      technicalSupport: '',
+      orderTracking: '',
+      complaintResolution: '',
+      tone: 'professional',
+      agentName: '',
+      greeting: '',
+      closingMessage: '',
+      closingAggressiveness: 5,
+      questionFrequency: 3,
+      responseLength: 'balanced',
+      proactiveLevel: 5,
+      uploadedDocs: [],
+      urls: [],
+      faqs: '',
+      competitorUrls: [],
+      requiredDisclosures: '',
+      privacyCompliance: false,
+      industryRegulations: '',
+      prohibitedTopics: '',
+      enableAdvanced: false,
+      customFunctions: [],
+      conversationFlowLogic: '',
+      responseLengthLimit: 0,
+      industryTemplate: '',
+      knowledgePriority: [],
+      idleTimeoutMinutes: 30,
+      priceObjectionStrategy: '',
+      competitorObjectionStrategy: '',
+      timingObjectionStrategy: '',
+      authorityObjectionStrategy: '',
+      needObjectionStrategy: '',
+      angryCustomerApproach: '',
+      confusedCustomerApproach: '',
+      readyToBuySignals: '',
+      disengagementSignals: '',
+      frustratedCustomerApproach: '',
+      budgetQualificationQuestions: '',
+      timelineQuestions: '',
+      authorityQuestions: '',
+      needIdentificationQuestions: '',
+      painPointQuestions: '',
+      assumptiveCloseConditions: '',
+      urgencyCreationTactics: '',
+      trialCloseTriggers: '',
+      softCloseApproaches: '',
+      prohibitedBehaviors: '',
+      behavioralBoundaries: '',
+      mustAlwaysMention: '',
+      neverMention: '',
+      selectedTrainingMetrics: [],
+      uploadedSalesMaterials: [],
+    });
+  };
+
+  const getFieldConfidence = (fieldName: string): FieldConfidence | null => {
+    return prefillResult?.fieldConfidences?.[fieldName] || null;
+  };
 
   const completeOnboarding = async () => {
     setIsAnalyzing(true);
@@ -358,46 +592,150 @@ export default function OnboardingWizard() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextInputField formData={formData} updateField={updateField} label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
+              {/* Prefill Loading State */}
+              {isPrefilling && <PrefillLoadingState />}
 
+              {/* Prefill Status Banner */}
+              {prefillResult && !isPrefilling && (
+                <PrefillStatusBanner
+                  overallConfidence={prefillResult.overallConfidence}
+                  fieldsPrefilledCount={Object.keys(prefillResult.fieldConfidences).length}
+                  totalFieldsCount={6}
+                  fromCache={prefillResult.discoveryMetadata.fromCache}
+                  onStartFresh={handleStartFresh}
+                />
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Website URL - First field to enter */}
                 <div>
-                  <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                    Industry *
-                  </label>
-                  <select
-                    value={formData.industry}
-                    onChange={(e) => updateField('industry', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #333',
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                      fontSize: '1rem'
-                    }}
-                  >
-                    <option value="">Select your industry...</option>
-                    <option value="retail">Retail / E-commerce</option>
-                    <option value="services">Professional Services</option>
-                    <option value="manufacturing">Manufacturing / Wholesale</option>
-                    <option value="realestate">Real Estate</option>
-                    <option value="hospitality">Hospitality / Tourism</option>
-                    <option value="automotive">Automotive</option>
-                    <option value="finance">Financial Services / Insurance</option>
-                    <option value="education">Education / Training</option>
-                    <option value="construction">Construction / Contracting</option>
-                    <option value="legal">Legal Services</option>
-                    <option value="fitness">Fitness / Wellness</option>
-                    <option value="home_services">Home Services</option>
-                    <option value="other">Other</option>
-                  </select>
+                  <TextInputField label="Website URL" field="website" placeholder="https://yourwebsite.com" formData={formData} updateField={updateField} />
+                  <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                    We'll automatically analyze your website to learn about your company, products, and services
+                  </div>
+                  
+                  {/* Auto-fill Button */}
+                  {formData.website && !prefillResult && (
+                    <button
+                      onClick={handlePrefill}
+                      disabled={isPrefilling}
+                      style={{
+                        marginTop: '0.75rem',
+                        padding: '0.75rem 1.5rem',
+                        backgroundColor: '#6366f1',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        cursor: isPrefilling ? 'not-allowed' : 'pointer',
+                        opacity: isPrefilling ? 0.6 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <span>🪄</span>
+                      <span>{isPrefilling ? 'Analyzing...' : 'Auto-fill from website'}</span>
+                    </button>
+                  )}
                 </div>
 
-                <TextInputField label="Website URL" field="website" placeholder="https://yourwebsite.com" formData={formData} updateField={updateField} />
-                <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
-                  We'll automatically analyze your website to learn about your company, products, and services
+                {/* Business Name with Prefill */}
+                {getFieldConfidence('businessName') ? (
+                  <PrefilledFieldWrapper
+                    fieldConfidence={getFieldConfidence('businessName')!}
+                    onConfirm={() => handleConfirmField('businessName')}
+                    onReject={() => handleRejectField('businessName')}
+                    isConfirmed={confirmedFields.has('businessName')}
+                    isRejected={rejectedFields.has('businessName')}
+                  >
+                    <TextInputField formData={formData} updateField={updateField} label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
+                  </PrefilledFieldWrapper>
+                ) : (
+                  <TextInputField formData={formData} updateField={updateField} label="Business Name" field="businessName" placeholder="e.g., Acme Outdoor Gear" required />
+                )}
+
+                {/* Industry with Prefill */}
+                <div>
+                  {getFieldConfidence('industry') && (
+                    <PrefilledFieldWrapper
+                      fieldConfidence={getFieldConfidence('industry')!}
+                      onConfirm={() => handleConfirmField('industry')}
+                      onReject={() => handleRejectField('industry')}
+                      isConfirmed={confirmedFields.has('industry')}
+                      isRejected={rejectedFields.has('industry')}
+                    >
+                      <div>
+                        <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                          Industry *
+                        </label>
+                        <select
+                          value={formData.industry}
+                          onChange={(e) => updateField('industry', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            backgroundColor: '#0a0a0a',
+                            border: '1px solid #333',
+                            borderRadius: '0.5rem',
+                            color: '#fff',
+                            fontSize: '1rem'
+                          }}
+                        >
+                          <option value="">Select your industry...</option>
+                          <option value="retail">Retail / E-commerce</option>
+                          <option value="services">Professional Services</option>
+                          <option value="manufacturing">Manufacturing / Wholesale</option>
+                          <option value="realestate">Real Estate</option>
+                          <option value="hospitality">Hospitality / Tourism</option>
+                          <option value="automotive">Automotive</option>
+                          <option value="finance">Financial Services / Insurance</option>
+                          <option value="education">Education / Training</option>
+                          <option value="construction">Construction / Contracting</option>
+                          <option value="legal">Legal Services</option>
+                          <option value="fitness">Fitness / Wellness</option>
+                          <option value="home_services">Home Services</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                    </PrefilledFieldWrapper>
+                  )}
+                  {!getFieldConfidence('industry') && (
+                    <div>
+                      <label style={{ display: 'block', color: '#ccc', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                        Industry *
+                      </label>
+                      <select
+                        value={formData.industry}
+                        onChange={(e) => updateField('industry', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          backgroundColor: '#0a0a0a',
+                          border: '1px solid #333',
+                          borderRadius: '0.5rem',
+                          color: '#fff',
+                          fontSize: '1rem'
+                        }}
+                      >
+                        <option value="">Select your industry...</option>
+                        <option value="retail">Retail / E-commerce</option>
+                        <option value="services">Professional Services</option>
+                        <option value="manufacturing">Manufacturing / Wholesale</option>
+                        <option value="realestate">Real Estate</option>
+                        <option value="hospitality">Hospitality / Tourism</option>
+                        <option value="automotive">Automotive</option>
+                        <option value="finance">Financial Services / Insurance</option>
+                        <option value="education">Education / Training</option>
+                        <option value="construction">Construction / Contracting</option>
+                        <option value="legal">Legal Services</option>
+                        <option value="fitness">Fitness / Wellness</option>
+                        <option value="home_services">Home Services</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <TextInputField label="FAQ Page URL (optional)" field="faqPageUrl" placeholder="https://yourwebsite.com/faq" formData={formData} updateField={updateField} />

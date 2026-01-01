@@ -66,6 +66,12 @@ export type SignalType =
   | 'deal.won'                  // Deal closed-won
   | 'deal.lost'                 // Deal closed-lost
   
+  // Onboarding Signals
+  | 'onboarding.started'        // User began onboarding flow
+  | 'onboarding.prefilled'      // Business data auto-prefilled from Discovery Engine
+  | 'onboarding.completed'      // User completed onboarding
+  | 'onboarding.abandoned'      // User left onboarding incomplete
+  
   // System Signals
   | 'system.error'              // System error occurred
   | 'system.quota.warning'      // API quota approaching limit

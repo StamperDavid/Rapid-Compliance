@@ -1,0 +1,62 @@
+/**
+ * Onboarding Prefill API Route
+ * 
+ * Server-side endpoint for prefilling onboarding data using the Discovery Engine.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger/logger';
+import { prefillOnboardingData } from '@/lib/onboarding/prefill-engine';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { websiteUrl, organizationId } = body;
+
+    // Validation
+    if (!websiteUrl || typeof websiteUrl !== 'string') {
+      return NextResponse.json(
+        { error: 'Website URL is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!organizationId || typeof organizationId !== 'string') {
+      return NextResponse.json(
+        { error: 'Organization ID is required' },
+        { status: 400 }
+      );
+    }
+
+    logger.info('Prefill API request received', {
+      websiteUrl,
+      organizationId,
+    });
+
+    // Call prefill engine
+    const result = await prefillOnboardingData(websiteUrl, organizationId);
+
+    logger.info('Prefill API request complete', {
+      websiteUrl,
+      organizationId,
+      overallConfidence: result.overallConfidence,
+      fieldsPrefilledCount: Object.keys(result.fieldConfidences).length,
+    });
+
+    return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    logger.error('Prefill API error', error, {
+      endpoint: '/api/onboarding/prefill',
+    });
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return NextResponse.json(
+      { error: `Failed to prefill onboarding data: ${errorMessage}` },
+      { status: 500 }
+    );
+  }
+}
