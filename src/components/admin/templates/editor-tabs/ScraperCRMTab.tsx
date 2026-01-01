@@ -136,9 +136,8 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Select
                 value={template.category}
                 onValueChange={val => handleBasicInfoChange('category', val)}
-                disabled={disabled}
               >
-                <SelectTrigger>
+                <SelectTrigger disabled={disabled}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -183,9 +182,8 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Select
                 value={template.research?.scrapingStrategy?.primarySource || 'website'}
                 onValueChange={val => handleScrapingStrategyChange('primarySource', val)}
-                disabled={disabled}
               >
-                <SelectTrigger>
+                <SelectTrigger disabled={disabled}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -201,9 +199,8 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Select
                 value={template.research?.scrapingStrategy?.frequency || 'per-lead'}
                 onValueChange={val => handleScrapingStrategyChange('frequency', val)}
-                disabled={disabled}
               >
-                <SelectTrigger>
+                <SelectTrigger disabled={disabled}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,9 +243,8 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
               <Select
                 value={template.research?.scrapingStrategy?.enableCaching ? 'true' : 'false'}
                 onValueChange={val => handleScrapingStrategyChange('enableCaching', val === 'true')}
-                disabled={disabled}
               >
-                <SelectTrigger>
+                <SelectTrigger disabled={disabled}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -309,9 +305,8 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
                         <Select
                           value={field.type}
                           onValueChange={val => updateCustomField(index, { type: val })}
-                          disabled={disabled}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger disabled={disabled}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
