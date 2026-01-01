@@ -292,9 +292,10 @@ export async function processSequenceStepsWithPriority(
 
     const now = new Date();
 
-    // Get all due enrollments
+    // Get all due enrollments (using environment-aware collection path)
+    const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const snapshot = await db
-      .collection('sequenceEnrollments')
+      .collection(COLLECTIONS.SEQUENCE_ENROLLMENTS)
       .where('organizationId', '==', organizationId)
       .where('status', '==', 'active')
       .where('nextExecutionAt', '<=', Timestamp.fromDate(now))
@@ -378,9 +379,10 @@ export async function rescoreActiveSequenceLeads(
   try {
     logger.info('Rescoring active sequence leads', { organizationId });
 
-    // Get all active enrollments
+    // Get all active enrollments (using environment-aware collection path)
+    const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const snapshot = await db
-      .collection('sequenceEnrollments')
+      .collection(COLLECTIONS.SEQUENCE_ENROLLMENTS)
       .where('organizationId', '==', organizationId)
       .where('status', '==', 'active')
       .get();
@@ -404,8 +406,9 @@ export async function rescoreActiveSequenceLeads(
             forceRescore: true,
           });
 
-          // Update enrollment metadata
-          await db.collection('sequenceEnrollments').doc(doc.id).update({
+          // Update enrollment metadata (using environment-aware collection path)
+          const { COLLECTIONS: COLS } = await import('@/lib/firebase/collections');
+          await db.collection(COLS.SEQUENCE_ENROLLMENTS).doc(doc.id).update({
             'metadata.leadScore': score.totalScore,
             'metadata.leadGrade': score.grade,
             'metadata.leadPriority': score.priority,
@@ -453,8 +456,9 @@ async function adjustEnrollmentTiming(
   multiplier: number
 ): Promise<void> {
   try {
+    const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const enrollmentDoc = await db
-      .collection('sequenceEnrollments')
+      .collection(COLLECTIONS.SEQUENCE_ENROLLMENTS)
       .doc(enrollmentId)
       .get();
 
@@ -473,7 +477,7 @@ async function adjustEnrollmentTiming(
     const adjustedDelayMs = delayMs * multiplier;
     const newNext = new Date(now.getTime() + adjustedDelayMs);
 
-    await db.collection('sequenceEnrollments').doc(enrollmentId).update({
+    await db.collection(COLLECTIONS.SEQUENCE_ENROLLMENTS).doc(enrollmentId).update({
       nextExecutionAt: Timestamp.fromDate(newNext),
       'metadata.timingAdjusted': true,
       'metadata.delayMultiplier': multiplier,
@@ -507,11 +511,12 @@ export async function getRecommendedSequence(params: {
       organizationId,
     });
 
-    // Get available sequences
+    // Get available sequences (using environment-aware collection path)
+    const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const sequences =
       availableSequences ||
       (await db
-        .collection('sequences')
+        .collection(COLLECTIONS.SEQUENCES)
         .where('organizationId', '==', organizationId)
         .where('isActive', '==', true)
         .get()

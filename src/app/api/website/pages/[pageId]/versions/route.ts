@@ -60,8 +60,10 @@ export async function GET(
       );
     }
 
-    // Get all versions
-    const versionsRef = pageRef.collection('versions');
+    // Get all versions (using environment-aware subcollection path)
+    const { adminDb } = await import('@/lib/firebase/admin');
+    const versionsPath = adminDal.getSubColPath('versions');
+    const versionsRef = adminDb!.collection(pageRef.path).doc(params.pageId).collection(versionsPath);
     const snapshot = await versionsRef.orderBy('version', 'desc').get();
 
     const versions = snapshot.docs.map(doc => ({
@@ -143,8 +145,10 @@ export async function POST(
       );
     }
 
-    // Get the version to restore
-    const versionDoc = await pageRef.collection('versions').doc(versionId).get();
+    // Get the version to restore (using environment-aware subcollection path)
+    const { adminDb: db } = await import('@/lib/firebase/admin');
+    const versionsPath = adminDal.getSubColPath('versions');
+    const versionDoc = await db!.collection(pageRef.path).doc(params.pageId).collection(versionsPath).doc(versionId).get();
 
     if (!versionDoc.exists) {
       return NextResponse.json(

@@ -43,10 +43,15 @@ export async function GET(request: NextRequest) {
     if (!organizationId) {
       const subdomain = host.split('.')[0];
       const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
+      const { adminDb } = await import('@/lib/firebase/admin');
       
       for (const orgDoc of orgsSnapshot.docs) {
-        const settingsDoc = await orgDoc.ref
-          .collection('website')
+        // Use environment-aware subcollection path
+        const websitePath = adminDal.getSubColPath('website');
+        const settingsDoc = await adminDb!
+          .collection(orgDoc.ref.path)
+          .doc(orgDoc.id)
+          .collection(websitePath)
           .doc('settings')
           .get();
         

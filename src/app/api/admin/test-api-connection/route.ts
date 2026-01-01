@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
     // Update API key document with test result
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
+      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
+        const apiKeysPath = getOrgSubCollection(orgId, 'apiKeys');
         await adminDb
-          .collection('organizations')
-          .doc(orgId)
-          .collection('apiKeys')
+          .collection(apiKeysPath)
           .doc(orgId)
           .update({
             [`ai.${service}LastChecked`]: new Date().toISOString(),

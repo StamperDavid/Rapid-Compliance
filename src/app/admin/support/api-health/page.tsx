@@ -40,10 +40,11 @@ export default function APIHealthPage() {
       const { adminDb } = await import('@/lib/firebase/admin');
       const { limit: firestoreLimit } = await import('firebase/firestore');
       
-      // Get all organizations
+      // Get all organizations (using environment-aware collection)
+      const { COLLECTIONS } = await import('@/lib/firebase/collections');
       let orgDocs: Array<{ id: string; data: () => any }>;
       if (adminDb) {
-        const snapshot = await adminDb.collection('organizations').limit(50).get();
+        const snapshot = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).limit(50).get();
         orgDocs = snapshot.docs;
       } else {
         const orgsData = await FirestoreService.getAll('organizations', [firestoreLimit(50)]);
@@ -60,14 +61,14 @@ export default function APIHealthPage() {
         const orgData = orgDoc.data();
         const orgId = orgDoc.id;
         
-        // Get API keys for this org
+        // Get API keys for this org (using environment-aware paths)
         let apiKeys;
         try {
           if (adminDb) {
+            const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+            const apiKeysPath = getOrgSubCollection(orgId, 'apiKeys');
             const keysDoc = await adminDb
-              .collection('organizations')
-              .doc(orgId)
-              .collection('apiKeys')
+              .collection(apiKeysPath)
               .doc(orgId)
               .get();
             apiKeys = keysDoc.exists ? keysDoc.data() : null;

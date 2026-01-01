@@ -39,16 +39,16 @@ export async function GET(request: NextRequest) {
 
     // Save integration using Admin SDK (server-side, bypasses security rules)
     const { adminDb } = await import('@/lib/firebase/admin');
+    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
     
     if (!adminDb) {
       throw new Error('Firebase Admin not initialized');
     }
 
     const integrationId = `google_${Date.now()}`;
+    const integrationsPath = getOrgSubCollection(orgId, 'integrations');
     await adminDb
-      .collection('organizations')
-      .doc(orgId)
-      .collection('integrations')
+      .collection(integrationsPath)
       .doc(integrationId)
       .set({
         id: integrationId,

@@ -108,13 +108,10 @@ export async function verifyOrgAccess(
   organizationId: string
 ): Promise<boolean> {
   try {
-    // TODO: Implement actual org access verification
-    // Check if user is member of organization
-    const userOrgRef = db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('members')
-      .doc(userId);
+    // Use environment-aware collection path via helper
+    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+    const membersPath = getOrgSubCollection(organizationId, 'members');
+    const userOrgRef = db.collection(membersPath).doc(userId);
 
     const doc = await userOrgRef.get();
     return doc.exists;

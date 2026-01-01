@@ -248,11 +248,11 @@ class APIKeyService {
     try {
       // Prefer admin SDK (bypasses client-side security rules) when available
       const { adminDb } = await import('@/lib/firebase/admin');
+      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
+        const apiKeysPath = getOrgSubCollection(organizationId, 'apiKeys');
         const snap = await adminDb
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('apiKeys')
+          .collection(apiKeysPath)
           .doc(organizationId)
           .get();
         if (snap.exists) {

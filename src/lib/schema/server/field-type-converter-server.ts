@@ -4,6 +4,7 @@
  */
 
 import { db, admin } from '@/lib/firebase-admin';
+import { getWorkspaceSubCollection } from '@/lib/firebase/collections';
 import { FieldType } from '@/types/schema';
 
 export interface TypeConversionPreview {
@@ -51,13 +52,10 @@ export class FieldTypeConverterServer {
     estimatedSuccess: number;
     estimatedFailures: number;
   }> {
-    // Get schema
+    // Get schema (using environment-aware paths)
+    const schemasPath = getWorkspaceSubCollection(organizationId, workspaceId, 'schemas');
     const schemaDoc = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('schemas')
+      .collection(schemasPath)
       .doc(schemaId)
       .get();
     
@@ -72,15 +70,12 @@ export class FieldTypeConverterServer {
       throw new Error('Schema name not found');
     }
     
-    // Get records
+    // Get records (using environment-aware paths for nested entities)
+    const { getPrefix } = await import('@/lib/firebase/collections');
+    const entitiesPath = getWorkspaceSubCollection(organizationId, workspaceId, 'entities');
+    const recordsPath = `${getPrefix()}records`;
     const recordsSnapshot = await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('workspaces')
-      .doc(workspaceId)
-      .collection('entities')
-      .doc(schemaName)
-      .collection('records')
+      .collection(`${entitiesPath}/${schemaName}/${recordsPath}`)
       .limit(Math.max(sampleSize, 100))
       .get();
     

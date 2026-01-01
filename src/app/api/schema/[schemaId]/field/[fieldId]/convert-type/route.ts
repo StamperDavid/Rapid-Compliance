@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
 import { FieldType } from '@/types/schema';
 
@@ -99,15 +100,14 @@ export async function POST(
       file: 'route.ts'
     });
     
-    // Import admin SDK
+    // Import admin SDK and helpers
     const { getFirestore } = await import('firebase-admin/firestore');
+    const { getWorkspaceSubCollection } = await import('@/lib/firebase/collections');
     const db = getFirestore();
     
-    // Get schema to get schema name
-    const schemaRef = db
-      .collection('organizations').doc(organizationId)
-      .collection('workspaces').doc(workspaceId)
-      .collection('schemas').doc(params.schemaId);
+    // Get schema to get schema name (using environment-aware paths)
+    const schemasPath = getWorkspaceSubCollection(organizationId, workspaceId, 'schemas');
+    const schemaRef = db.collection(schemasPath).doc(params.schemaId);
     
     const schemaDoc = await schemaRef.get();
     
@@ -128,12 +128,10 @@ export async function POST(
       );
     }
     
-    // Get all records
-    const recordsRef = db
-      .collection('organizations').doc(organizationId)
-      .collection('workspaces').doc(workspaceId)
-      .collection('entities').doc(schemaName)
-      .collection('records');
+    // Get all records (using environment-aware paths for entities)
+    const entitiesPath = getWorkspaceSubCollection(organizationId, workspaceId, 'entities');
+    const recordsPath = adminDal.getSubColPath('records');
+    const recordsRef = db.collection(`${entitiesPath}/${schemaName}/${recordsPath}`);
     
     const snapshot = await recordsRef.get();
     

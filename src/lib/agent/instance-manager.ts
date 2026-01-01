@@ -549,11 +549,11 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Prefer admin SDK to bypass security rules
       try {
         const { adminDb } = await import('@/lib/firebase/admin');
+        const { getOrgSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
+          const goldenMastersPath = getOrgSubCollection(orgId, 'goldenMasters');
           const snap = await adminDb
-            .collection('organizations')
-            .doc(orgId)
-            .collection('goldenMasters')
+            .collection(goldenMastersPath)
             .get();
           
           const goldenMasters = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -596,11 +596,11 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Prefer admin SDK
       try {
         const { adminDb } = await import('@/lib/firebase/admin');
+        const { getOrgSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
+          const customerMemoriesPath = getOrgSubCollection(orgId, 'customerMemories');
           const doc = await adminDb
-            .collection('organizations')
-            .doc(orgId)
-            .collection('customerMemories')
+            .collection(customerMemoriesPath)
             .doc(customerId)
             .get();
           
@@ -681,11 +681,11 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Prefer admin SDK
       try {
         const { adminDb } = await import('@/lib/firebase/admin');
+        const { getOrgSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
+          const customerMemoriesPath = getOrgSubCollection(memory.orgId, 'customerMemories');
           await adminDb
-            .collection('organizations')
-            .doc(memory.orgId)
-            .collection('customerMemories')
+            .collection(customerMemoriesPath)
             .doc(memory.customerId)
             .set(memory, { merge: true });
           return;

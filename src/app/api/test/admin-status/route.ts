@@ -56,7 +56,8 @@ export async function GET(request: NextRequest) {
     // If adminDb exists, try a test read
     if (adminDb) {
       try {
-        const testDoc = await adminDb.collection('organizations').doc('platform-admin').get();
+        const { COLLECTIONS } = await import('@/lib/firebase/collections');
+        const testDoc = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc('platform-admin').get();
         diagnostics.testRead = {
           success: true,
           docExists: testDoc.exists,

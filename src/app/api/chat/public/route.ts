@@ -44,15 +44,15 @@ export async function POST(request: NextRequest) {
     let chatConfig: any = null;
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
+      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
         const orgSnap = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc(orgId).get();
         if (orgSnap.exists) {
           organization = { id: orgSnap.id, ...orgSnap.data() };
         }
+        const settingsPath = getOrgSubCollection(orgId, 'settings');
         const chatSnap = await adminDb
-          .collection(COLLECTIONS.ORGANIZATIONS)
-          .doc(orgId)
-          .collection('settings')
+          .collection(settingsPath)
           .doc('chatWidget')
           .get();
         if (chatSnap.exists) {
@@ -111,11 +111,11 @@ export async function POST(request: NextRequest) {
     let agentConfig: any = null;
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
+      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
+        const agentConfigPath = getOrgSubCollection(orgId, 'agentConfig');
         const cfgSnap = await adminDb
-          .collection(COLLECTIONS.ORGANIZATIONS)
-          .doc(orgId)
-          .collection('agentConfig')
+          .collection(agentConfigPath)
           .doc('default')
           .get();
         if (cfgSnap.exists) {

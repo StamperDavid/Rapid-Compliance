@@ -78,8 +78,9 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     
     const userId = decodedToken.uid;
     
-    // Get user document to check role
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    // Get user document to check role (using environment-aware collection path)
+    const { COLLECTIONS } = await import('@/lib/firebase/collections');
+    const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(userId).get();
     
     if (!userDoc.exists) {
       return {

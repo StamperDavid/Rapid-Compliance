@@ -4,6 +4,7 @@
  */
 
 import { db, admin } from '@/lib/firebase-admin';
+import { getOrgSubCollection } from '@/lib/firebase/collections';
 import { SchemaChangeEvent } from '../schema-change-tracker';
 
 export class SchemaChangeEventPublisherServer {
@@ -11,10 +12,9 @@ export class SchemaChangeEventPublisherServer {
    * Publish schema change event (SERVER SIDE with admin SDK)
    */
   static async publishEvent(event: SchemaChangeEvent): Promise<void> {
+    const schemaChangeEventsPath = getOrgSubCollection(event.organizationId, 'schemaChangeEvents');
     await db
-      .collection('organizations')
-      .doc(event.organizationId)
-      .collection('schemaChangeEvents')
+      .collection(schemaChangeEventsPath)
       .doc(event.id)
       .set({
         ...event,
@@ -39,10 +39,9 @@ export class SchemaChangeEventPublisherServer {
     organizationId: string,
     eventId: string
   ): Promise<void> {
+    const schemaChangeEventsPath = getOrgSubCollection(organizationId, 'schemaChangeEvents');
     await db
-      .collection('organizations')
-      .doc(organizationId)
-      .collection('schemaChangeEvents')
+      .collection(schemaChangeEventsPath)
       .doc(eventId)
       .update({
         processed: true,
