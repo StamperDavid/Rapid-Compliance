@@ -157,7 +157,7 @@ export class FirestoreDAL {
       return;
     }
     
-    const docRef = doc(this.db, collectionRef, docId);
+    const docRef = doc(this.db, collectionRef, docId) as DocumentReference<T>;
     
     logger.info('📝 Updating Firestore', {
       collection: collectionRef,
