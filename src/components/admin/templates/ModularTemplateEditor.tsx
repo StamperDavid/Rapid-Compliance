@@ -285,7 +285,7 @@ export function ModularTemplateEditor({
 
             {/* High-Value Signals */}
             {sections.find(s => s.id === 'signals')?.visible && (
-              <div ref={el => (sectionRefs.current['signals'] = el)}>
+              <div ref={el => { sectionRefs.current['signals'] = el; }}>
                 <HighValueSignalsSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -299,7 +299,7 @@ export function ModularTemplateEditor({
 
             {/* Fluff Patterns */}
             {sections.find(s => s.id === 'fluff')?.visible && (
-              <div ref={el => (sectionRefs.current['fluff'] = el)}>
+              <div ref={el => { sectionRefs.current['fluff'] = el; }}>
                 <FluffPatternsSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -313,7 +313,7 @@ export function ModularTemplateEditor({
 
             {/* Scoring Rules */}
             {sections.find(s => s.id === 'scoring')?.visible && (
-              <div ref={el => (sectionRefs.current['scoring'] = el)}>
+              <div ref={el => { sectionRefs.current['scoring'] = el; }}>
                 <ScoringRulesSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -327,7 +327,7 @@ export function ModularTemplateEditor({
 
             {/* Core Identity (AI) */}
             {sections.find(s => s.id === 'core-identity')?.visible && (
-              <div ref={el => (sectionRefs.current['core-identity'] = el)}>
+              <div ref={el => { sectionRefs.current['core-identity'] = el; }}>
                 <CoreIdentitySection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -341,7 +341,7 @@ export function ModularTemplateEditor({
 
             {/* Cognitive Logic */}
             {sections.find(s => s.id === 'cognitive')?.visible && (
-              <div ref={el => (sectionRefs.current['cognitive'] = el)}>
+              <div ref={el => { sectionRefs.current['cognitive'] = el; }}>
                 <CognitiveLogicSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -355,7 +355,7 @@ export function ModularTemplateEditor({
 
             {/* Knowledge Base (RAG) */}
             {sections.find(s => s.id === 'knowledge')?.visible && (
-              <div ref={el => (sectionRefs.current['knowledge'] = el)}>
+              <div ref={el => { sectionRefs.current['knowledge'] = el; }}>
                 <KnowledgeRAGSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -369,7 +369,7 @@ export function ModularTemplateEditor({
 
             {/* Learning Loops */}
             {sections.find(s => s.id === 'learning')?.visible && (
-              <div ref={el => (sectionRefs.current['learning'] = el)}>
+              <div ref={el => { sectionRefs.current['learning'] = el; }}>
                 <LearningLoopsSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
@@ -383,7 +383,7 @@ export function ModularTemplateEditor({
 
             {/* Tactical Execution */}
             {sections.find(s => s.id === 'tactical')?.visible && (
-              <div ref={el => (sectionRefs.current['tactical'] = el)}>
+              <div ref={el => { sectionRefs.current['tactical'] = el; }}>
                 <TacticalExecutionSection
                   template={editedTemplate}
                   onUpdate={updateTemplate}
