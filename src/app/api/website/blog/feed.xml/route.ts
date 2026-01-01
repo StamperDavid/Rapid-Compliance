@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     let siteTitle = 'Blog';
     let siteDescription = 'Latest blog posts';
 
-    // Check if custom domain
-    const domainsSnapshot = await adminDal.getCollection('ORGANIZATIONS').collectionGroup('website').get();
+    // Check if custom domain (query across all orgs' website settings)
+    const domainsSnapshot = await adminDal.getCollectionGroup('website').get();
     for (const doc of domainsSnapshot.docs) {
       const data = doc.data();
       if (data.customDomain === host && data.customDomainVerified) {

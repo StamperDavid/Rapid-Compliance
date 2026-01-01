@@ -115,6 +115,15 @@ export class FirestoreAdminDAL {
     return this.db.doc(path);
   }
   
+  /**
+   * Get a collection group reference (queries across all organizations)
+   * Usage: adminDal.getCollectionGroup('website')
+   * This queries all 'website' subcollections across all organizations
+   */
+  getCollectionGroup(collectionId: string) {
+    return this.db.collectionGroup(collectionId);
+  }
+  
   // ========================================
   // SAFE WRITE OPERATIONS
   // ========================================
