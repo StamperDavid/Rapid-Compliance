@@ -93,7 +93,8 @@ export default function TemplatesPage() {
   };
 
   const handleAddNew = () => {
-    setSelectedTemplate(STANDARD_BASE_TEMPLATE as IndustryTemplate);
+    // Create a mutable deep copy to avoid readonly type issues
+    setSelectedTemplate(JSON.parse(JSON.stringify(STANDARD_BASE_TEMPLATE)) as IndustryTemplate);
     setIsEditing(true);
   };
 
