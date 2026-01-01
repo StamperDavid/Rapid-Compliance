@@ -180,7 +180,7 @@ CRM Deal Service → [deal.created, deal.won, deal.lost] → Signal Bus
 
 | Date | Commit | Description |
 |------|--------|-------------|
-| 2025-12-31 | (pending) | feat: phase 1 step 1.4 - Signal Bus Integration (The Neural Net Goes Live) |
+| 2025-12-31 | fc3bfd7 | feat: phase 1 step 1.4 - Signal Bus Integration (The Neural Net Goes Live) |
 | 2025-12-31 | ad61188 | fix: TypeScript compilation errors in orchestration module |
 | 2025-12-31 | 08a5ed9 | docs: update project status with commit hash for step 1.2 |
 | 2025-12-31 | d620c32 | feat: phase 1 step 1.2 - Firestore-Native Signal Bus (The Neural Net) |
