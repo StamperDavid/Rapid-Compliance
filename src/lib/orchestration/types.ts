@@ -65,6 +65,9 @@ export type SignalType =
   | 'deal.stage.changed'        // Deal moved to new stage
   | 'deal.won'                  // Deal closed-won
   | 'deal.lost'                 // Deal closed-lost
+  | 'deal.health.updated'       // Deal health score recalculated
+  | 'deal.recommendations.generated' // Next best actions generated
+  | 'deal.action.recommended'   // Specific action recommended
   
   // Onboarding Signals
   | 'onboarding.started'        // User began onboarding flow
