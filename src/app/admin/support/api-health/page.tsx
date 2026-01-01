@@ -38,19 +38,25 @@ export default function APIHealthPage() {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { adminDb } = await import('@/lib/firebase/admin');
+      const { limit: firestoreLimit } = await import('firebase/firestore');
       
       // Get all organizations
-      let orgsSnapshot;
+      let orgDocs: Array<{ id: string; data: () => any }>;
       if (adminDb) {
-        orgsSnapshot = await adminDb.collection('organizations').limit(50).get();
+        const snapshot = await adminDb.collection('organizations').limit(50).get();
+        orgDocs = snapshot.docs;
       } else {
-        const orgsData = await FirestoreService.query('organizations', (ref) => ref.limit(50));
-        orgsSnapshot = orgsData;
+        const orgsData = await FirestoreService.getAll('organizations', [firestoreLimit(50)]);
+        // Convert array to snapshot-like structure
+        orgDocs = orgsData.map((org: any) => ({
+          id: org.id,
+          data: () => org,
+        }));
       }
       
       const orgHealthData: OrgAPIHealth[] = [];
       
-      for (const orgDoc of orgsSnapshot.docs) {
+      for (const orgDoc of orgDocs) {
         const orgData = orgDoc.data();
         const orgId = orgDoc.id;
         
