@@ -4,6 +4,7 @@ import { MutationEngine } from '@/lib/services/mutation-engine';
 import { getIndustryTemplate } from '@/lib/persona/industry-templates';
 import { getMutationRules } from '@/lib/persona/templates/mutation-rules';
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
+import type { UpdateData } from 'firebase/firestore';
 
 // Check if running on server or client
 const isServer = typeof window === 'undefined';
@@ -258,7 +259,7 @@ export async function updateBaseModel(
     await dal.safeUpdateDoc('BASE_MODELS', baseModelId, {
       ...updates,
       updatedAt: serverTimestamp(),
-    }, {
+    } as UpdateData<BaseModel>, {
       audit: true,
       userId: 'system-update', // No userId available in this context
       organizationId: orgId,
