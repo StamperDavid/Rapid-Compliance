@@ -119,7 +119,12 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date();
-    const rulesId = adminDal.generateId();
+    // Generate a new document ID
+    const rulesRef = adminDal.getNestedCollection(
+      'organizations/{orgId}/scoringRules',
+      { orgId: organizationId }
+    );
+    const rulesId = rulesRef.doc().id;
 
     // If this is set to active, deactivate all other rules
     if (rulesData.isActive) {
