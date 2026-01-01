@@ -28,6 +28,7 @@ import {
   SetOptions,
   WithFieldValue,
   DocumentData,
+  UpdateData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS, getCollection, getOrgSubCollection } from './collections';
@@ -141,7 +142,7 @@ export class FirestoreDAL {
   async safeUpdateDoc<T extends DocumentData>(
     collectionName: keyof typeof COLLECTIONS,
     docId: string,
-    data: Partial<T>,
+    data: UpdateData<T>,
     options?: WriteOptions
   ): Promise<void> {
     const collectionRef = COLLECTIONS[collectionName];
