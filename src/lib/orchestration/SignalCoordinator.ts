@@ -271,7 +271,7 @@ export class SignalCoordinator {
         leadId: signalData.leadId,
         priority: signalData.priority,
         confidence: signalData.confidence,
-        duration: `${duration}ms`,
+        durationMs: duration,
         file: 'SignalCoordinator.ts'
       });
       

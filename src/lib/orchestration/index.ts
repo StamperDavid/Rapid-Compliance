@@ -33,11 +33,15 @@
  * ```
  */
 
-// Main coordinator
-export { SignalCoordinator, SignalCoordinatorConfig } from './SignalCoordinator';
+// Main coordinator (class export)
+export { SignalCoordinator } from './SignalCoordinator';
 export { default as DefaultSignalCoordinator } from './SignalCoordinator';
 
 // Types and interfaces
+export type {
+  SignalCoordinatorConfig,
+} from './SignalCoordinator';
+
 export type {
   SalesSignal,
   SignalObserver,
