@@ -4,8 +4,9 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, QueryConstraint, QueryDocumentSnapshot, Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { getClientSignalCoordinator } from '@/lib/orchestration';
 
 export interface Deal {
   id: string;
@@ -159,6 +160,14 @@ export async function createDeal(
       stage: deal.stage,
     });
 
+    // Emit deal.created signal
+    await emitDealSignal({
+      type: 'deal.created',
+      organizationId,
+      workspaceId,
+      deal,
+    });
+
     return deal;
   } catch (error: any) {
     logger.error('Failed to create deal', error, { organizationId, data });
@@ -251,6 +260,34 @@ export async function moveDealToStage(
       value: deal.value,
     });
 
+    // Emit signals based on stage change
+    await emitDealSignal({
+      type: 'deal.stage.changed',
+      organizationId,
+      workspaceId,
+      deal,
+      metadata: { oldStage, newStage },
+    });
+
+    // Emit specific win/loss signals
+    if (newStage === 'closed_won') {
+      await emitDealSignal({
+        type: 'deal.won',
+        organizationId,
+        workspaceId,
+        deal,
+        metadata: { oldStage },
+      });
+    } else if (newStage === 'closed_lost') {
+      await emitDealSignal({
+        type: 'deal.lost',
+        organizationId,
+        workspaceId,
+        deal,
+        metadata: { oldStage, lostReason: deal.lostReason },
+      });
+    }
+
     return deal;
   } catch (error: any) {
     logger.error('Failed to move deal', error, { organizationId, dealId, newStage });
@@ -306,6 +343,76 @@ export async function getPipelineSummary(
   } catch (error: any) {
     logger.error('Failed to get pipeline summary', error, { organizationId });
     throw new Error(`Failed to get pipeline summary: ${error.message}`);
+  }
+}
+
+// ============================================================================
+// SIGNAL BUS INTEGRATION
+// ============================================================================
+
+/**
+ * Emit CRM deal signals to the Neural Net
+ */
+async function emitDealSignal(params: {
+  type: 'deal.created' | 'deal.stage.changed' | 'deal.won' | 'deal.lost';
+  organizationId: string;
+  workspaceId: string;
+  deal: Deal;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const { type, organizationId, workspaceId, deal, metadata = {} } = params;
+    const coordinator = getClientSignalCoordinator();
+
+    // Determine signal priority based on deal value and type
+    let priority: 'High' | 'Medium' | 'Low' = 'Medium';
+    if (type === 'deal.won' || type === 'deal.lost') {
+      priority = 'High';
+    } else if (deal.value > 50000) {
+      priority = 'High';
+    } else if (deal.value > 10000) {
+      priority = 'Medium';
+    } else {
+      priority = 'Low';
+    }
+
+    await coordinator.emitSignal({
+      type,
+      leadId: deal.contactId, // Link to contact if available
+      orgId: organizationId,
+      workspaceId,
+      confidence: 1.0, // CRM events are always certain
+      priority,
+      metadata: {
+        source: 'crm-deal-service',
+        dealId: deal.id,
+        dealName: deal.name,
+        company: deal.company || deal.companyName,
+        contactId: deal.contactId,
+        value: deal.value,
+        currency: deal.currency,
+        stage: deal.stage,
+        probability: deal.probability,
+        expectedCloseDate: deal.expectedCloseDate,
+        actualCloseDate: deal.actualCloseDate,
+        ownerId: deal.ownerId,
+        dealSource: deal.source,
+        ...metadata,
+      },
+    });
+
+    logger.info('Deal signal emitted', {
+      type,
+      dealId: deal.id,
+      organizationId,
+      value: deal.value,
+    });
+  } catch (error) {
+    // Don't fail deal operations if signal emission fails
+    logger.error('Failed to emit deal signal', error, {
+      type: params.type,
+      dealId: params.deal.id,
+    });
   }
 }
 

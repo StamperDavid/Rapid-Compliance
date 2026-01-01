@@ -37,6 +37,14 @@
 export { SignalCoordinator } from './SignalCoordinator';
 export { default as DefaultSignalCoordinator } from './SignalCoordinator';
 
+// Factory functions for easy instantiation
+export { 
+  getSignalCoordinator,
+  getServerSignalCoordinator,
+  getClientSignalCoordinator,
+  resetCoordinators,
+} from './coordinator-factory';
+
 // Types and interfaces
 export type {
   SignalCoordinatorConfig,

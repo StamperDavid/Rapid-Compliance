@@ -22,6 +22,7 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { discoverCompany, discoverPerson } from './discovery-engine';
 import type { DiscoveredCompany, DiscoveredPerson } from './discovery-engine';
+import { getServerSignalCoordinator } from '@/lib/orchestration';
 import type {
   LeadScore,
   LeadScoreReason,
@@ -180,6 +181,9 @@ export async function calculateLeadScore(
       grade: score.grade,
       priority: score.priority,
     });
+
+    // Step 10: Emit Signal Bus signals based on score
+    await emitScoringSignals(leadId, organizationId, score, company, person);
 
     return score;
   } catch (error) {
@@ -1295,4 +1299,156 @@ async function cacheScore(
   } catch (error) {
     logger.error('Failed to cache score', error, { leadId });
   }
+}
+
+// ============================================================================
+// SIGNAL BUS INTEGRATION
+// ============================================================================
+
+/**
+ * Emit Signal Bus signals based on lead scoring results
+ * 
+ * This function emits signals to the Neural Net when leads are scored.
+ * Signals different events based on score, grade, and intent.
+ */
+async function emitScoringSignals(
+  leadId: string,
+  organizationId: string,
+  score: LeadScore,
+  company: DiscoveredCompany | null,
+  person: DiscoveredPerson | null
+): Promise<void> {
+  try {
+    const coordinator = getServerSignalCoordinator();
+
+    // Signal 1: lead.qualified - High-quality leads (Grade A or B)
+    if (score.grade === 'A' || score.grade === 'B') {
+      await coordinator.emitSignal({
+        type: 'lead.qualified',
+        leadId,
+        orgId: organizationId,
+        confidence: score.metadata.confidence,
+        priority: score.grade === 'A' ? 'High' : 'Medium',
+        metadata: {
+          source: 'lead-scoring-engine',
+          totalScore: score.totalScore,
+          grade: score.grade,
+          priority: score.priority,
+          breakdown: score.breakdown,
+          reasons: score.reasons.map(r => ({
+            category: r.category,
+            factor: r.factor,
+            points: r.points,
+            impact: r.impact,
+          })),
+          companyDomain: company?.domain,
+          personEmail: person?.email,
+          scoredAt: score.metadata.scoredAt.toISOString(),
+        },
+      });
+    }
+
+    // Signal 2: lead.intent.high - High intent signals detected
+    const highIntentSignals = score.detectedSignals.filter(s => 
+      ['hiring', 'funding', 'high_growth', 'job_change'].includes(s.type)
+    );
+    
+    if (highIntentSignals.length > 0 && score.breakdown.intentSignals >= 10) {
+      await coordinator.emitSignal({
+        type: 'lead.intent.high',
+        leadId,
+        orgId: organizationId,
+        confidence: Math.max(...highIntentSignals.map(s => s.confidence)),
+        priority: 'High',
+        metadata: {
+          source: 'lead-scoring-engine',
+          intentScore: score.breakdown.intentSignals,
+          detectedSignals: highIntentSignals.map(s => ({
+            type: s.type,
+            confidence: s.confidence,
+            description: s.description,
+            source: s.source,
+          })),
+          totalScore: score.totalScore,
+          grade: score.grade,
+          companyDomain: company?.domain,
+          personEmail: person?.email,
+          nextBestAction: determineNextBestAction(score, highIntentSignals),
+        },
+      });
+    }
+
+    // Signal 3: lead.intent.low - Low intent or cold lead
+    if (score.breakdown.intentSignals < 5 && score.priority === 'cold') {
+      await coordinator.emitSignal({
+        type: 'lead.intent.low',
+        leadId,
+        orgId: organizationId,
+        confidence: score.metadata.confidence,
+        priority: 'Low',
+        metadata: {
+          source: 'lead-scoring-engine',
+          intentScore: score.breakdown.intentSignals,
+          totalScore: score.totalScore,
+          grade: score.grade,
+          priority: score.priority,
+          companyDomain: company?.domain,
+          personEmail: person?.email,
+          recommendation: 'Consider nurture sequence or deprioritize',
+        },
+      });
+    }
+
+    logger.info('Lead scoring signals emitted', {
+      leadId,
+      organizationId,
+      grade: score.grade,
+      intentScore: score.breakdown.intentSignals,
+      signalsEmitted: [
+        score.grade === 'A' || score.grade === 'B' ? 'qualified' : null,
+        highIntentSignals.length > 0 && score.breakdown.intentSignals >= 10 ? 'intent.high' : null,
+        score.breakdown.intentSignals < 5 && score.priority === 'cold' ? 'intent.low' : null,
+      ].filter(Boolean).length,
+    });
+  } catch (error) {
+    // Don't fail scoring if signal emission fails
+    logger.error('Failed to emit scoring signals', error, {
+      leadId,
+      organizationId,
+    });
+  }
+}
+
+/**
+ * Determine next best action based on score and intent signals
+ */
+function determineNextBestAction(
+  score: LeadScore,
+  highIntentSignals: Array<{ type: string; description: string }>
+): string {
+  // High-grade + hiring signal = immediate outreach
+  if (score.grade === 'A' && highIntentSignals.some(s => s.type === 'hiring')) {
+    return 'Send personalized email referencing hiring activity';
+  }
+
+  // High-grade + funding signal = strategic outreach
+  if (score.grade === 'A' && highIntentSignals.some(s => s.type === 'funding')) {
+    return 'Send growth-focused email referencing recent funding';
+  }
+
+  // High-grade + job change = timing-based outreach
+  if (score.grade === 'A' && highIntentSignals.some(s => s.type === 'job_change')) {
+    return 'Reach out about new role responsibilities';
+  }
+
+  // Default high-grade action
+  if (score.grade === 'A') {
+    return 'Enroll in high-touch sales sequence';
+  }
+
+  if (score.grade === 'B') {
+    return 'Enroll in standard outreach sequence';
+  }
+
+  return 'Monitor for engagement signals';
 }

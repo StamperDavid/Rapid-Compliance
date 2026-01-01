@@ -30,6 +30,8 @@ import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
 import type { WorkflowState } from '@/types/workflow-state';
 import { createWorkflowState } from '@/types/workflow-state';
+import { getSignalCoordinator } from '@/lib/orchestration';
+import { Timestamp } from 'firebase/firestore';
 
 // ============================================================================
 // TYPES
@@ -222,8 +224,13 @@ export async function discoverCompany(
         message: 'Cost savings achieved - no scraping needed',
       });
 
+      const company = JSON.parse(cached.scrape.cleanedContent) as DiscoveredCompany;
+      
+      // Emit Signal Bus signals even for cached data (lower priority)
+      await emitDiscoverySignals(company, organizationId, true);
+
       return {
-        company: JSON.parse(cached.scrape.cleanedContent) as DiscoveredCompany,
+        company,
         rawData: JSON.parse(cached.scrape.rawHtml) as RawScrapedData,
         fromCache: true,
         scrapeId: cached.scrape.id,
@@ -252,6 +259,9 @@ export async function discoverCompany(
       techStackFound: company.techStack.length,
       fromCache: false,
     });
+
+    // Emit Signal Bus signals for newly discovered data
+    await emitDiscoverySignals(company, organizationId, false);
 
     return {
       company,
@@ -974,8 +984,13 @@ export async function discoverPerson(
         cacheAge: Date.now() - cached.createdAt.getTime(),
       });
 
+      const person = JSON.parse(cached.cleanedContent) as DiscoveredPerson;
+      
+      // Emit Signal Bus signal even for cached data (lower priority)
+      await emitPersonDiscoverySignals(person, organizationId, true);
+
       return {
-        person: JSON.parse(cached.cleanedContent) as DiscoveredPerson,
+        person,
         fromCache: true,
         scrapeId: cached.id,
       };
@@ -1009,6 +1024,9 @@ export async function discoverPerson(
       title: person.title,
       fromCache: false,
     });
+
+    // Emit Signal Bus signal for newly discovered person
+    await emitPersonDiscoverySignals(person, organizationId, false);
 
     return {
       person,
@@ -1381,4 +1399,168 @@ export async function discoverPeopleBatch(
   });
 
   return results;
+}
+
+// ============================================================================
+// SIGNAL BUS INTEGRATION
+// ============================================================================
+
+/**
+ * Emit discovery signals to the Neural Net
+ * 
+ * Emits signals when company data is discovered (new or cached).
+ * Triggers downstream actions like lead scoring, sequence enrollment, etc.
+ */
+async function emitDiscoverySignals(
+  company: DiscoveredCompany,
+  organizationId: string,
+  fromCache: boolean
+): Promise<void> {
+  try {
+    const coordinator = getSignalCoordinator();
+
+    // Signal 1: website.discovered - Always emit when company is discovered
+    await coordinator.emitSignal({
+      type: 'website.discovered',
+      orgId: organizationId,
+      confidence: company.metadata.confidence,
+      priority: fromCache ? 'Low' : 'Medium',
+      metadata: {
+        source: 'discovery-engine',
+        domain: company.domain,
+        companyName: company.companyName,
+        industry: company.industry,
+        size: company.size,
+        location: company.location,
+        teamMembersCount: company.teamMembers.length,
+        techStackCount: company.techStack.length,
+        fromCache,
+        scrapedAt: company.metadata.scrapedAt.toISOString(),
+        expiresAt: company.metadata.expiresAt.toISOString(),
+      },
+    });
+
+    // Signal 2: website.technology.detected - Emit if tech stack found
+    if (company.techStack.length > 0) {
+      await coordinator.emitSignal({
+        type: 'website.technology.detected',
+        orgId: organizationId,
+        confidence: 0.9, // Tech stack detection is usually accurate
+        priority: 'Medium',
+        metadata: {
+          source: 'discovery-engine',
+          domain: company.domain,
+          companyName: company.companyName,
+          techStack: company.techStack.map(t => ({
+            name: t.name,
+            category: t.category,
+            confidence: t.confidence,
+          })),
+          techStackCount: company.techStack.length,
+          categories: [...new Set(company.techStack.map(t => t.category))],
+        },
+      });
+    }
+
+    // Signal 3: lead.discovered - Emit for each team member found
+    if (company.teamMembers.length > 0) {
+      for (const member of company.teamMembers.slice(0, 10)) { // Limit to first 10 to avoid spam
+        if (member.email) {
+          await coordinator.emitSignal({
+            type: 'lead.discovered',
+            leadId: member.email, // Use email as temporary leadId
+            orgId: organizationId,
+            confidence: member.email ? 0.8 : 0.5,
+            priority: member.email ? 'Medium' : 'Low',
+            metadata: {
+              source: 'discovery-engine',
+              discoveryMethod: 'team-directory',
+              domain: company.domain,
+              companyName: company.companyName,
+              personName: member.name,
+              personTitle: member.title,
+              personEmail: member.email,
+              personLinkedIn: member.linkedinUrl,
+              personImageUrl: member.imageUrl,
+              companyIndustry: company.industry,
+              companySize: company.size,
+            },
+          });
+        }
+      }
+    }
+
+    logger.info('Discovery signals emitted', {
+      domain: company.domain,
+      organizationId,
+      fromCache,
+      signalsEmitted: {
+        websiteDiscovered: 1,
+        technologyDetected: company.techStack.length > 0 ? 1 : 0,
+        leadsDiscovered: Math.min(company.teamMembers.filter(m => m.email).length, 10),
+      },
+    });
+  } catch (error) {
+    // Don't fail discovery if signal emission fails
+    logger.error('Failed to emit discovery signals', error, {
+      domain: company.domain,
+      organizationId,
+    });
+  }
+}
+
+/**
+ * Emit person discovery signals to the Neural Net
+ * 
+ * Emits signals when person data is discovered.
+ */
+async function emitPersonDiscoverySignals(
+  person: DiscoveredPerson,
+  organizationId: string,
+  fromCache: boolean
+): Promise<void> {
+  try {
+    const coordinator = getSignalCoordinator();
+
+    // Signal: lead.discovered
+    await coordinator.emitSignal({
+      type: 'lead.discovered',
+      leadId: person.email,
+      orgId: organizationId,
+      confidence: person.metadata.confidence,
+      priority: fromCache ? 'Low' : 'Medium',
+      metadata: {
+        source: 'person-discovery',
+        discoveryMethod: 'email-enrichment',
+        email: person.email,
+        firstName: person.firstName,
+        lastName: person.lastName,
+        fullName: person.fullName,
+        title: person.title,
+        company: person.company,
+        currentRole: person.currentRole,
+        location: person.location,
+        socialProfiles: person.socialProfiles,
+        skills: person.skills,
+        interests: person.interests,
+        discoveryMethods: person.metadata.methods,
+        fromCache,
+        discoveredAt: person.metadata.discoveredAt.toISOString(),
+        expiresAt: person.metadata.expiresAt.toISOString(),
+      },
+    });
+
+    logger.info('Person discovery signal emitted', {
+      email: person.email,
+      organizationId,
+      fullName: person.fullName,
+      fromCache,
+    });
+  } catch (error) {
+    // Don't fail person discovery if signal emission fails
+    logger.error('Failed to emit person discovery signal', error, {
+      email: person.email,
+      organizationId,
+    });
+  }
 }

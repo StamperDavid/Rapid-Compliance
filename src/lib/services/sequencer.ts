@@ -27,6 +27,8 @@ import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS } from '@/lib/sms/sms-service';
 import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
 import { initiateCall } from '@/lib/voice/twilio-service';
+import { getServerSignalCoordinator } from '@/lib/orchestration';
+import type { SalesSignal } from '@/lib/orchestration/types';
 
 // ============================================================================
 // TYPES
@@ -352,6 +354,15 @@ export async function enrollInSequence(params: {
       nextExecutionAt: nextExecutionAt.toISOString(),
     });
 
+    // Emit sequence.started signal
+    await emitSequenceSignal({
+      type: 'sequence.started',
+      leadId,
+      organizationId,
+      enrollment,
+      sequence,
+    });
+
     return enrollment;
   } catch (error) {
     logger.error('Failed to enroll in sequence', error, params);
@@ -458,6 +469,15 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
       await adminDal.safeUpdateDoc('SEQUENCES', enrollment.sequenceId, {
         'stats.activeEnrollments': Math.max(0, (sequence.stats.activeEnrollments || 0) - 1),
         'stats.completedEnrollments': (sequence.stats.completedEnrollments || 0) + 1,
+      });
+
+      // Emit sequence.completed signal
+      await emitSequenceSignal({
+        type: 'sequence.completed',
+        leadId: enrollment.leadId,
+        organizationId: enrollment.organizationId,
+        enrollment: { ...enrollment, status: 'completed' },
+        sequence,
       });
     }
 
@@ -588,14 +608,35 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
 
     // Get enrollment to update sequence stats
     const enrollmentDoc = await adminDal.safeGetDoc('SEQUENCE_ENROLLMENTS', enrollmentId);
-    const enrollment = enrollmentDoc.data();
-    if (enrollment) {
-      await adminDal.safeUpdateDoc('SEQUENCES', enrollment.sequenceId, {
-        'stats.activeEnrollments': Math.max(0, (enrollment.stats?.activeEnrollments || 0) - 1),
+    const enrollmentData = enrollmentDoc.data();
+    if (enrollmentData) {
+      await adminDal.safeUpdateDoc('SEQUENCES', enrollmentData.sequenceId, {
+        'stats.activeEnrollments': Math.max(0, (enrollmentData.stats?.activeEnrollments || 0) - 1),
       });
     }
 
     logger.info('Enrollment stopped', { enrollmentId, reason });
+
+    // Emit sequence.paused signal
+    if (enrollmentData) {
+      const enrollment: SequenceEnrollment = {
+        ...enrollmentData,
+        id: enrollmentId,
+        enrolledAt: enrollmentData.enrolledAt?.toDate?.() || enrollmentData.enrolledAt,
+        nextExecutionAt: enrollmentData.nextExecutionAt?.toDate?.() || enrollmentData.nextExecutionAt,
+        completedAt: enrollmentData.completedAt?.toDate?.() || enrollmentData.completedAt,
+        status: 'stopped',
+      } as SequenceEnrollment;
+      
+      await emitSequenceSignal({
+        type: 'sequence.paused',
+        leadId: enrollment.leadId,
+        organizationId: enrollment.organizationId,
+        enrollment,
+        sequence: null,
+        metadata: { reason: reason || 'Manual stop' },
+      });
+    }
   } catch (error) {
     logger.error('Failed to stop enrollment', error, { enrollmentId });
     throw error;
@@ -1067,4 +1108,258 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
     logger.error('Failed to process due sequence steps', error, { organizationId });
     throw error;
   }
+}
+
+// ============================================================================
+// SIGNAL BUS INTEGRATION
+// ============================================================================
+
+/**
+ * Emit sequence-related signals to the Neural Net
+ */
+async function emitSequenceSignal(params: {
+  type: 'sequence.started' | 'sequence.completed' | 'sequence.paused' | 'sequence.failed';
+  leadId: string;
+  organizationId: string;
+  enrollment: SequenceEnrollment;
+  sequence: Sequence | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const { type, leadId, organizationId, enrollment, sequence, metadata = {} } = params;
+    const coordinator = getServerSignalCoordinator();
+
+    await coordinator.emitSignal({
+      type,
+      leadId,
+      orgId: organizationId,
+      confidence: 1.0, // Sequence events are always certain
+      priority: type === 'sequence.failed' ? 'High' : 'Medium',
+      metadata: {
+        source: 'sequencer',
+        enrollmentId: enrollment.id,
+        sequenceId: enrollment.sequenceId,
+        sequenceName: sequence?.name,
+        status: enrollment.status,
+        currentStepIndex: enrollment.currentStepIndex,
+        executedStepsCount: enrollment.executedSteps.length,
+        enrolledAt: enrollment.enrolledAt.toISOString(),
+        completedAt: enrollment.completedAt?.toISOString(),
+        ...metadata,
+      },
+    });
+
+    logger.info('Sequence signal emitted', {
+      type,
+      leadId,
+      enrollmentId: enrollment.id,
+    });
+  } catch (error) {
+    // Don't fail sequence execution if signal emission fails
+    logger.error('Failed to emit sequence signal', error, {
+      type: params.type,
+      leadId: params.leadId,
+    });
+  }
+}
+
+/**
+ * Initialize signal observers for the sequencer
+ * 
+ * This function sets up real-time listeners that automatically react to signals.
+ * Should be called once when the application starts.
+ * 
+ * @param organizationId - Organization to observe signals for
+ * @param autoEnrollConfig - Configuration for auto-enrollment
+ */
+export async function initializeSequencerSignalObservers(
+  organizationId: string,
+  autoEnrollConfig: {
+    /** Sequence to enroll qualified leads into */
+    qualifiedLeadSequenceId?: string;
+    /** Sequence to enroll high-intent leads into */
+    highIntentSequenceId?: string;
+    /** Whether to auto-enroll qualified leads */
+    autoEnrollQualified?: boolean;
+    /** Whether to auto-enroll high-intent leads */
+    autoEnrollHighIntent?: boolean;
+  }
+): Promise<() => void> {
+  const coordinator = getServerSignalCoordinator();
+  const unsubscribers: Array<() => void> = [];
+
+  logger.info('Initializing sequencer signal observers', {
+    organizationId,
+    autoEnrollConfig,
+  });
+
+  // Observer 1: Auto-enroll qualified leads
+  if (autoEnrollConfig.autoEnrollQualified && autoEnrollConfig.qualifiedLeadSequenceId) {
+    const unsubscribe = await coordinator.observeSignals(
+      {
+        types: ['lead.qualified'],
+        orgId: organizationId,
+        minConfidence: 0.7,
+        unprocessedOnly: true,
+      },
+      async (signal: SalesSignal) => {
+        try {
+          if (!signal.leadId) {
+            logger.warn('Received lead.qualified signal without leadId', { signalId: signal.id });
+            return;
+          }
+
+          logger.info('Auto-enrolling qualified lead in sequence', {
+            leadId: signal.leadId,
+            sequenceId: autoEnrollConfig.qualifiedLeadSequenceId,
+            score: signal.metadata.totalScore,
+            grade: signal.metadata.grade,
+          });
+
+          // Check if already enrolled
+          const existing = await adminDal?.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
+            ref
+              .where('sequenceId', '==', autoEnrollConfig.qualifiedLeadSequenceId)
+              .where('leadId', '==', signal.leadId)
+              .where('status', '==', 'active')
+              .limit(1)
+          );
+
+          if (!existing || existing.empty) {
+            await enrollInSequence({
+              sequenceId: autoEnrollConfig.qualifiedLeadSequenceId!,
+              leadId: signal.leadId,
+              organizationId,
+              metadata: {
+                source: 'signal-observer',
+                trigger: 'lead.qualified',
+                signalId: signal.id,
+                score: signal.metadata.totalScore,
+                grade: signal.metadata.grade,
+              },
+            });
+
+            // Mark signal as processed
+            await coordinator.markSignalProcessed(organizationId, signal.id!, {
+              success: true,
+              action: 'enrolled_in_sequence',
+              module: 'sequencer',
+            });
+          } else {
+            logger.info('Lead already enrolled in sequence, skipping', {
+              leadId: signal.leadId,
+              sequenceId: autoEnrollConfig.qualifiedLeadSequenceId,
+            });
+          }
+        } catch (error) {
+          logger.error('Failed to auto-enroll qualified lead', error, {
+            leadId: signal.leadId,
+            signalId: signal.id,
+          });
+
+          // Mark signal processing as failed
+          if (signal.id) {
+            await coordinator.markSignalProcessed(organizationId, signal.id, {
+              success: false,
+              action: 'enrollment_failed',
+              module: 'sequencer',
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
+        }
+      }
+    );
+    unsubscribers.push(unsubscribe);
+  }
+
+  // Observer 2: Auto-enroll high-intent leads
+  if (autoEnrollConfig.autoEnrollHighIntent && autoEnrollConfig.highIntentSequenceId) {
+    const unsubscribe = await coordinator.observeSignals(
+      {
+        types: ['lead.intent.high'],
+        orgId: organizationId,
+        minConfidence: 0.8,
+        unprocessedOnly: true,
+      },
+      async (signal: SalesSignal) => {
+        try {
+          if (!signal.leadId) {
+            logger.warn('Received lead.intent.high signal without leadId', { signalId: signal.id });
+            return;
+          }
+
+          logger.info('Auto-enrolling high-intent lead in sequence', {
+            leadId: signal.leadId,
+            sequenceId: autoEnrollConfig.highIntentSequenceId,
+            intentScore: signal.metadata.intentScore,
+            detectedSignals: signal.metadata.detectedSignals,
+          });
+
+          // Check if already enrolled
+          const existing = await adminDal?.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
+            ref
+              .where('sequenceId', '==', autoEnrollConfig.highIntentSequenceId)
+              .where('leadId', '==', signal.leadId)
+              .where('status', '==', 'active')
+              .limit(1)
+          );
+
+          if (!existing || existing.empty) {
+            await enrollInSequence({
+              sequenceId: autoEnrollConfig.highIntentSequenceId!,
+              leadId: signal.leadId,
+              organizationId,
+              metadata: {
+                source: 'signal-observer',
+                trigger: 'lead.intent.high',
+                signalId: signal.id,
+                intentScore: signal.metadata.intentScore,
+                detectedSignals: signal.metadata.detectedSignals,
+                nextBestAction: signal.metadata.nextBestAction,
+              },
+            });
+
+            // Mark signal as processed
+            await coordinator.markSignalProcessed(organizationId, signal.id!, {
+              success: true,
+              action: 'enrolled_in_sequence',
+              module: 'sequencer',
+            });
+          } else {
+            logger.info('Lead already enrolled in sequence, skipping', {
+              leadId: signal.leadId,
+              sequenceId: autoEnrollConfig.highIntentSequenceId,
+            });
+          }
+        } catch (error) {
+          logger.error('Failed to auto-enroll high-intent lead', error, {
+            leadId: signal.leadId,
+            signalId: signal.id,
+          });
+
+          // Mark signal processing as failed
+          if (signal.id) {
+            await coordinator.markSignalProcessed(organizationId, signal.id, {
+              success: false,
+              action: 'enrollment_failed',
+              module: 'sequencer',
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
+        }
+      }
+    );
+    unsubscribers.push(unsubscribe);
+  }
+
+  logger.info('Sequencer signal observers initialized', {
+    organizationId,
+    observersCount: unsubscribers.length,
+  });
+
+  // Return cleanup function
+  return () => {
+    logger.info('Cleaning up sequencer signal observers', { organizationId });
+    unsubscribers.forEach(unsubscribe => unsubscribe());
+  };
 }
