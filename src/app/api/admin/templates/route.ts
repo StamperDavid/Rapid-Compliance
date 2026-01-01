@@ -78,8 +78,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // TypeScript guard: validation.success === true means validation.data exists
+    if (!validation.data) {
+      return NextResponse.json(
+        { success: false, error: 'Validation data missing' },
+        { status: 500 }
+      );
+    }
+
     // Save template to Firestore
-    await saveGlobalTemplate(validation.data, user.uid);
+    await saveGlobalTemplate(validation.data as any, user.uid);
 
     logger.info('Template saved', {
       templateId: validation.data.id,
