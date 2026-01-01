@@ -135,9 +135,8 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
                       <Select
                         value={signal.priority}
                         onValueChange={val => updateSignal(index, { priority: val })}
-                        disabled={disabled}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger disabled={disabled}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -188,9 +187,8 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
                     <Select
                       value={signal.action}
                       onValueChange={val => updateSignal(index, { action: val })}
-                      disabled={disabled}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger disabled={disabled}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -217,9 +215,8 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
                     <Select
                       value={signal.platform}
                       onValueChange={val => updateSignal(index, { platform: val })}
-                      disabled={disabled}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger disabled={disabled}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

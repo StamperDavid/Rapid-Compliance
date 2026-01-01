@@ -120,9 +120,8 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
                       <Select
                         value={field.type}
                         onValueChange={val => updateCustomField(index, { type: val })}
-                        disabled={disabled}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger disabled={disabled}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

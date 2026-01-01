@@ -116,9 +116,8 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
                       <Select
                         value={pattern.context}
                         onValueChange={val => updateFluffPattern(index, { context: val })}
-                        disabled={disabled}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger disabled={disabled}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
