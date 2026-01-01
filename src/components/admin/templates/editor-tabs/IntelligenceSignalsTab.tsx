@@ -218,9 +218,8 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                           <Select
                             value={signal.priority}
                             onValueChange={val => updateSignal(index, { priority: val })}
-                            disabled={disabled}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger disabled={disabled}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -271,9 +270,8 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                         <Select
                           value={signal.action}
                           onValueChange={val => updateSignal(index, { action: val })}
-                          disabled={disabled}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger disabled={disabled}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -300,9 +298,8 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                         <Select
                           value={signal.platform}
                           onValueChange={val => updateSignal(index, { platform: val })}
-                          disabled={disabled}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger disabled={disabled}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -376,9 +373,8 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
                           <Select
                             value={pattern.context}
                             onValueChange={val => updateFluffPattern(index, { context: val })}
-                            disabled={disabled}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger disabled={disabled}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
