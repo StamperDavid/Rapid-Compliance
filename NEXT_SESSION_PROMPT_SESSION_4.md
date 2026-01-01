@@ -37,14 +37,15 @@ You are continuing work on the "Universal AI Sales Operating System" - the Sover
 - **Commits**: d620c32, 08a5ed9, ad61188
 
 ### Session 3: Phase 1, Step 1.4 - Signal Bus Integration ✅
-- Created `src/lib/orchestration/coordinator-factory.ts` - Factory for proper SignalCoordinator initialization
+- Created coordinator factories (server/client separation for proper bundling)
 - **Discovery Engine** emits: `website.discovered`, `website.technology.detected`, `lead.discovered`
 - **Lead Scoring Engine** emits: `lead.qualified`, `lead.intent.high`, `lead.intent.low`
 - **Sequencer** observes signals and auto-enrolls leads in sequences
 - **CRM Deal Service** emits: `deal.created`, `deal.stage.changed`, `deal.won`, `deal.lost`
 - TypeScript compilation clean (0 errors in modified files)
+- **CRITICAL FIX**: Split coordinator factory to prevent firebase-admin bundling in client code
 - **Total Changes**: +905 insertions, -9 deletions across 7 files
-- **Commits**: fc3bfd7, 2569ea3
+- **Commits**: fc3bfd7, 2569ea3, f5ffab4, fec631d
 
 ---
 
@@ -141,13 +142,15 @@ CRM Deal Service → [deal.created, deal.won, deal.lost] → Signal Bus
 ## 📊 CURRENT STATE SNAPSHOT
 
 **Branch**: `dev` (clean working tree, pushed to origin)  
-**Latest Commit**: `2569ea3` - docs: update project status with Step 1.4 commit hash  
-**Previous Commit**: `fc3bfd7` - feat: phase 1 step 1.4 - Signal Bus Integration  
+**Latest Commit**: `fec631d` - fix: split coordinator factory into separate client/server modules  
+**Previous Commit**: `f5ffab4` - docs: add Session 4 continuation prompt  
+**Session 3 Main**: `fc3bfd7` - feat: phase 1 step 1.4 - Signal Bus Integration  
 
 **New Modules Created**:
 - `src/lib/dal/` - BaseAgentDAL for environment-aware data access
 - `src/lib/orchestration/` - SignalCoordinator and types (The Neural Net)
-- `src/lib/orchestration/coordinator-factory.ts` - Factory for proper initialization
+- `src/lib/orchestration/coordinator-factory-server.ts` - Server-side factory (firebase-admin)
+- `src/lib/orchestration/coordinator-factory-client.ts` - Client-side factory (firebase client SDK)
 
 **Signal Bus Status**: ✅ Fully operational, integrated with 4 core modules, TypeScript-clean
 
