@@ -124,6 +124,21 @@ export class FirestoreAdminDAL {
     return this.db.collectionGroup(collectionId);
   }
   
+  /**
+   * Get an environment-aware subcollection name
+   * Helper method to apply prefix to any subcollection
+   * 
+   * @param subCollectionName - Base subcollection name
+   * @returns Prefixed subcollection name based on environment
+   * 
+   * @example
+   * adminDal.getSubColPath('website') // 'test_website' in dev, 'website' in prod
+   */
+  getSubColPath(subCollectionName: string): string {
+    const prefix = getPrefix();
+    return `${prefix}${subCollectionName}`;
+  }
+  
   // ========================================
   // SAFE WRITE OPERATIONS
   // ========================================

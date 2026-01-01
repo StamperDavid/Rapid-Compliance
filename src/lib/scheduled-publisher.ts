@@ -2,9 +2,12 @@
  * Scheduled Publisher
  * Processes scheduled pages and blog posts to publish them at the right time
  * CRITICAL: Multi-tenant - processes all orgs safely
+ * 
+ * REFACTORED: Now uses adminDal for environment-aware collection access
  */
 
 import { db, admin } from '@/lib/firebase-admin';
+import { adminDal } from '@/lib/firebase/admin-dal';
 
 interface ScheduledItem {
   id: string;
@@ -30,21 +33,24 @@ export async function processScheduledPages(): Promise<{
     const now = new Date();
     const items: ScheduledItem[] = [];
 
-    // Get all organizations
-    const orgsSnapshot = await db.collection('organizations').get();
+    // Get all organizations (DAL-refactored instance #1)
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+    const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
 
     // For each organization, check for scheduled pages
     for (const orgDoc of orgsSnapshot.docs) {
       const organizationId = orgDoc.id;
 
       try {
-        // Get scheduled pages
-        const pagesSnapshot = await db
-          .collection('organizations')
+        // Get scheduled pages (DAL-refactored instances #2-3)
+        const pagesSnapshot = await adminDal
+          .getCollection('ORGANIZATIONS')
           .doc(organizationId)
-          .collection('website')
+          .collection(adminDal.getSubColPath('website'))
           .doc('pages')
-          .collection('items')
+          .collection(adminDal.getSubColPath('items'))
           .where('status', '==', 'scheduled')
           .get();
 
@@ -64,13 +70,13 @@ export async function processScheduledPages(): Promise<{
           }
         });
 
-        // Get scheduled blog posts
-        const postsSnapshot = await db
-          .collection('organizations')
+        // Get scheduled blog posts (DAL-refactored instances #4-5)
+        const postsSnapshot = await adminDal
+          .getCollection('ORGANIZATIONS')
           .doc(organizationId)
-          .collection('website')
+          .collection(adminDal.getSubColPath('website'))
           .doc('config')
-          .collection('blog-posts')
+          .collection(adminDal.getSubColPath('blog-posts'))
           .where('status', '==', 'scheduled')
           .get();
 
@@ -125,12 +131,16 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
   const now = admin.firestore.Timestamp.now();
 
   if (item.type === 'page') {
-    const pageRef = db
-      .collection('organizations')
+    // DAL-refactored instances #6-7
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+    const pageRef = adminDal
+      .getCollection('ORGANIZATIONS')
       .doc(item.organizationId)
-      .collection('website')
+      .collection(adminDal.getSubColPath('website'))
       .doc('pages')
-      .collection('items')
+      .collection(adminDal.getSubColPath('items'))
       .doc(item.id);
 
     const pageDoc = await pageRef.get();
@@ -165,13 +175,13 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
       lastEditedBy: 'scheduled-publisher',
     });
 
-    // Create audit log
-    const auditRef = db
-      .collection('organizations')
+    // Create audit log (DAL-refactored - page audit)
+    const auditRef = adminDal
+      .getCollection('ORGANIZATIONS')
       .doc(item.organizationId)
-      .collection('website')
+      .collection(adminDal.getSubColPath('website'))
       .doc('audit-log')
-      .collection('entries');
+      .collection(adminDal.getSubColPath('entries'));
 
     await auditRef.add({
       type: 'page_auto_published',
@@ -183,12 +193,16 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
       organizationId: item.organizationId,
     });
   } else if (item.type === 'blog-post') {
-    const postRef = db
-      .collection('organizations')
+    // DAL-refactored instance #10
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+    const postRef = adminDal
+      .getCollection('ORGANIZATIONS')
       .doc(item.organizationId)
-      .collection('website')
+      .collection(adminDal.getSubColPath('website'))
       .doc('config')
-      .collection('blog-posts')
+      .collection(adminDal.getSubColPath('blog-posts'))
       .doc(item.id);
 
     // Publish the post
@@ -200,13 +214,13 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
       lastEditedBy: 'scheduled-publisher',
     });
 
-    // Create audit log
-    const auditRef = db
-      .collection('organizations')
+    // Create audit log (DAL-refactored - blog post audit)
+    const auditRef = adminDal
+      .getCollection('ORGANIZATIONS')
       .doc(item.organizationId)
-      .collection('website')
+      .collection(adminDal.getSubColPath('website'))
       .doc('audit-log')
-      .collection('entries');
+      .collection(adminDal.getSubColPath('entries'));
 
     await auditRef.add({
       type: 'blog_post_auto_published',
