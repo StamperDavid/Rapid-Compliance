@@ -111,7 +111,7 @@ export class FirestoreDAL {
     //   await this.verifyOrgAccess(options.userId, options.organizationId);
     // }
     
-    const docRef = doc(this.db, collectionRef, docId);
+    const docRef = doc(this.db, collectionRef, docId) as DocumentReference<T>;
     
     logger.info('✍️ Writing to Firestore', {
       collection: collectionRef,
