@@ -107,9 +107,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if domain already exists (across all organizations)
-    // Note: Collection group queries still use the underlying db
-    const allOrgsSnapshot = await adminDal.getCollection('ORGANIZATIONS')
-      .collectionGroup('custom-domains')
+    // Use collection group to search across all organizations' custom domains
+    const allOrgsSnapshot = await adminDal.getCollectionGroup('custom-domains')
       .where('__name__', '==', domain)
       .limit(1)
       .get();
