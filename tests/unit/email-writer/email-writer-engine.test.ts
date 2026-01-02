@@ -37,6 +37,7 @@ jest.mock('@/lib/templates/deal-scoring-engine', () => ({
 }));
 
 jest.mock('@/lib/battlecard/battlecard-engine', () => ({
+  discoverCompetitor: jest.fn(),
   generateBattlecard: jest.fn(),
 }));
 
@@ -45,9 +46,9 @@ import { generateSalesEmail, generateEmailVariants } from '@/lib/email-writer/se
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { calculateDealScore } from '@/lib/templates/deal-scoring-engine';
-import { generateBattlecard } from '@/lib/battlecard/battlecard-engine';
+import { discoverCompetitor, generateBattlecard } from '@/lib/battlecard/battlecard-engine';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
-import type { Battlecard } from '@/lib/battlecard/battlecard-engine';
+import type { Battlecard, CompetitorProfile } from '@/lib/battlecard/battlecard-engine';
 
 describe('Email Writer Engine', () => {
   // ============================================================================
@@ -91,6 +92,36 @@ describe('Email Writer Engine', () => {
     predictedCloseDate: new Date('2026-02-01'),
     predictedValue: 50000,
     calculatedAt: new Date(),
+  };
+  
+  const mockCompetitorProfile: CompetitorProfile = {
+    id: 'comp_123',
+    organizationId: 'org_123',
+    domain: 'competitor.com',
+    companyName: 'Competitor Inc',
+    productOffering: {
+      category: 'SaaS',
+      targetMarket: ['Enterprise'],
+      verticals: ['Technology'],
+      keyFeatures: [],
+    },
+    pricing: {
+      model: 'subscription',
+      tiers: [],
+      hasFreeTrial: false,
+      competitivePosition: 'premium',
+    },
+    positioning: {
+      valueProposition: [],
+      differentiators: [],
+      targetPersonas: [],
+      useCases: [],
+    },
+    analysis: {
+      strengths: [],
+      weaknesses: [],
+    },
+    discoveredAt: new Date(),
   };
   
   const mockBattlecard: Battlecard = {
@@ -380,6 +411,8 @@ IMPROVEMENTS:
   
   describe('Competitive Positioning', () => {
     it('should include battlecard data when requested', async () => {
+      (discoverCompetitor as jest.MockedFunction<typeof discoverCompetitor>)
+        .mockResolvedValue(mockCompetitorProfile);
       (generateBattlecard as jest.MockedFunction<typeof generateBattlecard>)
         .mockResolvedValue(mockBattlecard);
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
@@ -396,18 +429,17 @@ IMPROVEMENTS:
         includeCompetitive: true,
       });
       
-      expect(generateBattlecard).toHaveBeenCalledWith({
-        organizationId: 'org_123',
-        competitorDomain: 'https://competitor.com',
-        ourProductName: '[Company]',
+      expect(discoverCompetitor).toHaveBeenCalledWith('https://competitor.com', 'org_123');
+      expect(generateBattlecard).toHaveBeenCalledWith(mockCompetitorProfile, {
+        ourProduct: '[Company]',
       });
       expect(result.success).toBe(true);
       expect(result.email?.includeCompetitive).toBe(true);
     });
     
     it('should handle battlecard fetch failure gracefully', async () => {
-      (generateBattlecard as jest.MockedFunction<typeof generateBattlecard>)
-        .mockRejectedValue(new Error('Battlecard not found'));
+      (discoverCompetitor as jest.MockedFunction<typeof discoverCompetitor>)
+        .mockRejectedValue(new Error('Competitor not found'));
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);
       
@@ -422,7 +454,7 @@ IMPROVEMENTS:
         includeCompetitive: true,
       });
       
-      // Should still succeed even if battlecard fails
+      // Should still succeed even if competitor discovery fails
       expect(result.success).toBe(true);
     });
   });
