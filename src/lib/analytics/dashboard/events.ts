@@ -167,7 +167,13 @@ export async function emitDashboardViewed(
       timestamp: new Date(),
     };
     
-    await coordinator.emit(ANALYTICS_EVENTS.DASHBOARD_VIEWED, payload);
+    await coordinator.emitSignal({
+      type: ANALYTICS_EVENTS.DASHBOARD_VIEWED,
+      orgId: organizationId,
+      confidence: 1.0,
+      priority: 'Low',
+      metadata: payload,
+    });
   } catch (error) {
     console.error('Failed to emit dashboard viewed event:', error);
   }
@@ -202,7 +208,13 @@ export async function emitDashboardGenerated(
       timestamp: new Date(),
     };
     
-    await coordinator.emit(ANALYTICS_EVENTS.DASHBOARD_GENERATED, payload);
+    await coordinator.emitSignal({
+      type: ANALYTICS_EVENTS.DASHBOARD_GENERATED,
+      orgId: organizationId,
+      confidence: 1.0,
+      priority: 'Low',
+      metadata: payload,
+    });
   } catch (error) {
     console.error('Failed to emit dashboard generated event:', error);
   }
@@ -224,7 +236,13 @@ export async function emitCacheCleared(
       timestamp: new Date(),
     };
     
-    await coordinator.emit(ANALYTICS_EVENTS.CACHE_CLEARED, payload);
+    await coordinator.emitSignal({
+      type: ANALYTICS_EVENTS.CACHE_CLEARED,
+      orgId: 'system',
+      confidence: 1.0,
+      priority: 'Low',
+      metadata: payload,
+    });
   } catch (error) {
     console.error('Failed to emit cache cleared event:', error);
   }
@@ -250,7 +268,13 @@ export async function emitExportRequested(
       timestamp: new Date(),
     };
     
-    await coordinator.emit(ANALYTICS_EVENTS.EXPORT_REQUESTED, payload);
+    await coordinator.emitSignal({
+      type: ANALYTICS_EVENTS.EXPORT_REQUESTED,
+      orgId: organizationId,
+      confidence: 1.0,
+      priority: 'Low',
+      metadata: payload,
+    });
   } catch (error) {
     console.error('Failed to emit export requested event:', error);
   }
@@ -278,7 +302,13 @@ export async function emitAnalyticsError(
       timestamp: new Date(),
     };
     
-    await coordinator.emit(ANALYTICS_EVENTS.ERROR_OCCURRED, payload);
+    await coordinator.emitSignal({
+      type: ANALYTICS_EVENTS.ERROR_OCCURRED,
+      orgId: organizationId || 'system',
+      confidence: 1.0,
+      priority: 'Medium',
+      metadata: payload,
+    });
   } catch (err) {
     console.error('Failed to emit analytics error event:', err);
   }
