@@ -99,14 +99,15 @@ export function validateOrReturnError<T>(
 ): { data: T } | { error: Response } {
   const validation = validateRequestBody(schema, body);
   
-  if (!validation.success) {
+  if (validation.success === false) {
+    const { error, details } = validation;
     return {
       error: new Response(
         JSON.stringify({
           success: false,
           error: 'Validation failed',
-          message: validation.error,
-          details: validation.details?.errors
+          message: error,
+          details: details?.errors
         }),
         {
           status: 400,
