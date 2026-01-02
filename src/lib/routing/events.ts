@@ -199,7 +199,7 @@ export function createLeadRoutedSignal(
     orgId,
     confidence: assignment.confidence,
     priority,
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -235,7 +235,7 @@ export function createLeadAssignedSignal(
     orgId,
     confidence: expectedConversion,
     priority: lead.priority === 'hot' ? 'High' : 'Medium',
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -270,7 +270,7 @@ export function createLeadReassignedSignal(
     orgId,
     confidence: 0.7,
     priority: 'Medium',
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -303,7 +303,7 @@ export function createRoutingFailedSignal(
     orgId,
     confidence: 1.0, // High confidence in the error
     priority: lead.priority === 'hot' ? 'High' : 'Medium',
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -335,7 +335,7 @@ export function createAssignmentAcceptedSignal(
     orgId,
     confidence: 0.8,
     priority: 'Medium',
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -368,7 +368,7 @@ export function createAssignmentRejectedSignal(
     orgId,
     confidence: 0.9,
     priority: lead.priority === 'hot' ? 'High' : 'Medium',
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -399,7 +399,7 @@ export function createAssignmentExpiredSignal(
     orgId,
     confidence: 0.9,
     priority: 'High', // Expired assignments are high priority
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -428,7 +428,7 @@ export function createLeadQueuedSignal(
     orgId,
     confidence: 0.8,
     priority: lead.priority === 'hot' ? 'High' : 'Low',
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
@@ -457,7 +457,7 @@ export function createQueueEscalatedSignal(
     orgId,
     confidence: 1.0,
     priority: 'High', // Always high priority
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as Record<string, unknown>,
     processed: false,
     processedAt: null,
   };
