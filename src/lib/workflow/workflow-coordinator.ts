@@ -497,15 +497,12 @@ export class WorkflowCoordinator {
       };
       
       // Save to Firestore
-      const executionsCollection = this.dal.getOrgSubCollection(
-        context.organizationId,
-        'workflow_executions'
-      );
+      const executionsPath = `${this.dal.getColPath('organizations')}/${context.organizationId}/${this.dal.getSubColPath('workflow_executions')}`;
       
-      await this.dal.createDocument(
-        executionsCollection,
-        execution,
-        executionId
+      await this.dal.safeSetDoc(
+        executionsPath,
+        executionId,
+        execution
       );
       
       logger.debug('Workflow execution record saved', {
@@ -549,13 +546,10 @@ export class WorkflowCoordinator {
       stats['averageExecutionTimeMs'] = Math.round(newAverage);
       
       // Update workflow in Firestore
-      const workflowsCollection = this.dal.getOrgSubCollection(
-        workflow.organizationId,
-        'workflows'
-      );
+      const workflowsPath = `${this.dal.getColPath('organizations')}/${workflow.organizationId}/${this.dal.getSubColPath('workflows')}`;
       
-      await this.dal.updateDocument(
-        workflowsCollection,
+      await this.dal.safeUpdateDoc(
+        workflowsPath,
         workflow.id,
         { stats }
       );
@@ -591,21 +585,18 @@ export class WorkflowCoordinator {
     });
     
     // Fetch workflow
-    const workflowsCollection = this.dal.getOrgSubCollection(
-      context.organizationId,
-      'workflows'
-    );
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${context.organizationId}/${this.dal.getSubColPath('workflows')}`;
     
-    const workflowDoc = await this.dal.getDocument<Workflow>(
-      workflowsCollection,
+    const workflowSnap = await this.dal.safeGetDoc<Workflow>(
+      workflowsPath,
       workflowId
     );
     
-    if (!workflowDoc) {
+    if (!workflowSnap.exists()) {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
     
-    const workflow = { id: workflowId, ...workflowDoc } as Workflow;
+    const workflow = { id: workflowId, ...workflowSnap.data() } as Workflow;
     
     // Execute
     const result = await WorkflowEngine.executeWorkflow(workflow, context);

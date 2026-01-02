@@ -87,14 +87,11 @@ export class WorkflowService {
       tags: input.tags || [],
     };
     
-    // Save to Firestore
-    const workflowsCollection = this.dal.getOrgSubCollection(
-      input.organizationId,
-      'workflows'
-    );
+    // Save to Firestore (use collection path as string)
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${input.organizationId}/${this.dal.getSubColPath('workflows')}`;
     
-    const docRef = await this.dal.createDocument(
-      workflowsCollection,
+    const docRef = await this.dal.safeAddDoc(
+      workflowsPath,
       workflow
     );
     
@@ -115,21 +112,18 @@ export class WorkflowService {
     organizationId: string,
     workflowId: string
   ): Promise<Workflow | null> {
-    const workflowsCollection = this.dal.getOrgSubCollection(
-      organizationId,
-      'workflows'
-    );
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflows')}`;
     
-    const doc = await this.dal.getDocument<Workflow>(
-      workflowsCollection,
+    const docSnap = await this.dal.safeGetDoc<Workflow>(
+      workflowsPath,
       workflowId
     );
     
-    if (!doc) {
+    if (!docSnap.exists()) {
       return null;
     }
     
-    return { id: workflowId, ...doc } as Workflow;
+    return { id: workflowId, ...docSnap.data() } as Workflow;
   }
   
   /**
@@ -175,18 +169,15 @@ export class WorkflowService {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
     
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflows')}`;
+    
     const updatedData = {
       ...updates,
       updatedAt: Timestamp.now(),
     };
     
-    const workflowsCollection = this.dal.getOrgSubCollection(
-      organizationId,
-      'workflows'
-    );
-    
-    await this.dal.updateDocument(
-      workflowsCollection,
+    await this.dal.safeUpdateDoc(
+      workflowsPath,
       workflowId,
       updatedData
     );
@@ -230,12 +221,9 @@ export class WorkflowService {
       workflowId,
     });
     
-    const workflowsCollection = this.dal.getOrgSubCollection(
-      organizationId,
-      'workflows'
-    );
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflows')}`;
     
-    await this.dal.deleteDocument(workflowsCollection, workflowId);
+    await this.dal.safeDeleteDoc(workflowsPath, workflowId);
     
     logger.info('Workflow deleted successfully', {
       workflowId,
@@ -299,21 +287,18 @@ export class WorkflowService {
     organizationId: string,
     executionId: string
   ): Promise<WorkflowExecution | null> {
-    const executionsCollection = this.dal.getOrgSubCollection(
-      organizationId,
-      'workflow_executions'
-    );
+    const executionsPath = `${this.dal.getColPath('organizations')}/${organizationId}/${this.dal.getSubColPath('workflow_executions')}`;
     
-    const doc = await this.dal.getDocument<WorkflowExecution>(
-      executionsCollection,
+    const docSnap = await this.dal.safeGetDoc<WorkflowExecution>(
+      executionsPath,
       executionId
     );
     
-    if (!doc) {
+    if (!docSnap.exists()) {
       return null;
     }
     
-    return { id: executionId, ...doc } as WorkflowExecution;
+    return { id: executionId, ...docSnap.data() } as WorkflowExecution;
   }
   
   /**
