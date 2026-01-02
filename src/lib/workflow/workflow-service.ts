@@ -184,7 +184,7 @@ export class WorkflowService {
       updatedData
     );
     
-    const updatedWorkflow = { ...workflow, ...updatedData };
+    const updatedWorkflow = { ...workflow, ...updatedData } as Workflow;
     
     logger.info('Workflow updated successfully', {
       workflowId,
