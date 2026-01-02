@@ -228,12 +228,12 @@ export async function generateSalesEmail(
       maxTokens: 1500, // Enough for comprehensive emails
     });
     
-    if (!llmResponse.success || !llmResponse.content) {
-      throw new Error(llmResponse.error || 'Failed to generate email');
+    if (!llmResponse.text) {
+      throw new Error('Failed to generate email - no response from LLM');
     }
     
     // 7. Parse email from LLM response
-    const { subject, body, bodyPlain } = parseEmailResponse(llmResponse.content);
+    const { subject, body, bodyPlain } = parseEmailResponse(llmResponse.text);
     
     // 8. Create generated email object
     const generatedEmail: GeneratedEmail = {
@@ -259,9 +259,9 @@ export async function generateSalesEmail(
       includeSocialProof: options.includeSocialProof || false,
       
       model: 'gpt-4o',
-      promptTokens: llmResponse.usage?.prompt_tokens || 0,
-      completionTokens: llmResponse.usage?.completion_tokens || 0,
-      totalTokens: llmResponse.usage?.total_tokens || 0,
+      promptTokens: llmResponse.usage?.promptTokens || 0,
+      completionTokens: llmResponse.usage?.completionTokens || 0,
+      totalTokens: llmResponse.usage?.totalTokens || 0,
       
       version: 1,
       

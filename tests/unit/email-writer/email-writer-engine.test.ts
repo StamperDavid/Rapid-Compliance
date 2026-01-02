@@ -154,8 +154,7 @@ describe('Email Writer Engine', () => {
   };
   
   const mockLLMResponse = {
-    success: true,
-    content: `SUBJECT: Quick question about your sales process
+    text: `SUBJECT: Quick question about your sales process
 
 ---
 BODY:
@@ -188,10 +187,12 @@ IMPROVEMENTS:
 - Consider adding a specific time slot
 - Include a P.S. with a relevant resource`,
     usage: {
-      prompt_tokens: 500,
-      completion_tokens: 200,
-      total_tokens: 700,
+      promptTokens: 500,
+      completionTokens: 200,
+      totalTokens: 700,
     },
+    model: 'gpt-4o',
+    provider: 'openai' as const,
   };
   
   // ============================================================================
