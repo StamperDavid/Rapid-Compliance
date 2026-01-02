@@ -172,7 +172,7 @@ export async function emitDashboardViewed(
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload,
+      metadata: payload as any,
     });
   } catch (error) {
     console.error('Failed to emit dashboard viewed event:', error);
@@ -213,7 +213,7 @@ export async function emitDashboardGenerated(
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload,
+      metadata: payload as any,
     });
   } catch (error) {
     console.error('Failed to emit dashboard generated event:', error);
@@ -241,7 +241,7 @@ export async function emitCacheCleared(
       orgId: 'system',
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload,
+      metadata: payload as any,
     });
   } catch (error) {
     console.error('Failed to emit cache cleared event:', error);
@@ -273,7 +273,7 @@ export async function emitExportRequested(
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload,
+      metadata: payload as any,
     });
   } catch (error) {
     console.error('Failed to emit export requested event:', error);
@@ -307,7 +307,7 @@ export async function emitAnalyticsError(
       orgId: organizationId || 'system',
       confidence: 1.0,
       priority: 'Medium',
-      metadata: payload,
+      metadata: payload as any,
     });
   } catch (err) {
     console.error('Failed to emit analytics error event:', err);
