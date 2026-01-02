@@ -708,13 +708,3 @@ export async function generateEmailVariants(
     };
   }
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export type {
-  EmailGenerationOptions,
-  GeneratedEmail,
-  EmailGenerationResult,
-};
