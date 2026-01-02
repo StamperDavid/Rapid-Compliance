@@ -126,7 +126,7 @@ export class SequenceIntelligenceEngine {
     const minimumLift = validatedRequest.minimumLift || MIN_LIFT_FOR_PATTERN;
     
     // Filter sequences with sufficient data
-    const qualifiedMetrics: SequenceMetrics[] = validatedRequest.sequenceMetrics.filter(
+    const qualifiedMetrics = (validatedRequest.sequenceMetrics as SequenceMetrics[]).filter(
       m => m.totalRecipients >= minimumSampleSize
     );
     
