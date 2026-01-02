@@ -1,0 +1,37 @@
+/**
+ * Templates API
+ * GET /api/templates - List all available industry templates
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { listTemplates } from '@/lib/templates';
+import { logger } from '@/lib/logger/logger';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * GET /api/templates
+ * List all available industry templates with metadata
+ */
+export async function GET(request: NextRequest) {
+  try {
+    logger.info('Listing industry templates');
+    
+    const templates = listTemplates();
+    
+    return NextResponse.json({
+      success: true,
+      templates,
+      count: templates.length
+    });
+    
+  } catch (error) {
+    logger.error('Failed to list templates', error as Error);
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to list templates',
+      message: (error as Error).message
+    }, { status: 500 });
+  }
+}

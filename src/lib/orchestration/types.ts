@@ -82,6 +82,21 @@ export type SignalType =
   | 'onboarding.completed'      // User completed onboarding
   | 'onboarding.abandoned'      // User left onboarding incomplete
   
+  // Template Signals
+  | 'template.applied'          // Industry template applied to organization
+  | 'template.customized'       // Template was customized
+  | 'template.validation.failed' // Template validation failed
+  
+  // Deal Scoring Signals
+  | 'deal.scored'               // Deal score calculated
+  | 'deal.risk.detected'        // Risk factor identified in deal
+  | 'deal.tier.changed'         // Deal tier changed (hot/warm/cold/at-risk)
+  
+  // Revenue Forecasting Signals
+  | 'forecast.updated'          // Revenue forecast updated
+  | 'quota.at_risk'             // Quota attainment at risk
+  | 'quota.achieved'            // Quota achieved
+  
   // System Signals
   | 'system.error'              // System error occurred
   | 'system.quota.warning'      // API quota approaching limit
