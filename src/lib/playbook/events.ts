@@ -224,9 +224,10 @@ export function createPlaybookGeneratedEvent(
   return {
     type: 'playbook.generated',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'medium',
+    priority: 'Medium',
+    confidence: metadata.confidence / 100, // Convert 0-100 to 0-1
     metadata,
   } as Omit<PlaybookGeneratedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -242,9 +243,10 @@ export function createPatternsExtractedEvent(
   return {
     type: 'playbook.patterns_extracted',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'low',
+    priority: 'Low',
+    confidence: metadata.highConfidencePatterns > 0 ? 0.8 : 0.6,
     metadata,
   } as Omit<PatternsExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -260,9 +262,10 @@ export function createPlaybookActivatedEvent(
   return {
     type: 'playbook.activated',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'high',
+    priority: 'High',
+    confidence: metadata.confidence / 100,
     metadata,
   } as Omit<PlaybookActivatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -278,9 +281,10 @@ export function createPlaybookUsedEvent(
   return {
     type: 'playbook.used',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'low',
+    priority: 'Low',
+    confidence: metadata.adherenceScore / 100,
     metadata,
   } as Omit<PlaybookUsedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -296,9 +300,10 @@ export function createPlaybookUpdatedEvent(
   return {
     type: 'playbook.updated',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'medium',
+    priority: 'Medium',
+    confidence: Math.abs(metadata.confidenceChange) > 10 ? 0.7 : 0.8,
     metadata,
   } as Omit<PlaybookUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -314,9 +319,10 @@ export function createAdoptionTrackedEvent(
   return {
     type: 'playbook.adoption_tracked',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'low',
+    priority: 'Low',
+    confidence: metadata.adoptionRate / 100,
     metadata,
   } as Omit<AdoptionTrackedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -332,9 +338,10 @@ export function createEffectivenessMeasuredEvent(
   return {
     type: 'playbook.effectiveness_measured',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: metadata.recommendation === 'retire' ? 'high' : 'medium',
+    priority: metadata.recommendation === 'retire' ? 'High' : 'Medium',
+    confidence: metadata.confidence / 100,
     metadata,
   } as Omit<EffectivenessMeasuredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -350,9 +357,10 @@ export function createPlaybookArchivedEvent(
   return {
     type: 'playbook.archived',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'medium',
+    priority: 'Medium',
+    confidence: metadata.finalEffectiveness / 100,
     metadata,
   } as Omit<PlaybookArchivedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -368,9 +376,10 @@ export function createPatternIdentifiedEvent(
   return {
     type: 'playbook.pattern_identified',
     timestamp: new Date(),
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: metadata.shouldAddToPlaybook ? 'high' : 'low',
+    priority: metadata.shouldAddToPlaybook ? 'High' : 'Low',
+    confidence: metadata.confidence / 100,
     metadata,
   } as Omit<PatternIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
