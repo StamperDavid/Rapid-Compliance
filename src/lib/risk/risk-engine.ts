@@ -38,10 +38,10 @@ import type {
   RiskTrend,
   RiskMetadata,
   RiskEngineConfig,
-  DEFAULT_RISK_CONFIG,
   RiskSummary,
   RiskCategory,
 } from './types';
+import { DEFAULT_RISK_CONFIG } from './types';
 
 // ============================================================================
 // MAIN PREDICTION FUNCTION
