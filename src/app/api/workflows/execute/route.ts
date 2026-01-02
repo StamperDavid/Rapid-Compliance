@@ -1,91 +1,125 @@
+/**
+ * Workflow Execution API
+ * 
+ * POST /api/workflows/execute
+ * 
+ * Execute a workflow manually with provided context
+ * 
+ * REQUEST BODY:
+ * ```json
+ * {
+ *   "workflowId": "workflow_123",
+ *   "organizationId": "org_123",
+ *   "workspaceId": "workspace_123",
+ *   "dealId": "deal_456",
+ *   "triggerData": {},
+ *   "userId": "user_789"
+ * }
+ * ```
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { executeWorkflowImpl as executeWorkflow } from '@/lib/workflows/workflow-engine';
-import { Workflow } from '@/types/workflow';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
-import { workflowExecuteSchema, validateInput } from '@/lib/validation/schemas';
-import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
-import { errors } from '@/lib/middleware/error-handler';
+import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
+import { getWorkflowService } from '@/lib/workflow/workflow-service';
+import { validateWorkflowExecution } from '@/lib/workflow/validation';
+import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
-    // Rate limiting
-    const rateLimitResponse = await rateLimitMiddleware(request, '/api/workflows/execute');
+    // 1. Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.STANDARD);
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-
-    // Authentication
-    const authResult = await requireOrganization(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-    const { user } = authResult;
-
-    // Parse and validate input
+    
+    // 2. Parse and validate request body
     const body = await request.json();
-    const validation = validateInput(workflowExecuteSchema, body);
-
+    const validation = validateWorkflowExecution(body);
+    
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+      logger.warn('Invalid workflow execution request', {
+        error: validation.error,
+        details: validation.details,
+      });
       
-      return errors.validation('Validation failed', errorDetails);
-    }
-
-    const data = validation.data;
-
-    // Verify user has access to this organization
-    if (user.organizationId !== data.organizationId) {
-      return errors.forbidden('Access denied to this organization');
-    }
-
-    // Handle both workflow object and workflowId variants
-    let workflow: Workflow;
-    if ('workflow' in data) {
-      workflow = data.workflow as Workflow;
-    } else if ('workflowId' in data) {
-      // Load workflow from database using workflowId
-      const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-      const { COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
-      const loadedWorkflow = await AdminFirestoreService.get(
-        COLLECTIONS.WORKFLOWS,
-        data.workflowId
-      );
-      
-      if (!loadedWorkflow) {
-        return NextResponse.json(
-          { success: false, error: 'Workflow not found' },
-          { status: 404 }
-        );
-      }
-      
-      workflow = loadedWorkflow as Workflow;
-    } else {
       return NextResponse.json(
-        { success: false, error: 'Invalid request: workflow or workflowId required' },
+        {
+          success: false,
+          error: validation.error,
+          details: validation.details,
+        },
         { status: 400 }
       );
     }
-
-    // Execute workflow
-    const execution = await executeWorkflow(workflow, {
-      ...data.triggerData,
-      userId: user.uid,
-      organizationId: data.organizationId,
+    
+    const validData = validation.data;
+    
+    // 3. Execute workflow
+    logger.info('Executing workflow', {
+      workflowId: validData.workflowId,
+      organizationId: validData.organizationId,
+      dealId: validData.dealId,
     });
-
-    return NextResponse.json({
-      success: execution.status === 'completed',
-      execution,
+    
+    const dal = new BaseAgentDAL();
+    const service = getWorkflowService(dal);
+    
+    const result = await service.executeWorkflow(
+      validData.organizationId,
+      validData.workflowId,
+      {
+        workspaceId: validData.workspaceId,
+        dealId: validData.dealId,
+        triggeredBy: 'manual',
+        triggerData: validData.triggerData || {},
+        userId: validData.userId,
+      }
+    );
+    
+    const duration = Date.now() - startTime;
+    
+    logger.info('Workflow execution completed', {
+      workflowId: validData.workflowId,
+      success: result.success,
+      actionsExecuted: result.actionsExecuted.length,
+      durationMs: duration,
     });
-  } catch (error: any) {
-    logger.error('Workflow execution error', error, { route: '/api/workflows/execute' });
-    return errors.internal('Failed to execute workflow', error);
+    
+    // 4. Return result
+    return NextResponse.json(
+      {
+        success: result.success,
+        executionId: result.executionId,
+        workflowId: validData.workflowId,
+        startedAt: result.startedAt.toISOString(),
+        completedAt: result.completedAt?.toISOString(),
+        durationMs: result.durationMs,
+        actionsExecuted: result.actionsExecuted,
+        error: result.error,
+      },
+      { status: result.success ? 200 : 500 }
+    );
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    logger.error('Unexpected error in workflow execution endpoint', {
+      error,
+      durationMs: duration,
+    });
+    
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'An unexpected error occurred',
+      },
+      { status: 500 }
+    );
   }
 }
 
