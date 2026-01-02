@@ -148,16 +148,15 @@ export async function POST(request: NextRequest) {
     const validationResult = safeValidate(RiskPredictionRequestSchema, body, 'request');
     
     if (!validationResult.success) {
-      const errors = validationResult.errors;
       logger.warn('Invalid risk prediction request', {
-        errors
+        errors: (validationResult as { success: false; errors: string[] }).errors
       });
       
       return NextResponse.json(
         {
           success: false,
           error: 'Invalid request data',
-          details: errors,
+          details: (validationResult as { success: false; errors: string[] }).errors,
         },
         { status: 400 }
       );
@@ -307,16 +306,15 @@ async function handleBatchRequest(
     const validationResult = safeValidate(BatchRiskPredictionRequestSchema, body, 'request');
     
     if (!validationResult.success) {
-      const errors = validationResult.errors;
       logger.warn('Invalid batch risk prediction request', {
-        errors
+        errors: (validationResult as { success: false; errors: string[] }).errors
       });
       
       return NextResponse.json(
         {
           success: false,
           error: 'Invalid request data',
-          details: errors,
+          details: (validationResult as { success: false; errors: string[] }).errors,
         },
         { status: 400 }
       );
