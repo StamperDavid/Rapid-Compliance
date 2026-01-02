@@ -42,7 +42,7 @@
 - ⚡ AI scales 1-on-1 coaching to entire team
 - 💰 Better performance = higher quota attainment
 
-**Git Commits**: TBD (to be committed)
+**Git Commits**: 12 total (1 main feature + 11 build fixes)
 
 ---
 
