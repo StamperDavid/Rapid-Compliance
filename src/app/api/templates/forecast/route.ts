@@ -6,7 +6,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateRevenueForecast, calculateQuotaPerformance } from '@/lib/templates';
 import type { ForecastPeriod } from '@/lib/templates';
+import { RevenueForecastSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,30 +27,35 @@ export const dynamic = 'force-dynamic';
  * }
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting: 20 requests per minute (AI operation)
+  const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+  
   try {
     const body = await request.json();
+    
+    // Validate request body with Zod schema
+    const validation = validateRequestBody(RevenueForecastSchema, body);
+    
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        message: validation.error,
+        details: validation.details?.errors
+      }, { status: 400 });
+    }
+    
     const {
       organizationId,
       workspaceId,
-      period = '90-day',
+      period,
       quota,
       templateId,
-      includeQuotaPerformance = true
-    } = body;
-    
-    if (!organizationId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing organizationId'
-      }, { status: 400 });
-    }
-    
-    if (!workspaceId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing workspaceId'
-      }, { status: 400 });
-    }
+      includeQuotaPerformance
+    } = validation.data;
     
     logger.info('Generating revenue forecast', {
       orgId: organizationId,

@@ -5,7 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { applyTemplate } from '@/lib/templates';
+import { ApplyTemplateSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,30 +26,35 @@ export const dynamic = 'force-dynamic';
  * }
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting: 30 requests per minute (mutation operation)
+  const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.MUTATIONS);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+  
   try {
     const body = await request.json();
+    
+    // Validate request body with Zod schema
+    const validation = validateRequestBody(ApplyTemplateSchema, body);
+    
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        message: validation.error,
+        details: validation.details?.errors
+      }, { status: 400 });
+    }
+    
     const {
       organizationId,
       workspaceId,
       templateId,
-      merge = false,
-      applyWorkflows = true,
-      applyBestPractices = true
-    } = body;
-    
-    if (!organizationId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing organizationId'
-      }, { status: 400 });
-    }
-    
-    if (!templateId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing templateId'
-      }, { status: 400 });
-    }
+      merge,
+      applyWorkflows,
+      applyBestPractices
+    } = validation.data;
     
     logger.info('Applying industry template', {
       orgId: organizationId,

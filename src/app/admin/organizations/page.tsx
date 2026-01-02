@@ -20,8 +20,6 @@ export default function OrganizationsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
-  const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'preview' | 'cleaning' | 'done'>('idle');
-  const [cleanupData, setCleanupData] = useState<any>(null);
 
   const loadOrganizations = async (cursor: string | null = null, append: boolean = false) => {
     try {
@@ -107,37 +105,6 @@ export default function OrganizationsPage() {
 
   useEffect(() => {
     loadOrganizations();
-    
-    // Auto-cleanup if URL has ?cleanup=true
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('cleanup') === 'true') {
-      // Auto-run cleanup after page loads
-      setTimeout(async () => {
-        try {
-          const { auth } = await import('@/lib/firebase/config');
-          const token = await auth.currentUser?.getIdToken();
-          
-          if (token) {
-            const response = await fetch('/api/admin/cleanup-test-orgs', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ dryRun: false })
-            });
-            
-            if (response.ok) {
-              const result = await response.json();
-              alert(`✅ Cleanup complete! Deleted ${result.deleted} test organizations.`);
-              window.location.href = '/admin/organizations'; // Remove query param and reload
-            }
-          }
-        } catch (error) {
-          console.error('Auto-cleanup error:', error);
-        }
-      }, 2000);
-    }
   }, []);
 
   const filteredOrgs = organizations.filter(org => {
@@ -164,81 +131,6 @@ export default function OrganizationsPage() {
     if (currentPage > 1) {
       setCurrentPage(1);
       loadOrganizations();
-    }
-  };
-
-  const handleCleanupPreview = async () => {
-    try {
-      setCleanupStatus('preview');
-      const { auth } = await import('@/lib/firebase/config');
-      const token = await auth.currentUser?.getIdToken();
-      
-      if (!token) {
-        alert('Not authenticated');
-        return;
-      }
-
-      const response = await fetch('/api/admin/cleanup-test-orgs', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ dryRun: true })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCleanupData(data);
-      } else {
-        alert('Failed to preview cleanup');
-        setCleanupStatus('idle');
-      }
-    } catch (error) {
-      console.error('Cleanup preview error:', error);
-      alert('Error previewing cleanup');
-      setCleanupStatus('idle');
-    }
-  };
-
-  const handleCleanupExecute = async () => {
-    if (!confirm(`Are you sure you want to delete ${cleanupData?.analysis?.testOrganizations || 0} test organizations? This cannot be undone!`)) {
-      return;
-    }
-
-    try {
-      setCleanupStatus('cleaning');
-      const { auth } = await import('@/lib/firebase/config');
-      const token = await auth.currentUser?.getIdToken();
-      
-      if (!token) {
-        alert('Not authenticated');
-        return;
-      }
-
-      const response = await fetch('/api/admin/cleanup-test-orgs', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ dryRun: false })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCleanupData(data);
-        setCleanupStatus('done');
-        // Reload organizations
-        loadOrganizations();
-      } else {
-        alert('Failed to cleanup organizations');
-        setCleanupStatus('preview');
-      }
-    } catch (error) {
-      console.error('Cleanup execution error:', error);
-      alert('Error cleaning up organizations');
-      setCleanupStatus('preview');
     }
   };
 
@@ -324,13 +216,33 @@ export default function OrganizationsPage() {
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-          Organizations
-        </h1>
-        <p style={{ color: '#666', fontSize: '0.875rem' }}>
-          Manage all customer organizations
-        </p>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+            Organizations
+          </h1>
+          <p style={{ color: '#666', fontSize: '0.875rem' }}>
+            Manage all customer organizations
+          </p>
+        </div>
+        <Link
+          href="/admin/organizations/new"
+          style={{
+            padding: '0.75rem 1.5rem',
+            backgroundColor: '#6366f1',
+            color: '#fff',
+            borderRadius: '0.5rem',
+            textDecoration: 'none',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <span style={{ fontSize: '1.25rem' }}>+</span>
+          Add Organization
+        </Link>
       </div>
 
       {/* Filters */}
@@ -435,128 +347,6 @@ export default function OrganizationsPage() {
           <div><StatCard label="Suspended" value={organizations.filter(o => o.status === 'suspended').length} /></div>
         </Tooltip>
       </div>
-
-      {/* Cleanup Tool (Super Admin Only) */}
-      {isSuperAdmin() && (
-        <div style={{
-          marginBottom: '2rem',
-          padding: '1rem',
-          backgroundColor: '#1a1a1a',
-          border: '1px solid #333',
-          borderRadius: '0.5rem'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
-                🧹 Test Organization Cleanup
-              </h3>
-              <p style={{ fontSize: '0.75rem', color: '#666' }}>
-                Remove test organizations created by automated tests
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {cleanupStatus === 'idle' && (
-                <button
-                  onClick={handleCleanupPreview}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#6366f1',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.875rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Preview Cleanup
-                </button>
-              )}
-              {cleanupStatus === 'preview' && cleanupData && (
-                <>
-                  <span style={{ color: '#fbbf24', fontSize: '0.875rem', alignSelf: 'center' }}>
-                    Found {cleanupData.analysis.testOrganizations} test org(s)
-                  </span>
-                  <button
-                    onClick={handleCleanupExecute}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#ef4444',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Delete Test Orgs
-                  </button>
-                  <button
-                    onClick={() => setCleanupStatus('idle')}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#374151',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-              {cleanupStatus === 'cleaning' && (
-                <span style={{ color: '#fbbf24', fontSize: '0.875rem', alignSelf: 'center' }}>
-                  Cleaning up...
-                </span>
-              )}
-              {cleanupStatus === 'done' && cleanupData && (
-                <>
-                  <span style={{ color: '#10b981', fontSize: '0.875rem', alignSelf: 'center' }}>
-                    ✅ Deleted {cleanupData.deleted} org(s)!
-                  </span>
-                  <button
-                    onClick={() => setCleanupStatus('idle')}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#374151',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Close
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {/* Preview Details */}
-          {cleanupStatus === 'preview' && cleanupData && cleanupData.testOrgsToDelete.length > 0 && (
-            <div style={{
-              marginTop: '1rem',
-              padding: '1rem',
-              backgroundColor: '#0a0a0a',
-              borderRadius: '0.375rem',
-              maxHeight: '200px',
-              overflowY: 'auto'
-            }}>
-              <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem' }}>
-                Test organizations to be deleted:
-              </p>
-              {cleanupData.testOrgsToDelete.map((org: any, i: number) => (
-                <div key={i} style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>
-                  {i + 1}. {org.name} ({org.reason})
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Organizations Table */}
       {loading ? (

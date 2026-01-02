@@ -12,6 +12,7 @@
 
 'use client';
 
+import { ErrorBoundary, InlineErrorFallback } from '@/components/common/ErrorBoundary';
 import type { DealScore, ScoringFactor, RiskFactor } from '@/lib/templates';
 
 interface DealScoreCardProps {
@@ -21,7 +22,7 @@ interface DealScoreCardProps {
   showDetails?: boolean;
 }
 
-export default function DealScoreCard({
+function DealScoreCardInner({
   dealId,
   dealName,
   score,
@@ -256,5 +257,17 @@ export default function DealScoreCard({
         </div>
       )}
     </div>
+  );
+}
+
+// Export with error boundary
+export default function DealScoreCard(props: DealScoreCardProps) {
+  return (
+    <ErrorBoundary
+      componentName="DealScoreCard"
+      fallback={<InlineErrorFallback message="Failed to load deal score" />}
+    >
+      <DealScoreCardInner {...props} />
+    </ErrorBoundary>
   );
 }

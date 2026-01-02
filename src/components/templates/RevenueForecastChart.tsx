@@ -11,6 +11,7 @@
 
 'use client';
 
+import { ErrorBoundary, InlineErrorFallback } from '@/components/common/ErrorBoundary';
 import type { RevenueForecast, StageRevenue } from '@/lib/templates';
 
 interface RevenueForecastChartProps {
@@ -19,7 +20,7 @@ interface RevenueForecastChartProps {
   showQuotaTracking?: boolean;
 }
 
-export default function RevenueForecastChart({
+function RevenueForecastChartInner({
   forecast,
   showStageBreakdown = true,
   showQuotaTracking = true
@@ -259,5 +260,17 @@ export default function RevenueForecastChart({
         </div>
       </div>
     </div>
+  );
+}
+
+// Export with error boundary
+export default function RevenueForecastChart(props: RevenueForecastChartProps) {
+  return (
+    <ErrorBoundary
+      componentName="RevenueForecastChart"
+      fallback={<InlineErrorFallback message="Failed to load revenue forecast" />}
+    >
+      <RevenueForecastChartInner {...props} />
+    </ErrorBoundary>
   );
 }

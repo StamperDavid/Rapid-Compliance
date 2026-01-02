@@ -41,17 +41,18 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      // Users can read their own profile (MUST BE FIRST to avoid circular dependency)
-      allow read: if isAuthenticated() && request.auth.uid == userId;
-      
-      // Super admins have FULL access to ALL users (IT support)
-      allow read, write: if isSuperAdmin();
+      // CRITICAL: Users can ALWAYS read their own profile (MUST BE FIRST to avoid circular dependency)
+      // This prevents the isSuperAdmin() function from creating a circular reference
+      allow read: if request.auth != null && request.auth.uid == userId;
       
       // Users can update their own profile (except role and organizationId)
-      allow update: if isAuthenticated() 
+      allow update: if request.auth != null 
         && request.auth.uid == userId
         && !('role' in request.resource.data.diff(resource.data).affectedKeys())
         && !('organizationId' in request.resource.data.diff(resource.data).affectedKeys());
+      
+      // Super admins have FULL access to ALL users (IT support)
+      allow read, write: if isSuperAdmin();
       
       // Only admins can create/delete users
       allow create, delete: if isAuthenticated() && isAdminOrOwner();

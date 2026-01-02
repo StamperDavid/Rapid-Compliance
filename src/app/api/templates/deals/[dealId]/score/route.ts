@@ -5,7 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateDealScore } from '@/lib/templates';
+import { ScoreDealSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,24 +26,32 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { dealId: string } }
 ) {
+  // Rate limiting: 20 requests per minute (AI operation)
+  const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+  
   try {
     const dealId = params.dealId;
     const body = await request.json();
-    const { organizationId, workspaceId, templateId } = body;
     
-    if (!organizationId) {
+    // Validate request body with Zod schema
+    const validation = validateRequestBody(
+      ScoreDealSchema,
+      { ...body, dealId }
+    );
+    
+    if (!validation.success) {
       return NextResponse.json({
         success: false,
-        error: 'Missing organizationId'
+        error: 'Validation failed',
+        message: validation.error,
+        details: validation.details?.errors
       }, { status: 400 });
     }
     
-    if (!workspaceId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing workspaceId'
-      }, { status: 400 });
-    }
+    const { organizationId, workspaceId, templateId } = validation.data;
     
     logger.info('Calculating deal score', {
       orgId: organizationId,

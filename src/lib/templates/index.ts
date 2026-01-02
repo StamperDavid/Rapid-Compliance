@@ -8,7 +8,24 @@
  * - Template engine (apply, validate, preview)
  * - Deal scoring engine (predictive scoring with 7+ factors)
  * - Revenue forecasting engine (pipeline-based forecasting)
+ * - Validation schemas (Zod schemas for API input validation)
  */
+
+// Validation Schemas
+export {
+  ApplyTemplateSchema,
+  ScoreDealSchema,
+  ForecastPeriodSchema,
+  RevenueForecastSchema,
+  validateRequestBody,
+  validateOrReturnError
+} from './validation';
+
+export type {
+  ApplyTemplateInput,
+  ScoreDealInput,
+  RevenueForecastInput
+} from './validation';
 
 // Industry Templates
 export {

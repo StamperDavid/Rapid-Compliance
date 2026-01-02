@@ -48,8 +48,16 @@ Thumbs.db
 serviceAccountKey.json
 serviceAccountKey-*.json
 *-firebase-adminsdk-*.json
+firebase-prod-key.json
+firebase-dev-key.json
 .env.local.backup
 .env.development
 .env.production
 .env.example
 firebase-debug.log
+
+# Prevent AI from overwriting configs
+.env.local.temp
+.env.*.temp
+firebase-config-*.json
+serviceAccount*.json

@@ -11,6 +11,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ErrorBoundary, InlineErrorFallback } from '@/components/common/ErrorBoundary';
 import type { SalesIndustryTemplate } from '@/lib/templates';
 
 interface TemplateSelectorProps {
@@ -19,7 +20,7 @@ interface TemplateSelectorProps {
   selectedTemplateId?: string;
 }
 
-export default function TemplateSelector({
+function TemplateSelectorInner({
   organizationId,
   onTemplateSelect,
   selectedTemplateId
@@ -172,5 +173,17 @@ export default function TemplateSelector({
         </div>
       )}
     </div>
+  );
+}
+
+// Export with error boundary
+export default function TemplateSelector(props: TemplateSelectorProps) {
+  return (
+    <ErrorBoundary
+      componentName="TemplateSelector"
+      fallback={<InlineErrorFallback message="Failed to load templates" />}
+    >
+      <TemplateSelectorInner {...props} />
+    </ErrorBoundary>
   );
 }

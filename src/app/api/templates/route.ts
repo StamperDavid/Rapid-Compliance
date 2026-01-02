@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listTemplates } from '@/lib/templates';
 import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,12 @@ export const dynamic = 'force-dynamic';
  * List all available industry templates with metadata
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting: 120 requests per minute (read operation)
+  const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.READS);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+  
   try {
     logger.info('Listing industry templates');
     
