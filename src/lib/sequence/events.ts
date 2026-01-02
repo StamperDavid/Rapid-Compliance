@@ -556,19 +556,4 @@ export function isSequenceMetricsUpdatedEvent(
   return signal.type === 'sequence.metrics_updated';
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export type {
-  SequenceAnalyzedEvent,
-  PatternDetectedEvent,
-  UnderperformingSequenceEvent,
-  OptimizationNeededEvent,
-  OptimalTimingFoundEvent,
-  ABTestCompletedEvent,
-  PerformanceDeclineEvent,
-  BestPracticeFoundEvent,
-  SequenceMetricsUpdatedEvent,
-  SequenceEvent,
-};
+// All types and functions are already exported individually above
