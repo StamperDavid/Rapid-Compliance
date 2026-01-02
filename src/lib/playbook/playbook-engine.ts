@@ -310,7 +310,7 @@ async function analyzePatternCandidatesWithAI(
     maxTokens: config.maxTokens,
   });
   
-  const content = response.choices[0]?.message?.content;
+  const content = response.text;
   if (!content) {
     throw new Error('Failed to get AI response for pattern extraction');
   }
@@ -416,7 +416,7 @@ async function analyzeTalkTrackCandidatesWithAI(
     maxTokens: config.maxTokens,
   });
   
-  const content = response.choices[0]?.message?.content;
+  const content = response.text;
   if (!content) {
     throw new Error('Failed to get AI response for talk track extraction');
   }
@@ -512,7 +512,7 @@ async function analyzeObjectionResponsesWithAI(
     maxTokens: config.maxTokens,
   });
   
-  const content = response.choices[0]?.message?.content;
+  const content = response.text;
   if (!content) {
     throw new Error('Failed to get AI response for objection response extraction');
   }
@@ -613,7 +613,7 @@ async function analyzeBestPracticesWithAI(
     maxTokens: config.maxTokens,
   });
   
-  const content = response.choices[0]?.message?.content;
+  const content = response.text;
   if (!content) {
     throw new Error('Failed to get AI response for best practice extraction');
   }
