@@ -54,6 +54,23 @@ const CACHE_TTL = 300;
 const analyticsCache = new Map<string, { data: DashboardOverview; timestamp: Date }>();
 
 // ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Convert Firestore Timestamp or Date-like object to Date
+ */
+function toDate(value: any): Date {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  return new Date(value);
+}
+
+// ============================================================================
 // MAIN ANALYTICS ENGINE
 // ============================================================================
 
@@ -185,8 +202,8 @@ async function getWorkflowMetrics(
   const executionTimes = executions
     .filter((e: WorkflowExecution) => e.completedAt && e.startedAt)
     .map((e: WorkflowExecution) => {
-      const start = e.startedAt instanceof Date ? e.startedAt : new Date(e.startedAt);
-      const end = e.completedAt instanceof Date ? e.completedAt : new Date(e.completedAt as any);
+      const start = toDate(e.startedAt);
+      const end = toDate(e.completedAt);
       return end.getTime() - start.getTime();
     });
   
@@ -264,8 +281,8 @@ function calculateTopWorkflows(
       const executionTimes = data.executions
         .filter(e => e.completedAt && e.startedAt)
         .map(e => {
-          const start = e.startedAt instanceof Date ? e.startedAt : new Date(e.startedAt);
-          const end = e.completedAt instanceof Date ? e.completedAt : new Date(e.completedAt as any);
+          const start = toDate(e.startedAt);
+          const end = toDate(e.completedAt);
           return end.getTime() - start.getTime();
         });
       
@@ -614,8 +631,8 @@ function calculateAverageVelocity(closedDeals: any[]): number {
   const velocities = closedDeals
     .filter((d: any) => d.createdAt && d.closedAt)
     .map((d: any) => {
-      const created = d.createdAt instanceof Date ? d.createdAt : new Date(d.createdAt);
-      const closed = d.closedAt instanceof Date ? d.closedAt : new Date(d.closedAt);
+      const created = toDate(d.createdAt);
+      const closed = toDate(d.closedAt);
       const days = (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
       return days;
     });
@@ -868,7 +885,7 @@ function generateTimeSeries<T>(
   items.forEach((item: any) => {
     const date = item.createdAt || item.startedAt || item.date;
     if (date) {
-      const dateObj = date instanceof Date ? date : new Date(date);
+      const dateObj = toDate(date);
       const key = dateObj.toISOString().split('T')[0];
       const existing = dayMap.get(key) || 0;
       dayMap.set(key, existing + valueExtractor(item));
