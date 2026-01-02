@@ -74,16 +74,17 @@ export async function POST(request: NextRequest) {
     const validation = validateRequestBody(body, GenerateEmailSchema);
     
     if (!validation.success) {
+      const { error, details } = validation;
       logger.warn('Invalid email generation request', {
-        error: validation.error,
-        details: validation.details,
+        error,
+        details,
       });
       
       return NextResponse.json(
         {
           success: false,
-          error: validation.error,
-          details: validation.details,
+          error,
+          details,
         },
         { status: 400 }
       );
