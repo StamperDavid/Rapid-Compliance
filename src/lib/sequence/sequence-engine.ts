@@ -278,7 +278,7 @@ Return patterns in this JSON format:
           },
         ],
         temperature: 0.3,
-        max_tokens: 3000,
+        maxTokens: 3000,
       });
       
       const content = response.content || '';
@@ -396,7 +396,7 @@ Return JSON format:
           },
         ],
         temperature: 0.3,
-        max_tokens: 2500,
+        maxTokens: 2500,
       });
       
       const content = response.content || '';
@@ -485,7 +485,7 @@ Return concise JSON:
           },
         ],
         temperature: 0.3,
-        max_tokens: 1000,
+        maxTokens: 1000,
       });
       
       const content = response.content || '';
