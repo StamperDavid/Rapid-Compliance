@@ -18,7 +18,7 @@
  * @module lib/conversation
  */
 
-import type { SignalEvent } from '@/lib/orchestration/signal-bus';
+import type { SalesSignal } from '@/lib/orchestration';
 import type {
   ConversationAnalysis,
   Conversation,
@@ -48,7 +48,7 @@ import type {
  * - Trigger follow-up workflows
  * - Log analysis to analytics dashboard
  */
-export interface ConversationAnalyzedEvent extends SignalEvent {
+export interface ConversationAnalyzedEvent extends SalesSignal {
   type: 'conversation.analyzed';
   metadata: {
     source: 'conversation-intelligence';
@@ -82,7 +82,7 @@ export interface ConversationAnalyzedEvent extends SignalEvent {
  * - Trigger rep training recommendation
  * - Flag deal as at-risk if associated
  */
-export interface ConversationLowScoreEvent extends SignalEvent {
+export interface ConversationLowScoreEvent extends SalesSignal {
   type: 'conversation.low_score';
   metadata: {
     source: 'conversation-intelligence';
@@ -112,7 +112,7 @@ export interface ConversationLowScoreEvent extends SignalEvent {
  * - Create urgent follow-up task
  * - Flag deal as at-risk
  */
-export interface ConversationRedFlagEvent extends SignalEvent {
+export interface ConversationRedFlagEvent extends SalesSignal {
   type: 'conversation.red_flag';
   metadata: {
     source: 'conversation-intelligence';
@@ -142,7 +142,7 @@ export interface ConversationRedFlagEvent extends SignalEvent {
  * - Add to coaching dashboard
  * - Send coaching resources to rep
  */
-export interface ConversationCoachingNeededEvent extends SignalEvent {
+export interface ConversationCoachingNeededEvent extends SalesSignal {
   type: 'conversation.coaching_needed';
   metadata: {
     source: 'conversation-intelligence';
@@ -174,7 +174,7 @@ export interface ConversationCoachingNeededEvent extends SignalEvent {
  * - Alert sales manager
  * - Track competitive intelligence
  */
-export interface ConversationCompetitorMentionedEvent extends SignalEvent {
+export interface ConversationCompetitorMentionedEvent extends SalesSignal {
   type: 'conversation.competitor_mentioned';
   metadata: {
     source: 'conversation-intelligence';
@@ -205,7 +205,7 @@ export interface ConversationCompetitorMentionedEvent extends SignalEvent {
  * - Create follow-up task to address
  * - Alert manager for coaching
  */
-export interface ConversationObjectionRaisedEvent extends SignalEvent {
+export interface ConversationObjectionRaisedEvent extends SalesSignal {
   type: 'conversation.objection_raised';
   metadata: {
     source: 'conversation-intelligence';
@@ -236,7 +236,7 @@ export interface ConversationObjectionRaisedEvent extends SignalEvent {
  * - Notify manager of hot opportunity
  * - Trigger proposal generation
  */
-export interface ConversationPositiveSignalEvent extends SignalEvent {
+export interface ConversationPositiveSignalEvent extends SalesSignal {
   type: 'conversation.positive_signal';
   metadata: {
     source: 'conversation-intelligence';
@@ -266,7 +266,7 @@ export interface ConversationPositiveSignalEvent extends SignalEvent {
  * - Send reminder to rep
  * - Add to follow-up queue
  */
-export interface ConversationFollowUpRequiredEvent extends SignalEvent {
+export interface ConversationFollowUpRequiredEvent extends SalesSignal {
   type: 'conversation.follow_up_required';
   metadata: {
     source: 'conversation-intelligence';
@@ -298,7 +298,7 @@ export interface ConversationFollowUpRequiredEvent extends SignalEvent {
  * - Create damage control task
  * - Flag deal as at-risk
  */
-export interface ConversationSentimentNegativeEvent extends SignalEvent {
+export interface ConversationSentimentNegativeEvent extends SalesSignal {
   type: 'conversation.sentiment_negative';
   metadata: {
     source: 'conversation-intelligence';
@@ -323,7 +323,7 @@ export interface ConversationSentimentNegativeEvent extends SignalEvent {
 export function createConversationAnalyzedEvent(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationAnalyzedEvent {
+): Omit<ConversationAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'conversation.analyzed',
     leadId: conversation.leadId || 'unknown',
@@ -347,7 +347,7 @@ export function createConversationAnalyzedEvent(
       duration: conversation.duration,
       tokensUsed: analysis.tokensUsed,
     },
-  };
+  } as ConversationAnalyzedEvent;
 }
 
 /**
@@ -356,7 +356,7 @@ export function createConversationAnalyzedEvent(
 export function createLowScoreEvent(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationLowScoreEvent | null {
+): Omit<ConversationLowScoreEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> | null {
   if (analysis.scores.overall >= 50) {
     return null;
   }
@@ -391,7 +391,7 @@ export function createLowScoreEvent(
       recommendation: `Focus on improving ${lowestScore.area.replace('_', ' ')} skills`,
       repId: conversation.repId,
     },
-  };
+  } as ConversationLowScoreEvent;
 }
 
 /**
@@ -400,7 +400,7 @@ export function createLowScoreEvent(
 export function createRedFlagEvents(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationRedFlagEvent[] {
+): Omit<ConversationRedFlagEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] {
   return analysis.redFlags
     .filter(flag => flag.severity === 'critical' || flag.severity === 'high')
     .map(flag => ({
@@ -431,7 +431,7 @@ export function createRedFlagEvents(
 export function createCoachingNeededEvents(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationCoachingNeededEvent[] {
+): Omit<ConversationCoachingNeededEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] {
   return analysis.coachingInsights
     .filter(insight => insight.priority === 'critical' || insight.priority === 'high')
     .map(insight => ({
@@ -463,7 +463,7 @@ export function createCoachingNeededEvents(
 export function createCompetitorMentionedEvents(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationCompetitorMentionedEvent[] {
+): Omit<ConversationCompetitorMentionedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] {
   return analysis.competitors
     .filter(competitor => competitor.concernLevel === 'high' || competitor.mentions >= 3)
     .map(competitor => ({
@@ -495,7 +495,7 @@ export function createCompetitorMentionedEvents(
 export function createObjectionRaisedEvents(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationObjectionRaisedEvent[] {
+): Omit<ConversationObjectionRaisedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] {
   return analysis.objections
     .filter(objection => 
       !objection.wasAddressed || 
@@ -531,7 +531,7 @@ export function createObjectionRaisedEvents(
 export function createPositiveSignalEvents(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationPositiveSignalEvent[] {
+): Omit<ConversationPositiveSignalEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] {
   return analysis.positiveSignals
     .filter(signal => signal.strength === 'strong')
     .map(signal => ({
@@ -562,7 +562,7 @@ export function createPositiveSignalEvents(
 export function createFollowUpRequiredEvents(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationFollowUpRequiredEvent[] {
+): Omit<ConversationFollowUpRequiredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] {
   return analysis.followUpActions
     .filter(action => 
       action.priority === 'critical' || 
@@ -598,7 +598,7 @@ export function createFollowUpRequiredEvents(
 export function createNegativeSentimentEvent(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): ConversationSentimentNegativeEvent | null {
+): Omit<ConversationSentimentNegativeEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> | null {
   const sentiment = analysis.sentiment.overall;
   
   // Only emit if sentiment is negative or declining
@@ -620,13 +620,13 @@ export function createNegativeSentimentEvent(
       conversationId: conversation.id,
       sentimentPolarity: sentiment.polarity,
       sentimentScore: sentiment.score,
-      trendDirection: analysis.sentiment.trendDirection,
+      trendDirection: analysis.sentiment.trendDirection === 'improving' ? 'stable' : analysis.sentiment.trendDirection,
       criticalMomentsCount: analysis.sentiment.criticalMoments.filter(m => m.type === 'drop').length,
       recommendation: 'Immediate follow-up required to address prospect concerns',
       dealId: conversation.dealId,
       repId: conversation.repId,
     },
-  };
+  } as ConversationSentimentNegativeEvent;
 }
 
 /**
@@ -635,8 +635,8 @@ export function createNegativeSentimentEvent(
 export function createAllConversationEvents(
   analysis: ConversationAnalysis,
   conversation: Conversation
-): SignalEvent[] {
-  const events: SignalEvent[] = [];
+): Omit<SalesSignal, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] {
+  const events: Omit<SalesSignal, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>[] = [];
   
   // Always emit analyzed event
   events.push(createConversationAnalyzedEvent(analysis, conversation));

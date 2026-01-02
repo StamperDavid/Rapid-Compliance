@@ -102,6 +102,17 @@ export type SignalType =
   | 'quota.at_risk'             // Quota attainment at risk
   | 'quota.achieved'            // Quota achieved
   
+  // Conversation Intelligence Signals
+  | 'conversation.analyzed'     // Conversation analysis completed
+  | 'conversation.low_score'    // Poor conversation quality detected
+  | 'conversation.red_flag'     // Critical warning identified
+  | 'conversation.coaching_needed' // Coaching opportunity detected
+  | 'conversation.competitor_mentioned' // Competitor discussed
+  | 'conversation.objection_raised' // Unaddressed objection detected
+  | 'conversation.positive_signal' // Buying signal identified
+  | 'conversation.follow_up_required' // Action items generated
+  | 'conversation.sentiment_negative' // Negative sentiment trend
+  
   // System Signals
   | 'system.error'              // System error occurred
   | 'system.quota.warning'      // API quota approaching limit
