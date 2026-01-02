@@ -558,6 +558,9 @@ export class CoachingAnalyticsEngine {
     endDate: Date
   ): Promise<EfficiencyMetrics> {
     try {
+      // Get environment prefix once for all queries
+      const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
+      
       // Query deals for efficiency analysis
       const dealsRef = this.adminDal.getCollection('DEALS');
       const snapshot = await dealsRef
@@ -605,7 +608,6 @@ export class CoachingAnalyticsEngine {
         : 0;
       
       // Touch points per deal (meetings + emails)
-      const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
       const activitiesRef = this.adminDal.db.collection(`${prefix}activities`);
       const activitiesSnapshot = await activitiesRef
         .where('userId', '==', repId)
@@ -623,7 +625,7 @@ export class CoachingAnalyticsEngine {
       const touchPointsPerDeal = meetingsPerDeal + emailsPerDeal;
       
       // AI automation usage
-      const workflowsRef = this.adminDal.getCollection('WORKFLOW_EXECUTIONS');
+      const workflowsRef = this.adminDal.db.collection(`${prefix}workflow_executions`);
       const workflowSnapshot = await workflowsRef
         .where('triggeredBy', '==', repId)
         .where('createdAt', '>=', startDate)
