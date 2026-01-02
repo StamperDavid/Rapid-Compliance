@@ -307,7 +307,7 @@ async function analyzePatternCandidatesWithAI(
       },
     ],
     temperature: config.temperature,
-    max_tokens: config.maxTokens,
+    maxTokens: config.maxTokens,
   });
   
   const content = response.choices[0]?.message?.content;
@@ -413,7 +413,7 @@ async function analyzeTalkTrackCandidatesWithAI(
       },
     ],
     temperature: config.temperature,
-    max_tokens: config.maxTokens,
+    maxTokens: config.maxTokens,
   });
   
   const content = response.choices[0]?.message?.content;
@@ -509,7 +509,7 @@ async function analyzeObjectionResponsesWithAI(
       },
     ],
     temperature: config.temperature,
-    max_tokens: config.maxTokens,
+    maxTokens: config.maxTokens,
   });
   
   const content = response.choices[0]?.message?.content;
@@ -610,7 +610,7 @@ async function analyzeBestPracticesWithAI(
       },
     ],
     temperature: config.temperature,
-    max_tokens: config.maxTokens,
+    maxTokens: config.maxTokens,
   });
   
   const content = response.choices[0]?.message?.content;
