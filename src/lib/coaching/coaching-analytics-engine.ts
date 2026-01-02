@@ -346,8 +346,7 @@ export class CoachingAnalyticsEngine {
       const totalTasks = activities.filter((a: any) => a.type === 'task').length;
       const taskCompletionRate = totalTasks > 0 ? tasksCompleted / totalTasks : 0;
       
-      // Query workflow executions
-      const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
+      // Query workflow executions (reuse prefix from above)
       const workflowsRef = this.adminDal.db.collection(`${prefix}workflow_executions`);
       const workflowSnapshot = await workflowsRef
         .where('triggeredBy', '==', repId)
