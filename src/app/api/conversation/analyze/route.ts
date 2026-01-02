@@ -43,7 +43,7 @@ const rateLimitMap = new Map<string, RateLimitEntry>();
 /**
  * Check if request is rate limited
  */
-function checkRateLimit(organizationId: string): { allowed: boolean; resetAt: number } {
+function checkRateLimit(organizationId: string): { allowed: boolean; resetAt: number; remaining: number } {
   const now = Date.now();
   const entry = rateLimitMap.get(organizationId);
   
@@ -53,17 +53,17 @@ function checkRateLimit(organizationId: string): { allowed: boolean; resetAt: nu
       count: 1,
       resetAt: now + RATE_LIMIT_WINDOW,
     });
-    return { allowed: true, resetAt: now + RATE_LIMIT_WINDOW };
+    return { allowed: true, resetAt: now + RATE_LIMIT_WINDOW, remaining: MAX_REQUESTS_PER_WINDOW - 1 };
   }
   
   // Within window
   if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
-    return { allowed: false, resetAt: entry.resetAt };
+    return { allowed: false, resetAt: entry.resetAt, remaining: 0 };
   }
   
   // Increment count
   entry.count++;
-  return { allowed: true, resetAt: entry.resetAt };
+  return { allowed: true, resetAt: entry.resetAt, remaining: MAX_REQUESTS_PER_WINDOW - entry.count };
 }
 
 /**
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
             headers: {
               'X-Cache': 'HIT',
               'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
-              'X-RateLimit-Remaining': (MAX_REQUESTS_PER_WINDOW - rateLimit.count + 1).toString(),
+              'X-RateLimit-Remaining': rateLimit.remaining.toString(),
               'X-RateLimit-Reset': rateLimit.resetAt.toString(),
             },
           }
@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
           'X-Cache': 'MISS',
           'X-Processing-Time': duration.toString(),
           'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
-          'X-RateLimit-Remaining': (MAX_REQUESTS_PER_WINDOW - rateLimit.count).toString(),
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
           'X-RateLimit-Reset': rateLimit.resetAt.toString(),
         },
       }
