@@ -391,70 +391,70 @@ export function createPatternIdentifiedEvent(
 /**
  * Check if signal is a playbook generated event
  */
-export function isPlaybookGeneratedEvent(signal: SalesSignal): signal is PlaybookGeneratedEvent {
+export function isPlaybookGeneratedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.generated' } {
   return signal.type === 'playbook.generated';
 }
 
 /**
  * Check if signal is a patterns extracted event
  */
-export function isPatternsExtractedEvent(signal: SalesSignal): signal is PatternsExtractedEvent {
+export function isPatternsExtractedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.patterns_extracted' } {
   return signal.type === 'playbook.patterns_extracted';
 }
 
 /**
  * Check if signal is a playbook activated event
  */
-export function isPlaybookActivatedEvent(signal: SalesSignal): signal is PlaybookActivatedEvent {
+export function isPlaybookActivatedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.activated' } {
   return signal.type === 'playbook.activated';
 }
 
 /**
  * Check if signal is a playbook used event
  */
-export function isPlaybookUsedEvent(signal: SalesSignal): signal is PlaybookUsedEvent {
+export function isPlaybookUsedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.used' } {
   return signal.type === 'playbook.used';
 }
 
 /**
  * Check if signal is a playbook updated event
  */
-export function isPlaybookUpdatedEvent(signal: SalesSignal): signal is PlaybookUpdatedEvent {
+export function isPlaybookUpdatedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.updated' } {
   return signal.type === 'playbook.updated';
 }
 
 /**
  * Check if signal is an adoption tracked event
  */
-export function isAdoptionTrackedEvent(signal: SalesSignal): signal is AdoptionTrackedEvent {
+export function isAdoptionTrackedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.adoption_tracked' } {
   return signal.type === 'playbook.adoption_tracked';
 }
 
 /**
  * Check if signal is an effectiveness measured event
  */
-export function isEffectivenessMeasuredEvent(signal: SalesSignal): signal is EffectivenessMeasuredEvent {
+export function isEffectivenessMeasuredEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.effectiveness_measured' } {
   return signal.type === 'playbook.effectiveness_measured';
 }
 
 /**
  * Check if signal is a playbook archived event
  */
-export function isPlaybookArchivedEvent(signal: SalesSignal): signal is PlaybookArchivedEvent {
+export function isPlaybookArchivedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.archived' } {
   return signal.type === 'playbook.archived';
 }
 
 /**
  * Check if signal is a pattern identified event
  */
-export function isPatternIdentifiedEvent(signal: SalesSignal): signal is PatternIdentifiedEvent {
+export function isPatternIdentifiedEvent(signal: SalesSignal): signal is SalesSignal & { type: 'playbook.pattern_identified' } {
   return signal.type === 'playbook.pattern_identified';
 }
 
 /**
  * Check if signal is any playbook-related event
  */
-export function isPlaybookEvent(signal: SalesSignal): signal is PlaybookEvent {
+export function isPlaybookEvent(signal: SalesSignal): boolean {
   return signal.type.startsWith('playbook.');
 }
 
