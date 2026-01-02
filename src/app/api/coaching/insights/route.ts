@@ -159,7 +159,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const requestData: GenerateCoachingRequest = validationResult.data;
+    // Type assertion: validation guarantees required fields are present
+    const requestData = validationResult.data as GenerateCoachingRequest;
     
     // Check rate limit
     const rateLimit = checkRateLimit(requestData.repId);
