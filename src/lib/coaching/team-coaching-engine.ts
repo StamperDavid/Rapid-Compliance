@@ -209,14 +209,11 @@ export class TeamCoachingEngine {
       const batch = repIds.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(repId =>
-          this.analyticsEngine.generatePerformanceMetrics({
+          this.analyticsEngine.analyzeRepPerformance(
             repId,
-            period: period as any,
-            customRange: dateRange,
-            includeDetailed: false,
-            includeTraining: false,
-            includeActionItems: false
-          })
+            period as any,
+            dateRange
+          )
         )
       );
       results.push(...batchResults);
