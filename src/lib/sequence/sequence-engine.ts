@@ -281,7 +281,7 @@ Return patterns in this JSON format:
         maxTokens: 3000,
       });
       
-      const content = response.content || '';
+      const content = response.text || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       
       if (!jsonMatch) {
@@ -399,7 +399,7 @@ Return JSON format:
         maxTokens: 2500,
       });
       
-      const content = response.content || '';
+      const content = response.text || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       
       if (!jsonMatch) {
@@ -488,7 +488,7 @@ Return concise JSON:
         maxTokens: 1000,
       });
       
-      const content = response.content || '';
+      const content = response.text || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       
       if (jsonMatch) {
