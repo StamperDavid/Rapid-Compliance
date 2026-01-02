@@ -755,14 +755,12 @@ async function generateAIInterventions(
     );
     
     // Call AI
-    const response = await sendUnifiedChatMessage(
-      [{ role: 'user', content: prompt }],
-      {
-        model: config.aiModel,
-        temperature: 0.7,
-        max_tokens: 2000,
-      }
-    );
+    const response = await sendUnifiedChatMessage({
+      model: config.aiModel,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
     
     // Parse AI response
     const interventions = parseAIInterventions(
