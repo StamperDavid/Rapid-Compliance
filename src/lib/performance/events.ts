@@ -19,10 +19,8 @@
  */
 
 import type { SalesSignal } from '@/lib/orchestration';
-import type {
-  PerformanceTier,
-  CoachingCategory,
-} from './types';
+import type { CoachingCategory } from '@/lib/conversation/types';
+import type { PerformanceTier } from './types';
 
 // ============================================================================
 // EVENT INTERFACES
