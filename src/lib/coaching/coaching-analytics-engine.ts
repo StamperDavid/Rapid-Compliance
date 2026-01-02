@@ -169,24 +169,24 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       
       const totalDeals = deals.length;
-      const activeDeals = deals.filter(d => !['won', 'lost', 'closed'].includes(d.status || '')).length;
-      const dealsWon = deals.filter(d => d.status === 'won').length;
-      const dealsLost = deals.filter(d => d.status === 'lost').length;
+      const activeDeals = deals.filter((d: any) => !['won', 'lost', 'closed'].includes(d.status || '')).length;
+      const dealsWon = deals.filter((d: any) => d.status === 'won').length;
+      const dealsLost = deals.filter((d: any) => d.status === 'lost').length;
       const closedDeals = dealsWon + dealsLost;
       const winRate = closedDeals > 0 ? dealsWon / closedDeals : 0;
       
       // Calculate average deal size
-      const wonDeals = deals.filter(d => d.status === 'won');
-      const totalValue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+      const wonDeals = deals.filter((d: any) => d.status === 'won');
+      const totalValue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
       const averageDealSize = wonDeals.length > 0 ? totalValue / wonDeals.length : 0;
       
       // Calculate average deal cycle
       const cycleTimes = wonDeals
-        .filter(d => d.createdAt && d.closedAt)
-        .map(d => {
+        .filter((d: any) => d.createdAt && d.closedAt)
+        .map((d: any) => {
           const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
           const closed = d.closedAt.toDate ? d.closedAt.toDate() : new Date(d.closedAt);
           return (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
@@ -200,15 +200,15 @@ export class CoachingAnalyticsEngine {
       const dealVelocity = periodDays > 0 ? (totalDeals / periodDays) * 7 : 0;
       
       // Count at-risk deals (using deal scoring data if available)
-      const atRiskDeals = deals.filter(d => 
+      const atRiskDeals = deals.filter((d: any) => 
         d.healthScore !== undefined && d.healthScore < 50
       ).length;
       
       // Health distribution
       const healthDistribution = {
-        healthy: deals.filter(d => d.healthScore >= 70).length,
-        warning: deals.filter(d => d.healthScore >= 50 && d.healthScore < 70).length,
-        critical: deals.filter(d => d.healthScore < 50).length
+        healthy: deals.filter((d: any) => d.healthScore >= 70).length,
+        warning: deals.filter((d: any) => d.healthScore >= 50 && d.healthScore < 70).length,
+        critical: deals.filter((d: any) => d.healthScore < 50).length
       };
       
       return {
@@ -258,20 +258,20 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const emails = snapshot.docs.map(doc => doc.data());
+      const emails = snapshot.docs.map(doc => doc.data() as any);
       
-      const emailsGenerated = emails.filter(e => e.type === 'generated').length;
-      const emailsSent = emails.filter(e => e.type === 'sent').length;
+      const emailsGenerated = emails.filter((e: any) => e.type === 'generated').length;
+      const emailsSent = emails.filter((e: any) => e.type === 'sent').length;
       
       // Calculate response rate
-      const sentEmails = emails.filter(e => e.type === 'sent');
-      const repliedEmails = sentEmails.filter(e => e.replied === true).length;
+      const sentEmails = emails.filter((e: any) => e.type === 'sent');
+      const repliedEmails = sentEmails.filter((e: any) => e.replied === true).length;
       const emailResponseRate = sentEmails.length > 0 ? repliedEmails / sentEmails.length : 0;
       
       // Calculate average response time (hours)
       const responseTimes = emails
-        .filter(e => e.sentAt && e.repliedAt)
-        .map(e => {
+        .filter((e: any) => e.sentAt && e.repliedAt)
+        .map((e: any) => {
           const sent = e.sentAt.toDate ? e.sentAt.toDate() : new Date(e.sentAt);
           const replied = e.repliedAt.toDate ? e.repliedAt.toDate() : new Date(e.repliedAt);
           return (replied.getTime() - sent.getTime()) / (1000 * 60 * 60);
@@ -284,11 +284,11 @@ export class CoachingAnalyticsEngine {
       const aiEmailUsageRate = emailsSent > 0 ? emailsGenerated / emailsSent : 0;
       
       // Personalization score (based on custom instructions usage)
-      const personalizedEmails = emails.filter(e => e.customInstructions && e.customInstructions.length > 10).length;
+      const personalizedEmails = emails.filter((e: any) => e.customInstructions && e.customInstructions.length > 10).length;
       const personalizationScore = emailsSent > 0 ? (personalizedEmails / emailsSent) * 100 : 0;
       
       // Follow-up consistency (percentage of emails that are follow-ups)
-      const followUpEmails = emails.filter(e => e.isFollowUp === true).length;
+      const followUpEmails = emails.filter((e: any) => e.isFollowUp === true).length;
       const followUpConsistency = emailsSent > 0 ? (followUpEmails / emailsSent) * 100 : 0;
       
       return {
@@ -331,16 +331,16 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const activities = snapshot.docs.map(doc => doc.data());
+      const activities = snapshot.docs.map(doc => doc.data() as any);
       
       const totalActivities = activities.length;
       const periodDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
       const activitiesPerDay = periodDays > 0 ? totalActivities / periodDays : 0;
       
-      const callsMade = activities.filter(a => a.type === 'call').length;
-      const meetingsHeld = activities.filter(a => a.type === 'meeting').length;
-      const tasksCompleted = activities.filter(a => a.type === 'task' && a.completed).length;
-      const totalTasks = activities.filter(a => a.type === 'task').length;
+      const callsMade = activities.filter((a: any) => a.type === 'call').length;
+      const meetingsHeld = activities.filter((a: any) => a.type === 'meeting').length;
+      const tasksCompleted = activities.filter((a: any) => a.type === 'task' && a.completed).length;
+      const totalTasks = activities.filter((a: any) => a.type === 'task').length;
       const taskCompletionRate = totalTasks > 0 ? tasksCompleted / totalTasks : 0;
       
       // Query workflow executions
@@ -353,7 +353,7 @@ export class CoachingAnalyticsEngine {
       const workflowsTriggered = workflowSnapshot.size;
       
       // CRM updates (deal updates + contact updates)
-      const crmUpdates = activities.filter(a => 
+      const crmUpdates = activities.filter((a: any) => 
         ['deal_update', 'contact_update', 'note_added'].includes(a.type || '')
       ).length;
       
@@ -399,17 +399,17 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const deals = snapshot.docs.map(doc => doc.data());
+      const deals = snapshot.docs.map(doc => doc.data() as any);
       
       // Count deals at each stage
-      const leadCount = deals.filter(d => d.stage === 'lead' || d.stage === 'prospecting').length;
-      const opportunityCount = deals.filter(d => 
+      const leadCount = deals.filter((d: any) => d.stage === 'lead' || d.stage === 'prospecting').length;
+      const opportunityCount = deals.filter((d: any) => 
         ['qualification', 'needs_analysis', 'discovery'].includes(d.stage || '')
       ).length;
-      const proposalCount = deals.filter(d => 
+      const proposalCount = deals.filter((d: any) => 
         ['proposal', 'negotiation'].includes(d.stage || '')
       ).length;
-      const closedCount = deals.filter(d => d.status === 'won').length;
+      const closedCount = deals.filter((d: any) => d.status === 'won').length;
       
       // Calculate conversion rates
       const totalLeads = leadCount + opportunityCount + proposalCount + closedCount;
@@ -474,16 +474,16 @@ export class CoachingAnalyticsEngine {
         .where('ownerId', '==', repId)
         .get();
       
-      const allDeals = snapshot.docs.map(doc => doc.data());
+      const allDeals = snapshot.docs.map(doc => doc.data() as any);
       
       // Total revenue (won deals in period)
-      const wonDeals = allDeals.filter(d => 
+      const wonDeals = allDeals.filter((d: any) => 
         d.status === 'won' && 
         d.closedAt &&
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) >= startDate &&
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) <= endDate
       );
-      const totalRevenue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+      const totalRevenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
       
       // Get quota from user profile
       const repDoc = await this.adminDal.getCollection('USERS').doc(repId).get();
@@ -491,13 +491,13 @@ export class CoachingAnalyticsEngine {
       const quotaAttainment = quota > 0 ? totalRevenue / quota : 0;
       
       // Pipeline value (active deals)
-      const activeDeals = allDeals.filter(d => 
+      const activeDeals = allDeals.filter((d: any) => 
         !['won', 'lost', 'closed'].includes(d.status || '')
       );
-      const pipelineValue = activeDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+      const pipelineValue = activeDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
       
       // Weighted pipeline (value * probability)
-      const weightedPipeline = activeDeals.reduce((sum, d) => {
+      const weightedPipeline = activeDeals.reduce((sum: number, d: any) => {
         const value = d.value || 0;
         const probability = d.winProbability || 0.5;
         return sum + (value * probability);
@@ -512,13 +512,13 @@ export class CoachingAnalyticsEngine {
       // Growth rate (compare to previous period)
       const previousPeriodStart = new Date(startDate);
       previousPeriodStart.setTime(startDate.getTime() - (endDate.getTime() - startDate.getTime()));
-      const previousWonDeals = allDeals.filter(d =>
+      const previousWonDeals = allDeals.filter((d: any) =>
         d.status === 'won' &&
         d.closedAt &&
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) >= previousPeriodStart &&
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) < startDate
       );
-      const previousRevenue = previousWonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+      const previousRevenue = previousWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
       const growthRate = previousRevenue > 0 ? (totalRevenue - previousRevenue) / previousRevenue : 0;
       
       return {
@@ -563,12 +563,12 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const deals = snapshot.docs.map(doc => doc.data());
+      const deals = snapshot.docs.map(doc => doc.data() as any);
       
       // Time to first contact
       const firstContactTimes = deals
-        .filter(d => d.createdAt && d.firstContactAt)
-        .map(d => {
+        .filter((d: any) => d.createdAt && d.firstContactAt)
+        .map((d: any) => {
           const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
           const contacted = d.firstContactAt.toDate ? d.firstContactAt.toDate() : new Date(d.firstContactAt);
           return (contacted.getTime() - created.getTime()) / (1000 * 60 * 60);
@@ -579,8 +579,8 @@ export class CoachingAnalyticsEngine {
       
       // Time to proposal
       const proposalTimes = deals
-        .filter(d => d.createdAt && d.proposalSentAt)
-        .map(d => {
+        .filter((d: any) => d.createdAt && d.proposalSentAt)
+        .map((d: any) => {
           const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
           const proposal = d.proposalSentAt.toDate ? d.proposalSentAt.toDate() : new Date(d.proposalSentAt);
           return (proposal.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
@@ -591,8 +591,8 @@ export class CoachingAnalyticsEngine {
       
       // Time to close
       const closeTimes = deals
-        .filter(d => d.createdAt && d.closedAt && d.status === 'won')
-        .map(d => {
+        .filter((d: any) => d.createdAt && d.closedAt && d.status === 'won')
+        .map((d: any) => {
           const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
           const closed = d.closedAt.toDate ? d.closedAt.toDate() : new Date(d.closedAt);
           return (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
@@ -609,12 +609,12 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const activities = activitiesSnapshot.docs.map(doc => doc.data());
+      const activities = activitiesSnapshot.docs.map(doc => doc.data() as any);
       const meetingsPerDeal = deals.length > 0 
-        ? activities.filter(a => a.type === 'meeting').length / deals.length 
+        ? activities.filter((a: any) => a.type === 'meeting').length / deals.length 
         : 0;
       const emailsPerDeal = deals.length > 0
-        ? activities.filter(a => a.type === 'email').length / deals.length
+        ? activities.filter((a: any) => a.type === 'email').length / deals.length
         : 0;
       const touchPointsPerDeal = meetingsPerDeal + emailsPerDeal;
       
@@ -635,7 +635,7 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '>=', startDate)
         .where('createdAt', '<=', endDate)
         .get();
-      const aiEmails = emailActivities.docs.filter(doc => doc.data().type === 'generated').length;
+      const aiEmails = emailActivities.docs.filter(doc => (doc.data() as any).type === 'generated').length;
       const hoursSaved = (workflowExecutions * 5 + aiEmails * 10) / 60;
       
       return {
