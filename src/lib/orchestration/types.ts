@@ -124,6 +124,17 @@ export type SignalType =
   | 'performance.benchmark_changed' // Performance benchmark changed
   | 'performance.alert_triggered' // Performance alert triggered
   
+  // Playbook Builder Signals
+  | 'playbook.generated'        // New playbook created
+  | 'playbook.patterns_extracted' // Patterns extracted from conversations
+  | 'playbook.activated'        // Playbook activated for use
+  | 'playbook.used'             // Playbook used in conversation
+  | 'playbook.updated'          // Playbook content updated
+  | 'playbook.adoption_tracked' // Adoption metrics calculated
+  | 'playbook.effectiveness_measured' // Effectiveness metrics measured
+  | 'playbook.archived'         // Playbook archived/deprecated
+  | 'playbook.pattern_identified' // New pattern identified
+  
   // System Signals
   | 'system.error'              // System error occurred
   | 'system.quota.warning'      // API quota approaching limit
