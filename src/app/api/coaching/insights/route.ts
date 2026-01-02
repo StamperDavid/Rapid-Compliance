@@ -242,7 +242,8 @@ export async function POST(request: NextRequest) {
         'gpt-4o',
         Date.now() - startTime
       );
-      await coordinator.emitSignal(event.type as any, event.data);
+      // Signal coordinator expects the full event object
+      await coordinator.emitSignal(event as any);
     } catch (signalError) {
       logger.error('Failed to emit coaching insights signal', { signalError });
       // Don't fail the request if signal emission fails
@@ -286,10 +287,14 @@ export async function POST(request: NextRequest) {
     // Emit error signal
     try {
       const coordinator = getServerSignalCoordinator();
-      await coordinator.emitSignal('coaching.error' as any, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date()
-      });
+      await coordinator.emitSignal({
+        type: 'coaching.error' as any,
+        timestamp: new Date(),
+        data: {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date()
+        }
+      } as any);
     } catch (signalError) {
       logger.error('Failed to emit error signal', { signalError });
     }
