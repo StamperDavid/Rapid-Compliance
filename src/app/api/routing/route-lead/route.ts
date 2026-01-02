@@ -385,7 +385,7 @@ export async function POST(request: NextRequest) {
 
       // Emit signal
       try {
-        const coordinator = getServerSignalCoordinator(lead.orgId);
+        const coordinator = getServerSignalCoordinator();
         const signal = createLeadRoutedSignal(
           lead.orgId,
           lead,
@@ -451,7 +451,7 @@ export async function POST(request: NextRequest) {
 
     // Emit signal
     try {
-      const coordinator = getServerSignalCoordinator(lead.orgId);
+      const coordinator = getServerSignalCoordinator();
       const signal = createLeadRoutedSignal(
         lead.orgId,
         lead,
@@ -521,7 +521,7 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         };
 
-        const coordinator = getServerSignalCoordinator('org_demo');
+        const coordinator = getServerSignalCoordinator();
         const signal = createRoutingFailedSignal(
           'org_demo',
           lead,
