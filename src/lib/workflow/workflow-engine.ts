@@ -169,10 +169,10 @@ export class WorkflowEngine {
         return typeof fieldValue === 'string' && typeof value === 'string' && !fieldValue.includes(value);
       
       case 'in':
-        return Array.isArray(value) && value.includes(fieldValue);
+        return Array.isArray(value) && value.includes(fieldValue as string);
       
       case 'not_in':
-        return Array.isArray(value) && !value.includes(fieldValue);
+        return Array.isArray(value) && !value.includes(fieldValue as string);
       
       case 'is_null':
         return fieldValue === null || fieldValue === undefined;
