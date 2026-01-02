@@ -39,7 +39,7 @@ import type {
   RepPerformanceSummary,
 } from './types';
 
-import { adminDAL } from '@/lib/dal';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Workflow, WorkflowExecution } from '@/lib/workflow/types';
 import { emitDashboardGenerated } from './events';
 
@@ -156,11 +156,11 @@ async function getWorkflowMetrics(
   previousDateRange: { start: Date; end: Date }
 ): Promise<WorkflowOverviewMetrics> {
   // Get all workflows
-  const workflows = await adminDAL.getAllWorkflows(organizationId, workspaceId);
+  const workflows = await adminDal.getAllWorkflows(organizationId, workspaceId);
   const activeWorkflows = workflows.filter((w: Workflow) => w.status === 'active');
   
   // Get executions in current period
-  const executions = await adminDAL.getWorkflowExecutions(
+  const executions = await adminDal.getWorkflowExecutions(
     organizationId,
     workspaceId,
     startDate,
@@ -168,7 +168,7 @@ async function getWorkflowMetrics(
   );
   
   // Get executions in previous period (for trend)
-  const previousExecutions = await adminDAL.getWorkflowExecutions(
+  const previousExecutions = await adminDal.getWorkflowExecutions(
     organizationId,
     workspaceId,
     previousDateRange.start,
@@ -350,14 +350,14 @@ async function getEmailMetrics(
   previousDateRange: { start: Date; end: Date }
 ): Promise<EmailOverviewMetrics> {
   // Get email generation events from Signal Bus or email writer logs
-  const emails = await adminDAL.getEmailGenerations(
+  const emails = await adminDal.getEmailGenerations(
     organizationId,
     workspaceId,
     startDate,
     endDate
   );
   
-  const previousEmails = await adminDAL.getEmailGenerations(
+  const previousEmails = await adminDal.getEmailGenerations(
     organizationId,
     workspaceId,
     previousDateRange.start,
@@ -475,8 +475,8 @@ async function getDealMetrics(
   previousDateRange: { start: Date; end: Date }
 ): Promise<DealOverviewMetrics> {
   // Get all active deals
-  const deals = await adminDAL.getActiveDeals(organizationId, workspaceId);
-  const previousDeals = await adminDAL.getDealsSnapshot(
+  const deals = await adminDal.getActiveDeals(organizationId, workspaceId);
+  const previousDeals = await adminDal.getDealsSnapshot(
     organizationId,
     workspaceId,
     previousDateRange.end
@@ -502,7 +502,7 @@ async function getDealMetrics(
   const byTier = calculateDealsByTier(deals);
   
   // Calculate average velocity
-  const closedDeals = await adminDAL.getClosedDeals(
+  const closedDeals = await adminDal.getClosedDeals(
     organizationId,
     workspaceId,
     startDate,
@@ -654,14 +654,14 @@ async function getRevenueMetrics(
   previousDateRange: { start: Date; end: Date }
 ): Promise<RevenueOverviewMetrics> {
   // Get closed/won deals in period
-  const wonDeals = await adminDAL.getWonDeals(
+  const wonDeals = await adminDal.getWonDeals(
     organizationId,
     workspaceId,
     startDate,
     endDate
   );
   
-  const previousWonDeals = await adminDAL.getWonDeals(
+  const previousWonDeals = await adminDal.getWonDeals(
     organizationId,
     workspaceId,
     previousDateRange.start,
@@ -676,7 +676,7 @@ async function getRevenueMetrics(
   const quotaAttainment = quota > 0 ? (totalRevenue / quota) * 100 : 0;
   
   // Get revenue forecast from forecasting engine
-  const forecast = await adminDAL.getRevenueForecast(organizationId, workspaceId);
+  const forecast = await adminDal.getRevenueForecast(organizationId, workspaceId);
   
   // Calculate trend
   const revenueTrend = previousRevenue > 0
@@ -692,7 +692,7 @@ async function getRevenueMetrics(
   );
   
   // Calculate win rate
-  const allDeals = await adminDAL.getClosedDeals(organizationId, workspaceId, startDate, endDate);
+  const allDeals = await adminDal.getClosedDeals(organizationId, workspaceId, startDate, endDate);
   const winRate = allDeals.length > 0
     ? (wonDeals.length / allDeals.length) * 100
     : 0;
@@ -730,12 +730,12 @@ async function getTeamMetrics(
   endDate: Date
 ): Promise<TeamOverviewMetrics> {
   // Get all reps (users with role 'sales')
-  const reps = await adminDAL.getSalesReps(organizationId, workspaceId);
+  const reps = await adminDal.getSalesReps(organizationId, workspaceId);
   
   // Get deals for each rep
   const repDeals = await Promise.all(
     reps.map((rep: any) =>
-      adminDAL.getRepDeals(organizationId, workspaceId, rep.id, startDate, endDate)
+      adminDal.getRepDeals(organizationId, workspaceId, rep.id, startDate, endDate)
     )
   );
   

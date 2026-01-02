@@ -18,6 +18,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Cell,
 } from 'recharts';
 import type { RevenueOverviewMetrics } from '@/lib/analytics/dashboard/types';
 

@@ -4,7 +4,7 @@
  * Event definitions and emitters for analytics dashboard events
  */
 
-import { getSignalCoordinator } from '@/lib/orchestration';
+import { getServerSignalCoordinator } from '@/lib/orchestration';
 import type { DashboardOverview, TimePeriod } from './types';
 
 // ============================================================================
@@ -157,7 +157,7 @@ export async function emitDashboardViewed(
   userId?: string
 ): Promise<void> {
   try {
-    const coordinator = await getSignalCoordinator();
+    const coordinator = await getServerSignalCoordinator();
     
     const payload: DashboardViewedPayload = {
       organizationId,
@@ -185,7 +185,7 @@ export async function emitDashboardGenerated(
   data: DashboardOverview
 ): Promise<void> {
   try {
-    const coordinator = await getSignalCoordinator();
+    const coordinator = await getServerSignalCoordinator();
     
     const payload: DashboardGeneratedPayload = {
       organizationId,
@@ -216,7 +216,7 @@ export async function emitCacheCleared(
   userId?: string
 ): Promise<void> {
   try {
-    const coordinator = await getSignalCoordinator();
+    const coordinator = await getServerSignalCoordinator();
     
     const payload: CacheClearedPayload = {
       reason,
@@ -240,7 +240,7 @@ export async function emitExportRequested(
   userId?: string
 ): Promise<void> {
   try {
-    const coordinator = await getSignalCoordinator();
+    const coordinator = await getServerSignalCoordinator();
     
     const payload: ExportRequestedPayload = {
       organizationId,
@@ -267,7 +267,7 @@ export async function emitAnalyticsError(
   context?: Record<string, unknown>
 ): Promise<void> {
   try {
-    const coordinator = await getSignalCoordinator();
+    const coordinator = await getServerSignalCoordinator();
     
     const payload: ErrorOccurredPayload = {
       error,
