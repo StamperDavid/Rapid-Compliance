@@ -23,6 +23,7 @@
  */
 
 import type { FirestoreAdminDAL } from '@/lib/firebase/admin-dal';
+import { adminDb } from '@/lib/firebase/admin';
 import type {
   RepPerformanceMetrics,
   DealPerformanceMetrics,
@@ -253,7 +254,7 @@ export class CoachingAnalyticsEngine {
       // Query email activities (using organization sub-collection pattern)
       // This data may not exist yet, so we handle gracefully
       const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
-      const emailsRef = this.adminDal.db.collection(`${prefix}email_activities`);
+      const emailsRef = adminDb.collection(`${prefix}email_activities`);
       const snapshot = await emailsRef
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -327,7 +328,7 @@ export class CoachingAnalyticsEngine {
     try {
       // Query activities (using direct collection reference as ACTIVITIES may not be in enum)
       const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
-      const activitiesRef = this.adminDal.db.collection(`${prefix}activities`);
+      const activitiesRef = adminDb.collection(`${prefix}activities`);
       const snapshot = await activitiesRef
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -347,7 +348,7 @@ export class CoachingAnalyticsEngine {
       const taskCompletionRate = totalTasks > 0 ? tasksCompleted / totalTasks : 0;
       
       // Query workflow executions (reuse prefix from above)
-      const workflowsRef = this.adminDal.db.collection(`${prefix}workflow_executions`);
+      const workflowsRef = adminDb.collection(`${prefix}workflow_executions`);
       const workflowSnapshot = await workflowsRef
         .where('triggeredBy', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -608,7 +609,7 @@ export class CoachingAnalyticsEngine {
         : 0;
       
       // Touch points per deal (meetings + emails)
-      const activitiesRef = this.adminDal.db.collection(`${prefix}activities`);
+      const activitiesRef = adminDb.collection(`${prefix}activities`);
       const activitiesSnapshot = await activitiesRef
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -625,7 +626,7 @@ export class CoachingAnalyticsEngine {
       const touchPointsPerDeal = meetingsPerDeal + emailsPerDeal;
       
       // AI automation usage
-      const workflowsRef = this.adminDal.db.collection(`${prefix}workflow_executions`);
+      const workflowsRef = adminDb.collection(`${prefix}workflow_executions`);
       const workflowSnapshot = await workflowsRef
         .where('triggeredBy', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -636,7 +637,7 @@ export class CoachingAnalyticsEngine {
       const automationUsage = totalActivities > 0 ? workflowExecutions / totalActivities : 0;
       
       // Hours saved (estimate: 5 min per workflow, 10 min per AI email)
-      const emailActivities = await this.adminDal.db.collection(`${prefix}email_activities`)
+      const emailActivities = await adminDb.collection(`${prefix}email_activities`)
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
         .where('createdAt', '<=', endDate)
