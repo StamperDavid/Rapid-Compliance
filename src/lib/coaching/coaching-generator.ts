@@ -156,7 +156,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return {
         assessment: parsed.assessment || 'Performance analysis completed',
         currentTier: performance.tier,
@@ -189,7 +189,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.strengths || this.identifyStrengthsFallback(performance);
     } catch (error) {
       logger.error('Error parsing strengths', { error });
@@ -215,7 +215,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.weaknesses || this.identifyWeaknessesFallback(performance);
     } catch (error) {
       logger.error('Error parsing weaknesses', { error });
@@ -241,7 +241,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.opportunities || this.identifyOpportunitiesFallback(performance);
     } catch (error) {
       logger.error('Error parsing opportunities', { error });
@@ -267,7 +267,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.risks || this.assessRisksFallback(performance);
     } catch (error) {
       logger.error('Error parsing risks', { error });
@@ -293,7 +293,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.bestPractices || [];
     } catch (error) {
       logger.error('Error parsing best practices', { error });
@@ -319,7 +319,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.recommendations || this.generateRecommendationsFallback(performance);
     } catch (error) {
       logger.error('Error parsing recommendations', { error });
@@ -346,7 +346,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.trainingSuggestions || [];
     } catch (error) {
       logger.error('Error parsing training suggestions', { error });
@@ -373,7 +373,7 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.content);
+      const parsed = JSON.parse(response.text);
       return parsed.actionItems || [];
     } catch (error) {
       logger.error('Error parsing action items', { error });
