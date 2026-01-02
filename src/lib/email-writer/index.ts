@@ -1,20 +1,18 @@
 /**
- * Email Writer Module - Exports
+ * Email Writer Module - Client-Safe Exports
  * 
- * AI-powered sales email generation with deal scoring,
- * battlecard integration, and industry templates.
+ * This file only exports client-safe code (types, templates, validation schemas).
+ * For server-side engine functions, import from './server' instead.
  */
 
-// Main engine exports
-export {
-  generateSalesEmail,
-  generateEmailVariants,
-  type EmailGenerationOptions,
-  type GeneratedEmail,
-  type EmailGenerationResult,
+// Type-only exports from engine (safe for client)
+export type {
+  EmailGenerationOptions,
+  GeneratedEmail,
+  EmailGenerationResult,
 } from './email-writer-engine';
 
-// Template exports
+// Template exports (safe for client - no server dependencies)
 export {
   EMAIL_TEMPLATES,
   getEmailTemplate,
@@ -24,7 +22,7 @@ export {
   type EmailType,
 } from './email-templates';
 
-// Validation exports
+// Validation exports (safe for client)
 export {
   GenerateEmailSchema,
   GenerateEmailVariantsSchema,

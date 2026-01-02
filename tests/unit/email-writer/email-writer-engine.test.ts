@@ -41,7 +41,7 @@ jest.mock('@/lib/battlecard/battlecard-engine', () => ({
 }));
 
 // Now import after mocks are set up
-import { generateSalesEmail, generateEmailVariants } from '@/lib/email-writer/email-writer-engine';
+import { generateSalesEmail, generateEmailVariants } from '@/lib/email-writer/server';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { calculateDealScore } from '@/lib/templates/deal-scoring-engine';

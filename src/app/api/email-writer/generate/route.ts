@@ -50,8 +50,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/middleware/rate-limiter';
-import { generateSalesEmail } from '@/lib/email-writer/email-writer-engine';
-import { GenerateEmailSchema, validateRequestBody } from '@/lib/email-writer/validation';
+import { generateSalesEmail, GenerateEmailSchema, validateRequestBody } from '@/lib/email-writer/server';
 
 /**
  * POST /api/email-writer/generate
