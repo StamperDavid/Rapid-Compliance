@@ -188,9 +188,10 @@ export function createPerformanceAnalyzedEvent(
   return {
     id: `perf-analyzed-${Date.now()}`,
     type: 'performance.analyzed',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'medium',
+    confidence: 0.95,
+    priority: 'Medium',
     payload: {
       repsAnalyzed,
       conversationsAnalyzed,
@@ -205,7 +206,7 @@ export function createPerformanceAnalyzedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as Omit<PerformanceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as PerformanceAnalyzedEvent;
 }
 
 /**
@@ -224,9 +225,10 @@ export function createTopPerformerIdentifiedEvent(
   return {
     id: `top-performer-${repId}-${Date.now()}`,
     type: 'performance.top_performer_identified',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'high',
+    confidence: 0.9,
+    priority: 'High',
     payload: {
       repId,
       rank,
@@ -240,7 +242,7 @@ export function createTopPerformerIdentifiedEvent(
       repId,
       timestamp: new Date().toISOString(),
     },
-  } as Omit<TopPerformerIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as TopPerformerIdentifiedEvent;
 }
 
 /**
@@ -261,9 +263,10 @@ export function createImprovementOpportunityDetectedEvent(
   return {
     id: `improvement-${repId}-${Date.now()}`,
     type: 'performance.improvement_opportunity',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: hasCriticalGap ? 'high' : 'medium',
+    confidence: 0.85,
+    priority: hasCriticalGap ? 'High' : 'Medium',
     payload: {
       repId,
       currentScore,
@@ -277,7 +280,7 @@ export function createImprovementOpportunityDetectedEvent(
       repId,
       timestamp: new Date().toISOString(),
     },
-  } as Omit<ImprovementOpportunityDetectedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as ImprovementOpportunityDetectedEvent;
 }
 
 /**
@@ -295,9 +298,10 @@ export function createCoachingPriorityCreatedEvent(
   return {
     id: `coaching-priority-${category}-${Date.now()}`,
     type: 'performance.coaching_priority_created',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: priority === 'critical' ? 'high' : 'medium',
+    confidence: 0.9,
+    priority: priority === 'critical' ? 'High' : 'Medium',
     payload: {
       category,
       priority,
@@ -309,7 +313,7 @@ export function createCoachingPriorityCreatedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as Omit<CoachingPriorityCreatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as CoachingPriorityCreatedEvent;
 }
 
 /**
@@ -329,9 +333,10 @@ export function createBestPracticeExtractedEvent(
   return {
     id: `best-practice-${practiceId}`,
     type: 'performance.best_practice_extracted',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'medium',
+    confidence: 0.85,
+    priority: 'Medium',
     payload: {
       practiceId,
       title,
@@ -346,7 +351,7 @@ export function createBestPracticeExtractedEvent(
       repId: sourceRepId,
       timestamp: new Date().toISOString(),
     },
-  } as Omit<BestPracticeExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as BestPracticeExtractedEvent;
 }
 
 /**
@@ -366,9 +371,10 @@ export function createTrendDetectedEvent(
   return {
     id: `trend-${trendType}-${Date.now()}`,
     type: 'performance.trend_detected',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: isNegative ? 'high' : 'medium',
+    confidence: 0.8,
+    priority: isNegative ? 'High' : 'Medium',
     payload: {
       trendType,
       direction,
@@ -380,7 +386,7 @@ export function createTrendDetectedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as Omit<TrendDetectedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as TrendDetectedEvent;
 }
 
 /**
@@ -397,9 +403,10 @@ export function createLeaderboardUpdatedEvent(
   return {
     id: `leaderboard-${category}-${Date.now()}`,
     type: 'performance.leaderboard_updated',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'low',
+    confidence: 1.0,
+    priority: 'Low',
     payload: {
       category,
       topReps: topReps.slice(0, 5),
@@ -410,7 +417,7 @@ export function createLeaderboardUpdatedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as Omit<LeaderboardUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as LeaderboardUpdatedEvent;
 }
 
 /**
@@ -429,9 +436,10 @@ export function createBenchmarkChangedEvent(
   return {
     id: `benchmark-${benchmarkType}-${Date.now()}`,
     type: 'performance.benchmark_changed',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: 'low',
+    confidence: 1.0,
+    priority: 'Low',
     payload: {
       benchmarkType,
       previousValue,
@@ -443,7 +451,7 @@ export function createBenchmarkChangedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as Omit<BenchmarkChangedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as BenchmarkChangedEvent;
 }
 
 /**
@@ -461,9 +469,10 @@ export function createPerformanceAlertTriggeredEvent(
   return {
     id: `alert-${alertType}-${Date.now()}`,
     type: 'performance.alert_triggered',
-    organizationId,
+    orgId: organizationId,
     workspaceId,
-    priority: severity === 'critical' || severity === 'high' ? 'high' : 'medium',
+    confidence: 0.9,
+    priority: severity === 'critical' || severity === 'high' ? 'High' : 'Medium',
     payload: {
       alertType,
       severity,
@@ -476,5 +485,5 @@ export function createPerformanceAlertTriggeredEvent(
       repId,
       timestamp: new Date().toISOString(),
     },
-  } as Omit<PerformanceAlertTriggeredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
+  } as PerformanceAlertTriggeredEvent;
 }
