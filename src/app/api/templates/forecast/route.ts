@@ -40,11 +40,12 @@ export async function POST(request: NextRequest) {
     const validation = validateRequestBody(RevenueForecastSchema, body);
     
     if (validation.success === false) {
+      const { error, details } = validation;
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
-        message: validation.error,
-        details: validation.details?.errors
+        message: error,
+        details: details?.errors
       }, { status: 400 });
     }
     

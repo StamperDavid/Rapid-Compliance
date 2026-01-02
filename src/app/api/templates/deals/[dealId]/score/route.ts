@@ -43,11 +43,12 @@ export async function POST(
     );
     
     if (validation.success === false) {
+      const { error, details } = validation;
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
-        message: validation.error,
-        details: validation.details?.errors
+        message: error,
+        details: details?.errors
       }, { status: 400 });
     }
     
