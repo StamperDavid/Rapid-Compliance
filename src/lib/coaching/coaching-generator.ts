@@ -767,19 +767,24 @@ Return as JSON:
     return 'stable';
   }
 
-  private getKeyMetrics(performance: RepPerformanceMetrics) {
+  private getKeyMetrics(performance: RepPerformanceMetrics): Array<{
+    metric: string;
+    value: number;
+    vsTeamAverage: number;
+    trend: 'up' | 'down' | 'stable';
+  }> {
     return [
       {
         metric: 'Win Rate',
         value: performance.deals.winRate * 100,
         vsTeamAverage: performance.vsTeamAverage.winRateDelta * 100,
-        trend: performance.deals.winRate > 0.5 ? 'up' : 'down' as const
+        trend: (performance.deals.winRate > 0.5 ? 'up' : 'down') as 'up' | 'down'
       },
       {
         metric: 'Quota Attainment',
         value: performance.revenue.quotaAttainment * 100,
         vsTeamAverage: performance.vsTeamAverage.overallScoreDelta,
-        trend: performance.revenue.quotaAttainment >= 1 ? 'up' : 'down' as const
+        trend: (performance.revenue.quotaAttainment >= 1 ? 'up' : 'down') as 'up' | 'down'
       }
     ];
   }
