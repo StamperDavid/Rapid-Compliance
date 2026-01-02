@@ -18,7 +18,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { adminDal } from '@/lib/dal/admin-dal';
+import { adminDal } from '@/lib/firebase/admin-dal';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type {
   TeamPerformanceAnalytics,
