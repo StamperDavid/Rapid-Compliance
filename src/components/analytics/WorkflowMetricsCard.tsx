@@ -120,7 +120,7 @@ export function WorkflowMetricsCard({ data, loading = false }: WorkflowMetricsCa
                 cx="50%"
                 cy="50%"
                 outerRadius={70}
-                label={({ actionType, percentage }) => `${actionType}: ${percentage.toFixed(0)}%`}
+                label={(props: any) => `${props.actionType}: ${props.percentage.toFixed(0)}%`}
                 labelLine={false}
               >
                 {data.actionBreakdown.slice(0, 5).map((_, index) => (
