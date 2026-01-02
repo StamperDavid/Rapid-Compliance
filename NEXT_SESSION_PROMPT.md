@@ -235,12 +235,11 @@
 
 **Top Recommendations**:
 
-1. **Intelligent Lead Routing** (High Impact)
-   - AI-based lead assignment
-   - Route hot leads to top performers
-   - Balance workload across team
-   - Territory optimization
-   - Scope: 1,500-2,000 lines
+1. **Deal Risk Predictor** (High Impact) ⭐
+   - AI model to predict deal slippage
+   - Early warning system for at-risk deals
+   - Recommended interventions
+   - Scope: 1,800-2,200 lines
 
 2. **Conversation Intelligence**
    - Call/meeting transcript analysis
