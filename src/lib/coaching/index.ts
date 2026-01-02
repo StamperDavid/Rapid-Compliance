@@ -27,6 +27,7 @@
 // Core engines
 export { CoachingAnalyticsEngine } from './coaching-analytics-engine';
 export { CoachingGenerator } from './coaching-generator';
+export { TeamCoachingEngine } from './team-coaching-engine';
 
 // Types
 export type {
