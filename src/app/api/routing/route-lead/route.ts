@@ -393,11 +393,7 @@ export async function POST(request: NextRequest) {
           lead.qualityScore,
           0.5
         );
-        await coordinator.emitSignal({
-          ...signal,
-          createdAt: Timestamp.now(),
-          ttl: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-        });
+        await coordinator.emitSignal(signal);
       } catch (signalError) {
         console.error('Failed to emit routing signal:', signalError);
         // Continue - don't fail the routing
@@ -459,11 +455,7 @@ export async function POST(request: NextRequest) {
         analysis.leadQuality.overallScore,
         analysis.recommendation.expectedOutcomes.conversionProbability
       );
-      await coordinator.emitSignal({
-        ...signal,
-        createdAt: Timestamp.now(),
-        ttl: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-      });
+      await coordinator.emitSignal(signal);
     } catch (signalError) {
       console.error('Failed to emit routing signal:', signalError);
       // Continue - don't fail the routing
@@ -530,11 +522,7 @@ export async function POST(request: NextRequest) {
           'hybrid',
           false
         );
-        await coordinator.emitSignal({
-          ...signal,
-          createdAt: Timestamp.now(),
-          ttl: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-        });
+        await coordinator.emitSignal(signal);
       } catch (signalError) {
         console.error('Failed to emit failure signal:', signalError);
       }
