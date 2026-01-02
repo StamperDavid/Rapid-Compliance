@@ -168,7 +168,7 @@ export async function emitDashboardViewed(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.DASHBOARD_VIEWED,
+      type: ANALYTICS_EVENTS.DASHBOARD_VIEWED as any,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
@@ -209,7 +209,7 @@ export async function emitDashboardGenerated(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.DASHBOARD_GENERATED,
+      type: ANALYTICS_EVENTS.DASHBOARD_GENERATED as any,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
@@ -237,7 +237,7 @@ export async function emitCacheCleared(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.CACHE_CLEARED,
+      type: ANALYTICS_EVENTS.CACHE_CLEARED as any,
       orgId: 'system',
       confidence: 1.0,
       priority: 'Low',
@@ -269,7 +269,7 @@ export async function emitExportRequested(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.EXPORT_REQUESTED,
+      type: ANALYTICS_EVENTS.EXPORT_REQUESTED as any,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
@@ -303,7 +303,7 @@ export async function emitAnalyticsError(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.ERROR_OCCURRED,
+      type: ANALYTICS_EVENTS.ERROR_OCCURRED as any,
       orgId: organizationId || 'system',
       confidence: 1.0,
       priority: 'Medium',
