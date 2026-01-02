@@ -62,7 +62,7 @@ export class CoachingAnalyticsEngine {
       const { startDate, endDate } = this.getDateRange(period, customRange);
       
       // Get rep info
-      const repDoc = await this.adminDal.getDocument('USERS', repId);
+      const repDoc = await this.adminDal.getCollection('USERS').doc(repId).get();
       if (!repDoc.exists) {
         throw new Error(`Rep not found: ${repId}`);
       }
@@ -486,7 +486,7 @@ export class CoachingAnalyticsEngine {
       const totalRevenue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
       
       // Get quota from user profile
-      const repDoc = await this.adminDal.getDocument('USERS', repId);
+      const repDoc = await this.adminDal.getCollection('USERS').doc(repId).get();
       const quota = repDoc.data()?.quota || 0;
       const quotaAttainment = quota > 0 ? totalRevenue / quota : 0;
       
