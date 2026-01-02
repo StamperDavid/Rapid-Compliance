@@ -265,9 +265,10 @@ When starting Session 9:
    - [ ] `PHASE_3_STEP_3.3_COMPLETION_SUMMARY.md` - What was just built
 
 2. **Verify Environment**:
-   - [ ] `git status` - Check working directory
-   - [ ] `git log --oneline -5` - Verify commits are pushed
-   - [ ] Review recent changes
+   - [ ] `git status` - Check working directory is clean
+   - [ ] `git log --oneline -5` - Verify recent commits
+   - [ ] `git log origin/dev..HEAD` - **MUST BE EMPTY** (no unpushed commits)
+   - [ ] If unpushed commits found: **IMMEDIATELY** run `git push origin dev`
 
 3. **Decide Direction**:
    - [ ] Choose between Option A (Production Hardening), Option B (Phase 4), or Option C (Integrations)
@@ -279,6 +280,7 @@ When starting Session 9:
    - [ ] Maintain code quality standards
    - [ ] Document as you go
    - [ ] Commit regularly
+   - [ ] **🚨 PUSH EVERY COMMIT TO REMOTE IMMEDIATELY** - `git push origin dev` after EVERY commit
 
 ---
 
@@ -346,6 +348,23 @@ Based on the current state, here are my recommendations for Session 9:
 
 ## 🔥 CRITICAL REMINDERS
 
+### 🚨 HIGHEST PRIORITY - GIT WORKFLOW 🚨
+**⚠️ AFTER EVERY SINGLE GIT COMMIT, IMMEDIATELY RUN:**
+```bash
+git push origin dev
+```
+
+**NEVER LEAVE COMMITS UNPUSHED TO REMOTE. NEVER.**
+
+If you create a commit, you MUST push it in the same response. No exceptions.
+
+Example workflow:
+```bash
+git commit -m "message"
+git push origin dev  # ← REQUIRED. ALWAYS.
+```
+
+### Code Quality Standards
 1. ✅ **Environment Isolation**: Always use DAL for Firestore operations
 2. ✅ **Signal Bus**: Emit signals for all major events
 3. ✅ **TypeScript**: Strict typing, no `any` types
