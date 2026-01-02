@@ -61,6 +61,11 @@ export type SignalType =
   | 'email.bounced'             // Email delivery failure
   | 'email.replied'             // Lead replied to email
   
+  // Email Writer Signals
+  | 'email.generated'           // AI email generated
+  | 'email.sent'                // Email sent to recipient
+  | 'email.variant.created'     // Email variant created for A/B testing
+  
   // Sequence Signals
   | 'sequence.started'          // Lead entered sequence
   | 'sequence.completed'        // Lead completed sequence
