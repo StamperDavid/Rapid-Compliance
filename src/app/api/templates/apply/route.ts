@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Validate request body with Zod schema
     const validation = validateRequestBody(ApplyTemplateSchema, body);
     
-    if (!validation.success) {
+    if (validation.success === false) {
       return NextResponse.json({
         success: false,
         error: 'Validation failed',

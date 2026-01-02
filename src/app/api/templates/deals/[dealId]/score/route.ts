@@ -42,7 +42,7 @@ export async function POST(
       { ...body, dealId }
     );
     
-    if (!validation.success) {
+    if (validation.success === false) {
       return NextResponse.json({
         success: false,
         error: 'Validation failed',
