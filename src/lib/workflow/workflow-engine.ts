@@ -229,7 +229,7 @@ export class WorkflowEngine {
     // For deal score changes, use previousDealScore
     if (field.startsWith('dealScore.') && context.previousDealScore) {
       const scorePart = field.replace('dealScore.', '');
-      return (context.previousDealScore as Record<string, unknown>)[scorePart];
+      return (context.previousDealScore as unknown as Record<string, unknown>)[scorePart];
     }
     
     // For other fields, check triggerData.previous
