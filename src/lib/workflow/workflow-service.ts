@@ -28,6 +28,8 @@ import type {
   WorkflowExecution,
   WorkflowStats,
   WorkflowSettings,
+  WorkflowTrigger,
+  WorkflowAction,
 } from './types';
 import type { CreateWorkflowInput, UpdateWorkflowInput, WorkflowFilterInput } from './validation';
 
