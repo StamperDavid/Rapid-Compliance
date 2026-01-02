@@ -135,6 +135,17 @@ export type SignalType =
   | 'playbook.archived'         // Playbook archived/deprecated
   | 'playbook.pattern_identified' // New pattern identified
   
+  // Email Sequence Intelligence Signals
+  | 'sequence.analyzed'         // Sequence analysis completed
+  | 'sequence.pattern_detected' // High-performing pattern detected
+  | 'sequence.underperforming'  // Low-performing sequence identified
+  | 'sequence.optimization_needed' // Critical optimization recommended
+  | 'sequence.optimal_timing_found' // Optimal send time discovered
+  | 'sequence.ab_test_completed' // A/B test completed with results
+  | 'sequence.performance_decline' // Sequence performance declined
+  | 'sequence.best_practice_found' // Best practice identified
+  | 'sequence.metrics_updated'  // Sequence metrics refreshed
+  
   // System Signals
   | 'system.error'              // System error occurred
   | 'system.quota.warning'      // API quota approaching limit
