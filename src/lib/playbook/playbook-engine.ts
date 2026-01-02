@@ -153,7 +153,6 @@ export async function extractPatterns(
     const coordinator = await getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'playbook.patterns_extracted' as any,
-      timestamp: new Date(),
       orgId: request.organizationId,
       workspaceId: request.workspaceId || 'default',
       priority: 'Medium',
@@ -167,9 +166,6 @@ export async function extractPatterns(
         highConfidencePatterns: summary.highConfidencePatterns,
         processingTime,
       },
-      ttl: 86400,
-      createdAt: new Date(),
-      processed: false,
     });
     
     logger.info('Pattern extraction completed', {
@@ -707,7 +703,6 @@ export async function generatePlaybook(
     const coordinator = await getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'playbook.generated' as any,
-      timestamp: new Date(),
       orgId: request.organizationId,
       workspaceId: request.workspaceId || 'default',
       priority: 'Medium',
@@ -726,9 +721,6 @@ export async function generatePlaybook(
         confidence: playbook.confidence,
         status: playbook.status,
       },
-      ttl: 86400,
-      createdAt: new Date(),
-      processed: false,
     });
     
     const processingTime = Date.now() - startTime;
