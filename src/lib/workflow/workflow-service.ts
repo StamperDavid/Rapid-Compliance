@@ -17,8 +17,9 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 import { WorkflowEngine, type WorkflowExecutionContext, type WorkflowExecutionResult } from './workflow-engine';
 import { WorkflowCoordinator } from './workflow-coordinator';
 import type {
@@ -402,7 +403,7 @@ export async function createWorkflow(
   userId: string,
   workspaceId?: string
 ): Promise<Workflow> {
-  const dal = new BaseAgentDAL();
+  const dal = new BaseAgentDAL(db as any);
   const service = getWorkflowService(dal);
   
   const input: CreateWorkflowInput = {
@@ -422,7 +423,7 @@ export async function getWorkflows(
   workspaceId: string,
   filters?: Record<string, unknown>
 ): Promise<{ data: Workflow[]; hasMore: boolean }> {
-  const dal = new BaseAgentDAL();
+  const dal = new BaseAgentDAL(db as any);
   const service = getWorkflowService(dal);
   
   const result = await service.getWorkflows({
@@ -445,7 +446,7 @@ export async function getWorkflow(
   workflowId: string,
   workspaceId?: string
 ): Promise<Workflow | null> {
-  const dal = new BaseAgentDAL();
+  const dal = new BaseAgentDAL(db as any);
   const service = getWorkflowService(dal);
   
   return service.getWorkflow(organizationId, workflowId);
@@ -460,7 +461,7 @@ export async function updateWorkflow(
   updates: UpdateWorkflowInput,
   workspaceId?: string
 ): Promise<Workflow> {
-  const dal = new BaseAgentDAL();
+  const dal = new BaseAgentDAL(db as any);
   const service = getWorkflowService(dal);
   
   return service.updateWorkflow(organizationId, workflowId, updates);
@@ -475,7 +476,7 @@ export async function setWorkflowStatus(
   status: WorkflowStatus,
   workspaceId?: string
 ): Promise<Workflow> {
-  const dal = new BaseAgentDAL();
+  const dal = new BaseAgentDAL(db as any);
   const service = getWorkflowService(dal);
   
   return service.setWorkflowStatus(organizationId, workflowId, status);
@@ -489,7 +490,7 @@ export async function deleteWorkflow(
   workflowId: string,
   workspaceId?: string
 ): Promise<void> {
-  const dal = new BaseAgentDAL();
+  const dal = new BaseAgentDAL(db as any);
   const service = getWorkflowService(dal);
   
   return service.deleteWorkflow(organizationId, workflowId);

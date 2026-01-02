@@ -28,7 +28,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import type { SalesSignal, SignalType } from '@/lib/orchestration/types';
 import { WorkflowEngine, type WorkflowExecutionContext } from './workflow-engine';
 import type {

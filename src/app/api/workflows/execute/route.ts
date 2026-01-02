@@ -24,6 +24,7 @@ import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-lim
 import { getWorkflowService } from '@/lib/workflow/workflow-service';
 import { validateWorkflowExecution } from '@/lib/workflow/validation';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
       dealId: validData.dealId,
     });
     
-    const dal = new BaseAgentDAL();
+    const dal = new BaseAgentDAL(db as any);
     const service = getWorkflowService(dal);
     
     const result = await service.executeWorkflow(
