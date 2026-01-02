@@ -37,7 +37,7 @@ jest.mock('@/lib/templates/deal-scoring-engine', () => ({
 }));
 
 jest.mock('@/lib/battlecard/battlecard-engine', () => ({
-  getBattlecard: jest.fn(),
+  generateBattlecard: jest.fn(),
 }));
 
 // Now import after mocks are set up
@@ -45,7 +45,7 @@ import { generateSalesEmail, generateEmailVariants } from '@/lib/email-writer/se
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { calculateDealScore } from '@/lib/templates/deal-scoring-engine';
-import { getBattlecard } from '@/lib/battlecard/battlecard-engine';
+import { generateBattlecard } from '@/lib/battlecard/battlecard-engine';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
 import type { Battlecard } from '@/lib/battlecard/battlecard-engine';
 
@@ -380,7 +380,7 @@ IMPROVEMENTS:
   
   describe('Competitive Positioning', () => {
     it('should include battlecard data when requested', async () => {
-      (getBattlecard as jest.MockedFunction<typeof getBattlecard>)
+      (generateBattlecard as jest.MockedFunction<typeof generateBattlecard>)
         .mockResolvedValue(mockBattlecard);
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);
@@ -396,7 +396,7 @@ IMPROVEMENTS:
         includeCompetitive: true,
       });
       
-      expect(getBattlecard).toHaveBeenCalledWith({
+      expect(generateBattlecard).toHaveBeenCalledWith({
         organizationId: 'org_123',
         competitorDomain: 'https://competitor.com',
         ourProductName: '[Company]',
@@ -406,7 +406,7 @@ IMPROVEMENTS:
     });
     
     it('should handle battlecard fetch failure gracefully', async () => {
-      (getBattlecard as jest.MockedFunction<typeof getBattlecard>)
+      (generateBattlecard as jest.MockedFunction<typeof generateBattlecard>)
         .mockRejectedValue(new Error('Battlecard not found'));
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);

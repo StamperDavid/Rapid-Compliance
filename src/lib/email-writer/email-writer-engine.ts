@@ -28,7 +28,7 @@ import { logger } from '@/lib/logger/logger';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { calculateDealScore, type DealScore } from '@/lib/templates/deal-scoring-engine';
-import { getBattlecard, type Battlecard } from '@/lib/battlecard/battlecard-engine';
+import { generateBattlecard, type Battlecard } from '@/lib/battlecard/battlecard-engine';
 import { getTemplateById, type SalesIndustryTemplate } from '@/lib/templates/industry-templates';
 import type { Deal } from '@/lib/crm/deal-service';
 import { EMAIL_TEMPLATES, type EmailTemplate, type EmailType } from './email-templates';
@@ -178,13 +178,13 @@ export async function generateSalesEmail(
     let battlecard: Battlecard | undefined = options.battlecard;
     if (options.includeCompetitive && options.competitorDomain && !battlecard) {
       try {
-        battlecard = await getBattlecard({
+        battlecard = await generateBattlecard({
           organizationId: options.organizationId,
           competitorDomain: options.competitorDomain,
           ourProductName: options.companyName || 'Our Product',
         });
       } catch (error) {
-        logger.warn('Failed to get battlecard, continuing without competitive positioning', {
+        logger.warn('Failed to generate battlecard, continuing without competitive positioning', {
           error,
           competitorDomain: options.competitorDomain,
         });

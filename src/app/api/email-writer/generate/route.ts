@@ -49,8 +49,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
-import { rateLimitMiddleware } from '@/lib/middleware/rate-limiter';
+import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 import { generateSalesEmail, GenerateEmailSchema, validateRequestBody } from '@/lib/email-writer/server';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/email-writer/generate
@@ -62,33 +64,9 @@ export async function POST(request: NextRequest) {
   
   try {
     // 1. Rate limiting (AI operations: 20 req/min)
-    const rateLimitResult = await rateLimitMiddleware(request, {
-      strategy: 'ip',
-      limit: 20,
-      windowMs: 60 * 1000, // 1 minute
-    });
-    
-    if (!rateLimitResult.allowed) {
-      logger.warn('Rate limit exceeded for email generation', {
-        ip: rateLimitResult.identifier,
-        retryAfter: rateLimitResult.retryAfter,
-      });
-      
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Rate limit exceeded. Please try again later.',
-          retryAfter: rateLimitResult.retryAfter,
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'Retry-After': rateLimitResult.retryAfter?.toString() || '60',
-          },
-        }
-      );
+    const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
     
     // 2. Parse and validate request body
@@ -173,13 +151,7 @@ export async function POST(request: NextRequest) {
         email: result.email,
         suggestedImprovements: result.suggestedImprovements,
       },
-      {
-        status: 200,
-        headers: {
-          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-        },
-      }
+      { status: 200 }
     );
     
   } catch (error) {
