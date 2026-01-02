@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validation = validateRequestBody(body, GenerateEmailSchema);
     
-    if (!validation.success) {
+    if (validation.success === false) {
       const { error, details } = validation;
       logger.warn('Invalid email generation request', {
         error,
