@@ -81,7 +81,7 @@ export class WorkflowService {
       status: input.status || 'draft',
       trigger: input.trigger as WorkflowTrigger,
       actions: input.actions as WorkflowAction[],
-      settings: this.getDefaultSettings(input.settings),
+      settings: this.getDefaultSettings(input.settings as Partial<WorkflowSettings> | undefined),
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
