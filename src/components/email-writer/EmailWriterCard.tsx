@@ -546,7 +546,7 @@ export function EmailWriterCard(props: EmailWriterCardProps) {
   return (
     <ErrorBoundary
       componentName="EmailWriterCard"
-      fallback={(error, reset) => (
+      fallback={
         <div className="bg-gray-900 border border-red-700 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="text-3xl">⚠️</div>
@@ -561,27 +561,19 @@ export function EmailWriterCard(props: EmailWriterCardProps) {
           </div>
           
           <div className="bg-red-900/20 border border-red-800 rounded p-3 mb-4">
-            <p className="text-sm text-red-300 font-mono">
-              {error.message}
+            <p className="text-sm text-red-300">
+              An unexpected error occurred. Please try refreshing the page.
             </p>
           </div>
           
-          <div className="flex gap-2">
-            <button
-              onClick={reset}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm transition-colors"
-            >
-              Reload Page
-            </button>
-          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
+          >
+            Reload Page
+          </button>
         </div>
-      )}
+      }
     >
       <EmailWriterCardInner {...props} />
     </ErrorBoundary>
