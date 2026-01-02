@@ -213,7 +213,7 @@ async function getWorkflowMetrics(
   
   // Calculate total actions
   const totalActionsExecuted = executions.reduce((sum, e: WorkflowExecution) => {
-    return sum + (e.actionResults?.length || 0);
+    return sum + (e.actionsExecuted?.length || 0);
   }, 0);
   
   // Calculate trend
@@ -322,7 +322,7 @@ function calculateActionBreakdown(
   }>();
   
   executions.forEach((execution: WorkflowExecution) => {
-    const results = execution.actionResults || [];
+    const results = execution.actionsExecuted || [];
     results.forEach((result: any) => {
       const actionType = result.actionType || 'unknown';
       const existing = actionMap.get(actionType) || {
