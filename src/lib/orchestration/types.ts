@@ -113,6 +113,17 @@ export type SignalType =
   | 'conversation.follow_up_required' // Action items generated
   | 'conversation.sentiment_negative' // Negative sentiment trend
   
+  // Performance Analytics Signals
+  | 'performance.analyzed'      // Team performance analysis completed
+  | 'performance.top_performer_identified' // Top performer identified
+  | 'performance.improvement_opportunity' // Improvement opportunity detected
+  | 'performance.coaching_priority_created' // Coaching priority identified
+  | 'performance.best_practice_extracted' // Best practice extracted
+  | 'performance.trend_detected' // Performance trend detected
+  | 'performance.leaderboard_updated' // Leaderboard updated
+  | 'performance.benchmark_changed' // Performance benchmark changed
+  | 'performance.alert_triggered' // Performance alert triggered
+  
   // System Signals
   | 'system.error'              // System error occurred
   | 'system.quota.warning'      // API quota approaching limit
