@@ -186,8 +186,7 @@ export function createPerformanceAnalyzedEvent(
   coachingPrioritiesCount = 0
 ): Omit<PerformanceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
-    id: `perf-analyzed-${Date.now()}`,
-    type: 'performance.analyzed',
+    type: 'performance.analyzed' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 0.95,
@@ -206,7 +205,7 @@ export function createPerformanceAnalyzedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as PerformanceAnalyzedEvent;
+  };
 }
 
 /**
@@ -223,8 +222,7 @@ export function createTopPerformerIdentifiedEvent(
   recommendedAsMentor = false
 ): Omit<TopPerformerIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
-    id: `top-performer-${repId}-${Date.now()}`,
-    type: 'performance.top_performer_identified',
+    type: 'performance.top_performer_identified' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 0.9,
@@ -242,7 +240,7 @@ export function createTopPerformerIdentifiedEvent(
       repId,
       timestamp: new Date().toISOString(),
     },
-  } as TopPerformerIdentifiedEvent;
+  };
 }
 
 /**
@@ -261,8 +259,7 @@ export function createImprovementOpportunityDetectedEvent(
   const hasCriticalGap = topGaps.some(g => g.priority === 'critical');
   
   return {
-    id: `improvement-${repId}-${Date.now()}`,
-    type: 'performance.improvement_opportunity',
+    type: 'performance.improvement_opportunity' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 0.85,
@@ -280,7 +277,7 @@ export function createImprovementOpportunityDetectedEvent(
       repId,
       timestamp: new Date().toISOString(),
     },
-  } as ImprovementOpportunityDetectedEvent;
+  };
 }
 
 /**
@@ -296,8 +293,7 @@ export function createCoachingPriorityCreatedEvent(
   avgGap = 10
 ): Omit<CoachingPriorityCreatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
-    id: `coaching-priority-${category}-${Date.now()}`,
-    type: 'performance.coaching_priority_created',
+    type: 'performance.coaching_priority_created' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 0.9,
@@ -313,7 +309,7 @@ export function createCoachingPriorityCreatedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as CoachingPriorityCreatedEvent;
+  };
 }
 
 /**
@@ -331,8 +327,7 @@ export function createBestPracticeExtractedEvent(
   vsTeamAvg: number
 ): Omit<BestPracticeExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
-    id: `best-practice-${practiceId}`,
-    type: 'performance.best_practice_extracted',
+    type: 'performance.best_practice_extracted' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 0.85,
@@ -351,7 +346,7 @@ export function createBestPracticeExtractedEvent(
       repId: sourceRepId,
       timestamp: new Date().toISOString(),
     },
-  } as BestPracticeExtractedEvent;
+  };
 }
 
 /**
@@ -369,8 +364,7 @@ export function createTrendDetectedEvent(
   const isNegative = direction === 'declining' && (significance === 'major' || significance === 'moderate');
   
   return {
-    id: `trend-${trendType}-${Date.now()}`,
-    type: 'performance.trend_detected',
+    type: 'performance.trend_detected' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 0.8,
@@ -386,7 +380,7 @@ export function createTrendDetectedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as TrendDetectedEvent;
+  };
 }
 
 /**
@@ -401,8 +395,7 @@ export function createLeaderboardUpdatedEvent(
   totalReps: number
 ): Omit<LeaderboardUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
-    id: `leaderboard-${category}-${Date.now()}`,
-    type: 'performance.leaderboard_updated',
+    type: 'performance.leaderboard_updated' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 1.0,
@@ -417,7 +410,7 @@ export function createLeaderboardUpdatedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as LeaderboardUpdatedEvent;
+  };
 }
 
 /**
@@ -434,8 +427,7 @@ export function createBenchmarkChangedEvent(
   const direction = newValue > previousValue ? 'up' : 'down';
   
   return {
-    id: `benchmark-${benchmarkType}-${Date.now()}`,
-    type: 'performance.benchmark_changed',
+    type: 'performance.benchmark_changed' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 1.0,
@@ -451,7 +443,7 @@ export function createBenchmarkChangedEvent(
       source: 'performance-analytics',
       timestamp: new Date().toISOString(),
     },
-  } as BenchmarkChangedEvent;
+  };
 }
 
 /**
@@ -467,8 +459,7 @@ export function createPerformanceAlertTriggeredEvent(
   repId?: string
 ): Omit<PerformanceAlertTriggeredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
-    id: `alert-${alertType}-${Date.now()}`,
-    type: 'performance.alert_triggered',
+    type: 'performance.alert_triggered' as const,
     orgId: organizationId,
     workspaceId,
     confidence: 0.9,
@@ -485,5 +476,5 @@ export function createPerformanceAlertTriggeredEvent(
       repId,
       timestamp: new Date().toISOString(),
     },
-  } as PerformanceAlertTriggeredEvent;
+  };
 }
