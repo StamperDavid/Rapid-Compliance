@@ -501,6 +501,149 @@ export class FirestoreAdminDAL {
       file: 'admin-dal.ts'
     });
   }
+  
+  // ========================================
+  // ANALYTICS QUERY METHODS
+  // ========================================
+  
+  /**
+   * Get all workflows for an organization workspace
+   */
+  async getAllWorkflows(organizationId: string, workspaceId: string): Promise<any[]> {
+    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'workflows');
+    const snapshot = await colRef.get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  /**
+   * Get workflow executions in a date range
+   */
+  async getWorkflowExecutions(
+    organizationId: string,
+    workspaceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'workflowExecutions');
+    const snapshot = await colRef
+      .where('startedAt', '>=', startDate)
+      .where('startedAt', '<=', endDate)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  /**
+   * Get email generations in a date range
+   */
+  async getEmailGenerations(
+    organizationId: string,
+    workspaceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    // TODO: Query from email generation logs or Signal Bus events
+    // For now, return empty array
+    return [];
+  }
+  
+  /**
+   * Get all active deals
+   */
+  async getActiveDeals(organizationId: string, workspaceId: string): Promise<any[]> {
+    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+    const snapshot = await colRef
+      .where('status', 'in', ['active', 'open', 'in_progress'])
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  /**
+   * Get deals snapshot at a specific date (for trend comparison)
+   */
+  async getDealsSnapshot(
+    organizationId: string,
+    workspaceId: string,
+    snapshotDate: Date
+  ): Promise<any[]> {
+    // This would require historical snapshots
+    // For now, return current active deals
+    return this.getActiveDeals(organizationId, workspaceId);
+  }
+  
+  /**
+   * Get closed deals in a date range
+   */
+  async getClosedDeals(
+    organizationId: string,
+    workspaceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+    const snapshot = await colRef
+      .where('status', 'in', ['won', 'lost', 'closed'])
+      .where('closedAt', '>=', startDate)
+      .where('closedAt', '<=', endDate)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  /**
+   * Get won deals in a date range
+   */
+  async getWonDeals(
+    organizationId: string,
+    workspaceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+    const snapshot = await colRef
+      .where('status', '==', 'won')
+      .where('closedAt', '>=', startDate)
+      .where('closedAt', '<=', endDate)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  /**
+   * Get revenue forecast
+   */
+  async getRevenueForecast(organizationId: string, workspaceId: string): Promise<any> {
+    const docRef = this.getWorkspaceCollection(organizationId, workspaceId, 'forecasts').doc('current');
+    const snapshot = await docRef.get();
+    return snapshot.exists ? snapshot.data() : null;
+  }
+  
+  /**
+   * Get sales reps for an organization
+   */
+  async getSalesReps(organizationId: string, workspaceId: string): Promise<any[]> {
+    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'users');
+    const snapshot = await colRef
+      .where('role', '==', 'sales')
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  /**
+   * Get deals for a specific rep in a date range
+   */
+  async getRepDeals(
+    organizationId: string,
+    workspaceId: string,
+    repId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<any[]> {
+    const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
+    const snapshot = await colRef
+      .where('ownerId', '==', repId)
+      .where('createdAt', '>=', startDate)
+      .where('createdAt', '<=', endDate)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
 }
 
 // ========================================
