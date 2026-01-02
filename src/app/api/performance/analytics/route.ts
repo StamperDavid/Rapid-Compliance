@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     
     let validatedRequest: PerformanceAnalyticsRequest;
     try {
-      validatedRequest = validatePerformanceAnalyticsRequest(body);
+      validatedRequest = validatePerformanceAnalyticsRequest(body) as PerformanceAnalyticsRequest;
     } catch (error) {
       logger.warn('Invalid performance analytics request', { error });
       return NextResponse.json(
