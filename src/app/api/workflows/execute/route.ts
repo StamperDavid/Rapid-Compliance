@@ -41,26 +41,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validation = validateWorkflowExecution(body);
     
-    if (!validation.success) {
-      // Type narrowing: validation is now { success: false; error: string; details: ZodIssue[] }
-      const { error, details } = validation;
-      
+    if (validation.success === false) {
       logger.warn('Invalid workflow execution request', {
-        error,
-        details,
+        error: validation.error,
+        details: validation.details,
       });
       
       return NextResponse.json(
         {
           success: false,
-          error,
-          details,
+          error: validation.error,
+          details: validation.details,
         },
         { status: 400 }
       );
     }
     
-    // Type narrowing: validation is now { success: true; data: ... }
     const validData = validation.data;
     
     // 3. Execute workflow
