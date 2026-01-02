@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const validatedRequest = validationResult.data;
+    const validatedRequest = validationResult.data as RiskPredictionRequest;
     
     // Rate limiting (use organizationId as user identifier)
     const rateLimit = checkRateLimit(validatedRequest.organizationId);
@@ -320,7 +320,7 @@ async function handleBatchRequest(
       );
     }
     
-    const validatedRequest = validationResult.data;
+    const validatedRequest = validationResult.data as BatchRiskPredictionRequest;
     
     // Rate limiting (batch requests count as 2x)
     const rateLimit = checkRateLimit(validatedRequest.organizationId);
