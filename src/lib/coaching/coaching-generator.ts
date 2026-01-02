@@ -147,8 +147,10 @@ export class CoachingGenerator {
     const prompt = this.buildPerformanceSummaryPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.7,
       maxTokens: 1000
     });
@@ -178,8 +180,10 @@ export class CoachingGenerator {
     const prompt = this.buildStrengthsPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.7,
       maxTokens: 1500
     });
@@ -202,8 +206,10 @@ export class CoachingGenerator {
     const prompt = this.buildWeaknessesPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.7,
       maxTokens: 1500
     });
@@ -226,8 +232,10 @@ export class CoachingGenerator {
     const prompt = this.buildOpportunitiesPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.8,
       maxTokens: 2000
     });
@@ -250,8 +258,10 @@ export class CoachingGenerator {
     const prompt = this.buildRisksPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.6,
       maxTokens: 1500
     });
@@ -274,8 +284,10 @@ export class CoachingGenerator {
     const prompt = this.buildBestPracticesPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.7,
       maxTokens: 2000
     });
@@ -298,8 +310,10 @@ export class CoachingGenerator {
     const prompt = this.buildRecommendationsPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.7,
       maxTokens: 3000
     });
@@ -323,8 +337,10 @@ export class CoachingGenerator {
     const prompt = this.buildTrainingPrompt(performance, weaknesses);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.7,
       maxTokens: 2000
     });
@@ -348,8 +364,10 @@ export class CoachingGenerator {
     const prompt = this.buildActionItemsPrompt(performance, recommendations);
     
     const response = await sendUnifiedChatMessage({
-      message: prompt,
-      modelPreference: 'gpt-4o',
+      model: 'gpt-4o',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
       temperature: 0.6,
       maxTokens: 2000
     });
