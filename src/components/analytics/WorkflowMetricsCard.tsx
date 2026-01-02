@@ -114,7 +114,7 @@ export function WorkflowMetricsCard({ data, loading = false }: WorkflowMetricsCa
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
-                data={data.actionBreakdown.slice(0, 5)}
+                data={data.actionBreakdown.slice(0, 5) as any}
                 dataKey="count"
                 nameKey="actionType"
                 cx="50%"
