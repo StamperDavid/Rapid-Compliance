@@ -764,7 +764,7 @@ async function generateAIInterventions(
     
     // Parse AI response
     const interventions = parseAIInterventions(
-      response.content,
+      response.text,
       riskFactors,
       config.maxInterventions
     );
@@ -772,12 +772,12 @@ async function generateAIInterventions(
     logger.info('AI interventions generated', {
       dealId: deal.id,
       interventionsCount: interventions.length,
-      tokensUsed: response.usage.total_tokens,
+      tokensUsed: response.usage?.totalTokens || 0,
     });
     
     return {
       interventions,
-      tokensUsed: response.usage.total_tokens,
+      tokensUsed: response.usage?.totalTokens || 0,
     };
     
   } catch (error: any) {
