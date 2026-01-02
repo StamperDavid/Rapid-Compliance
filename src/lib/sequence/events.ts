@@ -180,12 +180,14 @@ export type SequenceEvent =
  * Create sequence analyzed event
  */
 export function createSequenceAnalyzedEvent(
-  analysis: SequenceAnalysis
+  analysis: SequenceAnalysis,
+  orgId: string = 'default'
 ): Omit<SequenceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.analyzed',
-    source: 'sequence-engine',
-    priority: 'normal',
+    orgId,
+    confidence: 0.9,
+    priority: 'Low' as const,
     payload: {
       analysisId: analysis.analysisId,
       sequenceIds: analysis.sequences.map(s => s.id),
@@ -199,6 +201,7 @@ export function createSequenceAnalyzedEvent(
       timestamp: new Date().toISOString(),
       version: '1.0',
       sequenceCount: analysis.sequences.length,
+      source: 'sequence-engine',
     },
   } as Omit<SequenceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -208,12 +211,15 @@ export function createSequenceAnalyzedEvent(
  */
 export function createPatternDetectedEvent(
   pattern: SequencePattern,
-  affectedSequences: number
+  affectedSequences: number,
+  orgId: string = 'default'
 ): Omit<PatternDetectedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
+  const confidenceMap = { high: 0.9, medium: 0.75, low: 0.6 };
   return {
     type: 'sequence.pattern_detected',
-    source: 'sequence-engine',
-    priority: pattern.confidence === 'high' ? 'high' : 'normal',
+    orgId,
+    confidence: confidenceMap[pattern.confidence],
+    priority: pattern.confidence === 'high' ? 'High' as const : 'Medium' as const,
     payload: {
       patternId: pattern.id,
       patternType: pattern.type,
@@ -228,6 +234,7 @@ export function createPatternDetectedEvent(
       version: '1.0',
       patternType: pattern.type,
       sampleSize: pattern.sampleSize,
+      source: 'sequence-engine',
     },
   } as Omit<PatternDetectedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -237,7 +244,8 @@ export function createPatternDetectedEvent(
  */
 export function createUnderperformingSequenceEvent(
   sequenceMetrics: SequenceMetrics,
-  benchmarkReplyRate: number
+  benchmarkReplyRate: number,
+  orgId: string = 'default'
 ): Omit<UnderperformingSequenceEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const gap = benchmarkReplyRate - sequenceMetrics.overallReplyRate;
   const urgency: 'low' | 'medium' | 'high' | 'critical' = 
@@ -247,8 +255,9 @@ export function createUnderperformingSequenceEvent(
   
   return {
     type: 'sequence.underperforming',
-    source: 'sequence-engine',
-    priority: urgency === 'critical' || urgency === 'high' ? 'high' : 'normal',
+    orgId,
+    confidence: 0.85,
+    priority: urgency === 'critical' || urgency === 'high' ? 'High' as const : 'Medium' as const,
     payload: {
       sequenceId: sequenceMetrics.sequenceId,
       sequenceName: sequenceMetrics.sequenceName,
@@ -261,6 +270,7 @@ export function createUnderperformingSequenceEvent(
       timestamp: new Date().toISOString(),
       version: '1.0',
       recipients: sequenceMetrics.totalRecipients,
+      source: 'sequence-engine',
     },
   } as Omit<UnderperformingSequenceEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -270,13 +280,16 @@ export function createUnderperformingSequenceEvent(
  */
 export function createOptimizationNeededEvent(
   recommendation: OptimizationRecommendation,
-  sequenceId: string
+  sequenceId: string,
+  orgId: string = 'default'
 ): Omit<OptimizationNeededEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
+  const confidenceMap = { high: 0.9, medium: 0.75, low: 0.6 };
   return {
     type: 'sequence.optimization_needed',
-    source: 'sequence-engine',
-    priority: recommendation.priority === 'critical' ? 'critical' :
-             recommendation.priority === 'high' ? 'high' : 'normal',
+    orgId,
+    confidence: confidenceMap[recommendation.confidence],
+    priority: recommendation.priority === 'critical' ? 'High' as const :
+             recommendation.priority === 'high' ? 'High' as const : 'Medium' as const,
     payload: {
       recommendationId: recommendation.id,
       sequenceId,
@@ -290,6 +303,7 @@ export function createOptimizationNeededEvent(
       timestamp: new Date().toISOString(),
       version: '1.0',
       optimizationArea: recommendation.area,
+      source: 'sequence-engine',
     },
   } as Omit<OptimizationNeededEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -302,12 +316,14 @@ export function createOptimalTimingFoundEvent(
   bestHours: number[],
   bestDays: string[],
   improvementPotential: number,
-  currentTimingScore: number
+  currentTimingScore: number,
+  orgId: string = 'default'
 ): Omit<OptimalTimingFoundEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.optimal_timing_found',
-    source: 'sequence-engine',
-    priority: improvementPotential > 20 ? 'high' : 'normal',
+    orgId,
+    confidence: 0.85,
+    priority: improvementPotential > 20 ? 'High' as const : 'Medium' as const,
     payload: {
       sequenceId,
       bestHours,
@@ -318,6 +334,7 @@ export function createOptimalTimingFoundEvent(
     metadata: {
       timestamp: new Date().toISOString(),
       version: '1.0',
+      source: 'sequence-engine',
     },
   } as Omit<OptimalTimingFoundEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -326,7 +343,8 @@ export function createOptimalTimingFoundEvent(
  * Create A/B test completed event
  */
 export function createABTestCompletedEvent(
-  test: ABTest
+  test: ABTest,
+  orgId: string = 'default'
 ): Omit<ABTestCompletedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   if (!test.winningVariant || test.lift === undefined) {
     throw new Error('Cannot create event for incomplete A/B test');
@@ -334,8 +352,9 @@ export function createABTestCompletedEvent(
   
   return {
     type: 'sequence.ab_test_completed',
-    source: 'sequence-engine',
-    priority: test.lift > 20 ? 'high' : 'normal',
+    orgId,
+    confidence: (test.statisticalSignificance || 0) / 100,
+    priority: test.lift > 20 ? 'High' as const : 'Medium' as const,
     payload: {
       testId: test.id,
       testName: test.name,
@@ -348,6 +367,7 @@ export function createABTestCompletedEvent(
       timestamp: new Date().toISOString(),
       version: '1.0',
       testDuration: test.minimumDuration,
+      source: 'sequence-engine',
     },
   } as Omit<ABTestCompletedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -361,14 +381,16 @@ export function createPerformanceDeclineEvent(
   metric: string,
   previousValue: number,
   currentValue: number,
-  timeframe: string
+  timeframe: string,
+  orgId: string = 'default'
 ): Omit<PerformanceDeclineEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   const percentageChange = ((currentValue - previousValue) / previousValue) * 100;
   
   return {
     type: 'sequence.performance_decline',
-    source: 'sequence-engine',
-    priority: percentageChange < -30 ? 'high' : 'normal',
+    orgId,
+    confidence: 0.8,
+    priority: percentageChange < -30 ? 'High' as const : 'Medium' as const,
     payload: {
       sequenceId,
       sequenceName,
@@ -382,6 +404,7 @@ export function createPerformanceDeclineEvent(
       timestamp: new Date().toISOString(),
       version: '1.0',
       declinePercentage: Math.abs(percentageChange),
+      source: 'sequence-engine',
     },
   } as Omit<PerformanceDeclineEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -394,12 +417,14 @@ export function createBestPracticeFoundEvent(
   category: string,
   impact: string,
   adoption: number,
-  sequences: string[]
+  sequences: string[],
+  orgId: string = 'default'
 ): Omit<BestPracticeFoundEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.best_practice_found',
-    source: 'sequence-engine',
-    priority: impact === 'high' ? 'high' : 'normal',
+    orgId,
+    confidence: 0.85,
+    priority: impact === 'high' ? 'High' as const : 'Medium' as const,
     payload: {
       practice,
       category,
@@ -411,6 +436,7 @@ export function createBestPracticeFoundEvent(
       timestamp: new Date().toISOString(),
       version: '1.0',
       sequenceCount: sequences.length,
+      source: 'sequence-engine',
     },
   } as Omit<BestPracticeFoundEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
@@ -420,12 +446,14 @@ export function createBestPracticeFoundEvent(
  */
 export function createSequenceMetricsUpdatedEvent(
   sequenceMetrics: SequenceMetrics,
-  period: string
+  period: string,
+  orgId: string = 'default'
 ): Omit<SequenceMetricsUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'sequence.metrics_updated',
-    source: 'sequence-engine',
-    priority: 'low',
+    orgId,
+    confidence: 0.95,
+    priority: 'Low' as const,
     payload: {
       sequenceId: sequenceMetrics.sequenceId,
       totalRecipients: sequenceMetrics.totalRecipients,
@@ -438,6 +466,7 @@ export function createSequenceMetricsUpdatedEvent(
       timestamp: new Date().toISOString(),
       version: '1.0',
       dataPoints: sequenceMetrics.dataPoints,
+      source: 'sequence-engine',
     },
   } as Omit<SequenceMetricsUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'>;
 }
