@@ -48,6 +48,13 @@ export type SignalType =
   | 'website.technology.detected' // New tech stack identified
   | 'website.competitor.detected' // Competitor mentioned
   
+  // Competitive Intelligence Signals
+  | 'competitor.discovered'     // New competitor profiled
+  | 'competitor.updated'        // Competitor intelligence refreshed
+  | 'competitor.weakness.detected' // New weakness identified
+  | 'battlecard.generated'      // New battlecard created
+  | 'battlecard.updated'        // Battlecard refreshed
+  
   // Engagement Signals
   | 'email.opened'              // Email tracking event
   | 'email.clicked'             // Link click in email
