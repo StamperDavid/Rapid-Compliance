@@ -504,9 +504,3 @@ export function getRecommendedEmailType(params: {
   // Intro: New or cold deal
   return 'intro';
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export type { EmailTemplate, EmailType };
