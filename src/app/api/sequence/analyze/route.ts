@@ -29,7 +29,7 @@ import {
   type SequenceAnalysisResponse,
   type SequenceAnalysis,
 } from '@/lib/sequence';
-import { getServerSignalCoordinator } from '@/lib/orchestration/signal-coordinator-server';
+import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 
 // ============================================================================
 // RATE LIMITING & CACHING

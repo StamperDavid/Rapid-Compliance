@@ -33,7 +33,7 @@ import {
   patternDetectionRequestSchema,
   optimizationRequestSchema,
 } from './validation';
-import { aiService } from '@/lib/ai/ai-service';
+import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 
 // ============================================================================
 // CONSTANTS
@@ -265,7 +265,7 @@ Return patterns in this JSON format:
 }`;
 
     try {
-      const response = await aiService.generateChatCompletion({
+      const response = await sendUnifiedChatMessage({
         model: 'gpt-4o',
         messages: [
           {
@@ -278,10 +278,10 @@ Return patterns in this JSON format:
           },
         ],
         temperature: 0.3,
-        maxTokens: 3000,
+        max_tokens: 3000,
       });
       
-      const content = response.text;
+      const content = response.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       
       if (!jsonMatch) {
@@ -383,7 +383,7 @@ Return JSON format:
 }`;
 
     try {
-      const response = await aiService.generateChatCompletion({
+      const response = await sendUnifiedChatMessage({
         model: 'gpt-4o',
         messages: [
           {
@@ -396,10 +396,10 @@ Return JSON format:
           },
         ],
         temperature: 0.3,
-        maxTokens: 2500,
+        max_tokens: 2500,
       });
       
-      const content = response.text;
+      const content = response.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       
       if (!jsonMatch) {
@@ -472,7 +472,7 @@ Return concise JSON:
 }`;
 
     try {
-      const response = await aiService.generateChatCompletion({
+      const response = await sendUnifiedChatMessage({
         model: 'gpt-4o-mini',
         messages: [
           {
@@ -485,10 +485,10 @@ Return concise JSON:
           },
         ],
         temperature: 0.3,
-        maxTokens: 1000,
+        max_tokens: 1000,
       });
       
-      const content = response.text;
+      const content = response.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       
       if (jsonMatch) {

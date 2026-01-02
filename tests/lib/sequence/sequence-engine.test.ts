@@ -16,10 +16,8 @@ import {
 } from '@/lib/sequence';
 
 // Mock AI service
-jest.mock('@/lib/ai/ai-service', () => ({
-  aiService: {
-    generateChatCompletion: jest.fn(),
-  },
+jest.mock('@/lib/ai/unified-ai-service', () => ({
+  sendUnifiedChatMessage: jest.fn(),
 }));
 
 describe('SequenceIntelligenceEngine', () => {
