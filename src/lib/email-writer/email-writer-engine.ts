@@ -288,7 +288,7 @@ export async function generateSalesEmail(
     return {
       success: true,
       email: generatedEmail,
-      suggestedImprovements: extractImprovementSuggestions(llmResponse.content),
+      suggestedImprovements: extractImprovementSuggestions(llmResponse.text),
     };
     
   } catch (error) {
