@@ -225,7 +225,7 @@ export async function generateSalesEmail(
       ],
       model: 'gpt-4o', // Use GPT-4o for high-quality email generation
       temperature: 0.7, // Balance creativity with consistency
-      max_tokens: 1500, // Enough for comprehensive emails
+      maxTokens: 1500, // Enough for comprehensive emails
     });
     
     if (!llmResponse.success || !llmResponse.content) {
