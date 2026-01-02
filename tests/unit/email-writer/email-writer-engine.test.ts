@@ -127,30 +127,64 @@ describe('Email Writer Engine', () => {
   const mockBattlecard: Battlecard = {
     id: 'battlecard_123',
     organizationId: 'org_123',
-    competitorDomain: 'competitor.com',
+    ourProduct: 'Our Product',
+    competitorId: 'comp_123',
     competitorName: 'Competitor Inc',
-    ourProductName: 'Our Product',
-    battleTactics: {
-      whenWeWin: ['Better pricing', 'Superior support'],
-      whenTheyWin: ['Established brand'],
-      commonObjections: [
+    competitorDomain: 'competitor.com',
+    featureComparison: [
+      {
+        category: 'Core Features',
+        features: [
+          {
+            featureName: 'Advanced Analytics',
+            us: 'yes',
+            them: 'no',
+            advantage: 'us',
+          },
+        ],
+      },
+    ],
+    pricingComparison: {
+      ourPositioning: 'Premium',
+      theirPositioning: 'Mid-market',
+      advantage: 'us',
+      keyDifferences: ['Better ROI'],
+      valueJustification: ['3x ROI'],
+    },
+    tactics: {
+      idealSituations: [
+        {
+          situation: 'Better pricing needed',
+          reasoning: 'Our pricing is more competitive',
+          talkTrack: 'We offer better value',
+        },
+      ],
+      challengingSituations: [],
+      objectionHandling: [
         {
           objection: 'Too expensive',
           response: 'Our ROI is 3x higher',
           proofPoints: ['Case study A', 'Case study B'],
-          category: 'pricing',
         },
       ],
+      competitiveTraps: [],
     },
-    featureComparison: [
-      {
-        feature: 'Advanced Analytics',
-        usValue: 'Yes',
-        themValue: 'No',
-        advantage: 'us',
-      },
-    ],
-    generatedAt: new Date(),
+    discoveryQuestions: {
+      qualifyingQuestions: [],
+      landmineQuestions: [],
+    },
+    keyMessages: {
+      elevator: 'We help companies win',
+      executiveSummary: 'Better ROI and support',
+      riskMitigation: [],
+    },
+    metadata: {
+      generatedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      confidence: 0.85,
+      source: 'battlecard-engine',
+      version: 1,
+    },
   };
   
   const mockLLMResponse = {

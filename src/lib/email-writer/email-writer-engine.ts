@@ -398,14 +398,14 @@ ${template.keyPoints.map(point => `- ${point}`).join('\n')}
     prompt += `\n\nCOMPETITIVE POSITIONING (vs ${battlecard.competitorDomain}):
 `;
     
-    if (battlecard.battleTactics?.whenWeWin) {
+    if (battlecard.tactics?.idealSituations && battlecard.tactics.idealSituations.length > 0) {
       prompt += `\nWhen We Win:
-${battlecard.battleTactics.whenWeWin.map(s => `- ${s}`).join('\n')}
+${battlecard.tactics.idealSituations.slice(0, 2).map(s => `- ${s.situation}: ${s.reasoning}`).join('\n')}
 `;
     }
     
-    if (battlecard.battleTactics?.commonObjections && battlecard.battleTactics.commonObjections.length > 0) {
-      const topObjection = battlecard.battleTactics.commonObjections[0];
+    if (battlecard.tactics?.objectionHandling && battlecard.tactics.objectionHandling.length > 0) {
+      const topObjection = battlecard.tactics.objectionHandling[0];
       prompt += `\nObjection Handling:
 - Objection: "${topObjection.objection}"
 - Response: ${topObjection.response}
@@ -413,14 +413,24 @@ ${battlecard.battleTactics.whenWeWin.map(s => `- ${s}`).join('\n')}
 `;
     }
     
-    if (battlecard.featureComparison) {
-      const ourAdvantages = battlecard.featureComparison
-        .filter(f => f.advantage === 'us')
-        .slice(0, 3);
+    if (battlecard.featureComparison && battlecard.featureComparison.length > 0) {
+      const ourAdvantages: Array<{featureName: string; us: string; them: string}> = [];
+      
+      for (const category of battlecard.featureComparison) {
+        for (const feature of category.features) {
+          if (feature.advantage === 'us') {
+            ourAdvantages.push({
+              featureName: feature.featureName,
+              us: feature.us,
+              them: feature.them,
+            });
+          }
+        }
+      }
       
       if (ourAdvantages.length > 0) {
         prompt += `\nOur Competitive Advantages:
-${ourAdvantages.map(f => `- ${f.feature}: ${f.usValue || 'Yes'} (They: ${f.themValue || 'No'})`).join('\n')}
+${ourAdvantages.slice(0, 3).map(f => `- ${f.featureName}: ${f.us} (They: ${f.them})`).join('\n')}
 `;
       }
     }
