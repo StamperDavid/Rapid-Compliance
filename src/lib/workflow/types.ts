@@ -19,7 +19,14 @@
  * - CRM for task creation and updates
  */
 
-import { Timestamp } from 'firebase/firestore';
+// Use conditional type to support both client and admin Timestamp
+type FirestoreTimestamp = {
+  toDate(): Date;
+  toMillis(): number;
+  seconds: number;
+  nanoseconds: number;
+};
+
 import type { EmailType } from '@/lib/email-writer/email-templates';
 
 // ============================================================================
@@ -341,8 +348,8 @@ export interface Workflow {
   
   // Metadata
   createdBy: string;              // User ID
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: FirestoreTimestamp;
+  updatedAt: FirestoreTimestamp;
   
   // Statistics
   stats: WorkflowStats;
@@ -382,9 +389,9 @@ export interface WorkflowStats {
   successfulExecutions: number;   // Successful executions
   failedExecutions: number;       // Failed executions
   averageExecutionTimeMs: number; // Average execution time
-  lastExecutedAt?: Timestamp;     // Last execution time
-  lastSuccessAt?: Timestamp;      // Last successful execution
-  lastFailureAt?: Timestamp;      // Last failed execution
+  lastExecutedAt?: FirestoreTimestamp;     // Last execution time
+  lastSuccessAt?: FirestoreTimestamp;      // Last successful execution
+  lastFailureAt?: FirestoreTimestamp;      // Last failed execution
 }
 
 /**
@@ -405,8 +412,8 @@ export interface WorkflowExecution {
   
   // Execution status
   status: WorkflowExecutionStatus;
-  startedAt: Timestamp;
-  completedAt?: Timestamp;
+  startedAt: FirestoreTimestamp;
+  completedAt?: FirestoreTimestamp;
   durationMs?: number;
   
   // Results
@@ -427,8 +434,8 @@ export interface ActionExecutionResult {
   actionId: string;
   actionType: WorkflowActionType;
   status: 'success' | 'failed' | 'skipped';
-  startedAt: Timestamp;
-  completedAt?: Timestamp;
+  startedAt: FirestoreTimestamp;
+  completedAt?: FirestoreTimestamp;
   durationMs?: number;
   result?: Record<string, unknown>; // Action-specific result data
   error?: string;
