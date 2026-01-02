@@ -37,7 +37,7 @@ import type {
 } from './types';
 import { CoachingAnalyticsEngine } from './coaching-analytics-engine';
 import { createTeamInsightsGeneratedEvent } from './events';
-import type { SignalCoordinator } from '../orchestration/signal-coordinator';
+import type { SignalCoordinator } from '../orchestration/SignalCoordinator';
 
 // ============================================================================
 // TEAM COACHING ENGINE
