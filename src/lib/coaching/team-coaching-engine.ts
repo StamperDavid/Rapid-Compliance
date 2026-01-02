@@ -177,7 +177,8 @@ export class TeamCoachingEngine {
         'gpt-4o',
         processingTimeMs
       );
-      await this.signalCoordinator.emitSignal(event.type, event.data);
+      // Signal coordinator expects the full event object
+      await this.signalCoordinator.emitSignal(event as any);
     }
     
     console.log(`[TeamCoachingEngine] Team insights generated in ${processingTimeMs}ms`);
