@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Workflow, WorkflowAction } from '@/types/workflow';
+import { Workflow, WorkflowTrigger, WorkflowAction } from '@/types/workflow';
 
 interface WorkflowBuilderProps {
   workflow: Partial<Workflow> | null;
