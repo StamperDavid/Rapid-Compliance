@@ -190,7 +190,7 @@ export default function AdminLoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={(e) => { void handleLogin(e); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#999' }}>
               Email

@@ -169,8 +169,6 @@ export type WidgetType =
   | 'tabs'
   | 'accordion'
   | 'progress'
-  | 'accordion'
-  | 'tabs'
   | 'faq'
   // Forms
   | 'contact-form'

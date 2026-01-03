@@ -766,9 +766,15 @@ export interface AdminCustomer {
  * Determine the appropriate tier based on record count
  */
 export function getTierForRecordCount(recordCount: number): SubscriptionTier {
-  if (recordCount <= VOLUME_TIERS.tier1.recordMax) return 'tier1';
-  if (recordCount <= VOLUME_TIERS.tier2.recordMax) return 'tier2';
-  if (recordCount <= VOLUME_TIERS.tier3.recordMax) return 'tier3';
+  if (recordCount <= VOLUME_TIERS.tier1.recordMax) {
+    return 'tier1';
+  }
+  if (recordCount <= VOLUME_TIERS.tier2.recordMax) {
+    return 'tier2';
+  }
+  if (recordCount <= VOLUME_TIERS.tier3.recordMax) {
+    return 'tier3';
+  }
   return 'tier4';
 }
 

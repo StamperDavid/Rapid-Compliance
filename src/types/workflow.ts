@@ -207,9 +207,7 @@ export type ConditionOperator =
   | 'not_in'
   | 'exists'
   | 'not_exists'
-  | 'between'
-  | 'exists'
-  | 'not_exists';
+  | 'between';
 
 /**
  * Workflow Action
