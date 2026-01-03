@@ -22,7 +22,7 @@
  * - Multi-workspace isolation
  */
 
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import { NotificationCategory, NotificationPriority } from '@/lib/notifications/types';
 
 /**
