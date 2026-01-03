@@ -18,13 +18,13 @@ import type { SalesSignal } from '@/lib/orchestration/types';
 import type { NotificationVariables } from '@/lib/notifications/types';
 import { SlackService } from './slack-service';
 import { SlackMessageBuilder } from './message-builder';
+import { db } from '@/lib/firebase-admin';
 import type {
   SlackWorkspace,
   SlackChannelMapping,
   SlackMessage,
   SlackMessagePriority,
 } from './types';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 
 /**
  * Slack Signal Handler
@@ -32,15 +32,12 @@ import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
  * Handles Signal Bus events and sends Slack notifications
  */
 export class SlackSignalHandler {
-  private dal: BaseAgentDAL;
   private slackService: SlackService;
   private messageBuilder: SlackMessageBuilder;
   
   constructor(
-    dal: BaseAgentDAL,
     slackService: SlackService
   ) {
-    this.dal = dal;
     this.slackService = slackService;
     this.messageBuilder = new SlackMessageBuilder();
   }
@@ -623,15 +620,14 @@ export class SlackSignalHandler {
    */
   private async getWorkspace(orgId: string): Promise<SlackWorkspace | null> {
     try {
-      const workspacesPath = `${this.dal.getColPath('organizations')}/${orgId}/${this.dal.getSubColPath('slack_workspaces')}`;
-      
       // Get first active workspace
-      const snapshot = await this.dal.safeQuery(workspacesPath, {
-        where: [
-          ['status', '==', 'connected'],
-        ],
-        limit: 1,
-      });
+      const snapshot = await db
+        .collection('organizations')
+        .doc(orgId)
+        .collection('slack_workspaces')
+        .where('status', '==', 'connected')
+        .limit(1)
+        .get();
       
       if (snapshot.empty) {
         return null;
@@ -657,26 +653,23 @@ export class SlackSignalHandler {
     category: string
   ): Promise<SlackChannelMapping | null> {
     try {
-      const workspace = await this.dal.safeGetDoc<SlackWorkspace>(
-        this.dal.getColPath('slack_workspaces'),
-        workspaceId
-      );
+      const workspace = await db.collection('slack_workspaces').doc(workspaceId).get();
       
-      if (!workspace.exists()) {
+      if (!workspace.exists) {
         return null;
       }
       
       const workspaceData = workspace.data() as SlackWorkspace;
-      const mappingsPath = `${this.dal.getColPath('organizations')}/${workspaceData.organizationId}/${this.dal.getSubColPath('slack_channel_mappings')}`;
       
-      const snapshot = await this.dal.safeQuery(mappingsPath, {
-        where: [
-          ['workspaceId', '==', workspaceId],
-          ['category', '==', category],
-          ['enabled', '==', true],
-        ],
-        limit: 1,
-      });
+      const snapshot = await db
+        .collection('organizations')
+        .doc(workspaceData.organizationId)
+        .collection('slack_channel_mappings')
+        .where('workspaceId', '==', workspaceId)
+        .where('category', '==', category)
+        .where('enabled', '==', true)
+        .limit(1)
+        .get();
       
       if (snapshot.empty) {
         return null;
@@ -747,10 +740,9 @@ export class SlackSignalHandler {
  * Initialize Slack signal handlers
  */
 export function initializeSlackHandlers(
-  dal: BaseAgentDAL,
   slackService: SlackService
 ): SlackSignalHandler {
-  const handler = new SlackSignalHandler(dal, slackService);
+  const handler = new SlackSignalHandler(slackService);
   
   logger.info('Slack signal handlers initialized');
   
