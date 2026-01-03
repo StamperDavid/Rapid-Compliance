@@ -66,7 +66,7 @@ export interface EngineError {
   retryAfterMs?: number;
   
   /** Additional context */
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 /**
@@ -129,7 +129,7 @@ export interface EngineMetadata {
   userId?: string;
   
   /** Additional context */
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 /**

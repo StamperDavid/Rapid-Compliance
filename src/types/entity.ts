@@ -11,11 +11,11 @@ export interface EntityRecord {
   schemaId: string;
   workspaceId: string;
   
-  // Dynamic fields based on schema
-  [key: string]: any;
-  
   // System fields (always present)
   _meta: EntityMetadata;
+  
+  // Dynamic fields based on schema
+  [key: string]: unknown;
 }
 
 export interface EntityMetadata {
@@ -67,12 +67,12 @@ export interface EntityActivity {
   // Changes
   changes?: {
     field: string;
-    oldValue: any;
-    newValue: any;
+    oldValue: unknown;
+    newValue: unknown;
   }[];
   
   // Context
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   
   // Timestamp
   timestamp: Timestamp;
@@ -104,7 +104,7 @@ export interface EntityComment {
   
   // Comment
   content: string;
-  richContent?: any; // For rich text editor
+  richContent?: unknown; // For rich text editor
   
   // User
   userId: string;
@@ -173,7 +173,7 @@ export interface EntityExport {
   
   // Export config
   format: 'csv' | 'xlsx' | 'json' | 'pdf';
-  filters?: any; // View filters to apply
+  filters?: EntityFilter[]; // View filters to apply
   fields?: string[]; // Specific fields to export
   
   // Output
@@ -243,7 +243,7 @@ export interface ImportError {
   row: number;
   field?: string;
   error: string;
-  value?: any;
+  value?: unknown;
 }
 
 /**
@@ -253,7 +253,7 @@ export interface ImportError {
 export interface EntityFilter {
   field: string;
   operator: FilterOperator;
-  value: any;
+  value: unknown;
   conjunction?: 'and' | 'or'; // How to combine with next filter
 }
 

@@ -44,7 +44,7 @@ export interface FilterCondition {
   id: string;
   field: string;
   operator: FilterOperator;
-  value: any;
+  value: unknown;
   valueType?: 'text' | 'number' | 'date' | 'select' | 'boolean';
 }
 
