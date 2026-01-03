@@ -175,6 +175,12 @@ export class WorkflowCoordinator {
         'deal.risk.critical',
         'deal.risk.high',
       ],
+      'deal.risk.critical': [
+        'deal.risk.critical',
+      ],
+      'deal.risk.high': [
+        'deal.risk.high',
+      ],
       
       // Deal stage signals
       'deal.stage.changed': [
@@ -267,6 +273,9 @@ export class WorkflowCoordinator {
       'sequence.performance_decline': [],
       'sequence.best_practice_found': [],
       'sequence.metrics_updated': [],
+      'coaching.insights.generated': [],
+      'lead.routed': [],
+      'workflow.executed': [],
       'system.error': [],
       'system.quota.warning': [],
       'system.quota.exceeded': [],

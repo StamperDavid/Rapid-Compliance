@@ -95,6 +95,8 @@ export type SignalType =
   // Deal Scoring Signals
   | 'deal.scored'               // Deal score calculated
   | 'deal.risk.detected'        // Risk factor identified in deal
+  | 'deal.risk.critical'        // Critical risk level detected
+  | 'deal.risk.high'            // High risk level detected
   | 'deal.tier.changed'         // Deal tier changed (hot/warm/cold/at-risk)
   
   // Revenue Forecasting Signals
@@ -124,6 +126,9 @@ export type SignalType =
   | 'performance.benchmark_changed' // Performance benchmark changed
   | 'performance.alert_triggered' // Performance alert triggered
   
+  // Coaching Signals
+  | 'coaching.insights.generated' // Personalized coaching insights generated
+  
   // Playbook Builder Signals
   | 'playbook.generated'        // New playbook created
   | 'playbook.patterns_extracted' // Patterns extracted from conversations
@@ -145,6 +150,12 @@ export type SignalType =
   | 'sequence.performance_decline' // Sequence performance declined
   | 'sequence.best_practice_found' // Best practice identified
   | 'sequence.metrics_updated'  // Sequence metrics refreshed
+  
+  // Lead Routing Signals
+  | 'lead.routed'               // Lead routed to sales rep
+  
+  // Workflow Automation Signals
+  | 'workflow.executed'         // Workflow automation completed
   
   // System Signals
   | 'system.error'              // System error occurred
