@@ -71,7 +71,7 @@ export class SlackMessageBuilder {
             text: level === 'critical' 
               ? '🔴 *Immediate action required* - This deal needs urgent attention'
               : '🟠 *Action recommended* - Review this deal soon to prevent slippage',
-          },
+          } as any,
         ],
       },
       {
