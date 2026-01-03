@@ -13,6 +13,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { sendSlackMessageSchema } from '@/lib/slack/validation';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackMessage } from '@/lib/slack/types';
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
     
     const data = validation.data;
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Get workspace
     const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(

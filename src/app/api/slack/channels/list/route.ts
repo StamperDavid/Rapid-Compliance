@@ -12,6 +12,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { listChannelsSchema } from '@/lib/slack/validation';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackChannel } from '@/lib/slack/types';
 
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Get workspace
     const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(

@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { updateWorkspaceSettingsSchema } from '@/lib/slack/validation';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace } from '@/lib/slack/types';
 
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Get workspace
     const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
@@ -123,7 +124,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Get workspace
     const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(

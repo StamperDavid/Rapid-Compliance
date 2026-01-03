@@ -12,6 +12,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { Timestamp } from 'firebase-admin/firestore';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 import crypto from 'crypto';
 import type { SlackOAuthState } from '@/lib/slack/types';
 
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     const state = crypto.randomBytes(32).toString('hex');
     
     // Store state in Firestore (expires in 10 minutes)
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     const statesPath = dal.getColPath('slack_oauth_states');
     
     const oauthState: SlackOAuthState = {

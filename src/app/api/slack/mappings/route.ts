@@ -14,6 +14,7 @@ import {
   updateChannelMappingSchema,
 } from '@/lib/slack/validation';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackChannelMapping, SlackWorkspace } from '@/lib/slack/types';
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Get workspace to verify it exists
     const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
     
     const data = validation.data;
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Get workspace
     const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
@@ -236,7 +237,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Find mapping (we need to search since we don't know the org ID)
     const orgsSnapshot = await dal.safeQuery(dal.getColPath('organizations'), {});
@@ -318,7 +319,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Find mapping
     const orgsSnapshot = await dal.safeQuery(dal.getColPath('organizations'), {});

@@ -14,6 +14,7 @@ import { createSlackService } from '@/lib/slack/slack-service';
 import { oauthCallbackSchema } from '@/lib/slack/validation';
 import { Timestamp } from 'firebase-admin/firestore';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import { db } from '@/lib/firebase-admin';
 import type { SlackWorkspace, SlackOAuthState } from '@/lib/slack/types';
 
 /**
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL('production');
+    const dal = new BaseAgentDAL(db);
     
     // Verify state token
     const statesPath = dal.getColPath('slack_oauth_states');
