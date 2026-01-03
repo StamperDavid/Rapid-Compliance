@@ -465,7 +465,7 @@ export class SlackService {
     messageTs: string
   ): Promise<string> {
     try {
-      const response = await this.makeAPICall<{ permalink: string }>(
+      const response = await this.makeAPICall<SlackAPIResponse & { permalink: string }>(
         'chat.getPermalink',
         {
           channel: channelId,
