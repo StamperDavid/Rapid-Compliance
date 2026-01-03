@@ -13,7 +13,6 @@ import {
   createChannelMappingSchema,
   updateChannelMappingSchema,
 } from '@/lib/slack/validation';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackChannelMapping, SlackWorkspace } from '@/lib/slack/types';
@@ -42,15 +41,10 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL(db);
-    
     // Get workspace to verify it exists
-    const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
-      dal.getColPath('slack_workspaces'),
-      workspaceId
-    );
+    const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId).get();
     
-    if (!workspaceDoc.exists()) {
+    if (!workspaceDoc.exists) {
       return NextResponse.json(
         { error: 'Workspace not found' },
         { status: 404 }
@@ -60,10 +54,12 @@ export async function GET(request: NextRequest) {
     const workspace = { id: workspaceDoc.id, ...workspaceDoc.data() } as SlackWorkspace;
     
     // Get mappings
-    const mappingsPath = `${dal.getColPath('organizations')}/${workspace.organizationId}/${dal.getSubColPath('slack_channel_mappings')}`;
-    const snapshot = await dal.safeQuery(mappingsPath, {
-      where: [['workspaceId', '==', workspaceId]],
-    });
+    const snapshot = await db
+      .collection('organizations')
+      .doc(workspace.organizationId)
+      .collection('slack_channel_mappings')
+      .where('workspaceId', '==', workspaceId)
+      .get();
     
     const mappings = snapshot.docs.map(doc => ({
       id: doc.id,
@@ -122,15 +118,11 @@ export async function POST(request: NextRequest) {
     }
     
     const data = validation.data;
-    const dal = new BaseAgentDAL(db);
     
     // Get workspace
-    const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
-      dal.getColPath('slack_workspaces'),
-      data.workspaceId
-    );
+    const workspaceDoc = await db.collection('slack_workspaces').doc(data.workspaceId).get();
     
-    if (!workspaceDoc.exists()) {
+    if (!workspaceDoc.exists) {
       return NextResponse.json(
         { error: 'Workspace not found' },
         { status: 404 }
@@ -140,14 +132,14 @@ export async function POST(request: NextRequest) {
     const workspace = { id: workspaceDoc.id, ...workspaceDoc.data() } as SlackWorkspace;
     
     // Check for existing mapping
-    const mappingsPath = `${dal.getColPath('organizations')}/${workspace.organizationId}/${dal.getSubColPath('slack_channel_mappings')}`;
-    const existingSnapshot = await dal.safeQuery(mappingsPath, {
-      where: [
-        ['workspaceId', '==', data.workspaceId],
-        ['category', '==', data.category],
-      ],
-      limit: 1,
-    });
+    const existingSnapshot = await db
+      .collection('organizations')
+      .doc(workspace.organizationId)
+      .collection('slack_channel_mappings')
+      .where('workspaceId', '==', data.workspaceId)
+      .where('category', '==', data.category)
+      .limit(1)
+      .get();
     
     if (!existingSnapshot.empty) {
       return NextResponse.json(
@@ -173,7 +165,12 @@ export async function POST(request: NextRequest) {
       updatedAt: Timestamp.now(),
     };
     
-    await dal.safeSetDoc(mappingsPath, mappingId, mapping);
+    await db
+      .collection('organizations')
+      .doc(workspace.organizationId)
+      .collection('slack_channel_mappings')
+      .doc(mappingId)
+      .set(mapping);
     
     logger.info('Created Slack channel mapping', {
       mappingId,
@@ -237,20 +234,22 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL(db);
-    
     // Find mapping (we need to search since we don't know the org ID)
-    const orgsSnapshot = await dal.safeQuery(dal.getColPath('organizations'), {});
+    const orgsSnapshot = await db.collection('organizations').get();
     
     let found = false;
     let mappingsPath = '';
     
     for (const orgDoc of orgsSnapshot.docs) {
-      const path = `${dal.getColPath('organizations')}/${orgDoc.id}/${dal.getSubColPath('slack_channel_mappings')}`;
-      const mappingDoc = await dal.safeGetDoc<SlackChannelMapping>(path, mappingId);
+      const mappingDoc = await db
+        .collection('organizations')
+        .doc(orgDoc.id)
+        .collection('slack_channel_mappings')
+        .doc(mappingId)
+        .get();
       
-      if (mappingDoc.exists()) {
-        mappingsPath = path;
+      if (mappingDoc.exists) {
+        mappingsPath = `organizations/${orgDoc.id}/slack_channel_mappings`;
         found = true;
         break;
       }
@@ -264,14 +263,10 @@ export async function PUT(request: NextRequest) {
     }
     
     // Update mapping
-    await dal.safeUpdateDoc(
-      mappingsPath,
-      mappingId,
-      {
-        ...validation.data,
-        updatedAt: Timestamp.now(),
-      }
-    );
+    await db.doc(`${mappingsPath}/${mappingId}`).update({
+      ...validation.data,
+      updatedAt: Timestamp.now(),
+    });
     
     logger.info('Updated Slack channel mapping', {
       mappingId,
@@ -319,20 +314,22 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL(db);
-    
     // Find mapping
-    const orgsSnapshot = await dal.safeQuery(dal.getColPath('organizations'), {});
+    const orgsSnapshot = await db.collection('organizations').get();
     
     let found = false;
     let mappingsPath = '';
     
     for (const orgDoc of orgsSnapshot.docs) {
-      const path = `${dal.getColPath('organizations')}/${orgDoc.id}/${dal.getSubColPath('slack_channel_mappings')}`;
-      const mappingDoc = await dal.safeGetDoc<SlackChannelMapping>(path, mappingId);
+      const mappingDoc = await db
+        .collection('organizations')
+        .doc(orgDoc.id)
+        .collection('slack_channel_mappings')
+        .doc(mappingId)
+        .get();
       
-      if (mappingDoc.exists()) {
-        mappingsPath = path;
+      if (mappingDoc.exists) {
+        mappingsPath = `organizations/${orgDoc.id}/slack_channel_mappings`;
         found = true;
         break;
       }
@@ -346,7 +343,7 @@ export async function DELETE(request: NextRequest) {
     }
     
     // Delete mapping
-    await dal.safeDeleteDoc(mappingsPath, mappingId);
+    await db.doc(`${mappingsPath}/${mappingId}`).delete();
     
     logger.info('Deleted Slack channel mapping', {
       mappingId,

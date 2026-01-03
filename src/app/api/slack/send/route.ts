@@ -12,7 +12,6 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { sendSlackMessageSchema } from '@/lib/slack/validation';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackMessage } from '@/lib/slack/types';
@@ -47,15 +46,11 @@ export async function POST(request: NextRequest) {
     }
     
     const data = validation.data;
-    const dal = new BaseAgentDAL(db);
     
     // Get workspace
-    const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
-      dal.getColPath('slack_workspaces'),
-      data.workspaceId
-    );
+    const workspaceDoc = await db.collection('slack_workspaces').doc(data.workspaceId).get();
     
-    if (!workspaceDoc.exists()) {
+    if (!workspaceDoc.exists) {
       return NextResponse.json(
         { error: 'Workspace not found' },
         { status: 404 }
@@ -118,8 +113,12 @@ export async function POST(request: NextRequest) {
       message.sentAt = Timestamp.now();
       
       // Save message record
-      const messagesPath = `${dal.getColPath('organizations')}/${workspace.organizationId}/${dal.getSubColPath('slack_messages')}`;
-      await dal.safeSetDoc(messagesPath, messageId, message);
+      await db
+        .collection('organizations')
+        .doc(workspace.organizationId)
+        .collection('slack_messages')
+        .doc(messageId)
+        .set(message);
       
       logger.info('Slack message sent successfully', {
         messageId,
@@ -148,8 +147,12 @@ export async function POST(request: NextRequest) {
       message.error = sendError.message;
       
       // Save failed message
-      const messagesPath = `${dal.getColPath('organizations')}/${workspace.organizationId}/${dal.getSubColPath('slack_messages')}`;
-      await dal.safeSetDoc(messagesPath, messageId, message);
+      await db
+        .collection('organizations')
+        .doc(workspace.organizationId)
+        .collection('slack_messages')
+        .doc(messageId)
+        .set(message);
       
       return NextResponse.json(
         {

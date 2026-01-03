@@ -11,7 +11,6 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { listChannelsSchema } from '@/lib/slack/validation';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackChannel } from '@/lib/slack/types';
@@ -56,15 +55,10 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL(db);
-    
     // Get workspace
-    const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
-      dal.getColPath('slack_workspaces'),
-      workspaceId!
-    );
+    const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId!).get();
     
-    if (!workspaceDoc.exists()) {
+    if (!workspaceDoc.exists) {
       return NextResponse.json(
         { error: 'Workspace not found' },
         { status: 404 }
@@ -94,7 +88,10 @@ export async function GET(request: NextRequest) {
     );
     
     // Cache channels in Firestore
-    const channelsPath = `${dal.getColPath('organizations')}/${workspace.organizationId}/${dal.getSubColPath('slack_channels')}`;
+    const channelsCollection = db
+      .collection('organizations')
+      .doc(workspace.organizationId)
+      .collection('slack_channels');
     
     const cachePromises = result.channels.map(async (channel) => {
       const slackChannel: SlackChannel = {
@@ -113,7 +110,7 @@ export async function GET(request: NextRequest) {
         updatedAt: Timestamp.now(),
       };
       
-      await dal.safeSetDoc(channelsPath, channel.id, slackChannel);
+      await channelsCollection.doc(channel.id).set(slackChannel);
     });
     
     await Promise.all(cachePromises);

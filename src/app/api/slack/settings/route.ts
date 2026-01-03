@@ -10,7 +10,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { updateWorkspaceSettingsSchema } from '@/lib/slack/validation';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace } from '@/lib/slack/types';
@@ -148,14 +147,10 @@ export async function PUT(request: NextRequest) {
     };
     
     // Save updated workspace
-    await dal.safeUpdateDoc(
-      dal.getColPath('slack_workspaces'),
-      workspaceId,
-      {
-        settings: updatedSettings,
-        updatedAt: Timestamp.now(),
-      }
-    );
+    await db.collection('slack_workspaces').doc(workspaceId).update({
+      settings: updatedSettings,
+      updatedAt: Timestamp.now(),
+    });
     
     logger.info('Updated Slack workspace settings', {
       workspaceId,

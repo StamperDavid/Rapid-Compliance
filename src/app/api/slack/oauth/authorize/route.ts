@@ -11,7 +11,6 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { Timestamp } from 'firebase-admin/firestore';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import crypto from 'crypto';
 import type { SlackOAuthState } from '@/lib/slack/types';
@@ -46,9 +45,6 @@ export async function GET(request: NextRequest) {
     const state = crypto.randomBytes(32).toString('hex');
     
     // Store state in Firestore (expires in 10 minutes)
-    const dal = new BaseAgentDAL(db);
-    const statesPath = dal.getColPath('slack_oauth_states');
-    
     const oauthState: SlackOAuthState = {
       state,
       organizationId: orgId,
@@ -58,7 +54,7 @@ export async function GET(request: NextRequest) {
       expiresAt: Timestamp.fromMillis(Date.now() + 10 * 60 * 1000), // 10 minutes
     };
     
-    await dal.safeSetDoc(statesPath, state, oauthState);
+    await db.collection('slack_oauth_states').doc(state).set(oauthState);
     
     // Get authorization URL
     const slackService = createSlackService();

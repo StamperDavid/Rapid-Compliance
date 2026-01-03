@@ -13,7 +13,6 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { oauthCallbackSchema } from '@/lib/slack/validation';
 import { Timestamp } from 'firebase-admin/firestore';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import type { SlackWorkspace, SlackOAuthState } from '@/lib/slack/types';
 
@@ -56,13 +55,10 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL(db);
-    
     // Verify state token
-    const statesPath = dal.getColPath('slack_oauth_states');
-    const stateDoc = await dal.safeGetDoc<SlackOAuthState>(statesPath, state!);
+    const stateDoc = await db.collection('slack_oauth_states').doc(state!).get();
     
-    if (!stateDoc.exists()) {
+    if (!stateDoc.exists) {
       logger.error('Invalid or expired OAuth state', { state });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=invalid_state`
@@ -74,7 +70,7 @@ export async function GET(request: NextRequest) {
     // Check expiration
     if (oauthState.expiresAt.toMillis() < Date.now()) {
       logger.error('OAuth state expired', { state });
-      await dal.safeDeleteDoc(statesPath, state!);
+      await db.collection('slack_oauth_states').doc(state!).delete();
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=state_expired`
       );
@@ -91,7 +87,6 @@ export async function GET(request: NextRequest) {
     
     // Create workspace record
     const workspaceId = `slack_${tokenResponse.team.id}`;
-    const workspacesPath = `${dal.getColPath('organizations')}/${oauthState.organizationId}/${dal.getSubColPath('slack_workspaces')}`;
     
     const workspace: SlackWorkspace = {
       id: workspaceId,
@@ -141,10 +136,15 @@ export async function GET(request: NextRequest) {
       updatedAt: Timestamp.now(),
     };
     
-    await dal.safeSetDoc(workspacesPath, workspaceId, workspace);
+    await db
+      .collection('organizations')
+      .doc(oauthState.organizationId)
+      .collection('slack_workspaces')
+      .doc(workspaceId)
+      .set(workspace);
     
     // Delete state token
-    await dal.safeDeleteDoc(statesPath, state!);
+    await db.collection('slack_oauth_states').doc(state!).delete();
     
     logger.info('Slack workspace connected successfully', {
       workspaceId,
