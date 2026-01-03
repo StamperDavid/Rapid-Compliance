@@ -240,7 +240,7 @@ export interface ProductFilter {
 
 export interface FilterOption {
   label: string;
-  value: any;
+  value: unknown;
   count?: number; // Number of products
 }
 
@@ -763,7 +763,7 @@ export interface CartItem {
   image?: string;
   
   // Metadata
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   addedAt: Timestamp;
 }
 

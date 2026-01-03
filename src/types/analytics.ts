@@ -212,7 +212,7 @@ export interface CustomReport {
 export interface ReportFilter {
   field: string;
   operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'between' | 'in' | 'not_in';
-  value: any;
+  value: unknown;
 }
 
 export interface ReportGrouping {

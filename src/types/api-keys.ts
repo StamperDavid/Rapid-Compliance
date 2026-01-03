@@ -181,7 +181,7 @@ export interface APIKeyStatus {
 export interface APIKeyValidationResult {
   valid: boolean;
   error?: string;
-  details?: any;
+  details?: unknown;
 }
 
 export type APIServiceName = 
