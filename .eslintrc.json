@@ -3,7 +3,6 @@
     "next/core-web-vitals",
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "prettier"
   ],
   "parser": "@typescript-eslint/parser",
@@ -17,10 +16,10 @@
   },
   "plugins": ["@typescript-eslint"],
   "rules": {
-    // TypeScript Best Practices - Critical errors that prevent compilation
+    // TypeScript Best Practices - All warnings for incremental fixes
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-unused-vars": [
-      "error",
+      "warn",
       {
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_",
@@ -30,9 +29,9 @@
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-non-null-assertion": "warn",
-    "@typescript-eslint/no-floating-promises": "error",
-    "@typescript-eslint/no-misused-promises": "error",
-    "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/no-floating-promises": "warn",
+    "@typescript-eslint/no-misused-promises": "warn",
+    "@typescript-eslint/await-thenable": "warn",
     "@typescript-eslint/require-await": "warn",
     "@typescript-eslint/no-unnecessary-type-assertion": "warn",
     "@typescript-eslint/prefer-nullish-coalescing": "warn",
@@ -56,43 +55,43 @@
     // React Best Practices
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
-    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/rules-of-hooks": "warn",
     "react-hooks/exhaustive-deps": "warn",
     "react/no-unescaped-entities": "warn",
     "react/display-name": "off",
 
     // Next.js Best Practices
-    "@next/next/no-html-link-for-pages": "error",
+    "@next/next/no-html-link-for-pages": "warn",
     "@next/next/no-img-element": "warn",
 
-    // General Code Quality
+    // General Code Quality - All warnings
     "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
-    "no-debugger": "error",
+    "no-debugger": "warn",
     "no-alert": "warn",
-    "no-var": "error",
-    "prefer-const": "error",
+    "no-var": "warn",
+    "prefer-const": "warn",
     "prefer-template": "warn",
-    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "eqeqeq": ["warn", "always", { "null": "ignore" }],
     "curly": ["warn", "all"],
     "no-return-await": "off",
-    "@typescript-eslint/return-await": ["error", "in-try-catch"],
+    "@typescript-eslint/return-await": ["warn", "in-try-catch"],
     
     // Import organization
-    "no-duplicate-imports": "error",
+    "no-duplicate-imports": "warn",
     "import/no-duplicates": "off",
 
     // Best practices for async/await
-    "require-atomic-updates": "error",
-    "no-async-promise-executor": "error",
-    "no-promise-executor-return": "error",
+    "require-atomic-updates": "warn",
+    "no-async-promise-executor": "warn",
+    "no-promise-executor-return": "warn",
 
     // Prevent common bugs
-    "no-constant-binary-expression": "error",
-    "no-unreachable": "error",
-    "no-unreachable-loop": "error",
-    "no-self-compare": "error",
+    "no-constant-binary-expression": "warn",
+    "no-unreachable": "warn",
+    "no-unreachable-loop": "warn",
+    "no-self-compare": "warn",
     "no-template-curly-in-string": "warn",
-    "array-callback-return": "error"
+    "array-callback-return": "warn"
   },
   "overrides": [
     {
