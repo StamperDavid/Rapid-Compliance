@@ -233,9 +233,9 @@ export async function sendEmail(
       async () => await sgMail.send(msg),
       {
         maxRetries: 3,
-        initialDelay: 1000,
-        maxDelay: 10000,
-        backoffMultiplier: 2,
+        baseDelayMs: 1000,
+        maxDelayMs: 10000,
+        operationName: 'sendEmail',
       }
     );
     
