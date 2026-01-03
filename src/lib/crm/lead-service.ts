@@ -163,7 +163,7 @@ export async function createLead(
         }
       } catch (enrichError) {
         // Don't fail lead creation if enrichment fails
-        logger.warn('Auto-enrichment failed, continuing with lead creation', enrichError);
+        logger.warn('Auto-enrichment failed, continuing with lead creation', enrichError as Error);
       }
     }
 
@@ -207,7 +207,7 @@ export async function createLead(
         userName: 'System',
       });
     } catch (activityError) {
-      logger.warn('Failed to log lead creation activity', activityError);
+      logger.warn('Failed to log lead creation activity', activityError as Error);
     }
 
     // Fire CRM event for workflow triggers
@@ -215,7 +215,7 @@ export async function createLead(
       const { fireLeadCreated } = await import('./event-triggers');
       await fireLeadCreated(organizationId, workspaceId, leadId, lead);
     } catch (triggerError) {
-      logger.warn('Failed to fire lead created event', triggerError);
+      logger.warn('Failed to fire lead created event', triggerError as Error);
     }
 
     logger.info('Lead created', {
@@ -298,7 +298,7 @@ export async function updateLead(
         );
       }
     } catch (triggerError) {
-      logger.warn('Failed to fire lead update events', triggerError);
+      logger.warn('Failed to fire lead update events', triggerError as Error);
     }
 
     return lead;
@@ -361,7 +361,7 @@ export async function enrichLead(
 
     // Update lead with enrichment data
     const updatedLead = await updateLead(organizationId, leadId, {
-      enrichmentData,
+      enrichmentData: enrichmentData || undefined,
       score: calculateEnrichedScore(lead, enrichmentData),
       updatedAt: new Date(),
     }, workspaceId);

@@ -240,7 +240,7 @@ function analyzeBuyingCommittee(stakeholders: Stakeholder[]): BuyingCommitteeAna
   const sentimentScores = stakeholders.map(s => 
     s.sentiment === 'positive' ? 1 : s.sentiment === 'negative' ? -1 : 0
   );
-  const avgSentiment = sentimentScores.reduce((sum, s) => sum + s, 0) / sentimentScores.length;
+  const avgSentiment = sentimentScores.reduce((sum: number, s) => sum + s, 0) / sentimentScores.length;
   const overallSentiment = avgSentiment > 0.3 ? 'positive' : avgSentiment < -0.3 ? 'negative' : 'neutral';
 
   // Calculate engagement score
