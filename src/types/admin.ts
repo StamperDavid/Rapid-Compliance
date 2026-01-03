@@ -303,7 +303,7 @@ export interface AdminAuditLog {
   resourceId: string;
   
   // Details
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
   
@@ -339,7 +339,7 @@ export interface BulkOperation {
   resourceType: string;
   
   // Parameters
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   
   // Export format (for export operations)
   format?: 'json' | 'csv' | 'xlsx';
@@ -391,10 +391,12 @@ export interface ComplianceRequirement {
 /**
  * System Configuration
  */
+export type SystemConfigValue = string | number | boolean | Record<string, unknown>;
+
 export interface SystemConfig {
   id: string;
   key: string;
-  value: any;
+  value: SystemConfigValue;
   type: 'string' | 'number' | 'boolean' | 'json';
   description?: string;
   category: 'general' | 'billing' | 'ai' | 'integrations' | 'security' | 'compliance';

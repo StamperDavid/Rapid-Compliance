@@ -74,7 +74,7 @@ export interface ConversationMessage {
   content: string;
   metadata?: {
     intent?: string; // detected customer intent
-    entities?: Record<string, any>; // extracted entities (product names, prices, etc.)
+    entities?: Record<string, unknown>; // extracted entities (product names, prices, etc.)
     sentiment?: number;
     confidence?: number;
   };
@@ -256,7 +256,7 @@ export interface BaseModel {
   
   // NEW: Industry Template Integration
   sourceTemplateId?: string; // Reference to IndustryTemplate used
-  researchIntelligence?: any; // ResearchIntelligence from template (avoid circular dependency)
+  researchIntelligence?: unknown; // ResearchIntelligence from template (avoid circular dependency)
   
   // Metadata
   createdAt: string;
@@ -434,9 +434,6 @@ export interface OnboardingData {
   completedAt?: string;
   completedBy?: string;
   version?: string; // Onboarding form version
-  
-  // Allow additional properties from form data
-  [key: string]: any;
 }
 
 /**
@@ -604,8 +601,8 @@ export interface AgentPersona {
     lastAdjustedAt?: string;
     adjustmentHistory?: {
       field: string;
-      oldValue: any;
-      newValue: any;
+      oldValue: unknown;
+      newValue: unknown;
       reason: string;
       timestamp: string;
     }[];
@@ -629,7 +626,7 @@ export interface KnowledgeDocument {
   uploadedAt: string;
   processedAt?: string;
   extractedContent: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface KnowledgeURL {
@@ -667,7 +664,7 @@ export interface Product {
   inStock: boolean;
   stockLevel?: number;
   variants?: ProductVariant[];
-  specifications?: Record<string, any>;
+  specifications?: Record<string, unknown>;
 }
 
 export interface ProductVariant {

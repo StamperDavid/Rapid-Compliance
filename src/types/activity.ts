@@ -3,6 +3,8 @@
  * Tracks all interactions with leads, contacts, and deals
  */
 
+import type { Timestamp } from 'firebase/firestore';
+
 export type ActivityType = 
   | 'email_sent'
   | 'email_received'
@@ -91,8 +93,8 @@ export interface Activity {
     intent?: string;
     
     // Deal/Lead changes
-    previousValue?: any;
-    newValue?: any;
+    previousValue?: unknown;
+    newValue?: unknown;
     fieldChanged?: string;
     
     // Document specific
@@ -121,8 +123,8 @@ export interface Activity {
   };
   
   // Timestamps
-  occurredAt: any; // Firestore Timestamp - when activity actually happened
-  createdAt: any; // When record was created (might differ from occurredAt)
+  occurredAt: Timestamp; // Firestore Timestamp - when activity actually happened
+  createdAt: Timestamp; // When record was created (might differ from occurredAt)
   
   // Display flags
   isPinned?: boolean;
