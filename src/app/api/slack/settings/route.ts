@@ -118,15 +118,10 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const dal = new BaseAgentDAL(db);
-    
     // Get workspace
-    const workspaceDoc = await dal.safeGetDoc<SlackWorkspace>(
-      dal.getColPath('slack_workspaces'),
-      workspaceId
-    );
+    const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId).get();
     
-    if (!workspaceDoc.exists()) {
+    if (!workspaceDoc.exists) {
       return NextResponse.json(
         { error: 'Workspace not found' },
         { status: 404 }
