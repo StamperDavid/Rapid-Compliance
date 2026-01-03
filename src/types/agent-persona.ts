@@ -145,7 +145,7 @@ export function generatePersonaFromOnboarding(
     // Tactical Execution
     toolAuthorization: onboarding.integrations.map(integration => ({
       tool: integration.name,
-      permissions: integration.permissions.join('/') as any,
+      permissions: integration.permissions.join('/') as 'Read Only' | 'Read/Write' | 'Execute' | 'Execute with Review',
       canExecuteAutonomously: !integration.requiresApproval,
       description: `${integration.type} integration`
     })),

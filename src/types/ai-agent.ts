@@ -295,11 +295,11 @@ export interface MessagePart {
   text?: string;
   functionCall?: {
     name: string;
-    args: Record<string, any>;
+    args: Record<string, unknown>;
   };
   functionResponse?: {
     name: string;
-    response: any;
+    response: unknown;
   };
   inlineData?: {
     mimeType: string;

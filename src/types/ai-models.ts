@@ -94,7 +94,7 @@ export interface ChatResponse {
   // Function calling
   functionCall?: {
     name: string;
-    arguments: Record<string, any>;
+    arguments: Record<string, unknown>;
   };
   
   // Usage
