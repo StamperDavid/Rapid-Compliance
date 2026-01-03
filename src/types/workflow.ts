@@ -1,5 +1,5 @@
-import { Timestamp } from 'firebase/firestore';
-import { EntityFilter } from './entity';
+import type { Timestamp } from 'firebase/firestore';
+import type { EntityFilter } from './entity';
 
 /**
  * Workflow
@@ -161,7 +161,7 @@ export interface WorkflowParameter {
   label: string;
   type: 'text' | 'number' | 'boolean' | 'date' | 'select';
   required: boolean;
-  defaultValue?: any;
+  defaultValue?: unknown;
   options?: string[]; // For select type
 }
 
@@ -178,7 +178,7 @@ export interface WorkflowCondition {
   
   // Comparison
   operator: ConditionOperator;
-  value: any;
+  value: unknown;
   
   // For complex conditions
   logicOperator?: 'and' | 'or';
@@ -288,7 +288,7 @@ export interface FieldMapping {
   source: 'static' | 'trigger' | 'variable' | 'function' | 'ai';
   
   // Static value
-  staticValue?: any;
+  staticValue?: unknown;
   
   // Dynamic value
   sourceField?: string; // From trigger data or previous action
@@ -348,7 +348,7 @@ export interface SendSlackAction extends BaseAction {
   message: string;
   
   // Message formatting
-  blocks?: any[]; // Slack Block Kit
+  blocks?: Record<string, unknown>[]; // Slack Block Kit
   
   // Mentions
   mentions?: string[]; // User IDs
@@ -364,7 +364,7 @@ export interface HTTPRequestAction extends BaseAction {
   headers?: Record<string, string>;
   
   // Body
-  body?: string | Record<string, any>;
+  body?: string | Record<string, unknown>;
   bodyType?: 'json' | 'form' | 'raw';
   
   // Auth
@@ -384,7 +384,7 @@ export interface AIAgentAction extends BaseAction {
   
   // Input
   prompt: string; // Can reference trigger data
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   
   // Output
   saveResponseAs: string; // Variable name
@@ -458,7 +458,7 @@ export interface CloudFunctionAction extends BaseAction {
   functionName: string;
   
   // Input
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
   
   // Output
   saveResponseAs?: string;
@@ -518,7 +518,7 @@ export interface WorkflowExecution {
   
   // Trigger info
   triggeredBy: string; // 'system', 'user:userId', 'webhook', etc.
-  triggerData: any; // Data that triggered the workflow
+  triggerData: Record<string, unknown>; // Data that triggered the workflow
   
   // Execution
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -530,7 +530,7 @@ export interface WorkflowExecution {
   actionResults: ActionResult[];
   
   // Variables/context
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
   
   // Error info
   error?: {
@@ -555,12 +555,12 @@ export interface ActionResult {
   duration?: number;
   
   // Output
-  output?: any;
+  output?: unknown;
   
   // Error
   error?: {
     message: string;
-    details?: any;
+    details?: unknown;
   };
   
   // Retry info

@@ -689,12 +689,12 @@ export interface PlanDetails {
   id: string;
   name: string;
   description?: string;
-  monthlyPrice: number | null;
-  yearlyPrice: number | null;
+  monthlyPrice?: number;
+  yearlyPrice?: number;
   currency?: string;
   displayOrder: number;
   features: string[];
-  limits: Partial<OutboundFeatures> | Record<string, any>;
+  limits: Partial<OutboundFeatures> | Record<string, unknown>;
   isPopular?: boolean;
   isActive: boolean;
   createdAt?: string;
@@ -719,7 +719,7 @@ export interface CustomerSubscription {
   trialEnd?: string;
   mrr: number; // Monthly Recurring Revenue
   createdAt: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

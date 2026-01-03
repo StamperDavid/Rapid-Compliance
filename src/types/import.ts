@@ -19,7 +19,7 @@ export interface ImportSession {
   
   // Data
   headers: string[];
-  rows: any[][];
+  rows: unknown[][];
   totalRows: number;
   
   // Column mapping
@@ -56,10 +56,10 @@ export interface ColumnMapping {
   
   // Data transformation
   transform?: 'trim' | 'uppercase' | 'lowercase' | 'phone' | 'email' | 'currency' | 'date';
-  defaultValue?: any;
+  defaultValue?: unknown;
   
   // Validation
-  sampleValues: any[];
+  sampleValues: unknown[];
   detectedType: string;
   confidence: number; // 0-100
 }
@@ -86,14 +86,14 @@ export interface DetectedField {
   required: boolean;
   confidence: number;
   reasoning: string;
-  sampleValues: any[];
+  sampleValues: unknown[];
 }
 
 export interface ImportError {
   row: number;
   column?: string;
   message: string;
-  value?: any;
+  value?: unknown;
   severity: 'error' | 'warning';
 }
 
@@ -121,7 +121,7 @@ export interface FieldTypeDetectionResult {
   type: DetectedFieldType;
   confidence: number;
   pattern?: string;
-  uniqueValues?: any[];
+  uniqueValues?: unknown[];
 }
 
 

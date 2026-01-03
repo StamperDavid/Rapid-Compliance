@@ -94,12 +94,12 @@ export interface SequenceStep {
 export interface SendTime {
   hour: number; // 0-23
   minute: number; // 0-59
-  timezone: 'prospect' | 'organization' | string; // IANA timezone
+  timezone: string; // IANA timezone or 'prospect' or 'organization'
 }
 
 export interface StepCondition {
   type: 'opened_previous' | 'clicked_previous' | 'not_opened_previous' | 'replied' | 'not_replied' | 'custom_field';
-  value?: any;
+  value?: unknown;
 }
 
 export interface SequenceStepVariant {
@@ -125,7 +125,7 @@ export interface EnrollmentCriteria {
   maxLeadScore?: number;
   
   // Custom fields
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
 }
 
 export interface SequenceAnalytics {
@@ -184,7 +184,7 @@ export interface ProspectEnrollment {
   outcomeDate?: string;
   
   // Metadata
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

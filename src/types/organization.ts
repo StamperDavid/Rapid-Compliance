@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Organization (Top-level tenant)
@@ -188,8 +188,8 @@ export interface AuditLog {
   
   // Changes
   changes?: {
-    before?: Record<string, any>;
-    after?: Record<string, any>;
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
   };
   
   // Metadata
@@ -198,7 +198,7 @@ export interface AuditLog {
   userAgent?: string;
   
   // Context
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

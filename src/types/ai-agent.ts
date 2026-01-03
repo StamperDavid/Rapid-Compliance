@@ -1,5 +1,5 @@
-import { Timestamp } from 'firebase/firestore';
-import { EntityFilter } from './entity';
+import type { Timestamp } from 'firebase/firestore';
+import type { EntityFilter } from './entity';
 
 /**
  * AI Agent Configuration

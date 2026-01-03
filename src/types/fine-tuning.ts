@@ -3,7 +3,7 @@
  * For real model training on customer data
  */
 
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 export interface TrainingExample {
   id: string;

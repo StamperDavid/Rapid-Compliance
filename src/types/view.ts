@@ -1,5 +1,5 @@
-import { Timestamp } from 'firebase/firestore';
-import { EntityFilter, EntitySort, EntityGroup } from './entity';
+import type { Timestamp } from 'firebase/firestore';
+import type { EntityFilter, EntitySort, EntityGroup } from './entity';
 
 /**
  * View
@@ -219,7 +219,7 @@ export interface FormSection {
   conditional?: {
     field: string;
     operator: string;
-    value: any;
+    value: unknown;
   };
 }
 

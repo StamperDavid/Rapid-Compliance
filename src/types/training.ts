@@ -3,7 +3,7 @@
  * Complete type definitions for the training and improvement system
  */
 
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Training Session
@@ -169,10 +169,10 @@ export interface ProposedChange {
   path: string; // e.g., "systemPrompt.greeting", "behaviorConfig.closingAggressiveness"
   
   // Current value
-  currentValue: any;
+  currentValue: unknown;
   
   // Proposed value
-  proposedValue: any;
+  proposedValue: unknown;
   
   // Reason for change
   reason: string;

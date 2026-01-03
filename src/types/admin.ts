@@ -1,6 +1,4 @@
-import { Timestamp } from 'firebase/firestore';
-import type { Organization, Workspace } from './organization';
-import type { User } from './user';
+import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Admin Platform Types

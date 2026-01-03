@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Schema Definition
@@ -71,7 +71,7 @@ export interface SchemaField {
   // Validation
   required: boolean;
   unique: boolean;
-  defaultValue?: any;
+  defaultValue?: unknown;
   validation?: FieldValidation;
   
   // UI
@@ -289,7 +289,7 @@ export interface FieldValidation {
 
 export interface ValidationRule {
   type: 'regex' | 'min' | 'max' | 'length' | 'custom';
-  value: any;
+  value: unknown;
   message?: string;
 }
 
@@ -306,7 +306,7 @@ export interface ConditionalLogic {
 export interface Condition {
   fieldId: string;
   operator: ConditionOperator;
-  value: any;
+  value: unknown;
 }
 
 export type ConditionOperator =
@@ -359,7 +359,7 @@ export interface SchemaTemplate {
   
   // Template data
   schemas: Partial<Schema>[]; // Array of schemas to create
-  sampleData?: any[]; // Sample records
+  sampleData?: Record<string, unknown>[]; // Sample records
   
   // AI agent template
   agentTemplate?: {

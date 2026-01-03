@@ -191,7 +191,7 @@ export type WidgetType =
 
 export interface WidgetData {
   // Varies by widget type
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface WidgetStyle {

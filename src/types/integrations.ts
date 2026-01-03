@@ -3,7 +3,7 @@
  * Complete type definitions for third-party integrations
  */
 
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Integration Category
@@ -76,7 +76,7 @@ export interface IntegrationParameter {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array';
   required: boolean;
   description: string;
-  default?: any;
+  default?: unknown;
 }
 
 /**
@@ -110,8 +110,8 @@ export interface ConnectedIntegration {
   webhookSecret?: string;
   
   // Configuration
-  config?: Record<string, any>;
-  settings?: Record<string, any>;
+  config?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
   
   // Status
   status: 'active' | 'error' | 'disconnected';
@@ -325,7 +325,11 @@ export interface ZapierIntegration extends ConnectedIntegration {
     apiKey?: string;
     activeZaps?: number;
     webhookUrl?: string;
-    enabledZaps?: any[];
+    enabledZaps?: Array<{
+      id: string;
+      name: string;
+      enabled: boolean;
+    }>;
     webhookSecurity?: {
       enabled?: boolean;
       secret?: string;
@@ -348,7 +352,7 @@ export interface FunctionCallRequest {
   // Function
   integrationId: string;
   functionName: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   
   // AI Context
   conversationContext: string;
@@ -363,7 +367,7 @@ export interface FunctionCallRequest {
  */
 export interface FunctionCallResponse {
   success: boolean;
-  result?: any;
+  result?: unknown;
   error?: string;
   
   // For AI to understand
@@ -385,11 +389,11 @@ export interface IntegrationActionLog {
   
   // Action
   functionName: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   
   // Result
   success: boolean;
-  result?: any;
+  result?: unknown;
   error?: string;
   
   // Context

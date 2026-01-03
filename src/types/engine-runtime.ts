@@ -160,9 +160,9 @@ export function createFailureResult<T>(
     success: false,
     error,
     usage: {
-      tokens: usage.tokens || 0,
-      cost: usage.cost || 0,
-      durationMs: usage.durationMs || 0,
+      tokens: usage.tokens ?? 0,
+      cost: usage.cost ?? 0,
+      durationMs: usage.durationMs ?? 0,
       ...usage,
     },
     metadata,
@@ -258,7 +258,7 @@ export function createBatchResult<T>(
     tokens: results.reduce((sum, r) => sum + r.usage.tokens, 0),
     cost: results.reduce((sum, r) => sum + r.usage.cost, 0),
     durationMs: Math.max(...results.map(r => r.usage.durationMs)),
-    apiCalls: results.reduce((sum, r) => sum + (r.usage.apiCalls || 0), 0),
+    apiCalls: results.reduce((sum, r) => sum + (r.usage.apiCalls ?? 0), 0),
   };
   
   return {
