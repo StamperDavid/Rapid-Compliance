@@ -135,7 +135,7 @@ function CRMContent() {
     leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks
   };
 
-  const setterMap: Record<ViewType, Function> = {
+  const setterMap: Record<ViewType, React.Dispatch<React.SetStateAction<any[]>>> = {
     leads: setLeads,
     companies: setCompanies,
     contacts: setContacts,
@@ -389,7 +389,7 @@ function CRMContent() {
                       {brandName}
                     </h1>
                     <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
-                      {config?.industry ? STANDARD_SCHEMAS[config.industry]?.name : 'Platform'}
+                      {config?.industry ? STANDARD_SCHEMAS[config.industry as keyof typeof STANDARD_SCHEMAS]?.name : 'Platform'}
                     </p>
                   </div>
                 )}

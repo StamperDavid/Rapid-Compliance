@@ -1206,14 +1206,14 @@ function StyleEditor({
                     style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
                   >
                     <option value="">-</option>
-                    {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    {'options' in field && field.options?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : (
                   <input
                     type="text"
                     value={(currentStyles as any)[field.key] || ''}
                     onChange={(e) => updateStyle(field.key, e.target.value)}
-                    placeholder={field.placeholder}
+                    placeholder={'placeholder' in field ? field.placeholder : undefined}
                     style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
                   />
                 )}
@@ -1273,7 +1273,7 @@ function WidgetRenderer({
 
   const renderContent = () => {
     switch (element.type) {
-      case 'heading':
+      case 'heading': {
         const HeadingTag = (element.settings?.tag || 'h2') as keyof JSX.IntrinsicElements;
         return (
           <div
@@ -1287,6 +1287,7 @@ function WidgetRenderer({
             {element.content || 'Heading'}
           </div>
         );
+      }
 
       case 'text':
         return (

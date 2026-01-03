@@ -17,6 +17,11 @@ export function useAdminAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     // Listen to Firebase auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {

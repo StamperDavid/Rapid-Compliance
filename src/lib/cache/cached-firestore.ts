@@ -57,7 +57,7 @@ export async function setCached<T>(
   merge: boolean = false
 ): Promise<void> {
   // Save to Firestore
-  await FirestoreService.set(collection, docId, data, merge);
+  await FirestoreService.set(collection, docId, data as any, merge);
   
   // Invalidate cache
   const cacheKey = `firestore:${collection}:${docId}`;

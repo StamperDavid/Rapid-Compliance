@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     switch (action) {
-      case 'create-sequence':
+      case 'create-sequence': {
         if (!data.sequence) {
           return errors.badRequest('Sequence data is required');
         }
@@ -56,8 +56,9 @@ export async function POST(request: NextRequest) {
           createdBy: user.uid,
         });
         return NextResponse.json({ success: true, sequence });
+      }
 
-      case 'enroll-lead':
+      case 'enroll-lead': {
         if (!data.leadId || !data.sequenceId || !data.organizationId) {
           return errors.badRequest('leadId, sequenceId, and organizationId are required');
         }
@@ -66,15 +67,17 @@ export async function POST(request: NextRequest) {
           return errors.badRequest(result.error || 'Failed to enroll lead');
         }
         return NextResponse.json({ success: true });
+      }
 
-      case 'analyze-lifecycle':
+      case 'analyze-lifecycle': {
         if (!data.leadId) {
           return errors.badRequest('leadId is required');
         }
         const analysis = await analyzeLeadLifecycle(data.leadId);
         return NextResponse.json({ success: true, analysis });
+      }
 
-      case 'get-attribution':
+      case 'get-attribution': {
         if (!data.leadId) {
           return errors.badRequest('leadId is required');
         }
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest) {
           data.model as 'linear' | 'first_touch' | 'last_touch' | 'time_decay' | 'u_shaped'
         );
         return NextResponse.json({ success: true, attribution });
+      }
 
       default:
         return errors.badRequest('Invalid action');

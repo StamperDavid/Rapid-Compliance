@@ -18,6 +18,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const organizationId = token.organizationId;
+
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
     const { leadId, workspaceId = 'default' } = body;
 
     if (!leadId) {

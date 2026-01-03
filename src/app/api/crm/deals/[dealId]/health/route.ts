@@ -20,6 +20,11 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const organizationId = token.organizationId;
+
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
     const workspaceId = searchParams.get('workspaceId') || 'default';
     const { dealId } = params;
 

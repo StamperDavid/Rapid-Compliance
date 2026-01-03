@@ -153,7 +153,7 @@ export default function SubscriptionPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => toggleFeature('aiEmailWriter', !subscription?.outboundFeatures?.aiEmailWriter?.enabled)}
+                    onClick={() => void toggleFeature('aiEmailWriter', !subscription?.outboundFeatures?.aiEmailWriter?.enabled)}
                     disabled={!subscription?.outboundFeatures?.aiEmailWriter}
                     style={{
                       padding: '0.5rem 1rem',
@@ -193,7 +193,7 @@ export default function SubscriptionPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => toggleFeature('emailSequences', !subscription?.outboundFeatures?.emailSequences?.enabled)}
+                    onClick={() => void toggleFeature('emailSequences', !subscription?.outboundFeatures?.emailSequences?.enabled)}
                     disabled={!subscription?.outboundFeatures?.emailSequences}
                     style={{
                       padding: '0.5rem 1rem',
@@ -228,7 +228,7 @@ export default function SubscriptionPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => toggleFeature('emailReplyHandler', !subscription?.outboundFeatures?.emailReplyHandler?.enabled)}
+                    onClick={() => void toggleFeature('emailReplyHandler', !subscription?.outboundFeatures?.emailReplyHandler?.enabled)}
                     disabled={!subscription?.outboundFeatures?.emailReplyHandler}
                     style={{
                       padding: '0.5rem 1rem',
@@ -268,7 +268,7 @@ export default function SubscriptionPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => toggleFeature('prospectFinder', !subscription?.outboundFeatures?.prospectFinder?.enabled)}
+                    onClick={() => void toggleFeature('prospectFinder', !subscription?.outboundFeatures?.prospectFinder?.enabled)}
                     disabled={!subscription?.outboundFeatures?.prospectFinder}
                     style={{
                       padding: '0.5rem 1rem',
@@ -305,7 +305,7 @@ export default function SubscriptionPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => toggleFeature('multiChannel', !subscription?.outboundFeatures?.multiChannel?.enabled)}
+                    onClick={() => void toggleFeature('multiChannel', !subscription?.outboundFeatures?.multiChannel?.enabled)}
                     disabled={!subscription?.outboundFeatures?.multiChannel}
                     style={{
                       padding: '0.5rem 1rem',

@@ -263,6 +263,10 @@ export async function deployGoldenMaster(organizationId: string, goldenMasterId:
   const { getDocs, collection, query, where, writeBatch, doc } = await import('firebase/firestore');
   const { db } = await import('@/lib/firebase/config');
   
+  if (!db) {
+    throw new Error('Firestore not initialized');
+  }
+  
   // Get all Golden Masters
   const allGMs = await getAllGoldenMasters(organizationId);
   

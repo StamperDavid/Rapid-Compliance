@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
       organizationId,
       workspaceId,
       templateId,
-      merge,
-      applyWorkflows,
-      applyBestPractices
+      merge: merge ?? false,
+      applyWorkflows: applyWorkflows ?? true,
+      applyBestPractices: applyBestPractices ?? true
     });
     
     if (!result.success) {

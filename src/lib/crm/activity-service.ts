@@ -47,8 +47,8 @@ export async function createActivity(
       id: activityId,
       organizationId,
       workspaceId,
-      occurredAt: data.occurredAt || now,
-      createdAt: now,
+      occurredAt: (data.occurredAt || now) as any,
+      createdAt: now as any,
     };
 
     await FirestoreService.set(
@@ -132,7 +132,7 @@ export async function getActivities(
     // Date range filter
     if (filters?.dateRange) {
       filteredData = filteredData.filter(activity => {
-        const occurredAt = activity.occurredAt?.toDate ? activity.occurredAt.toDate() : new Date(activity.occurredAt);
+        const occurredAt = activity.occurredAt?.toDate ? activity.occurredAt.toDate() : new Date(activity.occurredAt as any);
         return occurredAt >= filters.dateRange!.start && occurredAt <= filters.dateRange!.end;
       });
     }
@@ -176,7 +176,7 @@ export async function getEntityTimeline(
     const grouped = new Map<string, Activity[]>();
     
     result.data.forEach(activity => {
-      const occurredAt = activity.occurredAt?.toDate ? activity.occurredAt.toDate() : new Date(activity.occurredAt);
+      const occurredAt = activity.occurredAt?.toDate ? activity.occurredAt.toDate() : new Date(activity.occurredAt as any);
       const dateKey = occurredAt.toISOString().split('T')[0]; // YYYY-MM-DD
       
       if (!grouped.has(dateKey)) {
@@ -190,8 +190,8 @@ export async function getEntityTimeline(
       .map(([date, activities]) => ({
         date,
         activities: activities.sort((a, b) => {
-          const aTime = a.occurredAt?.toDate ? a.occurredAt.toDate().getTime() : new Date(a.occurredAt).getTime();
-          const bTime = b.occurredAt?.toDate ? b.occurredAt.toDate().getTime() : new Date(b.occurredAt).getTime();
+          const aTime = a.occurredAt?.toDate ? a.occurredAt.toDate().getTime() : new Date(a.occurredAt as any).getTime();
+          const bTime = b.occurredAt?.toDate ? b.occurredAt.toDate().getTime() : new Date(b.occurredAt as any).getTime();
           return bTime - aTime;
         }),
       }))
@@ -252,14 +252,14 @@ export async function getActivityStats(
       const lastActivity = activities[0]; // Already sorted by occurredAt desc
       lastActivityDate = lastActivity.occurredAt?.toDate ? 
         lastActivity.occurredAt.toDate() : 
-        new Date(lastActivity.occurredAt);
+        new Date(lastActivity.occurredAt as any);
     }
 
     // Calculate avg activities per day (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentActivities = activities.filter(a => {
-      const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : new Date(a.occurredAt);
+      const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : new Date(a.occurredAt as any);
       return occurredAt >= thirtyDaysAgo;
     });
     const avgActivitiesPerDay = recentActivities.length / 30;
@@ -303,7 +303,7 @@ function calculateEngagementScore(activities: Activity[]): number {
   const lastActivity = activities[0];
   const lastActivityDate = lastActivity.occurredAt?.toDate ? 
     lastActivity.occurredAt.toDate() : 
-    new Date(lastActivity.occurredAt);
+    new Date(lastActivity.occurredAt as any);
   const daysSinceLastActivity = (Date.now() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24);
   
   if (daysSinceLastActivity < 1) score += 50;
@@ -317,7 +317,7 @@ function calculateEngagementScore(activities: Activity[]): number {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const recentActivities = activities.filter(a => {
-    const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : new Date(a.occurredAt);
+    const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : new Date(a.occurredAt as any);
     return occurredAt >= thirtyDaysAgo;
   });
 
@@ -486,7 +486,7 @@ export async function getNextBestAction(
     if (lastMeeting) {
       const meetingDate = lastMeeting.occurredAt?.toDate ? 
         lastMeeting.occurredAt.toDate() : 
-        new Date(lastMeeting.occurredAt);
+        new Date(lastMeeting.occurredAt as any);
       const daysSinceMeeting = (Date.now() - meetingDate.getTime()) / (1000 * 60 * 60 * 24);
       
       if (daysSinceMeeting < 2) {

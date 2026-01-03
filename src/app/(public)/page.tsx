@@ -7,6 +7,11 @@ import PasscodeGate from '@/components/PasscodeGate';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';;
 
+interface ChatResponse {
+  response?: string;
+  error?: string;
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -70,21 +75,21 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
           customerId: `demo_${Date.now()}`,
         }),
       });
-      let data: any = {};
+      let data: ChatResponse = {};
       try {
-        data = await response.json();
-      } catch (err) {
+        data = await response.json() as ChatResponse;
+      } catch {
         data = {};
       }
 
       const responseText = response.ok
         ? data.response
-        : data.error || "I'm having trouble connecting to the AI right now.";
+        : data.error ?? "I'm having trouble connecting to the AI right now.";
 
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: responseText || "I'm having trouble connecting to the AI right now.",
+        content: responseText ?? "I'm having trouble connecting to the AI right now.",
         timestamp: new Date(),
       };
 

@@ -1,0 +1,376 @@
+{
+  "summary": {
+    "filesWithIssues": 347,
+    "totalErrors": 11,
+    "totalWarnings": 9576,
+    "totalIssues": 9587,
+    "uniqueRules": 29
+  },
+  "topRules": [
+    {
+      "rule": "@typescript-eslint/no-unsafe-member-access",
+      "total": 2662,
+      "errors": 0,
+      "warnings": 2662,
+      "percentage": "27.77",
+      "sampleMessage": "Unsafe member access .error on an `any` value"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-assignment",
+      "total": 2059,
+      "errors": 0,
+      "warnings": 2059,
+      "percentage": "21.48",
+      "sampleMessage": "Unsafe assignment of an `any` value"
+    },
+    {
+      "rule": "@typescript-eslint/prefer-nullish-coalescing",
+      "total": 1295,
+      "errors": 0,
+      "warnings": 1295,
+      "percentage": "13.51",
+      "sampleMessage": "Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-argument",
+      "total": 748,
+      "errors": 0,
+      "warnings": 748,
+      "percentage": "7.80",
+      "sampleMessage": "Unsafe argument of type `any` assigned to a parameter of type `string | undefined`"
+    },
+    {
+      "rule": "@typescript-eslint/no-explicit-any",
+      "total": 736,
+      "errors": 0,
+      "warnings": 736,
+      "percentage": "7.68",
+      "sampleMessage": "Unexpected any. Specify a different type"
+    },
+    {
+      "rule": "@typescript-eslint/no-unused-vars",
+      "total": 305,
+      "errors": 0,
+      "warnings": 305,
+      "percentage": "3.18",
+      "sampleMessage": "'LiveChatDemo' is defined but never used. Allowed unused vars must match /^_/u"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-call",
+      "total": 299,
+      "errors": 0,
+      "warnings": 299,
+      "percentage": "3.12",
+      "sampleMessage": "Unsafe call of a(n) `any` typed value"
+    },
+    {
+      "rule": "curly",
+      "total": 247,
+      "errors": 0,
+      "warnings": 247,
+      "percentage": "2.58",
+      "sampleMessage": "Expected { after 'if' condition"
+    },
+    {
+      "rule": "no-alert",
+      "total": 230,
+      "errors": 0,
+      "warnings": 230,
+      "percentage": "2.40",
+      "sampleMessage": "Unexpected alert"
+    },
+    {
+      "rule": "@typescript-eslint/consistent-type-imports",
+      "total": 224,
+      "errors": 0,
+      "warnings": 224,
+      "percentage": "2.34",
+      "sampleMessage": "Imports \"SubscriptionTier\" are only used as type"
+    },
+    {
+      "rule": "@typescript-eslint/no-misused-promises",
+      "total": 174,
+      "errors": 0,
+      "warnings": 174,
+      "percentage": "1.81",
+      "sampleMessage": "Promise-returning function provided to attribute where a void return was expected"
+    },
+    {
+      "rule": "@typescript-eslint/no-floating-promises",
+      "total": 140,
+      "errors": 0,
+      "warnings": 140,
+      "percentage": "1.46",
+      "sampleMessage": "Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator"
+    },
+    {
+      "rule": "react/no-unescaped-entities",
+      "total": 101,
+      "errors": 0,
+      "warnings": 101,
+      "percentage": "1.05",
+      "sampleMessage": "`'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-return",
+      "total": 94,
+      "errors": 0,
+      "warnings": 94,
+      "percentage": "0.98",
+      "sampleMessage": "Unsafe return of a value of type `any[]`"
+    },
+    {
+      "rule": "react-hooks/exhaustive-deps",
+      "total": 59,
+      "errors": 0,
+      "warnings": 59,
+      "percentage": "0.62",
+      "sampleMessage": "React Hook useEffect has a missing dependency: 'loadOrganizations'. Either include it or remove the dependency array"
+    },
+    {
+      "rule": "@typescript-eslint/require-await",
+      "total": 34,
+      "errors": 0,
+      "warnings": 34,
+      "percentage": "0.35",
+      "sampleMessage": "Async arrow function 'handleSubmit' has no 'await' expression"
+    },
+    {
+      "rule": "prefer-template",
+      "total": 33,
+      "errors": 0,
+      "warnings": 33,
+      "percentage": "0.34",
+      "sampleMessage": "Unexpected string concatenation"
+    },
+    {
+      "rule": "@typescript-eslint/no-non-null-assertion",
+      "total": 32,
+      "errors": 0,
+      "warnings": 32,
+      "percentage": "0.33",
+      "sampleMessage": "Forbidden non-null assertion"
+    },
+    {
+      "rule": "@typescript-eslint/prefer-optional-chain",
+      "total": 29,
+      "errors": 0,
+      "warnings": 29,
+      "percentage": "0.30",
+      "sampleMessage": "Prefer using an optional chain expression instead, as it's more concise and easier to read"
+    },
+    {
+      "rule": "@next/next/no-img-element",
+      "total": 21,
+      "errors": 0,
+      "warnings": 21,
+      "percentage": "0.22",
+      "sampleMessage": "Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element"
+    }
+  ],
+  "allRules": [
+    {
+      "rule": "@typescript-eslint/no-unsafe-member-access",
+      "total": 2662,
+      "errors": 0,
+      "warnings": 2662,
+      "percentage": "27.77"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-assignment",
+      "total": 2059,
+      "errors": 0,
+      "warnings": 2059,
+      "percentage": "21.48"
+    },
+    {
+      "rule": "@typescript-eslint/prefer-nullish-coalescing",
+      "total": 1295,
+      "errors": 0,
+      "warnings": 1295,
+      "percentage": "13.51"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-argument",
+      "total": 748,
+      "errors": 0,
+      "warnings": 748,
+      "percentage": "7.80"
+    },
+    {
+      "rule": "@typescript-eslint/no-explicit-any",
+      "total": 736,
+      "errors": 0,
+      "warnings": 736,
+      "percentage": "7.68"
+    },
+    {
+      "rule": "@typescript-eslint/no-unused-vars",
+      "total": 305,
+      "errors": 0,
+      "warnings": 305,
+      "percentage": "3.18"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-call",
+      "total": 299,
+      "errors": 0,
+      "warnings": 299,
+      "percentage": "3.12"
+    },
+    {
+      "rule": "curly",
+      "total": 247,
+      "errors": 0,
+      "warnings": 247,
+      "percentage": "2.58"
+    },
+    {
+      "rule": "no-alert",
+      "total": 230,
+      "errors": 0,
+      "warnings": 230,
+      "percentage": "2.40"
+    },
+    {
+      "rule": "@typescript-eslint/consistent-type-imports",
+      "total": 224,
+      "errors": 0,
+      "warnings": 224,
+      "percentage": "2.34"
+    },
+    {
+      "rule": "@typescript-eslint/no-misused-promises",
+      "total": 174,
+      "errors": 0,
+      "warnings": 174,
+      "percentage": "1.81"
+    },
+    {
+      "rule": "@typescript-eslint/no-floating-promises",
+      "total": 140,
+      "errors": 0,
+      "warnings": 140,
+      "percentage": "1.46"
+    },
+    {
+      "rule": "react/no-unescaped-entities",
+      "total": 101,
+      "errors": 0,
+      "warnings": 101,
+      "percentage": "1.05"
+    },
+    {
+      "rule": "@typescript-eslint/no-unsafe-return",
+      "total": 94,
+      "errors": 0,
+      "warnings": 94,
+      "percentage": "0.98"
+    },
+    {
+      "rule": "react-hooks/exhaustive-deps",
+      "total": 59,
+      "errors": 0,
+      "warnings": 59,
+      "percentage": "0.62"
+    },
+    {
+      "rule": "@typescript-eslint/require-await",
+      "total": 34,
+      "errors": 0,
+      "warnings": 34,
+      "percentage": "0.35"
+    },
+    {
+      "rule": "prefer-template",
+      "total": 33,
+      "errors": 0,
+      "warnings": 33,
+      "percentage": "0.34"
+    },
+    {
+      "rule": "@typescript-eslint/no-non-null-assertion",
+      "total": 32,
+      "errors": 0,
+      "warnings": 32,
+      "percentage": "0.33"
+    },
+    {
+      "rule": "@typescript-eslint/prefer-optional-chain",
+      "total": 29,
+      "errors": 0,
+      "warnings": 29,
+      "percentage": "0.30"
+    },
+    {
+      "rule": "@next/next/no-img-element",
+      "total": 21,
+      "errors": 0,
+      "warnings": 21,
+      "percentage": "0.22"
+    },
+    {
+      "rule": "@typescript-eslint/return-await",
+      "total": 21,
+      "errors": 0,
+      "warnings": 21,
+      "percentage": "0.22"
+    },
+    {
+      "rule": "@typescript-eslint/no-unnecessary-type-assertion",
+      "total": 17,
+      "errors": 0,
+      "warnings": 17,
+      "percentage": "0.18"
+    },
+    {
+      "rule": "no-case-declarations",
+      "total": 8,
+      "errors": 8,
+      "warnings": 0,
+      "percentage": "0.08"
+    },
+    {
+      "rule": "@typescript-eslint/no-redundant-type-constituents",
+      "total": 5,
+      "errors": 0,
+      "warnings": 5,
+      "percentage": "0.05"
+    },
+    {
+      "rule": "no-duplicate-imports",
+      "total": 4,
+      "errors": 0,
+      "warnings": 4,
+      "percentage": "0.04"
+    },
+    {
+      "rule": "@typescript-eslint/no-require-imports",
+      "total": 3,
+      "errors": 3,
+      "warnings": 0,
+      "percentage": "0.03"
+    },
+    {
+      "rule": "no-console",
+      "total": 3,
+      "errors": 0,
+      "warnings": 3,
+      "percentage": "0.03"
+    },
+    {
+      "rule": "react-hooks/rules-of-hooks",
+      "total": 2,
+      "errors": 0,
+      "warnings": 2,
+      "percentage": "0.02"
+    },
+    {
+      "rule": "no-constant-binary-expression",
+      "total": 2,
+      "errors": 0,
+      "warnings": 2,
+      "percentage": "0.02"
+    }
+  ]
+}

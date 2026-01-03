@@ -28,6 +28,11 @@ export async function GET(
     }
 
     const { user } = authResult;
+
+    if (!user.organizationId) {
+      return errors.badRequest('Organization ID required');
+    }
+
     const integration = await getIntegration(user.organizationId, params.integrationId);
 
     if (!integration) {
@@ -60,6 +65,10 @@ export async function PATCH(
     const body = await request.json();
     const { user } = authResult;
 
+    if (!user.organizationId) {
+      return errors.badRequest('Organization ID required');
+    }
+
     await updateIntegration(user.organizationId, params.integrationId, body);
 
     return NextResponse.json({
@@ -86,6 +95,11 @@ export async function DELETE(
     }
 
     const { user } = authResult;
+
+    if (!user.organizationId) {
+      return errors.badRequest('Organization ID required');
+    }
+
     await deleteIntegration(user.organizationId, params.integrationId);
 
     return NextResponse.json({

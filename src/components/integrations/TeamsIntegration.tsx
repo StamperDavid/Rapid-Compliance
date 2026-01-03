@@ -151,7 +151,7 @@ export default function TeamsIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.notifications.newDeal}
+                checked={integration.settings.notifications?.newDeal ?? false}
                 onChange={(e) => onUpdate({ 
                   notifications: { ...integration.settings.notifications, newDeal: e.target.checked }
                 })}
@@ -162,7 +162,7 @@ export default function TeamsIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.notifications.dealWon}
+                checked={integration.settings.notifications?.dealWon ?? false}
                 onChange={(e) => onUpdate({ 
                   notifications: { ...integration.settings.notifications, dealWon: e.target.checked }
                 })}
@@ -173,7 +173,7 @@ export default function TeamsIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.notifications.dealLost}
+                checked={integration.settings.notifications?.dealLost ?? false}
                 onChange={(e) => onUpdate({ 
                   notifications: { ...integration.settings.notifications, dealLost: e.target.checked }
                 })}
@@ -184,7 +184,7 @@ export default function TeamsIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.notifications.newLead}
+                checked={integration.settings.notifications?.newLead ?? false}
                 onChange={(e) => onUpdate({ 
                   notifications: { ...integration.settings.notifications, newLead: e.target.checked }
                 })}
@@ -195,7 +195,7 @@ export default function TeamsIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.notifications.taskDue}
+                checked={integration.settings.notifications?.taskDue ?? false}
                 onChange={(e) => onUpdate({ 
                   notifications: { ...integration.settings.notifications, taskDue: e.target.checked }
                 })}

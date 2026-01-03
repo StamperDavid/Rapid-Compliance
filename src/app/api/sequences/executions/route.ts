@@ -85,6 +85,10 @@ async function getRecentExecutions(
   limit: number = 50,
   sequenceId?: string
 ): Promise<SequenceExecution[]> {
+  if (!adminDal) {
+    return [];
+  }
+
   try {
     const executions: SequenceExecution[] = [];
 

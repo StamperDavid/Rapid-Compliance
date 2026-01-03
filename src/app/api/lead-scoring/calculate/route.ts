@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!adminApp) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const token = authHeader.substring(7);
     const decodedToken = await getAuth(adminApp).verifyIdToken(token);
     const userId = decodedToken.uid;

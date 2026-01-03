@@ -50,13 +50,20 @@ export async function POST(
 
     const postData = doc.data();
 
+    if (!postData) {
+      return NextResponse.json(
+        { error: 'Blog post data not found' },
+        { status: 404 }
+      );
+    }
+
     // CRITICAL: Verify organizationId matches
-    if (postData?.organizationId !== organizationId) {
+    if (postData.organizationId !== organizationId) {
       logger.error('[SECURITY] organizationId mismatch on blog publish', new Error('Cross-org blog publish attempt'), {
         route: '/api/website/blog/posts/[postId]/publish',
         method: 'POST',
         requested: organizationId,
-        actual: postData?.organizationId,
+        actual: postData.organizationId,
         postId: params.postId,
       });
       return NextResponse.json(

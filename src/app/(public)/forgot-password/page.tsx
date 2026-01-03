@@ -6,6 +6,11 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config'
 import { logger } from '@/lib/logger/logger';;
 
+interface FirebaseError {
+  code: string;
+  message: string;
+}
+
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,7 +30,8 @@ export default function ForgotPasswordPage() {
 
       await sendPasswordResetEmail(auth, email);
       setSuccess(true);
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       logger.error('Password reset error:', error, { file: 'page.tsx' });
 
       // User-friendly error messages
@@ -36,7 +42,7 @@ export default function ForgotPasswordPage() {
         'auth/network-request-failed': 'Network error. Please check your connection.',
       };
 
-      setError(errorMessages[error.code] || error.message || 'Failed to send reset email');
+      setError(errorMessages[error.code] ?? error.message ?? 'Failed to send reset email');
     } finally {
       setLoading(false);
     }

@@ -18,6 +18,13 @@ export default function UsersPage() {
       try {
         setLoading(true);
         const { auth } = await import('@/lib/firebase/config');
+        
+        if (!auth) {
+          logger.error('Firebase auth not initialized', { file: 'page.tsx' });
+          setLoading(false);
+          return;
+        }
+
         const currentUser = auth.currentUser;
         
         if (!currentUser) {

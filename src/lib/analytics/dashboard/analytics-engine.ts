@@ -172,6 +172,22 @@ async function getWorkflowMetrics(
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
 ): Promise<WorkflowOverviewMetrics> {
+  if (!adminDal) {
+    return {
+      totalActiveWorkflows: 0,
+      totalExecutions: 0,
+      successfulExecutions: 0,
+      failedExecutions: 0,
+      successRate: 0,
+      averageExecutionTime: 0,
+      totalActionsExecuted: 0,
+      executionsTrend: 0,
+      topWorkflows: [],
+      executionsByDay: [],
+      actionBreakdown: [],
+    };
+  }
+
   // Get all workflows
   const workflows = await adminDal.getAllWorkflows(organizationId, workspaceId);
   const activeWorkflows = workflows.filter((w: Workflow) => w.status === 'active');
@@ -366,6 +382,19 @@ async function getEmailMetrics(
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
 ): Promise<EmailOverviewMetrics> {
+  if (!adminDal) {
+    return {
+      totalGenerated: 0,
+      totalSent: 0,
+      averageGenerationTime: 0,
+      mostUsedType: 'sales',
+      generationTrend: 0,
+      byType: [],
+      emailsByDay: [],
+      byTier: [],
+    };
+  }
+
   // Get email generation events from Signal Bus or email writer logs
   const emails = await adminDal.getEmailGenerations(
     organizationId,
@@ -491,6 +520,21 @@ async function getDealMetrics(
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
 ): Promise<DealOverviewMetrics> {
+  if (!adminDal) {
+    return {
+      totalActiveDeals: 0,
+      totalValue: 0,
+      averageValue: 0,
+      hotDeals: 0,
+      atRiskDeals: 0,
+      dealsTrend: 0,
+      byStage: [],
+      byTier: [],
+      averageVelocity: 0,
+      pipelineByDay: [],
+    };
+  }
+
   // Get all active deals
   const deals = await adminDal.getActiveDeals(organizationId, workspaceId);
   const previousDeals = await adminDal.getDealsSnapshot(
@@ -670,6 +714,21 @@ async function getRevenueMetrics(
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
 ): Promise<RevenueOverviewMetrics> {
+  if (!adminDal) {
+    return {
+      totalRevenue: 0,
+      quota: 0,
+      quotaAttainment: 0,
+      forecastOptimistic: 0,
+      forecastRealistic: 0,
+      forecastPessimistic: 0,
+      revenueTrend: 0,
+      revenueByDay: [],
+      winRate: 0,
+      averageDealSize: 0,
+    };
+  }
+
   // Get closed/won deals in period
   const wonDeals = await adminDal.getWonDeals(
     organizationId,
@@ -746,13 +805,25 @@ async function getTeamMetrics(
   startDate: Date,
   endDate: Date
 ): Promise<TeamOverviewMetrics> {
+  if (!adminDal) {
+    return {
+      totalReps: 0,
+      topPerformers: [],
+      averageDealsPerRep: 0,
+      averageQuotaAttainment: 0,
+      teamVelocity: 0,
+    };
+  }
+
+  const dal = adminDal; // Type narrowing for callbacks
+
   // Get all reps (users with role 'sales')
-  const reps = await adminDal.getSalesReps(organizationId, workspaceId);
+  const reps = await dal.getSalesReps(organizationId, workspaceId);
   
   // Get deals for each rep
   const repDeals = await Promise.all(
     reps.map((rep: any) =>
-      adminDal.getRepDeals(organizationId, workspaceId, rep.id, startDate, endDate)
+      dal.getRepDeals(organizationId, workspaceId, rep.id, startDate, endDate)
     )
   );
   

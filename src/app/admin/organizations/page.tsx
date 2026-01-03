@@ -27,6 +27,13 @@ export default function OrganizationsPage() {
       logger.info('🔍 Loading organizations...', { cursor, page: currentPage, file: 'page.tsx' });
       const { auth } = await import('@/lib/firebase/config');
       
+      if (!auth) {
+        logger.error('Firebase auth not initialized', { file: 'page.tsx' });
+        setAuthError('NOT_LOGGED_IN');
+        setLoading(false);
+        return;
+      }
+
       const currentUser = auth.currentUser;
       let orgs: any[] = [];
       
@@ -141,6 +148,12 @@ export default function OrganizationsPage() {
 
     try {
       const { auth } = await import('@/lib/firebase/config');
+      
+      if (!auth) {
+        alert('Firebase auth not initialized');
+        return;
+      }
+
       const token = await auth.currentUser?.getIdToken();
       
       if (!token) {

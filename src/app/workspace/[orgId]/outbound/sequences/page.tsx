@@ -315,7 +315,7 @@ export default function EmailSequencesPage() {
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', color: '#666' }}>Enrolled</div>
-                        <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{seq.analytics.totalEnrolled}</div>
+                        <div style={{ fontSize: '1.25rem', color: '#fff', fontWeight: '600' }}>{seq.analytics?.totalEnrolled ?? 0}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', color: '#666' }}>Reply Rate</div>

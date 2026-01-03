@@ -22,6 +22,11 @@ export async function POST(
     }
 
     const { user } = authResult;
+
+    if (!user.organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
     const result = await testIntegration(user.organizationId, params.integrationId);
 
     return NextResponse.json({

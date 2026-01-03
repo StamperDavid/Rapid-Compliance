@@ -17,6 +17,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const organizationId = token.organizationId;
+
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
     const workspaceId = searchParams.get('workspaceId') || 'default';
     const period = (searchParams.get('period') || 'month') as 'week' | 'month' | 'quarter' | 'year';
 

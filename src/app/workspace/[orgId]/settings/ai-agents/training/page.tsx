@@ -1112,7 +1112,11 @@ export default function AgentTrainingPage() {
                       type="text"
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          void handleSendMessage();
+                        }
+                      }}
                       placeholder="Type your message as a customer..."
                       style={{
                         flex: 1,
@@ -1125,7 +1129,7 @@ export default function AgentTrainingPage() {
                       }}
                     />
                     <button
-                      onClick={handleSendMessage}
+                      onClick={() => void handleSendMessage()}
                       disabled={!userInput.trim() || isTyping}
                       style={{
                         padding: '0.75rem 1.5rem',
@@ -1284,7 +1288,7 @@ export default function AgentTrainingPage() {
 
                   {/* Submit Button */}
                   <button
-                    onClick={submitSalesCriteriaScoring}
+                    onClick={() => void submitSalesCriteriaScoring()}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -1336,7 +1340,7 @@ export default function AgentTrainingPage() {
                   type="file"
                   multiple
                   accept=".pdf,.doc,.docx,.txt"
-                  onChange={handleUploadMaterial}
+                  onChange={(e) => void handleUploadMaterial(e)}
                   style={{ display: 'none' }}
                 />
               </div>
@@ -1430,7 +1434,7 @@ export default function AgentTrainingPage() {
                 </div>
                 
                 <button
-                  onClick={handleSaveGoldenMaster}
+                  onClick={() => void handleSaveGoldenMaster()}
                   disabled={baseModel.status !== 'ready' || overallScore < 80}
                   style={{
                     padding: '0.75rem 1.5rem',
@@ -1501,7 +1505,7 @@ export default function AgentTrainingPage() {
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         {!gm.isActive && (
                           <button
-                            onClick={() => handleDeployGoldenMaster(gm.id, gm.version)}
+                            onClick={() => void handleDeployGoldenMaster(gm.id, gm.version)}
                             style={{
                               padding: '0.5rem 1rem',
                               backgroundColor: primaryColor,
@@ -1675,7 +1679,7 @@ export default function AgentTrainingPage() {
                 Cancel
               </button>
               <button
-                onClick={handleSubmitFeedback}
+                onClick={() => void handleSubmitFeedback()}
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: primaryColor,

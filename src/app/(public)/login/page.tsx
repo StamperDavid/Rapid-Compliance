@@ -8,6 +8,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase/config'
 import { logger } from '@/lib/logger/logger';;
 
+interface FirebaseError {
+  code: string;
+  message: string;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -53,7 +58,8 @@ export default function LoginPage() {
 
       // Redirect to workspace dashboard
       router.push(`/workspace/${orgId}/dashboard`);
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       logger.error('Login error:', error, { file: 'page.tsx' });
 
       // User-friendly error messages
@@ -66,7 +72,7 @@ export default function LoginPage() {
         'auth/network-request-failed': 'Network error. Please check your connection.',
       };
 
-      setError(errorMessages[error.code] || error.message || 'Login failed');
+      setError(errorMessages[error.code] ?? error.message ?? 'Login failed');
     } finally {
       setLoading(false);
     }

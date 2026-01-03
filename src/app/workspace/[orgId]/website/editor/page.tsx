@@ -504,11 +504,11 @@ export default function PageEditorPage() {
           const next = redo();
           if (next) setPage(next);
         }}
-        onSave={() => savePage(false)}
-        onSaveAsTemplate={saveAsTemplate}
-        onPublish={() => publishPage()}
-        onUnpublish={unpublishPage}
-        onPreview={generatePreview}
+        onSave={() => void savePage(false)}
+        onSaveAsTemplate={() => void saveAsTemplate()}
+        onPublish={() => void publishPage()}
+        onUnpublish={() => void unpublishPage()}
+        onPreview={() => void generatePreview()}
         onSchedule={handleSchedulePublish}
         onViewVersions={() => setShowVersionHistory(true)}
         saving={saving}

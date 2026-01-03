@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
     const entityType = searchParams.get('entityType') as any;
     const entityId = searchParams.get('entityId');
 
-    if (!entityType || !entityId) {
+    if (!organizationId || !entityType || !entityId) {
       return NextResponse.json(
-        { error: 'entityType and entityId are required' },
+        { error: 'organizationId, entityType and entityId are required' },
         { status: 400 }
       );
     }

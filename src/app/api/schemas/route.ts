@@ -44,8 +44,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const snapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref) => {
-      return adminDal.getWorkspaceCollection(organizationId, workspaceId, 'schemas')
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Admin DAL not initialized' },
+        { status: 500 }
+      );
+    }
+
+    const dal = adminDal; // Type narrowing for callback
+    const snapshot = await dal.safeQuery('ORGANIZATIONS', (ref) => {
+      return dal.getWorkspaceCollection(organizationId, workspaceId, 'schemas')
         .where('status', '==', 'active');
     });
 

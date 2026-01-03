@@ -137,8 +137,15 @@ export async function POST(
 
     const pageData = pageDoc.data();
 
+    if (!pageData) {
+      return NextResponse.json(
+        { error: 'Page data not found' },
+        { status: 404 }
+      );
+    }
+
     // CRITICAL: Verify organizationId matches
-    if (pageData?.organizationId !== organizationId) {
+    if (pageData.organizationId !== organizationId) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

@@ -368,7 +368,7 @@ export default function KnowledgeBasePage() {
                   Key Points for Agent:
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#999' }}>
-                  {feature.keyPoints.map((point, idx) => (
+                  {feature.keyPoints.map((point: string, idx: number) => (
                     <li key={idx} style={{ marginBottom: '0.25rem' }}>{point}</li>
                   ))}
                 </ul>
@@ -439,7 +439,7 @@ export default function KnowledgeBasePage() {
                   What's Included:
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#999' }}>
-                  {plan.features.map((feature, idx) => (
+                  {plan.features.map((feature: string, idx: number) => (
                     <li key={idx} style={{ marginBottom: '0.5rem' }}>{feature}</li>
                   ))}
                 </ul>
@@ -493,7 +493,7 @@ export default function KnowledgeBasePage() {
                     Their Strengths:
                   </div>
                   <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#999' }}>
-                    {competitor.strengths.map((strength, idx) => (
+                    {competitor.strengths.map((strength: string, idx: number) => (
                       <li key={idx} style={{ marginBottom: '0.25rem' }}>{strength}</li>
                     ))}
                   </ul>
@@ -504,7 +504,7 @@ export default function KnowledgeBasePage() {
                     Their Weaknesses:
                   </div>
                   <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#999' }}>
-                    {competitor.weaknesses.map((weakness, idx) => (
+                    {competitor.weaknesses.map((weakness: string, idx: number) => (
                       <li key={idx} style={{ marginBottom: '0.25rem' }}>{weakness}</li>
                     ))}
                   </ul>
@@ -589,7 +589,7 @@ export default function KnowledgeBasePage() {
                     Results:
                   </div>
                   <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#999' }}>
-                    {study.results.map((result, idx) => (
+                    {study.results.map((result: string, idx: number) => (
                       <li key={idx} style={{ marginBottom: '0.25rem' }}>{result}</li>
                     ))}
                   </ul>

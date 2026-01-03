@@ -18,6 +18,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!adminApp) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const token = authHeader.split('Bearer ')[1];
     await getAuth(adminApp).verifyIdToken(token);
 
@@ -57,6 +64,13 @@ export async function PUT(
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!adminApp) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
     }
 
     const token = authHeader.split('Bearer ')[1];
@@ -104,6 +118,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!adminApp) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const token = authHeader.split('Bearer ')[1];
     await getAuth(adminApp).verifyIdToken(token);
 
@@ -147,6 +168,13 @@ export async function DELETE(
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!adminApp) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
     }
 
     const token = authHeader.split('Bearer ')[1];

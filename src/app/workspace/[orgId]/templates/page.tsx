@@ -217,7 +217,7 @@ export default function TemplatesDashboard() {
                   </p>
                 </div>
                 <button
-                  onClick={handleApplyTemplate}
+                  onClick={() => void handleApplyTemplate()}
                   disabled={!selectedTemplateId || applyingTemplate}
                   className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                     selectedTemplateId && !applyingTemplate
@@ -277,7 +277,7 @@ export default function TemplatesDashboard() {
                   </p>
                 </div>
                 <button
-                  onClick={loadDealScores}
+                  onClick={() => void loadDealScores()}
                   disabled={loadingScores}
                   className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
                 >
@@ -306,7 +306,7 @@ export default function TemplatesDashboard() {
                   <div className="text-6xl mb-4">🎯</div>
                   <p className="text-gray-400 mb-4">No deals scored yet</p>
                   <button
-                    onClick={loadDealScores}
+                    onClick={() => void loadDealScores()}
                     className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
                   >
                     Score Sample Deals
@@ -366,7 +366,7 @@ export default function TemplatesDashboard() {
                     <option value="90-day">90-Day</option>
                   </select>
                   <button
-                    onClick={generateForecast}
+                    onClick={() => void generateForecast()}
                     disabled={loadingForecast}
                     className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:bg-gray-700 disabled:text-gray-500"
                   >
@@ -390,7 +390,7 @@ export default function TemplatesDashboard() {
                   <div className="text-6xl mb-4">📊</div>
                   <p className="text-gray-400 mb-4">No forecast generated yet</p>
                   <button
-                    onClick={generateForecast}
+                    onClick={() => void generateForecast()}
                     className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
                   >
                     Generate Forecast

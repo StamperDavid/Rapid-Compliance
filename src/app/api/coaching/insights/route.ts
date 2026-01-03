@@ -38,6 +38,7 @@ import type {
 } from '@/lib/coaching/types';
 import { ZodError } from 'zod';
 import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 // ============================================================================
 // RATE LIMITING
@@ -217,6 +218,10 @@ export async function POST(request: NextRequest) {
       period: requestData.period
     });
     
+    if (!adminDal) {
+      return errors.internal('Admin DAL not initialized');
+    }
+
     // Step 1: Analyze performance metrics
     const analyticsEngine = new CoachingAnalyticsEngine(adminDal);
     const performance = await analyticsEngine.analyzeRepPerformance(

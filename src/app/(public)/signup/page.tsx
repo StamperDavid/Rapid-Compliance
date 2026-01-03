@@ -11,6 +11,11 @@ import { logger } from '@/lib/logger/logger';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
+interface FirebaseError {
+  code: string;
+  message: string;
+}
+
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -196,7 +201,8 @@ export default function SignupPage() {
       
       // Redirect to onboarding
       router.push(`/workspace/${orgId}/onboarding`);
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as FirebaseError;
       logger.error('Failed to create account:', error, { file: 'page.tsx' });
       
       // User-friendly error messages

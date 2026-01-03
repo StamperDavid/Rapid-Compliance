@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const organizationId = token.organizationId;
+
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
     const workspaceId = searchParams.get('workspaceId') || 'default';
     const userId = searchParams.get('userId') || token.uid;
     const status = searchParams.get('status') as any;
@@ -47,6 +52,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const organizationId = token.organizationId;
+
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
     const workspaceId = body.workspaceId || 'default';
 
     const task = await createTask(organizationId, workspaceId, {
@@ -55,7 +65,7 @@ export async function POST(request: NextRequest) {
       assignedTo: body.assignedTo,
       assignedToName: body.assignedToName,
       assignedBy: token.uid,
-      assignedByName: token.email,
+      assignedByName: token.email || undefined,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
       priority: body.priority || 'normal',
       status: 'todo',

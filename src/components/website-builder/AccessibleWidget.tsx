@@ -69,7 +69,7 @@ export function AccessibleWidget({ widget, children }: AccessibleWidgetProps) {
         attrs['role'] = 'dialog';
         attrs['aria-modal'] = 'true';
         if (widget.data.title) {
-          attrs['aria-label'] = widget.data.title;
+          attrs['aria-label'] = String(widget.data.title);
         }
         break;
 

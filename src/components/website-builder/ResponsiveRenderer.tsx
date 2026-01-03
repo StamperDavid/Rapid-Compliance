@@ -235,14 +235,14 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
       return (
         <HeadingTag style={style}>
-          {widget.data.text || 'Heading'}
+          {String(widget.data.text || 'Heading')}
         </HeadingTag>
       );
 
     case 'text':
       return (
         <p style={style}>
-          {widget.data.content || 'Text content'}
+          {String(widget.data.content || 'Text content')}
         </p>
       );
 
@@ -251,7 +251,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
         <button
           style={{
             padding: '12px 24px',
-            backgroundColor: widget.data.color || '#3b82f6',
+            backgroundColor: (widget.data.color as string) || '#3b82f6',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -262,19 +262,19 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           }}
           onClick={() => {
             if (widget.data.url) {
-              window.location.href = widget.data.url;
+              window.location.href = widget.data.url as string;
             }
           }}
         >
-          {widget.data.text || 'Button'}
+          {String(widget.data.text || 'Button')}
         </button>
       );
 
     case 'image':
       return (
         <OptimizedImage
-          src={widget.data.src || 'https://via.placeholder.com/800x400'}
-          alt={widget.data.alt || 'Image'}
+          src={(widget.data.src as string) || 'https://via.placeholder.com/800x400'}
+          alt={(widget.data.alt as string) || 'Image'}
           style={{
             width: '100%',
             height: 'auto',
@@ -312,7 +312,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               marginBottom: '16px',
             }}
           >
-            {widget.data.heading || 'Hero Heading'}
+            {String(widget.data.heading || 'Hero Heading')}
           </h1>
           <p
             style={{
@@ -322,9 +322,9 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               margin: '0 auto 32px',
             }}
           >
-            {widget.data.subheading || 'Hero subheading'}
+            {String(widget.data.subheading || 'Hero subheading')}
           </p>
-          {widget.data.buttonText && (
+          {(widget.data.buttonText as string) && (
             <button
               style={{
                 padding: '16px 32px',
@@ -338,18 +338,18 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               }}
               onClick={() => {
                 if (widget.data.buttonUrl) {
-                  window.location.href = widget.data.buttonUrl;
+                  window.location.href = String(widget.data.buttonUrl);
                 }
               }}
             >
-              {widget.data.buttonText}
+              {String(widget.data.buttonText)}
             </button>
           )}
         </div>
       );
 
     case 'features':
-      const features = widget.data.features || [];
+      const features = (widget.data.features as any[]) || [];
       return (
         <div className="feature-grid">
           {features.map((feature: any, idx: number) => (
@@ -379,7 +379,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       );
 
     case 'pricing':
-      const plans = widget.data.plans || [];
+      const plans = (widget.data.plans as any[]) || [];
       return (
         <div className="pricing-grid">
           {plans.map((plan: any, idx: number) => (
@@ -441,13 +441,13 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               marginBottom: '16px',
             }}
           >
-            "{widget.data.quote || 'Testimonial quote'}"
+            "{String(widget.data.quote || 'Testimonial quote')}"
           </p>
           <div style={{ fontWeight: '600', color: '#111827' }}>
-            {widget.data.author || 'Author Name'}
+            {String(widget.data.author || 'Author Name')}
           </div>
           <div style={{ fontSize: '14px', color: '#6b7280' }}>
-            {widget.data.role || 'Role / Company'}
+            {String(widget.data.role || 'Role / Company')}
           </div>
         </div>
       );
@@ -471,10 +471,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               marginBottom: '16px',
             }}
           >
-            {widget.data.heading || 'Ready to get started?'}
+            {String(widget.data.heading || 'Ready to get started?')}
           </h2>
           <p style={{ fontSize: '18px', marginBottom: '24px' }}>
-            {widget.data.text || 'Join thousands of satisfied customers'}
+            {String(widget.data.text || 'Join thousands of satisfied customers')}
           </p>
           <button
             style={{
@@ -488,13 +488,13 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               cursor: 'pointer',
             }}
           >
-            {widget.data.buttonText || 'Get Started'}
+            {String(widget.data.buttonText || 'Get Started')}
           </button>
         </div>
       );
 
     case 'logo-grid':
-      const logos = widget.data.logos || [];
+      const logos = (widget.data.logos as any[]) || [];
       return (
         <div className="logo-grid">
           {logos.map((logo: any, idx: number) => (

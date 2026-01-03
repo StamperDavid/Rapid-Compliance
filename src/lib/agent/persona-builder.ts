@@ -19,9 +19,9 @@ export function buildPersonaFromOnboarding(
 ): AgentPersona {
   // Extract persona data from onboarding
   const agentName = onboardingData.agentName || onboardingData.businessName || 'AI Assistant';
-  const tone = onboardingData.tone || 'professional';
-  const greeting = onboardingData.greeting || buildDefaultGreeting(onboardingData);
-  const closingMessage = onboardingData.closingMessage || buildDefaultClosing(onboardingData);
+  const tone = (onboardingData as any).tone || 'professional';
+  const greeting = (onboardingData as any).greeting || buildDefaultGreeting(onboardingData);
+  const closingMessage = (onboardingData as any).closingMessage || buildDefaultClosing(onboardingData);
   
   // Build objectives from onboarding
   const objectives = buildObjectives(onboardingData);
@@ -44,7 +44,7 @@ export function buildPersonaFromOnboarding(
  */
 function buildDefaultGreeting(onboardingData: OnboardingData): string {
   const businessName = onboardingData.businessName || 'our company';
-  const tone = onboardingData.tone || 'professional';
+  const tone = (onboardingData as any).tone || 'professional';
   
   if (tone === 'friendly') {
     return `Hi! Welcome to ${businessName}! I'm here to help you find exactly what you need. What can I help you with today?`;
@@ -61,7 +61,7 @@ function buildDefaultGreeting(onboardingData: OnboardingData): string {
  * Build default closing message from onboarding data
  */
 function buildDefaultClosing(onboardingData: OnboardingData): string {
-  const tone = onboardingData.tone || 'professional';
+  const tone = (onboardingData as any).tone || 'professional';
   
   if (tone === 'friendly') {
     return `Thanks for chatting! Feel free to reach out anytime if you have more questions. Have a great day!`;
@@ -79,9 +79,10 @@ function buildDefaultClosing(onboardingData: OnboardingData): string {
  */
 function buildObjectives(onboardingData: OnboardingData): string[] {
   const objectives: string[] = [];
+  const data = onboardingData as any;
   
   // Primary objective
-  const primaryObjective = onboardingData.primaryObjective || 'sales';
+  const primaryObjective = data.primaryObjective || 'sales';
   if (primaryObjective === 'sales') {
     objectives.push('Help customers find the right products/services for their needs');
     objectives.push('Qualify leads and identify buying signals');
@@ -97,8 +98,8 @@ function buildObjectives(onboardingData: OnboardingData): string[] {
   }
   
   // Secondary objectives
-  if (onboardingData.secondaryObjectives && Array.isArray(onboardingData.secondaryObjectives)) {
-    onboardingData.secondaryObjectives.forEach((obj: string) => {
+  if (data.secondaryObjectives && Array.isArray(data.secondaryObjectives)) {
+    data.secondaryObjectives.forEach((obj: string) => {
       if (obj === 'lead_generation') {
         objectives.push('Capture lead information and qualify prospects');
       } else if (obj === 'customer_education') {
@@ -112,8 +113,8 @@ function buildObjectives(onboardingData: OnboardingData): string[] {
   }
   
   // Add success metrics as objectives if provided
-  if (onboardingData.successMetrics) {
-    objectives.push(`Track and achieve: ${onboardingData.successMetrics}`);
+  if (data.successMetrics) {
+    objectives.push(`Track and achieve: ${data.successMetrics}`);
   }
   
   // Default objectives if none specified
@@ -131,13 +132,14 @@ function buildObjectives(onboardingData: OnboardingData): string[] {
  */
 function buildEscalationRules(onboardingData: OnboardingData): string[] {
   const rules: string[] = [];
+  const data = onboardingData as any;
   
   // Add custom escalation rules if provided
-  if (onboardingData.escalationRules) {
-    if (typeof onboardingData.escalationRules === 'string') {
-      rules.push(onboardingData.escalationRules);
-    } else if (Array.isArray(onboardingData.escalationRules)) {
-      rules.push(...onboardingData.escalationRules);
+  if (data.escalationRules) {
+    if (typeof data.escalationRules === 'string') {
+      rules.push(data.escalationRules);
+    } else if (Array.isArray(data.escalationRules)) {
+      rules.push(...data.escalationRules);
     }
   }
   
@@ -148,7 +150,7 @@ function buildEscalationRules(onboardingData: OnboardingData): string[] {
   rules.push('Escalate if customer needs custom pricing or special arrangements');
   
   // Add max messages rule if specified
-  const maxMessages = onboardingData.maxMessagesBeforeEscalation;
+  const maxMessages = data.maxMessagesBeforeEscalation;
   if (maxMessages && maxMessages > 0) {
     rules.push(`Escalate if conversation exceeds ${maxMessages} messages without resolution`);
   }
@@ -163,66 +165,67 @@ function buildEscalationRules(onboardingData: OnboardingData): string[] {
 export function buildBusinessContextFromOnboarding(
   onboardingData: OnboardingData
 ): Record<string, any> {
+  const data = onboardingData as any;
   return {
-    businessName: onboardingData.businessName || 'the company',
-    industry: onboardingData.industry || 'general',
-    website: onboardingData.website || '',
-    companySize: onboardingData.companySize || '',
+    businessName: data.businessName || 'the company',
+    industry: data.industry || 'general',
+    website: data.website || '',
+    companySize: data.companySize || '',
     
     // Business understanding
-    problemSolved: onboardingData.problemSolved || '',
-    uniqueValue: onboardingData.uniqueValue || '',
-    whyBuy: onboardingData.whyBuy || '',
-    whyNotBuy: onboardingData.whyNotBuy || '',
+    problemSolved: data.problemSolved || '',
+    uniqueValue: data.uniqueValue || '',
+    whyBuy: data.whyBuy || '',
+    whyNotBuy: data.whyNotBuy || '',
     
     // Products/Services
-    primaryOffering: onboardingData.primaryOffering || '',
-    topProducts: onboardingData.topProducts || '',
-    productComparison: onboardingData.productComparison || '',
-    seasonalOfferings: onboardingData.seasonalOfferings || '',
-    whoShouldNotBuy: onboardingData.whoShouldNotBuy || '',
+    primaryOffering: data.primaryOffering || '',
+    topProducts: data.topProducts || '',
+    productComparison: data.productComparison || '',
+    seasonalOfferings: data.seasonalOfferings || '',
+    whoShouldNotBuy: data.whoShouldNotBuy || '',
     
     // Pricing
-    pricingStrategy: onboardingData.pricingStrategy || '',
-    discountPolicy: onboardingData.discountPolicy || '',
-    volumeDiscounts: onboardingData.volumeDiscounts || '',
-    firstTimeBuyerIncentive: onboardingData.firstTimeBuyerIncentive || '',
-    financingOptions: onboardingData.financingOptions || '',
+    pricingStrategy: data.pricingStrategy || '',
+    discountPolicy: data.discountPolicy || '',
+    volumeDiscounts: data.volumeDiscounts || '',
+    firstTimeBuyerIncentive: data.firstTimeBuyerIncentive || '',
+    financingOptions: data.financingOptions || '',
     
     // Operations
-    geographicCoverage: onboardingData.geographicCoverage || '',
-    deliveryTimeframes: onboardingData.deliveryTimeframes || '',
-    inventoryConstraints: onboardingData.inventoryConstraints || '',
-    capacityLimitations: onboardingData.capacityLimitations || '',
+    geographicCoverage: data.geographicCoverage || '',
+    deliveryTimeframes: data.deliveryTimeframes || '',
+    inventoryConstraints: data.inventoryConstraints || '',
+    capacityLimitations: data.capacityLimitations || '',
     
     // Policies
-    returnPolicy: onboardingData.returnPolicy || '',
-    warrantyTerms: onboardingData.warrantyTerms || '',
-    cancellationPolicy: onboardingData.cancellationPolicy || '',
-    satisfactionGuarantee: onboardingData.satisfactionGuarantee || '',
+    returnPolicy: data.returnPolicy || '',
+    warrantyTerms: data.warrantyTerms || '',
+    cancellationPolicy: data.cancellationPolicy || '',
+    satisfactionGuarantee: data.satisfactionGuarantee || '',
     
     // Sales process
-    typicalSalesFlow: onboardingData.typicalSalesFlow || '',
-    qualificationCriteria: onboardingData.qualificationCriteria || '',
-    discoveryQuestions: onboardingData.discoveryQuestions || '',
-    closingStrategy: onboardingData.closingStrategy || '',
+    typicalSalesFlow: data.typicalSalesFlow || '',
+    qualificationCriteria: data.qualificationCriteria || '',
+    discoveryQuestions: data.discoveryQuestions || '',
+    closingStrategy: data.closingStrategy || '',
     
     // Objection handling
-    commonObjections: onboardingData.commonObjections || '',
-    priceObjections: onboardingData.priceObjections || '',
-    timeObjections: onboardingData.timeObjections || '',
-    competitorObjections: onboardingData.competitorObjections || '',
+    commonObjections: data.commonObjections || '',
+    priceObjections: data.priceObjections || '',
+    timeObjections: data.timeObjections || '',
+    competitorObjections: data.competitorObjections || '',
     
     // Customer service
-    supportScope: onboardingData.supportScope || '',
-    technicalSupport: onboardingData.technicalSupport || '',
-    orderTracking: onboardingData.orderTracking || '',
-    complaintResolution: onboardingData.complaintResolution || '',
+    supportScope: data.supportScope || '',
+    technicalSupport: data.technicalSupport || '',
+    orderTracking: data.orderTracking || '',
+    complaintResolution: data.complaintResolution || '',
     
     // Target customer
-    targetCustomer: onboardingData.targetCustomer || '',
-    customerDemographics: onboardingData.customerDemographics || '',
-    priceRange: onboardingData.priceRange || '',
+    targetCustomer: data.targetCustomer || '',
+    customerDemographics: data.customerDemographics || '',
+    priceRange: data.priceRange || '',
   };
 }
 
@@ -232,12 +235,13 @@ export function buildBusinessContextFromOnboarding(
 export function buildBehaviorConfigFromOnboarding(
   onboardingData: OnboardingData
 ): Record<string, any> {
+  const data = onboardingData as any;
   return {
-    closingAggressiveness: onboardingData.closingAggressiveness || 5,
-    questionFrequency: onboardingData.questionFrequency || 3,
-    responseLength: onboardingData.responseLength || 'balanced',
-    proactiveLevel: onboardingData.proactiveLevel || 5,
-    maxMessagesBeforeEscalation: onboardingData.maxMessagesBeforeEscalation || 20,
+    closingAggressiveness: data.closingAggressiveness || 5,
+    questionFrequency: data.questionFrequency || 3,
+    responseLength: data.responseLength || 'balanced',
+    proactiveLevel: data.proactiveLevel || 5,
+    maxMessagesBeforeEscalation: data.maxMessagesBeforeEscalation || 20,
     idleTimeoutMinutes: 30,
   };
 }

@@ -30,6 +30,11 @@ export async function GET(request: NextRequest) {
     const { user } = authResult;
     const organizationId = user.organizationId;
 
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
+
     const authUrl = await generateAuthUrl(organizationId, workspaceId || undefined, integrationId, provider);
 
     return NextResponse.json({

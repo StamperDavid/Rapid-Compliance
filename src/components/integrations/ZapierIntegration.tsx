@@ -203,7 +203,7 @@ export default function ZapierIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.settings.webhookSecurity.enabled}
+                checked={integration.settings.webhookSecurity?.enabled ?? false}
                 onChange={(e) => onUpdate({ 
                   webhookSecurity: { 
                     ...integration.settings.webhookSecurity, 
@@ -214,14 +214,14 @@ export default function ZapierIntegration({
               />
               <span style={{ fontSize: '0.875rem', color: textColor }}>Enable webhook security</span>
             </label>
-            {integration.settings.webhookSecurity.enabled && (
+            {integration.settings.webhookSecurity?.enabled && (
               <div>
                 <label style={{ fontSize: '0.875rem', color: textColor, display: 'block', marginBottom: '0.5rem' }}>
                   Webhook Secret
                 </label>
                 <input
                   type="password"
-                  value={integration.settings.webhookSecurity.secret || ''}
+                  value={integration.settings.webhookSecurity?.secret || ''}
                   onChange={(e) => onUpdate({ 
                     webhookSecurity: { 
                       ...integration.settings.webhookSecurity, 

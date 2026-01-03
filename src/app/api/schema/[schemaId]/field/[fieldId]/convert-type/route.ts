@@ -90,6 +90,13 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    if (!adminDal) {
+      return NextResponse.json(
+        { error: 'Admin DAL not initialized' },
+        { status: 500 }
+      );
+    }
     
     logger.info('[Type Conversion] Starting conversion', {
       schemaId: params.schemaId,

@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Invalid token format', 401);
     }
     
+    if (!adminAuth) {
+      return createErrorResponse('Admin authentication not initialized', 500);
+    }
+
     // Verify the token
     let decodedToken;
     try {

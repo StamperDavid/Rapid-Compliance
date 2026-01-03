@@ -773,7 +773,11 @@ Would you like me to walk you through a specific feature, or would you prefer to
                   type="text"
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      void handleSendMessage();
+                    }
+                  }}
                   placeholder="Type as a prospect..."
                   style={{
                     flex: 1,
@@ -786,7 +790,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
                   }}
                 />
                 <button
-                  onClick={handleSendMessage}
+                  onClick={() => void handleSendMessage()}
                   disabled={!userInput.trim() || isTyping}
                   style={{
                     padding: '0.75rem 1.5rem',
@@ -853,7 +857,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
             </div>
             
             <button
-              onClick={submitSalesCriteriaScoring}
+              onClick={() => void submitSalesCriteriaScoring()}
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -894,7 +898,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
             >
               {isUploading ? 'Uploading...' : '📤 Upload'}
             </button>
-            <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.txt,.xlsx" onChange={handleUploadMaterial} style={{ display: 'none' }} />
+            <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.txt,.xlsx" onChange={(e) => void handleUploadMaterial(e)} style={{ display: 'none' }} />
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
@@ -941,7 +945,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
               <p style={{ color: '#666', fontSize: '0.875rem' }}>Production-ready snapshots of your trained agent</p>
             </div>
             <button
-              onClick={handleSaveGoldenMaster}
+              onClick={() => void handleSaveGoldenMaster()}
               disabled={overallScore < 80}
               style={{
                 padding: '0.75rem 1.5rem',
@@ -976,7 +980,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
                   </div>
                   {!gm.isActive && (
                     <button
-                      onClick={() => handleDeployGoldenMaster(gm.id, gm.version)}
+                      onClick={() => void handleDeployGoldenMaster(gm.id, gm.version)}
                       style={{
                         padding: '0.5rem 1rem',
                         backgroundColor: primaryColor,
@@ -1104,7 +1108,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
                 Cancel
               </button>
               <button
-                onClick={handleSubmitFeedback}
+                onClick={() => void handleSubmitFeedback()}
                 style={{
                   padding: '0.75rem 1.5rem',
                   backgroundColor: primaryColor,

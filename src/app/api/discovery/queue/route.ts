@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const results = await Promise.allSettled(
-      body.tasks.map(task =>
+      body.tasks.map((task: any) =>
         queueDiscoveryTask(
           task.type,
           task.target,

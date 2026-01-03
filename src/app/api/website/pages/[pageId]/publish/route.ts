@@ -49,8 +49,12 @@ export async function POST(
 
     const pageData = doc.data();
 
+    if (!pageData) {
+      return errorResponse('Page data not found', 404, 'PAGE_DATA_NOT_FOUND');
+    }
+
     // CRITICAL: Verify organizationId matches
-    if (pageData?.organizationId) {
+    if (pageData.organizationId) {
       verifyOrgOwnership(pageData.organizationId, validOrgId, 'page');
     }
 
@@ -170,8 +174,12 @@ export async function DELETE(
 
     const pageData = doc.data();
 
+    if (!pageData) {
+      return errorResponse('Page data not found', 404, 'PAGE_DATA_NOT_FOUND');
+    }
+
     // CRITICAL: Verify organizationId matches
-    if (pageData?.organizationId) {
+    if (pageData.organizationId) {
       verifyOrgOwnership(pageData.organizationId, validOrgId, 'page');
     }
 

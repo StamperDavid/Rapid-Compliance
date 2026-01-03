@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
 
     const { organizationId, amount, currency, metadata } = validation.data;
 
+    if (!currency) {
+      return errors.badRequest('Currency is required');
+    }
+
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {
       return errors.forbidden('Access denied to this organization');

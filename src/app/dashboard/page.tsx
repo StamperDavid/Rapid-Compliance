@@ -188,10 +188,10 @@ function DashboardContent() {
   ];
 
   const mockForecastData = [
-    { date: 'Jul', forecasted: 72000, bestCase: 85000, worstCase: 60000, actual: null },
-    { date: 'Aug', forecasted: 68000, bestCase: 80000, worstCase: 55000, actual: null },
-    { date: 'Sep', forecasted: 75000, bestCase: 90000, worstCase: 62000, actual: null },
-    { date: 'Oct', forecasted: 71000, bestCase: 85000, worstCase: 58000, actual: null },
+    { date: 'Jul', forecasted: 72000, bestCase: 85000, worstCase: 60000, actual: undefined },
+    { date: 'Aug', forecasted: 68000, bestCase: 80000, worstCase: 55000, actual: undefined },
+    { date: 'Sep', forecasted: 75000, bestCase: 90000, worstCase: 62000, actual: undefined },
+    { date: 'Oct', forecasted: 71000, bestCase: 85000, worstCase: 58000, actual: undefined },
   ];
 
   const winLossData = { won: 68, lost: 32 };

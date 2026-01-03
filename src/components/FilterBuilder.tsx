@@ -185,7 +185,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                   {needsValue && (
                     field?.type === 'select' || field?.type === 'singleSelect' ? (
                       <select
-                        value={condition.value}
+                        value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
                         style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                       >
@@ -197,14 +197,14 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                     ) : field?.type === 'date' ? (
                       <input
                         type="date"
-                        value={condition.value}
+                        value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
                         style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                       />
                     ) : field?.type === 'number' || field?.type === 'currency' ? (
                       <input
                         type="number"
-                        value={condition.value}
+                        value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
                         style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         placeholder="Enter value..."
@@ -212,7 +212,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                     ) : (
                       <input
                         type="text"
-                        value={condition.value}
+                        value={condition.value as string}
                         onChange={(e) => updateCondition(group.id, condition.id, { value: e.target.value })}
                         style={{ flex: 1, padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         placeholder="Enter value..."

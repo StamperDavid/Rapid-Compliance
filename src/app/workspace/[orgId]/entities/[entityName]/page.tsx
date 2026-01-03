@@ -7,7 +7,8 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
 import { useRecords } from '@/hooks/useRecords';
 import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import LookupFieldPicker from '@/components/LookupFieldPicker';
 
 interface EntityRecord {
   id: string;
@@ -287,7 +288,7 @@ export default function EntityTablePage() {
           </label>
         );
 
-      case 'singleSelect':
+      case 'singleSelect': {
         const options = getPicklistOptions(field);
         return (
           <select
@@ -301,6 +302,7 @@ export default function EntityTablePage() {
             ))}
           </select>
         );
+      }
 
       case 'longText':
         return (
@@ -369,9 +371,8 @@ export default function EntityTablePage() {
           />
         );
 
-      case 'lookup':
+      case 'lookup': {
         // Lookup field with record picker
-        const LookupFieldPicker = require('@/components/LookupFieldPicker').default;
         return (
           <LookupFieldPicker
             organizationId={orgId}
@@ -386,6 +387,7 @@ export default function EntityTablePage() {
             style={baseInputStyle}
           />
         );
+      }
 
       default:
         return (

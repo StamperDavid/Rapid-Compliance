@@ -20,6 +20,11 @@ export default function AdminDashboard() {
         logger.info('📊 Admin Dashboard: Loading data...', { file: 'page.tsx' });
         const { auth } = await import('@/lib/firebase/config');
         
+        if (!auth) {
+          logger.error('Firebase auth not initialized', { file: 'page.tsx' });
+          return;
+        }
+
         // Check auth state and get token
         const currentUser = auth.currentUser;
         logger.info('📊 Current auth user', { email: currentUser?.email || 'NOT LOGGED IN', file: 'page.tsx' });

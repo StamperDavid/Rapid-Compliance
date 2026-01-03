@@ -3,9 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import type { Timestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/config';
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger/logger';;
+
+interface FirebaseError {
+  code: string;
+  message: string;
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -101,8 +107,8 @@ export default function AdminLoginPage() {
           canManageTemplates: true,
           canManageCompliance: true,
         },
-        createdAt: new Date() as any,
-        updatedAt: new Date() as any,
+        createdAt: new Date() as unknown as Timestamp,
+        updatedAt: new Date() as unknown as Timestamp,
         status: 'active' as const,
         mfaEnabled: false,
       };
@@ -113,8 +119,9 @@ export default function AdminLoginPage() {
       // Redirect to admin dashboard
       router.push('/admin');
       
-    } catch (err: any) {
-      logger.error('Login error:', err, { file: 'page.tsx' });
+    } catch (err) {
+      const error = err as FirebaseError;
+      logger.error('Login error:', error, { file: 'page.tsx' });
       
       // Map Firebase error codes to user-friendly messages
       const errorMessages: Record<string, string> = {
@@ -126,7 +133,7 @@ export default function AdminLoginPage() {
         'auth/network-request-failed': 'Network error. Please check your connection',
       };
       
-      setError(errorMessages[err.code] || err.message || 'Login failed');
+      setError(errorMessages[error.code] ?? error.message ?? 'Login failed');
     } finally {
       setLoading(false);
     }

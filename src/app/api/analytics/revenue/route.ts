@@ -81,7 +81,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       // Fetch with reasonable constraints to prevent timeout
       // Note: For analytics, we need all matching records to calculate totals
       // If org has 10,000+ deals, consider implementing background jobs for analytics
-      const constraints = [
+      const constraints: any[] = [
         // Limit to won/closed deals to reduce data fetched
         // Multiple status checks would require OR queries (not supported in single query)
         // So we fetch all and filter - consider indexing if performance becomes an issue

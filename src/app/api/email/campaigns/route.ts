@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     } else {
       // List all campaigns with pagination
       const limit = parseInt(searchParams.get('limit') || '50');
-      const cursor = searchParams.get('cursor');
+      const cursor = searchParams.get('cursor') || undefined;
       const result = await listCampaigns(organizationId, limit, cursor);
       return NextResponse.json({ 
         success: true, 

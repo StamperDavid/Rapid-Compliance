@@ -124,7 +124,7 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
           }
         );
       } catch (error) {
-        logger.warn(`Failed to update agent knowledge for org ${org.id}`, error);
+        logger.warn(`Failed to update agent knowledge for org ${org.id}`, error as Error);
       }
     }
 

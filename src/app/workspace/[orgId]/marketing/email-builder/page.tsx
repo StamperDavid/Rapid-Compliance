@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { EmailTemplate, EmailBlock } from '@/lib/email/email-builder';
+import { buildEmailHTML } from '@/lib/email/email-builder';
 
 export default function EmailBuilderPage() {
   const params = useParams();
@@ -104,7 +105,6 @@ export default function EmailBuilderPage() {
   };
 
   const renderPreview = () => {
-    const { buildEmailHTML } = require('@/lib/email/email-builder');
     return buildEmailHTML(template as EmailTemplate, {
       first_name: 'John',
       company_name: 'Acme Corp',

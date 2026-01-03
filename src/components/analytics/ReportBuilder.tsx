@@ -208,7 +208,7 @@ export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilde
             <input
               type="text"
               placeholder="Value"
-              value={filter.value}
+              value={filter.value as string}
               onChange={(e) => updateFilter(index, { value: e.target.value })}
               style={{
                 flex: 1,

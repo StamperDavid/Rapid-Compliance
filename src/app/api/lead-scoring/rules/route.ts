@@ -38,6 +38,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (!adminApp) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const token = authHeader.substring(7);
     const decodedToken = await getAuth(adminApp).verifyIdToken(token);
 
@@ -104,6 +111,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!adminApp) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const token = authHeader.substring(7);
     const decodedToken = await getAuth(adminApp).verifyIdToken(token);
     const userId = decodedToken.uid;
@@ -142,12 +156,12 @@ export async function POST(req: NextRequest) {
     }
 
     const rules: ScoringRules = {
+      ...DEFAULT_SCORING_RULES,
+      ...rulesData,
       id: rulesId,
       organizationId,
       name,
       description,
-      ...DEFAULT_SCORING_RULES,
-      ...rulesData,
       createdAt: now,
       updatedAt: now,
       createdBy: userId,
@@ -204,6 +218,20 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    if (!adminApp) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    if (!adminApp) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
       );
     }
 
@@ -282,6 +310,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    if (!adminApp) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
       );
     }
 

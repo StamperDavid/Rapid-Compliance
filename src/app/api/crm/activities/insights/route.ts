@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const organizationId = token.organizationId;
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceId: string = searchParams.get('workspaceId') || 'default';
     const entityType = searchParams.get('entityType') as any;
     const entityId = searchParams.get('entityId');
 
-    if (!entityType || !entityId) {
+    if (!organizationId || !entityType || !entityId) {
       return NextResponse.json(
-        { error: 'entityType and entityId are required' },
+        { error: 'organizationId, entityType and entityId are required' },
         { status: 400 }
       );
     }

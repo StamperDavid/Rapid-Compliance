@@ -39,7 +39,7 @@ export async function logAIChat(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName || 'AI Agent',
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         conversationId: params.conversationId,
         messageCount: params.messageCount,
@@ -96,7 +96,7 @@ export async function logEmailSent(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         emailId: params.emailId,
         fromEmail: params.fromEmail,
@@ -143,7 +143,7 @@ export async function logEmailOpened(params: {
         entityType: params.relatedEntityType,
         entityId: params.relatedEntityId,
       }],
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         emailId: params.emailId,
       },
@@ -191,7 +191,7 @@ export async function logCall(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         callDuration: params.duration,
         callOutcome: params.outcome,
@@ -248,7 +248,7 @@ export async function logMeeting(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         meetingDuration: params.duration,
         meetingAttendees: params.attendees,
@@ -302,7 +302,7 @@ export async function logStatusChange(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         fieldChanged: params.fieldChanged,
         previousValue: params.previousValue,
@@ -347,7 +347,7 @@ export async function logWorkflow(params: {
         entityName: params.relatedEntityName,
       }],
       createdByName: 'System',
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         workflowId: params.workflowId,
         workflowName: params.workflowName,
@@ -393,7 +393,7 @@ export async function logSequenceChange(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
       metadata: {
         sequenceId: params.sequenceId,
         sequenceName: params.sequenceName,
@@ -440,7 +440,7 @@ export async function logNote(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
     };
 
     await createActivity(
@@ -478,7 +478,7 @@ export async function logEnrichment(params: {
         entityName: params.relatedEntityName,
       }],
       createdByName: 'System',
-      occurredAt: new Date(),
+      occurredAt: new Date() as any,
     };
 
     await createActivity(

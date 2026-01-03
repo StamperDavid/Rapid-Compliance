@@ -18,32 +18,32 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
   switch (widget.type) {
     case 'heading':
       const HeadingTag = (widget.data.tag || 'h2') as keyof JSX.IntrinsicElements;
-      return <HeadingTag style={style}>{widget.data.text || 'Heading'}</HeadingTag>;
+      return <HeadingTag style={style}>{String(widget.data.text || 'Heading')}</HeadingTag>;
 
     case 'text':
-      return <p style={style}>{widget.data.content || 'Text content'}</p>;
+      return <p style={style}>{String(widget.data.content || 'Text content')}</p>;
 
     case 'button':
       return (
         <a 
-          href={widget.data.url || '#'} 
+          href={(widget.data.url as string) || '#'} 
           target={widget.data.openInNewTab ? '_blank' : undefined}
           rel={widget.data.openInNewTab ? 'noopener noreferrer' : undefined}
           style={{ ...style, display: 'inline-block', textDecoration: 'none' }}
         >
-          {widget.data.text || 'Button'}
+          {String(widget.data.text || 'Button')}
         </a>
       );
 
     case 'link':
       return (
         <a 
-          href={widget.data.url || '#'}
+          href={(widget.data.url as string) || '#'}
           target={widget.data.openInNewTab ? '_blank' : undefined}
           rel={widget.data.openInNewTab ? 'noopener noreferrer' : undefined}
           style={style}
         >
-          {widget.data.text || 'Link'}
+          {String(widget.data.text || 'Link')}
         </a>
       );
 
@@ -51,18 +51,18 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
       return (
         <div style={style}>
           <img 
-            src={widget.data.src || 'https://via.placeholder.com/800x400'} 
-            alt={widget.data.alt || ''}
+            src={(widget.data.src as string) || 'https://via.placeholder.com/800x400'} 
+            alt={(widget.data.alt as string) || ''}
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
-          {widget.data.caption && (
+          {(widget.data.caption as string) && (
             <p style={{ 
               fontSize: '0.875rem', 
               color: '#6c757d', 
               marginTop: '0.5rem',
               textAlign: 'center',
             }}>
-              {widget.data.caption}
+              {String(widget.data.caption)}
             </p>
           )}
         </div>
@@ -78,7 +78,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
             overflow: 'hidden',
           }}>
             <iframe
-              src={getVideoEmbedUrl(widget.data.url, widget.data.provider)}
+              src={getVideoEmbedUrl(widget.data.url as string, widget.data.provider as string)}
               style={{
                 position: 'absolute',
                 top: 0,
@@ -95,14 +95,14 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
       );
 
     case 'spacer':
-      return <div style={{ height: widget.data.height || '2rem', ...style }} />;
+      return <div style={{ height: (widget.data.height as string) || '2rem', ...style }} />;
 
     case 'divider':
       return (
         <hr style={{
           border: 'none',
-          height: widget.data.thickness || '1px',
-          backgroundColor: widget.data.color || '#dee2e6',
+          height: (widget.data.thickness as string) || '1px',
+          backgroundColor: (widget.data.color as string) || '#dee2e6',
           ...style,
         }} />
       );
@@ -116,16 +116,16 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           backgroundPosition: 'center',
         }}>
           <h1 style={{ fontSize: '3rem', fontWeight: '700', marginBottom: '1rem' }}>
-            {widget.data.heading || 'Welcome'}
+            {String(widget.data.heading || 'Welcome')}
           </h1>
-          {widget.data.subheading && (
+          {(widget.data.subheading as string) && (
             <p style={{ fontSize: '1.25rem', marginBottom: '2rem' }}>
-              {widget.data.subheading}
+              {String(widget.data.subheading)}
             </p>
           )}
-          {widget.data.buttonText && (
+          {(widget.data.buttonText as string) && (
             <a 
-              href={widget.data.buttonUrl || '#'}
+              href={(widget.data.buttonUrl as string) || '#'}
               style={{
                 display: 'inline-block',
                 padding: '1rem 2rem',
@@ -137,7 +137,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
                 fontWeight: '600',
               }}
             >
-              {widget.data.buttonText}
+              {String(widget.data.buttonText)}
             </a>
           )}
         </div>
@@ -151,7 +151,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
           gap: '2rem',
         }}>
-          {(widget.data.features || []).map((feature: any, i: number) => (
+          {((widget.data.features as any[]) || []).map((feature: any, i: number) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{feature.icon}</div>
               <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{feature.title}</h3>
@@ -169,7 +169,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '2rem',
         }}>
-          {(widget.data.plans || []).map((plan: any, i: number) => (
+          {((widget.data.plans as any[]) || []).map((plan: any, i: number) => (
             <div 
               key={i} 
               style={{
@@ -224,13 +224,13 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
             marginBottom: '1.5rem',
             lineHeight: '1.6',
           }}>
-            "{widget.data.quote}"
+            "{String(widget.data.quote)}"
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-            {widget.data.avatar && (
+            {(widget.data.avatar as string) && (
               <img 
-                src={widget.data.avatar} 
-                alt={widget.data.author}
+                src={widget.data.avatar as string} 
+                alt={(widget.data.author as string) || ''}
                 style={{ 
                   width: '60px', 
                   height: '60px', 
@@ -240,8 +240,8 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
               />
             )}
             <div>
-              <div style={{ fontWeight: '600' }}>{widget.data.author}</div>
-              <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>{widget.data.role}</div>
+              <div style={{ fontWeight: '600' }}>{String(widget.data.author)}</div>
+              <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>{String(widget.data.role)}</div>
             </div>
           </div>
         </div>
@@ -250,12 +250,12 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'cta':
       return (
         <div style={style}>
-          <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{widget.data.heading}</h2>
-          {widget.data.subheading && (
-            <p style={{ fontSize: '1.125rem', marginBottom: '1.5rem' }}>{widget.data.subheading}</p>
+          <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{String(widget.data.heading)}</h2>
+          {(widget.data.subheading as string) && (
+            <p style={{ fontSize: '1.125rem', marginBottom: '1.5rem' }}>{String(widget.data.subheading)}</p>
           )}
           <a 
-            href={widget.data.buttonUrl || '#'}
+            href={(widget.data.buttonUrl as string) || '#'}
             style={{
               display: 'inline-block',
               padding: '1rem 2rem',
@@ -267,7 +267,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
               fontWeight: '600',
             }}
           >
-            {widget.data.buttonText}
+            {String(widget.data.buttonText)}
           </a>
         </div>
       );
@@ -280,7 +280,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '2rem',
         }}>
-          {(widget.data.stats || []).map((stat: any, i: number) => (
+          {((widget.data.stats as any[]) || []).map((stat: any, i: number) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', fontWeight: '700', color: '#007bff', marginBottom: '0.5rem' }}>
                 {stat.number}
@@ -296,10 +296,10 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
         <div style={{
           ...style,
           display: 'grid',
-          gridTemplateColumns: `repeat(${widget.data.columns || 3}, 1fr)`,
-          gap: widget.data.gap || '1rem',
+          gridTemplateColumns: `repeat(${(widget.data.columns as number) || 3}, 1fr)`,
+          gap: (widget.data.gap as string) || '1rem',
         }}>
-          {(widget.data.images || []).map((img: any, i: number) => (
+          {((widget.data.images as any[]) || []).map((img: any, i: number) => (
             <img 
               key={i}
               src={img.src} 
@@ -331,7 +331,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
             <textarea rows={4} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Your message" />
           </div>
           <button type="submit" style={buttonStyle}>
-            {widget.data.submitText || 'Send Message'}
+            {String(widget.data.submitText || 'Send Message')}
           </button>
         </form>
       );
@@ -339,15 +339,15 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'newsletter':
       return (
         <div style={style}>
-          <h3 style={{ marginBottom: '1rem' }}>{widget.data.heading}</h3>
+          <h3 style={{ marginBottom: '1rem' }}>{String(widget.data.heading)}</h3>
           <form style={{ display: 'flex', gap: '0.5rem' }} onSubmit={(e) => e.preventDefault()}>
             <input 
               type="email" 
-              placeholder={widget.data.placeholder || 'Enter your email'}
+              placeholder={(widget.data.placeholder as string) || 'Enter your email'}
               style={{ ...inputStyle, flex: 1 }}
             />
             <button type="submit" style={buttonStyle}>
-              {widget.data.buttonText || 'Subscribe'}
+              {String(widget.data.buttonText || 'Subscribe')}
             </button>
           </form>
         </div>
@@ -356,7 +356,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'social-icons':
       return (
         <div style={{ ...style, display: 'flex', gap: '1rem' }}>
-          {(widget.data.icons || []).map((icon: any, i: number) => (
+          {((widget.data.icons as any[]) || []).map((icon: any, i: number) => (
             <a 
               key={i}
               href={icon.url}
@@ -384,7 +384,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'accordion':
       return (
         <div style={style}>
-          {(widget.data.items || []).map((item: any, i: number) => (
+          {((widget.data.items as any[]) || []).map((item: any, i: number) => (
             <details key={i} style={{ 
               marginBottom: '0.5rem',
               border: '1px solid #dee2e6',
@@ -405,9 +405,9 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'icon-box':
       return (
         <div style={style}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{widget.data.icon}</div>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{widget.data.title}</h3>
-          <p style={{ color: '#6c757d' }}>{widget.data.description}</p>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{String(widget.data.icon)}</div>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{String(widget.data.title)}</h3>
+          <p style={{ color: '#6c757d' }}>{String(widget.data.description)}</p>
         </div>
       );
 
@@ -417,7 +417,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'code':
       return (
         <pre style={style}>
-          <code>{widget.data.code || ''}</code>
+          <code>{String(widget.data.code || '')}</code>
         </pre>
       );
 
@@ -427,7 +427,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           <button
             style={{
               padding: '12px 24px',
-              background: widget.data.buttonColor || '#007bff',
+              background: (widget.data.buttonColor as string) || '#007bff',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -436,13 +436,13 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
               fontWeight: '500',
             }}
           >
-            {widget.data.buttonText || 'Open Modal'}
+            {String(widget.data.buttonText || 'Open Modal')}
           </button>
         </div>
       );
 
     case 'tabs':
-      const tabs = widget.data.tabs || [{ title: 'Tab 1', content: 'Content 1' }];
+      const tabs = (widget.data.tabs as any[]) || [{ title: 'Tab 1', content: 'Content 1' }];
       return (
         <div style={style}>
           <div style={{ borderBottom: '2px solid #dee2e6', display: 'flex' }}>
@@ -471,7 +471,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
       );
 
     case 'accordion':
-      const accordionItems = widget.data.items || [{ title: 'Accordion Item', content: 'Content' }];
+      const accordionItems = (widget.data.items as any[]) || [{ title: 'Accordion Item', content: 'Content' }];
       return (
         <div style={style}>
           {accordionItems.map((item: any, index: number) => (

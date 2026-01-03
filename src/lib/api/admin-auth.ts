@@ -58,6 +58,14 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
     
+    if (!adminAuth) {
+      return {
+        success: false,
+        error: 'Server configuration error',
+        status: 401
+      };
+    }
+    
     // Verify the token
     let decodedToken;
     try {
@@ -77,6 +85,14 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     }
     
     const userId = decodedToken.uid;
+    
+    if (!adminDb) {
+      return {
+        success: false,
+        error: 'Server configuration error',
+        status: 401
+      };
+    }
     
     // Get user document to check role (using environment-aware collection path)
     const { COLLECTIONS } = await import('@/lib/firebase/collections');

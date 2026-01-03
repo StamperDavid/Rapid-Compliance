@@ -104,7 +104,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    */
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
     // Handle both nested and flat structures for backwards compatibility
-    const businessContext = goldenMaster.businessContext || {
+    const businessContext: any = goldenMaster.businessContext || {
       businessName: (goldenMaster as any).businessName || 'Your Business',
       industry: (goldenMaster as any).industry || 'General',
       problemSolved: (goldenMaster as any).problemSolved || '',

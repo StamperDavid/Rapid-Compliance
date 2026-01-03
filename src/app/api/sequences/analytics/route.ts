@@ -203,6 +203,10 @@ async function getSequencePerformance(
   dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance | null> {
   try {
+    if (!adminDal) {
+      return null;
+    }
+
     // Try native Hunter-Closer sequencer first
     const nativeSeqRef = adminDal.getNestedDocRef('sequences/{sequenceId}', { sequenceId });
     const nativeSeqDoc = await nativeSeqRef.get();
@@ -247,6 +251,10 @@ async function getAllSequencePerformances(
   organizationId: string,
   dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance[]> {
+  if (!adminDal) {
+    return [];
+  }
+
   try {
     const performances: SequencePerformance[] = [];
 

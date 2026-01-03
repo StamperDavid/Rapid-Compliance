@@ -15,6 +15,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!adminApp) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await getAuth(adminApp).verifyIdToken(token);
 
@@ -56,6 +63,13 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!adminApp) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
     }
 
     const token = authHeader.split('Bearer ')[1];

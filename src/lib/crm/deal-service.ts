@@ -249,7 +249,7 @@ export async function moveDealToStage(
       const { fireDealStageChanged } = await import('./event-triggers');
       await fireDealStageChanged(organizationId, workspaceId, dealId, oldStage, newStage, deal);
     } catch (triggerError) {
-      logger.warn('Failed to fire deal stage changed event', triggerError);
+      logger.warn('Failed to fire deal stage changed event', triggerError as Error);
     }
 
     logger.info('Deal moved to new stage', {

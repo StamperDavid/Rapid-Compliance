@@ -105,6 +105,10 @@ export async function signIn(email: string, password: string): Promise<UserCrede
  * Sign in with Google
  */
 export async function signInWithGoogle(): Promise<UserCredential> {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured.');
+  }
+
   try {
     const provider = new GoogleAuthProvider();
     provider.addScope('email');
@@ -120,6 +124,10 @@ export async function signInWithGoogle(): Promise<UserCredential> {
  * Sign in with Microsoft
  */
 export async function signInWithMicrosoft(): Promise<UserCredential> {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured.');
+  }
+
   try {
     const provider = new OAuthProvider('microsoft.com');
     provider.addScope('email');
@@ -135,6 +143,10 @@ export async function signInWithMicrosoft(): Promise<UserCredential> {
  * Sign out
  */
 export async function signOutUser(): Promise<void> {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured.');
+  }
+
   try {
     await signOut(auth);
   } catch (error: any) {
@@ -147,6 +159,10 @@ export async function signOutUser(): Promise<void> {
  * Send password reset email
  */
 export async function resetPassword(email: string): Promise<void> {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured.');
+  }
+
   try {
     await sendPasswordResetEmail(auth, email);
   } catch (error: any) {
@@ -159,6 +175,10 @@ export async function resetPassword(email: string): Promise<void> {
  * Send email verification
  */
 export async function verifyEmail(): Promise<void> {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured.');
+  }
+
   try {
     const user = auth.currentUser;
     if (!user) {
@@ -219,6 +239,10 @@ export async function updateUserProfile(updates: {
   displayName?: string;
   photoURL?: string;
 }): Promise<void> {
+  if (!auth) {
+    throw new Error('Firebase Auth is not configured.');
+  }
+
   try {
     const user = auth.currentUser;
     if (!user) {

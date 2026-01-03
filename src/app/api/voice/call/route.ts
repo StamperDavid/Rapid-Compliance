@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import twilio from 'twilio';
 
 /**
  * POST /api/voice/call
@@ -36,7 +37,6 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Twilio is not configured. Please add credentials in settings.');
     }
 
-    const twilio = require('twilio');
     const client = twilio(accountSid, authToken);
 
     // Make the call

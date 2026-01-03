@@ -137,13 +137,20 @@ export async function PUT(
 
     const existingData = existingDoc.data();
 
+    if (!existingData) {
+      return NextResponse.json(
+        { error: 'Page data not found' },
+        { status: 404 }
+      );
+    }
+
     // CRITICAL: Verify organizationId matches
-    if (existingData?.organizationId !== organizationId) {
+    if (existingData.organizationId !== organizationId) {
       logger.error('[SECURITY] Attempted cross-org page update', new Error('Cross-org page update attempt'), {
         route: '/api/website/pages/[pageId]',
         method: 'PUT',
         requested: organizationId,
-        actual: existingData?.organizationId,
+        actual: existingData.organizationId,
         pageId: params.pageId,
       });
       return NextResponse.json(

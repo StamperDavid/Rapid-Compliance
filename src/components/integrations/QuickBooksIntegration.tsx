@@ -140,7 +140,7 @@ export default function QuickBooksIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.syncSettings.syncInvoices}
+                checked={integration.syncSettings?.syncInvoices ?? false}
                 onChange={(e) => onUpdate({ syncInvoices: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -149,7 +149,7 @@ export default function QuickBooksIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.syncSettings.syncPayments}
+                checked={integration.syncSettings?.syncPayments ?? false}
                 onChange={(e) => onUpdate({ syncPayments: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -158,7 +158,7 @@ export default function QuickBooksIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.syncSettings.syncCustomers}
+                checked={integration.syncSettings?.syncCustomers ?? false}
                 onChange={(e) => onUpdate({ syncCustomers: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -167,7 +167,7 @@ export default function QuickBooksIntegration({
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={integration.syncSettings.syncItems}
+                checked={integration.syncSettings?.syncItems ?? false}
                 onChange={(e) => onUpdate({ syncItems: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
@@ -178,7 +178,7 @@ export default function QuickBooksIntegration({
                 Sync Direction
               </label>
               <select
-                value={integration.syncSettings.syncDirection}
+                value={integration.syncSettings?.syncDirection ?? 'bidirectional'}
                 onChange={(e) => onUpdate({ syncDirection: e.target.value as any })}
                 style={{
                   width: '100%',

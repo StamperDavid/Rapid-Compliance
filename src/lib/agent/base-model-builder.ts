@@ -78,8 +78,8 @@ export async function buildBaseModel(params: {
     greeting: onboardingData.greetingMessage || 'Hi! How can I help you today?',
     closingMessage: onboardingData.closingMessage || 'Thanks for chatting! Feel free to reach out anytime.',
     personality: onboardingData.personalityTraits || [],
-    objectives: onboardingData.objectives || [],
-    escalationRules: onboardingData.escalationRules || [],
+    objectives: (onboardingData as any).objectives || [],
+    escalationRules: (onboardingData as any).escalationRules || [],
     
     // NEW: Include template-derived fields
     ...(mutatedTemplate && {

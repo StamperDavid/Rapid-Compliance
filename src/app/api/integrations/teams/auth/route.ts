@@ -24,6 +24,11 @@ export async function POST(request: NextRequest) {
     const userId = user.uid;
     const organizationId = user.organizationId;
 
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    }
+
+
     // Check if Microsoft 365 (Teams) is configured
     const microsoft365Keys = await apiKeyService.getServiceKey(organizationId!, 'microsoft365');
     

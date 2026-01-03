@@ -250,6 +250,18 @@ export class CoachingAnalyticsEngine {
     startDate: Date,
     endDate: Date
   ): Promise<CommunicationMetrics> {
+    if (!adminDb) {
+      return {
+        emailsGenerated: 0,
+        emailsSent: 0,
+        emailResponseRate: 0,
+        averageResponseTime: 0,
+        aiEmailUsageRate: 0,
+        personalizationScore: 0,
+        followUpConsistency: 0,
+      };
+    }
+
     try {
       // Query email activities (using organization sub-collection pattern)
       // This data may not exist yet, so we handle gracefully
@@ -325,6 +337,19 @@ export class CoachingAnalyticsEngine {
     startDate: Date,
     endDate: Date
   ): Promise<ActivityMetrics> {
+    if (!adminDb) {
+      return {
+        totalActivities: 0,
+        activitiesPerDay: 0,
+        callsMade: 0,
+        meetingsHeld: 0,
+        tasksCompleted: 0,
+        taskCompletionRate: 0,
+        workflowsTriggered: 0,
+        crmUpdates: 0,
+      };
+    }
+
     try {
       // Query activities (using direct collection reference as ACTIVITIES may not be in enum)
       const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
@@ -558,6 +583,19 @@ export class CoachingAnalyticsEngine {
     startDate: Date,
     endDate: Date
   ): Promise<EfficiencyMetrics> {
+    if (!adminDb || !this.adminDal) {
+      return {
+        timeToFirstContact: 0,
+        timeToProposal: 0,
+        timeToClose: 0,
+        meetingsPerDeal: 0,
+        emailsPerDeal: 0,
+        touchPointsPerDeal: 0,
+        automationUsage: 0,
+        hoursSaved: 0,
+      };
+    }
+
     try {
       // Get environment prefix once for all queries
       const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';

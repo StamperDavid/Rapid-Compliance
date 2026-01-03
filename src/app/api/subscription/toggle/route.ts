@@ -10,6 +10,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { OrganizationSubscription } from '@/types/subscription';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +24,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { orgId, feature, enabled } = body;
+    const { orgId, feature, enabled } = body as {
+      orgId: string;
+      feature: keyof OrganizationSubscription['outboundFeatures'];
+      enabled: boolean;
+    };
 
     if (!orgId) {
       return errors.badRequest('Organization ID required');

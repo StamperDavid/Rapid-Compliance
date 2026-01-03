@@ -351,8 +351,7 @@ export interface CustomField {
   /**
    * Default value if not found
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  defaultValue?: any;
+  defaultValue?: unknown;
 
   /**
    * Validation rule (Zod schema as string)
@@ -368,7 +367,7 @@ export const CustomFieldSchema = z.object({
   description: z.string().min(1),
   extractionHints: z.array(z.string()),
   required: z.boolean(),
-  defaultValue: z.any().optional(),
+  defaultValue: z.unknown().optional(),
   validation: z.string().optional(),
 });
 

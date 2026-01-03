@@ -27,7 +27,14 @@ export default function NewOrganizationPage() {
 
     try {
       const { auth } = await import('@/lib/firebase/config');
-      const token = await auth.currentUser?.getIdToken();
+      
+      if (!auth || !auth.currentUser) {
+        setError('Not authenticated');
+        setLoading(false);
+        return;
+      }
+      
+      const token = await auth.currentUser.getIdToken();
 
       if (!token) {
         setError('Not authenticated');

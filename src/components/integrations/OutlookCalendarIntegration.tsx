@@ -142,7 +142,7 @@ export default function OutlookCalendarIntegration({
               </label>
               <input
                 type="number"
-                value={integration.settings.reminderSettings.defaultReminderMinutes}
+                value={integration.settings.reminderSettings?.defaultReminderMinutes ?? 15}
                 onChange={(e) => onUpdate({ 
                   reminderSettings: { 
                     defaultReminderMinutes: parseInt(e.target.value) || 15 

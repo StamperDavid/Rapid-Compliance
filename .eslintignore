@@ -56,6 +56,9 @@ ui-debug.log
 *.d.ts.map
 tsconfig.tsbuildinfo
 
+# CSS files (handled by PostCSS/Tailwind)
+*.css
+
 # Playwright
 test-results/
 playwright-report/

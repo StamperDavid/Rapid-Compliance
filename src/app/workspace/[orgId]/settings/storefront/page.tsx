@@ -621,11 +621,11 @@ export default function StorefrontSettingsPage() {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                   {[
-                    { label: 'Primary Color', path: ['theme', 'primaryColor'], value: config.theme.primaryColor },
-                    { label: 'Secondary Color', path: ['theme', 'secondaryColor'], value: config.theme.secondaryColor },
-                    { label: 'Accent Color', path: ['theme', 'accentColor'], value: config.theme.accentColor },
-                    { label: 'Background Color', path: ['theme', 'backgroundColor'], value: config.theme.backgroundColor },
-                    { label: 'Text Color', path: ['theme', 'textColor'], value: config.theme.textColor },
+                    { label: 'Primary Color', path: ['theme', 'primaryColor'], value: config.theme?.primaryColor },
+                    { label: 'Secondary Color', path: ['theme', 'secondaryColor'], value: config.theme?.secondaryColor },
+                    { label: 'Accent Color', path: ['theme', 'accentColor'], value: config.theme?.accentColor },
+                    { label: 'Background Color', path: ['theme', 'backgroundColor'], value: config.theme?.backgroundColor },
+                    { label: 'Text Color', path: ['theme', 'textColor'], value: config.theme?.textColor },
                   ].map((color) => (
                     <div key={color.label}>
                       <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
@@ -660,7 +660,7 @@ export default function StorefrontSettingsPage() {
                       Font Family
                     </label>
                     <select
-                      value={config.theme.fontFamily}
+                      value={config.theme?.fontFamily}
                       onChange={(e) => updateConfig(['theme', 'fontFamily'], e.target.value)}
                       style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -677,7 +677,7 @@ export default function StorefrontSettingsPage() {
                       Button Border Radius
                     </label>
                     <select
-                      value={config.theme.buttonRadius}
+                      value={config.theme?.buttonRadius}
                       onChange={(e) => updateConfig(['theme', 'buttonRadius'], e.target.value)}
                       style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >

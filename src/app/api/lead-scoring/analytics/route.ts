@@ -35,6 +35,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    if (!adminApp) {
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const token = authHeader.substring(7);
     await getAuth(adminApp).verifyIdToken(token);
 

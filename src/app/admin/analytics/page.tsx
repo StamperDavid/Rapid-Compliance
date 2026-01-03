@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { Timestamp } from 'firebase/firestore';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { PlatformMetrics } from '@/types/admin';
 

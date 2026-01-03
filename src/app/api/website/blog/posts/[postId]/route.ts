@@ -61,8 +61,8 @@ export async function GET(
 
     return NextResponse.json({
       post: {
-        id: postDoc.id,
         ...postData,
+        id: postDoc.id,
       },
     });
   } catch (error) {

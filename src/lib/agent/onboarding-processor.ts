@@ -48,11 +48,11 @@ export async function processOnboarding(
     // Step 2: Process knowledge base
     const knowledgeOptions: KnowledgeProcessorOptions = {
       organizationId,
-      uploadedFiles: onboardingData.uploadedDocs || [],
-      urls: onboardingData.urls || [],
-      faqPageUrl: onboardingData.faqPageUrl,
-      socialMediaUrls: onboardingData.socialMediaUrls || [],
-      faqs: onboardingData.faqs,
+      uploadedFiles: (onboardingData as any).uploadedDocs || [],
+      urls: (onboardingData as any).urls || [],
+      faqPageUrl: (onboardingData as any).faqPageUrl,
+      socialMediaUrls: (onboardingData as any).socialMediaUrls || [],
+      faqs: (onboardingData as any).faqs,
       websiteUrl: onboardingData.website,
     };
     

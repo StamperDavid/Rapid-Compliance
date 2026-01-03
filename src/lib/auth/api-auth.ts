@@ -26,7 +26,7 @@ async function initializeAdminAuth() {
     
     // Check if already initialized
     const existingApps = admin.apps;
-    if (existingApps.length > 0) {
+    if (existingApps.length > 0 && existingApps[0]) {
       adminAuth = admin.auth(existingApps[0]);
       adminInitialized = true;
       return adminAuth;

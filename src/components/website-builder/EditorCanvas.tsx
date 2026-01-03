@@ -246,11 +246,11 @@ function SectionRenderer({
 
               const widgetType = e.dataTransfer.getData('widgetType');
               if (widgetType) {
-                const definition = widgetDefinitions[widgetType as any];
+                const definition = widgetDefinitions[widgetType as keyof typeof widgetDefinitions];
                 if (definition) {
                   const newWidget: Widget = {
                     id: `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                    type: widgetType as any,
+                    type: widgetType as keyof typeof widgetDefinitions,
                     data: definition.defaultData || {},
                     style: definition.defaultStyle || {},
                   };

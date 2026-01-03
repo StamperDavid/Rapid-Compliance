@@ -90,7 +90,7 @@ async function processEvent(event: SendGridWebhookEvent): Promise<void> {
       break;
 
     case 'bounce':
-    case 'dropped':
+    case 'dropped': {
       const bounceReason = event.reason || event.type || 'Unknown';
       logger.warn('Email bounced', { 
         route: '/api/webhooks/email', 
@@ -100,6 +100,7 @@ async function processEvent(event: SendGridWebhookEvent): Promise<void> {
       });
       await handleEmailBounce(enrollmentId, stepId, organizationId, bounceReason);
       break;
+    }
 
     case 'spamreport':
       logger.warn('Spam report', { route: '/api/webhooks/email', enrollmentId, email: event.email });

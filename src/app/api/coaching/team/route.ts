@@ -36,6 +36,7 @@ import type {
   GenerateTeamCoachingResponse 
 } from '@/lib/coaching/types';
 import { logger } from '@/lib/logger/logger';
+import { errors } from '@/lib/middleware/error-handler';
 
 // ============================================================================
 // RATE LIMITING
@@ -233,6 +234,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    if (!adminDal) {
+      return errors.internal('Admin DAL not initialized');
+    }
+
     // Step 2: Generate team insights
     const analyticsEngine = new CoachingAnalyticsEngine(adminDal);
     const coordinator = getServerSignalCoordinator();
