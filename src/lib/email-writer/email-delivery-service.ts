@@ -23,9 +23,9 @@ import sgMail from '@sendgrid/mail';
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { adminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS, getOrgSubCollection } from '@/lib/firebase/collections';
+import { getOrgSubCollection } from '@/lib/firebase/collections';
 import { retryWithBackoff } from '@/lib/utils/retry';
-import type { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
 // ============================================================================
 // TYPES
@@ -230,7 +230,7 @@ export async function sendEmail(
     
     // Send email with retry logic
     const [response] = await retryWithBackoff(
-      async () => await sgMail.send(msg),
+      async () => sgMail.send(msg),
       {
         maxRetries: 3,
         baseDelayMs: 1000,
@@ -239,7 +239,8 @@ export async function sendEmail(
       }
     );
     
-    const messageId = response.headers['x-message-id'] as string;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const messageId = String(response.headers['x-message-id'] ?? '');
     const sentAt = new Date();
     
     // Save delivery record
@@ -255,7 +256,7 @@ export async function sendEmail(
       text: options.text,
       status: 'sent',
       messageId,
-      sentAt: adminDb.Timestamp.fromDate(sentAt),
+      sentAt: Timestamp.fromDate(sentAt),
       opens: 0,
       clicks: 0,
       uniqueOpens: 0,
@@ -264,8 +265,8 @@ export async function sendEmail(
       emailId: options.emailId,
       campaignId: options.campaignId,
       retryCount: 0,
-      createdAt: adminDb.Timestamp.now(),
-      updatedAt: adminDb.Timestamp.now(),
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
       customArgs,
     });
     
@@ -293,10 +294,9 @@ export async function sendEmail(
       retryCount: 0,
     };
     
-  } catch (error) {
+  } catch (error: unknown) {
     const duration = Date.now() - startTime;
-    logger.error('Failed to send email', {
-      error,
+    logger.error('Failed to send email', error as Error, {
       to: options.to,
       duration,
     });
@@ -315,7 +315,7 @@ export async function sendEmail(
       text: options.text,
       status: 'failed',
       error: error instanceof Error ? error.message : 'Unknown error',
-      failedAt: adminDb.Timestamp.now(),
+      failedAt: Timestamp.now(),
       opens: 0,
       clicks: 0,
       uniqueOpens: 0,
@@ -324,8 +324,8 @@ export async function sendEmail(
       emailId: options.emailId,
       campaignId: options.campaignId,
       retryCount: 3, // Max retries exhausted
-      createdAt: adminDb.Timestamp.now(),
-      updatedAt: adminDb.Timestamp.now(),
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
     });
     
     await emitEmailFailedSignal(options.organizationId, deliveryId, {
@@ -374,25 +374,25 @@ export async function updateDeliveryStatus(
   
   const updates: Partial<EmailDeliveryRecord> = {
     status,
-    updatedAt: adminDb.Timestamp.now(),
+    updatedAt: Timestamp.now(),
   };
   
   if (metadata?.openedAt) {
-    updates.openedAt = adminDb.Timestamp.fromDate(metadata.openedAt);
+    updates.openedAt = Timestamp.fromDate(metadata.openedAt);
     updates.uniqueOpens = 1; // Will be incremented on subsequent opens
   }
   
   if (metadata?.clickedAt) {
-    updates.clickedAt = adminDb.Timestamp.fromDate(metadata.clickedAt);
+    updates.clickedAt = Timestamp.fromDate(metadata.clickedAt);
     updates.uniqueClicks = 1;
   }
   
   if (metadata?.bouncedAt) {
-    updates.bouncedAt = adminDb.Timestamp.fromDate(metadata.bouncedAt);
+    updates.bouncedAt = Timestamp.fromDate(metadata.bouncedAt);
   }
   
   if (metadata?.deliveredAt) {
-    updates.deliveredAt = adminDb.Timestamp.fromDate(metadata.deliveredAt);
+    updates.deliveredAt = Timestamp.fromDate(metadata.deliveredAt);
   }
   
   await deliveriesRef.update(updates);
@@ -410,9 +410,9 @@ export async function incrementOpenCount(
     .doc(deliveryId);
   
   await deliveriesRef.update({
-    opens: adminDb.FieldValue.increment(1),
+    opens: FieldValue.increment(1),
     status: 'opened',
-    updatedAt: adminDb.Timestamp.now(),
+    updatedAt: Timestamp.now(),
   });
   
   // Emit signal
@@ -431,9 +431,9 @@ export async function incrementClickCount(
     .doc(deliveryId);
   
   await deliveriesRef.update({
-    clicks: adminDb.FieldValue.increment(1),
+    clicks: FieldValue.increment(1),
     status: 'clicked',
-    updatedAt: adminDb.Timestamp.now(),
+    updatedAt: Timestamp.now(),
   });
   
   // Emit signal
@@ -502,11 +502,11 @@ export async function getDeliveryStatsForUser(
     .where('userId', '==', userId);
   
   if (startDate) {
-    query = query.where('createdAt', '>=', adminDb.Timestamp.fromDate(startDate));
+    query = query.where('createdAt', '>=', Timestamp.fromDate(startDate));
   }
   
   if (endDate) {
-    query = query.where('createdAt', '<=', adminDb.Timestamp.fromDate(endDate));
+    query = query.where('createdAt', '<=', Timestamp.fromDate(endDate));
   }
   
   const snapshot = await query.get();
@@ -554,15 +554,16 @@ async function emitEmailSentSignal(
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.sent',
-      organizationId,
-      priority: 'medium',
+      orgId: organizationId,
+      confidence: 1.0,
+      priority: 'Medium',
       metadata: {
         deliveryId,
         ...metadata,
       },
     });
-  } catch (error) {
-    logger.error('Failed to emit email.sent signal', { error, deliveryId });
+  } catch (error: unknown) {
+    logger.error('Failed to emit email.sent signal', error as Error, { deliveryId });
   }
 }
 
@@ -577,14 +578,15 @@ async function emitEmailOpenedSignal(
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.opened',
-      organizationId,
-      priority: 'low',
+      orgId: organizationId,
+      confidence: 1.0,
+      priority: 'Low',
       metadata: {
         deliveryId,
       },
     });
-  } catch (error) {
-    logger.error('Failed to emit email.opened signal', { error, deliveryId });
+  } catch (error: unknown) {
+    logger.error('Failed to emit email.opened signal', error as Error, { deliveryId });
   }
 }
 
@@ -599,14 +601,15 @@ async function emitEmailClickedSignal(
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.clicked',
-      organizationId,
-      priority: 'medium',
+      orgId: organizationId,
+      confidence: 1.0,
+      priority: 'Medium',
       metadata: {
         deliveryId,
       },
     });
-  } catch (error) {
-    logger.error('Failed to emit email.clicked signal', { error, deliveryId });
+  } catch (error: unknown) {
+    logger.error('Failed to emit email.clicked signal', error as Error, { deliveryId });
   }
 }
 
@@ -626,14 +629,15 @@ async function emitEmailFailedSignal(
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'email.delivery.failed',
-      organizationId,
-      priority: 'high',
+      orgId: organizationId,
+      confidence: 1.0,
+      priority: 'High',
       metadata: {
         deliveryId,
         ...metadata,
       },
     });
-  } catch (error) {
-    logger.error('Failed to emit email.delivery.failed signal', { error, deliveryId });
+  } catch (error: unknown) {
+    logger.error('Failed to emit email.delivery.failed signal', error as Error, { deliveryId });
   }
 }

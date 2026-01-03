@@ -217,6 +217,7 @@ export class WorkflowCoordinator {
       'email.replied': [],
       'email.generated': [],
       'email.sent': [],
+      'email.delivery.failed': [],
       'email.variant.created': [],
       'sequence.started': [],
       'sequence.completed': [],
