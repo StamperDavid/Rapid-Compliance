@@ -267,7 +267,7 @@ async function getLoadBalancedUser(
     return selectedUser;
 
   } catch (error) {
-    logger.warn('Load balancing failed, using first user', error);
+    logger.warn('Load balancing failed, using first user', error as Error);
     return rule.assignedUsers[0];
   }
 }
