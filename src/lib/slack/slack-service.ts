@@ -597,7 +597,7 @@ export class SlackService {
     memberCount?: number;
   }> {
     try {
-      const response = await this.makeAPICall<{ channel: any }>(
+      const response = await this.makeAPICall<SlackAPIResponse & { channel: any }>(
         'conversations.info',
         { channel: channelId },
         token
@@ -735,7 +735,7 @@ export class SlackService {
     isBot: boolean;
   }> {
     try {
-      const response = await this.makeAPICall<{ user: any }>(
+      const response = await this.makeAPICall<SlackAPIResponse & { user: any }>(
         'users.info',
         { user: userId },
         token
