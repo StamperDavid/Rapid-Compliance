@@ -549,8 +549,8 @@ export interface SlackAttachment {
   
   /** Fields */
   fields?: Array<{
-    title: string;
-    value: string;
+    title?: string;
+    value?: string;
     short?: boolean;
   }>;
   
