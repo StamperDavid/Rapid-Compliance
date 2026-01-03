@@ -16,6 +16,32 @@ export {
   type EmailGenerationResult,
 } from './email-writer-engine';
 
+// Email delivery functions
+export {
+  sendEmail,
+  updateDeliveryStatus,
+  incrementOpenCount,
+  incrementClickCount,
+  getDeliveryRecord,
+  getDeliveryRecordsForDeal,
+  getDeliveryStatsForUser,
+  type EmailDeliveryOptions,
+  type EmailDeliveryResult,
+  type EmailDeliveryStatus,
+  type EmailDeliveryRecord,
+} from './email-delivery-service';
+
+// HTML template functions
+export {
+  generateEmailHTML,
+  textToHTML,
+  wrapEmailBody,
+  stripHTML,
+  generateSignatureHTML,
+  generateCTAButtonHTML,
+  type EmailHTMLOptions,
+} from './email-html-templates';
+
 // Re-export client-safe exports for convenience
 export {
   EMAIL_TEMPLATES,
