@@ -157,6 +157,13 @@ export type SignalType =
   // Workflow Automation Signals
   | 'workflow.executed'         // Workflow automation completed
   
+  // Slack Integration Signals
+  | 'slack.connected'           // Slack workspace connected
+  | 'slack.disconnected'        // Slack workspace disconnected
+  | 'slack.message.sent'        // Message sent to Slack
+  | 'slack.message.failed'      // Message failed to send
+  | 'slack.rate_limited'        // Rate limit hit
+  
   // System Signals
   | 'system.error'              // System error occurred
   | 'system.quota.warning'      // API quota approaching limit
