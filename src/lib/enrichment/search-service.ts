@@ -31,7 +31,7 @@ export async function searchCompany(query: string): Promise<CompanySearchResult[
       snippet: `Estimated website for ${query}`,
       source: 'domain-guess',
     }];
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Search Service] Error', error, { file: 'search-service.ts' });
     
     // Last resort: guess the domain
@@ -70,6 +70,16 @@ async function searchGoogle(query: string): Promise<CompanySearchResult[]> {
   return await searchGoogleDirect(searchQuery);
 }
 
+interface SerperSearchResult {
+  title: string;
+  link: string;
+  snippet?: string;
+}
+
+interface SerperResponse {
+  organic?: SerperSearchResult[];
+}
+
 /**
  * Search using Serper.dev API
  * Cost: $5 per 1000 searches
@@ -93,19 +103,29 @@ async function searchWithSerper(query: string, apiKey: string): Promise<CompanyS
       return [];
     }
     
-    const data = await response.json();
+    const data = await response.json() as SerperResponse;
     
-    return (data.organic || []).slice(0, 5).map((result: any) => ({
+    return (data.organic || []).slice(0, 5).map((result: SerperSearchResult) => ({
       name: extractCompanyName(result.title),
       website: result.link,
       domain: extractDomain(result.link),
       snippet: result.snippet || '',
-      source: 'serper',
+      source: 'serper' as const,
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Serper] Error', error, { file: 'search-service.ts' });
     return [];
   }
+}
+
+interface GoogleCustomSearchResult {
+  title: string;
+  link: string;
+  snippet?: string;
+}
+
+interface GoogleCustomSearchResponse {
+  items?: GoogleCustomSearchResult[];
 }
 
 /**
@@ -127,16 +147,16 @@ async function searchWithGoogleCustomSearch(
       return [];
     }
     
-    const data = await response.json();
+    const data = await response.json() as GoogleCustomSearchResponse;
     
-    return (data.items || []).slice(0, 5).map((result: any) => ({
+    return (data.items || []).slice(0, 5).map((result: GoogleCustomSearchResult) => ({
       name: extractCompanyName(result.title),
       website: result.link,
       domain: extractDomain(result.link),
       snippet: result.snippet || '',
-      source: 'google-custom-search',
+      source: 'google-custom-search' as const,
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Google Custom Search] Error', error, { file: 'search-service.ts' });
     return [];
   }
@@ -189,10 +209,24 @@ async function searchGoogleDirect(query: string): Promise<CompanySearchResult[]>
     }
     
     return results;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Google Direct] Error', error, { file: 'search-service.ts' });
     return [];
   }
+}
+
+interface NewsArticle {
+  title: string;
+  url: string;
+  publishedAt: string;
+  description?: string;
+  source: {
+    name: string;
+  };
+}
+
+interface NewsAPIResponse {
+  articles?: NewsArticle[];
 }
 
 /**
@@ -221,16 +255,16 @@ export async function searchCompanyNews(companyName: string, limit: number = 5):
       return [];
     }
     
-    const data = await response.json();
+    const data = await response.json() as NewsAPIResponse;
     
-    return (data.articles || []).map((article: any) => ({
+    return (data.articles || []).map((article: NewsArticle) => ({
       title: article.title,
       url: article.url,
       publishedDate: article.publishedAt,
       source: article.source.name,
       summary: article.description,
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Search Service] News search error', error, { file: 'search-service.ts' });
     return [];
   }

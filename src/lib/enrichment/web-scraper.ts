@@ -93,9 +93,10 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
       rawHtml: html,
       metadata,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error(`[Web Scraper] Error scraping ${url}`, error, { file: 'web-scraper.ts' });
-    throw new Error(`Failed to scrape website: ${error.message}`);
+    throw new Error(`Failed to scrape website: ${errorMessage}`);
   }
 }
 

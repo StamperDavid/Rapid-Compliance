@@ -214,7 +214,7 @@ async function getCrunchbaseApiKey(organizationId: string): Promise<string | nul
 /**
  * Format funding data for display
  */
-export function formatFundingData(org: CrunchbaseOrganization): {
+export interface FormattedFundingData {
   totalFunding?: string;
   lastRound?: {
     amount: string;
@@ -222,8 +222,10 @@ export function formatFundingData(org: CrunchbaseOrganization): {
     date: string;
     investors?: string[];
   };
-} {
-  const result: any = {};
+}
+
+export function formatFundingData(org: CrunchbaseOrganization): FormattedFundingData {
+  const result: FormattedFundingData = {};
 
   if (org.funding_total?.value_usd) {
     result.totalFunding = formatCurrency(org.funding_total.value_usd);

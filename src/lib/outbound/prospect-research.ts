@@ -315,7 +315,7 @@ async function generateInsights(data: {
   
   // Hiring insight
   if (data.hiring && data.hiring.length > 0) {
-    const departments = [...new Set(data.hiring.map(j => j.department))];
+    const departments = Array.from(new Set(data.hiring.map(j => j.department)));
     insights.push(`Actively hiring in ${departments.join(', ')}`);
   }
   
