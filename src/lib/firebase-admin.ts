@@ -59,6 +59,7 @@ if (!admin.apps.length) {
     });
 
     console.log('[Firebase Admin] Initialized successfully');
+    console.log(`[Firebase Admin] 🎯 PROJECT ID: ${process.env.FIREBASE_ADMIN_PROJECT_ID || 'NOT SET'}`);
   } catch (error) {
     console.error('[Firebase Admin] Initialization failed:', error);
     throw error;

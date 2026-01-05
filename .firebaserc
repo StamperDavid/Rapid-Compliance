@@ -1,25 +1,7 @@
 {
   "projects": {
-    "default": "ai-sales-platform-4f5e4",
-    "dev": "ai-sales-platform-4f5e4",
-    "prod": "ai-sales-platform-dev"
+    "default": "ai-sales-platform-dev",
+    "dev": "ai-sales-platform-dev",
+    "prod": "ai-sales-platform-4f5e4"
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
