@@ -1,4 +1,5 @@
 /**
+import path from 'path'; import fs from 'fs';
  * Centralized Firebase Admin SDK Initialization
  * Single source of truth for all Firebase Admin operations
  */
@@ -31,8 +32,6 @@ if (!admin.apps.length) {
     else {
       try {
         // Only require in development when file exists
-        if (process.env.NODE_ENV === 'development') {
-          const path = require('path');
           const fs = require('fs');
           const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
           
