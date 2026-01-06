@@ -7,7 +7,7 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '../logger/logger';;
 
 // Firebase config from environment variables
 // Loads from .env.local (local overrides) and .env.development/.env.production (defaults)
