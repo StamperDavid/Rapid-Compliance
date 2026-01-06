@@ -1,0 +1,21 @@
+WORKER 2 FILE ASSIGNMENTS
+=========================
+Fix these 6 files ONE AT A TIME using TYPESCRIPT_FIXING_GUIDE.md
+
+1. src/lib/outbound/sequence-engine.ts
+2. src/lib/services/discovery-engine.ts
+3. src/lib/services/smart-sequencer.ts
+4. src/lib/subscription/feature-gate.ts
+5. src/lib/subscription/middleware.ts
+6. src/lib/team/collaboration.ts
+
+WORKFLOW:
+For each file:
+  - Run: NODE_OPTIONS='--max-old-space-size=8192' npx tsc --noEmit 2>&1 | grep filename
+  - Read the errors
+  - Apply fixes from TYPESCRIPT_FIXING_GUIDE.md
+  - Verify: NODE_OPTIONS='--max-old-space-size=8192' npx tsc --noEmit 2>&1 | grep filename (should be empty)
+  - Commit: git add filename && git commit -m "[W2] Fix: description"
+  - Move to next file
+
+START NOW with file #1
