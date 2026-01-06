@@ -72,7 +72,7 @@ describe('Training Manager', () => {
       (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(mockScrape);
 
       // Mock Firestore
-      const mockSet = jest.fn().mockResolvedValue(undefined);
+      const mockSet = (jest.fn() as any).mockResolvedValue(undefined);
       const mockDoc = { 
         id: 'feedback_123',
         set: mockSet
@@ -106,7 +106,7 @@ describe('Training Manager', () => {
 
       const mockDoc = { 
         id: 'feedback_123',
-        set: jest.fn().mockResolvedValue(undefined)
+        set: (jest.fn() as any).mockResolvedValue(undefined)
       } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),
@@ -132,7 +132,7 @@ describe('Training Manager', () => {
 
       const mockDoc = { 
         id: 'feedback_123',
-        set: jest.fn().mockResolvedValue(undefined)
+        set: (jest.fn() as any).mockResolvedValue(undefined)
       } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),
@@ -158,7 +158,7 @@ describe('Training Manager', () => {
 
       const mockDoc = { 
         id: 'feedback_123',
-        set: jest.fn().mockResolvedValue(undefined)
+        set: (jest.fn() as any).mockResolvedValue(undefined)
       } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),
@@ -332,9 +332,9 @@ describe('Training Manager', () => {
         data: () => data,
       }));
 
-      const mockGet = jest.fn().mockResolvedValue({
+      const mockGet = (jest.fn() as any).mockResolvedValue({
         docs: mockDocs,
-      } as unknown as { docs: Array<{ data: () => unknown }> });
+      });
 
       const mockOrderBy = jest.fn().mockReturnValue({
         get: mockGet,
@@ -363,9 +363,9 @@ describe('Training Manager', () => {
     it('should filter inactive patterns when activeOnly is true', async () => {
       const mockDocs: any[] = [];
 
-      const mockGet = jest.fn().mockResolvedValue({
+      const mockGet = (jest.fn() as any).mockResolvedValue({
         docs: mockDocs,
-      } as unknown as { docs: Array<{ data: () => unknown }> });
+      });
 
       const mockOrderBy = jest.fn().mockReturnValue({
         get: mockGet,
@@ -396,9 +396,9 @@ describe('Training Manager', () => {
     it('should not filter inactive patterns when activeOnly is false', async () => {
       const mockDocs: any[] = [];
 
-      const mockGet = jest.fn().mockResolvedValue({
+      const mockGet = (jest.fn() as any).mockResolvedValue({
         docs: mockDocs,
-      } as unknown as { docs: Array<{ data: () => unknown }> });
+      });
 
       const mockOrderBy = jest.fn().mockReturnValue({
         get: mockGet,
@@ -498,7 +498,7 @@ describe('Training Manager', () => {
     it('should handle empty analytics gracefully', async () => {
       const mockCollection: any = {
         where: jest.fn().mockReturnValue({
-          get: jest.fn().mockResolvedValue({
+          get: (jest.fn() as any).mockResolvedValue({
             size: 0,
             docs: [] as Array<{ data: () => unknown }>,
           }),
@@ -572,7 +572,7 @@ describe('Training Manager', () => {
 
       const mockDoc = { 
         id: 'feedback_123',
-        set: jest.fn().mockResolvedValue(undefined)
+        set: (jest.fn() as any).mockResolvedValue(undefined)
       } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),

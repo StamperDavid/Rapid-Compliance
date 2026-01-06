@@ -61,8 +61,8 @@ describe('Email Writer Engine', () => {
     // Mock Signal Coordinator
     (getServerSignalCoordinator as jest.MockedFunction<typeof getServerSignalCoordinator>)
       .mockReturnValue({
-        emitSignal: jest.fn().mockResolvedValue(undefined),
-      } as ReturnType<typeof getServerSignalCoordinator>);
+        emitSignal: (jest.fn() as any).mockResolvedValue(undefined),
+      } as unknown as ReturnType<typeof getServerSignalCoordinator>);
   });
   
   // ============================================================================
@@ -139,7 +139,6 @@ describe('Email Writer Engine', () => {
       confidence: 0.8,
       source: 'battlecard-engine',
       lastUpdated: new Date(),
-      version: 1,
     },
   };
   
@@ -718,11 +717,11 @@ IMPROVEMENTS:
   
   describe('Signal Emission', () => {
     it('should emit email.generated signal', async () => {
-      const mockEmitSignal = jest.fn().mockResolvedValue(undefined);
+      const mockEmitSignal = (jest.fn() as any).mockResolvedValue(undefined);
       (getServerSignalCoordinator as jest.MockedFunction<typeof getServerSignalCoordinator>)
         .mockReturnValue({
           emitSignal: mockEmitSignal,
-        } as ReturnType<typeof getServerSignalCoordinator>);
+        } as unknown as ReturnType<typeof getServerSignalCoordinator>);
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);
       
