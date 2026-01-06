@@ -20,13 +20,14 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "downlevelIteration": true,
+    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": [
