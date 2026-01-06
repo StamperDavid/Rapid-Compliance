@@ -5,6 +5,29 @@
 
 import { logger } from '@/lib/logger/logger';
 
+interface OpenAIEmbeddingResponse {
+  data: Array<{ embedding: number[] }>;
+}
+
+interface CohereRerankResponse {
+  results: Array<{
+    index: number;
+    relevance_score: number;
+  }>;
+}
+
+interface GPTScoreResponse {
+  text: string;
+}
+
+interface ChunkData {
+  id: string;
+  content: string;
+  source?: string;
+  embedding?: number[];
+  metadata?: Record<string, unknown>;
+}
+
 export interface RAGRequest {
   query: string;
   knowledgeBaseId: string;
@@ -27,7 +50,7 @@ export interface KnowledgeChunk {
   source: string;
   relevanceScore: number;
   embedding?: number[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -97,7 +120,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
     
     const data = await response.json();
     return data.data[0].embedding;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[RAG] Embedding error:', error, { file: 'advanced-rag.ts' });
     // Fallback to simple keyword matching if embeddings fail
     return [];
@@ -140,7 +163,7 @@ async function semanticSearch(
     return scoredChunks
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
       .slice(0, topK);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[RAG] Semantic search error:', error, { file: 'advanced-rag.ts' });
     return [];
   }

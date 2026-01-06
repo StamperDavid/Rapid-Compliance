@@ -1,0 +1,38 @@
+{
+  "totalErrors": 147,
+  "totalWarnings": 20580,
+  "ghostFactor": 420,
+  "ghostFactorPercentage": "2.00",
+  "top5Files": [
+    {
+      "file": "settings/email-templates/page.tsx",
+      "fullPath": "C:\\Users\\David\\PycharmProjects\\AI Sales Platform\\src\\app\\workspace\\[orgId]\\settings\\email-templates\\page.tsx",
+      "warnings": 468,
+      "errors": 0
+    },
+    {
+      "file": "lib/analytics/analytics-service.ts",
+      "fullPath": "C:\\Users\\David\\PycharmProjects\\AI Sales Platform\\src\\lib\\analytics\\analytics-service.ts",
+      "warnings": 447,
+      "errors": 0
+    },
+    {
+      "file": "admin/website-editor/page.tsx",
+      "fullPath": "C:\\Users\\David\\PycharmProjects\\AI Sales Platform\\src\\app\\admin\\website-editor\\page.tsx",
+      "warnings": 342,
+      "errors": 0
+    },
+    {
+      "file": "lib/coaching/coaching-analytics-engine.ts",
+      "fullPath": "C:\\Users\\David\\PycharmProjects\\AI Sales Platform\\src\\lib\\coaching\\coaching-analytics-engine.ts",
+      "warnings": 266,
+      "errors": 1
+    },
+    {
+      "file": "lib/conversation/conversation-engine.ts",
+      "fullPath": "C:\\Users\\David\\PycharmProjects\\AI Sales Platform\\src\\lib\\conversation\\conversation-engine.ts",
+      "warnings": 246,
+      "errors": 5
+    }
+  ]
+}
