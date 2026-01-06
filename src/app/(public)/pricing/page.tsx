@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
 import PageRenderer from '@/components/PageRenderer';
@@ -65,7 +65,7 @@ function FallbackContent() {
               </div>
               <p className="text-white/90 text-lg leading-relaxed mb-4">
                 Connect your own API key and pay the AI provider directly at <span className="font-bold text-indigo-300">raw market rates</span>. 
-                We don't touch your AI costs—that's your direct relationship with the provider. No hidden fees. No markup. Just honest pricing.
+                We don&apos;t touch your AI costs—that&apos;s your direct relationship with the provider. No hidden fees. No markup. Just honest pricing.
               </p>
               <div className="bg-purple-500/20 border border-purple-500/40 rounded-lg p-4 mb-4">
                 <p className="text-purple-200 text-sm">
@@ -168,7 +168,7 @@ function FallbackContent() {
               <span className="font-bold text-white">No hidden fees.</span> No per-user charges. No AI token markup. No surprise costs.
             </p>
             <p className="text-gray-400">
-              Just transparent, usage-based pricing: <span className="text-white font-semibold">You pay for CRM records.</span> We don't markup your AI costs. Period.
+              Just transparent, usage-based pricing: <span className="text-white font-semibold">You pay for CRM records.</span> We don&apos;t markup your AI costs. Period.
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ function FallbackContent() {
               Total Cost Breakdown: 100% Transparent
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-6">
-              You pay TWO costs: our platform fee + your own AI usage. We show you exactly what you'll spend vs. competitors who hide AI markups.
+              You pay TWO costs: our platform fee + your own AI usage. We show you exactly what you&apos;ll spend vs. competitors who hide AI markups.
             </p>
             <div className="inline-block bg-indigo-500/20 border border-indigo-500/40 rounded-lg px-6 py-3">
               <p className="text-indigo-300 font-semibold">💡 How Billing Works</p>
@@ -195,7 +195,7 @@ function FallbackContent() {
             <h3 className="text-2xl font-bold text-white mb-4 text-center">
               📊 Real Example: 200 CRM Records, 1,000 AI Conversations/Month
             </h3>
-            <p className="text-gray-300 text-center mb-8">Here's what you'd actually pay each month:</p>
+            <p className="text-gray-300 text-center mb-8">Here&apos;s what you&apos;d actually pay each month:</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Competitor Total Cost */}
@@ -307,7 +307,7 @@ function FallbackContent() {
               Stop Juggling Multiple Subscriptions
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Replace your "Frankenstein stack" of disconnected tools with one unified platform
+              Replace your &quot;Frankenstein stack&quot; of disconnected tools with one unified platform
             </p>
           </div>
 
@@ -391,7 +391,7 @@ function FallbackContent() {
               Save <span style={{ color: theme.primaryColor }}>$277 - $1,947</span> per month
             </h3>
             <p className="text-gray-300 text-lg mb-6">
-              That's <span className="font-bold text-white">$3,324 - $23,364</span> saved per year
+              That&apos;s <span className="font-bold text-white">$3,324 - $23,364</span> saved per year
             </p>
             <p className="text-gray-400 text-sm max-w-2xl mx-auto">
               While spending less, you get more: a unified platform built for small businesses, 
@@ -438,7 +438,7 @@ export default function PricingPage() {
         <div className="pt-44 pb-20 text-center">
           <div className="text-gray-400">Loading...</div>
         </div>
-      ) : page && page.sections && page.sections.length > 0 ? (
+      ) : page?.sections?.length > 0 ? (
         <PageRenderer page={page} />
       ) : (
         <FallbackContent />
