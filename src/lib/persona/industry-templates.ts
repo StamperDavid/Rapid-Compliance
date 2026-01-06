@@ -1,7 +1,7 @@
 export type { IndustryTemplate } from './templates/types';
 import type { IndustryTemplate } from './templates/types';
-import type { ResearchIntelligence } from '@/types/scraper-intelligence';
-import { ResearchIntelligenceSchema } from '@/types/scraper-intelligence';
+import type { ResearchIntelligence } from '../../types/scraper-intelligence';
+import { ResearchIntelligenceSchema } from '../../types/scraper-intelligence';
 
 // Lazy-loaded templates cache to avoid OOM during build
 let templatesCache: Record<string, IndustryTemplate> | null = null;

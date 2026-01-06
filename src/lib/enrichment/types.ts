@@ -3,7 +3,7 @@
  * Structured interfaces for company data extraction
  */
 
-import type { ExtractedSignal } from '@/types/scraper-intelligence';
+import type { ExtractedSignal } from '../../types/scraper-intelligence';
 
 /**
  * Core company enrichment data structure

@@ -1,4 +1,4 @@
-import type { ResearchIntelligence } from '@/types/scraper-intelligence';
+import type { ResearchIntelligence } from '../../../types/scraper-intelligence';
 import type { OnboardingData } from '@/types/agent-memory';
 
 /**

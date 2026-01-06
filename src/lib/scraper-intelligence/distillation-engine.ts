@@ -22,12 +22,12 @@ import type {
   ExtractedSignal,
   TemporaryScrape,
   ScrapingPlatform 
-} from '@/types/scraper-intelligence';
+} from '../../types/scraper-intelligence';
 import { 
   getAllKeywords, 
   getFluffRegexes,
   calculateMaxScore 
-} from '@/types/scraper-intelligence';
+} from '../../types/scraper-intelligence';
 import { logger } from '@/lib/logger/logger';
 import { saveTemporaryScrape } from './discovery-archive-service';
 
