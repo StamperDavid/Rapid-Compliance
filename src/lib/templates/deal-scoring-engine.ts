@@ -316,7 +316,7 @@ export async function calculateDealScore(
         score: finalScore
       });
     } catch (signalError) {
-      logger.warn('Failed to emit deal.scored signal', signalError);
+      logger.warn('Failed to emit deal.scored signal', { error: signalError as unknown });
     }
     
     const duration = Date.now() - startTime;
