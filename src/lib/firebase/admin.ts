@@ -3,7 +3,7 @@
  * Server-side only - for API routes and server actions
  */
 
-import admin from 'firebase-admin'
+import * as admin from 'firebase-admin'
 import { logger } from '../logger/logger';;
 
 // Initialize Firebase Admin SDK (singleton)

@@ -3,7 +3,7 @@
  * Single source of truth for all Firebase Admin operations
  */
 
-import admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
@@ -110,7 +110,7 @@ export async function verifyOrgAccess(
 ): Promise<boolean> {
   try {
     // Use environment-aware collection path via helper
-    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+    const { getOrgSubCollection } = await import('./firebase/collections');
     const membersPath = getOrgSubCollection(organizationId, 'members');
     const userOrgRef = db.collection(membersPath).doc(userId);
 

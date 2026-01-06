@@ -20,7 +20,7 @@
 
 import { db } from '../firebase-admin';
 import { logger } from '../logger/logger';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import type { TemporaryScrape, ExtractedSignal } from '../../types/scraper-intelligence';
 
 // ============================================================================
