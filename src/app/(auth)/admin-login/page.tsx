@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import type { Timestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/config';
-import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { logger } from '@/lib/logger/logger';;
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface FirebaseError {
   code: string;
@@ -68,17 +68,17 @@ export default function AdminLoginPage() {
       });
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Not authorized as admin');
+        const data = await response.json() as { error?: string };
+        throw new Error(data.error ?? 'Not authorized as admin');
       }
       
-      const userData = await response.json();
+      const userData = await response.json() as { name?: string; role: string };
       
       // Create admin user session
       const adminUserData = {
         id: user.uid,
-        email: user.email || email,
-        displayName: userData.name || user.displayName || 'Admin User',
+        email: user.email ?? email,
+        displayName: userData.name ?? user.displayName ?? 'Admin User',
         role: userData.role as 'super_admin' | 'admin',
         permissions: {
           canViewOrganizations: true,
