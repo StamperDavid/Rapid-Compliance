@@ -174,7 +174,7 @@ async function incrementalSync(
     let pageToken: string | undefined;
     
     do {
-      const response = await calendar.events.list({
+      const response: { data: { items?: any[]; nextSyncToken?: string; nextPageToken?: string } } = await calendar.events.list({
         calendarId,
         syncToken,
         pageToken,
