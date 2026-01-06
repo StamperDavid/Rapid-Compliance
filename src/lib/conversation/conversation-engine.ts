@@ -226,7 +226,7 @@ export async function analyzeTranscript(
       analyzedAt: new Date(),
       analysisVersion: '1.0.0',
       aiModel: config.aiModel,
-      tokensUsed: response.usage?.totalTokens || 0,
+      tokensUsed: response.usage?.totalTokens ?? 0,
       processingTime: Date.now() - startTime,
     };
     
@@ -458,11 +458,11 @@ function parseAIAnalysis(aiResponse: string): any {
     return {
       sentiment: parsed.sentiment,
       topics: parsed.topics,
-      objections: parsed.objections || [],
-      competitors: parsed.competitors || [],
-      keyMoments: parsed.keyMoments || [],
+      objections: parsed.objections ?? [],
+      competitors: parsed.competitors ?? [],
+      keyMoments: parsed.keyMoments ?? [],
       summary: parsed.summary,
-      highlights: parsed.highlights || [],
+      highlights: parsed.highlights ?? [],
       confidence: parsed.confidence || 75,
     };
     
