@@ -1,5 +1,5 @@
-const fs = require('fs');
-const glob = require('glob');
+import fs from 'fs';
+import glob from 'glob';
 
 // Find all API route files
 const apiFiles = glob.sync('src/app/api/**/*.ts', { nodir: true });
