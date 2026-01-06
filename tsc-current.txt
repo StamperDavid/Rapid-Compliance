@@ -1,0 +1,143 @@
+src/lib/documents/proposal-generator.ts(115,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/lib/ecommerce/shipping-service.ts(83,26): error TS7006: Parameter 'method' implicitly has an 'any' type.
+src/lib/email-writer/email-delivery-service.ts(350,25): error TS18047: 'adminDb' is possibly 'null'.
+src/lib/email-writer/email-delivery-service.ts(371,25): error TS18047: 'adminDb' is possibly 'null'.
+src/lib/email-writer/email-delivery-service.ts(408,25): error TS18047: 'adminDb' is possibly 'null'.
+src/lib/email-writer/email-delivery-service.ts(429,25): error TS18047: 'adminDb' is possibly 'null'.
+src/lib/email-writer/email-delivery-service.ts(450,25): error TS18047: 'adminDb' is possibly 'null'.
+src/lib/email-writer/email-delivery-service.ts(470,25): error TS18047: 'adminDb' is possibly 'null'.
+src/lib/email-writer/email-delivery-service.ts(500,15): error TS18047: 'adminDb' is possibly 'null'.
+src/lib/email-writer/email-writer-engine.ts(202,7): error TS2322: Type 'SalesIndustryTemplate | null' is not assignable to type 'SalesIndustryTemplate | undefined'.
+  Type 'null' is not assignable to type 'SalesIndustryTemplate | undefined'.
+src/lib/filters/filter-engine.ts(101,60): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+src/lib/filters/filter-engine.ts(104,46): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+src/lib/filters/filter-engine.ts(107,46): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+src/lib/filters/filter-engine.ts(110,47): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+src/lib/filters/filter-engine.ts(113,47): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+src/lib/integrations/accounting/quickbooks.ts(38,41): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/accounting/quickbooks.ts(50,42): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/accounting/quickbooks.ts(59,41): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/accounting/quickbooks.ts(63,40): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/accounting/xero.ts(38,41): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/accounting/xero.ts(50,41): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/accounting/xero.ts(58,40): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/accounting/xero.ts(62,40): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/integrations/calendar-sync-service.ts(177,13): error TS7022: 'response' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+src/lib/integrations/calendar-sync-service.ts(236,5): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(237,5): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(239,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(240,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(241,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(244,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(245,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(246,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(248,5): error TS2322: Type '{ email: string; displayName: string | null | undefined; responseStatus: any; }[] | undefined' is not assignable to type '{ email: string; displayName?: string | undefined; responseStatus: "needsAction" | "declined" | "tentative" | "accepted"; }[] | undefined'.
+  Type '{ email: string; displayName: string | null | undefined; responseStatus: any; }[]' is not assignable to type '{ email: string; displayName?: string | undefined; responseStatus: "needsAction" | "declined" | "tentative" | "accepted"; }[]'.
+    Type '{ email: string; displayName: string | null | undefined; responseStatus: any; }' is not assignable to type '{ email: string; displayName?: string | undefined; responseStatus: "needsAction" | "declined" | "tentative" | "accepted"; }'.
+      Types of property 'displayName' are incompatible.
+        Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+          Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(257,5): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/calendar-sync-service.ts(260,5): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/crm/salesforce.ts(16,11): error TS2339: Property 'instanceUrl' does not exist on type 'Record<string, unknown> | undefined'.
+src/lib/integrations/crm/salesforce.ts(16,24): error TS2339: Property 'accessToken' does not exist on type 'Record<string, unknown> | undefined'.
+src/lib/integrations/ecommerce/shopify.ts(16,11): error TS2339: Property 'shopDomain' does not exist on type 'Record<string, unknown> | undefined'.
+src/lib/integrations/ecommerce/shopify.ts(16,23): error TS2339: Property 'accessToken' does not exist on type 'Record<string, unknown> | undefined'.
+src/lib/integrations/email-sync.ts(239,9): error TS2739: Type 'Date' is missing the following properties from type 'Timestamp': seconds, nanoseconds, toDate, toMillis, isEqual
+src/lib/integrations/google-calendar-service.ts(110,5): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/google-calendar-service.ts(111,5): error TS2322: Type 'number | null | undefined' is not assignable to type 'number | undefined'.
+  Type 'null' is not assignable to type 'number | undefined'.
+src/lib/integrations/google-calendar-service.ts(201,5): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/meetings/scheduler-engine.ts(124,77): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/lib/meetings/scheduler-engine.ts(240,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/lib/meetings/scheduler-engine.ts(280,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/lib/middleware/with-rate-limit.ts(25,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/lib/monitoring/sentry-middleware.ts(135,11): error TS2783: 'url' is specified more than once, so this usage will be overwritten.
+src/lib/notifications/notification-service.ts(517,27): error TS7053: Element implicitly has an 'any' type because expression of type 'NotificationChannel' can't be used to index type '{ slack?: { enabled: boolean; channelId?: string | undefined; threadMessages?: boolean | undefined; quietHours?: { enabled: boolean; start: string; end: string; timezone: string; } | undefined; } | undefined; email?: { ...; } | undefined; webhook?: { ...; } | undefined; inApp?: { ...; } | undefined; }'.
+  Property 'sms' does not exist on type '{ slack?: { enabled: boolean; channelId?: string | undefined; threadMessages?: boolean | undefined; quietHours?: { enabled: boolean; start: string; end: string; timezone: string; } | undefined; } | undefined; email?: { ...; } | undefined; webhook?: { ...; } | undefined; inApp?: { ...; } | undefined; }'.
+src/lib/outbound/meeting-scheduler.ts(471,39): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(firestore: Firestore, path: string, ...pathSegments: string[]): DocumentReference<DocumentData, DocumentData>', gave the following error.
+    Argument of type 'Firestore | null' is not assignable to parameter of type 'Firestore'.
+      Type 'null' is not assignable to type 'Firestore'.
+  Overload 2 of 3, '(reference: CollectionReference<unknown, DocumentData>, path?: string | undefined, ...pathSegments: string[]): DocumentReference<unknown, DocumentData>', gave the following error.
+    Argument of type 'Firestore | null' is not assignable to parameter of type 'CollectionReference<unknown, DocumentData>'.
+      Type 'null' is not assignable to type 'CollectionReference<unknown, DocumentData>'.
+  Overload 3 of 3, '(reference: DocumentReference<unknown, DocumentData>, path: string, ...pathSegments: string[]): DocumentReference<DocumentData, DocumentData>', gave the following error.
+    Argument of type 'Firestore | null' is not assignable to parameter of type 'DocumentReference<unknown, DocumentData>'.
+      Type 'null' is not assignable to type 'DocumentReference<unknown, DocumentData>'.
+src/lib/outbound/meeting-scheduler.ts(626,42): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(firestore: Firestore, path: string, ...pathSegments: string[]): DocumentReference<DocumentData, DocumentData>', gave the following error.
+    Argument of type 'Firestore | null' is not assignable to parameter of type 'Firestore'.
+      Type 'null' is not assignable to type 'Firestore'.
+  Overload 2 of 3, '(reference: CollectionReference<unknown, DocumentData>, path?: string | undefined, ...pathSegments: string[]): DocumentReference<unknown, DocumentData>', gave the following error.
+    Argument of type 'Firestore | null' is not assignable to parameter of type 'CollectionReference<unknown, DocumentData>'.
+      Type 'null' is not assignable to type 'CollectionReference<unknown, DocumentData>'.
+  Overload 3 of 3, '(reference: DocumentReference<unknown, DocumentData>, path: string, ...pathSegments: string[]): DocumentReference<DocumentData, DocumentData>', gave the following error.
+    Argument of type 'Firestore | null' is not assignable to parameter of type 'DocumentReference<unknown, DocumentData>'.
+      Type 'null' is not assignable to type 'DocumentReference<unknown, DocumentData>'.
+src/lib/outbound/sequence-engine.ts(378,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/outbound/sequence-engine.ts(411,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/outbound/sequence-engine.ts(747,17): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(o: {}): string[]', gave the following error.
+    Argument of type 'Partial<SequenceAnalytics | undefined>' is not assignable to parameter of type '{}'.
+      Type 'undefined' is not assignable to type '{}'.
+  Overload 2 of 2, '(o: object): string[]', gave the following error.
+    Argument of type 'Partial<SequenceAnalytics | undefined>' is not assignable to parameter of type 'object'.
+      Type 'undefined' is not assignable to type 'object'.
+src/lib/outbound/sequence-engine.ts(748,21): error TS18048: 'updates' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(755,5): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(755,39): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(756,10): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(756,46): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(759,5): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(759,35): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(760,10): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(760,43): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(763,5): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(763,36): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(764,10): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(764,44): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(767,5): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(767,36): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(768,10): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(768,44): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(771,5): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(771,41): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(772,10): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(772,46): error TS18048: 'sequence.analytics' is possibly 'undefined'.
+src/lib/outbound/sequence-engine.ts(775,5): error TS18048: 'sequence.analytics' is possibly 'undefined'.
