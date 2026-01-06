@@ -768,13 +768,13 @@ export class SequenceEngine {
       sequence.analytics.replyRate = sequence.analytics.totalDelivered > 0
         ? (sequence.analytics.totalReplied / sequence.analytics.totalDelivered) * 100
         : 0;
+
+      sequence.analytics.conversionRate = sequence.analytics.totalEnrolled > 0
+        ? (sequence.analytics.meetingsBooked / sequence.analytics.totalEnrolled) * 100
+        : 0;
+
+      sequence.analytics.lastRun = new Date().toISOString();
     }
-
-    sequence.analytics.conversionRate = sequence.analytics.totalEnrolled > 0
-      ? (sequence.analytics.meetingsBooked / sequence.analytics.totalEnrolled) * 100
-      : 0;
-
-    sequence.analytics.lastRun = new Date().toISOString();
 
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequences`,

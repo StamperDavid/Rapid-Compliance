@@ -187,6 +187,10 @@ export class FeatureGate {
       const subscription = await this.getSubscription(orgId);
       
       // Update feature-specific usage
+      if (!subscription.outboundFeatures) {
+        return;
+      }
+      
       switch (feature) {
         case 'aiEmailWriter':
           subscription.outboundFeatures.aiEmailWriter.used += amount;
@@ -229,6 +233,11 @@ export class FeatureGate {
   static async resetMonthlyLimits(orgId: string): Promise<void> {
     try {
       const subscription = await this.getSubscription(orgId);
+      
+      if (!subscription.outboundFeatures) {
+        return;
+      }
+      
       const now = new Date();
       const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       
