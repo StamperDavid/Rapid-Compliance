@@ -6,20 +6,21 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import ReactFlow, {
+import type {
   Node,
   Edge,
+  Connection} from 'reactflow';
+import ReactFlow, {
   Controls,
   Background,
   useNodesState,
   useEdgesState,
   addEdge,
-  Connection,
   ReactFlowProvider,
   MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Workflow, WorkflowAction } from '@/types/workflow';
+import type { Workflow, WorkflowAction } from '@/types/workflow';
 
 interface VisualWorkflowBuilderProps {
   workflow?: Partial<Workflow>;
@@ -419,8 +420,8 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
             <Controls />
             <MiniMap 
               nodeColor={(node) => {
-                if (node.type === 'input') return '#10b981';
-                if (node.type === 'output') return '#ef4444';
+                if (node.type === 'input') {return '#10b981';}
+                if (node.type === 'output') {return '#ef4444';}
                 return '#6366f1';
               }}
               style={{ backgroundColor: '#1a1a1a', border: '1px solid #333' }}

@@ -464,7 +464,7 @@ export class WorkflowEngine {
       
       // Retry if configured
       if (action.retry && action.retry.maxAttempts > 1) {
-        return await this.executeActionWithRetry(action, context, workflow);
+        return this.executeActionWithRetry(action, context, workflow);
       }
       
       return {

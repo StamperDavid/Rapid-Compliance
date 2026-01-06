@@ -6,7 +6,8 @@
  * Discover and profile a competitor from their domain
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { discoverCompetitor } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 

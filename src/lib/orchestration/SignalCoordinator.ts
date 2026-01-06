@@ -26,8 +26,11 @@
  * - Firestore security rules enforce orgId isolation
  */
 
-import {
+import type {
   Firestore,
+  Unsubscribe,
+  QueryConstraint} from 'firebase/firestore';
+import {
   collection,
   addDoc,
   query,
@@ -36,23 +39,22 @@ import {
   Timestamp,
   updateDoc,
   doc,
-  Unsubscribe,
   orderBy,
-  limit as firestoreLimit,
-  QueryConstraint,
+  limit as firestoreLimit
 } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import {
+import type {
   SalesSignal,
   SignalObserver,
   SignalSubscription,
-  SignalType,
   SignalPriority,
   CircuitBreakerState,
   ThrottlerState,
-  SignalEmissionResult,
+  SignalEmissionResult} from './types';
+import {
+  SignalType
 } from './types';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import type { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 
 /**
  * Configuration for SignalCoordinator
@@ -510,7 +512,7 @@ export class SignalCoordinator {
   private isCircuitBreakerOpen(orgId: string): boolean {
     const breaker = this.circuitBreakers.get(orgId);
     
-    if (!breaker || !breaker.isOpen) {
+    if (!breaker?.isOpen) {
       return false;
     }
     

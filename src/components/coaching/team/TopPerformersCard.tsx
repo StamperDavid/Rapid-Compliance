@@ -66,9 +66,9 @@ export function TopPerformersCard({ topPerformers, loading = false }: TopPerform
 
   // Get score color
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-700 bg-green-50';
-    if (score >= 80) return 'text-blue-700 bg-blue-50';
-    if (score >= 70) return 'text-indigo-700 bg-indigo-50';
+    if (score >= 90) {return 'text-green-700 bg-green-50';}
+    if (score >= 80) {return 'text-blue-700 bg-blue-50';}
+    if (score >= 70) {return 'text-indigo-700 bg-indigo-50';}
     return 'text-gray-700 bg-gray-50';
   };
 

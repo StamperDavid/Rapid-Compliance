@@ -9,7 +9,8 @@
  * 4. If all fail: Use Gemini as last resort (always available, no API key needed in dev)
  */
 
-import { sendUnifiedChatMessage, UnifiedChatMessage, UnifiedChatResponse } from './unified-ai-service'
+import type { UnifiedChatMessage, UnifiedChatResponse } from './unified-ai-service';
+import { sendUnifiedChatMessage } from './unified-ai-service'
 import { logger } from '@/lib/logger/logger';;
 
 export interface FallbackRequest {

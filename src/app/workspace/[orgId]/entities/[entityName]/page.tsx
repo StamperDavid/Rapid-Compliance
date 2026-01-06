@@ -55,7 +55,7 @@ export default function EntityTablePage() {
     (async () => {
       try {
         const res = await fetch(`/api/schemas?organizationId=${orgId}&workspaceId=${workspaceId}`);
-        if (!res.ok) throw new Error(`Failed to load schemas (${res.status})`);
+        if (!res.ok) {throw new Error(`Failed to load schemas (${res.status})`);}
         const data = await res.json();
         if (isMounted) {
           setSchemaList(data.schemas || []);
@@ -80,7 +80,7 @@ export default function EntityTablePage() {
         s.name?.toLowerCase() === schemaKey ||
         s.pluralName?.toLowerCase() === schemaKey
     );
-    if (fromApi) return fromApi as any;
+    if (fromApi) {return fromApi;}
     return STANDARD_SCHEMAS[schemaKey as keyof typeof STANDARD_SCHEMAS] || null;
   }, [entityName, schemaList]);
 
@@ -134,7 +134,7 @@ export default function EntityTablePage() {
 
   // Get picklist options for a field
   const getPicklistOptions = (field: SchemaField): string[] => {
-    if (field.options) return field.options;
+    if (field.options) {return field.options;}
     
     // Map field keys to picklist values
     const picklistMap: Record<string, keyof typeof PICKLIST_VALUES> = {
@@ -168,7 +168,7 @@ export default function EntityTablePage() {
 
   // Filtered records based on search
   const filteredRecords = useMemo(() => {
-    if (!searchTerm.trim()) return records;
+    if (!searchTerm.trim()) {return records;}
     const term = searchTerm.toLowerCase();
     return records.filter(record => 
       fields.some(field => {
@@ -208,7 +208,7 @@ export default function EntityTablePage() {
   };
 
   const handleUpdate = async () => {
-    if (!editingId) return;
+    if (!editingId) {return;}
     try {
       const { id, createdAt, updatedAt, ...updateData } = formData;
       await updateRecord(editingId, updateData);
@@ -239,7 +239,7 @@ export default function EntityTablePage() {
 
   // Format value for display
   const formatValue = (value: any, field: SchemaField): string => {
-    if (value === null || value === undefined || value === '') return '—';
+    if (value === null || value === undefined || value === '') {return '—';}
     
     switch (field.type) {
       case 'currency':

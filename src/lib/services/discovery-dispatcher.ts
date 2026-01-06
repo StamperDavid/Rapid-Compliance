@@ -450,15 +450,15 @@ async function updateTaskStates(
  * Determine if an error is retryable
  */
 function isRetryableError(error: unknown): boolean {
-  if (!(error instanceof Error)) return true;
+  if (!(error instanceof Error)) {return true;}
   
   const message = error.message.toLowerCase();
   
   // Non-retryable errors
-  if (message.includes('invalid domain')) return false;
-  if (message.includes('invalid email')) return false;
-  if (message.includes('blocked')) return false;
-  if (message.includes('forbidden')) return false;
+  if (message.includes('invalid domain')) {return false;}
+  if (message.includes('invalid email')) {return false;}
+  if (message.includes('blocked')) {return false;}
+  if (message.includes('forbidden')) {return false;}
   
   // Retryable errors (network, rate limits, etc.)
   return true;

@@ -5,7 +5,8 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
 export interface Lead {
@@ -386,12 +387,12 @@ function calculateEnrichedScore(lead: Lead, enrichmentData: any): number {
   let score = lead.score || 50;
 
   // Boost score based on enrichment data quality
-  if (enrichmentData?.linkedInUrl) score += 10;
+  if (enrichmentData?.linkedInUrl) {score += 10;}
   if (enrichmentData?.title?.toLowerCase().includes('director') ||
-      enrichmentData?.title?.toLowerCase().includes('manager')) score += 5;
-  if (enrichmentData?.companySize && enrichmentData.companySize > 50) score += 5;
-  if (enrichmentData?.industry) score += 5;
-  if (enrichmentData?.revenue && enrichmentData.revenue > 1000000) score += 10;
+      enrichmentData?.title?.toLowerCase().includes('manager')) {score += 5;}
+  if (enrichmentData?.companySize && enrichmentData.companySize > 50) {score += 5;}
+  if (enrichmentData?.industry) {score += 5;}
+  if (enrichmentData?.revenue && enrichmentData.revenue > 1000000) {score += 10;}
 
   return Math.min(score, 100); // Cap at 100
 }

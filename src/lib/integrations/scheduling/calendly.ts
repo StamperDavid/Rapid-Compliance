@@ -29,7 +29,7 @@ export async function executeCalendlyFunction(
         throw new Error('eventType must be a string');
       }
       
-      return await checkAvailability(
+      return checkAvailability(
         {
           date: parameters.date,
           eventType: parameters.eventType,
@@ -52,7 +52,7 @@ export async function executeCalendlyFunction(
         throw new Error('notes must be a string');
       }
       
-      return await bookAppointment(
+      return bookAppointment(
         {
           datetime: parameters.datetime,
           name: parameters.name,

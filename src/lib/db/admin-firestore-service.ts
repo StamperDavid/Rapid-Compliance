@@ -50,7 +50,7 @@ export class AdminFirestoreService {
       for (const constraint of constraints) {
         const constraintData = constraint as any;
         
-        if (!constraintData || !constraintData.type) {
+        if (!constraintData?.type) {
           continue;
         }
         
@@ -124,7 +124,7 @@ export class AdminFirestoreService {
         const constraintData = constraint as any;
         
         // Skip invalid constraints
-        if (!constraintData || !constraintData.type) {
+        if (!constraintData?.type) {
           continue;
         }
         

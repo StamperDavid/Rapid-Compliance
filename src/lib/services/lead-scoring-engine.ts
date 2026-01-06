@@ -627,14 +627,14 @@ function scoreSeniority(person: DiscoveredPerson, rules: ScoringRules): ScoringR
 function detectDepartment(title: string): Department | null {
   const lower = title.toLowerCase();
 
-  if (/(sales|business development|account|revenue)/i.test(lower)) return 'Sales';
-  if (/(marketing|growth|demand gen|brand)/i.test(lower)) return 'Marketing';
-  if (/(engineer|developer|tech|software|devops)/i.test(lower)) return 'Engineering';
-  if (/(product|pm)/i.test(lower)) return 'Product';
-  if (/(operations|ops|supply chain)/i.test(lower)) return 'Operations';
-  if (/(finance|accounting|controller)/i.test(lower)) return 'Finance';
-  if (/(hr|people|talent|recruit)/i.test(lower)) return 'HR';
-  if (/(customer success|support|cs)/i.test(lower)) return 'Customer Success';
+  if (/(sales|business development|account|revenue)/i.test(lower)) {return 'Sales';}
+  if (/(marketing|growth|demand gen|brand)/i.test(lower)) {return 'Marketing';}
+  if (/(engineer|developer|tech|software|devops)/i.test(lower)) {return 'Engineering';}
+  if (/(product|pm)/i.test(lower)) {return 'Product';}
+  if (/(operations|ops|supply chain)/i.test(lower)) {return 'Operations';}
+  if (/(finance|accounting|controller)/i.test(lower)) {return 'Finance';}
+  if (/(hr|people|talent|recruit)/i.test(lower)) {return 'HR';}
+  if (/(customer success|support|cs)/i.test(lower)) {return 'Customer Success';}
 
   return 'Other';
 }
@@ -886,11 +886,11 @@ async function calculateEngagement(
       const data = doc.data();
       const conditions = data.metadata?.conditions || {};
 
-      if (conditions.email_opened) hasEmailOpened = true;
-      if (conditions.email_clicked) hasEmailClicked = true;
-      if (conditions.email_replied) hasEmailReplied = true;
-      if (conditions.linkedin_connected) hasLinkedInConnected = true;
-      if (conditions.phone_answered) hasPhoneAnswered = true;
+      if (conditions.email_opened) {hasEmailOpened = true;}
+      if (conditions.email_clicked) {hasEmailClicked = true;}
+      if (conditions.email_replied) {hasEmailReplied = true;}
+      if (conditions.linkedin_connected) {hasLinkedInConnected = true;}
+      if (conditions.phone_answered) {hasPhoneAnswered = true;}
     });
 
     // Score email engagement
@@ -971,10 +971,10 @@ async function calculateEngagement(
  * Calculate grade from score
  */
 function calculateGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
-  if (score >= GRADE_THRESHOLDS.A) return 'A';
-  if (score >= GRADE_THRESHOLDS.B) return 'B';
-  if (score >= GRADE_THRESHOLDS.C) return 'C';
-  if (score >= GRADE_THRESHOLDS.D) return 'D';
+  if (score >= GRADE_THRESHOLDS.A) {return 'A';}
+  if (score >= GRADE_THRESHOLDS.B) {return 'B';}
+  if (score >= GRADE_THRESHOLDS.C) {return 'C';}
+  if (score >= GRADE_THRESHOLDS.D) {return 'D';}
   return 'F';
 }
 
@@ -982,8 +982,8 @@ function calculateGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
  * Calculate priority from score
  */
 function calculatePriority(score: number): 'hot' | 'warm' | 'cold' {
-  if (score >= PRIORITY_THRESHOLDS_MAP.hot) return 'hot';
-  if (score >= PRIORITY_THRESHOLDS_MAP.warm) return 'warm';
+  if (score >= PRIORITY_THRESHOLDS_MAP.hot) {return 'hot';}
+  if (score >= PRIORITY_THRESHOLDS_MAP.warm) {return 'warm';}
   return 'cold';
 }
 

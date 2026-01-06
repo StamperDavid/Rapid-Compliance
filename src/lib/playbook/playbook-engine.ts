@@ -290,7 +290,7 @@ async function analyzePatternCandidatesWithAI(
   analyses: ConversationAnalysisWithConversation[],
   config: PlaybookEngineConfig
 ): Promise<Pattern[]> {
-  if (candidates.length === 0) return [];
+  if (candidates.length === 0) {return [];}
   
   const prompt = buildPatternExtractionPrompt(candidates, analyses);
   
@@ -341,7 +341,7 @@ async function extractTalkTracks(
   
   // Extract successful talk tracks from transcripts
   for (const analysis of highPerformers) {
-    if (!analysis.conversation.transcript) continue;
+    if (!analysis.conversation.transcript) {continue;}
     
     // Extract key phrases and successful messaging
     const keyPhrases = extractKeyPhrasesFromTranscript(
@@ -396,7 +396,7 @@ async function analyzeTalkTrackCandidatesWithAI(
   analyses: ConversationAnalysisWithConversation[],
   config: PlaybookEngineConfig
 ): Promise<TalkTrack[]> {
-  if (candidates.length === 0) return [];
+  if (candidates.length === 0) {return [];}
   
   const prompt = buildTalkTrackExtractionPrompt(candidates, analyses);
   
@@ -492,7 +492,7 @@ async function analyzeObjectionResponsesWithAI(
   analyses: ConversationAnalysisWithConversation[],
   config: PlaybookEngineConfig
 ): Promise<ObjectionResponse[]> {
-  if (candidates.length === 0) return [];
+  if (candidates.length === 0) {return [];}
   
   const prompt = buildObjectionResponseExtractionPrompt(candidates, analyses);
   
@@ -543,7 +543,7 @@ async function extractBestPractices(
   
   for (const analysis of topPerformers) {
     for (const insight of analysis.analysis.coachingInsights) {
-      if (!insight.whatWentWell) continue;
+      if (!insight.whatWentWell) {continue;}
       
       const practiceKey = `${insight.category}_${insight.skillArea}`;
       
@@ -593,7 +593,7 @@ async function analyzeBestPracticesWithAI(
   allAnalyses: ConversationAnalysisWithConversation[],
   config: PlaybookEngineConfig
 ): Promise<PlaybookBestPractice[]> {
-  if (candidates.length === 0) return [];
+  if (candidates.length === 0) {return [];}
   
   const prompt = buildBestPracticeExtractionPrompt(candidates, topPerformers, allAnalyses);
   
@@ -821,10 +821,10 @@ function getRepName(repId: string, analyses: ConversationAnalysisWithConversatio
  */
 function calculateSentimentChange(analysis: ConversationAnalysis, timestamp: number): number {
   const timeline = analysis.sentiment.timeline;
-  if (timeline.length === 0) return 0;
+  if (timeline.length === 0) {return 0;}
   
   const beforeIndex = timeline.findIndex(t => t.timestamp >= timestamp);
-  if (beforeIndex <= 0) return 0;
+  if (beforeIndex <= 0) {return 0;}
   
   const afterIndex = Math.min(beforeIndex + 5, timeline.length - 1);
   const before = timeline[beforeIndex - 1].sentiment;

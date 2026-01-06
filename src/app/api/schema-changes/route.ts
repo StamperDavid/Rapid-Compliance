@@ -3,11 +3,13 @@
  * Endpoints for managing schema change events and impact analysis
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import type {
+  SchemaChangeEvent} from '@/lib/schema/schema-change-tracker';
 import {
-  SchemaChangeEventPublisher,
-  SchemaChangeEvent,
+  SchemaChangeEventPublisher
 } from '@/lib/schema/schema-change-tracker';
 import {
   processSchemaChangeEvent,

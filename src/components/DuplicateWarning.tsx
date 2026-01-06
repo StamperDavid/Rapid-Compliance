@@ -26,13 +26,13 @@ export default function DuplicateWarning({
   const [merging, setMerging] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
-  if (duplicates.length === 0) return null;
+  if (duplicates.length === 0) {return null;}
 
   const highConfidenceMatches = duplicates.filter(d => d.confidence === 'high');
   const mediumConfidenceMatches = duplicates.filter(d => d.confidence === 'medium');
 
   const handleMerge = async (duplicateId: string) => {
-    if (!onMerge || !newRecordId) return;
+    if (!onMerge || !newRecordId) {return;}
     
     setMerging(true);
     try {

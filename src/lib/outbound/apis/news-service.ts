@@ -113,7 +113,7 @@ async function getNewsFromGoogleNews(
     const matches = xml.matchAll(itemRegex);
     
     for (const match of matches) {
-      if (articles.length >= maxResults) break;
+      if (articles.length >= maxResults) {break;}
       
       const itemXml = match[1];
       
@@ -204,11 +204,11 @@ export function analyzeNews(articles: NewsArticle[]): {
     
     // Count sentiment words
     positiveWords.forEach(word => {
-      if (titleLower.includes(word)) positiveCount++;
+      if (titleLower.includes(word)) {positiveCount++;}
     });
     
     negativeWords.forEach(word => {
-      if (titleLower.includes(word)) negativeCount++;
+      if (titleLower.includes(word)) {negativeCount++;}
     });
     
     // Extract themes (simple keyword extraction)

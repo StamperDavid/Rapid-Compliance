@@ -44,13 +44,13 @@ export async function processKnowledgeBase(
     const processedDocs = await Promise.all(
       uploadedFiles.map(file => processFile(file, organizationId))
     );
-    knowledgeBase.documents = processedDocs.filter(doc => doc !== null) as KnowledgeDocument[];
+    knowledgeBase.documents = processedDocs.filter(doc => doc !== null);
   }
   
   // Process URLs
   const allUrls = [...urls];
-  if (faqPageUrl) allUrls.push(faqPageUrl);
-  if (websiteUrl) allUrls.push(websiteUrl);
+  if (faqPageUrl) {allUrls.push(faqPageUrl);}
+  if (websiteUrl) {allUrls.push(websiteUrl);}
   
   if (allUrls.length > 0 || socialMediaUrls.length > 0) {
     // Use existing knowledge analyzer for URL processing
@@ -69,7 +69,7 @@ export async function processKnowledgeBase(
         question: faq.question,
         answer: faq.answer,
         category: faq.category,
-        keywords: extractKeywords(faq.question + ' ' + faq.answer),
+        keywords: extractKeywords(`${faq.question  } ${  faq.answer}`),
       }));
     }
     
@@ -197,10 +197,10 @@ async function processFile(
  */
 function getFileType(filename: string): 'pdf' | 'excel' | 'word' | 'image' | 'text' {
   const ext = filename.split('.').pop()?.toLowerCase();
-  if (ext === 'pdf') return 'pdf';
-  if (['xlsx', 'xls', 'csv'].includes(ext || '')) return 'excel';
-  if (['doc', 'docx'].includes(ext || '')) return 'word';
-  if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return 'image';
+  if (ext === 'pdf') {return 'pdf';}
+  if (['xlsx', 'xls', 'csv'].includes(ext || '')) {return 'excel';}
+  if (['doc', 'docx'].includes(ext || '')) {return 'word';}
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) {return 'image';}
   return 'text';
 }
 
@@ -235,7 +235,7 @@ function parseManualFAQs(faqsText: string): FAQ[] {
           id: `faq_manual_${Date.now()}_${faqs.length}`,
           question: currentQ,
           answer: currentA,
-          keywords: extractKeywords(currentQ + ' ' + currentA),
+          keywords: extractKeywords(`${currentQ  } ${  currentA}`),
         });
       }
       currentQ = line.replace(/^(Q:|Question:)\s*/i, '').trim();
@@ -253,7 +253,7 @@ function parseManualFAQs(faqsText: string): FAQ[] {
       id: `faq_manual_${Date.now()}_${faqs.length}`,
       question: currentQ,
       answer: currentA,
-      keywords: extractKeywords(currentQ + ' ' + currentA),
+      keywords: extractKeywords(`${currentQ  } ${  currentA}`),
     });
   }
   

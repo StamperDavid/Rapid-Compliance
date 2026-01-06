@@ -16,7 +16,7 @@ let deferredPrompt: BeforeInstallPromptEvent | null = null;
  * Listen for beforeinstallprompt event
  */
 export function setupInstallPrompt() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -55,7 +55,7 @@ export async function showInstallPrompt(): Promise<boolean> {
  * Check if app is installed
  */
 export function isAppInstalled(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') {return false;}
   
   // Check if running in standalone mode (installed PWA)
   if (window.matchMedia('(display-mode: standalone)').matches) {

@@ -75,7 +75,7 @@ export default function SchemaBuilderPage() {
   });
 
   const loadSchemas = useCallback(async () => {
-    if (!orgId || !workspaceId) return;
+    if (!orgId || !workspaceId) {return;}
     setLoading(true);
     setError(null);
     try {
@@ -103,7 +103,7 @@ export default function SchemaBuilderPage() {
   }, [loadSchemas]);
 
   const handleCreateSchema = async () => {
-    if (!newSchema.name || saving) return;
+    if (!newSchema.name || saving) {return;}
 
     setSaving(true);
     setError(null);
@@ -172,7 +172,7 @@ export default function SchemaBuilderPage() {
   };
 
   const deleteSchema = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this schema?')) return;
+    if (!confirm('Are you sure you want to delete this schema?')) {return;}
     setSaving(true);
     setError(null);
     try {
@@ -192,7 +192,7 @@ export default function SchemaBuilderPage() {
   };
 
   const saveEditedSchema = async () => {
-    if (!editingSchema) return;
+    if (!editingSchema) {return;}
     setSaving(true);
     setError(null);
     try {

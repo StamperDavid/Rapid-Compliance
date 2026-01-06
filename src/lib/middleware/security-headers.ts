@@ -3,7 +3,7 @@
  * Industry Best Practice: OWASP recommended security headers
  */
 
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 
 /**
  * Add security headers to response

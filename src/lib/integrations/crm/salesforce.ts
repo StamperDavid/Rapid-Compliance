@@ -43,7 +43,7 @@ export async function executeSalesforceFunction(
         throw new Error('notes must be a string');
       }
       
-      return await createLead(
+      return createLead(
         {
           firstName: parameters.firstName,
           lastName: parameters.lastName,

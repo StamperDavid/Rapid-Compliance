@@ -44,7 +44,7 @@ export function generateEmailHTML(options: EmailHTMLOptions): string {
   <meta name="format-detection" content="telephone=no,address=no,email=no,date=no">
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
-  <title>${options.subject || 'Email from ' + companyName}</title>
+  <title>${options.subject || `Email from ${  companyName}`}</title>
   
   <!--[if mso]>
   <noscript>

@@ -523,10 +523,10 @@ export class NotificationService {
    * Check if currently in quiet hours for a channel
    */
   private isQuietHours(channel: NotificationChannel, preferences: NotificationPreferences): boolean {
-    if (channel !== 'slack') return false;
+    if (channel !== 'slack') {return false;}
 
     const quietHours = preferences.channels.slack?.quietHours;
-    if (!quietHours?.enabled) return false;
+    if (!quietHours?.enabled) {return false;}
 
     const now = new Date();
     const timezone = quietHours.timezone || 'UTC';
@@ -540,7 +540,7 @@ export class NotificationService {
    * Check if notification should be batched
    */
   private shouldBatch(priority: NotificationPriority, preferences: NotificationPreferences): boolean {
-    if (!preferences.batching.enabled) return false;
+    if (!preferences.batching.enabled) {return false;}
     
     // Don't batch high-priority notifications
     if (preferences.batching.bypassPriorities.includes(priority)) {

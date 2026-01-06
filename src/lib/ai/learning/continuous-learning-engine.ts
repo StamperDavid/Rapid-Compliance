@@ -32,7 +32,7 @@ export async function processConversationFeedback(params: {
   // Get learning config
   const config = await getLearningConfig(organizationId);
   
-  if (!config || !config.autoCollectTrainingData) {
+  if (!config?.autoCollectTrainingData) {
     return { collected: false, shouldTriggerTraining: false };
   }
   
@@ -101,13 +101,13 @@ async function shouldTriggerFineTuning(
     
     switch (config.trainingFrequency) {
       case 'weekly':
-        if (daysSinceLastTraining < 7) return false;
+        if (daysSinceLastTraining < 7) {return false;}
         break;
       case 'monthly':
-        if (daysSinceLastTraining < 30) return false;
+        if (daysSinceLastTraining < 30) {return false;}
         break;
       case 'quarterly':
-        if (daysSinceLastTraining < 90) return false;
+        if (daysSinceLastTraining < 90) {return false;}
         break;
     }
   }
@@ -135,7 +135,7 @@ async function triggerFineTuning(
   const examples = await FirestoreService.getAll(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
     [where('status', '==', 'approved')] as any
-  ) as TrainingExample[];
+  );
   
   if (examples.length === 0) {
     throw new Error('No approved examples found');
@@ -154,13 +154,13 @@ async function triggerFineTuning(
   if (preferredModel.startsWith('gpt-')) {
     job = await createOpenAIFineTuningJob({
       organizationId,
-      baseModel: preferredModel as any,
+      baseModel: preferredModel,
       examples,
     });
   } else if (preferredModel.startsWith('gemini-')) {
     job = await createVertexAIFineTuningJob({
       organizationId,
-      baseModel: preferredModel as any,
+      baseModel: preferredModel,
       examples,
     });
   } else {
@@ -212,7 +212,7 @@ async function getLastFineTuningJob(organizationId: string): Promise<any> {
     []
   );
   
-  if (jobs.length === 0) return null;
+  if (jobs.length === 0) {return null;}
   
   // Sort by created date descending
   jobs.sort((a: any, b: any) => 
@@ -269,7 +269,7 @@ export async function evaluateAndDeployModel(
 }> {
   const config = await getLearningConfig(organizationId);
   
-  if (!config || !config.autoDeployFineTunedModels) {
+  if (!config?.autoDeployFineTunedModels) {
     return { deployed: false, reason: 'Auto-deployment disabled' };
   }
   
@@ -278,7 +278,7 @@ export async function evaluateAndDeployModel(
   
   // Check if there's already an active test
   const existingTest = await getActiveABTest(organizationId);
-  if (existingTest && existingTest.status === 'running') {
+  if (existingTest?.status === 'running') {
     return {
       deployed: false,
       reason: `A/B test already running (${existingTest.id}). Wait for completion.`,

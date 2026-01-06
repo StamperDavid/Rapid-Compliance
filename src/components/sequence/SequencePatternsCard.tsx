@@ -9,7 +9,7 @@
 'use client';
 
 import React from 'react';
-import { SequenceAnalysis, SequencePattern } from '@/lib/sequence';
+import type { SequenceAnalysis, SequencePattern } from '@/lib/sequence';
 import { Lightbulb, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface SequencePatternsCardProps {

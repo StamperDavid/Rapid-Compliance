@@ -305,7 +305,7 @@ export const i18n = new I18n();
  * Detect browser locale
  */
 export function detectLocale(): Locale {
-  if (typeof window === 'undefined') return 'en';
+  if (typeof window === 'undefined') {return 'en';}
   
   const browserLocale = navigator.language.split('-')[0];
   

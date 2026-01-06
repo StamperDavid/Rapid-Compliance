@@ -25,7 +25,7 @@
  * @module routing/routing-engine
  */
 
-import {
+import type {
   Lead,
   SalesRep,
   RoutingRule,
@@ -38,11 +38,12 @@ import {
   AssignmentRecommendation,
   AssignmentMethod,
   RoutingCondition,
+  Territory,
+  CompanySize} from './types';
+import {
   ConditionOperator,
   RepWorkload,
-  Territory,
-  TerritoryType,
-  CompanySize,
+  TerritoryType
 } from './types';
 import { PerformanceTier } from '../coaching/types';
 
@@ -214,8 +215,8 @@ export class LeadRoutingEngine {
     score += sourceScores[lead.source] || 0;
     
     // Priority scoring
-    if (lead.priority === 'hot') score += 25;
-    else if (lead.priority === 'warm') score += 15;
+    if (lead.priority === 'hot') {score += 25;}
+    else if (lead.priority === 'warm') {score += 15;}
     
     return Math.min(100, score);
   }
@@ -239,10 +240,10 @@ export class LeadRoutingEngine {
     
     // Estimated value scoring
     if (lead.estimatedValue) {
-      if (lead.estimatedValue >= 100000) score += 20;
-      else if (lead.estimatedValue >= 50000) score += 15;
-      else if (lead.estimatedValue >= 25000) score += 10;
-      else score += 5;
+      if (lead.estimatedValue >= 100000) {score += 20;}
+      else if (lead.estimatedValue >= 50000) {score += 15;}
+      else if (lead.estimatedValue >= 25000) {score += 10;}
+      else {score += 5;}
     }
     
     return Math.min(100, score);
@@ -254,10 +255,10 @@ export class LeadRoutingEngine {
   filterEligibleReps(reps: SalesRep[], lead: Lead): SalesRep[] {
     return reps.filter(rep => {
       // Must be available
-      if (!rep.isAvailable) return false;
+      if (!rep.isAvailable) {return false;}
       
       // Must not be at capacity
-      if (rep.currentWorkload.isAtCapacity) return false;
+      if (rep.currentWorkload.isAtCapacity) {return false;}
       
       // Check daily limit
       if (rep.currentWorkload.leadsAssignedToday >= rep.capacity.maxNewLeadsPerDay) {
@@ -277,7 +278,7 @@ export class LeadRoutingEngine {
       // Check custom capacity rules
       if (rep.capacity.customRules) {
         const hasExceededRule = rep.capacity.customRules.some(rule => rule.isExceeded);
-        if (hasExceededRule) return false;
+        if (hasExceededRule) {return false;}
       }
       
       return true;
@@ -329,7 +330,7 @@ export class LeadRoutingEngine {
    * Evaluate if rule conditions match the lead
    */
   private evaluateRuleConditions(lead: Lead, conditions: RoutingCondition[]): boolean {
-    if (conditions.length === 0) return true;
+    if (conditions.length === 0) {return true;}
     
     let result = true;
     let currentConnector: 'AND' | 'OR' = 'AND';
@@ -422,15 +423,15 @@ export class LeadRoutingEngine {
       const geo = territory.geographic;
       
       if (geo.countries && lead.country) {
-        if (!geo.countries.includes(lead.country)) return false;
+        if (!geo.countries.includes(lead.country)) {return false;}
       }
       
       if (geo.states && lead.state) {
-        if (!geo.states.includes(lead.state)) return false;
+        if (!geo.states.includes(lead.state)) {return false;}
       }
       
       if (geo.cities && lead.city) {
-        if (!geo.cities.includes(lead.city)) return false;
+        if (!geo.cities.includes(lead.city)) {return false;}
       }
     }
     
@@ -439,11 +440,11 @@ export class LeadRoutingEngine {
       const vert = territory.vertical;
       
       if (vert.industries && lead.industry) {
-        if (!vert.industries.includes(lead.industry)) return false;
+        if (!vert.industries.includes(lead.industry)) {return false;}
       }
       
       if (vert.companySizes && lead.companySize) {
-        if (!vert.companySizes.includes(lead.companySize)) return false;
+        if (!vert.companySizes.includes(lead.companySize)) {return false;}
       }
     }
     
@@ -459,12 +460,12 @@ export class LeadRoutingEngine {
       
       // Check industry match
       if (spec.industries && lead.industry) {
-        if (spec.industries.includes(lead.industry)) return true;
+        if (spec.industries.includes(lead.industry)) {return true;}
       }
       
       // Check company size match
       if (spec.companySizes && lead.companySize) {
-        if (spec.companySizes.includes(lead.companySize)) return true;
+        if (spec.companySizes.includes(lead.companySize)) {return true;}
       }
       
       return false;
@@ -476,7 +477,7 @@ export class LeadRoutingEngine {
    */
   private filterByPerformance(reps: SalesRep[], lead: Lead): SalesRep[] {
     // Only filter if lead is hot/premium
-    if (lead.priority !== 'hot') return reps;
+    if (lead.priority !== 'hot') {return reps;}
     
     // Keep only top performers and high performers
     return reps.filter(rep => 
@@ -607,14 +608,14 @@ export class LeadRoutingEngine {
    * Calculate territory match score
    */
   private calculateTerritoryScore(rep: SalesRep, lead: Lead): number {
-    if (rep.territories.length === 0) return 50; // Neutral if no territories
+    if (rep.territories.length === 0) {return 50;} // Neutral if no territories
     
     // Find matching territories
     const matches = rep.territories.filter(t => 
       this.matchesTerritory(lead, t)
     );
     
-    if (matches.length === 0) return 0;
+    if (matches.length === 0) {return 0;}
     
     // Return score based on highest priority territory match
     const highestPriority = Math.max(...matches.map(t => t.priority));
@@ -625,7 +626,7 @@ export class LeadRoutingEngine {
    * Calculate availability score
    */
   private calculateAvailabilityScore(rep: SalesRep): number {
-    if (!rep.isAvailable) return 0;
+    if (!rep.isAvailable) {return 0;}
     
     let score = 100;
     

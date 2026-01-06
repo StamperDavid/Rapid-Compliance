@@ -272,7 +272,7 @@ export async function getABTestVariant(
       testId
     );
 
-    if (!test || test.status !== 'running') {
+    if (test?.status !== 'running') {
       return 'A'; // Default to A if test not running
     }
 
@@ -347,8 +347,8 @@ export async function calculateABTestResults(
     const bValue = (variantBResults as any)[metric.replace('_rate', 'Rate')];
 
     let winner: 'A' | 'B' | 'tie' = 'tie';
-    if (aValue > bValue * 1.1) winner = 'A'; // 10% better
-    else if (bValue > aValue * 1.1) winner = 'B';
+    if (aValue > bValue * 1.1) {winner = 'A';} // 10% better
+    else if (bValue > aValue * 1.1) {winner = 'B';}
 
     // Calculate statistical confidence (simplified)
     const sampleSize = variantAResults.sent + variantBResults.sent;

@@ -101,7 +101,7 @@ const SelectContent = React.forwardRef<
     }
   }, [open, setOpen])
 
-  if (!open) return null
+  if (!open) {return null}
 
   return (
     <div

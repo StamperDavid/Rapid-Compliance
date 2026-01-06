@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
-import { BlogPost, PageSection } from '@/types/website';
+import type { BlogPost, PageSection } from '@/types/website';
 
 export default function BlogPostEditorPage() {
   const params = useParams();
@@ -55,7 +55,7 @@ export default function BlogPostEditorPage() {
       setLoading(true);
       const response = await fetch(`/api/website/blog/posts/${id}?organizationId=${orgId}`);
       
-      if (!response.ok) throw new Error('Failed to load post');
+      if (!response.ok) {throw new Error('Failed to load post');}
       
       const data = await response.json();
       setPost(data.post);
@@ -98,7 +98,7 @@ export default function BlogPostEditorPage() {
   }
 
   async function savePost() {
-    if (!post) return;
+    if (!post) {return;}
 
     try {
       setSaving(true);
@@ -123,7 +123,7 @@ export default function BlogPostEditorPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save post');
+      if (!response.ok) {throw new Error('Failed to save post');}
 
       const data = await response.json();
       alert('Post saved successfully!');
@@ -139,12 +139,12 @@ export default function BlogPostEditorPage() {
   }
 
   function updatePost(updates: Partial<BlogPost>) {
-    if (!post) return;
+    if (!post) {return;}
     setPost({ ...post, ...updates });
   }
 
   function addSection(sectionData?: Partial<PageSection>) {
-    if (!post) return;
+    if (!post) {return;}
 
     const newSection: PageSection = {
       id: `section_${Date.now()}`,
@@ -166,7 +166,7 @@ export default function BlogPostEditorPage() {
   }
 
   function updateSection(sectionId: string, updates: Partial<PageSection>) {
-    if (!post) return;
+    if (!post) {return;}
 
     const updatedContent = post.content.map(section =>
       section.id === sectionId ? { ...section, ...updates } : section
@@ -176,7 +176,7 @@ export default function BlogPostEditorPage() {
   }
 
   function deleteSection(sectionId: string) {
-    if (!post) return;
+    if (!post) {return;}
     updatePost({
       content: post.content.filter(s => s.id !== sectionId),
     });

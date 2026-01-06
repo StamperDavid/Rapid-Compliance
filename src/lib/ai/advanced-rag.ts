@@ -402,7 +402,7 @@ function splitIntoChunks(text: string, chunkSize: number): string[] {
       }
       currentChunk = sentence;
     } else {
-      currentChunk += sentence + '. ';
+      currentChunk += `${sentence  }. `;
     }
   }
   

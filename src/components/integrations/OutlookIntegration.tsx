@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { OutlookIntegration as OutlookType } from '@/types/integrations';
+import type { OutlookIntegration as OutlookType } from '@/types/integrations';
 
 interface OutlookIntegrationProps {
   integration: OutlookType | null;
@@ -47,7 +47,7 @@ export default function OutlookIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

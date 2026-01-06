@@ -40,24 +40,24 @@ export function PerformanceOverviewCard({
   const formatScore = (value: number) => value.toFixed(1);
 
   const getScoreColor = (score: number): string => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    if (score >= 60) return 'text-orange-600';
+    if (score >= 80) {return 'text-green-600';}
+    if (score >= 70) {return 'text-yellow-600';}
+    if (score >= 60) {return 'text-orange-600';}
     return 'text-red-600';
   };
 
   const getSentimentColor = (sentiment: number): string => {
-    if (sentiment >= 0.5) return 'text-green-600';
-    if (sentiment >= 0) return 'text-yellow-600';
-    if (sentiment >= -0.5) return 'text-orange-600';
+    if (sentiment >= 0.5) {return 'text-green-600';}
+    if (sentiment >= 0) {return 'text-yellow-600';}
+    if (sentiment >= -0.5) {return 'text-orange-600';}
     return 'text-red-600';
   };
 
   const formatSentiment = (sentiment: number): string => {
-    if (sentiment >= 0.5) return 'Very Positive';
-    if (sentiment >= 0.2) return 'Positive';
-    if (sentiment >= -0.2) return 'Neutral';
-    if (sentiment >= -0.5) return 'Negative';
+    if (sentiment >= 0.5) {return 'Very Positive';}
+    if (sentiment >= 0.2) {return 'Positive';}
+    if (sentiment >= -0.2) {return 'Neutral';}
+    if (sentiment >= -0.5) {return 'Negative';}
     return 'Very Negative';
   };
 

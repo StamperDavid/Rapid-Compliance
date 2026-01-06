@@ -120,7 +120,7 @@ export async function registerWebhookTrigger(
 ): Promise<string> {
   const trigger = workflow.trigger as WebhookTrigger;
   
-  if (!trigger || trigger.type !== 'webhook') {
+  if (trigger?.type !== 'webhook') {
     throw new Error('Not a webhook trigger');
   }
   

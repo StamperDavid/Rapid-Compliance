@@ -9,7 +9,7 @@
 'use client';
 
 import React from 'react';
-import { SequenceAnalysis } from '@/lib/sequence';
+import type { SequenceAnalysis } from '@/lib/sequence';
 import { TrendingUp, TrendingDown, Mail, Users, Calendar, Target } from 'lucide-react';
 
 interface SequenceOverviewCardProps {

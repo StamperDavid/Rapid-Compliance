@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { createCampaign, sendCampaign, getCampaignStats, listCampaigns } from '@/lib/email/campaign-manager';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { campaignActionSchema, validateInput, organizationIdSchema } from '@/lib/validation/schemas';

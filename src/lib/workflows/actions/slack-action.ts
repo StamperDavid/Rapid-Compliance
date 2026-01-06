@@ -3,7 +3,7 @@
  * Sends messages to Slack channels or users
  */
 
-import { BaseAction } from '@/types/workflow';
+import type { BaseAction } from '@/types/workflow';
 
 export interface SlackActionConfig extends BaseAction {
   type: 'send_slack';

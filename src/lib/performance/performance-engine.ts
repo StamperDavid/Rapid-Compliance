@@ -226,7 +226,7 @@ async function calculateIndividualMetrics(
   for (const analysis of analyses) {
     // Get rep ID from conversation
     const conversation = await getConversationForAnalysis(analysis.conversationId);
-    if (!conversation) continue;
+    if (!conversation) {continue;}
     
     const repId = conversation.repId;
     if (!analysesByRep.has(repId)) {
@@ -678,10 +678,10 @@ function identifyTopPerformers(
     const recommendedAsMentor = strengths.length >= 2 && metric.scores.overall >= 85;
     const mentorshipAreas: CoachingCategory[] = [];
     
-    if (metric.scores.discovery >= 85) mentorshipAreas.push('discovery');
-    if (metric.scores.objectionHandling >= 85) mentorshipAreas.push('objection_handling');
-    if (metric.scores.closing >= 85) mentorshipAreas.push('closing');
-    if (metric.scores.valueArticulation >= 85) mentorshipAreas.push('value_articulation');
+    if (metric.scores.discovery >= 85) {mentorshipAreas.push('discovery');}
+    if (metric.scores.objectionHandling >= 85) {mentorshipAreas.push('objection_handling');}
+    if (metric.scores.closing >= 85) {mentorshipAreas.push('closing');}
+    if (metric.scores.valueArticulation >= 85) {mentorshipAreas.push('value_articulation');}
     
     return {
       repId: metric.repId,
@@ -758,10 +758,10 @@ function findImprovementOpportunities(
       const gapSize = skill.teamAvg - skill.current;
       if (gapSize > 5) { // At least 5 points behind
         let priority: 'critical' | 'high' | 'medium' | 'low';
-        if (gapSize >= 20) priority = 'critical';
-        else if (gapSize >= 15) priority = 'high';
-        else if (gapSize >= 10) priority = 'medium';
-        else priority = 'low';
+        if (gapSize >= 20) {priority = 'critical';}
+        else if (gapSize >= 15) {priority = 'high';}
+        else if (gapSize >= 10) {priority = 'medium';}
+        else {priority = 'low';}
         
         gaps.push({
           skill: skill.skill,
@@ -983,10 +983,10 @@ function generateCoachingPriorities(
     const percentageAffected = (repsAffected / metrics.length) * 100;
     
     let priority: 'critical' | 'high' | 'medium' | 'low';
-    if (percentageAffected >= 50 && avgGap >= 15) priority = 'critical';
-    else if (percentageAffected >= 30 || avgGap >= 15) priority = 'high';
-    else if (percentageAffected >= 20 || avgGap >= 10) priority = 'medium';
-    else priority = 'low';
+    if (percentageAffected >= 50 && avgGap >= 15) {priority = 'critical';}
+    else if (percentageAffected >= 30 || avgGap >= 15) {priority = 'high';}
+    else if (percentageAffected >= 20 || avgGap >= 10) {priority = 'medium';}
+    else {priority = 'low';}
     
     const estimatedROI = percentageAffected >= 40 ? 'high' : percentageAffected >= 20 ? 'medium' : 'low';
     
@@ -1031,7 +1031,7 @@ function extractBestPractices(
   
   for (const topPerformer of topPerformers) {
     const metric = metrics.find(m => m.repId === topPerformer.repId);
-    if (!metric) continue;
+    if (!metric) {continue;}
     
     // Extract practices based on strengths
     for (const strength of topPerformer.topStrengths) {
@@ -1094,7 +1094,7 @@ function extractBestPractices(
  * Calculate average
  */
 function average(numbers: number[]): number {
-  if (numbers.length === 0) return 0;
+  if (numbers.length === 0) {return 0;}
   return numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
 }
 
@@ -1109,7 +1109,7 @@ function sum(numbers: number[]): number {
  * Calculate median
  */
 function median(numbers: number[]): number {
-  if (numbers.length === 0) return 0;
+  if (numbers.length === 0) {return 0;}
   const sorted = [...numbers].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
@@ -1119,7 +1119,7 @@ function median(numbers: number[]): number {
  * Calculate percentile
  */
 function percentile(sortedNumbers: number[], p: number): number {
-  if (sortedNumbers.length === 0) return 0;
+  if (sortedNumbers.length === 0) {return 0;}
   const index = Math.ceil((p / 100) * sortedNumbers.length) - 1;
   return sortedNumbers[Math.max(0, index)];
 }
@@ -1128,7 +1128,7 @@ function percentile(sortedNumbers: number[], p: number): number {
  * Determine sentiment trend
  */
 function determineSentimentTrend(analyses: ConversationAnalysis[]): 'improving' | 'declining' | 'stable' {
-  if (analyses.length < 2) return 'stable';
+  if (analyses.length < 2) {return 'stable';}
   
   // Compare first half vs second half
   const mid = Math.floor(analyses.length / 2);
@@ -1140,8 +1140,8 @@ function determineSentimentTrend(analyses: ConversationAnalysis[]): 'improving' 
   
   const diff = secondAvg - firstAvg;
   
-  if (diff > 0.1) return 'improving';
-  if (diff < -0.1) return 'declining';
+  if (diff > 0.1) {return 'improving';}
+  if (diff < -0.1) {return 'declining';}
   return 'stable';
 }
 

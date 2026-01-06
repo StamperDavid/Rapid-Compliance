@@ -60,7 +60,7 @@ export default function ShoppingCartPage() {
   };
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
-    if (newQuantity < 1 || !cart) return;
+    if (newQuantity < 1 || !cart) {return;}
     
     try {
       setUpdating(true);
@@ -76,7 +76,7 @@ export default function ShoppingCartPage() {
   };
 
   const handleRemoveItem = async (itemId: string) => {
-    if (!cart) return;
+    if (!cart) {return;}
     
     try {
       setUpdating(true);

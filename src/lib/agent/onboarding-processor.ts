@@ -9,7 +9,8 @@
 
 import type { OnboardingData, BaseModel, KnowledgeBase, AgentPersona } from '@/types/agent-memory';
 import { buildPersonaFromOnboarding } from './persona-builder';
-import { processKnowledgeBase, KnowledgeProcessorOptions } from './knowledge-processor';
+import type { KnowledgeProcessorOptions } from './knowledge-processor';
+import { processKnowledgeBase } from './knowledge-processor';
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';;

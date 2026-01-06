@@ -21,7 +21,8 @@
  * - metrics (optional): Comma-separated list of metrics to include
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getDashboardAnalytics } from '@/lib/analytics/dashboard';
 import { AnalyticsRequestSchema } from '@/lib/analytics/dashboard/validation';
 import type { AnalyticsResponse, AnalyticsErrorResponse, TimePeriod } from '@/lib/analytics/dashboard/types';

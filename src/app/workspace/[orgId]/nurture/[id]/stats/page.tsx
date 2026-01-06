@@ -28,7 +28,7 @@ export default function NurtureCampaignStatsPage() {
     }
   };
 
-  if (loading || !campaign) return <div className="p-8">Loading...</div>;
+  if (loading || !campaign) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

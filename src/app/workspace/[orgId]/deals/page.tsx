@@ -39,7 +39,7 @@ export default function DealsPage() {
       throw new Error('Failed to fetch deals');
     }
     
-    return await response.json();
+    return response.json();
   }, [orgId]);
 
   const {
@@ -58,7 +58,7 @@ export default function DealsPage() {
 
   const getDealsByStage = (stage: string) => deals.filter(d => d.stage === stage);
 
-  if (loading && deals.length === 0) return <div className="p-8">Loading...</div>;
+  if (loading && deals.length === 0) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

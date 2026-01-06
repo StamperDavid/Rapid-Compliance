@@ -4,7 +4,8 @@
  * https://developers.google.com/gmail/api/guides/push
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getEmail, parseEmailHeaders, getEmailBody } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail } from '@/lib/outbound/reply-handler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Decode the message
     const message = body.message;
-    if (!message || !message.data) {
+    if (!message?.data) {
       return NextResponse.json({ success: true }); // Acknowledge but skip
     }
 
@@ -281,7 +282,7 @@ async function pauseProspectSequences(
       [where('email', '==', prospectEmail)]
     );
 
-    if (prospects.length === 0) return;
+    if (prospects.length === 0) {return;}
 
     const prospectId = prospects[0].id;
 

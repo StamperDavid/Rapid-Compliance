@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { generateAuthUrl } from '@/lib/integrations/oauth-service';
 import { logger } from '@/lib/logger/logger';
@@ -11,7 +12,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/oauth/authorize');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {

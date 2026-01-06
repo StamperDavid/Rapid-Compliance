@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -16,7 +17,7 @@ import { withCache } from '@/lib/cache/analytics-cache';
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/revenue');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
@@ -94,7 +95,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     // Filter by date and status
     const closedDeals = allDeals.filter(deal => {
       const isWon = deal.status === 'won' || deal.status === 'closed_won' || deal.stage === 'closed_won';
-      if (!isWon) return false;
+      if (!isWon) {return false;}
       
       const closedDate = deal.closedDate?.toDate?.() || (deal.closedDate ? new Date(deal.closedDate) : deal.createdAt?.toDate?.() || new Date(deal.createdAt));
       return closedDate >= startDate && closedDate <= now;
@@ -111,7 +112,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     }
 
     const completedOrders = allOrders.filter(order => {
-      if (order.status !== 'completed' && order.status !== 'paid') return false;
+      if (order.status !== 'completed' && order.status !== 'paid') {return false;}
       const orderDate = order.createdAt?.toDate?.() || new Date(order.createdAt);
       return orderDate >= startDate && orderDate <= now;
     });
@@ -132,13 +133,13 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
 
       const prevDeals = allDeals.filter(deal => {
         const isWon = deal.status === 'won' || deal.status === 'closed_won' || deal.stage === 'closed_won';
-        if (!isWon) return false;
+        if (!isWon) {return false;}
         const closedDate = deal.closedDate?.toDate?.() || (deal.closedDate ? new Date(deal.closedDate) : deal.createdAt?.toDate?.() || new Date(deal.createdAt));
         return closedDate >= prevStart && closedDate < prevEnd;
       });
 
       const prevOrders = allOrders.filter(order => {
-        if (order.status !== 'completed' && order.status !== 'paid') return false;
+        if (order.status !== 'completed' && order.status !== 'paid') {return false;}
         const orderDate = order.createdAt?.toDate?.() || new Date(order.createdAt);
         return orderDate >= prevStart && orderDate < prevEnd;
       });

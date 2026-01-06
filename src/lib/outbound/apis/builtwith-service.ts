@@ -66,7 +66,7 @@ export async function getTechStack(
     const technologies: string[] = [];
 
     // Extract all technologies
-    if (result.Result && result.Result.Paths && result.Result.Paths.length > 0) {
+    if (result.Result?.Paths && result.Result.Paths.length > 0) {
       const path = result.Result.Paths[0];
       
       if (path.Technologies) {
@@ -79,7 +79,7 @@ export async function getTechStack(
     return technologies;
   } catch (error) {
     logger.error('[BuiltWith] Error getting tech stack:', error, { file: 'builtwith-service.ts' });
-    return await getFallbackTechStack(domain);
+    return getFallbackTechStack(domain);
   }
 }
 
@@ -120,7 +120,7 @@ export async function getTechStackDetailed(
     const technologies: BuiltWithTechnology[] = [];
     const categories: { [key: string]: BuiltWithTechnology[] } = {};
 
-    if (result.Result && result.Result.Paths && result.Result.Paths.length > 0) {
+    if (result.Result?.Paths && result.Result.Paths.length > 0) {
       const path = result.Result.Paths[0];
       
       if (path.Technologies) {

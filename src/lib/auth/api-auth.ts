@@ -3,7 +3,8 @@
  * Validates authentication tokens and user permissions for API routes
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';;
 
@@ -72,7 +73,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
   try {
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return null;
     }
 

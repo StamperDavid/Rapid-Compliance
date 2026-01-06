@@ -52,7 +52,7 @@ async function analyzeWithGPT4Vision(
   try {
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
     const keys = await apiKeyService.getServiceKey(organizationId || 'demo', 'openai');
-    const apiKey = (keys as any)?.openaiApiKey || process.env.OPENAI_API_KEY;
+    const apiKey = (keys)?.openaiApiKey || process.env.OPENAI_API_KEY;
     
     if (!apiKey) {
       throw new Error('OpenAI API key not configured');
@@ -313,16 +313,16 @@ function calculateConfidence(analysis: string): number {
   let confidence = 70; // Base confidence
   
   // Increase confidence for specific details
-  if (analysis.match(/\d+/)) confidence += 5; // Contains numbers
-  if (analysis.length > 200) confidence += 5; // Detailed response
-  if (analysis.includes('specifically')) confidence += 5;
-  if (analysis.includes('clearly')) confidence += 5;
+  if (analysis.match(/\d+/)) {confidence += 5;} // Contains numbers
+  if (analysis.length > 200) {confidence += 5;} // Detailed response
+  if (analysis.includes('specifically')) {confidence += 5;}
+  if (analysis.includes('clearly')) {confidence += 5;}
   
   // Decrease confidence for uncertainty
-  if (analysis.includes('might')) confidence -= 5;
-  if (analysis.includes('possibly')) confidence -= 5;
-  if (analysis.includes('unclear')) confidence -= 10;
-  if (analysis.includes('cannot')) confidence -= 10;
+  if (analysis.includes('might')) {confidence -= 5;}
+  if (analysis.includes('possibly')) {confidence -= 5;}
+  if (analysis.includes('unclear')) {confidence -= 10;}
+  if (analysis.includes('cannot')) {confidence -= 10;}
   
   return Math.max(0, Math.min(100, confidence));
 }

@@ -4,7 +4,8 @@
  * Each template includes complete PageSection[] structure
  */
 
-import { PageTemplate, PageSection } from '@/types/website';
+import type { PageTemplate} from '@/types/website';
+import { PageSection } from '@/types/website';
 
 /**
  * 1. Business Landing Page

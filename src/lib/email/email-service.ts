@@ -361,7 +361,7 @@ function addTrackingPixel(
   messageId?: string,
   organizationId?: string
 ): { html: string; trackingId?: string } {
-  if (!trackOpens) return { html };
+  if (!trackOpens) {return { html };}
   
   // Use messageId as trackingId if provided, otherwise generate one
   const trackingId = messageId || `track_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

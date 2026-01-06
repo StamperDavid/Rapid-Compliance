@@ -35,7 +35,7 @@ export async function executeStripeFunction(
         throw new Error('customerEmail must be a string');
       }
       
-      return await createCheckoutSession(
+      return createCheckoutSession(
         {
           amount: parameters.amount,
           description: parameters.description,
@@ -54,7 +54,7 @@ export async function executeStripeFunction(
         throw new Error('description (string) is required for createStripePaymentLink');
       }
       
-      return await createPaymentLink(
+      return createPaymentLink(
         {
           amount: parameters.amount,
           description: parameters.description,

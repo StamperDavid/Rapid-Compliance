@@ -205,7 +205,7 @@ async function processSquarePayment(
       };
     }
     
-    const { accessToken, locationId } = squareKeys as any;
+    const { accessToken, locationId } = squareKeys;
     
     if (!accessToken || !locationId) {
       return {
@@ -290,7 +290,7 @@ async function processPayPalPayment(
       };
     }
     
-    const { clientId, clientSecret, mode } = paypalKeys as any;
+    const { clientId, clientSecret, mode } = paypalKeys;
     
     if (!clientId || !clientSecret) {
       return {

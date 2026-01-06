@@ -1528,10 +1528,10 @@ export default function WebsiteEditorPage() {
   // Find selected element recursively
   const findElement = (elements: WidgetElement[], id: string): WidgetElement | null => {
     for (const el of elements) {
-      if (el.id === id) return el;
+      if (el.id === id) {return el;}
       if (el.children) {
         const found = findElement(el.children, id);
-        if (found) return found;
+        if (found) {return found;}
       }
     }
     return null;
@@ -1539,9 +1539,9 @@ export default function WebsiteEditorPage() {
 
   const findElementInSections = (sections: PageSection[], id: string): WidgetElement | null => {
     for (const section of sections) {
-      if (section.id === id) return section as any;
+      if (section.id === id) {return section as any;}
       const found = findElement(section.children, id);
-      if (found) return found;
+      if (found) {return found;}
     }
     return null;
   };
@@ -1592,7 +1592,7 @@ const load = async () => {
   };
 
   const addSection = () => {
-    if (!selectedPage) return;
+    if (!selectedPage) {return;}
     const newSection: PageSection = {
       id: generateId(),
       type: 'section',
@@ -1813,7 +1813,7 @@ const load = async () => {
                 {/* Widget Categories */}
                 {WIDGET_CATEGORIES.map(cat => {
                   const catWidgets = filteredWidgets.filter(w => w.category === cat.id);
-                  if (catWidgets.length === 0) return null;
+                  if (catWidgets.length === 0) {return null;}
                   
                   return (
                     <div key={cat.id} style={{ marginBottom: '0.5rem' }}>
@@ -1875,7 +1875,7 @@ const load = async () => {
                   onClick={() => {
                     const name = prompt('Page name:');
                     if (name) {
-                      const slug = '/' + name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                      const slug = `/${  name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
                       const newPage: WebsitePage = {
                         id: generateId(),
                         name,

@@ -4,7 +4,8 @@
  * Enroll prospects in sequences
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';
@@ -15,7 +16,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/sequences/enroll');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {

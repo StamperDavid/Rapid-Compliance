@@ -185,10 +185,10 @@ export default function ThemeEditorPage() {
     const R = (num >> 16) + amt;
     const G = (num >> 8 & 0x00FF) + amt;
     const B = (num & 0x0000FF) + amt;
-    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+    return `#${  (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
       (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
       (B < 255 ? B < 1 ? 0 : B : 255))
-      .toString(16).slice(1);
+      .toString(16).slice(1)}`;
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -948,8 +948,8 @@ export default function ThemeEditorPage() {
                   {/* Alerts */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <p style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Status Messages</p>
-                    <div style={{ backgroundColor: theme.colors.success.light + '20', color: theme.colors.success.dark, padding: '0.75rem', borderRadius: theme.layout.borderRadius.md, fontSize: theme.typography.fontSize.sm, border: `1px solid ${theme.colors.success.main}` }}>✓ Success message</div>
-                    <div style={{ backgroundColor: theme.colors.error.light + '20', color: theme.colors.error.dark, padding: '0.75rem', borderRadius: theme.layout.borderRadius.md, fontSize: theme.typography.fontSize.sm, border: `1px solid ${theme.colors.error.main}` }}>× Error message</div>
+                    <div style={{ backgroundColor: `${theme.colors.success.light  }20`, color: theme.colors.success.dark, padding: '0.75rem', borderRadius: theme.layout.borderRadius.md, fontSize: theme.typography.fontSize.sm, border: `1px solid ${theme.colors.success.main}` }}>✓ Success message</div>
+                    <div style={{ backgroundColor: `${theme.colors.error.light  }20`, color: theme.colors.error.dark, padding: '0.75rem', borderRadius: theme.layout.borderRadius.md, fontSize: theme.typography.fontSize.sm, border: `1px solid ${theme.colors.error.main}` }}>× Error message</div>
                   </div>
                 </div>
               </div>

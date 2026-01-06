@@ -3,8 +3,8 @@
  * Triggers AI agent to process data and optionally respond
  */
 
-import { BaseAction } from '@/types/workflow';
-import { ModelName } from '@/types/ai-models';
+import type { BaseAction } from '@/types/workflow';
+import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
 
 export interface AIAgentActionConfig extends BaseAction {

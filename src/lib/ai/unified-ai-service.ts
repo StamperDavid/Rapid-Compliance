@@ -5,7 +5,8 @@
 
 import { OpenAIProvider } from './providers/openai-provider';
 import { AnthropicProvider } from './providers/anthropic-provider';
-import { sendChatMessage, streamChatMessage, ChatMessage as GeminiChatMessage, ChatResponse as GeminiChatResponse } from './gemini-service';
+import type { ChatMessage as GeminiChatMessage} from './gemini-service';
+import { sendChatMessage, streamChatMessage, ChatResponse as GeminiChatResponse } from './gemini-service';
 
 export interface UnifiedChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -45,12 +46,12 @@ export async function sendUnifiedChatMessage(
   // Determine provider from model name
   if (model.startsWith('gpt-') || model.startsWith('ft:gpt-')) {
     // Fine-tuned models start with ft:gpt-
-    return await sendOpenAIMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
+    return sendOpenAIMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
   } else if (model.startsWith('claude-')) {
-    return await sendAnthropicMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
+    return sendAnthropicMessage(model, messages, systemInstruction, { temperature, maxTokens, topP }, organizationId);
   } else {
     // Default to Gemini
-    return await sendGeminiMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
+    return sendGeminiMessage(model, messages, systemInstruction, { temperature, maxTokens, topP });
   }
 }
 

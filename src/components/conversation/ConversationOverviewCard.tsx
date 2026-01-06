@@ -22,16 +22,16 @@ export function ConversationOverviewCard({ analysis, className = '' }: Conversat
   
   // Score colors
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-blue-600';
-    if (score >= 40) return 'text-yellow-600';
+    if (score >= 80) {return 'text-green-600';}
+    if (score >= 60) {return 'text-blue-600';}
+    if (score >= 40) {return 'text-yellow-600';}
     return 'text-red-600';
   };
   
   const getScoreBgColor = (score: number) => {
-    if (score >= 80) return 'bg-green-100';
-    if (score >= 60) return 'bg-blue-100';
-    if (score >= 40) return 'bg-yellow-100';
+    if (score >= 80) {return 'bg-green-100';}
+    if (score >= 60) {return 'bg-blue-100';}
+    if (score >= 40) {return 'bg-yellow-100';}
     return 'bg-red-100';
   };
   

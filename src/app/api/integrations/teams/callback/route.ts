@@ -3,7 +3,8 @@
  * Handles OAuth callback and stores access token
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
       throw new Error('Microsoft 365 (Teams) not configured');
     }
 
-    const { clientId, clientSecret, redirectUri } = microsoft365Keys as any;
+    const { clientId, clientSecret, redirectUri } = microsoft365Keys;
     const baseRedirectUri = redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
 
     // Exchange code for access token

@@ -74,7 +74,7 @@ export async function createOrder(
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 export async function captureOrder(
@@ -95,7 +95,7 @@ export async function captureOrder(
     },
   });
 
-  return await response.json();
+  return response.json();
 }
 
 export async function createPayout(
@@ -130,7 +130,7 @@ export async function createPayout(
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 export async function getOrderDetails(
@@ -149,7 +149,7 @@ export async function getOrderDetails(
     },
   });
 
-  return await response.json();
+  return response.json();
 }
 
 

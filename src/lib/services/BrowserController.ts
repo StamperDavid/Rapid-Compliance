@@ -9,8 +9,8 @@
  * for team directories, career portals, and tech stack detection.
  */
 
-import { chromium, Browser, Page, BrowserContext } from 'playwright';
-import type { LaunchOptions } from 'playwright';
+import { chromium } from 'playwright';
+import type { LaunchOptions , Browser, Page, BrowserContext } from 'playwright';
 import { logger } from '@/lib/logger/logger';
 
 export interface ProxyConfig {

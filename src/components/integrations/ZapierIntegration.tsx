@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ZapierIntegration as ZapierType } from '@/types/integrations';
+import type { ZapierIntegration as ZapierType } from '@/types/integrations';
 
 interface ZapierIntegrationProps {
   integration: ZapierType | null;
@@ -95,7 +95,7 @@ export default function ZapierIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

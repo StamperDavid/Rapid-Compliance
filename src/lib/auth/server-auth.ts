@@ -3,8 +3,9 @@
  * Helper functions for authenticating requests in API routes and server components
  */
 
-import { NextRequest } from 'next/server';
-import { requireAuth, requireRole, requireOrganization, AuthenticatedUser } from '@/lib/auth/api-auth';
+import type { NextRequest } from 'next/server';
+import type { AuthenticatedUser } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole, requireOrganization } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 /**

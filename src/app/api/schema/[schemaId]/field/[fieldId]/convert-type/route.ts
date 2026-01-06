@@ -2,11 +2,12 @@
  * Field Type Conversion API - SERVER SIDE (Admin SDK Only)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
-import { FieldType } from '@/types/schema';
+import type { FieldType } from '@/types/schema';
 
 /**
  * GET /api/schema/[schemaId]/field/[fieldId]/convert-type

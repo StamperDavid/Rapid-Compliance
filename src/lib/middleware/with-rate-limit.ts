@@ -3,7 +3,7 @@
  * Applies rate limiting automatically to all wrapped routes
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 
@@ -25,7 +25,7 @@ export function withRateLimit(
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
       });
       
-      return rateLimitResponse as NextResponse;
+      return rateLimitResponse;
     }
     
     // Continue to handler

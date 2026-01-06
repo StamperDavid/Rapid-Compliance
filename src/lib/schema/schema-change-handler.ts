@@ -3,8 +3,9 @@
  * Centralized handler that coordinates all system adaptations when schemas change
  */
 
+import type {
+  SchemaChangeEvent} from './schema-change-tracker';
 import {
-  SchemaChangeEvent,
   SchemaChangeEventPublisher,
 } from './schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
@@ -291,10 +292,10 @@ export async function getSchemaChangeImpactSummary(
     
     for (const event of schemaEvents) {
       for (const system of event.affectedSystems) {
-        if (system.system === 'workflows') affectedSystems.workflows += system.itemsAffected;
-        if (system.system === 'integrations') affectedSystems.integrations += system.itemsAffected;
-        if (system.system === 'ecommerce') affectedSystems.ecommerce += system.itemsAffected;
-        if (system.system === 'ai_agent') affectedSystems.aiAgent += system.itemsAffected;
+        if (system.system === 'workflows') {affectedSystems.workflows += system.itemsAffected;}
+        if (system.system === 'integrations') {affectedSystems.integrations += system.itemsAffected;}
+        if (system.system === 'ecommerce') {affectedSystems.ecommerce += system.itemsAffected;}
+        if (system.system === 'ai_agent') {affectedSystems.aiAgent += system.itemsAffected;}
       }
     }
     

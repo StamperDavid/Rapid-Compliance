@@ -224,31 +224,31 @@ export default function SmsMessagesPage() {
                       <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#999', marginBottom: '0.5rem' }}>Available Variables:</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
                         <button
-                          onClick={() => setSmsContent(smsContent + '{{customer_name}}')}
+                          onClick={() => setSmsContent(`${smsContent  }{{customer_name}}`)}
                           style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           + {`{{customer_name}}`}
                         </button>
                         <button
-                          onClick={() => setSmsContent(smsContent + '{{order_number}}')}
+                          onClick={() => setSmsContent(`${smsContent  }{{order_number}}`)}
                           style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           + {`{{order_number}}`}
                         </button>
                         <button
-                          onClick={() => setSmsContent(smsContent + '{{appointment_date}}')}
+                          onClick={() => setSmsContent(`${smsContent  }{{appointment_date}}`)}
                           style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           + {`{{appointment_date}}`}
                         </button>
                         <button
-                          onClick={() => setSmsContent(smsContent + '{{company_name}}')}
+                          onClick={() => setSmsContent(`${smsContent  }{{company_name}}`)}
                           style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           + {`{{company_name}}`}
                         </button>
                         <button
-                          onClick={() => setSmsContent(smsContent + '{{tracking_link}}')}
+                          onClick={() => setSmsContent(`${smsContent  }{{tracking_link}}`)}
                           style={{ padding: '0.375rem 0.625rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.25rem', color: '#ccc', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
                           + {`{{tracking_link}}`}

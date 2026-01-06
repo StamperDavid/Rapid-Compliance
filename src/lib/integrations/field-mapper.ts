@@ -5,7 +5,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
-import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
+import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { executeCustomTransform } from './custom-transforms';
 
 /**

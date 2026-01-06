@@ -22,8 +22,8 @@
  * - Multi-workspace isolation
  */
 
-import { Timestamp } from 'firebase-admin/firestore';
-import { NotificationCategory, NotificationPriority } from '@/lib/notifications/types';
+import type { Timestamp } from 'firebase-admin/firestore';
+import type { NotificationCategory, NotificationPriority } from '@/lib/notifications/types';
 
 /**
  * Slack Message Priority

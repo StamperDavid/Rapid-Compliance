@@ -52,7 +52,7 @@ export const CRMStoreWidget: React.FC<CRMStoreWidgetProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!loaded || !containerRef.current) return;
+    if (!loaded || !containerRef.current) {return;}
 
     // Initialize widget
     const widget = (window as any).CRMStore.init({
@@ -94,7 +94,7 @@ export const useCart = (widgetId: string) => {
   const [cart, setCart] = useState<any>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !(window as any).CRMStore) return;
+    if (typeof window === 'undefined' || !(window as any).CRMStore) {return;}
 
     // Get initial cart
     const initialCart = (window as any).CRMStore.getCart(widgetId);

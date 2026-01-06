@@ -47,7 +47,7 @@ export default function TemplatesDashboard() {
 
   // Apply Template
   const handleApplyTemplate = async () => {
-    if (!selectedTemplateId) return;
+    if (!selectedTemplateId) {return;}
 
     try {
       setApplyingTemplate(true);

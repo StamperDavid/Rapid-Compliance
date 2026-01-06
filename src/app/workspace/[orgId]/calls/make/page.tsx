@@ -12,7 +12,7 @@ export default function MakeCallPage() {
   const [calling, setCalling] = useState(false);
 
   const handleCall = async () => {
-    if (!phoneNumber) return;
+    if (!phoneNumber) {return;}
     try {
       setCalling(true);
       // Call Twilio voice API
@@ -21,7 +21,7 @@ export default function MakeCallPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: phoneNumber, organizationId: orgId }),
       });
-      if (!response.ok) throw new Error('Call failed');
+      if (!response.ok) {throw new Error('Call failed');}
       alert('Call initiated!');
       router.push(`/workspace/${orgId}/calls`);
     } catch (error) {

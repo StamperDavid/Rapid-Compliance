@@ -607,10 +607,10 @@ export function calculateSuccessRate(trainingData: TrainingData): number {
  * @returns Grade: A, B, C, D, or F
  */
 export function getConfidenceGrade(confidence: number): string {
-  if (confidence >= 90) return 'A';
-  if (confidence >= 80) return 'B';
-  if (confidence >= 70) return 'C';
-  if (confidence >= 60) return 'D';
+  if (confidence >= 90) {return 'A';}
+  if (confidence >= 80) {return 'B';}
+  if (confidence >= 70) {return 'C';}
+  if (confidence >= 60) {return 'D';}
   return 'F';
 }
 
@@ -646,7 +646,7 @@ export function calculateConfidenceTrend(
 
   const slope = numerator / denominator;
 
-  if (slope > 1) return 'improving';
-  if (slope < -1) return 'declining';
+  if (slope > 1) {return 'improving';}
+  if (slope < -1) {return 'declining';}
   return 'stable';
 }

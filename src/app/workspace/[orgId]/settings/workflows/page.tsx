@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import WorkflowBuilder from '@/components/workflows/WorkflowBuilder';
-import { Workflow } from '@/types/workflow';
+import type { Workflow } from '@/types/workflow';
 
 export default function WorkflowsPage() {
   const { user } = useAuth();
@@ -66,7 +66,7 @@ export default function WorkflowsPage() {
       const { getCurrentUser } = await import('@/lib/auth/auth-service');
       const currentUser = getCurrentUser();
       
-      if (!currentUser) return;
+      if (!currentUser) {return;}
 
       const token = await currentUser.getIdToken();
       const newStatus = currentStatus === 'active' ? 'paused' : 'active';
@@ -188,7 +188,7 @@ export default function WorkflowsPage() {
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button 
                           onClick={() => {
-                            setEditingWorkflow(workflow as any);
+                            setEditingWorkflow(workflow);
                             setShowBuilder(true);
                           }}
                           style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}

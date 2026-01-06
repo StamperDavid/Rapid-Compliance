@@ -3,7 +3,8 @@
  * Initiates OAuth flow for Teams integration
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -30,9 +31,9 @@ export async function POST(request: NextRequest) {
 
 
     // Check if Microsoft 365 (Teams) is configured
-    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId!, 'microsoft365');
+    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId, 'microsoft365');
     
-    if (!microsoft365Keys || !(microsoft365Keys as any).clientId) {
+    if (!microsoft365Keys?.clientId) {
       return NextResponse.json({
         success: false,
         error: 'Microsoft Teams not configured. Please add Microsoft 365 Client ID and Secret in API Keys settings.',
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { clientId, redirectUri } = microsoft365Keys as any;
+    const { clientId, redirectUri } = microsoft365Keys;
     const baseRedirectUri = redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
     
     // Microsoft Teams uses Azure AD OAuth

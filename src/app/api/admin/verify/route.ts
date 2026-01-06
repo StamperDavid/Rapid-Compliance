@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { adminAuth } from '@/lib/firebase/admin';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api/admin-auth';
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Get the auth token from the request headers
     const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return createErrorResponse('Missing or invalid Authorization header', 401);
     }
     

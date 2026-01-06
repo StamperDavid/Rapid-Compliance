@@ -53,7 +53,7 @@ export default function APIKeysPage() {
         setKeys({ ...keys, [service]: value });
         alert('API key saved successfully!');
       } else {
-        alert('Failed to save: ' + data.error);
+        alert(`Failed to save: ${  data.error}`);
       }
     } catch (error) {
       alert('Error saving API key');
@@ -69,9 +69,9 @@ export default function APIKeysPage() {
       setTestResults({ ...testResults, [service]: data });
       
       if (data.success) {
-        alert('✅ ' + service + ' is working!');
+        alert(`✅ ${  service  } is working!`);
       } else {
-        alert('❌ ' + service + ' test failed: ' + data.error);
+        alert(`❌ ${  service  } test failed: ${  data.error}`);
       }
     } catch (error) {
       alert('Error testing API key');
@@ -574,7 +574,7 @@ export default function APIKeysPage() {
                         fontSize: '0.75rem',
                         color: testResults[service.id].success ? '#6ee7b7' : '#fecaca',
                       }}>
-                        {testResults[service.id].success ? '✅ Working!' : '❌ ' + testResults[service.id].error}
+                        {testResults[service.id].success ? '✅ Working!' : `❌ ${  testResults[service.id].error}`}
                       </div>
                     )}
                   </div>

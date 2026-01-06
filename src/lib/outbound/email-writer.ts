@@ -3,7 +3,8 @@
  * Generates personalized cold emails using AI and prospect research
  */
 
-import { ProspectData, ProspectResearch, generatePersonalizationTokens } from './prospect-research'
+import type { ProspectData, ProspectResearch} from './prospect-research';
+import { generatePersonalizationTokens } from './prospect-research'
 import { logger } from '@/lib/logger/logger';;
 
 export interface EmailGenerationRequest {
@@ -119,7 +120,7 @@ async function buildAIDAEmail(
   const useAI = await shouldUseAI(request.organizationId);
   
   if (useAI) {
-    return await generateWithAI(request, tokens, 'AIDA');
+    return generateWithAI(request, tokens, 'AIDA');
   }
 
   // Template-based fallback
@@ -142,7 +143,7 @@ async function buildPASEmail(
   tokens: Record<string, string>
 ): Promise<string> {
   if (await shouldUseAI(request.organizationId)) {
-    return await generateWithAI(request, tokens, 'PAS');
+    return generateWithAI(request, tokens, 'PAS');
   }
 
   const problem = `Hi ${tokens.firstName},\n\nMost ${tokens.industry} companies struggle with manual sales processes that slow down their team.`;
@@ -162,7 +163,7 @@ async function buildBABEmail(
   tokens: Record<string, string>
 ): Promise<string> {
   if (await shouldUseAI(request.organizationId)) {
-    return await generateWithAI(request, tokens, 'BAB');
+    return generateWithAI(request, tokens, 'BAB');
   }
 
   const before = `Hi ${tokens.firstName},\n\nBefore working with us, ${tokens.industry} companies were losing 30% of leads due to slow follow-up.`;
@@ -181,7 +182,7 @@ async function buildCustomEmail(
   request: EmailGenerationRequest,
   tokens: Record<string, string>
 ): Promise<string> {
-  return await generateWithAI(request, tokens, 'custom');
+  return generateWithAI(request, tokens, 'custom');
 }
 
 /**
@@ -215,7 +216,7 @@ async function generateWithAI(
   } catch (error) {
     logger.error('[Email Writer] AI generation failed:', error, { file: 'email-writer.ts' });
     // Fallback to template
-    return await buildAIDAEmail(request, tokens);
+    return buildAIDAEmail(request, tokens);
   }
 }
 

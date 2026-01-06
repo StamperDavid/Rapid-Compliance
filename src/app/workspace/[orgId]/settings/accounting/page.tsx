@@ -90,7 +90,7 @@ export default function AccountingPage() {
   const [showConnectionModal, setShowConnectionModal] = useState(false);
 
   useEffect(() => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     const loadConfig = async () => {
       try {
@@ -112,7 +112,7 @@ export default function AccountingPage() {
   }, [user?.organizationId]);
 
   const handleSave = async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     setIsSaving(true);
     try {

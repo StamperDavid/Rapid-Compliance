@@ -1971,7 +1971,7 @@ export default function OnboardingWizard() {
                 <div style={{
                   padding: '1.5rem',
                   backgroundColor: '#0a0a0a',
-                  border: '1px solid ' + primaryColor,
+                  border: `1px solid ${  primaryColor}`,
                   borderRadius: '0.75rem',
                   marginTop: '1rem',
                   textAlign: 'center'

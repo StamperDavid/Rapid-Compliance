@@ -39,7 +39,7 @@ export async function calculateTax(
   const taxConfig = (ecommerceConfig as any).tax;
   
   // If no tax config or tax not enabled, return zero tax
-  if (!taxConfig || !taxConfig.enabled) {
+  if (!taxConfig?.enabled) {
     return {
       amount: 0,
       rate: 0,
@@ -80,11 +80,11 @@ function calculateManualTax(
   address: Address
 ): Promise<TaxCalculation> {
   const applicableRates = taxConfig.taxRates?.filter((rate: any) => {
-    if (!rate.enabled) return false;
-    if (rate.country !== address.country) return false;
-    if (rate.state && rate.state !== address.state) return false;
-    if (rate.city && rate.city !== address.city) return false;
-    if (rate.zipCode && rate.zipCode !== address.zip) return false;
+    if (!rate.enabled) {return false;}
+    if (rate.country !== address.country) {return false;}
+    if (rate.state && rate.state !== address.state) {return false;}
+    if (rate.city && rate.city !== address.city) {return false;}
+    if (rate.zipCode && rate.zipCode !== address.zip) {return false;}
     return true;
   }) || [];
   

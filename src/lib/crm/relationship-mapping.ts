@@ -273,8 +273,8 @@ function analyzeBuyingCommittee(stakeholders: Stakeholder[]): BuyingCommitteeAna
 function determineSentiment(activityStats: any): 'positive' | 'neutral' | 'negative' {
   // Simple heuristic based on engagement
   const engagement = activityStats.engagementScore || 0;
-  if (engagement > 70) return 'positive';
-  if (engagement < 30) return 'negative';
+  if (engagement > 70) {return 'positive';}
+  if (engagement < 30) {return 'negative';}
   return 'neutral';
 }
 

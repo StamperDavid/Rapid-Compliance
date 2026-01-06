@@ -6,7 +6,7 @@
 'use client';
 
 import { CardElement } from '@stripe/react-stripe-js';
-import { StripeCardElementOptions } from '@stripe/stripe-js';
+import type { StripeCardElementOptions } from '@stripe/stripe-js';
 
 interface StripeCardInputProps {
   onReady?: () => void;

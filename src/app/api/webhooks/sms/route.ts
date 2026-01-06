@@ -4,7 +4,8 @@
  * https://www.twilio.com/docs/sms/tutorials/how-to-confirm-delivery-php#handle-status-callbacks
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -178,7 +179,7 @@ async function handleSMSFailure(
       
       const smsRecord = smsMessages.find((sms: any) => sms.messageId === messageSid);
       
-      if (smsRecord && smsRecord.enrollmentId) {
+      if (smsRecord?.enrollmentId) {
         // Get the enrollment
         const enrollment = await FirestoreService.get(
           `${COLLECTIONS.ORGANIZATIONS}/${org.id}/enrollments`,

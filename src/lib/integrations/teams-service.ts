@@ -20,7 +20,7 @@ export async function sendTeamsMessage(accessToken: string, options: {
 }): Promise<any> {
   const client = createGraphClient(accessToken);
   
-  return await client
+  return client
     .api(`/teams/${options.teamId}/channels/${options.channelId}/messages`)
     .post({
       body: {
@@ -44,7 +44,7 @@ export async function listChannels(accessToken: string, teamId: string): Promise
 export async function createChannel(accessToken: string, teamId: string, channelName: string): Promise<any> {
   const client = createGraphClient(accessToken);
   
-  return await client.api(`/teams/${teamId}/channels`).post({
+  return client.api(`/teams/${teamId}/channels`).post({
     displayName: channelName,
     description: `Channel created by AI Sales Platform`,
   });
@@ -64,7 +64,7 @@ export async function scheduleTeamsMeeting(accessToken: string, meeting: {
 }): Promise<any> {
   const client = createGraphClient(accessToken);
   
-  return await client.api('/me/onlineMeetings').post({
+  return client.api('/me/onlineMeetings').post({
     subject: meeting.subject,
     startDateTime: meeting.startTime,
     endDateTime: meeting.endTime,

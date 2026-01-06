@@ -1,6 +1,7 @@
 'use client';
 
-import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import type { ReactNode} from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';;
@@ -41,7 +42,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   }, [chatMessages]);
 
   const sendMessage = async () => {
-    if (!inputValue.trim() || isTyping) return;
+    if (!inputValue.trim() || isTyping) {return;}
 
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,

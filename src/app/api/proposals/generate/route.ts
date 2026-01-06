@@ -3,7 +3,8 @@
  * POST /api/proposals/generate - Generate proposal from template
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { generateProposal } from '@/lib/documents/proposal-generator';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

@@ -35,7 +35,7 @@ export async function executeXeroFunction(
         throw new Error('lineItems (array) is required for createInvoice');
       }
       
-      return await createInvoice(accessToken, tenantId, {
+      return createInvoice(accessToken, tenantId, {
         contactId: parameters.contactId,
         lineItems: parameters.lineItems,
         dueDate: parameters.dueDate,
@@ -47,7 +47,7 @@ export async function executeXeroFunction(
         throw new Error('name (string) is required for createCustomer');
       }
       
-      return await createContact(accessToken, tenantId, {
+      return createContact(accessToken, tenantId, {
         name: parameters.name,
         email: parameters.email,
         phone: parameters.phone,
@@ -55,11 +55,11 @@ export async function executeXeroFunction(
       
     case 'getCustomer':
       // List all contacts (can be filtered client-side)
-      return await listContacts(accessToken, tenantId);
+      return listContacts(accessToken, tenantId);
       
     case 'listInvoices':
       // No parameters required
-      return await listInvoices(accessToken, tenantId);
+      return listInvoices(accessToken, tenantId);
       
     default:
       throw new Error(`Unknown Xero function: ${functionName}`);

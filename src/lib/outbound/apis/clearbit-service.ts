@@ -206,7 +206,7 @@ export async function searchCompanyByName(
     const domain = guessDomainFromCompanyName(companyName);
     
     // Try domain lookup
-    let company = await enrichCompanyByDomain(domain, organizationId);
+    const company = await enrichCompanyByDomain(domain, organizationId);
     
     if (company) {
       return company;
@@ -361,12 +361,12 @@ async function getClearbitApiKey(organizationId: string): Promise<string | null>
  * Guess domain from company name
  */
 function guessDomainFromCompanyName(companyName: string): string {
-  return companyName
+  return `${companyName
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[^a-z0-9]/g, '')
     .replace(/inc|llc|ltd|corp|corporation|company|co/g, '')
-    + '.com';
+     }.com`;
 }
 
 /**

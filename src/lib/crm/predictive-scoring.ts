@@ -89,9 +89,9 @@ export async function calculatePredictiveLeadScore(
 
     // Determine tier
     let tier: 'hot' | 'warm' | 'cold';
-    if (score >= 75) tier = 'hot';
-    else if (score >= 50) tier = 'warm';
-    else tier = 'cold';
+    if (score >= 75) {tier = 'hot';}
+    else if (score >= 50) {tier = 'warm';}
+    else {tier = 'cold';}
 
     // Estimate conversion probability (simplified)
     // In production, this would be ML model output
@@ -169,17 +169,17 @@ function scoreFirmographics(lead: Lead): number {
 
     // Company size
     if (enrichment.companySize) {
-      if (enrichment.companySize >= 100) score += 20;
-      else if (enrichment.companySize >= 50) score += 15;
-      else if (enrichment.companySize >= 10) score += 10;
-      else score += 5;
+      if (enrichment.companySize >= 100) {score += 20;}
+      else if (enrichment.companySize >= 50) {score += 15;}
+      else if (enrichment.companySize >= 10) {score += 10;}
+      else {score += 5;}
     }
 
     // Revenue
     if (enrichment.revenue) {
-      if (enrichment.revenue >= 10000000) score += 20;
-      else if (enrichment.revenue >= 1000000) score += 15;
-      else if (enrichment.revenue >= 100000) score += 10;
+      if (enrichment.revenue >= 10000000) {score += 20;}
+      else if (enrichment.revenue >= 1000000) {score += 15;}
+      else if (enrichment.revenue >= 100000) {score += 10;}
     }
 
     // Industry (would have industry-specific scoring in production)
@@ -204,17 +204,17 @@ function scoreBehavioralSignals(lead: Lead, activityStats: any): number {
   // Recent activity
   if (activityStats.lastActivityDate) {
     const daysSince = (Date.now() - new Date(activityStats.lastActivityDate).getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSince < 1) score += 25;
-    else if (daysSince < 3) score += 15;
-    else if (daysSince < 7) score += 5;
-    else score -= 10;
+    if (daysSince < 1) {score += 25;}
+    else if (daysSince < 3) {score += 15;}
+    else if (daysSince < 7) {score += 5;}
+    else {score -= 10;}
   }
 
   // Activity frequency
   if (activityStats.avgActivitiesPerDay) {
-    if (activityStats.avgActivitiesPerDay > 1) score += 15;
-    else if (activityStats.avgActivitiesPerDay > 0.5) score += 10;
-    else if (activityStats.avgActivitiesPerDay > 0.2) score += 5;
+    if (activityStats.avgActivitiesPerDay > 1) {score += 15;}
+    else if (activityStats.avgActivitiesPerDay > 0.5) {score += 10;}
+    else if (activityStats.avgActivitiesPerDay > 0.2) {score += 5;}
   }
 
   // Lead source quality
@@ -222,8 +222,8 @@ function scoreBehavioralSignals(lead: Lead, activityStats: any): number {
     const highQualitySources = ['Referral', 'Website', 'Demo Request'];
     const mediumQualitySources = ['Social Media', 'Email Campaign'];
     
-    if (highQualitySources.includes(lead.source)) score += 10;
-    else if (mediumQualitySources.includes(lead.source)) score += 5;
+    if (highQualitySources.includes(lead.source)) {score += 10;}
+    else if (mediumQualitySources.includes(lead.source)) {score += 5;}
   }
 
   return Math.min(100, Math.max(0, score));
@@ -298,15 +298,15 @@ function calculateConfidence(lead: Lead, activityStats: any): number {
   let confidence = 60; // Base confidence
 
   // More data = higher confidence
-  if (lead.email) confidence += 5;
-  if (lead.phone) confidence += 5;
-  if (lead.company) confidence += 5;
-  if (lead.title) confidence += 5;
-  if (lead.enrichmentData) confidence += 10;
+  if (lead.email) {confidence += 5;}
+  if (lead.phone) {confidence += 5;}
+  if (lead.company) {confidence += 5;}
+  if (lead.title) {confidence += 5;}
+  if (lead.enrichmentData) {confidence += 10;}
   
   // More activity = higher confidence
-  if (activityStats.totalActivities > 10) confidence += 10;
-  else if (activityStats.totalActivities > 5) confidence += 5;
+  if (activityStats.totalActivities > 10) {confidence += 10;}
+  else if (activityStats.totalActivities > 5) {confidence += 5;}
 
   return Math.min(100, confidence);
 }

@@ -233,7 +233,7 @@ async function getOAuthConfig(
   
   switch (provider) {
     case 'google':
-      const google = (apiKeys as any).integrations?.googleWorkspace;
+      const google = (apiKeys).integrations?.googleWorkspace;
       if (!google?.clientId || !google?.clientSecret) {
         throw new Error('Google OAuth credentials not configured');
       }
@@ -252,7 +252,7 @@ async function getOAuthConfig(
       };
     
     case 'microsoft':
-      const microsoft = (apiKeys as any).integrations?.microsoft365;
+      const microsoft = (apiKeys).integrations?.microsoft365;
       if (!microsoft?.clientId || !microsoft?.clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
       }
@@ -271,7 +271,7 @@ async function getOAuthConfig(
       };
     
     case 'slack':
-      const slack = (apiKeys as any).integrations?.slack;
+      const slack = (apiKeys).integrations?.slack;
       if (!slack?.clientId || !slack?.clientSecret) {
         throw new Error('Slack OAuth credentials not configured');
       }
@@ -291,7 +291,7 @@ async function getOAuthConfig(
       };
     
     case 'quickbooks':
-      const quickbooks = (apiKeys as any).integrations?.quickbooks;
+      const quickbooks = (apiKeys).integrations?.quickbooks;
       if (!quickbooks?.clientId || !quickbooks?.clientSecret) {
         throw new Error('QuickBooks OAuth credentials not configured');
       }
@@ -311,7 +311,7 @@ async function getOAuthConfig(
       };
     
     case 'xero':
-      const xero = (apiKeys as any).integrations?.xero;
+      const xero = (apiKeys).integrations?.xero;
       if (!xero?.clientId || !xero?.clientSecret) {
         throw new Error('Xero OAuth credentials not configured');
       }
@@ -346,7 +346,7 @@ async function saveIntegrationTokens(
   tokens: any
 ): Promise<void> {
   // Get or create integration
-  let integration = await FirestoreService.get(
+  const integration = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
     integrationId
   );
@@ -429,7 +429,7 @@ export async function getValidAccessToken(
     
     if (expiresAt <= fiveMinutesFromNow) {
       // Refresh token
-      return await refreshAccessToken(organizationId, integrationId, provider);
+      return refreshAccessToken(organizationId, integrationId, provider);
     }
   }
   

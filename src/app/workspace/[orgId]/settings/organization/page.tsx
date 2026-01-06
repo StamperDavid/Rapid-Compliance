@@ -37,7 +37,7 @@ export default function OrganizationSettingsPage() {
   React.useEffect(() => {
     // Load organization data from Firestore
     const loadOrganizationData = async () => {
-      if (!user?.organizationId) return;
+      if (!user?.organizationId) {return;}
       
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -77,7 +77,7 @@ export default function OrganizationSettingsPage() {
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   const handleSave = async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     setSaving(true);
     try {

@@ -21,7 +21,7 @@ interface ScoringRulesSectionProps {
 export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, canRemove }: ScoringRulesSectionProps) {
   const addScoringRule = () => {
     const id = prompt('Rule ID (e.g., growing_business):');
-    if (!id) return;
+    if (!id) {return;}
 
     const newRule = {
       id,

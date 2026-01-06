@@ -45,7 +45,7 @@ export async function getTokensFromCode(code: string): Promise<{
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 /**
@@ -66,7 +66,7 @@ export async function sendMessage(accessToken: string, options: {
 }): Promise<any> {
   const client = createSlackClient(accessToken);
   
-  return await client.chat.postMessage({
+  return client.chat.postMessage({
     channel: options.channel,
     text: options.text,
     attachments: options.attachments,
@@ -92,7 +92,7 @@ export async function listChannels(accessToken: string): Promise<any[]> {
 export async function createChannel(accessToken: string, name: string, isPrivate: boolean = false): Promise<any> {
   const client = createSlackClient(accessToken);
   
-  return await client.conversations.create({
+  return client.conversations.create({
     name,
     is_private: isPrivate,
   });
@@ -120,7 +120,7 @@ export async function sendDirectMessage(accessToken: string, userId: string, tex
   });
   
   // Send message
-  return await client.chat.postMessage({
+  return client.chat.postMessage({
     channel: dm.channel!.id!,
     text,
   });
@@ -137,7 +137,7 @@ export async function uploadFile(accessToken: string, options: {
 }): Promise<any> {
   const client = createSlackClient(accessToken);
   
-  return await client.files.upload({
+  return client.files.upload({
     channels: options.channels,
     content: options.content,
     filename: options.filename,
@@ -163,7 +163,7 @@ export async function getUserInfo(accessToken: string, userId: string): Promise<
 export async function setChannelTopic(accessToken: string, channel: string, topic: string): Promise<any> {
   const client = createSlackClient(accessToken);
   
-  return await client.conversations.setTopic({
+  return client.conversations.setTopic({
     channel,
     topic,
   });

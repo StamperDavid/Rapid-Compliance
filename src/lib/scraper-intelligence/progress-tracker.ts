@@ -350,7 +350,7 @@ export function createProgressEvent(
  * Calculate progress percentage from current/total
  */
 export function calculateProgress(current: number, total: number): number {
-  if (total === 0) return 0;
+  if (total === 0) {return 0;}
   return Math.min(100, Math.max(0, Math.round((current / total) * 100)));
 }
 
@@ -365,9 +365,9 @@ export function formatProgressMessage(
   const messages: Record<ProgressEventType, string> = {
     job_queued: `Queued scrape for ${url}`,
     job_started: `Started scraping ${url}`,
-    job_progress: `Scraping ${url}${details ? ': ' + details : ''}`,
+    job_progress: `Scraping ${url}${details ? `: ${  details}` : ''}`,
     job_completed: `Completed scraping ${url}`,
-    job_failed: `Failed to scrape ${url}${details ? ': ' + details : ''}`,
+    job_failed: `Failed to scrape ${url}${details ? `: ${  details}` : ''}`,
     job_cancelled: `Cancelled scraping ${url}`,
     job_cached: `Retrieved ${url} from cache`,
   };

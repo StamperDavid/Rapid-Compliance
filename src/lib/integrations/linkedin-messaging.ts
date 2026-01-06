@@ -32,7 +32,7 @@ export async function sendLinkedInMessage(
 ): Promise<LinkedInMessageResult> {
   try {
     logger.info('LinkedIn: Attempting to send message', {
-      recipient: recipientIdentifier.substring(0, 30) + '...',
+      recipient: `${recipientIdentifier.substring(0, 30)  }...`,
       messageLength: message.length,
       organizationId,
     });
@@ -154,7 +154,7 @@ async function logMessageForManualSend(
   logger.info('LinkedIn: Created manual task for message', {
     taskId,
     organizationId,
-    recipient: recipientIdentifier.substring(0, 30) + '...',
+    recipient: `${recipientIdentifier.substring(0, 30)  }...`,
   });
 }
 

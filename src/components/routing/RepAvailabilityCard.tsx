@@ -142,8 +142,8 @@ function RepRow({ rep }: { rep: SalesRep }) {
 }
 
 function getCapacityColor(utilization: number): string {
-  if (utilization >= 90) return 'bg-red-500';
-  if (utilization >= 70) return 'bg-yellow-500';
+  if (utilization >= 90) {return 'bg-red-500';}
+  if (utilization >= 70) {return 'bg-yellow-500';}
   return 'bg-green-500';
 }
 

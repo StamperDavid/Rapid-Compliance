@@ -85,7 +85,7 @@ export async function fetchGmailInbox(
           }
         );
 
-        if (!messageResponse.ok) continue;
+        if (!messageResponse.ok) {continue;}
 
         const messageData = await messageResponse.json();
         const message = parseGmailMessage(messageData);
@@ -167,7 +167,7 @@ export async function fetchOutlookInbox(
     }
 
     // Build filter
-    let filter = 'receivedDateTime ge ' + (since ? since.toISOString() : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+    const filter = `receivedDateTime ge ${  since ? since.toISOString() : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}`;
 
     const response = await fetch(
       `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$filter=${encodeURIComponent(filter)}&$top=100&$orderby=receivedDateTime desc`,

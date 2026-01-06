@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { z } from 'zod';
@@ -54,7 +55,7 @@ const checkoutSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/checkout');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {

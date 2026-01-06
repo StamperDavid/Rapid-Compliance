@@ -8,7 +8,8 @@
  * Provides comprehensive analytics for sequence performance monitoring.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
@@ -213,7 +214,7 @@ async function getSequencePerformance(
 
     if (nativeSeqDoc.exists) {
       const data = nativeSeqDoc.data();
-      if (!data || data.organizationId !== organizationId) {
+      if (data?.organizationId !== organizationId) {
         return null;
       }
 
@@ -429,9 +430,9 @@ function buildLegacySequencePerformance(
  * Map legacy step types to channels
  */
 function mapLegacyStepType(type: string): 'email' | 'linkedin' | 'phone' | 'sms' {
-  if (type.includes('linkedin')) return 'linkedin';
-  if (type.includes('sms')) return 'sms';
-  if (type.includes('call') || type.includes('phone')) return 'phone';
+  if (type.includes('linkedin')) {return 'linkedin';}
+  if (type.includes('sms')) {return 'sms';}
+  if (type.includes('call') || type.includes('phone')) {return 'phone';}
   return 'email';
 }
 

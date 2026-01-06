@@ -95,7 +95,7 @@ export async function getVariantForUser(
   // Get test
   const test = await getABTest(testId);
   
-  if (!test || test.status !== 'running') {
+  if (test?.status !== 'running') {
     return null;
   }
   
@@ -135,10 +135,10 @@ export async function trackImpression(
   
   // Increment impression count
   const test = await getABTest(testId);
-  if (!test) return;
+  if (!test) {return;}
   
   const variant = test.variants.find(v => v.id === variantId);
-  if (!variant) return;
+  if (!variant) {return;}
   
   variant.metrics.impressions++;
   variant.metrics.conversionRate = calculateConversionRate(variant.metrics);
@@ -164,10 +164,10 @@ export async function trackConversion(
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   
   const test = await getABTest(testId);
-  if (!test) return;
+  if (!test) {return;}
   
   const variant = test.variants.find(v => v.id === variantId);
-  if (!variant) return;
+  if (!variant) {return;}
   
   variant.metrics.conversions++;
   
@@ -224,12 +224,12 @@ export async function getABTestResults(testId: string): Promise<{
  */
 async function checkForWinner(test: ABTest): Promise<void> {
   // Only check if test is running and has enough data
-  if (test.status !== 'running') return;
+  if (test.status !== 'running') {return;}
   
   const totalImpressions = test.variants.reduce((sum, v) => sum + v.metrics.impressions, 0);
   
   // Need at least 1000 impressions
-  if (totalImpressions < 1000) return;
+  if (totalImpressions < 1000) {return;}
   
   const { winner, confidence } = calculateStatisticalSignificance(test.variants);
   
@@ -356,7 +356,7 @@ function generateInsights(variants: ABVariant[]): string[] {
 
 async function getABTest(testId: string): Promise<ABTest | null> {
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  return await FirestoreService.get<ABTest>(
+  return FirestoreService.get<ABTest>(
     `${COLLECTIONS.ORGANIZATIONS}/*/abTests`,
     testId
   );
@@ -396,7 +396,7 @@ function assignVariant(variants: ABVariant[], userHash: number): ABVariant {
 }
 
 function calculateConversionRate(metrics: ABMetrics): number {
-  if (metrics.impressions === 0) return 0;
+  if (metrics.impressions === 0) {return 0;}
   return (metrics.conversions / metrics.impressions) * 100;
 }
 

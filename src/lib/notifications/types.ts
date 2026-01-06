@@ -14,8 +14,8 @@
  * - Retry logic with exponential backoff
  */
 
-import { Timestamp } from 'firebase/firestore';
-import { SignalType } from '@/lib/orchestration/types';
+import type { Timestamp } from 'firebase/firestore';
+import type { SignalType } from '@/lib/orchestration/types';
 
 /**
  * Notification Channel

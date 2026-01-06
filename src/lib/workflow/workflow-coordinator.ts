@@ -38,7 +38,7 @@ import type {
   WorkflowExecutionStatus,
 } from './types';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
-import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
+import type { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 
 // ============================================================================
 // WORKFLOW COORDINATOR

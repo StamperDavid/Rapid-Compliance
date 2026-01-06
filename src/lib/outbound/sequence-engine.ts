@@ -3,11 +3,12 @@
  * Core logic for managing and executing email sequences
  */
 
-import { 
+import type { 
   OutboundSequence,
   ProspectEnrollment,
   SequenceStep,
-  StepAction,
+  StepAction} from '@/types/outbound-sequence';
+import {
   EnrollmentStatus,
   StepActionStatus 
 } from '@/types/outbound-sequence';
@@ -37,7 +38,7 @@ export class SequenceEngine {
 
     // Check if already enrolled
     const existing = await this.getEnrollment(prospectId, sequenceId, organizationId);
-    if (existing && existing.status === 'active') {
+    if (existing?.status === 'active') {
       throw new Error('Prospect already enrolled in this sequence');
     }
 
@@ -113,12 +114,12 @@ export class SequenceEngine {
     organizationId: string
   ): Promise<void> {
     const enrollment = await this.getEnrollmentById(enrollmentId, organizationId);
-    if (!enrollment || enrollment.status !== 'active') {
+    if (enrollment?.status !== 'active') {
       return; // Nothing to process
     }
 
     const sequence = await this.getSequence(enrollment.sequenceId, organizationId);
-    if (!sequence || sequence.status !== 'active') {
+    if (sequence?.status !== 'active') {
       return;
     }
 
@@ -264,7 +265,7 @@ export class SequenceEngine {
       enrollment.prospectId
     );
 
-    if (!prospect || !prospect.email) {
+    if (!prospect?.email) {
       throw new Error('Prospect email not found');
     }
 
@@ -398,7 +399,7 @@ export class SequenceEngine {
       enrollment.prospectId
     );
     
-    if (!prospect || !prospect.phone) {
+    if (!prospect?.phone) {
       throw new Error(`Prospect ${enrollment.prospectId} has no phone number`);
     }
     
@@ -541,9 +542,9 @@ export class SequenceEngine {
       };
       
       stats.totalExecutions += 1;
-      if (status === 'success') stats.successCount += 1;
-      if (status === 'failed') stats.failedCount += 1;
-      if (status === 'skipped') stats.skippedCount += 1;
+      if (status === 'success') {stats.successCount += 1;}
+      if (status === 'failed') {stats.failedCount += 1;}
+      if (status === 'skipped') {stats.skippedCount += 1;}
       stats.successRate = (stats.successCount / stats.totalExecutions) * 100;
       stats.updatedAt = new Date();
       
@@ -597,24 +598,24 @@ export class SequenceEngine {
           const previousOpened = enrollment.stepActions.some(
             a => a.stepOrder === step.order - 1 && a.openedAt
           );
-          if (!previousOpened) return false;
+          if (!previousOpened) {return false;}
           break;
 
         case 'not_opened_previous':
           const previousNotOpened = !enrollment.stepActions.some(
             a => a.stepOrder === step.order - 1 && a.openedAt
           );
-          if (!previousNotOpened) return false;
+          if (!previousNotOpened) {return false;}
           break;
 
         case 'replied':
           const hasReplied = enrollment.stepActions.some(a => a.repliedAt);
-          if (!hasReplied) return false;
+          if (!hasReplied) {return false;}
           break;
 
         case 'not_replied':
           const hasNotReplied = !enrollment.stepActions.some(a => a.repliedAt);
-          if (!hasNotReplied) return false;
+          if (!hasNotReplied) {return false;}
           break;
       }
     }
@@ -673,10 +674,10 @@ export class SequenceEngine {
     sequenceId: string,
     organizationId: string
   ): Promise<OutboundSequence | null> {
-    return await FirestoreService.get(
+    return FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequences`,
       sequenceId
-    ) as OutboundSequence | null;
+    );
   }
 
   /**
@@ -713,10 +714,10 @@ export class SequenceEngine {
     enrollmentId: string,
     organizationId: string
   ): Promise<ProspectEnrollment | null> {
-    return await FirestoreService.get(
+    return FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/enrollments`,
       enrollmentId
-    ) as ProspectEnrollment | null;
+    );
   }
 
   /**
@@ -740,7 +741,7 @@ export class SequenceEngine {
     updates: Partial<OutboundSequence['analytics']>
   ): Promise<void> {
     const sequence = await this.getSequence(sequenceId, organizationId);
-    if (!sequence) return;
+    if (!sequence) {return;}
 
     // Increment analytics
     Object.keys(updates).forEach((key) => {

@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import AdminBar from '@/components/AdminBar';
-import { SiteConfig } from '@/types/website';
+import type { SiteConfig } from '@/types/website';
 
 export default function SEOManagementPage() {
   const params = useParams();
@@ -66,7 +66,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
   }
 
   async function saveSettings() {
-    if (!settings) return;
+    if (!settings) {return;}
 
     try {
       setSaving(true);
@@ -83,7 +83,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save settings');
+      if (!response.ok) {throw new Error('Failed to save settings');}
 
       alert('SEO settings saved successfully!');
     } catch (error) {
@@ -95,7 +95,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
   }
 
   function updateSEO(field: string, value: any) {
-    if (!settings) return;
+    if (!settings) {return;}
 
     setSettings({
       ...settings,
@@ -107,7 +107,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
   }
 
   function updateAnalytics(field: string, value: any) {
-    if (!settings) return;
+    if (!settings) {return;}
 
     setSettings({
       ...settings,

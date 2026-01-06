@@ -19,7 +19,7 @@ export async function registerFirestoreTrigger(
 ): Promise<void> {
   const trigger = workflow.trigger as EntityTrigger;
   
-  if (!trigger || !trigger.type.startsWith('entity.')) {
+  if (!trigger?.type.startsWith('entity.')) {
     return; // Not an entity trigger
   }
   

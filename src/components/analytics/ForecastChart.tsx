@@ -38,7 +38,7 @@ export default function ForecastChart({ data, showConfidence = true }: ForecastC
   const ChartComponent = showConfidence ? AreaChart : LineChart;
 
   const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
+    if (active && payload?.length) {
       return (
         <div style={{
           backgroundColor: 'var(--color-bg-elevated)',

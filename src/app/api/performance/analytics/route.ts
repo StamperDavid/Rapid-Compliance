@@ -15,7 +15,8 @@
  * @module api/performance/analytics
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import {
   generatePerformanceAnalytics,
@@ -102,7 +103,7 @@ function getCacheKey(request: PerformanceAnalyticsRequest): string {
 
 function getFromCache(key: string): TeamPerformanceAnalytics | null {
   const entry = cache.get(key);
-  if (!entry) return null;
+  if (!entry) {return null;}
   
   const age = Date.now() - entry.cachedAt;
   if (age > CACHE_TTL) {
@@ -123,7 +124,7 @@ function setCache(key: string, data: TeamPerformanceAnalytics): void {
   // Clean up old entries (keep only last 100)
   if (cache.size > 100) {
     const oldestKey = cache.keys().next().value;
-    if (oldestKey) cache.delete(oldestKey);
+    if (oldestKey) {cache.delete(oldestKey);}
   }
 }
 

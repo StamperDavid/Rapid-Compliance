@@ -105,7 +105,7 @@ export function useAuth() {
 
 export function usePermission(permission: keyof RolePermissions): boolean {
   const { user } = useAuth();
-  if (!user) return false;
+  if (!user) {return false;}
   return hasPermission(user.role, permission);
 }
 

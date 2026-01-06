@@ -3,7 +3,8 @@
  * Executes email actions in workflows
  */
 
-import { sendEmail, EmailOptions } from '@/lib/email/email-service';
+import type { EmailOptions } from '@/lib/email/email-service';
+import { sendEmail } from '@/lib/email/email-service';
 import type { SendEmailAction } from '@/types/workflow';
 
 /**

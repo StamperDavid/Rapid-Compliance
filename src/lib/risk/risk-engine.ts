@@ -450,11 +450,11 @@ async function analyzeRiskFactors(
   dealScore.riskFactors.forEach((riskFactor, index) => {
     // Map risk categories
     let category: RiskCategory = 'external';
-    if (riskFactor.category === 'timing') category = 'timing';
-    else if (riskFactor.category === 'budget') category = 'budget';
-    else if (riskFactor.category === 'competition') category = 'competition';
-    else if (riskFactor.category === 'engagement') category = 'engagement';
-    else if (riskFactor.category === 'stakeholder') category = 'stakeholder';
+    if (riskFactor.category === 'timing') {category = 'timing';}
+    else if (riskFactor.category === 'budget') {category = 'budget';}
+    else if (riskFactor.category === 'competition') {category = 'competition';}
+    else if (riskFactor.category === 'engagement') {category = 'engagement';}
+    else if (riskFactor.category === 'stakeholder') {category = 'stakeholder';}
     
     factors.push({
       id: `score_risk_${index}`,
@@ -640,10 +640,10 @@ function determineRiskLevel(
   slippageProbability: number,
   thresholds: RiskEngineConfig['thresholds']
 ): RiskLevel {
-  if (slippageProbability >= thresholds.critical) return 'critical';
-  if (slippageProbability >= thresholds.high) return 'high';
-  if (slippageProbability >= thresholds.medium) return 'medium';
-  if (slippageProbability >= thresholds.low) return 'low';
+  if (slippageProbability >= thresholds.critical) {return 'critical';}
+  if (slippageProbability >= thresholds.high) {return 'high';}
+  if (slippageProbability >= thresholds.medium) {return 'medium';}
+  if (slippageProbability >= thresholds.low) {return 'low';}
   return 'minimal';
 }
 
@@ -659,13 +659,13 @@ function calculatePredictionConfidence(
   let confidence = 50; // Base confidence
   
   // Add confidence based on data quality
-  if (dealScore.confidence > 70) confidence += 20;
-  else if (dealScore.confidence > 50) confidence += 10;
+  if (dealScore.confidence > 70) {confidence += 20;}
+  else if (dealScore.confidence > 50) {confidence += 10;}
   
-  if (riskFactors.length >= 3) confidence += 15;
-  if (riskFactors.length >= 5) confidence += 10;
+  if (riskFactors.length >= 3) {confidence += 15;}
+  if (riskFactors.length >= 5) {confidence += 10;}
   
-  if (dealHealth.factors.length >= 4) confidence += 15;
+  if (dealHealth.factors.length >= 4) {confidence += 15;}
   
   return Math.min(100, confidence);
 }
@@ -1038,7 +1038,7 @@ function calculateRiskSummary(
   
   let totalSlippageProbability = 0;
   let urgentActionRequired = 0;
-  let revenueAtRisk = 0;
+  const revenueAtRisk = 0;
   
   const riskCategoryCounts = new Map<RiskCategory, { count: number; totalImpact: number }>();
   

@@ -80,7 +80,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded) {return;}
 
     // Apply CSS variables
     const root = document.documentElement;

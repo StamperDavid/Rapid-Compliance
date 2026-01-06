@@ -27,7 +27,7 @@ export interface DuplicateDetectionResult {
  * Normalize string for comparison
  */
 function normalizeString(str: string | undefined | null): string {
-  if (!str) return '';
+  if (!str) {return '';}
   return str
     .toLowerCase()
     .trim()
@@ -38,7 +38,7 @@ function normalizeString(str: string | undefined | null): string {
  * Normalize phone number
  */
 function normalizePhone(phone: string | undefined | null): string {
-  if (!phone) return '';
+  if (!phone) {return '';}
   return phone.replace(/\D/g, ''); // Remove non-digits
 }
 
@@ -49,7 +49,7 @@ function stringSimilarity(str1: string, str2: string): number {
   const longer = str1.length > str2.length ? str1 : str2;
   const shorter = str1.length > str2.length ? str2 : str1;
   
-  if (longer.length === 0) return 1.0;
+  if (longer.length === 0) {return 1.0;}
   
   const editDistance = levenshteinDistance(longer, shorter);
   return (longer.length - editDistance) / longer.length;
@@ -101,7 +101,7 @@ export async function detectLeadDuplicates(
     // Check each existing lead for similarity
     for (const existingLead of existingLeads) {
       // Skip self if checking existing record
-      if (lead.id && existingLead.id === lead.id) continue;
+      if (lead.id && existingLead.id === lead.id) {continue;}
 
       const matchReasons: string[] = [];
       let matchScore = 0;
@@ -185,9 +185,9 @@ export async function detectLeadDuplicates(
         
         // Determine confidence level
         let confidence: 'high' | 'medium' | 'low';
-        if (matchScore >= 85) confidence = 'high';
-        else if (matchScore >= 60) confidence = 'medium';
-        else confidence = 'low';
+        if (matchScore >= 85) {confidence = 'high';}
+        else if (matchScore >= 60) {confidence = 'medium';}
+        else {confidence = 'low';}
 
         matches.push({
           id: existingLead.id,
@@ -237,7 +237,7 @@ export async function detectContactDuplicates(
     const matches: DuplicateMatch[] = [];
 
     for (const existingContact of existingContacts) {
-      if (contact.id && existingContact.id === contact.id) continue;
+      if (contact.id && existingContact.id === contact.id) {continue;}
 
       const matchReasons: string[] = [];
       let matchScore = 0;
@@ -279,9 +279,9 @@ export async function detectContactDuplicates(
         matchScore = Math.min(matchScore, 100);
         
         let confidence: 'high' | 'medium' | 'low';
-        if (matchScore >= 85) confidence = 'high';
-        else if (matchScore >= 60) confidence = 'medium';
-        else confidence = 'low';
+        if (matchScore >= 85) {confidence = 'high';}
+        else if (matchScore >= 60) {confidence = 'medium';}
+        else {confidence = 'low';}
 
         matches.push({
           id: existingContact.id,
@@ -322,7 +322,7 @@ export async function detectCompanyDuplicates(
     const matches: DuplicateMatch[] = [];
 
     for (const existingCompany of existingCompanies) {
-      if (company.id && existingCompany.id === company.id) continue;
+      if (company.id && existingCompany.id === company.id) {continue;}
 
       const matchReasons: string[] = [];
       let matchScore = 0;
@@ -368,9 +368,9 @@ export async function detectCompanyDuplicates(
         matchScore = Math.min(matchScore, 100);
         
         let confidence: 'high' | 'medium' | 'low';
-        if (matchScore >= 85) confidence = 'high';
-        else if (matchScore >= 60) confidence = 'medium';
-        else confidence = 'low';
+        if (matchScore >= 85) {confidence = 'high';}
+        else if (matchScore >= 60) {confidence = 'medium';}
+        else {confidence = 'low';}
 
         matches.push({
           id: existingCompany.id,

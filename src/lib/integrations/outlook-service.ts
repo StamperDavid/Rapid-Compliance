@@ -46,7 +46,7 @@ export async function getTokensFromCode(code: string): Promise<{
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 /**
@@ -67,7 +67,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 /**
@@ -202,7 +202,7 @@ export async function createCalendarEvent(accessToken: string, event: {
     }));
   }
 
-  return await client.api('/me/calendar/events').post(eventData);
+  return client.api('/me/calendar/events').post(eventData);
 }
 
 /**
@@ -215,7 +215,7 @@ export async function getFreeBusy(accessToken: string, options: {
 }): Promise<any> {
   const client = createGraphClient(accessToken);
   
-  return await client.api('/me/calendar/getSchedule').post({
+  return client.api('/me/calendar/getSchedule').post({
     schedules: options.emails,
     startTime: {
       dateTime: options.startTime,

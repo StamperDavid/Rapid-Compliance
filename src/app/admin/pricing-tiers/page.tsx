@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { VOLUME_TIERS, TIER_PRICING, SubscriptionTier } from '@/types/subscription';
+import type { SubscriptionTier } from '@/types/subscription';
+import { VOLUME_TIERS, TIER_PRICING } from '@/types/subscription';
 import AdminBar from '@/components/AdminBar';
 
 interface TierConfig {
@@ -110,7 +111,7 @@ export default function PricingTiersAdmin() {
         setMessage('❌ Error saving tiers. Please try again.');
       }
     } catch (error) {
-      setMessage('❌ Error: ' + (error as Error).message);
+      setMessage(`❌ Error: ${  (error as Error).message}`);
     } finally {
       setSaving(false);
     }

@@ -33,7 +33,7 @@ export class OpenAIProvider implements ModelProvider {
    * Load API key from database or use cached value
    */
   private async getApiKey(): Promise<string> {
-    if (this.apiKey) return this.apiKey;
+    if (this.apiKey) {return this.apiKey;}
     
     try {
       const keys = await apiKeyService.getKeys(this.organizationId);
@@ -156,7 +156,7 @@ export class OpenAIProvider implements ModelProvider {
       
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {break;}
         
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -165,7 +165,7 @@ export class OpenAIProvider implements ModelProvider {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
-            if (data === '[DONE]') continue;
+            if (data === '[DONE]') {continue;}
             
             try {
               const parsed = JSON.parse(data);

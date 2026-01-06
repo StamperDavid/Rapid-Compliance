@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -15,7 +16,7 @@ import { withCache } from '@/lib/cache/analytics-cache';
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/lead-scoring');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
@@ -90,31 +91,31 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
 
     // Calculate lead scores if not present
     const scoredLeads = allLeads.map(lead => {
-      if (lead.score !== undefined) return lead;
+      if (lead.score !== undefined) {return lead;}
       
       // Simple scoring algorithm
       let score = 50; // Base score
       
       // Email provided: +10
-      if (lead.email) score += 10;
+      if (lead.email) {score += 10;}
       
       // Phone provided: +10
-      if (lead.phone || lead.phoneNumber) score += 10;
+      if (lead.phone || lead.phoneNumber) {score += 10;}
       
       // Company provided: +10
-      if (lead.company || lead.companyName) score += 10;
+      if (lead.company || lead.companyName) {score += 10;}
       
       // Has activity: +15
-      if (lead.lastActivity || lead.lastActivityAt) score += 15;
+      if (lead.lastActivity || lead.lastActivityAt) {score += 15;}
       
       // Qualified status: +20
-      if ((lead.status || '').toLowerCase().includes('qualified')) score += 20;
+      if ((lead.status || '').toLowerCase().includes('qualified')) {score += 20;}
       
       // Hot rating: +15
-      if ((lead.rating || '').toLowerCase() === 'hot') score += 15;
+      if ((lead.rating || '').toLowerCase() === 'hot') {score += 15;}
       
       // Warm rating: +10
-      if ((lead.rating || '').toLowerCase() === 'warm') score += 10;
+      if ((lead.rating || '').toLowerCase() === 'warm') {score += 10;}
       
       return { ...lead, score: Math.min(100, score) };
     });

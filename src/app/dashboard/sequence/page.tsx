@@ -10,7 +10,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SequenceAnalysis, SequenceAnalysisResponse } from '@/lib/sequence';
+import type { SequenceAnalysis, SequenceAnalysisResponse } from '@/lib/sequence';
 import { SequenceOverviewCard } from '@/components/sequence/SequenceOverviewCard';
 import { SequencePerformanceCard } from '@/components/sequence/SequencePerformanceCard';
 import { SequencePatternsCard } from '@/components/sequence/SequencePatternsCard';

@@ -3,9 +3,9 @@
  * Validates workflows against schema changes and provides warnings
  */
 
-import { SchemaChangeEvent } from './schema-change-tracker';
+import type { SchemaChangeEvent } from './schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
-import { Workflow } from '@/types/workflow';
+import type { Workflow } from '@/types/workflow';
 import { FieldResolver } from './field-resolver';
 
 /**

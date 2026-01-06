@@ -3,7 +3,7 @@
  * Automatically updates AI agent knowledge when schemas change
  */
 
-import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
+import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
 

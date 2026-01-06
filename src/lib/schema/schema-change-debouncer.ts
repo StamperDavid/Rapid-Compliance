@@ -3,7 +3,7 @@
  * Batches rapid schema changes to avoid multiple recompilations
  */
 
-import { SchemaChangeEvent } from './schema-change-tracker';
+import type { SchemaChangeEvent } from './schema-change-tracker';
 import { processSchemaChangeEvent } from './schema-change-handler';
 import { logger } from '@/lib/logger/logger';
 
@@ -51,7 +51,7 @@ export class SchemaChangeDebouncer {
     
     // Clear existing timer
     if (this.timers.has(key)) {
-      clearTimeout(this.timers.get(key)!);
+      clearTimeout(this.timers.get(key));
     }
     
     // Set new timer
@@ -358,11 +358,11 @@ export class SchemaBatchUpdater {
         organizationId: this.organizationId,
         workspaceId: this.workspaceId,
         schemaId: this.schemaId,
-        timestamp: updatedSchema.updatedAt as any,
+        timestamp: updatedSchema.updatedAt,
         changeType: 'field_renamed', // Generic type for batch
         affectedSystems: [],
         processed: false,
-        createdAt: updatedSchema.updatedAt as any,
+        createdAt: updatedSchema.updatedAt,
       });
       
       logger.info('[Schema Batch Updater] Batch committed successfully', {

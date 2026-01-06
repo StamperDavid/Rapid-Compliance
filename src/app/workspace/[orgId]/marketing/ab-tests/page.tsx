@@ -28,7 +28,7 @@ export default function ABTestsPage() {
     }
   };
 
-  const formatPercentage = (value: number) => value.toFixed(1) + '%';
+  const formatPercentage = (value: number) => `${value.toFixed(1)  }%`;
 
   return (
     <div className="p-8">

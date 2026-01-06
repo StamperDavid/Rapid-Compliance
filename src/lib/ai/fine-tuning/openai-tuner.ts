@@ -142,7 +142,7 @@ async function monitorFineTuningJob(
   providerJobId: string
 ): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return;
+  if (!apiKey) {return;}
   
   const checkStatus = async () => {
     try {

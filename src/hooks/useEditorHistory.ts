@@ -36,7 +36,7 @@ export function useEditorHistory<T>() {
   }, [currentIndex]);
 
   const undo = useCallback((): T | null => {
-    if (!canUndo) return null;
+    if (!canUndo) {return null;}
     
     const newIndex = currentIndex - 1;
     setCurrentIndex(newIndex);
@@ -44,7 +44,7 @@ export function useEditorHistory<T>() {
   }, [canUndo, currentIndex, history]);
 
   const redo = useCallback((): T | null => {
-    if (!canRedo) return null;
+    if (!canRedo) {return null;}
     
     const newIndex = currentIndex + 1;
     setCurrentIndex(newIndex);

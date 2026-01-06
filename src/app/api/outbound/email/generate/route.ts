@@ -4,11 +4,14 @@
  * Generates personalized cold emails with feature gating and usage tracking
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeatureWithLimit, incrementFeatureUsage } from '@/lib/subscription/middleware';
-import { researchProspect, ProspectData } from '@/lib/outbound/prospect-research';
-import { generateColdEmail, validateEmail, EmailTemplate, EmailTone } from '@/lib/outbound/email-writer';
+import type { ProspectData } from '@/lib/outbound/prospect-research';
+import { researchProspect } from '@/lib/outbound/prospect-research';
+import type { EmailTemplate, EmailTone } from '@/lib/outbound/email-writer';
+import { generateColdEmail, validateEmail } from '@/lib/outbound/email-writer';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -16,7 +19,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/email/generate');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
     const authResult = await requireAuth(request);
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Organization ID is required');
     }
 
-    if (!prospect || !prospect.name || !prospect.company) {
+    if (!prospect?.name || !prospect.company) {
       return errors.badRequest('Prospect name and company are required');
     }
 

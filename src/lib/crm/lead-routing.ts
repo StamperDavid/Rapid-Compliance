@@ -285,9 +285,9 @@ async function getUserLeadCount(
     const { getLeads } = await import('./lead-service');
     
     const since = new Date();
-    if (period === 'day') since.setDate(since.getDate() - 1);
-    else if (period === 'week') since.setDate(since.getDate() - 7);
-    else since.setDate(since.getDate() - 30);
+    if (period === 'day') {since.setDate(since.getDate() - 1);}
+    else if (period === 'week') {since.setDate(since.getDate() - 7);}
+    else {since.setDate(since.getDate() - 30);}
 
     const result = await getLeads(
       organizationId,

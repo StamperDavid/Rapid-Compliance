@@ -3,14 +3,16 @@
  * Handles REAL email events from SendGrid
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import {
   handleEmailBounce,
   handleEmailOpen,
   handleEmailClick,
   handleEmailReply,
 } from '@/lib/outbound/sequence-scheduler';
-import { parseSendGridWebhook, SendGridWebhookEvent } from '@/lib/email/sendgrid-service';
+import type { SendGridWebhookEvent } from '@/lib/email/sendgrid-service';
+import { parseSendGridWebhook } from '@/lib/email/sendgrid-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';

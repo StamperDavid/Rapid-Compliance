@@ -6,7 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePagination } from '@/hooks/usePagination';
 import { INTEGRATION_PROVIDERS } from '@/types/integrations';
 import type { IntegrationProvider, ConnectedIntegration } from '@/types/integrations';
-import { orderBy, QueryConstraint } from 'firebase/firestore'
+import type { QueryConstraint } from 'firebase/firestore';
+import { orderBy } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';;
 
 export default function IntegrationsPage() {
@@ -25,7 +26,7 @@ export default function IntegrationsPage() {
       orderBy('connectedAt', 'desc')
     ];
 
-    return await FirestoreService.getAllPaginated(
+    return FirestoreService.getAllPaginated(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/integrations`,
       constraints,
       50,
@@ -95,7 +96,7 @@ export default function IntegrationsPage() {
   };
 
   const handleDisconnect = async (integrationId: string) => {
-    if (!confirm('Are you sure you want to disconnect this integration?')) return;
+    if (!confirm('Are you sure you want to disconnect this integration?')) {return;}
 
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -300,7 +301,7 @@ export default function IntegrationsPage() {
                       const integration = connectedIntegrations.find(
                         (i) => i.providerId === provider.id
                       );
-                      if (integration) handleDisconnect(integration.id);
+                      if (integration) {handleDisconnect(integration.id);}
                     }}
                     className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition"
                   >

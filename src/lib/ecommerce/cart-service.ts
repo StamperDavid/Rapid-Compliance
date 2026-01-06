@@ -315,9 +315,9 @@ async function saveCart(cart: Cart): Promise<void> {
         };
         
         // Only include optional fields if they are defined
-        if (item.variantId !== undefined) serializedItem.variantId = item.variantId;
-        if (item.variantOptions !== undefined) serializedItem.variantOptions = item.variantOptions;
-        if (item.image !== undefined) serializedItem.image = item.image;
+        if (item.variantId !== undefined) {serializedItem.variantId = item.variantId;}
+        if (item.variantOptions !== undefined) {serializedItem.variantOptions = item.variantOptions;}
+        if (item.image !== undefined) {serializedItem.image = item.image;}
         
         return serializedItem;
       }),

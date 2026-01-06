@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Widget } from '@/types/website';
+import type { Widget } from '@/types/website';
 import { generateAriaId, getAriaLabel, meetsWCAGAA } from '@/lib/accessibility/aria-utils';
 import { useEffect, useRef } from 'react';
 

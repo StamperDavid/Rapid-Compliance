@@ -4,11 +4,12 @@
  * POST: Create new sequence
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { OutboundSequence } from '@/types/outbound-sequence';
+import type { OutboundSequence } from '@/types/outbound-sequence';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';

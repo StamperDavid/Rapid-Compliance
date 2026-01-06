@@ -35,7 +35,7 @@ export async function executeQuickBooksFunction(
         throw new Error('lineItems (array) is required for createInvoice');
       }
       
-      return await createInvoice(accessToken, realmId, {
+      return createInvoice(accessToken, realmId, {
         customerId: parameters.customerId,
         lineItems: parameters.lineItems,
         dueDate: parameters.dueDate,
@@ -47,7 +47,7 @@ export async function executeQuickBooksFunction(
         throw new Error('displayName (string) is required for createCustomer');
       }
       
-      return await createCustomer(accessToken, realmId, {
+      return createCustomer(accessToken, realmId, {
         displayName: parameters.displayName,
         companyName: parameters.companyName,
         email: parameters.email,
@@ -56,11 +56,11 @@ export async function executeQuickBooksFunction(
       
     case 'getCustomer':
       // List all customers (can be filtered client-side)
-      return await listCustomers(accessToken, realmId);
+      return listCustomers(accessToken, realmId);
       
     case 'listInvoices':
       // No parameters required
-      return await listInvoices(accessToken, realmId);
+      return listInvoices(accessToken, realmId);
       
     default:
       throw new Error(`Unknown QuickBooks function: ${functionName}`);

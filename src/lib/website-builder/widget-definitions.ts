@@ -3,7 +3,7 @@
  * Defines all 35-40 widgets with default data and styles
  */
 
-import { WidgetType, WidgetData, WidgetStyle } from '@/types/website';
+import type { WidgetType, WidgetData, WidgetStyle } from '@/types/website';
 
 export interface WidgetDefinition {
   label: string;

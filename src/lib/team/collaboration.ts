@@ -258,10 +258,10 @@ export async function calculateLeaderboard(
     // Calculate period start date
     const now = new Date();
     const startDate = new Date();
-    if (period === 'week') startDate.setDate(now.getDate() - 7);
-    else if (period === 'month') startDate.setMonth(now.getMonth() - 1);
-    else if (period === 'quarter') startDate.setMonth(now.getMonth() - 3);
-    else startDate.setFullYear(now.getFullYear() - 1);
+    if (period === 'week') {startDate.setDate(now.getDate() - 7);}
+    else if (period === 'month') {startDate.setMonth(now.getMonth() - 1);}
+    else if (period === 'quarter') {startDate.setMonth(now.getMonth() - 3);}
+    else {startDate.setFullYear(now.getFullYear() - 1);}
 
     // Calculate metrics for each member
     for (const member of members) {
@@ -336,7 +336,7 @@ async function calculateUserMetrics(
     // Get deals closed by user
     const dealsResult = await getDeals(organizationId, workspaceId, { ownerId: userId }, { pageSize: 1000 });
     const dealsClosedWon = dealsResult.data.filter(d => {
-      if (d.stage !== 'closed_won') return false;
+      if (d.stage !== 'closed_won') {return false;}
       const closedAt = d.actualCloseDate?.toDate ? d.actualCloseDate.toDate() : new Date(d.actualCloseDate || d.updatedAt);
       return closedAt >= startDate && closedAt <= endDate;
     });
@@ -422,7 +422,7 @@ export async function getUserTasks(
       const aPriority = priorityOrder[a.priority];
       const bPriority = priorityOrder[b.priority];
 
-      if (aPriority !== bPriority) return aPriority - bPriority;
+      if (aPriority !== bPriority) {return aPriority - bPriority;}
 
       if (a.dueDate && b.dueDate) {
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();

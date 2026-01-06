@@ -103,8 +103,8 @@ export function DealPipelineCard({ data, loading = false }: DealPipelineCardProp
             />
             <Tooltip
               formatter={(value: number, name: string) => {
-                if (name === 'count') return [value, 'Deals'];
-                if (name === 'value') return [formatCurrency(value), 'Value'];
+                if (name === 'count') {return [value, 'Deals'];}
+                if (name === 'value') {return [formatCurrency(value), 'Value'];}
                 return [value, name];
               }}
               labelFormatter={(value) => value.charAt(0).toUpperCase() + value.slice(1)}

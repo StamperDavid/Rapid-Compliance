@@ -19,7 +19,8 @@
  * @module api/routing/route-lead
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { leadRoutingEngine } from '@/lib/routing';
@@ -88,7 +89,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
  */
 function getCachedResponse(leadId: string): RouteLeadResponse | null {
   const entry = responseCache.get(leadId);
-  if (!entry) return null;
+  if (!entry) {return null;}
 
   if (entry.expiresAt < Date.now()) {
     responseCache.delete(leadId);

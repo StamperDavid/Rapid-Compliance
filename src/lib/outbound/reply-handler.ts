@@ -398,7 +398,7 @@ export async function sendReplyEmail(
 ): Promise<{ success: boolean; error?: string }> {
   const { sendEmail } = await import('@/lib/email/sendgrid-service');
   
-  return await sendEmail({
+  return sendEmail({
     to,
     subject,
     html: body,

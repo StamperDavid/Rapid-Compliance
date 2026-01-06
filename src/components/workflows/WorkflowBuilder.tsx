@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Workflow, WorkflowTrigger, WorkflowAction } from '@/types/workflow';
+import type { Workflow, WorkflowTrigger, WorkflowAction } from '@/types/workflow';
 
 interface WorkflowBuilderProps {
   workflow: Partial<Workflow> | null;
@@ -48,7 +48,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
   ];
 
   const handleAddAction = () => {
-    if (!selectedActionType) return;
+    if (!selectedActionType) {return;}
 
     const newAction: WorkflowAction = {
       id: `action_${Date.now()}`,

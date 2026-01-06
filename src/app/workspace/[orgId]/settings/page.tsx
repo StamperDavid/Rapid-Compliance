@@ -119,7 +119,7 @@ export default function SettingsPage() {
         {/* Settings Sections */}
         {settingsSections.map((section, sectionIdx) => {
           const visibleItems = section.items.filter(item => item.permission);
-          if (visibleItems.length === 0) return null;
+          if (visibleItems.length === 0) {return null;}
 
           return (
             <div key={sectionIdx} style={{ marginBottom: '2rem' }}>

@@ -4,10 +4,12 @@
  * Schedule meetings with prospects
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
-import { scheduleMeeting, MeetingRequest } from '@/lib/outbound/meeting-scheduler';
+import type { MeetingRequest } from '@/lib/outbound/meeting-scheduler';
+import { scheduleMeeting } from '@/lib/outbound/meeting-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';

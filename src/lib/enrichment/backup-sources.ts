@@ -62,10 +62,10 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
           if (mxRecords && mxRecords.length > 0) {
             const mx = mxRecords[0].exchange.toLowerCase();
             
-            if (mx.includes('google')) techStack.push('Google Workspace');
-            if (mx.includes('outlook') || mx.includes('microsoft')) techStack.push('Microsoft 365');
-            if (mx.includes('mailgun')) techStack.push('Mailgun');
-            if (mx.includes('sendgrid')) techStack.push('SendGrid');
+            if (mx.includes('google')) {techStack.push('Google Workspace');}
+            if (mx.includes('outlook') || mx.includes('microsoft')) {techStack.push('Microsoft 365');}
+            if (mx.includes('mailgun')) {techStack.push('Mailgun');}
+            if (mx.includes('sendgrid')) {techStack.push('SendGrid');}
           }
         } catch {}
         
@@ -74,11 +74,11 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
           const txtRecords = await dns.resolveTxt(domain);
           const txtString = txtRecords.flat().join(' ').toLowerCase();
           
-          if (txtString.includes('google-site-verification')) techStack.push('Google Analytics');
-          if (txtString.includes('facebook-domain-verification')) techStack.push('Facebook Pixel');
-          if (txtString.includes('stripe-verification')) techStack.push('Stripe');
-          if (txtString.includes('v=spf') && txtString.includes('mailchimp')) techStack.push('Mailchimp');
-          if (txtString.includes('hubspot')) techStack.push('HubSpot');
+          if (txtString.includes('google-site-verification')) {techStack.push('Google Analytics');}
+          if (txtString.includes('facebook-domain-verification')) {techStack.push('Facebook Pixel');}
+          if (txtString.includes('stripe-verification')) {techStack.push('Stripe');}
+          if (txtString.includes('v=spf') && txtString.includes('mailchimp')) {techStack.push('Mailchimp');}
+          if (txtString.includes('hubspot')) {techStack.push('HubSpot');}
         } catch {}
       } catch (error) {
         logger.warn('[DNS] DNS module not available in this environment', { file: 'backup-sources.ts' });
@@ -226,7 +226,7 @@ export async function getWikipediaData(companyName: string): Promise<Partial<Com
     const pages = extractData.query?.pages || {};
     const page = Object.values(pages)[0] as any;
     
-    if (!page || !page.extract) {
+    if (!page?.extract) {
       return {};
     }
     

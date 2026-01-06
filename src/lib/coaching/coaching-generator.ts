@@ -762,8 +762,8 @@ Return as JSON:
   }
 
   private inferTrend(performance: RepPerformanceMetrics): 'improving' | 'stable' | 'declining' {
-    if (performance.revenue.growthRate > 0.1) return 'improving';
-    if (performance.revenue.growthRate < -0.1) return 'declining';
+    if (performance.revenue.growthRate > 0.1) {return 'improving';}
+    if (performance.revenue.growthRate < -0.1) {return 'declining';}
     return 'stable';
   }
 
@@ -778,13 +778,13 @@ Return as JSON:
         metric: 'Win Rate',
         value: performance.deals.winRate * 100,
         vsTeamAverage: performance.vsTeamAverage.winRateDelta * 100,
-        trend: (performance.deals.winRate > 0.5 ? 'up' : 'down') as 'up' | 'down'
+        trend: (performance.deals.winRate > 0.5 ? 'up' : 'down')
       },
       {
         metric: 'Quota Attainment',
         value: performance.revenue.quotaAttainment * 100,
         vsTeamAverage: performance.vsTeamAverage.overallScoreDelta,
-        trend: (performance.revenue.quotaAttainment >= 1 ? 'up' : 'down') as 'up' | 'down'
+        trend: (performance.revenue.quotaAttainment >= 1 ? 'up' : 'down')
       }
     ];
   }
@@ -792,9 +792,9 @@ Return as JSON:
   private getFocusAreas(performance: RepPerformanceMetrics): string[] {
     const areas: string[] = [];
     
-    if (performance.deals.winRate < 0.4) areas.push('Win Rate Improvement');
-    if (performance.revenue.quotaAttainment < 0.8) areas.push('Quota Attainment');
-    if (performance.efficiency.automationUsage < 0.3) areas.push('AI Tool Adoption');
+    if (performance.deals.winRate < 0.4) {areas.push('Win Rate Improvement');}
+    if (performance.revenue.quotaAttainment < 0.8) {areas.push('Quota Attainment');}
+    if (performance.efficiency.automationUsage < 0.3) {areas.push('AI Tool Adoption');}
     
     return areas.slice(0, 3);
   }
@@ -877,10 +877,10 @@ Return as JSON:
     const totalDataPoints = dataPoints.reduce((sum, val) => sum + val, 0);
     
     // Scale confidence based on data volume
-    if (totalDataPoints > 100) return 0.95;
-    if (totalDataPoints > 50) return 0.85;
-    if (totalDataPoints > 20) return 0.75;
-    if (totalDataPoints > 10) return 0.65;
+    if (totalDataPoints > 100) {return 0.95;}
+    if (totalDataPoints > 50) {return 0.85;}
+    if (totalDataPoints > 20) {return 0.75;}
+    if (totalDataPoints > 10) {return 0.65;}
     return 0.50;
   }
 }

@@ -31,9 +31,9 @@ export function TalkTracksCard({ talkTracks, className = '' }: TalkTracksCardPro
   
   // Success rate color
   const getSuccessRateColor = (rate: number) => {
-    if (rate >= 80) return 'text-green-600';
-    if (rate >= 60) return 'text-blue-600';
-    if (rate >= 40) return 'text-yellow-600';
+    if (rate >= 80) {return 'text-green-600';}
+    if (rate >= 60) {return 'text-blue-600';}
+    if (rate >= 40) {return 'text-yellow-600';}
     return 'text-red-600';
   };
   
@@ -71,7 +71,7 @@ export function TalkTracksCard({ talkTracks, className = '' }: TalkTracksCardPro
           </button>
           {(['opening', 'value_prop', 'discovery', 'objection_handling', 'closing'] as TalkTrackPurpose[]).map((purpose) => {
             const count = talkTracks.filter(t => t.purpose === purpose).length;
-            if (count === 0) return null;
+            if (count === 0) {return null;}
             return (
               <button
                 key={purpose}

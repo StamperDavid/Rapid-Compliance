@@ -32,23 +32,23 @@ export function AdoptionMetricsCard({ metrics, className = '' }: AdoptionMetrics
   
   // Adoption color
   const getAdoptionColor = (rate: number) => {
-    if (rate >= 75) return 'text-green-600';
-    if (rate >= 50) return 'text-blue-600';
-    if (rate >= 25) return 'text-yellow-600';
+    if (rate >= 75) {return 'text-green-600';}
+    if (rate >= 50) {return 'text-blue-600';}
+    if (rate >= 25) {return 'text-yellow-600';}
     return 'text-red-600';
   };
   
   const getAdoptionBgColor = (rate: number) => {
-    if (rate >= 75) return 'bg-green-500';
-    if (rate >= 50) return 'bg-blue-500';
-    if (rate >= 25) return 'bg-yellow-500';
+    if (rate >= 75) {return 'bg-green-500';}
+    if (rate >= 50) {return 'bg-blue-500';}
+    if (rate >= 25) {return 'bg-yellow-500';}
     return 'bg-red-500';
   };
   
   // Impact color (for lift metrics)
   const getLiftColor = (lift: number) => {
-    if (lift > 0) return 'text-green-600';
-    if (lift < 0) return 'text-red-600';
+    if (lift > 0) {return 'text-green-600';}
+    if (lift < 0) {return 'text-red-600';}
     return 'text-gray-600';
   };
   

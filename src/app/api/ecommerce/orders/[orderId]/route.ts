@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Order } from '@/types/ecommerce';
@@ -15,7 +16,7 @@ export async function GET(
 ) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/orders');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {

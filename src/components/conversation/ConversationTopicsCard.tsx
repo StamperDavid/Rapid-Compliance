@@ -56,8 +56,8 @@ export function ConversationTopicsCard({ analysis, className = '' }: Conversatio
   
   // Sentiment indicator
   const getSentimentColor = (sentiment: number) => {
-    if (sentiment > 0.3) return 'text-green-600';
-    if (sentiment > -0.3) return 'text-gray-600';
+    if (sentiment > 0.3) {return 'text-green-600';}
+    if (sentiment > -0.3) {return 'text-gray-600';}
     return 'text-red-600';
   };
   

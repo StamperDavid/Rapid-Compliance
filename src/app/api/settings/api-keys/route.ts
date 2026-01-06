@@ -3,7 +3,8 @@
  * Saves keys to Firestore (encrypted) instead of .env files
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors, successResponse, validateRequired } from '@/lib/api/error-handler';
@@ -16,7 +17,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/settings/api-keys');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {

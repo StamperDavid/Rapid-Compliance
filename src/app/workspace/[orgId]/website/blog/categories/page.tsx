@@ -53,7 +53,7 @@ export default function CategoriesManagementPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save categories');
+      if (!response.ok) {throw new Error('Failed to save categories');}
 
       alert('Categories saved successfully!');
     } catch (error) {
@@ -80,7 +80,7 @@ export default function CategoriesManagementPage() {
   }
 
   function removeCategory(category: string) {
-    if (!confirm(`Delete category "${category}"?`)) return;
+    if (!confirm(`Delete category "${category}"?`)) {return;}
     setCategories(categories.filter(c => c !== category));
   }
 

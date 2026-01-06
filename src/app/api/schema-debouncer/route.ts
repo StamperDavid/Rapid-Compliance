@@ -3,7 +3,8 @@
  * Control debouncer behavior
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
 

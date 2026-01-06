@@ -3,7 +3,8 @@
  * Bidirectional email syncing between Gmail and CRM
  */
 
-import { gmail_v1, google } from 'googleapis';
+import type { gmail_v1} from 'googleapis';
+import { google } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';;
 
@@ -70,7 +71,7 @@ export async function syncGmailMessages(
     // Get last sync status
     const lastSync = await getLastSyncStatus(organizationId);
     
-    let query = 'in:inbox OR in:sent';
+    const query = 'in:inbox OR in:sent';
     
     // If we have a history ID, use incremental sync
     if (lastSync?.historyId) {
@@ -277,7 +278,7 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
   };
   
   const parseAddresses = (value: string): string[] => {
-    if (!value) return [];
+    if (!value) {return [];}
     return value.split(',').map(addr => addr.trim()).filter(Boolean);
   };
   

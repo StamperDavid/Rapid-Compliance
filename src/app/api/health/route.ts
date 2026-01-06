@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 

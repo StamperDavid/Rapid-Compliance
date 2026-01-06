@@ -368,7 +368,7 @@ function formatResultForAI(functionName: string, result: any): string {
   
   // Square
   if (functionName === 'processPayment') {
-    return `Payment processed successfully! Receipt: ${result.receiptUrl || 'Payment ID: ' + result.paymentId}`;
+    return `Payment processed successfully! Receipt: ${result.receiptUrl || `Payment ID: ${  result.paymentId}`}`;
   }
   if (functionName === 'createCustomer') {
     return `Customer created successfully in Square!`;

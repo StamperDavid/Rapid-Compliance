@@ -116,7 +116,7 @@ export class MutationEngine {
     template: IndustryTemplate,
     mutations: any[]
   ): IndustryTemplate {
-    let mutated = this.deepClone(template);
+    const mutated = this.deepClone(template);
 
     for (const mutation of mutations) {
       const { path, operation, value, skipIfMissing } = mutation;
@@ -173,7 +173,7 @@ export class MutationEngine {
     let current = obj;
 
     for (const part of parts) {
-      if (!current) return undefined;
+      if (!current) {return undefined;}
 
       // Check for array index notation [id]
       const arrayMatch = part.match(/^([^\[]+)\[([^\]]+)\]$/);

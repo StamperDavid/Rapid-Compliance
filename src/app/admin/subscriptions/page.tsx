@@ -29,7 +29,7 @@ export default function SubscriptionsAdminPage() {
   };
 
   const handleSavePlan = async () => {
-    if (!editingPlan) return;
+    if (!editingPlan) {return;}
     
     try {
       const { savePlan } = await import('@/lib/admin/subscription-manager');

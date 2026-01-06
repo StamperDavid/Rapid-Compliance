@@ -535,9 +535,9 @@ export function calculateJobPriority(config: ScrapeJobConfig): ScrapeJobPriority
   // score += organizationPriorityScore;
 
   // Map score to priority
-  if (score >= 3) return 'urgent';
-  if (score >= 1) return 'high';
-  if (score <= -1) return 'low';
+  if (score >= 3) {return 'urgent';}
+  if (score >= 1) {return 'high';}
+  if (score <= -1) {return 'low';}
   return 'normal';
 }
 

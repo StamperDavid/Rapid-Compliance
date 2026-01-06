@@ -532,7 +532,7 @@ function toDate(timestamp: any): Date {
   if (timestamp && typeof timestamp.toDate === 'function') {
     return timestamp.toDate();
   }
-  if (timestamp && timestamp.seconds) {
+  if (timestamp?.seconds) {
     return new Date(timestamp.seconds * 1000);
   }
   return new Date(timestamp);

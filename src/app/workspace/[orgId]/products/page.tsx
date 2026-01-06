@@ -18,7 +18,7 @@ export default function ProductManagementPage() {
 
   // Fetch function with pagination using service layer
   const fetchProducts = useCallback(async (lastDoc?: any) => {
-    return await getProducts(
+    return getProducts(
       orgId,
       'default',
       undefined,
@@ -41,7 +41,7 @@ export default function ProductManagementPage() {
   }, [refresh]);
 
   const handleDelete = async (productId: string) => {
-    if (!confirm('Delete this product?')) return;
+    if (!confirm('Delete this product?')) {return;}
     
     try {
       await deleteProduct(orgId, productId, 'default');

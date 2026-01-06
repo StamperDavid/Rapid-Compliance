@@ -69,17 +69,17 @@ export async function validateEnrichmentData(
   confidence -= warnings.length * 5;
   
   // Deduct for missing data
-  if (!data.description || data.description.length < 20) confidence -= 10;
-  if (!data.industry || data.industry === 'Unknown') confidence -= 10;
-  if (!data.employeeCount && !data.employeeRange) confidence -= 5;
-  if (!data.headquarters?.city) confidence -= 5;
-  if (!data.socialMedia?.linkedin) confidence -= 5;
+  if (!data.description || data.description.length < 20) {confidence -= 10;}
+  if (!data.industry || data.industry === 'Unknown') {confidence -= 10;}
+  if (!data.employeeCount && !data.employeeRange) {confidence -= 5;}
+  if (!data.headquarters?.city) {confidence -= 5;}
+  if (!data.socialMedia?.linkedin) {confidence -= 5;}
   
   // Add points for extra data
-  if (data.techStack && data.techStack.length > 0) confidence += 5;
-  if (data.recentNews && data.recentNews.length > 0) confidence += 5;
-  if (data.fundingStage) confidence += 5;
-  if (data.revenue) confidence += 5;
+  if (data.techStack && data.techStack.length > 0) {confidence += 5;}
+  if (data.recentNews && data.recentNews.length > 0) {confidence += 5;}
+  if (data.fundingStage) {confidence += 5;}
+  if (data.revenue) {confidence += 5;}
   
   confidence = Math.max(0, Math.min(100, confidence));
   

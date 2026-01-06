@@ -3,7 +3,7 @@
  * Manages field rename history and rollback functionality
  */
 
-import { Schema, SchemaField, FieldRenameRecord } from '@/types/schema';
+import type { Schema, SchemaField, FieldRenameRecord } from '@/types/schema';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 

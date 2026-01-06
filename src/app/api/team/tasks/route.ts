@@ -4,7 +4,8 @@
  * POST /api/team/tasks - Create task
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { createTask, getUserTasks, completeTask } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

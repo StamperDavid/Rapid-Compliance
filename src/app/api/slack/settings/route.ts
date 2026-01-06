@@ -6,7 +6,8 @@
  * Rate Limit: 30 req/min per user
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { updateWorkspaceSettingsSchema } from '@/lib/slack/validation';

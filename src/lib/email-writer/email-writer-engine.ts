@@ -480,13 +480,13 @@ ${template.examples[0]}
  * Determine tone based on deal score
  */
 function determineToneFromScore(dealScore?: DealScore): string {
-  if (!dealScore) return 'professional';
+  if (!dealScore) {return 'professional';}
   
   const { tier, score } = dealScore;
   
-  if (tier === 'hot' && score >= 80) return 'urgent'; // Push for close
-  if (tier === 'warm' && score >= 60) return 'consultative'; // Build value
-  if (tier === 'at-risk' && score < 40) return 'friendly'; // Salvage relationship
+  if (tier === 'hot' && score >= 80) {return 'urgent';} // Push for close
+  if (tier === 'warm' && score >= 60) {return 'consultative';} // Build value
+  if (tier === 'at-risk' && score < 40) {return 'friendly';} // Salvage relationship
   
   return 'professional'; // Default
 }
@@ -588,7 +588,7 @@ function stripHTML(html: string): string {
  */
 function extractImprovementSuggestions(response: string): string[] {
   const improvementsMatch = response.match(/IMPROVEMENTS:\s*\n([\s\S]+?)$/i);
-  if (!improvementsMatch) return [];
+  if (!improvementsMatch) {return [];}
   
   const improvements = improvementsMatch[1]
     .split('\n')

@@ -298,8 +298,8 @@ function RepTrendRow({ rep, type }: RepTrendRowProps) {
   };
 
   const getChangeColor = () => {
-    if (rep.scoreChange > 0) return 'text-green-600';
-    if (rep.scoreChange < 0) return 'text-red-600';
+    if (rep.scoreChange > 0) {return 'text-green-600';}
+    if (rep.scoreChange < 0) {return 'text-red-600';}
     return 'text-gray-600';
   };
 

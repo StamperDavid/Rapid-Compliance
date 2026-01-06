@@ -33,7 +33,7 @@ export async function executeOutlookFunction(
         throw new Error('body (string) is required for sendEmail');
       }
       
-      return await sendEmail(accessToken, {
+      return sendEmail(accessToken, {
         to: parameters.to,
         subject: parameters.subject,
         body: parameters.body,
@@ -44,7 +44,7 @@ export async function executeOutlookFunction(
       const startDateTime = parameters.startDateTime;
       const endDateTime = parameters.endDateTime;
       
-      return await listCalendarEvents(accessToken, {
+      return listCalendarEvents(accessToken, {
         startDateTime,
         endDateTime,
       });
@@ -61,7 +61,7 @@ export async function executeOutlookFunction(
         throw new Error('end (string) is required for createCalendarEvent');
       }
       
-      return await createCalendarEvent(accessToken, {
+      return createCalendarEvent(accessToken, {
         subject: parameters.subject,
         body: parameters.body,
         start: parameters.start,

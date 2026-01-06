@@ -36,7 +36,7 @@ export async function executeGmailFunction(
         throw new Error('body (string) is required for sendEmail');
       }
       
-      return await sendGmailEmail(tokens, {
+      return sendGmailEmail(tokens, {
         to: parameters.to,
         subject: parameters.subject,
         body: parameters.body,
@@ -50,7 +50,7 @@ export async function executeGmailFunction(
         throw new Error('query (string) is required for searchEmails');
       }
       
-      return await listEmails(tokens, {
+      return listEmails(tokens, {
         query: parameters.query,
         maxResults: parameters.maxResults || 10,
       });
@@ -61,7 +61,7 @@ export async function executeGmailFunction(
         throw new Error('messageId (string) is required for getEmail');
       }
       
-      return await getEmail(tokens, parameters.messageId);
+      return getEmail(tokens, parameters.messageId);
       
     default:
       throw new Error(`Unknown Gmail function: ${functionName}`);

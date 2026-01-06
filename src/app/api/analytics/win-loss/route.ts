@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -15,7 +16,7 @@ import { withCache } from '@/lib/cache/analytics-cache';
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/win-loss');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
@@ -90,7 +91,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     const closedDealsInPeriod = allDeals.filter(deal => {
       const status = (deal.status || deal.stage || '').toLowerCase();
       const isClosed = wonStatuses.some(s => status.includes(s)) || lostStatuses.some(s => status.includes(s));
-      if (!isClosed) return false;
+      if (!isClosed) {return false;}
 
       const closedDate = deal.closedDate?.toDate?.() || deal.closedAt?.toDate?.() || 
                         (deal.closedDate ? new Date(deal.closedDate) : new Date(deal.updatedAt));

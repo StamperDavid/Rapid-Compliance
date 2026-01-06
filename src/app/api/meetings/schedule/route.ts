@@ -3,7 +3,8 @@
  * POST /api/meetings/schedule - Schedule a meeting with auto-assignment
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { scheduleMeeting } from '@/lib/meetings/scheduler-engine';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

@@ -51,7 +51,7 @@ export async function trackEvent(
   const key = `${type}:${orgId || 'platform'}`;
   const config = DEFAULT_CONFIGS.find(c => c.type === type);
   
-  if (!config || !config.enabled) {
+  if (!config?.enabled) {
     return;
   }
 
@@ -97,7 +97,7 @@ async function triggerAlert(
   const alertId = `${type}:${orgId || 'platform'}:${Date.now()}`;
   const counter = alertCounters.get(`${type}:${orgId || 'platform'}`);
   
-  if (!counter) return;
+  if (!counter) {return;}
 
   const alert: Alert = {
     id: alertId,

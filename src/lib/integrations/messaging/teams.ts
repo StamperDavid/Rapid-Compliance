@@ -33,7 +33,7 @@ export async function executeTeamsFunction(
         throw new Error('message (string) is required for sendMessage');
       }
       
-      return await sendTeamsMessage(accessToken, {
+      return sendTeamsMessage(accessToken, {
         teamId: parameters.teamId,
         channelId: parameters.channelId,
         message: parameters.message,
@@ -41,7 +41,7 @@ export async function executeTeamsFunction(
       
     case 'listTeams':
       // No parameters required
-      return await listTeams(accessToken);
+      return listTeams(accessToken);
       
     case 'listChannels':
       // Validate required parameters
@@ -49,7 +49,7 @@ export async function executeTeamsFunction(
         throw new Error('teamId (string) is required for listChannels');
       }
       
-      return await listChannels(accessToken, parameters.teamId);
+      return listChannels(accessToken, parameters.teamId);
       
     default:
       throw new Error(`Unknown Teams function: ${functionName}`);

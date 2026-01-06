@@ -31,9 +31,9 @@ export default function TeamLeaderboardPage() {
   };
 
   const getRankEmoji = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
+    if (rank === 1) {return '🥇';}
+    if (rank === 2) {return '🥈';}
+    if (rank === 3) {return '🥉';}
     return rank;
   };
 

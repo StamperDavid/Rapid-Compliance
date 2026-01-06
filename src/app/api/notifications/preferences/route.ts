@@ -7,7 +7,8 @@
  * Rate Limit: 30 requests per minute
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
@@ -148,7 +149,7 @@ export async function PUT(request: NextRequest) {
     let existingPrefs = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/notification_preferences`,
       userId
-    ) as NotificationPreferences | null;
+    );
 
     if (!existingPrefs) {
       // Create default preferences

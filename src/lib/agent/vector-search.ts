@@ -35,7 +35,7 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
   }
   
   const denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
-  if (denominator === 0) return 0;
+  if (denominator === 0) {return 0;}
   
   return dotProduct / denominator;
 }
@@ -73,7 +73,7 @@ export async function searchKnowledgeBase(
     
     for (const embeddingDoc of embeddings) {
       const embedding = embeddingDoc.embedding as number[];
-      if (!embedding || embedding.length === 0) continue;
+      if (!embedding || embedding.length === 0) {continue;}
       
       const score = cosineSimilarity(queryEmbedding.embedding.values, embedding);
       
@@ -186,7 +186,7 @@ export async function indexKnowledgeBase(
     }
     
     // Index products
-    if (knowledgeBase.productCatalog && knowledgeBase.productCatalog.products) {
+    if (knowledgeBase.productCatalog?.products) {
       for (const product of knowledgeBase.productCatalog.products) {
         const productText = `${product.name} ${product.description}`;
         const embedding = await generateEmbedding(productText, organizationId);

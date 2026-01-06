@@ -3,10 +3,12 @@
  * Returns count of contacts matching filter criteria
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, QueryConstraint } from 'firebase/firestore';
+import type { QueryConstraint } from 'firebase/firestore';
+import { where } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -23,7 +25,7 @@ function buildQueryConstraints(filters: ViewFilter[]): QueryConstraint[] {
       for (const condition of group.conditions) {
         const { field, operator, value } = condition;
 
-        if (!value && value !== 0 && value !== false) continue;
+        if (!value && value !== 0 && value !== false) {continue;}
 
         switch (operator) {
           case 'equals':
@@ -39,7 +41,7 @@ function buildQueryConstraints(filters: ViewFilter[]): QueryConstraint[] {
             // Firestore doesn't support contains, but we can use >= and <= for prefix match
             if (typeof value === 'string') {
               constraints.push(where(field, '>=', value));
-              constraints.push(where(field, '<=', value + '\uf8ff'));
+              constraints.push(where(field, '<=', `${value  }\uf8ff`));
             }
             break;
           case 'greater_than':
@@ -98,7 +100,7 @@ function buildQueryConstraints(filters: ViewFilter[]): QueryConstraint[] {
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/contacts/count');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {

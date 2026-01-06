@@ -12,7 +12,7 @@ export default function NurtureCampaignsPage() {
 
   // Fetch function with pagination using service layer
   const fetchCampaigns = useCallback(async (lastDoc?: any) => {
-    return await getNurtureCampaigns(
+    return getNurtureCampaigns(
       orgId,
       undefined,
       { pageSize: 50, lastDoc }

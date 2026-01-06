@@ -16,7 +16,8 @@
  * @module api/playbook/generate
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { generatePlaybook } from '@/lib/playbook/playbook-engine';
 import { validateGeneratePlaybookRequest } from '@/lib/playbook/validation';
@@ -92,7 +93,7 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour
  */
 function getCachedResponse(key: string): any | null {
   const entry = responseCache.get(key);
-  if (!entry) return null;
+  if (!entry) {return null;}
   
   if (Date.now() >= entry.expiresAt) {
     responseCache.delete(key);

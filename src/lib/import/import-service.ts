@@ -51,7 +51,7 @@ export class ImportService {
           
           resolve({ headers, rows: dataRows });
         } catch (error: any) {
-          reject(new Error('Failed to parse CSV: ' + error.message));
+          reject(new Error(`Failed to parse CSV: ${  error.message}`));
         }
       };
       
@@ -282,7 +282,7 @@ export class ImportService {
    * Transform value based on mapping
    */
   static transformValue(value: any, mapping: ColumnMapping): any {
-    if (!value || value === '') return mapping.defaultValue || null;
+    if (!value || value === '') {return mapping.defaultValue || null;}
 
     switch (mapping.transform) {
       case 'trim':

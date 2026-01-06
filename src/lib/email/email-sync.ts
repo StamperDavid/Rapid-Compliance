@@ -4,8 +4,10 @@
  * Integrates with gmail-sync-service.ts and outlook-sync-service.ts
  */
 
-import { syncGmailMessages, GmailSyncStatus, setupGmailPushNotifications, stopGmailPushNotifications } from '@/lib/integrations/gmail-sync-service';
-import { syncOutlookMessages, OutlookSyncStatus } from '@/lib/integrations/outlook-sync-service';
+import type { GmailSyncStatus} from '@/lib/integrations/gmail-sync-service';
+import { syncGmailMessages, setupGmailPushNotifications, stopGmailPushNotifications } from '@/lib/integrations/gmail-sync-service';
+import type { OutlookSyncStatus } from '@/lib/integrations/outlook-sync-service';
+import { syncOutlookMessages } from '@/lib/integrations/outlook-sync-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
@@ -317,7 +319,7 @@ export async function getSyncStatus(organizationId: string, provider: 'gmail' | 
     const lastSyncResult = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrationStatus`,
       `${provider}-sync`
-    ) as GmailSyncStatus | OutlookSyncStatus | null;
+    );
 
     if (!lastSyncResult) {
   return {

@@ -30,7 +30,7 @@ export async function executeSlackFunction(
         throw new Error('text (string) is required for sendMessage');
       }
       
-      return await sendMessage(accessToken, {
+      return sendMessage(accessToken, {
         channel: parameters.channel,
         text: parameters.text,
         attachments: parameters.attachments,
@@ -43,7 +43,7 @@ export async function executeSlackFunction(
         throw new Error('name (string) is required for createChannel');
       }
       
-      return await createChannel(
+      return createChannel(
         accessToken,
         parameters.name,
         parameters.isPrivate || false
@@ -51,7 +51,7 @@ export async function executeSlackFunction(
       
     case 'listChannels':
       // No parameters required
-      return await listChannels(accessToken);
+      return listChannels(accessToken);
       
     default:
       throw new Error(`Unknown Slack function: ${functionName}`);

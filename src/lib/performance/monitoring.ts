@@ -15,7 +15,7 @@ export interface PerformanceMetrics {
  * Collect Web Vitals
  */
 export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
 
   const metrics: PerformanceMetrics = {};
 
@@ -144,7 +144,7 @@ export function calculatePerformanceScore(metrics: PerformanceMetrics): number {
  * Log performance metrics to console (dev mode)
  */
 export function logPerformanceMetrics(metrics: PerformanceMetrics): void {
-  if (process.env.NODE_ENV !== 'development') return;
+  if (process.env.NODE_ENV !== 'development') {return;}
 
   console.group('🚀 Performance Metrics');
   console.log('FCP (First Contentful Paint):', metrics.fcp?.toFixed(0), 'ms');
@@ -160,7 +160,7 @@ export function logPerformanceMetrics(metrics: PerformanceMetrics): void {
  * Monitor long tasks (tasks taking > 50ms)
  */
 export function monitorLongTasks(callback: (duration: number) => void): void {
-  if (typeof window === 'undefined' || !('PerformanceObserver' in window)) return;
+  if (typeof window === 'undefined' || !('PerformanceObserver' in window)) {return;}
 
   try {
     const observer = new PerformanceObserver((list) => {

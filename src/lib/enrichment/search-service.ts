@@ -56,18 +56,18 @@ async function searchGoogle(query: string): Promise<CompanySearchResult[]> {
   // Option 1: Use Serper API (if configured)
   const serperKey = process.env.SERPER_API_KEY;
   if (serperKey) {
-    return await searchWithSerper(searchQuery, serperKey);
+    return searchWithSerper(searchQuery, serperKey);
   }
   
   // Option 2: Use Google Custom Search (if configured)
   const googleApiKey = process.env.GOOGLE_SEARCH_API_KEY;
   const googleCx = process.env.GOOGLE_SEARCH_CX;
   if (googleApiKey && googleCx) {
-    return await searchWithGoogleCustomSearch(searchQuery, googleApiKey, googleCx);
+    return searchWithGoogleCustomSearch(searchQuery, googleApiKey, googleCx);
   }
   
   // Option 3: Direct Google search (less reliable, may get blocked)
-  return await searchGoogleDirect(searchQuery);
+  return searchGoogleDirect(searchQuery);
 }
 
 interface SerperSearchResult {
@@ -193,7 +193,7 @@ async function searchGoogleDirect(query: string): Promise<CompanySearchResult[]>
       const url = match[1];
       
       // Skip Google's own URLs
-      if (url.includes('google.com')) continue;
+      if (url.includes('google.com')) {continue;}
       
       const domain = extractDomain(url);
       
@@ -205,7 +205,7 @@ async function searchGoogleDirect(query: string): Promise<CompanySearchResult[]>
         source: 'google-direct',
       });
       
-      if (results.length >= 5) break;
+      if (results.length >= 5) {break;}
     }
     
     return results;
@@ -274,12 +274,12 @@ export async function searchCompanyNews(companyName: string, limit: number = 5):
  * Guess domain from company name
  */
 export function guessDomainFromCompanyName(companyName: string): string {
-  return companyName
+  return `${companyName
     .toLowerCase()
     .replace(/\s+/g, '') // Remove spaces
     .replace(/[^a-z0-9]/g, '') // Remove special chars
     .replace(/inc|llc|ltd|corp|corporation|company|co$/g, '') // Remove business suffixes
-    + '.com';
+     }.com`;
 }
 
 /**
@@ -358,28 +358,28 @@ export async function detectTechStack(domain: string): Promise<string[]> {
     const techStack: string[] = [];
     
     // Detect common technologies from HTML
-    if (html.includes('react')) techStack.push('React');
-    if (html.includes('vue')) techStack.push('Vue.js');
-    if (html.includes('angular')) techStack.push('Angular');
-    if (html.includes('next')) techStack.push('Next.js');
-    if (html.includes('shopify')) techStack.push('Shopify');
-    if (html.includes('wordpress')) techStack.push('WordPress');
-    if (html.includes('wix')) techStack.push('Wix');
-    if (html.includes('squarespace')) techStack.push('Squarespace');
-    if (html.includes('stripe')) techStack.push('Stripe');
-    if (html.includes('paypal')) techStack.push('PayPal');
-    if (html.includes('google-analytics') || html.includes('gtag')) techStack.push('Google Analytics');
-    if (html.includes('hubspot')) techStack.push('HubSpot');
-    if (html.includes('salesforce')) techStack.push('Salesforce');
-    if (html.includes('intercom')) techStack.push('Intercom');
-    if (html.includes('segment')) techStack.push('Segment');
+    if (html.includes('react')) {techStack.push('React');}
+    if (html.includes('vue')) {techStack.push('Vue.js');}
+    if (html.includes('angular')) {techStack.push('Angular');}
+    if (html.includes('next')) {techStack.push('Next.js');}
+    if (html.includes('shopify')) {techStack.push('Shopify');}
+    if (html.includes('wordpress')) {techStack.push('WordPress');}
+    if (html.includes('wix')) {techStack.push('Wix');}
+    if (html.includes('squarespace')) {techStack.push('Squarespace');}
+    if (html.includes('stripe')) {techStack.push('Stripe');}
+    if (html.includes('paypal')) {techStack.push('PayPal');}
+    if (html.includes('google-analytics') || html.includes('gtag')) {techStack.push('Google Analytics');}
+    if (html.includes('hubspot')) {techStack.push('HubSpot');}
+    if (html.includes('salesforce')) {techStack.push('Salesforce');}
+    if (html.includes('intercom')) {techStack.push('Intercom');}
+    if (html.includes('segment')) {techStack.push('Segment');}
     
     // Check headers for server tech
     const serverHeader = response.headers.get('server');
     if (serverHeader) {
-      if (serverHeader.includes('nginx')) techStack.push('Nginx');
-      if (serverHeader.includes('Apache')) techStack.push('Apache');
-      if (serverHeader.includes('cloudflare')) techStack.push('Cloudflare');
+      if (serverHeader.includes('nginx')) {techStack.push('Nginx');}
+      if (serverHeader.includes('Apache')) {techStack.push('Apache');}
+      if (serverHeader.includes('cloudflare')) {techStack.push('Cloudflare');}
     }
     
     return [...new Set(techStack)]; // Remove duplicates

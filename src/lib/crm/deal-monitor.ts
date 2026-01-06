@@ -482,9 +482,9 @@ export async function runDealHealthCheck(
         );
 
         // Count by status
-        if (healthScore.status === 'healthy') healthy++;
-        else if (healthScore.status === 'at-risk') atRisk++;
-        else if (healthScore.status === 'critical') critical++;
+        if (healthScore.status === 'healthy') {healthy++;}
+        else if (healthScore.status === 'at-risk') {atRisk++;}
+        else if (healthScore.status === 'critical') {critical++;}
 
         // Generate recommendations for at-risk and critical deals
         if (

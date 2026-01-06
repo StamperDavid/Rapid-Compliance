@@ -57,7 +57,7 @@ export default function ProfilePage() {
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {return;}
 
     setIsSaving(true);
     try {

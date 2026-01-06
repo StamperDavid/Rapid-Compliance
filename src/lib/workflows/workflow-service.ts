@@ -4,7 +4,8 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
+import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
 

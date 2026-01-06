@@ -6,7 +6,8 @@
  * POST /api/discovery/queue
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { queueDiscoveryTask } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
 

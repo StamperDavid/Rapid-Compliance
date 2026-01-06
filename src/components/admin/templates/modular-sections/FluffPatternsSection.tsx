@@ -20,7 +20,7 @@ interface FluffPatternsSectionProps {
 export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, canRemove }: FluffPatternsSectionProps) {
   const addFluffPattern = () => {
     const id = prompt('Pattern ID (e.g., copyright):');
-    if (!id) return;
+    if (!id) {return;}
 
     const newPattern = {
       id,

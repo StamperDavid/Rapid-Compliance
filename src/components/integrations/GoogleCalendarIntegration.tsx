@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations'
+import type { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations'
 import { logger } from '@/lib/logger/logger';;
 
 interface GoogleCalendarIntegrationProps {
@@ -55,7 +55,7 @@ export default function GoogleCalendarIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { RecordCounter } from '@/lib/subscription/record-counter';
 import { updateSubscriptionTier } from '@/lib/billing/stripe-service';
@@ -37,27 +38,27 @@ export async function POST(request: NextRequest) {
     // Handle different webhook events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        await handleCheckoutSessionCompleted(event.data.object);
         break;
 
       case 'customer.subscription.trial_will_end':
-        await handleTrialWillEnd(event.data.object as Stripe.Subscription);
+        await handleTrialWillEnd(event.data.object);
         break;
 
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await handleSubscriptionUpdated(event.data.object);
         break;
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await handleSubscriptionDeleted(event.data.object);
         break;
 
       case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+        await handlePaymentSucceeded(event.data.object);
         break;
 
       case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        await handlePaymentFailed(event.data.object);
         break;
 
       default:
@@ -192,7 +193,7 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   try {
     const organizationId = subscription.metadata?.organizationId;
-    if (!organizationId) return;
+    if (!organizationId) {return;}
 
     // Update organization's subscription status
     await FirestoreService.update(
@@ -222,7 +223,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   try {
     const organizationId = subscription.metadata?.organizationId;
-    if (!organizationId) return;
+    if (!organizationId) {return;}
 
     await FirestoreService.update(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/subscriptions`,
@@ -245,7 +246,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
     const organizationId = invoice.metadata?.organizationId;
-    if (!organizationId) return;
+    if (!organizationId) {return;}
 
     // Log successful payment
     const historyId = `payment_${invoice.id}_${Date.now()}`;
@@ -275,7 +276,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   try {
     const organizationId = invoice.metadata?.organizationId;
-    if (!organizationId) return;
+    if (!organizationId) {return;}
 
     // Update subscription status
     await FirestoreService.update(

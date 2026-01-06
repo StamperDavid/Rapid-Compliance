@@ -4,7 +4,7 @@
  */
 
 import { Timestamp } from 'firebase/firestore';
-import { Schema, SchemaField } from '@/types/schema';
+import type { Schema, SchemaField } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
 
 /**

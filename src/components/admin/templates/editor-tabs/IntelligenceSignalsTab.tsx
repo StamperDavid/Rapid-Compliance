@@ -29,7 +29,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
 
   const addSignal = () => {
     const id = prompt('Signal ID (e.g., hiring_staff):');
-    if (!id) return;
+    if (!id) {return;}
 
     const newSignal = {
       id,
@@ -73,7 +73,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
 
   const addFluffPattern = () => {
     const id = prompt('Pattern ID (e.g., copyright):');
-    if (!id) return;
+    if (!id) {return;}
 
     const newPattern = {
       id,
@@ -113,7 +113,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
 
   const addScoringRule = () => {
     const id = prompt('Rule ID (e.g., growing_business):');
-    if (!id) return;
+    if (!id) {return;}
 
     const newRule = {
       id,

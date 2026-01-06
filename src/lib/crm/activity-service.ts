@@ -5,7 +5,8 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, QueryConstraint, QueryDocumentSnapshot, limit } from 'firebase/firestore';
+import type { QueryConstraint, QueryDocumentSnapshot} from 'firebase/firestore';
+import { where, orderBy, limit } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { 
   Activity, 
@@ -295,7 +296,7 @@ export async function getActivityStats(
  * Calculate engagement score based on activity frequency and recency
  */
 function calculateEngagementScore(activities: Activity[]): number {
-  if (activities.length === 0) return 0;
+  if (activities.length === 0) {return 0;}
 
   let score = 0;
 
@@ -306,12 +307,12 @@ function calculateEngagementScore(activities: Activity[]): number {
     new Date(lastActivity.occurredAt as any);
   const daysSinceLastActivity = (Date.now() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24);
   
-  if (daysSinceLastActivity < 1) score += 50;
-  else if (daysSinceLastActivity < 3) score += 40;
-  else if (daysSinceLastActivity < 7) score += 30;
-  else if (daysSinceLastActivity < 14) score += 20;
-  else if (daysSinceLastActivity < 30) score += 10;
-  else score += 0;
+  if (daysSinceLastActivity < 1) {score += 50;}
+  else if (daysSinceLastActivity < 3) {score += 40;}
+  else if (daysSinceLastActivity < 7) {score += 30;}
+  else if (daysSinceLastActivity < 14) {score += 20;}
+  else if (daysSinceLastActivity < 30) {score += 10;}
+  else {score += 0;}
 
   // Frequency score (0-50 points)
   const thirtyDaysAgo = new Date();
@@ -321,12 +322,12 @@ function calculateEngagementScore(activities: Activity[]): number {
     return occurredAt >= thirtyDaysAgo;
   });
 
-  if (recentActivities.length >= 20) score += 50;
-  else if (recentActivities.length >= 10) score += 40;
-  else if (recentActivities.length >= 5) score += 30;
-  else if (recentActivities.length >= 3) score += 20;
-  else if (recentActivities.length >= 1) score += 10;
-  else score += 0;
+  if (recentActivities.length >= 20) {score += 50;}
+  else if (recentActivities.length >= 10) {score += 40;}
+  else if (recentActivities.length >= 5) {score += 30;}
+  else if (recentActivities.length >= 3) {score += 20;}
+  else if (recentActivities.length >= 1) {score += 10;}
+  else {score += 0;}
 
   return Math.min(score, 100);
 }

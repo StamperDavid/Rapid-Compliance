@@ -30,7 +30,7 @@ class APIKeyService {
     
     // In test mode, always bypass cache to ensure fresh data
     if (process.env.NODE_ENV === 'test') {
-      return await this.fetchKeysFromFirestore(organizationId);
+      return this.fetchKeysFromFirestore(organizationId);
     }
     
     // Return cached keys if still valid
@@ -57,7 +57,7 @@ class APIKeyService {
    */
   async getServiceKey(organizationId: string, service: APIServiceName): Promise<any> {
     const keys = await this.getKeys(organizationId);
-    if (!keys) return null;
+    if (!keys) {return null;}
 
     // Navigate to the specific service key
     switch (service) {
@@ -324,7 +324,7 @@ class APIKeyService {
 
   private async validateStripeKey(keys: any): Promise<APIKeyValidationResult> {
     // In production, make actual API call to Stripe
-    if (!keys?.secretKey || !keys.secretKey.startsWith('sk_')) {
+    if (!keys?.secretKey?.startsWith('sk_')) {
       return { valid: false, error: 'Invalid Stripe secret key format' };
     }
     return { valid: true };
@@ -340,7 +340,7 @@ class APIKeyService {
 
   private async validateSendgridKey(keys: any): Promise<APIKeyValidationResult> {
     // In production, make test API call to SendGrid
-    if (!keys?.apiKey || !keys.apiKey.startsWith('SG.')) {
+    if (!keys?.apiKey?.startsWith('SG.')) {
       return { valid: false, error: 'Invalid SendGrid API key format' };
     }
     return { valid: true };

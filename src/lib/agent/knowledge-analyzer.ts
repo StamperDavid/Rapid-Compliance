@@ -293,7 +293,7 @@ Return ONLY a valid JSON array of products in this format:
  * REAL: Scrapes FAQ page and uses AI to extract Q&A pairs
  */
 async function extractFAQs(faqPageUrl: string): Promise<KnowledgeAnalysisResult['faqs']> {
-  if (!faqPageUrl) return [];
+  if (!faqPageUrl) {return [];}
   
   try {
     // Scrape FAQ page

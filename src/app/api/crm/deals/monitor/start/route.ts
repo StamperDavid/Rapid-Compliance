@@ -8,7 +8,8 @@
  * Part of the CRM "Living Ledger" real-time intelligence.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { startDealMonitor } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
 
