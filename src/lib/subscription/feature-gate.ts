@@ -26,7 +26,7 @@ export class FeatureGate {
    */
   static async hasFeature(
     orgId: string,
-    feature: keyof OrganizationSubscription['outboundFeatures']
+    feature: keyof NonNullable<OrganizationSubscription['outboundFeatures']>
   ): Promise<boolean> {
     try {
       const subscription = await this.getSubscription(orgId);
