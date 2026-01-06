@@ -66,7 +66,12 @@ export default function AnalyticsPage() {
         </div>
         <select
           value={dateRange}
-          onChange={(e) => setDateRange(e.target.value as any)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '7d' || value === '30d' || value === '90d' || value === '1y') {
+              setDateRange(value);
+            }
+          }}
           style={{
             padding: '0.625rem 1rem',
             backgroundColor: bgPaper,

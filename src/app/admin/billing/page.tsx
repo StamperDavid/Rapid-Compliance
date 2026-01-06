@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import Link from 'next/link';
 
 interface Subscription {
   id: string;
@@ -29,10 +28,10 @@ interface Payment {
 }
 
 export default function BillingPage() {
-  const { adminUser, hasPermission } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'payments' | 'invoices'>('subscriptions');
 
   useEffect(() => {
@@ -132,7 +131,12 @@ export default function BillingPage() {
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => {
+              const tabId = tab.id;
+              if (tabId === 'subscriptions' || tabId === 'payments' || tabId === 'invoices') {
+                setActiveTab(tabId);
+              }
+            }}
             style={{
               padding: '0.75rem 1.5rem',
               borderBottom: `2px solid ${activeTab === tab.id ? primaryColor : 'transparent'}`,
@@ -208,7 +212,9 @@ export default function BillingPage() {
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     {hasPermission('canManageSubscriptions') && (
                       <button
-                        onClick={() => alert(`Manage subscription ${sub.id} - Feature coming soon`)}
+                        onClick={() => {
+                          // TODO: Implement subscription management
+                        }}
                         style={{
                           padding: '0.375rem 0.75rem',
                           backgroundColor: 'transparent',
@@ -267,7 +273,7 @@ export default function BillingPage() {
                     {payment.date.toLocaleDateString()}
                   </td>
                   <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
-                    {payment.invoiceId || 'N/A'}
+                    {payment.invoiceId ?? 'N/A'}
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     {hasPermission('canProcessRefunds') && payment.status === 'succeeded' && (

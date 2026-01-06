@@ -181,7 +181,7 @@ export default function EditOrganizationPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => { void handleSubmit(e); }}>
         <div style={{ display: 'grid', gap: '2rem', maxWidth: '800px' }}>
           {/* Basic Information */}
           <section style={{
