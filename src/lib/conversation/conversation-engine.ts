@@ -628,7 +628,7 @@ function parseTranscriptTurns(transcript: string, participants: Participant[]): 
   
   lines.forEach((line, index) => {
     // Try to extract speaker name
-    const match = line.match(/^[\[\(]?([^:\]\)]+)[\]\)]?\s*[:\-]\s*(.+)$/);
+    const match = line.match(/^[[()]?([^:\])]+ )[\])]?\s*[:-]\s*(.+)$/);
     
     if (match) {
       const speakerName = match[1].trim();
