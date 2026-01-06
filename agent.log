@@ -1,0 +1,23 @@
+
+All TypeScript errors in `src/lib` are fixed. Summary:
+
+## Fixed Issues
+
+### 1. `src/lib/subscription/middleware.ts` (line 22)
+- Problem: `FeatureGate.hasFeature` expected `keyof OrganizationSubscription['outboundFeatures']`, but since `outboundFeatures` is optional, TypeScript inferred `never`.
+- Fix: Updated `FeatureGate.hasFeature` to use `NonNullable<OrganizationSubscription['outboundFeatures']>` to handle the optional type.
+
+### 2. `src/lib/team/collaboration.ts` (line 361)
+- Problem: Unsafe cast of Firestore `Timestamp` to `string | number`.
+- Fix: Replaced the cast with explicit type checks:
+  - Check for `.toDate()` (Firestore Timestamp)
+  - Check for `Date` instance
+  - Check for `string` or `number`
+  - Fallback to current date if invalid
+
+Both fixes follow best practices:
+- No `any` types
+- No `ts-ignore` comments
+- Proper type guards and explicit checks
+
+Verification: `npx tsc` shows no errors in `src/lib`. Remaining errors are in `tests/`, which is outside the scope of this task.
