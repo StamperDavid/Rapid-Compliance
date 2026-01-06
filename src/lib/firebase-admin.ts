@@ -6,6 +6,8 @@
 import * as admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import path from 'path';
+import fs from 'fs';
 
 // Initialize Firebase Admin SDK once
 if (!admin.apps.length) {
@@ -32,8 +34,6 @@ if (!admin.apps.length) {
       try {
         // Only require in development when file exists
         if (process.env.NODE_ENV === 'development') {
-          const path = require('path');
-          const fs = require('fs');
           const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
           
           if (fs.existsSync(keyPath)) {

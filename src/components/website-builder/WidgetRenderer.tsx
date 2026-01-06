@@ -16,9 +16,10 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
   const style = convertWidgetStyleToCSS(widget.style);
 
   switch (widget.type) {
-    case 'heading':
+    case 'heading': {
       const HeadingTag = (widget.data.tag || 'h2') as keyof JSX.IntrinsicElements;
       return <HeadingTag style={style}>{String(widget.data.text || 'Heading')}</HeadingTag>;
+    }
 
     case 'text':
       return <p style={style}>{String(widget.data.content || 'Text content')}</p>;
@@ -381,27 +382,6 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
         </div>
       );
 
-    case 'accordion':
-      return (
-        <div style={style}>
-          {((widget.data.items as any[]) || []).map((item: any, i: number) => (
-            <details key={i} style={{ 
-              marginBottom: '0.5rem',
-              border: '1px solid #dee2e6',
-              borderRadius: '4px',
-              padding: '1rem',
-            }}>
-              <summary style={{ fontWeight: '600', cursor: 'pointer' }}>
-                {item.title}
-              </summary>
-              <p style={{ marginTop: '0.75rem', color: '#6c757d' }}>
-                {item.content}
-              </p>
-            </details>
-          ))}
-        </div>
-      );
-
     case 'icon-box':
       return (
         <div style={style}>
@@ -441,7 +421,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
         </div>
       );
 
-    case 'tabs':
+    case 'tabs': {
       const tabs = (widget.data.tabs as any[]) || [{ title: 'Tab 1', content: 'Content 1' }];
       return (
         <div style={style}>
@@ -469,8 +449,9 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           </div>
         </div>
       );
+    }
 
-    case 'accordion':
+    case 'accordion': {
       const accordionItems = (widget.data.items as any[]) || [{ title: 'Accordion Item', content: 'Content' }];
       return (
         <div style={style}>
@@ -506,6 +487,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           ))}
         </div>
       );
+    }
 
     default:
       return (
