@@ -12,7 +12,7 @@ function FallbackContent() {
   const [formData, setFormData] = useState({ name: '', email: '', company: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     logger.info('Contact form submitted', { email: formData.email, company: formData.company });
     setSubmitted(true);
@@ -24,11 +24,11 @@ function FallbackContent() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-white mb-6">Get in Touch</h1>
-          <p className="text-xl text-gray-300">Have questions? We'd love to hear from you.</p>
+          <p className="text-xl text-gray-300">Have questions? We&apos;d love to hear from you.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-12">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={(e) => { handleSubmit(e); }} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Name *</label>
               <input
@@ -71,7 +71,7 @@ function FallbackContent() {
             </button>
             {submitted && (
               <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-center">
-                ✓ Message sent! We'll get back to you soon.
+                ✓ Message sent! We&apos;ll get back to you soon.
               </div>
             )}
           </form>
@@ -103,7 +103,7 @@ export default function ContactPage() {
         <div className="pt-44 pb-20 text-center">
           <div className="text-gray-400">Loading...</div>
         </div>
-      ) : page && page.sections && page.sections.length > 0 ? (
+      ) : page?.sections?.length > 0 ? (
         <PageRenderer page={page} />
       ) : (
         <FallbackContent />
