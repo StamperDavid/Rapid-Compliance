@@ -159,7 +159,7 @@ Best regards,
 
         if (response.ok) {
           const data = await response.json();
-          setEstimatedRecipients(data.count || 0);
+          setEstimatedRecipients(data.count ?? 0);
         } else {
           setEstimatedRecipients(0);
         }
@@ -577,7 +577,7 @@ Best regards,
                                 <button
                                   onClick={() => {
                                     setEditingCustomTemplate(template);
-                                    setDesignerBlocks(template.blocks || []);
+                                    setDesignerBlocks(template.blocks ?? []);
                                     setShowDesigner(true);
                                   }}
                                   style={{ flex: 1, padding: '0.625rem', backgroundColor: primaryColor, color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
@@ -609,7 +609,7 @@ Best regards,
                       <div style={{ flex: 1 }}>
                         <input
                           type="text"
-                          value={editingCustomTemplate?.name || ''}
+                          value={editingCustomTemplate?.name ?? ''}
                           onChange={(e) => setEditingCustomTemplate({ ...editingCustomTemplate, name: e.target.value })}
                           style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', backgroundColor: 'transparent', border: 'none', outline: 'none', width: '100%' }}
                           placeholder="Template Name"
@@ -654,7 +654,7 @@ Best regards,
                               if (block.type === 'text') {
                                 generatedHtml += `
     <div style="padding: 20px; font-size: ${block.content.fontSize || '16px'}; color: ${block.content.color || '#000000'}; text-align: ${block.content.align || 'left'};">
-      ${block.content.text || ''}
+      ${block.content.text ?? ''}
     </div>`;
                               }
                               
@@ -689,7 +689,7 @@ Best regards,
                               }
                               
                               if (block.type === 'html') {
-                                generatedHtml += block.content.html || '';
+                                generatedHtml += block.content.html ?? '';
                               }
                             });
                             
@@ -739,7 +739,7 @@ Best regards,
                               accept="image/*"
                               multiple
                               onChange={(e) => {
-                                const files = Array.from(e.target.files || []);
+                                const files = Array.from(e.target.files ?? []);
                                 const newAssets = files.map(file => ({
                                   id: `asset_${Date.now()}_${Math.random()}`,
                                   name: file.name,
@@ -1025,7 +1025,7 @@ Best regards,
                                 {block.type === 'social' && (
                                   <div style={{ padding: '20px', textAlign: 'center' }}>
                                     <div style={{ display: 'inline-flex', gap: '15px' }}>
-                                      {(block.content.links || []).map((link: any, i: number) => (
+                                      {(block.content.links ?? []).map((link: any, i: number) => (
                                         <div key={i} style={{ width: block.content.iconSize || '32px', height: block.content.iconSize || '32px', backgroundColor: '#3b5998', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>
                                           {link.platform[0].toUpperCase()}
                                         </div>
@@ -1035,7 +1035,7 @@ Best regards,
                                 )}
                                 
                                 {block.type === 'html' && (
-                                  <div dangerouslySetInnerHTML={{ __html: block.content.html || '' }} />
+                                  <div dangerouslySetInnerHTML={{ __html: block.content.html ?? '' }} />
                                 )}
                                 
                                 {/* Block Actions */}
@@ -1149,7 +1149,7 @@ Best regards,
                                   </label>
                                   <input
                                     type="url"
-                                    value={selectedBlock.content.linkUrl || ''}
+                                    value={selectedBlock.content.linkUrl ?? ''}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, linkUrl: e.target.value } } : b
@@ -1194,7 +1194,7 @@ Best regards,
                                     Text Content
                                   </label>
                                   <textarea
-                                    value={selectedBlock.content.text || ''}
+                                    value={selectedBlock.content.text ?? ''}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, text: e.target.value } } : b
@@ -1308,7 +1308,7 @@ Best regards,
                                   </label>
                                   <input
                                     type="text"
-                                    value={selectedBlock.content.text || ''}
+                                    value={selectedBlock.content.text ?? ''}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, text: e.target.value } } : b
@@ -1327,7 +1327,7 @@ Best regards,
                                   </label>
                                   <input
                                     type="url"
-                                    value={selectedBlock.content.url || ''}
+                                    value={selectedBlock.content.url ?? ''}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, url: e.target.value } } : b
@@ -1477,7 +1477,7 @@ Best regards,
                                   </label>
                                   <input
                                     type="url"
-                                    value={selectedBlock.content.linkUrl || ''}
+                                    value={selectedBlock.content.linkUrl ?? ''}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, linkUrl: e.target.value } } : b
@@ -1671,7 +1671,7 @@ Best regards,
                           key={trigger.id}
                           onClick={() => {
                             setSelectedSmsTemplate(trigger.id);
-                            setSmsContent(smsTemplates.find(t => t.id === trigger.id)?.message || '');
+                            setSmsContent(smsTemplates.find(t => t.id === trigger.id)?.message ?? '');
                           }}
                           style={{
                             padding: '1rem',
@@ -2405,7 +2405,7 @@ Best regards,
                   accept="image/*"
                   multiple
                   onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
+                    const files = Array.from(e.target.files ?? []);
                     const newAssets = files.map(file => ({
                       id: `asset_${Date.now()}_${Math.random()}`,
                       name: file.name,
