@@ -1,3 +1,4 @@
+/* global __ENV, __VU */
 /**
  * k6 Load Testing Script
  * Test platform performance under high load
