@@ -5,8 +5,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { QueryConstraint } from 'firebase/firestore';
-import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { limit as firestoreLimit, orderBy, where, type QueryConstraint } from 'firebase/firestore';
 
 export interface ChatSession {
   id: string;
@@ -99,7 +98,7 @@ export class ChatSessionService {
       where('status', 'in', ['completed', 'abandoned']),
       orderBy('completedAt', 'desc'),
       firestoreLimit(limitCount),
-      ...(filters || []),
+      ...(filters ?? []),
     ];
 
     const sessions = await FirestoreService.getAll<ChatSession>(
@@ -352,7 +351,7 @@ export class ChatSessionService {
         lastMessageAt: new Date().toISOString(),
         messageCount: 0,
         lastMessage: '',
-        metadata: metadata || {},
+        metadata: metadata ?? {},
       },
       false
     );
