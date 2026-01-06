@@ -49,7 +49,7 @@ export default function LoginPage() {
         throw new Error('User profile not found. Please contact support.');
       }
 
-      const userData = userDoc.data();
+      const userData = userDoc.data() as { organizationId?: string };
       const orgId = userData.organizationId;
 
       if (!orgId) {
@@ -96,7 +96,7 @@ export default function LoginPage() {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-5">
             <div>
               <label className="block text-sm text-gray-400 mb-2">Email</label>
               <input
@@ -169,7 +169,7 @@ export default function LoginPage() {
             <button
               type="button"
               className="w-full py-3 px-4 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 font-medium hover:bg-gray-750 hover:border-gray-600 transition flex items-center justify-center gap-3"
-              onClick={() => alert('Google sign-in coming soon!')}
+              onClick={() => { setError('Google sign-in coming soon!'); }}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -183,7 +183,7 @@ export default function LoginPage() {
 
           {/* Sign Up Link */}
           <p className="text-center text-gray-400 mt-8">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium transition">
               Sign up free
             </Link>
