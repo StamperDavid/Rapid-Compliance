@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // Load environment variables FIRST (before any other imports)
 import { config } from 'dotenv'
 config({ path: '.env.local' })
@@ -45,11 +46,11 @@ if (!global.TextEncoder) {
   global.TextEncoder = TextEncoder
 }
 if (!global.TextDecoder) {
-  // @ts-ignore
+  // @ts-expect-error - Node polyfill type compatibility
   global.TextDecoder = TextDecoder
 }
 if (!global.ReadableStream) {
-  // @ts-ignore
+  // @ts-expect-error - Node polyfill type compatibility
   global.ReadableStream = ReadableStream
 }
 
