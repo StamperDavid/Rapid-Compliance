@@ -4,12 +4,12 @@
  */
 
 import { describe, it, expect, jest } from '@jest/globals';
+import { calculateStripeFee, calculateSquareFee, calculatePayPalFee, processPayment } from '@/lib/ecommerce/payment-service';
+import { calculateRazorpayFee, PAYMENT_PROVIDERS } from '@/lib/ecommerce/payment-providers';
 
 describe('Payment Service', () => {
   describe('Fee Calculations', () => {
     it('should calculate Stripe fees correctly', () => {
-      const { calculateStripeFee } = require('@/lib/ecommerce/payment-service');
-      
       // $100 order: 2.9% + $0.30 = $3.20
       expect(calculateStripeFee(100)).toBeCloseTo(3.20, 2);
       
@@ -18,22 +18,16 @@ describe('Payment Service', () => {
     });
     
     it('should calculate Square fees correctly', () => {
-      const { calculateSquareFee } = require('@/lib/ecommerce/payment-service');
-      
       // $100 order: 2.9% + $0.30 = $3.20
       expect(calculateSquareFee(100)).toBeCloseTo(3.20, 2);
     });
     
     it('should calculate PayPal fees correctly', () => {
-      const { calculatePayPalFee } = require('@/lib/ecommerce/payment-service');
-      
       // $100 order: 2.9% + $0.30 = $3.20
       expect(calculatePayPalFee(100)).toBeCloseTo(3.20, 2);
     });
     
     it('should calculate Razorpay fees correctly', () => {
-      const { calculateRazorpayFee } = require('@/lib/ecommerce/payment-providers');
-      
       // $100 order: 2% = $2.00
       expect(calculateRazorpayFee(100)).toBeCloseTo(2.00, 2);
     });
@@ -41,8 +35,6 @@ describe('Payment Service', () => {
   
   describe('Provider Routing', () => {
     it('should route to correct payment provider', async () => {
-      const { processPayment } = require('@/lib/ecommerce/payment-service');
-      
       const request = {
         workspaceId: 'test-workspace',
         amount: 100,
@@ -63,8 +55,6 @@ describe('Payment Service', () => {
   
   describe('Payment Providers List', () => {
     it('should have 8 payment providers configured', () => {
-      const { PAYMENT_PROVIDERS } = require('@/lib/ecommerce/payment-providers');
-      
       expect(PAYMENT_PROVIDERS).toHaveLength(8);
       
       const providerIds = PAYMENT_PROVIDERS.map((p: { id: string }) => p.id);
@@ -79,8 +69,6 @@ describe('Payment Service', () => {
     });
     
     it('should have provider metadata', () => {
-      const { PAYMENT_PROVIDERS } = require('@/lib/ecommerce/payment-providers');
-      
       PAYMENT_PROVIDERS.forEach((provider: { id: string; name: string; description: string; fee: string; countries: string }) => {
         expect(provider.id).toBeDefined();
         expect(provider.name).toBeDefined();
