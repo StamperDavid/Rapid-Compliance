@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -8,20 +8,19 @@ import { serverTimestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/config'
 import { dal } from '@/lib/firebase/dal';
 import { logger } from '@/lib/logger/logger';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 interface FirebaseError {
   code: string;
   message: string;
 }
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+// Initialize Stripe (unused for now)
+const _stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     // Step 1: Plan selection
     planId: 'tier1',
@@ -83,12 +82,12 @@ export default function SignupPage() {
     if (step === 2) {
       // Validate password
       if (formData.password !== formData.confirmPassword) {
-        alert('Passwords do not match');
+        setError('Passwords do not match');
         return;
       }
       
       if (formData.password.length < 8) {
-        alert('Password must be at least 8 characters');
+        setError('Password must be at least 8 characters');
         return;
       }
       
@@ -157,7 +156,7 @@ export default function SignupPage() {
         throw new Error('Failed to create subscription');
       }
 
-      const { customerId, subscriptionId } = await subscriptionResponse.json();
+      const { customerId, subscriptionId } = await subscriptionResponse.json() as { customerId: string; subscriptionId: string };
 
       // Create organization document in Firestore using DAL
       await dal.safeSetDoc('ORGANIZATIONS', orgId, {
@@ -197,7 +196,7 @@ export default function SignupPage() {
       logger.info('User document created', { file: 'page.tsx' });
 
       // Success!
-      alert(`Account created successfully! Welcome to ${formData.companyName}!\n\n${formData.startTrial ? '14-day free trial started. You\'ll be charged based on your usage at the end of the trial.' : 'Subscription activated!'}`);
+      logger.info(`Account created successfully! Welcome to ${formData.companyName}!`, { file: 'page.tsx' });
       
       // Redirect to onboarding
       router.push(`/workspace/${orgId}/onboarding`);
@@ -217,7 +216,7 @@ export default function SignupPage() {
         errorMessage = error.message;
       }
       
-      alert(errorMessage);
+      setError(errorMessage);
     }
   };
 
@@ -229,7 +228,7 @@ export default function SignupPage() {
       await createAccount();
     } catch (error) {
       logger.error('Failed to process payment:', error, { file: 'page.tsx' });
-      alert('Failed to process payment');
+      setError('Failed to process payment');
     }
   };
 
@@ -264,7 +263,12 @@ export default function SignupPage() {
         </div>
 
         <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700">
-          <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="mb-6 p-4 bg-red-900/30 border border-red-800 rounded-lg">
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+          <form onSubmit={(e) => { void handleSubmit(e); }}>
             {/* Step 1: Plan Selection */}
             {step === 1 && (
               <div>
@@ -386,7 +390,7 @@ export default function SignupPage() {
                   {/* Credit card is now required - trial checkbox removed */}
                   <div className="p-4 bg-gray-700/50 rounded-lg border border-gray-600">
                     <p className="text-gray-300 text-sm">
-                      💳 Credit card required to start your 14-day free trial. You won't be charged until your trial ends.
+                      💳 Credit card required to start your 14-day free trial. You won&apos;t be charged until your trial ends.
                     </p>
                   </div>
                 </div>

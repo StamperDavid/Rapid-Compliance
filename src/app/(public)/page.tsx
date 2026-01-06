@@ -19,7 +19,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
+function _LiveChatDemo({ primaryColor }: { primaryColor: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -51,7 +51,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
   ];
 
   const sendMessage = async (messageText?: string) => {
-    const text = messageText || input.trim();
+    const text = messageText ?? input.trim();
     if (!text || isTyping) {return;}
 
     const userMessage: ChatMessage = {
@@ -168,7 +168,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
             {suggestedQuestions.map((q, i) => (
               <button
                 key={i}
-                onClick={() => sendMessage(q)}
+                onClick={() => { void sendMessage(q); }}
                 className="px-3 py-1.5 text-xs bg-slate-700 text-gray-300 rounded-full hover:bg-slate-600 transition"
               >
                 {q}
@@ -185,13 +185,13 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            onKeyPress={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
             placeholder="Type your message..."
             className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
             disabled={isTyping}
           />
           <button
-            onClick={() => sendMessage()}
+            onClick={() => { void sendMessage(); }}
             disabled={!input.trim() || isTyping}
             className="px-4 py-3 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: primaryColor, color: '#fff' }}
@@ -305,7 +305,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              What's Included in Every Plan
+              What&apos;s Included in Every Plan
             </h2>
             <p className="text-xl text-gray-300">
               The $400 user gets the <span className="text-indigo-400 font-semibold">same features</span> as the $1,250 user. You only pay based on CRM records stored.
@@ -342,7 +342,7 @@ export default function LandingPage() {
               Stop Juggling 6 Different Tools
             </h2>
             <p className="text-xl text-gray-300">
-              Replace your "Frankenstein stack" with one unified platform
+              Replace your &quot;Frankenstein stack&quot; with one unified platform
             </p>
           </div>
 
@@ -434,7 +434,7 @@ export default function LandingPage() {
                 Save $322-3,147 per month
               </p>
               <p className="text-white text-sm">
-                That's $3,864-37,764 saved per year
+                That&apos;s $3,864-37,764 saved per year
               </p>
             </div>
           </div>
@@ -446,10 +446,10 @@ export default function LandingPage() {
           <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              BYOK: We Don't Markup Your AI Costs
+              BYOK: We Don&apos;t Markup Your AI Costs
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-4">
-              Most AI platforms mark up tokens by 300-500%. We don't. You connect your own API key and pay the AI provider directly at cost.
+              Most AI platforms mark up tokens by 300-500%. We don&apos;t. You connect your own API key and pay the AI provider directly at cost.
             </p>
             <p className="text-lg text-indigo-300 max-w-2xl mx-auto">
               💡 <span className="font-semibold">We recommend OpenRouter</span> - one key gives you access to GPT-4, Claude, Gemini, and 200+ models
@@ -524,7 +524,7 @@ export default function LandingPage() {
                 You Save: $1,150/month
               </p>
               <p className="text-white text-sm">
-                That's $13,800 saved per year with complete transparency
+                That&apos;s $13,800 saved per year with complete transparency
               </p>
             </div>
           </div>
@@ -794,7 +794,7 @@ export default function LandingPage() {
                 className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl"
               >
                 <div className="text-yellow-400 text-2xl mb-4">★★★★★</div>
-                <p className="text-gray-300 mb-4 italic">"{testimonial.quote}"</p>
+                <p className="text-gray-300 mb-4 italic">&quot;{testimonial.quote}&quot;</p>
                 <div className="border-t border-white/10 pt-4">
                   <div className="font-semibold text-white">{testimonial.author}</div>
                   <div className="text-sm text-gray-400">{testimonial.role}</div>
