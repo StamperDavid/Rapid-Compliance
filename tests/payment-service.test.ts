@@ -67,7 +67,7 @@ describe('Payment Service', () => {
       
       expect(PAYMENT_PROVIDERS).toHaveLength(8);
       
-      const providerIds = PAYMENT_PROVIDERS.map((p) => p.id);
+      const providerIds = PAYMENT_PROVIDERS.map((p: { id: string }) => p.id);
       expect(providerIds).toContain('stripe');
       expect(providerIds).toContain('square');
       expect(providerIds).toContain('paypal');
@@ -81,7 +81,7 @@ describe('Payment Service', () => {
     it('should have provider metadata', () => {
       const { PAYMENT_PROVIDERS } = require('@/lib/ecommerce/payment-providers');
       
-      PAYMENT_PROVIDERS.forEach((provider) => {
+      PAYMENT_PROVIDERS.forEach((provider: { id: string; name: string; description: string; fee: string; countries: string }) => {
         expect(provider.id).toBeDefined();
         expect(provider.name).toBeDefined();
         expect(provider.description).toBeDefined();

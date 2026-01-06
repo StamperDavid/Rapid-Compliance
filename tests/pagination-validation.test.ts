@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 // Helper to generate ISO timestamp strings (compatible with both SDKs)
 const now = () => new Date().toISOString();
@@ -120,7 +121,7 @@ describe('Pagination Stress Testing', () => {
       `organizations/${testOrgId}/workspaces/default/entities/leads/records`,
       [],
       50,
-      lastDoc
+      lastDoc ?? undefined
     );
 
     expect(page2.data).toHaveLength(50);
@@ -168,7 +169,7 @@ describe('Pagination Stress Testing', () => {
     const maxIterations = 5; // Load first 250 records
 
     while (iterations < maxIterations) {
-      const result = await FirestoreService.getAllPaginated(
+      const result: { data: unknown[]; lastDoc: QueryDocumentSnapshot | null; hasMore: boolean } = await FirestoreService.getAllPaginated(
         `organizations/${testOrgId}/workspaces/default/entities/leads/records`,
         [],
         50,
@@ -176,7 +177,7 @@ describe('Pagination Stress Testing', () => {
       );
 
       totalLoaded += result.data.length;
-      currentLastDoc = result.lastDoc;
+      currentLastDoc = result.lastDoc ?? undefined;
       iterations++;
 
       if (!result.hasMore) break;

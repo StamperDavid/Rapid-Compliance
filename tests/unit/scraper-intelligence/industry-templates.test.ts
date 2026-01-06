@@ -56,7 +56,7 @@ describe('Industry Template Research Intelligence Helpers', () => {
         scoringRules: [],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },
@@ -125,7 +125,7 @@ describe('Industry Template Research Intelligence Helpers', () => {
         scoringRules: [],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },
@@ -252,7 +252,7 @@ describe('Industry Template Research Intelligence Helpers', () => {
           },
         ],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
           notes: 'Test notes',

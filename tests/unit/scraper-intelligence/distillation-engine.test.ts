@@ -98,7 +98,7 @@ describe('Distillation Engine', () => {
       ],
       customFields: [],
       metadata: {
-        lastUpdated: new Date(),
+        lastUpdated: new Date().toISOString(),
         version: 1,
         updatedBy: 'system',
       },

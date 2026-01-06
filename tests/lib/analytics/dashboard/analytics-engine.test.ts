@@ -9,20 +9,72 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Workflow, WorkflowExecution } from '@/lib/workflow/types';
 
 // Mock admin DAL
+const mockAdminDal = {
+  getAllWorkflows: jest.fn(),
+  getWorkflowExecutions: jest.fn(),
+  getEmailGenerations: jest.fn(),
+  getActiveDeals: jest.fn(),
+  getDealsSnapshot: jest.fn(),
+  getClosedDeals: jest.fn(),
+  getWonDeals: jest.fn(),
+  getRevenueForecast: jest.fn(),
+  getSalesReps: jest.fn(),
+  getRepDeals: jest.fn(),
+};
+
 jest.mock('@/lib/firebase/admin-dal', () => ({
-  adminDal: {
-    getAllWorkflows: jest.fn(),
-    getWorkflowExecutions: jest.fn(),
-    getEmailGenerations: jest.fn(),
-    getActiveDeals: jest.fn(),
-    getDealsSnapshot: jest.fn(),
-    getClosedDeals: jest.fn(),
-    getWonDeals: jest.fn(),
-    getRevenueForecast: jest.fn(),
-    getSalesReps: jest.fn(),
-    getRepDeals: jest.fn(),
-  },
+  adminDal: mockAdminDal,
 }));
+
+// Helper function to create a proper Workflow mock
+function createMockWorkflow(overrides: Partial<Workflow> = {}): Workflow {
+  const now = new Date();
+  return {
+    id: 'wf1',
+    organizationId: 'org1',
+    workspaceId: 'ws1',
+    name: 'Test Workflow',
+    description: 'Test workflow description',
+    status: 'active',
+    trigger: {
+      id: 'trigger-1',
+      type: 'deal.score.changed',
+      conditions: [],
+      conditionLogic: 'AND',
+      name: 'Test Trigger',
+      description: 'Test trigger description',
+    },
+    actions: [],
+    settings: {},
+    createdBy: 'user1',
+    createdAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+    updatedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+    stats: {
+      totalExecutions: 0,
+      successfulExecutions: 0,
+      failedExecutions: 0,
+      averageExecutionTimeMs: 0,
+    },
+    ...overrides,
+  };
+}
+
+// Helper function to create a proper WorkflowExecution mock
+function createMockWorkflowExecution(overrides: Partial<WorkflowExecution> = {}): WorkflowExecution {
+  const now = new Date();
+  return {
+    id: 'ex1',
+    workflowId: 'wf1',
+    organizationId: 'org1',
+    workspaceId: 'ws1',
+    triggeredBy: 'event',
+    triggerData: {},
+    status: 'completed',
+    startedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+    actionsExecuted: [],
+    ...overrides,
+  };
+}
 
 describe('Analytics Engine', () => {
   beforeEach(() => {
@@ -32,70 +84,58 @@ describe('Analytics Engine', () => {
 
   describe('getDashboardAnalytics', () => {
     it('should return complete dashboard analytics', async () => {
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
       // Setup mocks
       const mockWorkflows: Workflow[] = [
-        {
-          id: 'wf1',
-          name: 'Test Workflow 1',
-          status: 'active',
-          trigger: { type: 'deal.score.changed', conditions: [] },
-          actions: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Workflow,
-        {
-          id: 'wf2',
-          name: 'Test Workflow 2',
-          status: 'active',
-          trigger: { type: 'deal.tier.changed', conditions: [] },
-          actions: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Workflow,
+        createMockWorkflow({ id: 'wf1', name: 'Test Workflow 1' }),
+        createMockWorkflow({ id: 'wf2', name: 'Test Workflow 2', trigger: { id: 'trigger-2', type: 'deal.tier.changed', conditions: [], conditionLogic: 'AND', name: 'Tier Changed', description: 'Tier changed trigger' } }),
       ];
 
       const mockExecutions: WorkflowExecution[] = [
-        {
+        createMockWorkflowExecution({
           id: 'ex1',
           workflowId: 'wf1',
           status: 'completed',
-          startedAt: new Date('2024-01-15'),
-          completedAt: new Date('2024-01-15'),
-          actionResults: [
-            { actionType: 'email', status: 'success', duration: 100 },
-            { actionType: 'task', status: 'success', duration: 50 },
+          startedAt: new Date('2024-01-15') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          completedAt: new Date('2024-01-15') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          actionsExecuted: [
+            { actionId: 'a1', actionType: 'email.send', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 100 },
+            { actionId: 'a2', actionType: 'task.create', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 50 },
           ],
-        } as WorkflowExecution,
-        {
+        }),
+        createMockWorkflowExecution({
           id: 'ex2',
           workflowId: 'wf1',
           status: 'completed',
-          startedAt: new Date('2024-01-16'),
-          completedAt: new Date('2024-01-16'),
-          actionResults: [
-            { actionType: 'email', status: 'success', duration: 120 },
+          startedAt: new Date('2024-01-16') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          completedAt: new Date('2024-01-16') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          actionsExecuted: [
+            { actionId: 'a3', actionType: 'email.send', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 120 },
           ],
-        } as WorkflowExecution,
-        {
+        }),
+        createMockWorkflowExecution({
           id: 'ex3',
           workflowId: 'wf2',
           status: 'failed',
-          startedAt: new Date('2024-01-17'),
-          completedAt: new Date('2024-01-17'),
-          actionResults: [],
-        } as WorkflowExecution,
+          startedAt: new Date('2024-01-17') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          completedAt: new Date('2024-01-17') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          actionsExecuted: [],
+        }),
       ];
 
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
-      (adminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue(mockExecutions);
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRepDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue(mockExecutions);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRepDeals as jest.Mock).mockResolvedValue([]);
 
       // Execute
       const result = await getDashboardAnalytics('org1', 'ws1', '30d');
@@ -110,61 +150,57 @@ describe('Analytics Engine', () => {
     });
 
     it('should calculate workflow metrics correctly', async () => {
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
       // Setup
       const mockWorkflows: Workflow[] = [
-        {
-          id: 'wf1',
-          name: 'Active Workflow',
-          status: 'active',
-          trigger: { type: 'deal.score.changed', conditions: [] },
-          actions: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Workflow,
+        createMockWorkflow({ id: 'wf1', name: 'Active Workflow' }),
       ];
 
       const mockExecutions: WorkflowExecution[] = [
-        {
+        createMockWorkflowExecution({
           id: 'ex1',
           workflowId: 'wf1',
           status: 'completed',
-          startedAt: new Date('2024-01-15T10:00:00'),
-          completedAt: new Date('2024-01-15T10:00:05'),
-          actionResults: [
-            { actionType: 'email', status: 'success', duration: 100 },
+          startedAt: new Date('2024-01-15T10:00:00') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          completedAt: new Date('2024-01-15T10:00:05') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          actionsExecuted: [
+            { actionId: 'a1', actionType: 'email.send', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 100 },
           ],
-        } as WorkflowExecution,
-        {
+        }),
+        createMockWorkflowExecution({
           id: 'ex2',
           workflowId: 'wf1',
           status: 'completed',
-          startedAt: new Date('2024-01-16T10:00:00'),
-          completedAt: new Date('2024-01-16T10:00:03'),
-          actionResults: [
-            { actionType: 'task', status: 'success', duration: 50 },
+          startedAt: new Date('2024-01-16T10:00:00') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          completedAt: new Date('2024-01-16T10:00:03') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          actionsExecuted: [
+            { actionId: 'a2', actionType: 'task.create', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 50 },
           ],
-        } as WorkflowExecution,
-        {
+        }),
+        createMockWorkflowExecution({
           id: 'ex3',
           workflowId: 'wf1',
           status: 'failed',
-          startedAt: new Date('2024-01-17T10:00:00'),
-          completedAt: new Date('2024-01-17T10:00:02'),
-          actionResults: [],
-        } as WorkflowExecution,
+          startedAt: new Date('2024-01-17T10:00:00') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          completedAt: new Date('2024-01-17T10:00:02') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          actionsExecuted: [],
+        }),
       ];
 
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
-      (adminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock)
         .mockResolvedValueOnce(mockExecutions) // Current period
         .mockResolvedValueOnce([]); // Previous period
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // Execute
       const result = await getDashboardAnalytics('org1', 'ws1', '30d');
@@ -179,45 +215,41 @@ describe('Analytics Engine', () => {
     });
 
     it('should calculate action breakdown correctly', async () => {
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
       // Setup
       const mockWorkflows: Workflow[] = [
-        {
-          id: 'wf1',
-          name: 'Test Workflow',
-          status: 'active',
-          trigger: { type: 'deal.score.changed', conditions: [] },
-          actions: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as Workflow,
+        createMockWorkflow({ id: 'wf1', name: 'Test Workflow' }),
       ];
 
       const mockExecutions: WorkflowExecution[] = [
-        {
+        createMockWorkflowExecution({
           id: 'ex1',
           workflowId: 'wf1',
           status: 'completed',
-          startedAt: new Date(),
-          completedAt: new Date(),
-          actionResults: [
-            { actionType: 'email', status: 'success', duration: 100 },
-            { actionType: 'email', status: 'success', duration: 120 },
-            { actionType: 'task', status: 'success', duration: 50 },
+          startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          completedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number },
+          actionsExecuted: [
+            { actionId: 'a1', actionType: 'email.send', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 100 },
+            { actionId: 'a2', actionType: 'email.send', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 120 },
+            { actionId: 'a3', actionType: 'task.create', status: 'success', startedAt: new Date() as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, durationMs: 50 },
           ],
-        } as WorkflowExecution,
+        }),
       ];
 
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
-      (adminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue(mockWorkflows);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock)
         .mockResolvedValueOnce(mockExecutions)
         .mockResolvedValueOnce([]);
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // Execute
       const result = await getDashboardAnalytics('org1', 'ws1', '30d');
@@ -225,13 +257,13 @@ describe('Analytics Engine', () => {
       // Verify action breakdown
       expect(result.workflows.actionBreakdown).toHaveLength(2);
       
-      const emailAction = result.workflows.actionBreakdown.find(a => a.actionType === 'email');
+      const emailAction = result.workflows.actionBreakdown.find(a => a.actionType === 'email.send');
       expect(emailAction).toBeDefined();
       expect(emailAction?.count).toBe(2);
       expect(emailAction?.percentage).toBeCloseTo(66.67, 1);
       expect(emailAction?.averageTime).toBe(110);
 
-      const taskAction = result.workflows.actionBreakdown.find(a => a.actionType === 'task');
+      const taskAction = result.workflows.actionBreakdown.find(a => a.actionType === 'task.create');
       expect(taskAction).toBeDefined();
       expect(taskAction?.count).toBe(1);
       expect(taskAction?.percentage).toBeCloseTo(33.33, 1);
@@ -250,15 +282,19 @@ describe('Analytics Engine', () => {
         { id: 'c1', status: 'won', value: 12000, createdAt: new Date('2024-01-01'), closedAt: new Date('2024-01-30') },
       ];
 
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue(mockDeals);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue(mockClosedDeals);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue(mockDeals);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue(mockClosedDeals);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // Execute
       const result = await getDashboardAnalytics('org1', 'ws1', '30d');
@@ -286,19 +322,23 @@ describe('Analytics Engine', () => {
         { id: 'l2', status: 'lost', value: 7000, closedAt: new Date('2024-01-22') },
       ];
 
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue(mockAllClosedDeals);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue(mockWonDeals);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue(mockAllClosedDeals);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue(mockWonDeals);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({
         optimistic: 120000,
         realistic: 100000,
         pessimistic: 80000,
       });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // Execute
       const result = await getDashboardAnalytics('org1', 'ws1', '30d');
@@ -315,56 +355,65 @@ describe('Analytics Engine', () => {
     });
 
     it('should cache results correctly', async () => {
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
       // Setup minimal mocks
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // First call
       await getDashboardAnalytics('org1', 'ws1', '30d');
-      expect(adminDal.getAllWorkflows).toHaveBeenCalledTimes(1);
+      expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(1);
 
       // Second call (should use cache)
       await getDashboardAnalytics('org1', 'ws1', '30d');
-      expect(adminDal.getAllWorkflows).toHaveBeenCalledTimes(1); // Still 1 (cached)
+      expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(1); // Still 1 (cached)
 
       // Clear cache
       clearAnalyticsCache();
 
       // Third call (should fetch again)
       await getDashboardAnalytics('org1', 'ws1', '30d');
-      expect(adminDal.getAllWorkflows).toHaveBeenCalledTimes(2);
+      expect(mockAdminDal.getAllWorkflows).toHaveBeenCalledTimes(2);
     });
 
     it('should calculate trends correctly', async () => {
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
       // Setup
+      const now = new Date();
       const currentExecutions: WorkflowExecution[] = [
-        { id: 'ex1', workflowId: 'wf1', status: 'completed', startedAt: new Date(), completedAt: new Date(), actionResults: [] } as WorkflowExecution,
-        { id: 'ex2', workflowId: 'wf1', status: 'completed', startedAt: new Date(), completedAt: new Date(), actionResults: [] } as WorkflowExecution,
-        { id: 'ex3', workflowId: 'wf1', status: 'completed', startedAt: new Date(), completedAt: new Date(), actionResults: [] } as WorkflowExecution,
+        createMockWorkflowExecution({ id: 'ex1', workflowId: 'wf1', status: 'completed', startedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
+        createMockWorkflowExecution({ id: 'ex2', workflowId: 'wf1', status: 'completed', startedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
+        createMockWorkflowExecution({ id: 'ex3', workflowId: 'wf1', status: 'completed', startedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
       ];
 
       const previousExecutions: WorkflowExecution[] = [
-        { id: 'ex0', workflowId: 'wf1', status: 'completed', startedAt: new Date(), completedAt: new Date(), actionResults: [] } as WorkflowExecution,
+        createMockWorkflowExecution({ id: 'ex0', workflowId: 'wf1', status: 'completed', startedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
       ];
 
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock)
         .mockResolvedValueOnce(currentExecutions) // Current period
         .mockResolvedValueOnce(previousExecutions); // Previous period
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // Execute
       const result = await getDashboardAnalytics('org1', 'ws1', '30d');
@@ -374,16 +423,20 @@ describe('Analytics Engine', () => {
     });
 
     it('should handle different time periods correctly', async () => {
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
       // Setup minimal mocks
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // Test different periods
       const periods = ['24h', '7d', '30d', '90d', 'month', 'quarter', 'year'] as const;
@@ -398,24 +451,29 @@ describe('Analytics Engine', () => {
     });
 
     it('should generate time series data correctly', async () => {
+      if (!adminDal) {
+        throw new Error('adminDal is not initialized');
+      }
+      
       // Setup
+      const now = new Date();
       const mockExecutions: WorkflowExecution[] = [
-        { id: 'ex1', workflowId: 'wf1', status: 'completed', startedAt: new Date('2024-01-15'), completedAt: new Date(), actionResults: [] } as WorkflowExecution,
-        { id: 'ex2', workflowId: 'wf1', status: 'completed', startedAt: new Date('2024-01-15'), completedAt: new Date(), actionResults: [] } as WorkflowExecution,
-        { id: 'ex3', workflowId: 'wf1', status: 'completed', startedAt: new Date('2024-01-16'), completedAt: new Date(), actionResults: [] } as WorkflowExecution,
+        createMockWorkflowExecution({ id: 'ex1', workflowId: 'wf1', status: 'completed', startedAt: new Date('2024-01-15') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
+        createMockWorkflowExecution({ id: 'ex2', workflowId: 'wf1', status: 'completed', startedAt: new Date('2024-01-15') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
+        createMockWorkflowExecution({ id: 'ex3', workflowId: 'wf1', status: 'completed', startedAt: new Date('2024-01-16') as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, completedAt: now as unknown as { toDate(): Date; toMillis(): number; seconds: number; nanoseconds: number }, actionsExecuted: [] }),
       ];
 
-      (adminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWorkflowExecutions as jest.Mock)
+      (mockAdminDal.getAllWorkflows as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWorkflowExecutions as jest.Mock)
         .mockResolvedValueOnce(mockExecutions)
         .mockResolvedValueOnce([]);
-      (adminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
-      (adminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
-      (adminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
-      (adminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (adminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getEmailGenerations as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getActiveDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getDealsSnapshot as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getClosedDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getWonDeals as jest.Mock).mockResolvedValue([]);
+      (mockAdminDal.getRevenueForecast as jest.Mock).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
+      (mockAdminDal.getSalesReps as jest.Mock).mockResolvedValue([]);
 
       // Execute
       const result = await getDashboardAnalytics('org1', 'ws1', '7d');
