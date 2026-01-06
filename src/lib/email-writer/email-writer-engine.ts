@@ -199,7 +199,7 @@ export async function generateSalesEmail(
     // 4. Get industry template (for best practices)
     let industryTemplate: SalesIndustryTemplate | undefined = options.industryTemplate;
     if (options.templateId && !industryTemplate) {
-      industryTemplate = getTemplateById(options.templateId);
+      industryTemplate = getTemplateById(options.templateId) ?? undefined;
     }
     
     // 5. Build AI prompt

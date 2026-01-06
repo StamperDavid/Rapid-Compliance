@@ -15,7 +15,7 @@ export async function executeQuickBooksFunction(
   integration: ConnectedIntegration
 ): Promise<any> {
   const accessToken = integration.accessToken || '';
-  const realmId = integration.config?.realmId || integration.settings?.realmId || '';
+  const realmId = (integration.config?.realmId ?? integration.settings?.realmId ?? '') as string;
   
   if (!accessToken) {
     throw new Error('QuickBooks access token not configured');

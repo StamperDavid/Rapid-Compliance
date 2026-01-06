@@ -15,7 +15,7 @@ export async function executeXeroFunction(
   integration: ConnectedIntegration
 ): Promise<any> {
   const accessToken = integration.accessToken || '';
-  const tenantId = integration.config?.tenantId || integration.settings?.tenantId || '';
+  const tenantId = (integration.config?.tenantId ?? integration.settings?.tenantId ?? '') as string;
   
   if (!accessToken) {
     throw new Error('Xero access token not configured');
