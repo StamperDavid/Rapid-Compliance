@@ -13,6 +13,10 @@ export async function executeSalesforceFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
+  if (!integration.config) {
+    throw new Error('Salesforce configuration missing');
+  }
+  
   const { instanceUrl, accessToken } = integration.config;
   
   if (!instanceUrl || !accessToken) {

@@ -98,19 +98,19 @@ export class FilterEngine {
 
     // Date operators
     if (operator === 'is_on') {
-      return this.isSameDay(new Date(fieldValue), new Date(value));
+      return this.isSameDay(new Date(fieldValue as string | number | Date), new Date(value as string | number | Date));
     }
     if (operator === 'is_before') {
-      return new Date(fieldValue) < new Date(value);
+      return new Date(fieldValue as string | number | Date) < new Date(value as string | number | Date);
     }
     if (operator === 'is_after') {
-      return new Date(fieldValue) > new Date(value);
+      return new Date(fieldValue as string | number | Date) > new Date(value as string | number | Date);
     }
     if (operator === 'is_on_or_before') {
-      return new Date(fieldValue) <= new Date(value);
+      return new Date(fieldValue as string | number | Date) <= new Date(value as string | number | Date);
     }
     if (operator === 'is_on_or_after') {
-      return new Date(fieldValue) >= new Date(value);
+      return new Date(fieldValue as string | number | Date) >= new Date(value as string | number | Date);
     }
 
     // Array/Select operators
