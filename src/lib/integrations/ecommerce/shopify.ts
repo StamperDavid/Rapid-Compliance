@@ -13,6 +13,10 @@ export async function executeShopifyFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
+  if (!integration.config) {
+    throw new Error('Shopify configuration missing');
+  }
+  
   const { shopDomain, accessToken } = integration.config;
   
   if (!shopDomain || !accessToken) {

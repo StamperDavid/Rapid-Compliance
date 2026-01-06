@@ -107,8 +107,8 @@ export async function getTokensFromCode(code: string): Promise<{
   
   return {
     access_token: tokens.access_token!,
-    refresh_token: tokens.refresh_token,
-    expiry_date: tokens.expiry_date,
+    refresh_token: tokens.refresh_token ?? undefined,
+    expiry_date: tokens.expiry_date ?? undefined,
   };
 }
 

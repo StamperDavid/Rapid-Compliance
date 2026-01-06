@@ -7,6 +7,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { logEmailOpened } from '@/lib/crm/activity-logger';
+import { Timestamp } from 'firebase/firestore';
 
 export interface EmailMessage {
   id: string;
@@ -236,7 +237,7 @@ export async function processEmailReply(
           toEmail: reply.to.join(', '),
           threadId: reply.threadId,
         },
-        occurredAt: reply.receivedAt,
+        occurredAt: Timestamp.fromDate(reply.receivedAt),
       });
 
       // Trigger reply handler for AI processing
