@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
+import { sendSMS, getDeliveryStatus, validatePhoneNumber } from @/lib/sms/sms-service\\;
 import { sendSMS } from '@/lib/sms/sms-service';
 
 describe('SMS Integration Tests', () => {
@@ -59,7 +60,6 @@ describe('SMS Integration Tests', () => {
 
   describe('Phone Number Validation', () => {
     it('should validate phone numbers', () => {
-      const { validatePhoneNumber } = require('@/lib/sms/sms-service');
       
       // Valid formats
       expect(validatePhoneNumber('+15551234567')).toBe(true);
