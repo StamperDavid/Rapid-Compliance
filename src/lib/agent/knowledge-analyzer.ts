@@ -192,16 +192,8 @@ export async function analyzeCompanyKnowledge(
  */
 async function scrapeWebsite(url: string): Promise<string> {
   try {
-    // Use node-fetch for server-side, or fetch API for client-side
-    let fetchFn: typeof fetch;
-    try {
-      const nodeFetch = await import('node-fetch');
-      fetchFn = nodeFetch.default;
-    } catch {
-      fetchFn = globalThis.fetch;
-    }
-    
-    const response = await fetchFn(url, {
+    // Next.js provides fetch API in both server and client contexts
+    const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
@@ -214,8 +206,8 @@ async function scrapeWebsite(url: string): Promise<string> {
     const html = await response.text();
     
     // Use Cheerio to parse HTML
-    const cheerio = (await import('cheerio')).default;
-    const $ = cheerio.load(html);
+    const { load } = await import('cheerio');
+    const $ = load(html);
     
     // Remove script and style tags
     $('script, style, noscript').remove();

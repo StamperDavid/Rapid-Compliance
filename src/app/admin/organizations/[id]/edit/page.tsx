@@ -48,7 +48,7 @@ export default function EditOrganizationPage() {
     async function loadOrganization() {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId) as Organization | null;
         
         if (org) {
           // Ensure settings has defaults

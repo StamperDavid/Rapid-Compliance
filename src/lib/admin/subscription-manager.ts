@@ -88,7 +88,7 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
       const subscription = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${org.id}/subscription`,
         'current'
-      );
+      ) as CustomerSubscription | null;
       
       if (subscription) {
         // Get usage stats

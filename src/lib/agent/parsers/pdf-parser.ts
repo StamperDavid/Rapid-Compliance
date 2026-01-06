@@ -9,7 +9,9 @@ import { logger } from '@/lib/logger/logger';
 let pdfParse: any;
 async function getPdfParse() {
   if (!pdfParse) {
-    pdfParse = (await import('pdf-parse')).default;
+    const module = await import('pdf-parse');
+    // Try default export first, fall back to module itself
+    pdfParse = module.default || module;
   }
   return pdfParse;
 }

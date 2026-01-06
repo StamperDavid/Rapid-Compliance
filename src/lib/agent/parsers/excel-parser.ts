@@ -38,14 +38,14 @@ export async function parseExcel(file: File | Buffer): Promise<ExcelParseResult>
     
     const sheets = workbook.SheetNames.map(sheetName => {
       const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as unknown[][];
       
       // First row as headers
-      const headers = data.length > 0 ? data[0].map((h: any) => String(h || '')) : [];
+      const headers = data.length > 0 ? data[0].map((h: unknown) => String(h || '')) : [];
       
       // Convert to objects
-      const rows = data.slice(1).map(row => {
-        const obj: any = {};
+      const rows = data.slice(1).map((row: unknown[]) => {
+        const obj: Record<string, unknown> = {};
         headers.forEach((header, index) => {
           if (header) {
             obj[header] = row[index] || '';

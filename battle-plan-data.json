@@ -1,0 +1,409 @@
+{
+  "summary": {
+    "totalIssues": 21388,
+    "totalErrors": 89,
+    "totalWarnings": 21299,
+    "uniqueRules": 44,
+    "filesAnalyzed": 896
+  },
+  "top20": [
+    {
+      "rank": 1,
+      "rule": "@typescript-eslint/no-unsafe-member-access",
+      "count": 5508,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 5508,
+      "files": 449,
+      "worker": "Worker 1 (Surgeon)",
+      "strategy": "Generate proper types, replace any"
+    },
+    {
+      "rank": 2,
+      "rule": "@typescript-eslint/no-unsafe-assignment",
+      "count": 4091,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 4091,
+      "files": 520,
+      "worker": "Worker 1 (Surgeon)",
+      "strategy": "Generate proper types, replace any"
+    },
+    {
+      "rank": 3,
+      "rule": "@typescript-eslint/prefer-nullish-coalescing",
+      "count": 3049,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 3049,
+      "files": 517,
+      "worker": "Worker 2 (Scrubber)",
+      "strategy": "Auto-fix with eslint --fix"
+    },
+    {
+      "rank": 4,
+      "rule": "@typescript-eslint/no-explicit-any",
+      "count": 2487,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 2487,
+      "files": 525,
+      "worker": "Worker 1 (Surgeon)",
+      "strategy": "Generate proper types, replace any"
+    },
+    {
+      "rank": 5,
+      "rule": "@typescript-eslint/no-unsafe-argument",
+      "count": 1345,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 1345,
+      "files": 374,
+      "worker": "Worker 1 (Surgeon)",
+      "strategy": "Generate proper types, replace any"
+    },
+    {
+      "rank": 6,
+      "rule": "curly",
+      "count": 875,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 875,
+      "files": 259,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 7,
+      "rule": "@typescript-eslint/no-unused-vars",
+      "count": 790,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 790,
+      "files": 354,
+      "worker": "Worker 2 (Scrubber)",
+      "strategy": "Auto-remove unused, verify imports"
+    },
+    {
+      "rank": 8,
+      "rule": "@typescript-eslint/no-unsafe-call",
+      "count": 697,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 697,
+      "files": 195,
+      "worker": "Worker 1 (Surgeon)",
+      "strategy": "Generate proper types, replace any"
+    },
+    {
+      "rank": 9,
+      "rule": "@typescript-eslint/consistent-type-imports",
+      "count": 367,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 367,
+      "files": 331,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 10,
+      "rule": "@typescript-eslint/no-unsafe-return",
+      "count": 332,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 332,
+      "files": 131,
+      "worker": "Worker 1 (Surgeon)",
+      "strategy": "Generate proper types, replace any"
+    },
+    {
+      "rank": 11,
+      "rule": "no-alert",
+      "count": 275,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 275,
+      "files": 101,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 12,
+      "rule": "@typescript-eslint/no-misused-promises",
+      "count": 187,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 187,
+      "files": 136,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 13,
+      "rule": "@typescript-eslint/no-floating-promises",
+      "count": 173,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 173,
+      "files": 129,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 14,
+      "rule": "@typescript-eslint/require-await",
+      "count": 169,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 169,
+      "files": 104,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 15,
+      "rule": "react/no-unescaped-entities",
+      "count": 157,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 157,
+      "files": 62,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 16,
+      "rule": "@typescript-eslint/no-non-null-assertion",
+      "count": 133,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 133,
+      "files": 57,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 17,
+      "rule": "@typescript-eslint/return-await",
+      "count": 109,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 109,
+      "files": 52,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    },
+    {
+      "rank": 18,
+      "rule": "@typescript-eslint/prefer-optional-chain",
+      "count": 95,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 95,
+      "files": 81,
+      "worker": "Worker 2 (Scrubber)",
+      "strategy": "Auto-fix with eslint --fix"
+    },
+    {
+      "rank": 19,
+      "rule": "react-hooks/exhaustive-deps",
+      "count": 76,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 76,
+      "files": 67,
+      "worker": "Worker 3 (Lifecycle Guard)",
+      "strategy": "Fix hook deps, JSX compliance"
+    },
+    {
+      "rank": 20,
+      "rule": "@typescript-eslint/no-unnecessary-type-assertion",
+      "count": 60,
+      "severity": "WARN",
+      "errors": 0,
+      "warnings": 60,
+      "files": 32,
+      "worker": "TBD",
+      "strategy": "Manual review"
+    }
+  ],
+  "allRules": [
+    [
+      "@typescript-eslint/no-unsafe-member-access",
+      5508
+    ],
+    [
+      "@typescript-eslint/no-unsafe-assignment",
+      4091
+    ],
+    [
+      "@typescript-eslint/prefer-nullish-coalescing",
+      3049
+    ],
+    [
+      "@typescript-eslint/no-explicit-any",
+      2487
+    ],
+    [
+      "@typescript-eslint/no-unsafe-argument",
+      1345
+    ],
+    [
+      "curly",
+      875
+    ],
+    [
+      "@typescript-eslint/no-unused-vars",
+      790
+    ],
+    [
+      "@typescript-eslint/no-unsafe-call",
+      697
+    ],
+    [
+      "@typescript-eslint/consistent-type-imports",
+      367
+    ],
+    [
+      "@typescript-eslint/no-unsafe-return",
+      332
+    ],
+    [
+      "no-alert",
+      275
+    ],
+    [
+      "@typescript-eslint/no-misused-promises",
+      187
+    ],
+    [
+      "@typescript-eslint/no-floating-promises",
+      173
+    ],
+    [
+      "@typescript-eslint/require-await",
+      169
+    ],
+    [
+      "react/no-unescaped-entities",
+      157
+    ],
+    [
+      "@typescript-eslint/no-non-null-assertion",
+      133
+    ],
+    [
+      "@typescript-eslint/return-await",
+      109
+    ],
+    [
+      "@typescript-eslint/prefer-optional-chain",
+      95
+    ],
+    [
+      "react-hooks/exhaustive-deps",
+      76
+    ],
+    [
+      "@typescript-eslint/no-unnecessary-type-assertion",
+      60
+    ],
+    [
+      "prefer-template",
+      59
+    ],
+    [
+      "no-case-declarations",
+      57
+    ],
+    [
+      "no-template-curly-in-string",
+      49
+    ],
+    [
+      "no-duplicate-imports",
+      42
+    ],
+    [
+      "no-console",
+      37
+    ],
+    [
+      "@next/next/no-img-element",
+      33
+    ],
+    [
+      "no-promise-executor-return",
+      22
+    ],
+    [
+      "@typescript-eslint/await-thenable",
+      19
+    ],
+    [
+      "require-atomic-updates",
+      19
+    ],
+    [
+      "@typescript-eslint/no-redundant-type-constituents",
+      17
+    ],
+    [
+      "prefer-const",
+      15
+    ],
+    [
+      "no-useless-escape",
+      15
+    ],
+    [
+      "@typescript-eslint/no-require-imports",
+      8
+    ],
+    [
+      "react-hooks/rules-of-hooks",
+      4
+    ],
+    [
+      "no-unreachable",
+      4
+    ],
+    [
+      "@typescript-eslint/no-empty-object-type",
+      3
+    ],
+    [
+      "no-constant-binary-expression",
+      2
+    ],
+    [
+      "no-empty",
+      2
+    ],
+    [
+      "jsx-a11y/role-has-required-aria-props",
+      1
+    ],
+    [
+      "no-duplicate-case",
+      1
+    ],
+    [
+      "eqeqeq",
+      1
+    ],
+    [
+      "no-constant-condition",
+      1
+    ],
+    [
+      "no-dupe-else-if",
+      1
+    ],
+    [
+      "no-useless-catch",
+      1
+    ]
+  ]
+}
