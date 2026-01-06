@@ -9,10 +9,12 @@ import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { executeWorkflow } from '@/lib/workflows/workflow-executor';
 import { createCampaign, listCampaigns } from '@/lib/email/campaign-manager';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import type { Workflow } from '@/types/workflow';
+import { Timestamp } from 'firebase/firestore';
 
 describe('E-Commerce UI Integration', () => {
-  const testOrgId = 'test-org-' + Date.now();
-  const testSessionId = 'test-session-' + Date.now();
+  const testOrgId = `test-org-${Date.now()}`;
+  const testSessionId = `test-session-${Date.now()}`;
   const testWorkspaceId = 'default';
 
   it('should create cart (products page → cart service)', async () => {
@@ -72,7 +74,7 @@ describe('E-Commerce UI Integration', () => {
 });
 
 describe('Workflow UI Integration', () => {
-  const testOrgId = 'test-org-' + Date.now();
+  const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
 
   it('should list workflows (workflows page → firestore)', async () => {
@@ -114,7 +116,7 @@ describe('Workflow UI Integration', () => {
   }, 10000);
 
   it('should execute workflow (workflow page → workflow engine)', async () => {
-    const workflow: any = {
+    const workflow: Workflow = {
       id: 'test-workflow',
       organizationId: testOrgId,
       workspaceId: testWorkspaceId,
@@ -123,7 +125,27 @@ describe('Workflow UI Integration', () => {
       actions: [
         { id: 'action-1', type: 'delay', duration: 1, onError: 'stop' }
       ],
+      settings: {
+        onError: 'stop',
+        retryOnFailure: false,
+        maxRetries: 0,
+        timeoutSeconds: 300,
+      },
+      permissions: {
+        canView: ['owner', 'admin'],
+        canEdit: ['owner', 'admin'],
+        canExecute: ['owner', 'admin'],
+      },
+      stats: {
+        totalRuns: 0,
+        successfulRuns: 0,
+        failedRuns: 0,
+      },
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      createdBy: 'test-user',
       status: 'active',
+      version: 1,
     };
     
     const execution = await executeWorkflow(workflow, {});
@@ -134,7 +156,7 @@ describe('Workflow UI Integration', () => {
 });
 
 describe('Email Campaign UI Integration', () => {
-  const testOrgId = 'test-org-' + Date.now();
+  const testOrgId = `test-org-${Date.now()}`;
 
   it('should create campaign (campaign builder → campaign service)', async () => {
     const campaign = await createCampaign({
@@ -161,7 +183,7 @@ describe('Email Campaign UI Integration', () => {
 });
 
 describe('CRM UI Integration', () => {
-  const testOrgId = 'test-org-' + Date.now();
+  const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
 
   it('should list leads (leads page → firestore)', async () => {
@@ -219,7 +241,7 @@ describe('CRM UI Integration', () => {
 });
 
 describe('Product Management UI Integration', () => {
-  const testOrgId = 'test-org-' + Date.now();
+  const testOrgId = `test-org-${Date.now()}`;
   const testWorkspaceId = 'default';
 
   it('should create product (product form → firestore)', async () => {
