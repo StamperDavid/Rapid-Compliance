@@ -6,7 +6,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { PlatformMetrics } from '@/types/admin';
 
 export default function AnalyticsPage() {
-  const { adminUser } = useAdminAuth();
+  useAdminAuth();
   const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
         churnRate: 2.3,
         growthRate: 12.5,
         conversionRate: 8.7,
-        updatedAt: new Date() as any,
+        updatedAt: new Date() as unknown as Timestamp,
       });
       setLoading(false);
     }, 500);
@@ -51,7 +51,6 @@ export default function AnalyticsPage() {
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
-  const primaryColor = '#6366f1';
 
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>

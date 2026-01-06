@@ -6,7 +6,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { ComplianceRecord } from '@/types/admin';
 
 export default function CompliancePage() {
-  const { adminUser, hasPermission } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
   const [records, setRecords] = useState<ComplianceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('all');
@@ -52,7 +52,7 @@ export default function CompliancePage() {
       <div style={{ padding: '2rem', color: '#fff' }}>
         <div style={{ padding: '1.5rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', color: '#fff' }}>
           <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Access Denied</div>
-          <div style={{ fontSize: '0.875rem' }}>You don't have permission to manage compliance.</div>
+          <div style={{ fontSize: '0.875rem' }}>You don&apos;t have permission to manage compliance.</div>
         </div>
       </div>
     );
@@ -67,7 +67,6 @@ export default function CompliancePage() {
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
-  const primaryColor = '#6366f1';
 
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>
