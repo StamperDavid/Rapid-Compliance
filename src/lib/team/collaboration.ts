@@ -358,7 +358,7 @@ async function calculateUserMetrics(
       { pageSize: 1000 }
     );
     const activitiesInPeriod = activitiesResult.data.filter(a => {
-      const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : new Date(a.occurredAt);
+      const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : (a.occurredAt instanceof Date ? a.occurredAt : new Date(a.occurredAt as string | number));
       return occurredAt >= startDate && occurredAt <= endDate;
     });
 

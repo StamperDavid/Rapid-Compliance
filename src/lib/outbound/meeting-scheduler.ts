@@ -464,6 +464,8 @@ async function getMeetingById(
   organizationId: string
 ): Promise<ScheduledMeeting | null> {
   const { db } = await import('@/lib/firebase/config');
+  if (!db) throw new Error('Firestore not initialized');
+  
   const { doc, getDoc } = await import('firebase/firestore');
   const { getOrgSubCollection } = await import('@/lib/firebase/collections');
   
@@ -619,6 +621,8 @@ async function sendMeetingUpdate(
     
     // Get organization settings for email templates
     const { db } = await import('@/lib/firebase/config');
+    if (!db) throw new Error('Firestore not initialized');
+    
     const { doc, getDoc } = await import('firebase/firestore');
     const { getOrgSubCollection } = await import('@/lib/firebase/collections');
     
