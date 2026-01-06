@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger/logger';;
 export async function requireFeature(
   request: NextRequest,
   orgId: string,
-  feature: keyof OrganizationSubscription['outboundFeatures']
+  feature: 'aiEmailWriter' | 'prospectFinder' | 'multiChannel'
 ): Promise<NextResponse | null> {
   try {
     const hasAccess = await FeatureGate.hasFeature(orgId, feature);

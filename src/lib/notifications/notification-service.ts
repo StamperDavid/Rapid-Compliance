@@ -514,7 +514,7 @@ export class NotificationService {
 
     // Filter to only enabled channels
     return preferredChannels.filter((channel) => {
-      const channelPref = preferences.channels[channel];
+      const channelPref = (preferences.channels as Record<string, any>)[channel];
       return channelPref?.enabled === true;
     });
   }
