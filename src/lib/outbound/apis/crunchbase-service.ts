@@ -4,8 +4,8 @@
  * https://data.crunchbase.com/docs
  */
 
-import { apiKeyService } from '@/lib/api-keys/api-key-service'
-import { logger } from '@/lib/logger/logger';;
+import { apiKeyService } from '../../api-keys/api-key-service'
+import { logger } from '../../logger/logger';;
 
 const CRUNCHBASE_API_BASE = 'https://api.crunchbase.com/api/v4';
 
