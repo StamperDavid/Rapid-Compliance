@@ -1060,7 +1060,7 @@ async function discoverPersonData(
 ): Promise<DiscoveredPerson> {
   const controller = createBrowserController({ headless: true });
   const discoveryMethods: string[] = [];
-  const personData: Partial<DiscoveredPerson> = {
+  const personData: Partial<DiscoveredPerson> & { socialProfiles: Record<string, string> } = {
     email,
     socialProfiles: {},
   };

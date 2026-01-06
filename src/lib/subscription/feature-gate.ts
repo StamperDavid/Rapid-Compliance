@@ -119,6 +119,10 @@ export class FeatureGate {
       let used = 0;
       let limit = 0;
       
+      if (!subscription.outboundFeatures) {
+        return { allowed: false, remaining: 0, limit: 0, used: 0 };
+      }
+      
       switch (feature) {
         case 'aiEmailWriter':
           if (!subscription.outboundFeatures.aiEmailWriter.enabled) {
