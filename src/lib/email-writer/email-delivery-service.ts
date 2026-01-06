@@ -27,6 +27,16 @@ import { getOrgSubCollection } from '@/lib/firebase/collections';
 import { retryWithBackoff } from '@/lib/utils/retry';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
+/**
+ * Ensure adminDb is initialized, throw if not
+ */
+function ensureAdminDb() {
+  if (!adminDb) {
+    throw new Error('Admin Firestore DB not initialized. Check Firebase Admin SDK configuration.');
+  }
+  return adminDb;
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
