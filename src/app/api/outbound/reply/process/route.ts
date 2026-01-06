@@ -4,15 +4,18 @@
  * Process incoming email replies and generate AI responses
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { requireFeature } from '@/lib/subscription/middleware';
+import type {
+  EmailReply,
+  ProspectContext 
+} from '@/lib/outbound/reply-handler';
 import { 
   classifyReply, 
   generateReply, 
-  shouldAutoSend,
-  EmailReply,
-  ProspectContext 
+  shouldAutoSend 
 } from '@/lib/outbound/reply-handler';
 import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
@@ -22,7 +25,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/reply/process');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {

@@ -3,7 +3,8 @@
  * GET /api/crm/activities/insights - Get intelligent insights and next best action
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getActivityInsights, getNextBestAction } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

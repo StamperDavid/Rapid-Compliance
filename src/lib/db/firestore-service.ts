@@ -4,6 +4,10 @@
  * Replaces localStorage usage throughout the application
  */
 
+import type {
+  QueryConstraint,
+  DocumentData,
+  QueryDocumentSnapshot} from 'firebase/firestore';
 import {
   collection,
   doc,
@@ -20,10 +24,7 @@ import {
   onSnapshot,
   Timestamp,
   serverTimestamp,
-  writeBatch,
-  QueryConstraint,
-  DocumentData,
-  QueryDocumentSnapshot,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase/config'
 import { logger } from '../logger/logger';;

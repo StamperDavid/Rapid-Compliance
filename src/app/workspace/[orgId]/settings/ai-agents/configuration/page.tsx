@@ -41,7 +41,7 @@ export default function AgentConfigurationPage() {
   };
 
   const handleSave = async () => {
-    if (!baseModel) return;
+    if (!baseModel) {return;}
     
     setSaving(true);
     try {
@@ -65,7 +65,7 @@ export default function AgentConfigurationPage() {
 
   const updateField = (section: string, field: string, value: any) => {
     setBaseModel((prev: any) => {
-      if (!prev) return prev;
+      if (!prev) {return prev;}
       
       return {
         ...prev,

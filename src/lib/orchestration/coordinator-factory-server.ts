@@ -15,7 +15,8 @@
 
 import 'server-only';
 
-import { SignalCoordinator, SignalCoordinatorConfig } from './SignalCoordinator';
+import type { SignalCoordinatorConfig } from './SignalCoordinator';
+import { SignalCoordinator } from './SignalCoordinator';
 
 // Lazy-loaded instance to avoid circular dependencies
 let serverCoordinator: SignalCoordinator | null = null;

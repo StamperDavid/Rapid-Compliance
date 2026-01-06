@@ -42,7 +42,8 @@
  * ```
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';

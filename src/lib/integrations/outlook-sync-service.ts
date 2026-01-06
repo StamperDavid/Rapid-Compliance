@@ -200,7 +200,7 @@ async function incrementalSync(
     // If delta link is invalid, fall back to full sync
     if ((error as any).statusCode === 410) {
       logger.info('[Outlook Sync] Delta link invalid, performing full sync', { file: 'outlook-sync-service.ts' });
-      return await fullSync(client, organizationId, 100);
+      return fullSync(client, organizationId, 100);
     }
     throw error;
   }

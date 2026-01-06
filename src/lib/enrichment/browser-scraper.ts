@@ -92,7 +92,7 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
                      document.querySelector('article') || 
                      document.querySelector('body');
         
-        if (!main) return '';
+        if (!main) {return '';}
         
         // Get text and clean up whitespace
         return main.textContent
@@ -148,7 +148,7 @@ export async function smartScrape(url: string): Promise<ScrapedContent> {
   } catch (error) {
     // If simple fetch fails, try browser
     logger.info('Smart Scraper Static scrape failed, using browser for url}', { file: 'browser-scraper.ts' });
-    return await scrapeWithBrowser(url);
+    return scrapeWithBrowser(url);
   }
 }
 

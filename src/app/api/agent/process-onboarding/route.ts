@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { processOnboarding } from '@/lib/agent/onboarding-processor';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { validateInput } from '@/lib/validation/schemas';
 import { z } from 'zod';
-import { OnboardingData } from '@/types/agent-memory';
+import type { OnboardingData } from '@/types/agent-memory';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -17,7 +18,7 @@ const processOnboardingSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/agent/process-onboarding');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication - just require auth, not organization membership
     // (user is setting up their organization via onboarding)

@@ -4,7 +4,7 @@
  * Updated for Sentry v8+ API
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { logger } from '@/lib/logger/logger';
 
@@ -19,7 +19,7 @@ async function extractUserContext(request: NextRequest): Promise<{
   try {
     // Try to get user from auth header
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) return {};
+    if (!authHeader) {return {};}
 
     // In a real implementation, decode the JWT token here
     // For now, we'll return empty context

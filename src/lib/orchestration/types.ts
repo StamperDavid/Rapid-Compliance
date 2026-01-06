@@ -16,7 +16,7 @@
  * - Full audit trail via signal_logs sub-collection
  */
 
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 /**
  * Signal Priority Levels

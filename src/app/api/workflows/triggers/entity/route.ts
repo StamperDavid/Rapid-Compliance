@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { z } from 'zod';
@@ -24,7 +25,7 @@ const entityChangeSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/workflows/triggers/entity');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
     const authResult = await requireOrganization(request);

@@ -2,7 +2,8 @@
  * API endpoint to deploy a Golden Master version to production
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { deployGoldenMaster } from '@/lib/training/golden-master-updater';
 import { logger } from '@/lib/logger/logger';
@@ -12,7 +13,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/training/deploy-golden-master');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
     const authResult = await requireAuth(request);

@@ -98,7 +98,7 @@ export default function LivingLedgerPage() {
   // Load health score for selected deal
   useEffect(() => {
     const loadHealthScore = async () => {
-      if (!selectedDealId || !user?.organizationId) return;
+      if (!selectedDealId || !user?.organizationId) {return;}
 
       try {
         const response = await fetch(
@@ -126,7 +126,7 @@ export default function LivingLedgerPage() {
   // Load recommendations for selected deal
   useEffect(() => {
     const loadRecommendations = async () => {
-      if (!selectedDealId || !user?.organizationId) return;
+      if (!selectedDealId || !user?.organizationId) {return;}
 
       try {
         const response = await fetch(

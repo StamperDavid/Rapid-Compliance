@@ -116,7 +116,7 @@ async function getJobsFromPublicSearch(
     const matches = html.matchAll(jobRegex);
     
     for (const match of matches) {
-      if (jobs.length >= maxResults) break;
+      if (jobs.length >= maxResults) {break;}
       
       const jobHtml = match[0];
       

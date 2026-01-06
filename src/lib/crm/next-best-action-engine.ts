@@ -819,7 +819,7 @@ function calculateOverallConfidence(
  * Get days since last activity
  */
 function getDaysSinceLastActivity(activityStats: any): number | null {
-  if (!activityStats.lastActivityDate) return null;
+  if (!activityStats.lastActivityDate) {return null;}
 
   const lastDate = new Date(activityStats.lastActivityDate);
   return Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));

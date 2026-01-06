@@ -3,7 +3,8 @@
  * Executes saved reports and returns results
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -17,7 +18,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/reports/execute');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -66,22 +67,22 @@ async function executeReport(report: any, orgId: string, parameters: any = {}) {
 
   switch (type) {
     case 'revenue':
-      return await executeRevenueReport(orgId, config, parameters);
+      return executeRevenueReport(orgId, config, parameters);
     
     case 'pipeline':
-      return await executePipelineReport(orgId, config, parameters);
+      return executePipelineReport(orgId, config, parameters);
     
     case 'leads':
-      return await executeLeadsReport(orgId, config, parameters);
+      return executeLeadsReport(orgId, config, parameters);
     
     case 'deals':
-      return await executeDealsReport(orgId, config, parameters);
+      return executeDealsReport(orgId, config, parameters);
     
     case 'contacts':
-      return await executeContactsReport(orgId, config, parameters);
+      return executeContactsReport(orgId, config, parameters);
     
     case 'custom':
-      return await executeCustomReport(orgId, config, parameters);
+      return executeCustomReport(orgId, config, parameters);
     
     default:
       throw new Error(`Unsupported report type: ${type}`);

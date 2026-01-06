@@ -315,7 +315,7 @@ async function updateInventory(workspaceId: string, organizationId: string, item
       item.productId
     );
     
-    if (product && product[inventoryField] !== undefined) {
+    if (product?.[inventoryField] !== undefined) {
       const newStock = Math.max(0, product[inventoryField] - item.quantity);
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/${productSchema}/records`,

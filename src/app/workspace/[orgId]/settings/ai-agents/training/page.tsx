@@ -209,7 +209,7 @@ export default function AgentTrainingPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!userInput.trim() || !baseModel) return;
+    if (!userInput.trim() || !baseModel) {return;}
     
     const userMessage = {
       id: `msg_${Date.now()}`,
@@ -274,7 +274,7 @@ export default function AgentTrainingPage() {
 
   const handleSubmitFeedback = async () => {
     if (!feedbackWhy.trim()) {
-      alert('Please explain WHY this response is ' + feedbackType);
+      alert(`Please explain WHY this response is ${  feedbackType}`);
       return;
     }
     
@@ -474,7 +474,7 @@ export default function AgentTrainingPage() {
 
   const handleUploadMaterial = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {return;}
     
     setIsUploading(true);
     
@@ -536,7 +536,7 @@ export default function AgentTrainingPage() {
   };
 
   const handleSaveGoldenMaster = async () => {
-    if (!baseModel) return;
+    if (!baseModel) {return;}
     
     if (baseModel.status !== 'ready') {
       alert(`⚠️ Base Model is not ready yet!\n\nCurrent status: ${baseModel.status}\nTraining score: ${overallScore}%\n\nContinue training until you reach 80%+ score across multiple scenarios.`);

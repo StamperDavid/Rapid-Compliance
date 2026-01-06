@@ -3,7 +3,8 @@
  * POST /api/templates/deals/[dealId]/score - Calculate predictive deal score
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { calculateDealScore } from '@/lib/templates';
 import { ScoreDealSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';

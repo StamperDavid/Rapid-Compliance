@@ -3,7 +3,8 @@
  * OWASP Top 10 compliance, input validation, XSS/CSRF protection
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 /**
@@ -37,7 +38,7 @@ export function sanitizeInput(input: any): any {
  * Validate SQL/NoSQL injection attempts
  */
 export function validateNoSQLInjection(input: any): boolean {
-  if (typeof input !== 'string') return true;
+  if (typeof input !== 'string') {return true;}
   
   // Check for common NoSQL injection patterns
   const dangerousPatterns = [
@@ -62,7 +63,7 @@ export function generateCSRFToken(): string {
  * Validate CSRF token
  */
 export function validateCSRFToken(token: string, expected: string): boolean {
-  if (!token || !expected) return false;
+  if (!token || !expected) {return false;}
   return crypto.timingSafeEqual(
     Buffer.from(token),
     Buffer.from(expected)
@@ -169,7 +170,7 @@ export function encryptData(data: string, key: string): string {
   let encrypted = cipher.update(data, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   
-  return iv.toString('hex') + ':' + encrypted;
+  return `${iv.toString('hex')  }:${  encrypted}`;
 }
 
 /**
@@ -246,7 +247,7 @@ export function checkRateLimit(
  */
 export function validateJWTFormat(token: string): boolean {
   const parts = token.split('.');
-  if (parts.length !== 3) return false;
+  if (parts.length !== 3) {return false;}
   
   try {
     // Validate header and payload are valid base64

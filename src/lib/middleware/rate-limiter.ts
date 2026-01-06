@@ -26,7 +26,7 @@
  * ```
  */
 
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================

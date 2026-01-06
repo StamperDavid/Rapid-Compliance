@@ -18,7 +18,7 @@ export default function EmailCampaignsPage() {
 
   // Fetch function with pagination using service layer
   const fetchCampaigns = useCallback(async (lastDoc?: any) => {
-    return await getCampaigns(
+    return getCampaigns(
       orgId,
       undefined,
       { pageSize: 50, lastDoc }
@@ -40,7 +40,7 @@ export default function EmailCampaignsPage() {
   }, [refresh]);
 
   const handleDelete = async (campaignId: string) => {
-    if (!confirm('Delete this campaign?')) return;
+    if (!confirm('Delete this campaign?')) {return;}
     
     try {
       await deleteCampaign(orgId, campaignId);

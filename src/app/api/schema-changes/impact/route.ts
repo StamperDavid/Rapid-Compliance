@@ -3,7 +3,8 @@
  * Get impact analysis for schema changes
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { getSchemaChangeImpactSummary } from '@/lib/schema/schema-change-handler';
 import { getWorkflowValidationSummary } from '@/lib/schema/workflow-validator';

@@ -78,9 +78,9 @@ export class ProviderFactory {
    * Determine provider from model name
    */
   private static getProviderName(model: ModelName): AIProvider {
-    if (model.startsWith('gpt-')) return 'openai';
-    if (model.startsWith('claude-')) return 'anthropic';
-    if (model.startsWith('gemini-')) return 'google';
+    if (model.startsWith('gpt-')) {return 'openai';}
+    if (model.startsWith('claude-')) {return 'anthropic';}
+    if (model.startsWith('gemini-')) {return 'google';}
     
     throw new Error(`Unknown model: ${model}`);
   }
@@ -98,7 +98,7 @@ export class ProviderFactory {
  */
 export async function sendChatRequest(request: ChatRequest): Promise<ChatResponse> {
   const provider = ProviderFactory.getProvider(request.model);
-  return await provider.chat(request);
+  return provider.chat(request);
 }
 
 /**

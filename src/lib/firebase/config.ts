@@ -3,10 +3,14 @@
  * Centralized Firebase initialization for client and server
  */
 
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage'
+import type { FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
+import type { Auth } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import type { FirebaseStorage } from 'firebase/storage';
+import { getStorage } from 'firebase/storage'
 import { logger } from '../logger/logger';;
 
 // Firebase config from environment variables

@@ -20,7 +20,7 @@
  * - Workflow Automation for post-assignment actions
  */
 
-import { PerformanceTier, SkillScores } from '../coaching/types';
+import type { PerformanceTier, SkillScores } from '../coaching/types';
 
 // ============================================================================
 // LEAD INFORMATION

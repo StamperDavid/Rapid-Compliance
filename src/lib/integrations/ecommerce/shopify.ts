@@ -25,7 +25,7 @@ export async function executeShopifyFunction(
       if (!parameters.productId || typeof parameters.productId !== 'string') {
         throw new Error('productId (string) is required for checkShopifyInventory');
       }
-      return await checkInventory(
+      return checkInventory(
         { productId: parameters.productId },
         shopDomain,
         accessToken
@@ -42,7 +42,7 @@ export async function executeShopifyFunction(
       if (parameters.variantId && typeof parameters.variantId !== 'string') {
         throw new Error('variantId must be a string');
       }
-      return await addToCart(
+      return addToCart(
         {
           productId: parameters.productId,
           quantity: parameters.quantity,
@@ -57,7 +57,7 @@ export async function executeShopifyFunction(
       if (!parameters.productId || typeof parameters.productId !== 'string') {
         throw new Error('productId (string) is required for getShopifyProduct');
       }
-      return await getProduct(
+      return getProduct(
         { productId: parameters.productId },
         shopDomain,
         accessToken

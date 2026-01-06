@@ -3,11 +3,11 @@
  * Automatically updates e-commerce field mappings when schemas change
  */
 
-import { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
-import { EcommerceConfig, ProductFieldMappings } from '@/types/ecommerce';
+import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
+import type { EcommerceConfig, ProductFieldMappings } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
-import { Schema } from '@/types/schema';
+import type { Schema } from '@/types/schema';
 
 /**
  * Adapt e-commerce mappings to schema changes

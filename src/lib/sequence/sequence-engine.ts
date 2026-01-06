@@ -8,24 +8,25 @@
  * @module sequence/sequence-engine
  */
 
-import { 
+import type { 
   SequenceAnalysis, 
   SequenceAnalysisInput,
   SequenceMetrics,
-  EmailMetrics,
   SequencePattern,
   OptimizationRecommendation,
   PatternDetectionRequest,
-  OptimizationRequest,
   EmailSequence,
-  SequenceExecution,
-  ExecutionStatus,
   HourOfDay,
   DayOfWeek,
   PatternConfidence,
   PatternType,
   OptimizationArea,
-  RecommendationPriority,
+  RecommendationPriority} from './types';
+import {
+  EmailMetrics,
+  OptimizationRequest,
+  SequenceExecution,
+  ExecutionStatus
 } from './types';
 import { 
   sequenceAnalysisInputSchema,

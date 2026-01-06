@@ -3,7 +3,8 @@
  * GET /api/crm/analytics/velocity - Get sales velocity metrics
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { calculateSalesVelocity, getPipelineInsights } from '@/lib/crm/sales-velocity';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

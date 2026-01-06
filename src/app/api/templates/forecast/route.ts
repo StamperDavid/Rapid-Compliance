@@ -3,7 +3,8 @@
  * POST /api/templates/forecast - Generate revenue forecast
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { generateRevenueForecast, calculateQuotaPerformance } from '@/lib/templates';
 import type { ForecastPeriod } from '@/lib/templates';
 import { RevenueForecastSchema, validateRequestBody } from '@/lib/templates/validation';

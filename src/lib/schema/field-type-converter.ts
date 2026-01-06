@@ -3,7 +3,7 @@
  * Handles field type changes with smart conversion and user preview
  */
 
-import { FieldType } from '@/types/schema';
+import type { FieldType } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
 
 /**

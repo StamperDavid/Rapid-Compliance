@@ -99,8 +99,8 @@ async function calculateKnowledgeCoverage(
   let score = avgRelevance * 100;
   
   // Bonus for quantity (up to a point)
-  if (retrievedContext.length >= 3) score += 10;
-  if (retrievedContext.length >= 5) score += 5;
+  if (retrievedContext.length >= 3) {score += 10;}
+  if (retrievedContext.length >= 5) {score += 5;}
   
   return Math.min(100, score);
 }
@@ -163,7 +163,7 @@ async function calculateSemanticConsistency(
   
   let overlap = 0;
   for (const word of responseWords) {
-    if (contextWords.has(word)) overlap++;
+    if (contextWords.has(word)) {overlap++;}
   }
   
   const overlapRatio = responseWords.size > 0 
@@ -201,7 +201,7 @@ function calculateTextSimilarity(text1: string, text2: string): number {
   
   let intersection = 0;
   for (const word of words1) {
-    if (words2.has(word)) intersection++;
+    if (words2.has(word)) {intersection++;}
   }
   
   const union = words1.size + words2.size - intersection;

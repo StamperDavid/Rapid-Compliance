@@ -337,7 +337,7 @@ export async function retryWithBackoffDetailed<T>(
     const result = await retryWithBackoff(
       async () => {
         attempts++;
-        return await operation();
+        return operation();
       },
       options
     );

@@ -362,17 +362,17 @@ function calculateForecastConfidence(
   let confidence = 60; // Base confidence
   
   // More deals = higher confidence
-  if (deals.length >= 50) confidence += 20;
-  else if (deals.length >= 20) confidence += 15;
-  else if (deals.length >= 10) confidence += 10;
-  else if (deals.length < 5) confidence -= 20;
+  if (deals.length >= 50) {confidence += 20;}
+  else if (deals.length >= 20) {confidence += 15;}
+  else if (deals.length >= 10) {confidence += 10;}
+  else if (deals.length < 5) {confidence -= 20;}
   
   // Pipeline diversity = higher confidence
   const stageSet = new Set(deals.map(d => (d as { stage?: string }).stage));
-  if (stageSet.size >= 4) confidence += 10;
+  if (stageSet.size >= 4) {confidence += 10;}
   
   // Template available = higher confidence
-  if (template) confidence += 10;
+  if (template) {confidence += 10;}
   
   return Math.min(100, Math.max(0, confidence));
 }
@@ -392,8 +392,8 @@ async function analyzeTrend(
   const changePercentage = Math.round((change / previousForecast) * 100);
   
   let direction: 'up' | 'down' | 'flat' = 'flat';
-  if (changePercentage > 5) direction = 'up';
-  else if (changePercentage < -5) direction = 'down';
+  if (changePercentage > 5) {direction = 'up';}
+  else if (changePercentage < -5) {direction = 'down';}
   
   let momentum: 'accelerating' | 'stable' | 'decelerating' = 'stable';
   if (Math.abs(changePercentage) > 15) {

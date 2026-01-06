@@ -82,7 +82,7 @@ export async function getCurrentUser(request: Request): Promise<{
 } | null> {
   try {
     const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return null;
     }
 

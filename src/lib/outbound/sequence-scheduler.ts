@@ -6,7 +6,7 @@
 
 import { SequenceEngine } from './sequence-engine';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { ProspectEnrollment } from '@/types/outbound-sequence'
+import type { ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';;
 
 /**
@@ -126,7 +126,7 @@ export async function handleEmailBounce(
     enrollmentId
   ) as ProspectEnrollment;
 
-  if (!enrollment) return;
+  if (!enrollment) {return;}
 
   // Find step action
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
@@ -169,7 +169,7 @@ export async function handleEmailReply(
     enrollmentId
   ) as ProspectEnrollment;
 
-  if (!enrollment) return;
+  if (!enrollment) {return;}
 
   // Find step action
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
@@ -216,7 +216,7 @@ export async function handleEmailOpen(
     enrollmentId
   ) as ProspectEnrollment;
 
-  if (!enrollment) return;
+  if (!enrollment) {return;}
 
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
   if (action && !action.openedAt) {
@@ -247,7 +247,7 @@ export async function handleEmailClick(
     enrollmentId
   ) as ProspectEnrollment;
 
-  if (!enrollment) return;
+  if (!enrollment) {return;}
 
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
   if (action && !action.clickedAt) {

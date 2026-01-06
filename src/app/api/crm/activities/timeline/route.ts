@@ -3,7 +3,8 @@
  * GET /api/crm/activities/timeline - Get timeline for an entity
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getEntityTimeline } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

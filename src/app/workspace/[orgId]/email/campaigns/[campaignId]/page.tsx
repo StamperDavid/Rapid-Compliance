@@ -29,7 +29,7 @@ export default function CampaignStatsPage() {
     }
   };
 
-  if (loading || !stats) return <div className="p-8">Loading...</div>;
+  if (loading || !stats) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

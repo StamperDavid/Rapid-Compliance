@@ -6,7 +6,8 @@
  * Generate a competitive battlecard comparing our product vs. competitor
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { discoverCompetitor, generateBattlecard, type BattlecardOptions } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 

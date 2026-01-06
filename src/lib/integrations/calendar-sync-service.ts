@@ -3,7 +3,8 @@
  * Bidirectional calendar syncing between Google Calendar and CRM
  */
 
-import { calendar_v3, google } from 'googleapis';
+import type { calendar_v3} from 'googleapis';
+import { google } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';;
 
@@ -184,7 +185,7 @@ async function incrementalSync(
           try {
             if (event.status === 'cancelled') {
               // Delete cancelled events
-              await deleteEventFromCRM(organizationId, event.id!);
+              await deleteEventFromCRM(organizationId, event.id);
             } else {
               // Update or create event
               const parsed = parseCalendarEvent(event, calendarId);
@@ -218,7 +219,7 @@ async function incrementalSync(
     // If sync token is invalid, fall back to full sync
     if ((error as any).code === 410) {
       logger.info('[Calendar Sync] Sync token invalid, performing full sync', { file: 'calendar-sync-service.ts' });
-      return await fullSync(calendar, organizationId, calendarId);
+      return fullSync(calendar, organizationId, calendarId);
     }
     throw error;
   }

@@ -217,7 +217,7 @@ async function getTwilioConfig(organizationId: string): Promise<VoiceConfig> {
     throw new Error('Twilio not configured');
   }
   
-  const config = keys as any;
+  const config = keys;
   
   if (!config.accountSid || !config.authToken || !config.phoneNumber) {
     throw new Error('Twilio configuration incomplete');

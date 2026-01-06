@@ -28,7 +28,7 @@ export default function ABTestResultsPage() {
     }
   };
 
-  if (loading || !test) return <div className="p-8">Loading...</div>;
+  if (loading || !test) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

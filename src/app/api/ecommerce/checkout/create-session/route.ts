@@ -2,7 +2,8 @@
  * Create Stripe checkout session
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import Stripe from 'stripe';
@@ -14,7 +15,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/checkout/create-session');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Organization ID required');
     }
 
-    if (!customerInfo || !customerInfo.email) {
+    if (!customerInfo?.email) {
       return errors.badRequest('Customer information required');
     }
 
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
       authResult.user.uid
     );
 
-    if (!cart || !cart.items || cart.items.length === 0) {
+    if (!cart?.items || cart.items.length === 0) {
       return errors.badRequest('Cart is empty');
     }
 

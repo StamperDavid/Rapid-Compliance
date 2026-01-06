@@ -216,7 +216,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
       const data = await response.json();
       
-      if (!data.data || !data.data[0] || !data.data[0].embedding) {
+      if (!data.data?.[0]?.embedding) {
         throw new Error('Invalid response from OpenAI API');
       }
 

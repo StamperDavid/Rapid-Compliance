@@ -202,7 +202,7 @@ async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMS
     }
 
     const data = await response.json();
-    if (data.messages && data.messages[0] && data.messages[0].status === '0') {
+    if (data.messages?.[0]?.status === '0') {
       const messageId = data.messages[0]['message-id'];
       
       // Store SMS record in Firestore

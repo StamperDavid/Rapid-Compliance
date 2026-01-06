@@ -175,12 +175,12 @@ async function getCompanyInfo(companyName: string, orgId: string): Promise<Compa
 }
 
 function guessDomainFromCompanyName(companyName: string): string {
-  return companyName
+  return `${companyName
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[^a-z0-9]/g, '')
     .replace(/inc|llc|ltd|corp|corporation|company|co$/g, '')
-    + '.com';
+     }.com`;
 }
 
 /**
@@ -189,7 +189,7 @@ function guessDomainFromCompanyName(companyName: string): string {
 async function getRecentNews(companyName: string, orgId: string): Promise<NewsItem[]> {
   const { searchCompanyNews } = await import('../enrichment/search-service');
   
-  return await searchCompanyNews(companyName, 5);
+  return searchCompanyNews(companyName, 5);
 }
 
 /**
@@ -229,7 +229,7 @@ async function getTechStack(companyName: string, orgId: string): Promise<string[
   
   const domain = guessDomainFromCompanyName(companyName);
   
-  return await detectTechStack(domain);
+  return detectTechStack(domain);
 }
 
 /**

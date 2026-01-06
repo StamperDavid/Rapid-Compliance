@@ -105,7 +105,7 @@ export async function findAvailableSlots(
   const businessStartHour = 9;
   const businessEndHour = 17;
 
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
   
   while (currentDate <= endDate) {
     // Skip weekends
@@ -562,10 +562,10 @@ async function updateCalendarEvent(meeting: ScheduledMeeting): Promise<void> {
 }
 
 async function cancelCalendarEvent(calendarEventId: string, userId?: string): Promise<void> {
-  if (!userId) return;
+  if (!userId) {return;}
   
   const tokens = await getCalendarTokens(userId);
-  if (!tokens) return;
+  if (!tokens) {return;}
 
   try {
     const { deleteEvent } = await import('@/lib/integrations/google-calendar-service');

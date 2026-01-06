@@ -4,7 +4,8 @@
  * This should be called by a cron job (e.g., Vercel Cron or external service)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { runScheduledPublisher } from '@/lib/scheduled-publisher';
 import { logger } from '@/lib/logger/logger';
 

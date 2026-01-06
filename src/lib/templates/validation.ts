@@ -72,7 +72,7 @@ export function validateRequestBody<T>(
       // Format Zod errors into readable message
       const errorMessages = error.errors.map(err => {
         const path = err.path.join('.');
-        return `${path ? path + ': ' : ''}${err.message}`;
+        return `${path ? `${path  }: ` : ''}${err.message}`;
       });
       
       return {

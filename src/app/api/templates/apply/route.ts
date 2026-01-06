@@ -3,7 +3,8 @@
  * POST /api/templates/apply - Apply an industry template to an organization
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { applyTemplate } from '@/lib/templates';
 import { ApplyTemplateSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';

@@ -5,7 +5,7 @@
 
 import { db, admin } from '@/lib/firebase-admin';
 import { getWorkspaceSubCollection } from '@/lib/firebase/collections';
-import { FieldType } from '@/types/schema';
+import type { FieldType } from '@/types/schema';
 
 export interface TypeConversionPreview {
   recordId: string;

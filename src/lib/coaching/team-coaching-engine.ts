@@ -35,7 +35,7 @@ import type {
   SkillScores,
   GenerateTeamCoachingRequest
 } from './types';
-import { CoachingAnalyticsEngine } from './coaching-analytics-engine';
+import type { CoachingAnalyticsEngine } from './coaching-analytics-engine';
 import { createTeamInsightsGeneratedEvent } from './events';
 import type { SignalCoordinator } from '../orchestration/SignalCoordinator';
 
@@ -482,7 +482,7 @@ export class TeamCoachingEngine {
       topPerformers.some(tp => tp.repId === r.repId)
     );
     
-    if (topPerformerReps.length === 0) return practices;
+    if (topPerformerReps.length === 0) {return practices;}
     
     // Email response rate best practice
     const avgEmailResponseRate = this.calculateAverage(
@@ -749,7 +749,7 @@ export class TeamCoachingEngine {
    * @returns Average value
    */
   private calculateAverage(values: number[]): number {
-    if (values.length === 0) return 0;
+    if (values.length === 0) {return 0;}
     const sum = values.reduce((acc, val) => acc + val, 0);
     return sum / values.length;
   }

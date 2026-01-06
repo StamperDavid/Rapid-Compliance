@@ -3,7 +3,8 @@
  * Handles schema updates with proper event publishing (server-side)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
@@ -57,7 +58,7 @@ export async function POST(
     // Detect changes
     const events = SchemaChangeDetector.detectChanges(
       oldSchema as any,
-      newSchema as any,
+      newSchema,
       organizationId
     );
     

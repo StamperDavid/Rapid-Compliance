@@ -4,7 +4,8 @@
  * Verifies all outbound features are configured correctly
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {

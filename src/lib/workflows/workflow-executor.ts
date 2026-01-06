@@ -3,7 +3,7 @@
  * Extracted to break circular dependencies between workflow-engine and triggers
  */
 
-import { Workflow } from '@/types/workflow';
+import type { Workflow } from '@/types/workflow';
 import type { WorkflowExecution } from './workflow-engine';
 
 /**

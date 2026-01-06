@@ -4,8 +4,9 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import type { 
+  SubscriptionTier} from '@/types/subscription';
 import { 
-  SubscriptionTier, 
   getTierForRecordCount, 
   VOLUME_TIERS,
   isWithinTierCapacity,

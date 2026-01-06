@@ -13,10 +13,11 @@ import {
   deleteDoc,
   query,
   where,
-  serverTimestamp,
+  serverTimestamp
+} from 'firebase/firestore';
+import type { Firestore ,
   Timestamp
 } from 'firebase/firestore';
-import type { Firestore } from 'firebase/firestore';
 import type { Schema, SchemaField, SchemaRelation, FieldType } from '@/types/schema';
 
 export class SchemaManager {
@@ -400,8 +401,8 @@ export class SchemaManager {
     
     if (dependencies.length > 0) {
       throw new Error(
-        `Cannot remove field. ${dependencies.length} other fields depend on it: ` +
-        dependencies.map(f => f.label).join(', ')
+        `Cannot remove field. ${dependencies.length} other fields depend on it: ${ 
+        dependencies.map(f => f.label).join(', ')}`
       );
     }
 

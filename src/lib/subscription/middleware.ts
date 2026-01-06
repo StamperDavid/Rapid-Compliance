@@ -3,9 +3,10 @@
  * Protects API routes based on subscription features and usage limits
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { FeatureGate } from './feature-gate';
-import { OrganizationSubscription } from '@/types/subscription'
+import type { OrganizationSubscription } from '@/types/subscription'
 import { logger } from '@/lib/logger/logger';;
 
 /**
@@ -102,11 +103,11 @@ export async function requireFeatureWithLimit(
   // First check if feature is enabled
   const featureKey = getFeatureKey(feature);
   const featureCheck = await requireFeature(request, orgId, featureKey);
-  if (featureCheck) return featureCheck;
+  if (featureCheck) {return featureCheck;}
   
   // Then check usage limit
   const limitCheck = await requireLimit(request, orgId, feature, amount);
-  if (limitCheck) return limitCheck;
+  if (limitCheck) {return limitCheck;}
   
   return null; // Both checks passed
 }
@@ -243,7 +244,7 @@ export async function withFeatureGate<T>(
   try {
     // Check feature access and limits
     const gateCheck = await requireFeatureWithLimit(request, orgId, feature, amount);
-    if (gateCheck) return gateCheck;
+    if (gateCheck) {return gateCheck;}
     
     // Execute the handler
     const result = await handler();

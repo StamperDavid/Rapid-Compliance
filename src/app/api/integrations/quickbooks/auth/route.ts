@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getQuickBooksAuthUrl } from '@/lib/integrations/quickbooks-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 

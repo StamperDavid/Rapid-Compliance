@@ -20,7 +20,7 @@ export async function registerScheduleTrigger(
 ): Promise<void> {
   const trigger = workflow.trigger as ScheduleTrigger;
   
-  if (!trigger || trigger.type !== 'schedule') {
+  if (trigger?.type !== 'schedule') {
     return;
   }
   

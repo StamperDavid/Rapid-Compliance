@@ -88,7 +88,7 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
       const subscription = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${org.id}/subscription`,
         'current'
-      ) as CustomerSubscription | null;
+      );
       
       if (subscription) {
         // Get usage stats
@@ -229,17 +229,17 @@ function calculateHealthScore(
   let score = 100;
   
   // Deduct for status
-  if (subscription.status === 'past_due') score -= 30;
-  if (subscription.status === 'cancelled') score -= 50;
+  if (subscription.status === 'past_due') {score -= 30;}
+  if (subscription.status === 'cancelled') {score -= 50;}
   
   // Deduct for low usage
   const usageRate = usage.conversations / 100; // Assume 100 is good baseline
-  if (usageRate < 0.2) score -= 20;
-  if (usageRate < 0.1) score -= 30;
+  if (usageRate < 0.2) {score -= 20;}
+  if (usageRate < 0.1) {score -= 30;}
   
   // Add for high usage (engaged customers)
-  if (usageRate > 0.8) score += 10;
-  if (usageRate > 1.5) score += 20;
+  if (usageRate > 0.8) {score += 10;}
+  if (usageRate > 1.5) {score += 20;}
   
   return Math.max(0, Math.min(100, score));
 }
@@ -282,11 +282,10 @@ export async function calculateRevenueMetrics(
     
     // Calculate churned customers
     const churnedCustomers = customers.filter(c =>
-      c.subscription &&
-      c.subscription.status === 'cancelled' &&
+      c.subscription?.status === 'cancelled' &&
       c.subscription.canceledAt &&
-      new Date(c.subscription.canceledAt as string) >= periodStart &&
-      new Date(c.subscription.canceledAt as string) <= periodEnd
+      new Date(c.subscription.canceledAt) >= periodStart &&
+      new Date(c.subscription.canceledAt) <= periodEnd
     ).length;
     
     // Calculate churn rate
@@ -328,11 +327,10 @@ export async function calculateRevenueMetrics(
     if (mrr > 0) {
       let lostMrr = 0;
       for (const customer of customers.filter(c =>
-        c.subscription &&
-        c.subscription.status === 'cancelled' &&
+        c.subscription?.status === 'cancelled' &&
         c.subscription.canceledAt &&
-        new Date(c.subscription.canceledAt as string) >= periodStart &&
-        new Date(c.subscription.canceledAt as string) <= periodEnd
+        new Date(c.subscription.canceledAt) >= periodStart &&
+        new Date(c.subscription.canceledAt) <= periodEnd
       )) {
         const sub = customer.subscription as any;
         if (sub.billingCycle === 'monthly') {

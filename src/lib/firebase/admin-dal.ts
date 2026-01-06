@@ -13,14 +13,15 @@
  * For client-side operations, use @/lib/firebase/dal
  */
 
-import { 
+import type { 
   Firestore,
   CollectionReference,
   DocumentReference,
   DocumentData,
   WriteResult,
   DocumentSnapshot,
-  QuerySnapshot,
+  QuerySnapshot} from 'firebase-admin/firestore';
+import {
   FieldValue,
 } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';

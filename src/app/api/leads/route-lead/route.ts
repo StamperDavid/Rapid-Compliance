@@ -3,7 +3,8 @@
  * POST /api/leads/route-lead - Automatically route a lead to appropriate user
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { routeLead } from '@/lib/crm/lead-routing';
 import { updateLead, getLead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';

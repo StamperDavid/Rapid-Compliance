@@ -786,26 +786,26 @@ function calculateConfidence(rawData: RawScrapedData, synthesized: Partial<Disco
 
   // Team members found
   maxScore += 20;
-  if (rawData.teamMembers.length > 0) score += 20;
-  else if (rawData.teamMembers.length > 5) score += 15;
-  else if (rawData.teamMembers.length > 0) score += 10;
+  if (rawData.teamMembers.length > 0) {score += 20;}
+  else if (rawData.teamMembers.length > 5) {score += 15;}
+  else if (rawData.teamMembers.length > 0) {score += 10;}
 
   // Tech stack found
   maxScore += 15;
-  if (rawData.techStack.length > 5) score += 15;
-  else if (rawData.techStack.length > 0) score += 10;
+  if (rawData.techStack.length > 5) {score += 15;}
+  else if (rawData.techStack.length > 0) {score += 10;}
 
   // Company info extracted
   maxScore += 30;
-  if (synthesized.companyName) score += 10;
-  if (synthesized.description) score += 10;
-  if (synthesized.industry) score += 5;
-  if (synthesized.size) score += 5;
+  if (synthesized.companyName) {score += 10;}
+  if (synthesized.description) {score += 10;}
+  if (synthesized.industry) {score += 5;}
+  if (synthesized.size) {score += 5;}
 
   // Contact info found
   maxScore += 15;
-  if (synthesized.contactInfo?.email) score += 10;
-  if (synthesized.contactInfo?.phone) score += 5;
+  if (synthesized.contactInfo?.email) {score += 10;}
+  if (synthesized.contactInfo?.phone) {score += 5;}
 
   // High-value areas extracted
   maxScore += 20;
@@ -818,7 +818,7 @@ function calculateConfidence(rawData: RawScrapedData, synthesized: Partial<Disco
  * Extract company name from domain
  */
 function extractDomainName(domain: string): string {
-  let name = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
+  const name = domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
@@ -968,7 +968,7 @@ export async function discoverPerson(
     });
 
     // Validate email
-    if (!email || !email.includes('@')) {
+    if (!email?.includes('@')) {
       throw new Error('Invalid email address');
     }
 
@@ -1060,7 +1060,7 @@ async function discoverPersonData(
 ): Promise<DiscoveredPerson> {
   const controller = createBrowserController({ headless: true });
   const discoveryMethods: string[] = [];
-  let personData: Partial<DiscoveredPerson> = {
+  const personData: Partial<DiscoveredPerson> = {
     email,
     socialProfiles: {},
   };
@@ -1295,20 +1295,20 @@ function calculatePersonConfidence(
 
   // Title found
   maxScore += 25;
-  if (personData.title) score += 25;
+  if (personData.title) {score += 25;}
 
   // LinkedIn found
   maxScore += 30;
-  if (personData.socialProfiles?.linkedin) score += 30;
+  if (personData.socialProfiles?.linkedin) {score += 30;}
 
   // Company website match
   maxScore += 15;
-  if (methods.includes('company-website')) score += 15;
+  if (methods.includes('company-website')) {score += 15;}
 
   // Additional profiles
   maxScore += 10;
-  if (personData.socialProfiles?.github) score += 5;
-  if (personData.socialProfiles?.twitter) score += 5;
+  if (personData.socialProfiles?.github) {score += 5;}
+  if (personData.socialProfiles?.twitter) {score += 5;}
 
   return Math.round((score / maxScore) * 100) / 100;
 }

@@ -25,7 +25,7 @@ export async function processAuthorizeNetPayment(
       };
     }
     
-    const { apiLoginId, transactionKey, mode } = authNetKeys as any;
+    const { apiLoginId, transactionKey, mode } = authNetKeys;
     
     if (!apiLoginId || !transactionKey) {
       return {
@@ -88,7 +88,7 @@ export async function processAuthorizeNetPayment(
     const result = await response.json();
     const txnResponse = result.transactionResponse;
     
-    if (txnResponse && txnResponse.responseCode === '1') {
+    if (txnResponse?.responseCode === '1') {
       // Approved
       return {
         success: true,
@@ -147,7 +147,7 @@ export async function process2CheckoutPayment(
       };
     }
     
-    const { merchantCode, secretKey, mode } = tcoKeys as any;
+    const { merchantCode, secretKey, mode } = tcoKeys;
     
     if (!merchantCode || !secretKey) {
       return {
@@ -265,7 +265,7 @@ export async function processMolliePayment(
       };
     }
     
-    const { apiKey } = mollieKeys as any;
+    const { apiKey } = mollieKeys;
     
     if (!apiKey) {
       return {

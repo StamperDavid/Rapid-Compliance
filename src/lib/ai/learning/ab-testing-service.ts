@@ -149,7 +149,7 @@ export async function getModelForConversation(
     org.activeABTest
   ) as ABTest;
   
-  if (!test || test.status !== 'running') {
+  if (test?.status !== 'running') {
     return {
       model: org?.preferredModel || 'gpt-4',
       isTestGroup: false,
@@ -187,7 +187,7 @@ export async function recordConversationResult(params: {
     testId
   ) as ABTest;
   
-  if (!test || test.status !== 'running') {
+  if (test?.status !== 'running') {
     return;
   }
   
@@ -196,7 +196,7 @@ export async function recordConversationResult(params: {
   
   if (isTestGroup) {
     metrics.treatmentConversations++;
-    if (converted) metrics.treatmentConversions++;
+    if (converted) {metrics.treatmentConversions++;}
     metrics.treatmentAvgConfidence = updateAverage(
       metrics.treatmentAvgConfidence,
       metrics.treatmentConversations - 1,
@@ -212,7 +212,7 @@ export async function recordConversationResult(params: {
     metrics.treatmentTotalTokens += tokensUsed;
   } else {
     metrics.controlConversations++;
-    if (converted) metrics.controlConversions++;
+    if (converted) {metrics.controlConversions++;}
     metrics.controlAvgConfidence = updateAverage(
       metrics.controlAvgConfidence,
       metrics.controlConversations - 1,
@@ -462,16 +462,16 @@ function calculateStatisticalSignificance(
   
   const se = Math.sqrt(pPooled * (1 - pPooled) * (1/controlN + 1/treatmentN));
   
-  if (se === 0) return 0;
+  if (se === 0) {return 0;}
   
   const z = Math.abs(p1 - p2) / se;
   
   // Convert z-score to confidence level (approximation)
   // z=1.96 → 95%, z=2.58 → 99%
-  if (z >= 2.58) return 99;
-  if (z >= 1.96) return 95;
-  if (z >= 1.64) return 90;
-  if (z >= 1.28) return 80;
+  if (z >= 2.58) {return 99;}
+  if (z >= 1.96) {return 95;}
+  if (z >= 1.64) {return 90;}
+  if (z >= 1.28) {return 80;}
   
   return Math.min(z / 1.96 * 95, 100);
 }

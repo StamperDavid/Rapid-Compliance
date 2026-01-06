@@ -534,7 +534,7 @@ export async function handleCondition(params: {
 
     // Find the step in sequence
     const step = sequence.steps.find((s) => s.id === lastExecutedStep.stepId);
-    if (!step || !step.conditions) {
+    if (!step?.conditions) {
       return;
     }
 

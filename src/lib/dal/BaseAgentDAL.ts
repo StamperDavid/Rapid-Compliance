@@ -15,12 +15,20 @@
  * This prevents test data pollution and ensures clean environment separation.
  */
 
-import { 
+import type { 
   Firestore,
-  collection,
   CollectionReference,
-  doc,
   DocumentReference,
+  QueryConstraint,
+  SetOptions,
+  WithFieldValue,
+  DocumentData,
+  UpdateData,
+  DocumentSnapshot,
+  QuerySnapshot} from 'firebase/firestore';
+import {
+  collection,
+  doc,
   addDoc,
   setDoc,
   updateDoc,
@@ -28,14 +36,7 @@ import {
   getDoc,
   getDocs,
   query,
-  where,
-  QueryConstraint,
-  SetOptions,
-  WithFieldValue,
-  DocumentData,
-  UpdateData,
-  DocumentSnapshot,
-  QuerySnapshot,
+  where
 } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
@@ -367,7 +368,7 @@ export class BaseAgentDAL {
         data,
         file: 'BaseAgentDAL.ts'
       });
-      return doc(this.db, path, 'dry-run-doc-id') as DocumentReference;
+      return doc(this.db, path, 'dry-run-doc-id');
     }
     
     const colRef = collection(this.db, path);

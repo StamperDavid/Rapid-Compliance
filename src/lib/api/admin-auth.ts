@@ -3,7 +3,7 @@
  * Centralized authentication for admin API routes
  */
 
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin'
 import { logger } from '@/lib/logger/logger';;
 
@@ -40,7 +40,7 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     // Get the auth token from the request headers
     const authHeader = request.headers.get('Authorization');
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return {
         success: false,
         error: 'Missing or invalid Authorization header',

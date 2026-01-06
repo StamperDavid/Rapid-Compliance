@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSlackAuthUrl } from '@/lib/integrations/slack-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
   }
 
   const state = Buffer.from(JSON.stringify({ userId, orgId })).toString('base64');
-  const authUrl = getSlackAuthUrl() + `&state=${state}`;
+  const authUrl = `${getSlackAuthUrl()  }&state=${state}`;
 
   return NextResponse.redirect(authUrl);
 }

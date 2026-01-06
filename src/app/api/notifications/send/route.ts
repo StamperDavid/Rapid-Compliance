@@ -8,7 +8,8 @@
  * Rate Limit: 50 requests per minute
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendNotificationRequestSchema } from '@/lib/notifications/validation';
 import { NotificationService } from '@/lib/notifications/notification-service';

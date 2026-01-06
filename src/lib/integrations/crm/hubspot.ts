@@ -45,7 +45,7 @@ export async function executeHubSpotFunction(
         throw new Error('company must be a string');
       }
       
-      return await createContact(
+      return createContact(
         {
           email: parameters.email,
           firstName: parameters.firstName,
@@ -78,10 +78,10 @@ async function createContact(
     email: params.email,
   };
   
-  if (params.firstName) properties.firstname = params.firstName;
-  if (params.lastName) properties.lastname = params.lastName;
-  if (params.phone) properties.phone = params.phone;
-  if (params.company) properties.company = params.company;
+  if (params.firstName) {properties.firstname = params.firstName;}
+  if (params.lastName) {properties.lastname = params.lastName;}
+  if (params.phone) {properties.phone = params.phone;}
+  if (params.company) {properties.company = params.company;}
   
   const response = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
     method: 'POST',

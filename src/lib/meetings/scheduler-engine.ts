@@ -196,7 +196,7 @@ async function assignMeeting(
   config: MeetingSchedulerConfig
 ): Promise<string> {
   if (config.assignmentType === 'round-robin') {
-    return await getRoundRobinAssignment(organizationId, config.id, config.assignedUsers);
+    return getRoundRobinAssignment(organizationId, config.id, config.assignedUsers);
   } else if (config.assignmentType === 'manual') {
     return config.assignedUsers[0]; // Default to first user
   }

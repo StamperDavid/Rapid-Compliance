@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 

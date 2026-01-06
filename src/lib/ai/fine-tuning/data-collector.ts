@@ -172,16 +172,16 @@ function evaluateQuality(params: {
   const { confidence, userRating, didConvert } = params;
   
   // High confidence conversations
-  if (confidence >= 85) return true;
+  if (confidence >= 85) {return true;}
   
   // High user rating
-  if (userRating && userRating >= 4) return true;
+  if (userRating && userRating >= 4) {return true;}
   
   // Converted to sale
-  if (didConvert) return true;
+  if (didConvert) {return true;}
   
   // Medium confidence + medium rating
-  if (confidence >= 70 && userRating && userRating >= 3) return true;
+  if (confidence >= 70 && userRating && userRating >= 3) {return true;}
   
   return false;
 }

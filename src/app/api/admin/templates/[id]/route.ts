@@ -5,7 +5,8 @@
  * Requires admin role
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireUserRole } from '@/lib/auth/server-auth';
 import { getTemplateWithSource } from '@/lib/templates/template-resolver';
 import { logger } from '@/lib/logger/logger';

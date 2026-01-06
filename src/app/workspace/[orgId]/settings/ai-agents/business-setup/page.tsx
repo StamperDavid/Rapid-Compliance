@@ -158,7 +158,7 @@ export default function BusinessSetupPage() {
                     width: '100%',
                     padding: '0.75rem 1rem',
                     marginBottom: '0.25rem',
-                    backgroundColor: activeSection === section.id ? primaryColor + '22' : 'transparent',
+                    backgroundColor: activeSection === section.id ? `${primaryColor  }22` : 'transparent',
                     color: activeSection === section.id ? primaryColor : '#999',
                     border: 'none',
                     borderRadius: '0.5rem',

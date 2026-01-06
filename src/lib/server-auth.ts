@@ -45,7 +45,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
  */
 export async function getUserIdentifier(): Promise<string> {
   const user = await getAuthenticatedUser();
-  if (!user) return 'system';
+  if (!user) {return 'system';}
   return user.displayName || user.email || user.uid;
 }
 

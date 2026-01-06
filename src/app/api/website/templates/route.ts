@@ -4,11 +4,12 @@
  * CRITICAL: Multi-tenant - custom templates scoped to organizationId
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
-import { PageTemplate } from '@/types/website';
+import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate template data
-    if (!template || !template.name || !template.content) {
+    if (!template?.name || !template.content) {
       return NextResponse.json(
         { error: 'Invalid template data' },
         { status: 400 }

@@ -106,7 +106,7 @@ export async function createCustomer(accessToken: string, realmId: string, custo
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 /**
@@ -145,7 +145,7 @@ export async function createInvoice(accessToken: string, realmId: string, invoic
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 /**

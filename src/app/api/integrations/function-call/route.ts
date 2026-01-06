@@ -3,7 +3,8 @@
  * AI agent calls this to execute integration functions
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { executeFunctionCall } from '@/lib/integrations/function-calling';
 import type { FunctionCallRequest } from '@/types/integrations';
@@ -14,7 +15,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/function-call');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
     const authResult = await requireAuth(request);

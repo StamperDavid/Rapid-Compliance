@@ -3,8 +3,9 @@
  * Logs all API requests and responses with structured data
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { logger, LogContext } from '../logger/logger';
+import type { NextRequest, NextResponse } from 'next/server';
+import type { LogContext } from '../logger/logger';
+import { logger } from '../logger/logger';
 
 /**
  * Log API request and response

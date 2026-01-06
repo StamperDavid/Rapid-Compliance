@@ -102,7 +102,7 @@ export default function StorefrontSettingsPage() {
 
   // Load saved config from Firestore
   useEffect(() => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     const loadConfig = async () => {
       try {
@@ -124,7 +124,7 @@ export default function StorefrontSettingsPage() {
   }, [user?.organizationId]);
 
   const handleSave = async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     setIsSaving(true);
     try {
@@ -158,7 +158,7 @@ export default function StorefrontSettingsPage() {
   };
 
   const generateWidgetId = () => {
-    return 'widget_' + Math.random().toString(36).substring(2, 15);
+    return `widget_${  Math.random().toString(36).substring(2, 15)}`;
   };
 
   const widgetId = 'demo_store_widget';

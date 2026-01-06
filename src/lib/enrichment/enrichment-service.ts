@@ -309,7 +309,7 @@ export async function enrichCompany(
         : Promise.resolve([]),
     ]);
     
-    if (request.includeNews !== false) searchCalls++;
+    if (request.includeNews !== false) {searchCalls++;}
     
     // Step 9: Compile enrichment data (with distillation results)
     const enrichmentData: CompanyEnrichmentData = {
@@ -649,18 +649,18 @@ function calculateCost(searchCalls: number, scrapeCalls: number, aiTokens: numbe
 function countDataPoints(data: CompanyEnrichmentData): number {
   let count = 0;
   
-  if (data.name) count++;
-  if (data.website) count++;
-  if (data.description) count++;
-  if (data.industry && data.industry !== 'Unknown') count++;
-  if (data.employeeCount) count++;
-  if (data.headquarters?.city) count++;
-  if (data.techStack && data.techStack.length > 0) count += data.techStack.length;
-  if (data.foundedYear) count++;
-  if (data.revenue) count++;
-  if (data.socialMedia?.linkedin) count++;
-  if (data.contactEmail) count++;
-  if (data.recentNews && data.recentNews.length > 0) count += data.recentNews.length;
+  if (data.name) {count++;}
+  if (data.website) {count++;}
+  if (data.description) {count++;}
+  if (data.industry && data.industry !== 'Unknown') {count++;}
+  if (data.employeeCount) {count++;}
+  if (data.headquarters?.city) {count++;}
+  if (data.techStack && data.techStack.length > 0) {count += data.techStack.length;}
+  if (data.foundedYear) {count++;}
+  if (data.revenue) {count++;}
+  if (data.socialMedia?.linkedin) {count++;}
+  if (data.contactEmail) {count++;}
+  if (data.recentNews && data.recentNews.length > 0) {count += data.recentNews.length;}
   
   return count;
 }

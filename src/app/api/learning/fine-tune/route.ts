@@ -3,7 +3,8 @@
  * Manage the complete learning pipeline
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { 
   processConversationFeedback, 
   processCompletedFineTuningJob,
@@ -21,7 +22,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/learning/fine-tune');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');

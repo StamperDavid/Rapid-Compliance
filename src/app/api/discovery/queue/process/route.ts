@@ -7,7 +7,8 @@
  * POST /api/discovery/queue/process
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { processDiscoveryQueue } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
 

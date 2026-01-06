@@ -40,7 +40,7 @@ export default function ContactsPage() {
       throw new Error('Failed to fetch contacts');
     }
     
-    return await response.json();
+    return response.json();
   }, [orgId]);
 
   const {

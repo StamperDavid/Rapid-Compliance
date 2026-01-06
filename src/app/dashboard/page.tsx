@@ -12,7 +12,7 @@ import PipelineChart from '@/components/analytics/PipelineChart';
 import ForecastChart from '@/components/analytics/ForecastChart';
 import WinLossChart from '@/components/analytics/WinLossChart';
 import ReportBuilder from '@/components/analytics/ReportBuilder';
-import { CustomReport } from '@/types/analytics'
+import type { CustomReport } from '@/types/analytics'
 import { logger } from '@/lib/logger/logger';;
 
 type AnalyticsView = 'overview' | 'revenue' | 'pipeline' | 'forecasting' | 'win-loss' | 'reports';
@@ -47,7 +47,7 @@ function DashboardContent() {
 
   // Load reports from Firestore
   useEffect(() => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
 
     const loadReports = async () => {
       try {
@@ -287,7 +287,7 @@ function DashboardContent() {
 
   // Report Builder Handlers
   const handleSaveReport = async (reportData: Partial<CustomReport>) => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
 
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -356,7 +356,7 @@ function DashboardContent() {
   };
 
   const handleDeleteReport = async (reportId: string) => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     if (confirm('Are you sure you want to delete this report?')) {
       try {

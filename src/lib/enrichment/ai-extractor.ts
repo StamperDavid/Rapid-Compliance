@@ -188,7 +188,7 @@ Be factual and precise. If information is not available, use null.`;
  * Get industry-specific context for better AI extraction
  */
 function getIndustryContext(industryTemplateId?: string): string | null {
-  if (!industryTemplateId) return null;
+  if (!industryTemplateId) {return null;}
   
   const industryContextMap: Record<string, string> = {
     'hvac': 'HVAC/Heating & Cooling services company',
@@ -235,10 +235,10 @@ function fallbackExtraction(
   const employeeMatch = text.match(/(\d+)\s*(employees|team members|people)/);
   if (employeeMatch) {
     const count = parseInt(employeeMatch[1]);
-    if (count < 50) size = 'startup';
-    else if (count < 200) size = 'small';
-    else if (count < 1000) size = 'medium';
-    else size = 'enterprise';
+    if (count < 50) {size = 'startup';}
+    else if (count < 200) {size = 'small';}
+    else if (count < 1000) {size = 'medium';}
+    else {size = 'enterprise';}
   }
   
   // Try to find founded year
@@ -301,18 +301,18 @@ export function calculateConfidence(data: Partial<CompanyEnrichmentData>): numbe
     contactPhone: 5,
   };
   
-  if (data.name) score += weights.name;
-  if (data.description && data.description.length > 50) score += weights.description;
-  if (data.industry && data.industry !== 'Unknown') score += weights.industry;
-  if (data.website) score += weights.website;
-  if (data.domain) score += weights.domain;
-  if (data.employeeCount) score += weights.employeeCount;
-  if (data.headquarters?.city) score += weights.headquarters;
-  if (data.foundedYear) score += weights.foundedYear;
-  if (data.techStack && data.techStack.length > 0) score += weights.techStack;
-  if (data.socialMedia?.linkedin) score += weights.socialMedia;
-  if (data.contactEmail) score += weights.contactEmail;
-  if (data.contactPhone) score += weights.contactPhone;
+  if (data.name) {score += weights.name;}
+  if (data.description && data.description.length > 50) {score += weights.description;}
+  if (data.industry && data.industry !== 'Unknown') {score += weights.industry;}
+  if (data.website) {score += weights.website;}
+  if (data.domain) {score += weights.domain;}
+  if (data.employeeCount) {score += weights.employeeCount;}
+  if (data.headquarters?.city) {score += weights.headquarters;}
+  if (data.foundedYear) {score += weights.foundedYear;}
+  if (data.techStack && data.techStack.length > 0) {score += weights.techStack;}
+  if (data.socialMedia?.linkedin) {score += weights.socialMedia;}
+  if (data.contactEmail) {score += weights.contactEmail;}
+  if (data.contactPhone) {score += weights.contactPhone;}
   
   return Math.min(100, score);
 }

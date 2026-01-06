@@ -7,7 +7,8 @@
  * DELETE /api/lead-scoring/rules - Delete scoring rules
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';

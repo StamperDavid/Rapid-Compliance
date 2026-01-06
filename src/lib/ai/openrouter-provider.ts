@@ -144,7 +144,7 @@ export class OpenRouterProvider {
   }
 
   private async getApiKey(): Promise<string> {
-    if (this.apiKey) return this.apiKey;
+    if (this.apiKey) {return this.apiKey;}
     if (!this.organizationId) {
       throw new Error('OpenRouter API key not configured');
     }

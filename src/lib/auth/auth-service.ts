@@ -3,6 +3,9 @@
  * Handles all authentication operations using Firebase Auth
  */
 
+import type {
+  User,
+  UserCredential} from 'firebase/auth';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -13,9 +16,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   OAuthProvider,
-  User,
-  onAuthStateChanged,
-  UserCredential,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
 

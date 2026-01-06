@@ -4,7 +4,8 @@
  * POST /api/crm/activities - Create activity
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getActivities, createActivity } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

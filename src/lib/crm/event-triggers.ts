@@ -119,7 +119,7 @@ function evaluateConditions(
   conditions: TriggerCondition[] | undefined,
   event: CRMEvent
 ): boolean {
-  if (!conditions || conditions.length === 0) return true;
+  if (!conditions || conditions.length === 0) {return true;}
 
   return conditions.every(condition => {
     const entityValue = event.entityData?.[condition.field];

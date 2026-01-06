@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { applyDiscountCode, removeDiscountCode } from '@/lib/ecommerce/cart-service';
 import { z } from 'zod';
@@ -20,7 +21,7 @@ const discountSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/cart/discount');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {

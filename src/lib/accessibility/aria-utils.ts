@@ -31,7 +31,7 @@ export function getContrastRatio(foreground: string, background: string): number
 function getRelativeLuminance(color: string): number {
   // Convert hex to RGB
   const rgb = hexToRgb(color);
-  if (!rgb) return 0;
+  if (!rgb) {return 0;}
 
   // Convert to sRGB
   const [r, g, b] = [rgb.r, rgb.g, rgb.b].map((val) => {

@@ -30,7 +30,7 @@ export class FilterEngine {
    * Evaluate a filter group
    */
   private static evaluateGroup(record: any, group: FilterGroup): boolean {
-    if (group.conditions.length === 0) return true;
+    if (group.conditions.length === 0) {return true;}
 
     const results = group.conditions.map(condition =>
       this.evaluateCondition(record, condition)

@@ -16,7 +16,8 @@ import AdminBar from '@/components/AdminBar';
 import type { RolePermissions, UserRole } from '@/types/permissions';
 import { ROLE_PERMISSIONS } from '@/types/permissions';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import { where, orderBy as firestoreOrderBy, QueryConstraint } from 'firebase/firestore';
+import type { QueryConstraint } from 'firebase/firestore';
+import { where, orderBy as firestoreOrderBy } from 'firebase/firestore';
 
 interface TeamMember {
   id: number;
@@ -60,7 +61,7 @@ export default function TeamMembersPage() {
       firestoreOrderBy('createdAt', 'desc')
     ];
 
-    return await FirestoreService.getAllPaginated(
+    return FirestoreService.getAllPaginated(
       COLLECTIONS.USERS,
       constraints,
       50,
@@ -193,12 +194,12 @@ export default function TeamMembersPage() {
 
   const getEffectivePermissions = (member: TeamMember): RolePermissions => {
     const basePermissions = ROLE_PERMISSIONS[member.role];
-    if (!member.customPermissions) return basePermissions;
+    if (!member.customPermissions) {return basePermissions;}
     return { ...basePermissions, ...member.customPermissions };
   };
 
   const updateMemberPermission = (key: keyof RolePermissions, value: boolean) => {
-    if (!editingMember) return;
+    if (!editingMember) {return;}
     setEditingMember({
       ...editingMember,
       customPermissions: {
@@ -209,7 +210,7 @@ export default function TeamMembersPage() {
   };
 
   const saveMemberChanges = () => {
-    if (!editingMember) return;
+    if (!editingMember) {return;}
     setTeamMembers(teamMembers.map(m => m.id === editingMember.id ? editingMember : m));
     setShowEditModal(false);
     setEditingMember(null);

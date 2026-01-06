@@ -466,20 +466,20 @@ async function calculateEngagementFactor(deal: Deal, orgId: string, workspaceId:
   
   // Recency score
   let recencyScore = 50;
-  if (lastActivityDays === 0) recencyScore = 100;
-  else if (lastActivityDays === 1) recencyScore = 90;
-  else if (lastActivityDays <= 3) recencyScore = 75;
-  else if (lastActivityDays <= 7) recencyScore = 60;
-  else if (lastActivityDays <= 14) recencyScore = 40;
-  else recencyScore = 20;
+  if (lastActivityDays === 0) {recencyScore = 100;}
+  else if (lastActivityDays === 1) {recencyScore = 90;}
+  else if (lastActivityDays <= 3) {recencyScore = 75;}
+  else if (lastActivityDays <= 7) {recencyScore = 60;}
+  else if (lastActivityDays <= 14) {recencyScore = 40;}
+  else {recencyScore = 20;}
   
   // Volume score
   let volumeScore = 50;
-  if (totalActivities >= 20) volumeScore = 90;
-  else if (totalActivities >= 15) volumeScore = 75;
-  else if (totalActivities >= 10) volumeScore = 60;
-  else if (totalActivities >= 5) volumeScore = 40;
-  else volumeScore = 20;
+  if (totalActivities >= 20) {volumeScore = 90;}
+  else if (totalActivities >= 15) {volumeScore = 75;}
+  else if (totalActivities >= 10) {volumeScore = 60;}
+  else if (totalActivities >= 5) {volumeScore = 40;}
+  else {volumeScore = 20;}
   
   score = Math.round((recencyScore * 0.6) + (volumeScore * 0.4));
   
@@ -702,8 +702,8 @@ function determineTier(score: number, probability: number, factors: ScoringFacto
     return 'at-risk';
   }
   
-  if (score >= 75 && probability >= 60) return 'hot';
-  if (score >= 50 && probability >= 40) return 'warm';
+  if (score >= 75 && probability >= 60) {return 'hot';}
+  if (score >= 50 && probability >= 40) {return 'warm';}
   return 'cold';
 }
 
@@ -711,9 +711,9 @@ function calculateConfidence(deal: Deal, factors: ScoringFactor[]): number {
   let confidence = 60;
   
   // More data = higher confidence
-  if (deal.value > 0) confidence += 10;
-  if ((deal as { stage?: string }).stage) confidence += 10;
-  if (deal.createdAt) confidence += 10;
+  if (deal.value > 0) {confidence += 10;}
+  if ((deal as { stage?: string }).stage) {confidence += 10;}
+  if (deal.createdAt) {confidence += 10;}
   
   // More factors with data = higher confidence
   const factorsWithData = factors.filter(f => f.value !== 'unknown').length;
@@ -728,8 +728,8 @@ function identifyRiskFactors(deal: Deal, factors: ScoringFactor[], template: Sal
   factors.forEach(factor => {
     if (factor.impact === 'negative' && factor.score < 40) {
       let severity: 'critical' | 'high' | 'medium' | 'low' = 'medium';
-      if (factor.score < 20) severity = 'critical';
-      else if (factor.score < 30) severity = 'high';
+      if (factor.score < 20) {severity = 'critical';}
+      else if (factor.score < 30) {severity = 'high';}
       
       risks.push({
         id: `risk_${factor.id}`,

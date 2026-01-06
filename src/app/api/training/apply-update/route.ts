@@ -2,7 +2,8 @@
  * API endpoint to apply an approved Golden Master update
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { applyUpdateRequest } from '@/lib/training/golden-master-updater';
@@ -14,7 +15,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/training/apply-update');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
     const authResult = await requireAuth(request);

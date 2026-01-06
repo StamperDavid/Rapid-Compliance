@@ -4,7 +4,7 @@
  */
 
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library'
+import type { OAuth2Client } from 'google-auth-library'
 import { logger } from '@/lib/logger/logger';;
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -270,7 +270,7 @@ export async function sendEmailViaGmail(options: {
   
   const gmailIntegration = integrations.find((i: any) => i.service === 'gmail' || i.providerId === 'google');
   
-  if (!gmailIntegration || !gmailIntegration.accessToken) {
+  if (!gmailIntegration?.accessToken) {
     throw new Error('Gmail not connected. Please connect your Google account first.');
   }
 

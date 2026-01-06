@@ -4,7 +4,8 @@ import { useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { usePagination } from '@/hooks/usePagination';
-import { orderBy, QueryConstraint } from 'firebase/firestore';
+import type { QueryConstraint } from 'firebase/firestore';
+import { orderBy } from 'firebase/firestore';
 
 export default function FineTuningPage() {
   const params = useParams();
@@ -17,7 +18,7 @@ export default function FineTuningPage() {
       orderBy('createdAt', 'desc')
     ];
 
-    return await FirestoreService.getAllPaginated(
+    return FirestoreService.getAllPaginated(
       `organizations/${orgId}/fineTuningJobs`,
       constraints,
       50,

@@ -22,7 +22,7 @@ export async function getAPIKey(
       'apiKeys'
     );
 
-    if (apiKeys && apiKeys[service]) {
+    if (apiKeys?.[service]) {
       return apiKeys[service];
     }
 

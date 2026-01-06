@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/quickbooks-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';

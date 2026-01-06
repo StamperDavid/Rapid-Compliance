@@ -4,7 +4,7 @@
  */
 
 import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library'
+import type { OAuth2Client } from 'google-auth-library'
 import { logger } from '@/lib/logger/logger';;
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -271,7 +271,7 @@ export async function findAvailableSlots(
   const { busy } = await getFreeBusy(tokens, calendarId, startDate, endDate);
 
   const slots: { start: Date; end: Date }[] = [];
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
 
   while (currentDate <= endDate) {
     // Skip weekends

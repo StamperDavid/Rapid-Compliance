@@ -3,7 +3,7 @@
  * Determines severity of schema changes and appropriate UX response
  */
 
-import { SchemaChangeEvent } from './schema-change-tracker';
+import type { SchemaChangeEvent } from './schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
 
 export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';

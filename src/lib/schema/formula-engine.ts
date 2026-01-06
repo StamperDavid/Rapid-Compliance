@@ -228,7 +228,7 @@ export class FormulaEngine {
   }
 
   private AVERAGE(...args: number[]): number {
-    if (args.length === 0) return 0;
+    if (args.length === 0) {return 0;}
     return this.SUM(...args) / args.length;
   }
 

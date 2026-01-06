@@ -264,7 +264,7 @@ async function gatherMetrics(): Promise<{
  * Send alert if system is unhealthy
  */
 export async function sendAlert(health: HealthCheckResult): Promise<void> {
-  if (health.status === 'healthy') return;
+  if (health.status === 'healthy') {return;}
   
   logger.error('[Health Check] System is unhealthy', new Error(`System status: ${health.status}`), { 
     status: health.status, 

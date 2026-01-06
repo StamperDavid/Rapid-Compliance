@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, orderBy } from 'firebase/firestore';

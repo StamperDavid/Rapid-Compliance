@@ -3,7 +3,8 @@
  * Handles drag-drop logic for page builder
  */
 
-import { Widget, PageSection } from '@/types/website';
+import type { Widget} from '@/types/website';
+import { PageSection } from '@/types/website';
 
 export interface DragData {
   type: 'widget' | 'section';
@@ -51,7 +52,7 @@ export function handleDrop(
 
   try {
     const dataStr = e.dataTransfer.getData('application/json');
-    if (!dataStr) return;
+    if (!dataStr) {return;}
 
     const data: DragData = JSON.parse(dataStr);
     onDrop(data, dropZone);

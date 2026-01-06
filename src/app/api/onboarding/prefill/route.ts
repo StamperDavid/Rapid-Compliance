@@ -4,7 +4,8 @@
  * Server-side endpoint for prefilling onboarding data using the Discovery Engine.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { prefillOnboardingData } from '@/lib/onboarding/prefill-engine';
 

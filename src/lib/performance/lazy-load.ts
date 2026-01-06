@@ -123,7 +123,7 @@ export function lazyLoadComponent(
  * Preload next sections
  */
 export function preloadNextSections(currentSection: number, totalSections: number): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
 
   // Preload next 2 sections
   const sectionsToPreload = [currentSection + 1, currentSection + 2].filter(
@@ -144,7 +144,7 @@ export function preloadNextSections(currentSection: number, totalSections: numbe
  * Defer non-critical scripts
  */
 export function deferScript(src: string, onLoad?: () => void): void {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined') {return;}
 
   const script = document.createElement('script');
   script.src = src;
@@ -161,7 +161,7 @@ export function deferScript(src: string, onLoad?: () => void): void {
  * Load script only when idle
  */
 export function loadWhenIdle(callback: () => void, timeout: number = 2000): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
 
   if ('requestIdleCallback' in window) {
     (window as any).requestIdleCallback(callback, { timeout });

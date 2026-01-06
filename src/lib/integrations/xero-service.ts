@@ -89,7 +89,7 @@ export async function createContact(accessToken: string, tenantId: string, conta
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 export async function createInvoice(accessToken: string, tenantId: string, invoice: {
@@ -119,7 +119,7 @@ export async function createInvoice(accessToken: string, tenantId: string, invoi
     }),
   });
 
-  return await response.json();
+  return response.json();
 }
 
 export async function listContacts(accessToken: string, tenantId: string): Promise<any[]> {

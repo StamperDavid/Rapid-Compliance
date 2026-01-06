@@ -343,7 +343,7 @@ function calculateRevenueTrends(
   const trends: any[] = [];
   const interval = getIntervalForPeriod(period);
   
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
   
   while (currentDate <= endDate) {
     const periodStart = new Date(currentDate);
@@ -433,7 +433,7 @@ function calculateDaysInStage(deal: any, stage: string): number {
   const stageHistory = deal.stageHistory || [];
   const stageEntry = stageHistory.find((h: any) => h.stage === stage);
   
-  if (stageEntry && stageEntry.enteredAt) {
+  if (stageEntry?.enteredAt) {
     const entered = stageEntry.enteredAt.toDate?.() || new Date(stageEntry.enteredAt);
     const now = new Date();
     return Math.floor((now.getTime() - entered.getTime()) / (1000 * 60 * 60 * 24));
@@ -619,7 +619,7 @@ function calculateWeightedForecast(deals: any[]): number {
 }
 
 function calculateForecastConfidence(deals: any[]): number {
-  if (deals.length === 0) return 0;
+  if (deals.length === 0) {return 0;}
   
   // Confidence based on:
   // - Number of deals

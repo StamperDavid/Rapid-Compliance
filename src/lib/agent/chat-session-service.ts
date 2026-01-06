@@ -5,7 +5,8 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, limit as firestoreLimit, QueryConstraint } from 'firebase/firestore';
+import type { QueryConstraint } from 'firebase/firestore';
+import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 
 export interface ChatSession {
   id: string;

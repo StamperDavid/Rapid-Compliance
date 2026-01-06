@@ -22,7 +22,8 @@
  * - customContext (optional): Additional context for AI analysis
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { predictDealRisk, predictBatchDealRisk } from '@/lib/risk/risk-engine';
 import { 
   validateRiskPredictionRequest,
@@ -93,7 +94,7 @@ const responseCache = new Map<string, CacheEntry>();
  */
 function getCachedResponse(cacheKey: string): DealRiskPrediction | null {
   const entry = responseCache.get(cacheKey);
-  if (!entry) return null;
+  if (!entry) {return null;}
   
   if (Date.now() > entry.expiresAt) {
     responseCache.delete(cacheKey);

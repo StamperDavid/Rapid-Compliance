@@ -4,7 +4,8 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, QueryConstraint, QueryDocumentSnapshot, Timestamp } from 'firebase/firestore';
+import type { QueryConstraint, QueryDocumentSnapshot} from 'firebase/firestore';
+import { where, orderBy, Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getClientSignalCoordinator } from '@/lib/orchestration/coordinator-factory-client';
 

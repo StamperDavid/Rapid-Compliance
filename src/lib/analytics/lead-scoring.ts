@@ -85,11 +85,11 @@ export function calculateLeadScore(factors: LeadScoringFactors): LeadScore {
 
   // Engagement Score (0-25 points)
   let engagementScore = 0;
-  if (factors.websiteVisits) engagementScore += Math.min(5, factors.websiteVisits * 0.5);
-  if (factors.pageViews) engagementScore += Math.min(5, Math.log10(factors.pageViews + 1) * 2);
-  if (factors.emailOpens) engagementScore += Math.min(5, factors.emailOpens * 0.5);
-  if (factors.emailClicks) engagementScore += Math.min(5, factors.emailClicks * 1);
-  if (factors.formSubmissions) engagementScore += Math.min(5, factors.formSubmissions * 2);
+  if (factors.websiteVisits) {engagementScore += Math.min(5, factors.websiteVisits * 0.5);}
+  if (factors.pageViews) {engagementScore += Math.min(5, Math.log10(factors.pageViews + 1) * 2);}
+  if (factors.emailOpens) {engagementScore += Math.min(5, factors.emailOpens * 0.5);}
+  if (factors.emailClicks) {engagementScore += Math.min(5, factors.emailClicks * 1);}
+  if (factors.formSubmissions) {engagementScore += Math.min(5, factors.formSubmissions * 2);}
   
   if (engagementScore > 0) {
     factorScores.push({
@@ -120,9 +120,9 @@ export function calculateLeadScore(factors: LeadScoringFactors): LeadScore {
 
   // Intent Signals (0-20 points)
   let intentScore = 0;
-  if (factors.demoRequested) intentScore += 10;
-  if (factors.meetingBooked) intentScore += 10;
-  if (factors.downloads && factors.downloads > 2) intentScore += 5;
+  if (factors.demoRequested) {intentScore += 10;}
+  if (factors.meetingBooked) {intentScore += 10;}
+  if (factors.downloads && factors.downloads > 2) {intentScore += 5;}
   
   if (intentScore > 0) {
     factorScores.push({
@@ -184,14 +184,14 @@ export function calculateLeadScore(factors: LeadScoringFactors): LeadScore {
 
   // Determine grade
   let grade: 'A+' | 'A' | 'B+' | 'B' | 'C+' | 'C' | 'D' | 'F';
-  if (overallScore >= 90) grade = 'A+';
-  else if (overallScore >= 80) grade = 'A';
-  else if (overallScore >= 70) grade = 'B+';
-  else if (overallScore >= 60) grade = 'B';
-  else if (overallScore >= 50) grade = 'C+';
-  else if (overallScore >= 40) grade = 'C';
-  else if (overallScore >= 30) grade = 'D';
-  else grade = 'F';
+  if (overallScore >= 90) {grade = 'A+';}
+  else if (overallScore >= 80) {grade = 'A';}
+  else if (overallScore >= 70) {grade = 'B+';}
+  else if (overallScore >= 60) {grade = 'B';}
+  else if (overallScore >= 50) {grade = 'C+';}
+  else if (overallScore >= 40) {grade = 'C';}
+  else if (overallScore >= 30) {grade = 'D';}
+  else {grade = 'F';}
 
   // Generate recommendations
   const recommendations: string[] = [];

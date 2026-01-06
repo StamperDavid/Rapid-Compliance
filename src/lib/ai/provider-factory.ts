@@ -89,12 +89,12 @@ export class AIProviderFactory {
     }
     
     // Check for specific provider prefixes
-    if (modelStr.startsWith('gpt-')) return 'openai';
-    if (modelStr.startsWith('claude-')) return 'anthropic';
-    if (modelStr.startsWith('gemini-')) return 'google';
+    if (modelStr.startsWith('gpt-')) {return 'openai';}
+    if (modelStr.startsWith('claude-')) {return 'anthropic';}
+    if (modelStr.startsWith('gemini-')) {return 'google';}
     
     // Default to OpenAI for common aliases
-    if (modelStr === 'gpt-4-turbo' || modelStr === 'gpt-4') return 'openai';
+    if (modelStr === 'gpt-4-turbo' || modelStr === 'gpt-4') {return 'openai';}
     
     throw new Error(`Cannot determine provider for model: ${modelStr}`);
   }

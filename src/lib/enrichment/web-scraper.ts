@@ -67,7 +67,7 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
     
     // LAYER 2: Extract main content
     // Try to find the main content area
-    let mainContent = $('main').html() || $('article').html() || $('body').html() || '';
+    const mainContent = $('main').html() || $('article').html() || $('body').html() || '';
     
     // Convert to clean text
     const $content = cheerio.load(mainContent);
@@ -112,7 +112,7 @@ function convertToMarkdown($: cheerio.CheerioAPI): string {
     const level = parseInt(elem.tagName[1]);
     const text = $(elem).text().trim();
     if (text) {
-      lines.push('\n' + '#'.repeat(level) + ' ' + text);
+      lines.push(`\n${  '#'.repeat(level)  } ${  text}`);
     }
   });
   
@@ -120,7 +120,7 @@ function convertToMarkdown($: cheerio.CheerioAPI): string {
   $('p').each((_, elem) => {
     const text = $(elem).text().trim();
     if (text) {
-      lines.push('\n' + text);
+      lines.push(`\n${  text}`);
     }
   });
   
@@ -177,15 +177,15 @@ export function extractDataPoints(content: ScrapedContent): {
     const $ = cheerio.load(rawHtml);
     $('a[href*="linkedin.com"]').each((_, elem) => {
       const href = $(elem).attr('href');
-      if (href) socialLinks.push(href);
+      if (href) {socialLinks.push(href);}
     });
     $('a[href*="twitter.com"], a[href*="x.com"]').each((_, elem) => {
       const href = $(elem).attr('href');
-      if (href) socialLinks.push(href);
+      if (href) {socialLinks.push(href);}
     });
     $('a[href*="facebook.com"]').each((_, elem) => {
       const href = $(elem).attr('href');
-      if (href) socialLinks.push(href);
+      if (href) {socialLinks.push(href);}
     });
   }
   
@@ -264,7 +264,7 @@ export async function scrapeCareersPage(baseUrl: string): Promise<{
         },
       });
       
-      if (!response.ok) continue;
+      if (!response.ok) {continue;}
       
       const html = await response.text();
       const $ = cheerio.load(html);

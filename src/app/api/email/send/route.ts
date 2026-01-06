@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/email-service';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { emailSendSchema, validateInput } from '@/lib/validation/schemas';

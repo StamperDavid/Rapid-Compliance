@@ -21,12 +21,13 @@
  * @module routing/events
  */
 
-import { SalesSignal, SignalPriority } from '../orchestration/types';
-import { 
+import type { SalesSignal, SignalPriority } from '../orchestration/types';
+import type { 
   Lead, 
   LeadAssignment, 
   RoutingStrategy,
-  AssignmentMethod,
+  AssignmentMethod} from './types';
+import {
   AssignmentStatus,
 } from './types';
 

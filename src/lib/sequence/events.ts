@@ -7,8 +7,8 @@
  * @module sequence/events
  */
 
-import { SalesSignal } from '@/lib/orchestration';
-import { 
+import type { SalesSignal } from '@/lib/orchestration';
+import type { 
   SequenceAnalysis,
   SequencePattern,
   OptimizationRecommendation,

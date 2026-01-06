@@ -1,4 +1,4 @@
-import { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory'
+import type { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory'
 import { logger } from '@/lib/logger/logger';
 import { MutationEngine } from '@/lib/services/mutation-engine';
 import { getIndustryTemplate } from '@/lib/persona/industry-templates';

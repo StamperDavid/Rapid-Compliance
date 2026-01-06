@@ -95,9 +95,9 @@ export async function calculateDealHealth(
 
     // Determine status
     let status: 'healthy' | 'at-risk' | 'critical';
-    if (overall >= 70) status = 'healthy';
-    else if (overall >= 40) status = 'at-risk';
-    else status = 'critical';
+    if (overall >= 70) {status = 'healthy';}
+    else if (overall >= 40) {status = 'at-risk';}
+    else {status = 'critical';}
 
     const healthScore: DealHealthScore = {
       overall,
@@ -251,7 +251,7 @@ function calculateEngagementFactor(activityStats: any): DealHealthFactor {
  */
 function calculateValueProbabilityFactor(deal: Deal): DealHealthFactor {
   const probability = deal.probability || 0;
-  let score = probability;
+  const score = probability;
   let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
   let description = '';
 
@@ -333,7 +333,7 @@ function calculateTimeToCloseFactor(deal: Deal): DealHealthFactor {
  * Helper to get days since last activity
  */
 function getDaysSinceLastActivity(activityStats: any): number | null {
-  if (!activityStats.lastActivityDate) return null;
+  if (!activityStats.lastActivityDate) {return null;}
   
   const lastDate = new Date(activityStats.lastActivityDate);
   return Math.floor((Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24));

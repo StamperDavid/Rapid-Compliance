@@ -22,7 +22,8 @@
  * - includeRepDetails (optional): Include individual rep metrics (default: true)
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { CoachingAnalyticsEngine } from '@/lib/coaching/coaching-analytics-engine';
@@ -90,7 +91,7 @@ const responseCache = new Map<string, CacheEntry>();
  */
 function getCachedResponse(cacheKey: string): GenerateTeamCoachingResponse | null {
   const entry = responseCache.get(cacheKey);
-  if (!entry) return null;
+  if (!entry) {return null;}
   
   if (Date.now() > entry.expiresAt) {
     responseCache.delete(cacheKey);

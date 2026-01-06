@@ -17,7 +17,8 @@
  * @module api/sequence/analyze
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { 
   sequenceEngine,
@@ -105,7 +106,7 @@ function getCacheKey(input: any): string {
  */
 function getCachedAnalysis(key: string): SequenceAnalysis | null {
   const entry = cache.get(key);
-  if (!entry) return null;
+  if (!entry) {return null;}
   
   if (Date.now() > entry.expiresAt) {
     cache.delete(key);

@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SalesSignal } from '@/lib/orchestration/types';
 import type { NotificationVariables } from '@/lib/notifications/types';
-import { SlackService } from './slack-service';
+import type { SlackService } from './slack-service';
 import { SlackMessageBuilder } from './message-builder';
 import { db } from '@/lib/firebase-admin';
 import type {
@@ -694,7 +694,7 @@ export class SlackSignalHandler {
   private isInQuietHours(workspace: SlackWorkspace): boolean {
     const quietHours = workspace.settings.quietHours;
     
-    if (!quietHours || !quietHours.enabled) {
+    if (!quietHours?.enabled) {
       return false;
     }
     

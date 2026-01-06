@@ -5,7 +5,7 @@
 
 import { db, admin } from '@/lib/firebase-admin';
 import { getOrgSubCollection } from '@/lib/firebase/collections';
-import { SchemaChangeEvent } from '../schema-change-tracker';
+import type { SchemaChangeEvent } from '../schema-change-tracker';
 
 export class SchemaChangeEventPublisherServer {
   /**

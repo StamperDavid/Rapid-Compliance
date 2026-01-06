@@ -3,7 +3,8 @@
  * Manage A/B tests for fine-tuned models
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { 
   createABTest, 
   getActiveABTest, 
@@ -18,7 +19,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/learning/ab-test');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     
     // Check for existing test
     const existingTest = await getActiveABTest(organizationId);
-    if (existingTest && existingTest.status === 'running') {
+    if (existingTest?.status === 'running') {
       return NextResponse.json(
         { error: 'An A/B test is already running. Complete it first.' },
         { status: 400 }

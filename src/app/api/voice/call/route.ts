@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/voice/call');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
     const authResult = await requireAuth(request);

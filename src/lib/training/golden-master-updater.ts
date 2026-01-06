@@ -101,12 +101,12 @@ async function createPromptUpdateChange(
   goldenMaster: GoldenMaster,
   improvement: ImprovementSuggestion
 ): Promise<ProposedChange | null> {
-  if (!improvement.implementation) return null;
+  if (!improvement.implementation) {return null;}
   
   const { section, additions, removals, modifications } = improvement.implementation;
   
   // Get current system prompt
-  let currentPrompt = goldenMaster.systemPrompt;
+  const currentPrompt = goldenMaster.systemPrompt;
   
   // Apply changes to create proposed prompt
   let proposedPrompt = currentPrompt;
@@ -159,7 +159,7 @@ function createBehaviorChange(
   };
   
   const configKey = configMapping[improvement.area];
-  if (!configKey) return null;
+  if (!configKey) {return null;}
   
   const currentValue = (goldenMaster.behaviorConfig as any)[configKey];
   
@@ -176,7 +176,7 @@ function createBehaviorChange(
     }
   }
   
-  if (proposedValue === currentValue) return null;
+  if (proposedValue === currentValue) {return null;}
   
   return {
     id: `change_${improvement.id}`,

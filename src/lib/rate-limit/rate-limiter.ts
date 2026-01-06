@@ -3,7 +3,8 @@
  * Prevents abuse and DDoS attacks by limiting request frequency
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 
 // In-memory rate limit store (for development)
 // In production, use Redis or similar distributed cache

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { processKnowledgeBase } from '@/lib/agent/knowledge-processor';
 import { indexKnowledgeBase } from '@/lib/agent/vector-search';
@@ -10,7 +11,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/agent/knowledge/upload');
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
     const authResult = await requireOrganization(request);

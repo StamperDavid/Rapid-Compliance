@@ -907,7 +907,7 @@ export class CoachingAnalyticsEngine {
   ): { startDate: Date; endDate: Date } {
     const now = new Date();
     let startDate: Date;
-    let endDate: Date = now;
+    const endDate: Date = now;
     
     if (period === 'custom' && customRange) {
       return { startDate: customRange.startDate, endDate: customRange.endDate };

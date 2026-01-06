@@ -28,7 +28,7 @@ export default function ContactDetailPage() {
     }
   };
 
-  if (loading || !contact) return <div className="p-8">Loading...</div>;
+  if (loading || !contact) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

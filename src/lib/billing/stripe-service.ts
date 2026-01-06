@@ -4,7 +4,8 @@
  */
 
 import Stripe from 'stripe';
-import { VOLUME_TIERS, TIER_PRICING, SubscriptionTier, ALL_INCLUSIVE_FEATURES } from '@/types/subscription';
+import type { SubscriptionTier} from '@/types/subscription';
+import { VOLUME_TIERS, TIER_PRICING, ALL_INCLUSIVE_FEATURES } from '@/types/subscription';
 
 // Use placeholder during build, validate at runtime
 const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
@@ -109,7 +110,7 @@ export async function createCustomer(
   name?: string,
   metadata?: Record<string, string>
 ): Promise<Stripe.Customer> {
-  return await stripe.customers.create({
+  return stripe.customers.create({
     email,
     name,
     metadata,
@@ -162,7 +163,7 @@ export async function createSubscription(
   // This ensures seamless conversion to paid
   subscriptionParams.cancel_at_period_end = false;
 
-  return await stripe.subscriptions.create(subscriptionParams);
+  return stripe.subscriptions.create(subscriptionParams);
 }
 
 // DEPRECATED functions removed - use createSubscriptionWithTier instead
@@ -187,7 +188,7 @@ export async function updateSubscriptionTier(
     throw new Error(`Stripe price ID not configured for tier: ${newTierId}`);
   }
 
-  return await stripe.subscriptions.update(subscriptionId, {
+  return stripe.subscriptions.update(subscriptionId, {
     items: [{
       id: subscription.items.data[0].id,
       price: priceId,
@@ -215,9 +216,9 @@ export async function cancelSubscription(
   immediately: boolean = false
 ): Promise<Stripe.Subscription> {
   if (immediately) {
-    return await stripe.subscriptions.cancel(subscriptionId);
+    return stripe.subscriptions.cancel(subscriptionId);
   } else {
-    return await stripe.subscriptions.update(subscriptionId, {
+    return stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
   }
@@ -227,7 +228,7 @@ export async function cancelSubscription(
  * Get subscription
  */
 export async function getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
-  return await stripe.subscriptions.retrieve(subscriptionId);
+  return stripe.subscriptions.retrieve(subscriptionId);
 }
 
 /**
@@ -237,7 +238,7 @@ export async function createBillingPortalSession(
   customerId: string,
   returnUrl: string
 ): Promise<Stripe.BillingPortal.Session> {
-  return await stripe.billingPortal.sessions.create({
+  return stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
   });
@@ -285,10 +286,10 @@ export async function checkRecordCapacity(
   // Determine required tier if exceeding current capacity
   let requiredTierId = currentTierId;
   if (!withinCapacity) {
-    if (totalRecords <= STRIPE_TIERS.tier1.recordCapacity.max) requiredTierId = 'tier1';
-    else if (totalRecords <= STRIPE_TIERS.tier2.recordCapacity.max) requiredTierId = 'tier2';
-    else if (totalRecords <= STRIPE_TIERS.tier3.recordCapacity.max) requiredTierId = 'tier3';
-    else requiredTierId = 'tier4';
+    if (totalRecords <= STRIPE_TIERS.tier1.recordCapacity.max) {requiredTierId = 'tier1';}
+    else if (totalRecords <= STRIPE_TIERS.tier2.recordCapacity.max) {requiredTierId = 'tier2';}
+    else if (totalRecords <= STRIPE_TIERS.tier3.recordCapacity.max) {requiredTierId = 'tier3';}
+    else {requiredTierId = 'tier4';}
   }
   
   const needsUpgrade = requiredTierId !== currentTierId;
@@ -370,7 +371,7 @@ export async function handleWebhook(
   switch (event.type) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = event.data.object;
       const orgId = subscription.metadata?.organizationId;
       
       if (orgId) {
@@ -384,7 +385,7 @@ export async function handleWebhook(
       break;
 
     case 'customer.subscription.deleted':
-      const deletedSubscription = event.data.object as Stripe.Subscription;
+      const deletedSubscription = event.data.object;
       const deletedOrgId = deletedSubscription.metadata?.organizationId;
       
       if (deletedOrgId) {
@@ -395,7 +396,7 @@ export async function handleWebhook(
       break;
 
     case 'invoice.payment_succeeded':
-      const invoice = event.data.object as Stripe.Invoice;
+      const invoice = event.data.object;
       const invoiceOrgId = invoice.metadata?.organizationId;
       
       if (invoiceOrgId) {
@@ -405,7 +406,7 @@ export async function handleWebhook(
       break;
 
     case 'invoice.payment_failed':
-      const failedInvoice = event.data.object as Stripe.Invoice;
+      const failedInvoice = event.data.object;
       const failedOrgId = failedInvoice.metadata?.organizationId;
       
       if (failedOrgId) {

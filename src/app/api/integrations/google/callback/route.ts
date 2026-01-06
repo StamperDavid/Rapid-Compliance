@@ -3,7 +3,8 @@
  * GET /api/integrations/google/callback
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';

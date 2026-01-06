@@ -4,9 +4,10 @@
  * CRITICAL: Serves content based on request domain/subdomain
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { BlogPost } from '@/types/website';
+import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';

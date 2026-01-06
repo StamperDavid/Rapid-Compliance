@@ -45,7 +45,7 @@ export async function executePayPalFunction(
         throw new Error('orderId (string) is required for getTransaction');
       }
       
-      return await getOrderDetails(organizationId, parameters.orderId);
+      return getOrderDetails(organizationId, parameters.orderId);
       
     case 'capturePayment':
       // Validate required parameters
@@ -53,7 +53,7 @@ export async function executePayPalFunction(
         throw new Error('orderId (string) is required for capturePayment');
       }
       
-      return await captureOrder(organizationId, parameters.orderId);
+      return captureOrder(organizationId, parameters.orderId);
       
     default:
       throw new Error(`Unknown PayPal function: ${functionName}`);

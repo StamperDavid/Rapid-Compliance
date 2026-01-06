@@ -7,7 +7,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';
-import { OutboundSequence, ProspectEnrollment } from '@/types/outbound-sequence'
+import type { OutboundSequence, ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';;
 
 export default function EmailSequencesPage() {
@@ -24,7 +24,7 @@ export default function EmailSequencesPage() {
 
   // Load sequences from Firestore
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId) {return;}
 
     const loadData = async () => {
       try {
@@ -54,7 +54,7 @@ export default function EmailSequencesPage() {
   }, [orgId]);
 
   const handleCreateSequence = async (name: string, description: string) => {
-    if (!orgId || !user) return;
+    if (!orgId || !user) {return;}
 
     try {
       const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

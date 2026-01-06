@@ -52,10 +52,10 @@ function buildNextImageUrl(
 ): string {
   const params = new URLSearchParams();
 
-  if (options.width) params.set('w', options.width.toString());
-  if (options.height) params.set('h', options.height.toString());
-  if (options.quality) params.set('q', options.quality.toString());
-  if (options.format) params.set('f', options.format);
+  if (options.width) {params.set('w', options.width.toString());}
+  if (options.height) {params.set('h', options.height.toString());}
+  if (options.quality) {params.set('q', options.quality.toString());}
+  if (options.format) {params.set('f', options.format);}
 
   const queryString = params.toString();
   return queryString ? `${src}?${queryString}` : src;
@@ -96,7 +96,7 @@ export const lazyLoadConfig = {
  * Preload critical images
  */
 export function preloadImage(src: string, as: 'image' = 'image'): void {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined') {return;}
 
   const link = document.createElement('link');
   link.rel = 'preload';
@@ -110,9 +110,9 @@ export function preloadImage(src: string, as: 'image' = 'image'): void {
  */
 export function getOptimalQuality(width: number): number {
   // Larger images can use lower quality without noticeable degradation
-  if (width <= 400) return 85;
-  if (width <= 800) return 80;
-  if (width <= 1200) return 75;
+  if (width <= 400) {return 85;}
+  if (width <= 800) {return 80;}
+  if (width <= 1200) {return 75;}
   return 70;
 }
 
@@ -120,7 +120,7 @@ export function getOptimalQuality(width: number): number {
  * Check if WebP is supported
  */
 export function supportsWebP(): boolean {
-  if (typeof document === 'undefined') return false;
+  if (typeof document === 'undefined') {return false;}
 
   const canvas = document.createElement('canvas');
   if (canvas.getContext && canvas.getContext('2d')) {

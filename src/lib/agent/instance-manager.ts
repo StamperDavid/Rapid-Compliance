@@ -5,7 +5,7 @@
  * Each customer interaction gets a fresh instance that loads their memory.
  */
 
-import {
+import type {
   AgentInstance,
   CustomerMemory,
   GoldenMaster,
@@ -262,11 +262,11 @@ ${this.summarizeRecentConversations(customerMemory)}
    */
   private summarizeRecentConversations(customerMemory: CustomerMemory): string {
     const recentSessions = customerMemory.sessions.slice(-3); // Last 3 sessions
-    if (recentSessions.length === 0) return 'First interaction with this customer';
+    if (recentSessions.length === 0) {return 'First interaction with this customer';}
     
     return recentSessions.map(session => {
       const date = new Date(session.startTime).toLocaleDateString();
-      return `- ${date}: ${session.outcome} (${session.sentiment} sentiment)${session.outcomeDetails ? ' - ' + session.outcomeDetails : ''}`;
+      return `- ${date}: ${session.outcome} (${session.sentiment} sentiment)${session.outcomeDetails ? ` - ${  session.outcomeDetails}` : ''}`;
     }).join('\n');
   }
   
@@ -275,10 +275,10 @@ ${this.summarizeRecentConversations(customerMemory)}
    */
   async loadCustomerMemory(instanceId: string, customerId: string): Promise<void> {
     const instance = await this.getActiveInstance(instanceId);
-    if (!instance) throw new Error('Instance not found');
+    if (!instance) {throw new Error('Instance not found');}
     
     const memory = await this.getCustomerMemory(customerId, instance.orgId);
-    if (!memory) throw new Error('Customer memory not found');
+    if (!memory) {throw new Error('Customer memory not found');}
     
     instance.customerMemory = memory;
     await this.storeActiveInstance(instance);
@@ -289,7 +289,7 @@ ${this.summarizeRecentConversations(customerMemory)}
    */
   async updateCustomerMemory(instanceId: string, updates: Partial<CustomerMemory>): Promise<void> {
     const instance = await this.getActiveInstance(instanceId);
-    if (!instance) throw new Error('Instance not found');
+    if (!instance) {throw new Error('Instance not found');}
     
     const currentMemory = instance.customerMemory;
     const updatedMemory = { ...currentMemory, ...updates, updatedAt: new Date().toISOString() };
@@ -309,7 +309,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     metadata?: ConversationMessage['metadata']
   ): Promise<void> {
     const instance = await this.getActiveInstance(instanceId);
-    if (!instance) throw new Error('Instance not found');
+    if (!instance) {throw new Error('Instance not found');}
     
     const message: ConversationMessage = {
       messageId: this.generateMessageId(),
@@ -403,7 +403,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     confidence: number = 0.8
   ): Promise<void> {
     const instance = await this.getActiveInstance(instanceId);
-    if (!instance) throw new Error('Instance not found');
+    if (!instance) {throw new Error('Instance not found');}
     
     const note: AgentNote = {
       noteId: this.generateNoteId(),
@@ -477,7 +477,7 @@ ${this.summarizeRecentConversations(customerMemory)}
    */
   async checkInstanceHealth(instanceId: string): Promise<'healthy' | 'idle' | 'unresponsive'> {
     const instance = await this.getActiveInstance(instanceId);
-    if (!instance) return 'unresponsive';
+    if (!instance) {return 'unresponsive';}
     
     const now = new Date().getTime();
     const lastActivity = new Date(instance.lastActivityAt).getTime();
@@ -507,7 +507,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     logger.info('Instance Manager Escalating instance instanceId} to human. Reason: reason}', { file: 'instance-manager.ts' });
     
     const instance = await this.getActiveInstance(instanceId);
-    if (!instance) throw new Error('Instance not found');
+    if (!instance) {throw new Error('Instance not found');}
     
     instance.escalationTriggered = true;
     instance.escalationReason = reason;
@@ -531,7 +531,7 @@ ${this.summarizeRecentConversations(customerMemory)}
    */
   async humanTakeover(instanceId: string, humanAgentId: string): Promise<void> {
     const instance = await this.getActiveInstance(instanceId);
-    if (!instance) throw new Error('Instance not found');
+    if (!instance) {throw new Error('Instance not found');}
     
     instance.humanTookOver = true;
     instance.humanAgentId = humanAgentId;

@@ -76,7 +76,7 @@ export async function searchWorkspace(
 
         results.push({
           id: record.id,
-          type: schema.id as any,
+          type: schema.id,
           title: title || 'Untitled',
           subtitle: schema.name,
           description: record.notes || record.description,

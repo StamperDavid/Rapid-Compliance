@@ -4,7 +4,7 @@
  * Supports exact matches, aliases, and type-based fallbacks
  */
 
-import { Schema, SchemaField, FieldType } from '@/types/schema';
+import type { Schema, SchemaField, FieldType } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -185,7 +185,7 @@ export class FieldResolver {
   ): any {
     // If we have a resolved field, use its key
     if (typeof fieldReference !== 'string') {
-      const resolved = fieldReference as ResolvedField;
+      const resolved = fieldReference;
       return this.getNestedValue(record, resolved.fieldKey);
     }
     
@@ -333,7 +333,7 @@ export class FieldResolver {
    * Get nested value from object using dot notation
    */
   private static getNestedValue(obj: any, path: string): any {
-    if (!path) return undefined;
+    if (!path) {return undefined;}
     return path.split('.').reduce((current, key) => current?.[key], obj);
   }
   
@@ -341,7 +341,7 @@ export class FieldResolver {
    * Set nested value in object using dot notation
    */
   private static setNestedValue(obj: any, path: string, value: any): void {
-    if (!path) return;
+    if (!path) {return;}
     
     const keys = path.split('.');
     const lastKey = keys.pop()!;

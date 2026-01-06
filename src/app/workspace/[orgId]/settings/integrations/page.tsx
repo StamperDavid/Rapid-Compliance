@@ -34,7 +34,7 @@ export default function IntegrationsPage() {
 
     // Load saved integrations from Firestore
     const loadIntegrations = async () => {
-      if (!user?.organizationId) return;
+      if (!user?.organizationId) {return;}
       
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -60,7 +60,7 @@ export default function IntegrationsPage() {
   const borderColor = theme?.colors?.border?.main || '#333333';
 
   const handleConnect = async (integrationId: string, integration: Partial<ConnectedIntegration>) => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     const updated = {
       ...integrations,
@@ -83,7 +83,7 @@ export default function IntegrationsPage() {
   };
 
   const handleDisconnect = async (integrationId: string) => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     const updated = {
       ...integrations,
@@ -106,7 +106,7 @@ export default function IntegrationsPage() {
   };
 
   const handleUpdate = async (integrationId: string, updates: any) => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     const current = integrations[integrationId];
     if (current) {
@@ -187,7 +187,7 @@ export default function IntegrationsPage() {
     },
   ];
 
-  const connectedCount = Object.values(integrations).filter(i => i && i.status === 'active').length;
+  const connectedCount = Object.values(integrations).filter(i => i?.status === 'active').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>

@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest} from 'next/server';
+import { NextResponse } from 'next/server';
 import { createCustomer, createSubscription } from '@/lib/billing/stripe-service';
 import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
 import { subscriptionCreateSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
-import { SubscriptionTier } from '@/types/subscription';
+import type { SubscriptionTier } from '@/types/subscription';
 
 export async function POST(request: NextRequest) {
   try {

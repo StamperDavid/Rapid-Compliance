@@ -47,7 +47,7 @@ const PII_FIELDS = [
  * Redact PII from context before logging
  */
 function redactPII(obj: any): any {
-  if (!obj || typeof obj !== 'object') return obj;
+  if (!obj || typeof obj !== 'object') {return obj;}
   
   if (Array.isArray(obj)) {
     return obj.map(item => redactPII(item));
@@ -78,7 +78,7 @@ class Logger {
    * Log debug information (only in development)
    */
   debug(message: string, context?: LogContext) {
-    if (!this.isDevelopment) return;
+    if (!this.isDevelopment) {return;}
     
     this.log(LogLevel.DEBUG, message, context);
   }
@@ -87,7 +87,7 @@ class Logger {
    * Log informational messages
    */
   info(message: string, context?: LogContext) {
-    if (this.isTest) return;
+    if (this.isTest) {return;}
     
     this.log(LogLevel.INFO, message, context);
     
@@ -104,7 +104,7 @@ class Logger {
    * Log warnings (potential issues)
    */
   warn(message: string, context?: LogContext) {
-    if (this.isTest) return;
+    if (this.isTest) {return;}
     
     this.log(LogLevel.WARN, message, context);
     
@@ -121,7 +121,7 @@ class Logger {
    * Log errors (critical issues)
    */
   error(message: string, error?: Error | unknown, context?: LogContext) {
-    if (this.isTest) return;
+    if (this.isTest) {return;}
     
     const errorObj = error instanceof Error ? error : new Error(String(error));
     

@@ -19,7 +19,8 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { discoverCompany, DiscoveredCompany } from '@/lib/services/discovery-engine';
+import type { DiscoveredCompany } from '@/lib/services/discovery-engine';
+import { discoverCompany } from '@/lib/services/discovery-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { OnboardingFormData, PrefillResult, FieldConfidence } from './types';
 import { CONFIDENCE_THRESHOLDS } from './constants';
@@ -396,7 +397,7 @@ function inferTargetCustomer(company: DiscoveredCompany): string {
   }
   
   // Default fallback
-  return 'Businesses and professionals in ' + (industry || 'various industries');
+  return `Businesses and professionals in ${  industry || 'various industries'}`;
 }
 
 // ============================================================================

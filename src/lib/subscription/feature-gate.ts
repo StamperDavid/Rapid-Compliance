@@ -4,10 +4,11 @@
  * The only limit is record capacity (storage), not feature access
  */
 
-import { 
+import type { 
   OrganizationSubscription, 
   SubscriptionPlan,
-  SubscriptionTier,
+  SubscriptionTier} from '@/types/subscription';
+import {
   PLAN_LIMITS,
   PLAN_PRICING,
   VOLUME_TIERS,

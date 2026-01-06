@@ -3,7 +3,7 @@
  * Iterates over arrays and executes actions for each item
  */
 
-import { BaseAction, WorkflowAction, Workflow } from '@/types/workflow';
+import type { BaseAction, WorkflowAction, Workflow } from '@/types/workflow';
 
 export interface LoopActionConfig extends BaseAction {
   type: 'loop';

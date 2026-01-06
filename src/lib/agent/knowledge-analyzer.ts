@@ -196,7 +196,7 @@ async function scrapeWebsite(url: string): Promise<string> {
     let fetchFn: typeof fetch;
     try {
       const nodeFetch = await import('node-fetch');
-      fetchFn = nodeFetch.default as any;
+      fetchFn = nodeFetch.default;
     } catch {
       fetchFn = globalThis.fetch;
     }
@@ -293,7 +293,7 @@ Return ONLY a valid JSON array of products in this format:
  * REAL: Scrapes FAQ page and uses AI to extract Q&A pairs
  */
 async function extractFAQs(faqPageUrl: string): Promise<KnowledgeAnalysisResult['faqs']> {
-  if (!faqPageUrl) return [];
+  if (!faqPageUrl) {return [];}
   
   try {
     // Scrape FAQ page

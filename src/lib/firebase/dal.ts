@@ -10,6 +10,15 @@
  * - Organization-scoped access verification (coming soon)
  */
 
+import type {
+  DocumentReference,
+  CollectionReference,
+  Firestore,
+  QueryConstraint,
+  SetOptions,
+  WithFieldValue,
+  DocumentData,
+  UpdateData} from 'firebase/firestore';
 import { 
   collection, 
   doc, 
@@ -20,15 +29,7 @@ import {
   getDoc,
   getDocs,
   query,
-  where,
-  DocumentReference,
-  CollectionReference,
-  Firestore,
-  QueryConstraint,
-  SetOptions,
-  WithFieldValue,
-  DocumentData,
-  UpdateData,
+  where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS, getCollection, getOrgSubCollection } from './collections';
@@ -250,7 +251,7 @@ export class FirestoreDAL {
         file: 'dal.ts'
       });
       // Return a fake doc ref in dry run mode
-      return doc(this.db, collectionRef, 'dry-run-doc-id') as DocumentReference;
+      return doc(this.db, collectionRef, 'dry-run-doc-id');
     }
     
     const colRef = collection(this.db, collectionRef);
@@ -291,7 +292,7 @@ export class FirestoreDAL {
       file: 'dal.ts'
     });
     
-    return await getDoc(docRef);
+    return getDoc(docRef);
   }
   
   /**
@@ -311,7 +312,7 @@ export class FirestoreDAL {
     });
     
     const q = query(colRef, ...queryConstraints);
-    return await getDocs(q);
+    return getDocs(q);
   }
   
   // ========================================
