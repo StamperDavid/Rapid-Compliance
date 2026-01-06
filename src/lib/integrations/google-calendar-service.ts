@@ -198,7 +198,7 @@ export async function createEvent(
   return {
     id: response.data.id!,
     htmlLink: response.data.htmlLink!,
-    hangoutLink: response.data.hangoutLink,
+    hangoutLink: response.data.hangoutLink ?? undefined,
   };
 }
 

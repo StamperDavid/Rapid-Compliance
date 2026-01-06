@@ -17,7 +17,8 @@ export async function executeSalesforceFunction(
     throw new Error('Salesforce configuration missing');
   }
   
-  const { instanceUrl, accessToken } = integration.config;
+  const instanceUrl = integration.config.instanceUrl as string;
+  const accessToken = integration.config.accessToken as string;
   
   if (!instanceUrl || !accessToken) {
     throw new Error('Salesforce credentials not configured');

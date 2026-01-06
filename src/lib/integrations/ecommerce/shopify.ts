@@ -17,7 +17,8 @@ export async function executeShopifyFunction(
     throw new Error('Shopify configuration missing');
   }
   
-  const { shopDomain, accessToken } = integration.config;
+  const shopDomain = integration.config.shopDomain as string;
+  const accessToken = integration.config.accessToken as string;
   
   if (!shopDomain || !accessToken) {
     throw new Error('Shopify credentials not configured');

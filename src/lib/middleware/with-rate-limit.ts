@@ -22,7 +22,7 @@ export function withRateLimit(
       // Rate limit exceeded
       logger.warn('Rate limit exceeded', {
         route: endpoint || request.url,
-        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        ip: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? undefined,
       });
       
       return rateLimitResponse;
