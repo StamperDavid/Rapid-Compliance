@@ -11,7 +11,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
-import { PageTemplate } from '@/types/website';
+import type { PageTemplate } from '@/types/website';
 
 export default function TemplateBrowserPage() {
   const params = useParams();
@@ -73,7 +73,7 @@ export default function TemplateBrowserPage() {
   }
 
   async function applyTemplate(template: PageTemplate) {
-    if (!confirm(`Create a new page from "${template.name}"?`)) return;
+    if (!confirm(`Create a new page from "${template.name}"?`)) {return;}
 
     try {
       // Create new page from template
@@ -100,7 +100,7 @@ export default function TemplateBrowserPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create page from template');
+      if (!response.ok) {throw new Error('Failed to create page from template');}
 
       const data = await response.json();
       

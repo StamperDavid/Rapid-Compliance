@@ -72,9 +72,9 @@ export default function NewLeadPage() {
     e.preventDefault();
     
     // Warn about high-confidence duplicates
-    if (duplicateResult?.hasDuplicates && duplicateResult.highestMatch && duplicateResult.highestMatch.confidence === 'high') {
+    if (duplicateResult?.hasDuplicates && duplicateResult.highestMatch?.confidence === 'high') {
       const proceed = confirm('High-confidence duplicate detected. Are you sure you want to create this lead?');
-      if (!proceed) return;
+      if (!proceed) {return;}
     }
 
     try {

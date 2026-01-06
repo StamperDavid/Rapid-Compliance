@@ -47,7 +47,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  if (!metrics) return null;
+  if (!metrics) {return null;}
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';

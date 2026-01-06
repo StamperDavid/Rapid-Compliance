@@ -63,7 +63,7 @@ export default function AuditLogPage() {
   }
 
   const filteredEntries = entries.filter(entry => {
-    if (filter === 'all') return true;
+    if (filter === 'all') {return true;}
     return entry.type === filter;
   });
 
@@ -88,17 +88,17 @@ export default function AuditLogPage() {
   }
 
   function getEventColor(type: string): string {
-    if (type.includes('published')) return '#27ae60';
-    if (type.includes('unpublished')) return '#e67e22';
-    if (type.includes('scheduled')) return '#3498db';
-    if (type.includes('deleted') || type.includes('removed')) return '#e74c3c';
-    if (type.includes('created') || type.includes('added')) return '#2ecc71';
-    if (type.includes('verified')) return '#9b59b6';
+    if (type.includes('published')) {return '#27ae60';}
+    if (type.includes('unpublished')) {return '#e67e22';}
+    if (type.includes('scheduled')) {return '#3498db';}
+    if (type.includes('deleted') || type.includes('removed')) {return '#e74c3c';}
+    if (type.includes('created') || type.includes('added')) {return '#2ecc71';}
+    if (type.includes('verified')) {return '#9b59b6';}
     return '#95a5a6';
   }
 
   function formatDate(timestamp: any): string {
-    if (!timestamp) return 'Unknown';
+    if (!timestamp) {return 'Unknown';}
     
     let date: Date;
     if (timestamp.toDate) {

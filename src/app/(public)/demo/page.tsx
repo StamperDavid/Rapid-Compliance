@@ -53,7 +53,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
 
   const sendMessage = async (messageText?: string) => {
     const text = messageText || input.trim();
-    if (!text || isTyping) return;
+    if (!text || isTyping) {return;}
 
     const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,

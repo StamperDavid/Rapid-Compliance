@@ -292,7 +292,7 @@ Always be helpful, professional, and focused on understanding the prospect's nee
   };
 
   const handleSendMessage = async () => {
-    if (!userInput.trim() || !baseModel) return;
+    if (!userInput.trim() || !baseModel) {return;}
     
     const userMessage = {
       id: `msg_${Date.now()}`,
@@ -365,7 +365,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
 
   const handleSubmitFeedback = async () => {
     if (!feedbackWhy.trim()) {
-      alert('Please explain WHY this response is ' + feedbackType);
+      alert(`Please explain WHY this response is ${  feedbackType}`);
       return;
     }
     
@@ -457,7 +457,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
 
   const handleUploadMaterial = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {return;}
     
     setIsUploading(true);
     
@@ -529,7 +529,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
   };
 
   const handleDeployGoldenMaster = async (gmId: string, version: number) => {
-    if (!confirm(`Deploy Golden Master v${version} to production?`)) return;
+    if (!confirm(`Deploy Golden Master v${version} to production?`)) {return;}
 
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');

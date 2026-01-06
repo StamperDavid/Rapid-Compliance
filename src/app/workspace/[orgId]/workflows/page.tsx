@@ -18,7 +18,7 @@ export default function WorkflowsPage() {
 
   // Fetch function with pagination using service layer
   const fetchWorkflows = useCallback(async (lastDoc?: any) => {
-    return await getWorkflows(
+    return getWorkflows(
       orgId,
       'default',
       undefined,
@@ -41,7 +41,7 @@ export default function WorkflowsPage() {
   }, [refresh]);
 
   const handleDelete = async (workflowId: string) => {
-    if (!confirm('Delete this workflow?')) return;
+    if (!confirm('Delete this workflow?')) {return;}
     
     try {
       await deleteWorkflow(orgId, workflowId, 'default');

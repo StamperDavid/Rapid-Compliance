@@ -58,7 +58,7 @@ export default function ProductDetailPage() {
   };
 
   const handleAddToCart = async () => {
-    if (!product) return;
+    if (!product) {return;}
     
     try {
       setAdding(true);

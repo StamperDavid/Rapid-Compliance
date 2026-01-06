@@ -44,7 +44,7 @@ export default function LeadsPage() {
       throw new Error('Failed to fetch leads');
     }
     
-    return await response.json();
+    return response.json();
   }, [orgId, filter]);
 
   const {
@@ -104,7 +104,7 @@ export default function LeadsPage() {
             ) : (
               leads.map(lead => (
                 <tr key={lead.id} className="border-t border-gray-800 hover:bg-gray-800/50">
-                  <td className="p-4 font-medium">{lead.name || lead.firstName + ' ' + lead.lastName}</td>
+                  <td className="p-4 font-medium">{lead.name || `${lead.firstName  } ${  lead.lastName}`}</td>
                   <td className="p-4 text-gray-400">{lead.company || lead.companyName}</td>
                   <td className="p-4 text-gray-400">{lead.email}</td>
                   <td className="p-4 text-gray-400">{lead.phone || 'N/A'}</td>

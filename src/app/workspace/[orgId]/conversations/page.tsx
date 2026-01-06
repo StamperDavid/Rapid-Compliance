@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import { ChatSessionService, ChatSession, ChatMessage } from '@/lib/agent/chat-session-service'
+import type { ChatSession, ChatMessage } from '@/lib/agent/chat-session-service';
+import { ChatSessionService } from '@/lib/agent/chat-session-service'
 import { logger } from '@/lib/logger/logger';;
 
 export default function ConversationsPage() {
@@ -26,7 +27,7 @@ export default function ConversationsPage() {
 
   // Subscribe to real-time active sessions
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId) {return;}
 
     setLoading(true);
     setError(null);
@@ -74,9 +75,9 @@ export default function ConversationsPage() {
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+    if (diffMins < 1) {return 'Just now';}
+    if (diffMins < 60) {return `${diffMins} min ago`;}
+    if (diffMins < 1440) {return `${Math.floor(diffMins / 60)} hours ago`;}
     return date.toLocaleDateString();
   };
 

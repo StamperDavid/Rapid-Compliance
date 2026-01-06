@@ -216,7 +216,7 @@ export default function AdminAPIKeysPageNew() {
   };
 
   const saveIntegration = async () => {
-    if (!selectedIntegration) return;
+    if (!selectedIntegration) {return;}
     
     setIsSaving(true);
     setSaveMessage(null);
@@ -248,7 +248,7 @@ export default function AdminAPIKeysPageNew() {
 
   const isIntegrationConfigured = (integrationId: string) => {
     const integrationData = keys[integrationId];
-    if (!integrationData) return false;
+    if (!integrationData) {return false;}
     
     // Check if at least one field has a value
     return Object.values(integrationData).some(value => value && value !== '');
@@ -297,7 +297,7 @@ export default function AdminAPIKeysPageNew() {
         {/* Categories */}
         {categories.map(category => {
           const categoryIntegrations = INTEGRATION_CARDS.filter(i => i.category === category.id);
-          if (categoryIntegrations.length === 0) return null;
+          if (categoryIntegrations.length === 0) {return null;}
 
           return (
             <div key={category.id} className="mb-10">

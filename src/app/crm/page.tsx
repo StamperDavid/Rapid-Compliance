@@ -52,7 +52,7 @@ function CRMContent() {
 
   // Load configuration from Firestore
   useEffect(() => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {return;}
     
     const loadConfig = async () => {
       try {
@@ -241,7 +241,7 @@ function CRMContent() {
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     setImportFile(file);
     const reader = new FileReader();
@@ -320,7 +320,7 @@ function CRMContent() {
   };
 
   const handleImportConfirm = () => {
-    if (!importFile) return;
+    if (!importFile) {return;}
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -455,10 +455,10 @@ function CRMContent() {
                   transition: 'all 0.2s'
                 }}
               onMouseEnter={(e) => {
-                if (activeView !== key) e.currentTarget.style.backgroundColor = '#111';
+                if (activeView !== key) {e.currentTarget.style.backgroundColor = '#111';}
               }}
               onMouseLeave={(e) => {
-                if (activeView !== key) e.currentTarget.style.backgroundColor = 'transparent';
+                if (activeView !== key) {e.currentTarget.style.backgroundColor = 'transparent';}
               }}
             >
               <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>

@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
-import { Page } from '@/types/website';
+import type { Page } from '@/types/website';
 
 export default function PagesManagementPage() {
   const params = useParams();
@@ -33,7 +33,7 @@ export default function PagesManagementPage() {
       
       const response = await fetch(url);
       
-      if (!response.ok) throw new Error('Failed to load pages');
+      if (!response.ok) {throw new Error('Failed to load pages');}
       
       const data = await response.json();
       setPages(data.pages || []);
@@ -46,7 +46,7 @@ export default function PagesManagementPage() {
   }
 
   async function deletePage(pageId: string) {
-    if (!confirm('Are you sure you want to delete this page?')) return;
+    if (!confirm('Are you sure you want to delete this page?')) {return;}
 
     try {
       const response = await fetch(
@@ -54,7 +54,7 @@ export default function PagesManagementPage() {
         { method: 'DELETE' }
       );
 
-      if (!response.ok) throw new Error('Failed to delete page');
+      if (!response.ok) {throw new Error('Failed to delete page');}
 
       alert('Page deleted successfully');
       loadPages();
@@ -83,7 +83,7 @@ export default function PagesManagementPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to duplicate page');
+      if (!response.ok) {throw new Error('Failed to duplicate page');}
 
       alert('Page duplicated successfully');
       loadPages();

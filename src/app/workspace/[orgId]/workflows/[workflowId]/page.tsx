@@ -47,7 +47,7 @@ export default function WorkflowEditPage() {
     }
   };
 
-  if (loading || !workflow) return <div className="p-8">Loading...</div>;
+  if (loading || !workflow) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">
