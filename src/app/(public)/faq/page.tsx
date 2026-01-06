@@ -223,7 +223,7 @@ export default function FAQPage() {
             Still have questions?
           </h2>
           <p className="text-gray-300 mb-8">
-            Our team is here to help. Reach out and we'll get back to you shortly.
+            Our team is here to help. Reach out and we&apos;ll get back to you shortly.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
