@@ -485,7 +485,7 @@ export class FeatureGate {
       const subscription = await this.getSubscription(orgId);
       
       // Check if plan allows this feature
-      const planLimits = PLAN_LIMITS[subscription.plan];
+      const planLimits = PLAN_LIMITS[subscription.plan || 'free'];
       const featureConfig = planLimits[feature];
       
       // Handle both boolean and object feature configs
@@ -498,6 +498,9 @@ export class FeatureGate {
       }
       
       // Toggle feature
+      if (!subscription.outboundFeatures) {
+        return;
+      }
       (subscription.outboundFeatures[feature] as any).enabled = enabled;
       subscription.updatedAt = new Date().toISOString();
       
@@ -527,6 +530,10 @@ export class FeatureGate {
       }
       
       // Check if already added
+      if (!subscription.addOns) {
+        subscription.addOns = [];
+      }
+      
       if (subscription.addOns.some(a => a.name === addOnConfig.name)) {
         throw new Error(`Add-on ${addOnConfig.name} already added`);
       }

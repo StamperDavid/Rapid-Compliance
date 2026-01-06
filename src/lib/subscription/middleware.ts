@@ -74,7 +74,7 @@ export async function requireLimit(
           remaining: limit.remaining,
           requested: amount,
           upgrade: true,
-          upgradeMessage: getLimitUpgradeMessage(feature, subscription.plan),
+          upgradeMessage: getLimitUpgradeMessage(feature, subscription.plan || 'free'),
           currentPlan: subscription.plan,
         },
         { status: 429 } // Too Many Requests
@@ -134,7 +134,7 @@ export async function incrementFeatureUsage(
  */
 function getFeatureKey(
   feature: 'aiEmailWriter' | 'prospectFinder' | 'linkedin' | 'sms' | 'email'
-): keyof OrganizationSubscription['outboundFeatures'] {
+): 'aiEmailWriter' | 'prospectFinder' | 'multiChannel' {
   switch (feature) {
     case 'aiEmailWriter':
       return 'aiEmailWriter';

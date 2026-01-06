@@ -125,7 +125,7 @@ export class WorkflowService {
       return null;
     }
     
-    return { id: workflowId, ...docSnap.data() } as Workflow;
+    return { ...docSnap.data(), id: workflowId } as Workflow;
   }
   
   /**

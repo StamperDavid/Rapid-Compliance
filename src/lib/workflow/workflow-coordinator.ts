@@ -647,7 +647,7 @@ export class WorkflowCoordinator {
       throw new Error(`Workflow not found: ${workflowId}`);
     }
     
-    const workflow = { id: workflowId, ...workflowSnap.data() } as Workflow;
+    const workflow = { ...workflowSnap.data(), id: workflowId } as Workflow;
     
     // Execute
     const result = await WorkflowEngine.executeWorkflow(workflow, context);

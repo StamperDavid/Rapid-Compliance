@@ -306,7 +306,7 @@ function applyChange(goldenMaster: GoldenMaster, change: ProposedChange): void {
   const pathParts = change.path.split('.');
   
   if (change.type === 'system_prompt') {
-    goldenMaster.systemPrompt = change.proposedValue;
+    goldenMaster.systemPrompt = change.proposedValue as string;
   } else if (change.type === 'behavior_config') {
     const key = pathParts[1];
     (goldenMaster.behaviorConfig as any)[key] = change.proposedValue;
