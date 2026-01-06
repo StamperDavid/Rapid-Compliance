@@ -1,5 +1,5 @@
 import type { ResearchIntelligence } from '../../../types/scraper-intelligence';
-import type { OnboardingData } from '@/types/agent-memory';
+import type { OnboardingData } from '../../../types/agent-memory';
 
 /**
  * Mutation Rule

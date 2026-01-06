@@ -28,7 +28,7 @@ import {
   getFluffRegexes,
   calculateMaxScore 
 } from '../../types/scraper-intelligence';
-import { logger } from '@/lib/logger/logger';
+import { logger } from '../logger/logger';
 import { saveTemporaryScrape } from './discovery-archive-service';
 
 // ============================================================================
