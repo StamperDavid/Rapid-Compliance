@@ -7,7 +7,6 @@
 import type { 
   GoldenMaster,
   BaseModel,
-  AgentPersona, 
   OnboardingData, 
   KnowledgeBase,
   BehaviorConfig 
@@ -85,7 +84,7 @@ export async function createGoldenMasterFromBase(
     // Metadata
     createdBy: userId,
     createdAt: new Date().toISOString(),
-    notes: notes || `Golden Master ${nextVersion} created from trained Base Model`,
+    notes: notes ?? `Golden Master ${nextVersion} created from trained Base Model`,
     
     // Versioning
     previousVersion,
@@ -134,7 +133,7 @@ export async function buildGoldenMaster(
   logger.warn('[Golden Master Builder] Use createGoldenMasterFromBase() instead.', { file: 'golden-master-builder.ts' });
   logger.warn('[Golden Master Builder] Golden Masters should only be created from trained Base Models.', { file: 'golden-master-builder.ts' });
   
-  const { onboardingData, knowledgeBase, organizationId, userId, workspaceId } = options;
+  const { onboardingData, knowledgeBase, organizationId, userId } = options;
   
   // Build persona from onboarding
   const agentPersona = buildPersonaFromOnboarding(onboardingData);
@@ -259,8 +258,8 @@ export async function getAllGoldenMasters(organizationId: string): Promise<Golde
  * Deploy Golden Master (make it active)
  */
 export async function deployGoldenMaster(organizationId: string, goldenMasterId: string): Promise<void> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  const { getDocs, collection, query, where, writeBatch, doc } = await import('firebase/firestore');
+  const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { writeBatch, doc } = await import('firebase/firestore');
   const { db } = await import('@/lib/firebase/config');
   
   if (!db) {
