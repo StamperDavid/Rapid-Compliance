@@ -52,7 +52,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
   ];
 
   const sendMessage = async (messageText?: string) => {
-    const text = messageText || input.trim();
+    const text = messageText ?? input.trim();
     if (!text || isTyping) {return;}
 
     const userMessage: ChatMessage = {
@@ -169,7 +169,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
             {suggestedQuestions.map((q, i) => (
               <button
                 key={i}
-                onClick={() => sendMessage(q)}
+                onClick={() => { void sendMessage(q); }}
                 className="px-3 py-1.5 text-xs bg-slate-700 text-gray-300 rounded-full hover:bg-slate-600 transition"
               >
                 {q}
@@ -186,13 +186,13 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            onKeyPress={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
             placeholder="Type your message..."
             className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
             disabled={isTyping}
           />
           <button
-            onClick={() => sendMessage()}
+            onClick={() => { void sendMessage(); }}
             disabled={!input.trim() || isTyping}
             className="px-4 py-3 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: primaryColor, color: '#fff' }}
