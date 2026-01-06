@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger/logger';
 export interface Embedding {
   values: number[];
   text: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface EmbeddingResult {
@@ -26,7 +26,7 @@ export async function generateEmbedding(
   try {
     // Get API key
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const geminiKey = await apiKeyService.getServiceKey(organizationId, 'gemini');
+    const geminiKey = await apiKeyService.getServiceKey(organizationId, 'gemini') as string | { apiKey: string } | null;
     
     if (!geminiKey) {
       throw new Error('Gemini API key not configured');
@@ -68,8 +68,8 @@ export async function generateEmbedding(
       return generateEmbeddingFallback(text);
     }
     
-    const data = await response.json();
-    const embedding = data.embedding?.values || [];
+    const data = await response.json() as { embedding?: { values?: number[] } };
+    const embedding = data.embedding?.values ?? [];
     
     return {
       embedding: {
@@ -78,7 +78,7 @@ export async function generateEmbedding(
       },
       model: 'text-embedding-004',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error generating embedding:', error, { file: 'embeddings-service.ts' });
     // Fallback to simple hash-based embedding for now
     return generateEmbeddingFallback(text);
@@ -92,7 +92,7 @@ export async function generateEmbedding(
 function generateEmbeddingFallback(text: string): EmbeddingResult {
   // Simple hash-based embedding (not semantic, but works for testing)
   // In production, MUST use Vertex AI Embeddings API
-  const embedding = new Array(768).fill(0);
+  const embedding: number[] = Array.from({ length: 768 }, () => 0);
   const words = text.toLowerCase().split(/\s+/);
   
   words.forEach((word, index) => {
@@ -106,7 +106,7 @@ function generateEmbeddingFallback(text: string): EmbeddingResult {
   });
   
   // Normalize
-  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + (val * val), 0));
   if (magnitude > 0) {
     for (let i = 0; i < embedding.length; i++) {
       embedding[i] /= magnitude;
@@ -142,7 +142,11 @@ export async function generateEmbeddings(
     
     // Rate limiting: wait between batches
     if (i + batchSize < texts.length) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise<void>(resolve => {
+        setTimeout(() => {
+          resolve();
+        }, 1000);
+      });
     }
   }
   
