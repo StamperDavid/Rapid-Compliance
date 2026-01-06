@@ -108,8 +108,10 @@ describe('Deal Scoring Engine', () => {
         probability: 75,
         createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), // 15 days ago (recent)
         expectedCloseDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Closing soon
-        contactName: 'John Smith', // Decision maker
-        contactTitle: 'CEO' // C-level
+        customFields: {
+          contactName: 'John Smith', // Decision maker
+          contactTitle: 'CEO' // C-level
+        }
       });
       
       const score = await calculateDealScore({
@@ -132,7 +134,9 @@ describe('Deal Scoring Engine', () => {
         probability: 20,
         createdAt: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000), // 6 months old (stale)
         expectedCloseDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Overdue
-        contactTitle: 'Coordinator' // Not decision maker
+        customFields: {
+          contactTitle: 'Coordinator' // Not decision maker
+        }
       });
       
       const score = await calculateDealScore({
@@ -169,8 +173,10 @@ describe('Deal Scoring Engine', () => {
     
     it('should detect decision maker involvement factor', async () => {
       const dealWithCEO = createMockDeal({
-        contactName: 'Jane Doe',
-        contactTitle: 'CEO'
+        customFields: {
+          contactName: 'Jane Doe',
+          contactTitle: 'CEO'
+        }
       });
       
       const scoreWithCEO = await calculateDealScore({
@@ -185,8 +191,10 @@ describe('Deal Scoring Engine', () => {
       expect(decisionMakerFactor!.score).toBeGreaterThan(70); // High score for CEO involvement
       
       const dealWithCoordinator = createMockDeal({
-        contactName: 'Bob Smith',
-        contactTitle: 'Coordinator'
+        customFields: {
+          contactName: 'Bob Smith',
+          contactTitle: 'Coordinator'
+        }
       });
       
       const scoreWithCoordinator = await calculateDealScore({
@@ -344,7 +352,9 @@ describe('Deal Scoring Engine', () => {
         value: 500000,
         stage: 'negotiation',
         probability: 80,
-        contactTitle: 'CEO'
+        customFields: {
+          contactTitle: 'CEO'
+        }
       });
       
       const hotScore = await calculateDealScore({
@@ -417,7 +427,9 @@ describe('Deal Scoring Engine', () => {
     
     it('should detect stakeholder risks when no decision maker', async () => {
       const noDecisionMakerDeal = createMockDeal({
-        contactTitle: 'Intern'
+        customFields: {
+          contactTitle: 'Intern'
+        }
       });
       
       const score = await calculateDealScore({
@@ -434,7 +446,9 @@ describe('Deal Scoring Engine', () => {
     it('should provide mitigation strategies for each risk', async () => {
       const riskyDeal = createMockDeal({
         createdAt: new Date(Date.now() - 200 * 24 * 60 * 60 * 1000),
-        contactTitle: 'Coordinator'
+        customFields: {
+          contactTitle: 'Coordinator'
+        }
       });
       
       const score = await calculateDealScore({
@@ -460,11 +474,11 @@ describe('Deal Scoring Engine', () => {
         createMockDeal({ id: 'deal-3', value: 25000 })
       ];
       
-      const result = await batchScoreDeals({
-        organizationId: TEST_ORG_ID,
-        workspaceId: TEST_WORKSPACE_ID,
-        deals
-      });
+      const result = await batchScoreDeals(
+        TEST_ORG_ID,
+        TEST_WORKSPACE_ID,
+        deals.map(d => d.id)
+      );
       
       expect(result.scores.size).toBe(3);
       expect(result.summary.totalDeals).toBe(3);
@@ -481,11 +495,11 @@ describe('Deal Scoring Engine', () => {
     });
     
     it('should handle empty batch gracefully', async () => {
-      const result = await batchScoreDeals({
-        organizationId: TEST_ORG_ID,
-        workspaceId: TEST_WORKSPACE_ID,
-        deals: []
-      });
+      const result = await batchScoreDeals(
+        TEST_ORG_ID,
+        TEST_WORKSPACE_ID,
+        []
+      );
       
       expect(result.scores.size).toBe(0);
       expect(result.summary.totalDeals).toBe(0);
@@ -502,9 +516,9 @@ describe('Deal Scoring Engine', () => {
         stage: 'proposal',
         probability: 60,
         expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        contactName: 'Jane Smith',
-        contactTitle: 'VP of Sales',
         customFields: {
+          contactName: 'Jane Smith',
+          contactTitle: 'VP of Sales',
           stated_budget: 100000,
           last_activity_date: new Date()
         }

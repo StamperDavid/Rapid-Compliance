@@ -60,9 +60,9 @@ describe('Email Writer Engine', () => {
     
     // Mock Signal Coordinator
     (getServerSignalCoordinator as jest.MockedFunction<typeof getServerSignalCoordinator>)
-      .mockResolvedValue({
+      .mockReturnValue({
         emitSignal: jest.fn().mockResolvedValue(undefined),
-      } as never);
+      } as ReturnType<typeof getServerSignalCoordinator>);
   });
   
   // ============================================================================
@@ -121,7 +121,26 @@ describe('Email Writer Engine', () => {
       strengths: [],
       weaknesses: [],
     },
-    discoveredAt: new Date(),
+    techStack: [],
+    socialProof: {
+      notableCustomers: [],
+      awards: [],
+      pressmentions: [],
+    },
+    growthSignals: {
+      isHiring: false,
+      jobCount: 0,
+      recentActivity: [],
+      expansionPlans: [],
+    },
+    metadata: {
+      scrapedAt: new Date(),
+      expiresAt: new Date(),
+      confidence: 0.8,
+      source: 'battlecard-engine',
+      lastUpdated: new Date(),
+      version: 1,
+    },
   };
   
   const mockBattlecard: Battlecard = {
@@ -261,7 +280,7 @@ IMPROVEMENTS:
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue({
           ...mockLLMResponse,
-          content: mockLLMResponse.content.replace('Quick question', 'Following up on our conversation'),
+          text: mockLLMResponse.text.replace('Quick question', 'Following up on our conversation'),
         } as never);
       
       const result = await generateSalesEmail({
@@ -282,7 +301,7 @@ IMPROVEMENTS:
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue({
           ...mockLLMResponse,
-          content: mockLLMResponse.content.replace('Quick question', 'Proposal for Acme Corp'),
+          text: mockLLMResponse.text.replace('Quick question', 'Proposal for Acme Corp'),
         } as never);
       
       const result = await generateSalesEmail({
@@ -303,7 +322,7 @@ IMPROVEMENTS:
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue({
           ...mockLLMResponse,
-          content: mockLLMResponse.content.replace('Quick question', 'Ready to move forward?'),
+          text: mockLLMResponse.text.replace('Quick question', 'Ready to move forward?'),
         } as never);
       
       const result = await generateSalesEmail({
@@ -324,7 +343,7 @@ IMPROVEMENTS:
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue({
           ...mockLLMResponse,
-          content: mockLLMResponse.content.replace('Quick question', 'Checking back in'),
+          text: mockLLMResponse.text.replace('Quick question', 'Checking back in'),
         } as never);
       
       const result = await generateSalesEmail({
@@ -701,9 +720,9 @@ IMPROVEMENTS:
     it('should emit email.generated signal', async () => {
       const mockEmitSignal = jest.fn().mockResolvedValue(undefined);
       (getServerSignalCoordinator as jest.MockedFunction<typeof getServerSignalCoordinator>)
-        .mockResolvedValue({
+        .mockReturnValue({
           emitSignal: mockEmitSignal,
-        } as never);
+        } as ReturnType<typeof getServerSignalCoordinator>);
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);
       

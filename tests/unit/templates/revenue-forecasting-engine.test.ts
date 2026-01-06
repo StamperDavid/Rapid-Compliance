@@ -36,7 +36,7 @@ jest.mock('@/lib/logger/logger', () => ({
 
 // Mock deal scoring (we're testing forecasting, not scoring)
 jest.mock('@/lib/templates/deal-scoring-engine', () => ({
-  calculateDealScore: jest.fn((options) => {
+  calculateDealScore: jest.fn((options: { dealId: string; deal?: { value?: number; expectedCloseDate?: Date } }) => {
     // Return a mock score based on deal value
     const dealValue = options.deal?.value || 0;
     const score = dealValue > 100000 ? 80 : dealValue > 50000 ? 60 : 40;
@@ -364,10 +364,10 @@ describe('Revenue Forecasting Engine', () => {
       );
       
       expect(comparison).toBeDefined();
-      expect(comparison.length).toBe(3);
+      expect(comparison.size).toBe(3);
       
-      comparison.forEach(forecast => {
-        expect(['30-day', '60-day', '90-day']).toContain(forecast.period);
+      comparison.forEach((forecast, period) => {
+        expect(['30-day', '60-day', '90-day']).toContain(period);
         expect(forecast.forecast).toBeGreaterThanOrEqual(0);
       });
     });
@@ -379,8 +379,8 @@ describe('Revenue Forecasting Engine', () => {
         ['30-day', '90-day']
       );
       
-      const thirtyDay = comparison.find(f => f.period === '30-day');
-      const ninetyDay = comparison.find(f => f.period === '90-day');
+      const thirtyDay = comparison.get('30-day');
+      const ninetyDay = comparison.get('90-day');
       
       expect(thirtyDay).toBeDefined();
       expect(ninetyDay).toBeDefined();
@@ -406,11 +406,14 @@ describe('Revenue Forecasting Engine', () => {
       
       // Each historical forecast should have required fields
       history.forEach(forecast => {
-        expect(forecast.organizationId).toBe(TEST_ORG_ID);
-        expect(forecast.workspaceId).toBe(TEST_WORKSPACE_ID);
-        expect(forecast.period).toBe('90-day');
+        expect(forecast.date).toBeInstanceOf(Date);
         expect(forecast.forecast).toBeGreaterThanOrEqual(0);
-        expect(forecast.calculatedAt).toBeInstanceOf(Date);
+        if (forecast.actual !== undefined) {
+          expect(typeof forecast.actual).toBe('number');
+        }
+        if (forecast.accuracy !== undefined) {
+          expect(typeof forecast.accuracy).toBe('number');
+        }
       });
     });
     

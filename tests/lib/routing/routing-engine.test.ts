@@ -684,7 +684,7 @@ describe('LeadRoutingEngine', () => {
         },
         specializations: {
           industries: ['Different Industry'],
-          companySizes: ['smb'],
+          companySizes: ['smb' as const],
         },
       };
 

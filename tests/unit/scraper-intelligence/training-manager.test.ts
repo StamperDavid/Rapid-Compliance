@@ -69,18 +69,18 @@ describe('Training Manager', () => {
 
     it('should submit feedback successfully', async () => {
       // Mock getTemporaryScrape
-      (getTemporaryScrape as jest.Mock).mockResolvedValue(mockScrape);
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(mockScrape);
 
       // Mock Firestore
       const mockSet = jest.fn().mockResolvedValue(undefined);
-      const mockDoc: any = { 
+      const mockDoc = { 
         id: 'feedback_123',
         set: mockSet
-      };
-      const mockCollection: any = {
+      } as { id: string; set: jest.Mock };
+      const mockCollection = {
         doc: jest.fn(() => mockDoc),
       };
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
         organizationId: 'org_123',
@@ -102,14 +102,16 @@ describe('Training Manager', () => {
     });
 
     it('should flag scrape for deletion when feedback is correct', async () => {
-      (getTemporaryScrape as jest.Mock).mockResolvedValue(mockScrape);
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(mockScrape);
 
-      const mockDoc = { id: 'feedback_123' };
+      const mockDoc = { 
+        id: 'feedback_123',
+        set: jest.fn().mockResolvedValue(undefined)
+      } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),
       };
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
-      mockDoc.set = jest.fn().mockResolvedValue(undefined);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
         organizationId: 'org_123',
@@ -126,14 +128,16 @@ describe('Training Manager', () => {
     });
 
     it('should not flag scrape for deletion when feedback is incorrect', async () => {
-      (getTemporaryScrape as jest.Mock).mockResolvedValue(mockScrape);
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(mockScrape);
 
-      const mockDoc = { id: 'feedback_123' };
+      const mockDoc = { 
+        id: 'feedback_123',
+        set: jest.fn().mockResolvedValue(undefined)
+      } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),
       };
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
-      mockDoc.set = jest.fn().mockResolvedValue(undefined);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
         organizationId: 'org_123',
@@ -150,14 +154,16 @@ describe('Training Manager', () => {
     });
 
     it('should enforce rate limiting', async () => {
-      (getTemporaryScrape as jest.Mock).mockResolvedValue(mockScrape);
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(mockScrape);
 
-      const mockDoc = { id: 'feedback_123' };
+      const mockDoc = { 
+        id: 'feedback_123',
+        set: jest.fn().mockResolvedValue(undefined)
+      } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),
       };
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
-      mockDoc.set = jest.fn().mockResolvedValue(undefined);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
         organizationId: 'org_123',
@@ -179,7 +185,7 @@ describe('Training Manager', () => {
     });
 
     it('should reject feedback for non-existent scrape', async () => {
-      (getTemporaryScrape as jest.Mock).mockResolvedValue(null);
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(null);
 
       const params = {
         organizationId: 'org_123',
@@ -195,7 +201,7 @@ describe('Training Manager', () => {
     });
 
     it('should reject feedback for scrape from different organization', async () => {
-      (getTemporaryScrape as jest.Mock).mockResolvedValue({
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue({
         ...mockScrape,
         organizationId: 'org_different',
       });
@@ -214,7 +220,7 @@ describe('Training Manager', () => {
     });
 
     it('should truncate long source text', async () => {
-      (getTemporaryScrape as jest.Mock).mockResolvedValue(mockScrape);
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(mockScrape);
 
       let savedData: any;
       const mockDoc: any = { 
@@ -227,7 +233,7 @@ describe('Training Manager', () => {
       const mockCollection: any = {
         doc: jest.fn(() => mockDoc),
       };
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const longText = 'a'.repeat(2000);
       const params = {
@@ -328,7 +334,7 @@ describe('Training Manager', () => {
 
       const mockGet = jest.fn().mockResolvedValue({
         docs: mockDocs,
-      });
+      } as unknown as { docs: Array<{ data: () => unknown }> });
 
       const mockOrderBy = jest.fn().mockReturnValue({
         get: mockGet,
@@ -345,7 +351,7 @@ describe('Training Manager', () => {
         where: mockWhere,
       };
 
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const result = await getTrainingData('org_123', 'signal_789');
 
@@ -359,7 +365,7 @@ describe('Training Manager', () => {
 
       const mockGet = jest.fn().mockResolvedValue({
         docs: mockDocs,
-      });
+      } as unknown as { docs: Array<{ data: () => unknown }> });
 
       const mockOrderBy = jest.fn().mockReturnValue({
         get: mockGet,
@@ -380,7 +386,7 @@ describe('Training Manager', () => {
         where: mockWhere,
       };
 
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       await getTrainingData('org_123', 'signal_789', true);
 
@@ -392,7 +398,7 @@ describe('Training Manager', () => {
 
       const mockGet = jest.fn().mockResolvedValue({
         docs: mockDocs,
-      });
+      } as unknown as { docs: Array<{ data: () => unknown }> });
 
       const mockOrderBy = jest.fn().mockReturnValue({
         get: mockGet,
@@ -411,7 +417,7 @@ describe('Training Manager', () => {
         where: mockWhere,
       };
 
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       await getTrainingData('org_123', 'signal_789', false);
 
@@ -471,8 +477,8 @@ describe('Training Manager', () => {
         }),
       };
 
-      (db.collection as jest.Mock).mockImplementation((name: string) => {
-        currentCollection = name;
+      (db.collection as jest.Mock).mockImplementation((name: unknown) => {
+        currentCollection = name as string;
         return mockCollection;
       });
 
@@ -494,12 +500,12 @@ describe('Training Manager', () => {
         where: jest.fn().mockReturnValue({
           get: jest.fn().mockResolvedValue({
             size: 0,
-            docs: [],
+            docs: [] as Array<{ data: () => unknown }>,
           }),
         }),
       };
 
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const result = await getTrainingAnalytics('org_123');
 
@@ -562,14 +568,16 @@ describe('Training Manager', () => {
         flaggedForDeletion: false,
       };
 
-      (getTemporaryScrape as jest.Mock).mockResolvedValue(mockScrape);
+      (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue(mockScrape);
 
-      const mockDoc = { id: 'feedback_123' };
+      const mockDoc = { 
+        id: 'feedback_123',
+        set: jest.fn().mockResolvedValue(undefined)
+      } as { id: string; set: jest.Mock };
       const mockCollection = {
         doc: jest.fn(() => mockDoc),
       };
-      (db.collection as jest.Mock).mockReturnValue(mockCollection);
-      mockDoc.set = jest.fn().mockResolvedValue(undefined);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
         organizationId: 'org_123',

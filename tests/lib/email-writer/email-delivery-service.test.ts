@@ -365,13 +365,24 @@ describe('Email Delivery Service', () => {
         { status: 'failed', uniqueOpens: 0, uniqueClicks: 0 },
       ];
       
-      mockAdminDb.collection.mockReturnValue({
-        where: jest.fn(() => ({
-          get: jest.fn(() => ({
-            docs: mockRecords.map(data => ({ data: () => data })),
+      const mockQuery: {
+        where: jest.Mock;
+        orderBy: jest.Mock;
+        get: jest.Mock;
+      } = {
+        where: jest.fn(function(this: typeof mockQuery) { return this; }),
+        orderBy: jest.fn(() => ({
+          limit: jest.fn(() => ({
+            get: jest.fn(() => ({
+              docs: [],
+            })),
           })),
         })),
-      });
+        get: jest.fn(() => ({
+          docs: mockRecords.map(data => ({ data: () => data })),
+        })),
+      };
+      mockAdminDb.collection.mockReturnValue(mockQuery as unknown as ReturnType<typeof mockAdminDb.collection>);
       
       // Act
       const { getDeliveryStatsForUser } = require('@/lib/email-writer/email-delivery-service');

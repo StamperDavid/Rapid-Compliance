@@ -27,7 +27,7 @@ describe('Scraper Intelligence Types', () => {
         scoringRules: [],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },
@@ -150,7 +150,7 @@ describe('Scraper Intelligence Types', () => {
         ],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },
@@ -194,7 +194,7 @@ describe('Scraper Intelligence Types', () => {
         scoringRules: [],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },
@@ -238,7 +238,7 @@ describe('Scraper Intelligence Types', () => {
         scoringRules: [],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },
@@ -269,7 +269,7 @@ describe('Scraper Intelligence Types', () => {
         scoringRules: [],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },
@@ -295,7 +295,7 @@ describe('Scraper Intelligence Types', () => {
         scoringRules: [],
         customFields: [],
         metadata: {
-          lastUpdated: new Date(),
+          lastUpdated: new Date().toISOString(),
           version: 1,
           updatedBy: 'system',
         },

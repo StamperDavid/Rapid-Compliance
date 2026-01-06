@@ -313,9 +313,9 @@ describe('TeamCoachingEngine', () => {
     ];
 
     beforeEach(() => {
-      // Mock generatePerformanceMetrics to return rep performance
-      mockAnalyticsEngine.generatePerformanceMetrics = jest.fn()
-        .mockImplementation(async ({ repId }) => {
+      // Mock analyzeRepPerformance to return rep performance
+      mockAnalyticsEngine.analyzeRepPerformance = jest.fn()
+        .mockImplementation(async (repId: string) => {
           return mockRepPerformance.find(r => r.repId === repId)!;
         });
     });
@@ -583,7 +583,7 @@ describe('TeamCoachingEngine', () => {
       expect(result1.generatedAt).toEqual(result2.generatedAt);
       
       // Analytics engine should only be called once per rep (first call)
-      expect(mockAnalyticsEngine.generatePerformanceMetrics).toHaveBeenCalledTimes(2);
+      expect(mockAnalyticsEngine.analyzeRepPerformance).toHaveBeenCalledTimes(2);
     });
 
     it('should clear cache correctly', async () => {
@@ -608,7 +608,7 @@ describe('TeamCoachingEngine', () => {
       );
 
       // Analytics engine should be called twice (once per call)
-      expect(mockAnalyticsEngine.generatePerformanceMetrics).toHaveBeenCalledTimes(2);
+      expect(mockAnalyticsEngine.analyzeRepPerformance).toHaveBeenCalledTimes(2);
     });
 
     it('should handle empty team correctly', async () => {
@@ -633,7 +633,7 @@ describe('TeamCoachingEngine', () => {
       const teamName = 'Large Team';
 
       // Mock performance for all reps
-      mockAnalyticsEngine.generatePerformanceMetrics = jest.fn()
+      mockAnalyticsEngine.analyzeRepPerformance = jest.fn()
         .mockResolvedValue(mockRepPerformance[0]);
 
       await teamEngine.generateTeamInsights(
@@ -642,8 +642,8 @@ describe('TeamCoachingEngine', () => {
         teamName
       );
 
-      // Should have called generatePerformanceMetrics 12 times
-      expect(mockAnalyticsEngine.generatePerformanceMetrics).toHaveBeenCalledTimes(12);
+      // Should have called analyzeRepPerformance 12 times
+      expect(mockAnalyticsEngine.analyzeRepPerformance).toHaveBeenCalledTimes(12);
     });
   });
 
@@ -655,7 +655,7 @@ describe('TeamCoachingEngine', () => {
         includeRepDetails: false
       };
 
-      mockAnalyticsEngine.generatePerformanceMetrics = jest.fn()
+      mockAnalyticsEngine.analyzeRepPerformance = jest.fn()
         .mockResolvedValue({} as any);
 
       const result = await teamEngine.generateTeamInsights(
@@ -678,7 +678,7 @@ describe('TeamCoachingEngine', () => {
         includeRepDetails: false
       };
 
-      mockAnalyticsEngine.generatePerformanceMetrics = jest.fn()
+      mockAnalyticsEngine.analyzeRepPerformance = jest.fn()
         .mockResolvedValue({} as any);
 
       const result = await teamEngine.generateTeamInsights(
@@ -701,7 +701,7 @@ describe('TeamCoachingEngine', () => {
         includeRepDetails: false
       };
 
-      mockAnalyticsEngine.generatePerformanceMetrics = jest.fn()
+      mockAnalyticsEngine.analyzeRepPerformance = jest.fn()
         .mockResolvedValue({} as any);
 
       const result = await teamEngine.generateTeamInsights(
