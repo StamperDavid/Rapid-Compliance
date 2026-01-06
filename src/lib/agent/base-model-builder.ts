@@ -1,4 +1,4 @@
-import type { BaseModel, OnboardingData, KnowledgeBase } from '@/types/agent-memory'
+import type { BaseModel, OnboardingData, KnowledgeBase, AgentPersona } from '@/types/agent-memory'
 import { logger } from '@/lib/logger/logger';
 import { MutationEngine } from '@/lib/services/mutation-engine';
 import { getIndustryTemplate } from '@/lib/persona/industry-templates';
@@ -72,14 +72,14 @@ export async function buildBaseModel(params: {
   }
 
   // Generate agent persona from onboarding data (enhanced with template if available)
-  const agentPersona = {
-    name: onboardingData.agentName || mutatedTemplate?.name || '',
-    tone: mutatedTemplate?.coreIdentity.tone || onboardingData.communicationStyle || 'professional',
-    greeting: onboardingData.greetingMessage || 'Hi! How can I help you today?',
-    closingMessage: onboardingData.closingMessage || 'Thanks for chatting! Feel free to reach out anytime.',
-    personality: onboardingData.personalityTraits || [],
-    objectives: (onboardingData as any).objectives || [],
-    escalationRules: (onboardingData as any).escalationRules || [],
+  const agentPersona: AgentPersona = {
+    name: onboardingData.agentName ?? mutatedTemplate?.name ?? '',
+    tone: mutatedTemplate?.coreIdentity.tone ?? onboardingData.communicationStyle ?? 'professional',
+    greeting: onboardingData.greetingMessage ?? 'Hi! How can I help you today?',
+    closingMessage: onboardingData.closingMessage ?? 'Thanks for chatting! Feel free to reach out anytime.',
+    personalityTraits: onboardingData.personalityTraits ?? [],
+    objectives: [],
+    escalationRules: onboardingData.escalationRules ?? [],
     
     // NEW: Include template-derived fields
     ...(mutatedTemplate && {
@@ -93,13 +93,13 @@ export async function buildBaseModel(params: {
 
   // Build behavior configuration
   const behaviorConfig = {
-    closingAggressiveness: onboardingData.closingStyle || 5,
-    questionFrequency: onboardingData.discoveryDepth || 3,
-    responseLength: onboardingData.responseLength || 'balanced',
-    proactiveLevel: onboardingData.proactivityLevel || 5,
-    discountAuthorization: onboardingData.maxDiscount || 0,
-    escalationTriggers: onboardingData.escalationRules || [],
-    idleTimeoutMinutes: onboardingData.idleTimeoutMinutes || 30,
+    closingAggressiveness: onboardingData.closingStyle ?? 5,
+    questionFrequency: onboardingData.discoveryDepth ?? 3,
+    responseLength: onboardingData.responseLength ?? 'balanced',
+    proactiveLevel: onboardingData.proactivityLevel ?? 5,
+    discountAuthorization: onboardingData.maxDiscount ?? 0,
+    escalationTriggers: onboardingData.escalationRules ?? [],
+    idleTimeoutMinutes: onboardingData.idleTimeoutMinutes ?? 30,
   };
 
   // Build system prompt (enhanced with template if available)
@@ -239,9 +239,9 @@ export async function updateBaseModel(
     }
     
     updates.systemPrompt = buildSystemPrompt({
-      businessContext: updates.businessContext || current.businessContext,
-      agentPersona: updates.agentPersona || current.agentPersona,
-      behaviorConfig: updates.behaviorConfig || current.behaviorConfig,
+      businessContext: updates.businessContext ?? current.businessContext,
+      agentPersona: updates.agentPersona ?? current.agentPersona,
+      behaviorConfig: updates.behaviorConfig ?? current.behaviorConfig,
     });
   }
   
@@ -278,16 +278,16 @@ export async function addTrainingScenario(
   if (isServer) {
     // Server-side: Use Admin SDK
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-    const current = await AdminFirestoreService.get('baseModels', baseModelId);
+    const current = await AdminFirestoreService.get('baseModels', baseModelId) as BaseModel | null;
     
     if (!current) {
       throw new Error('Base model not found');
     }
     
-    const scenarios = [...(current.trainingScenarios || []), scenarioId];
+    const scenarios = [...(current.trainingScenarios ?? []), scenarioId];
     
     // Calculate new average training score
-    const totalScore = (current.trainingScore || 0) * (current.trainingScenarios?.length || 0) + score;
+    const totalScore = (current.trainingScore ?? 0) * (current.trainingScenarios?.length ?? 0) + score;
     const newScore = totalScore / scenarios.length;
     
     await AdminFirestoreService.update('baseModels', baseModelId, {
@@ -331,8 +331,16 @@ export async function addTrainingScenario(
  */
 function buildSystemPrompt(params: {
   businessContext: OnboardingData;
-  agentPersona: any;
-  behaviorConfig: any;
+  agentPersona: AgentPersona;
+  behaviorConfig: {
+    closingAggressiveness: number;
+    questionFrequency: number;
+    responseLength: string;
+    proactiveLevel: number;
+    discountAuthorization: number;
+    escalationTriggers: string[];
+    idleTimeoutMinutes: number;
+  };
   template?: IndustryTemplate | null; // NEW: Optional template for enhancement
 }): string {
   const { businessContext, agentPersona, behaviorConfig, template } = params;
@@ -340,14 +348,14 @@ function buildSystemPrompt(params: {
   const sections: string[] = [];
 
   // Role & Identity
-  sections.push(`You are ${agentPersona.name || 'an AI sales assistant'} for ${businessContext.businessName}.`);
+  sections.push(`You are ${agentPersona.name ?? 'an AI sales assistant'} for ${businessContext.businessName}.`);
   sections.push(`Your role is to help potential customers understand our offerings and guide them toward a purchase decision.`);
   sections.push('');
 
   // Business Context
   sections.push('## About Our Business');
   sections.push(`Industry: ${businessContext.industry}`);
-  sections.push(`Website: ${businessContext.website || 'N/A'}`);
+  sections.push(`Website: ${businessContext.website ?? 'N/A'}`);
   sections.push('');
   sections.push(`Problem We Solve: ${businessContext.problemSolved}`);
   sections.push(`Our Unique Value: ${businessContext.uniqueValue}`);
@@ -369,7 +377,7 @@ function buildSystemPrompt(params: {
 
   // Pricing
   sections.push('## Pricing');
-  sections.push(`Price Range: ${businessContext.priceRange || 'Contact for pricing'}`);
+  sections.push(`Price Range: ${businessContext.priceRange ?? 'Contact for pricing'}`);
   if (businessContext.discountPolicy) {
     sections.push(`Discount Policy: ${businessContext.discountPolicy}`);
   }
@@ -421,7 +429,7 @@ function buildSystemPrompt(params: {
   // Behavioral Instructions
   sections.push('## Your Behavior & Style');
   sections.push(`Tone: ${agentPersona.tone}`);
-  sections.push(`Response Length: ${behaviorConfig.responseLength}`);
+  sections.push(`Response Length: ${String(behaviorConfig.responseLength)}`);
   sections.push(`Closing Aggressiveness: ${behaviorConfig.closingAggressiveness}/10`);
   sections.push(`Discovery Questions Before Recommendation: ${behaviorConfig.questionFrequency}`);
   sections.push(`Proactive Level: ${behaviorConfig.proactiveLevel}/10`);
