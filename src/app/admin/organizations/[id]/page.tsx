@@ -48,7 +48,7 @@ export default function OrganizationDetailPage() {
         setLoading(true);
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId) as Organization | null;
+        const org = await FirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, orgId);
         
         // Ensure organization has required nested objects with defaults
         if (org) {
