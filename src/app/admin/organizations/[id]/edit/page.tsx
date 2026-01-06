@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS = {
 export default function EditOrganizationPage() {
   const params = useParams();
   const router = useRouter();
-  const { adminUser, hasPermission } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,7 +48,7 @@ export default function EditOrganizationPage() {
     async function loadOrganization() {
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId) as Organization | null;
+        const org = await FirestoreService.get<Organization>(COLLECTIONS.ORGANIZATIONS, orgId);
         
         if (org) {
           // Ensure settings has defaults
@@ -74,10 +74,10 @@ export default function EditOrganizationPage() {
       }
     }
     
-    loadOrganization();
+    void loadOrganization();
   }, [orgId, hasPermission, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaving(true);
 
@@ -105,6 +105,7 @@ export default function EditOrganizationPage() {
     } catch (error) {
       logger.error('Failed to save organization:', error, { file: 'page.tsx' });
       setSaving(false);
+      // eslint-disable-next-line no-alert
       alert('Failed to save organization. Please try again.');
     }
   };
@@ -130,8 +131,8 @@ export default function EditOrganizationPage() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>
             Organization Not Found
           </h2>
-          <p style={{ color: '#666', marginBottom: '2rem' }}>
-            The organization you're looking for doesn't exist.
+            <p style={{ color: '#666', marginBottom: '2rem' }}>
+            The organization you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link
             href="/admin/organizations"
@@ -234,7 +235,7 @@ export default function EditOrganizationPage() {
               <FormSelect
                 label="Plan"
                 value={formData.plan}
-                onChange={(value) => setFormData({ ...formData, plan: value as any })}
+                onChange={(value) => setFormData({ ...formData, plan: value as 'free' | 'pro' | 'enterprise' })}
                 options={[
                   { value: 'free', label: 'Free' },
                   { value: 'pro', label: 'Pro ($99/month)' },
@@ -245,7 +246,7 @@ export default function EditOrganizationPage() {
               <FormSelect
                 label="Status"
                 value={formData.status}
-                onChange={(value) => setFormData({ ...formData, status: value as any })}
+                onChange={(value) => setFormData({ ...formData, status: value as 'active' | 'trial' | 'suspended' })}
                 options={[
                   { value: 'active', label: 'Active' },
                   { value: 'trial', label: 'Trial' },
@@ -288,7 +289,7 @@ export default function EditOrganizationPage() {
               <FormSelect
                 label="Time Format"
                 value={formData.timeFormat}
-                onChange={(value) => setFormData({ ...formData, timeFormat: value as any })}
+                onChange={(value) => setFormData({ ...formData, timeFormat: value as '12h' | '24h' })}
                 options={[
                   { value: '12h', label: '12-hour' },
                   { value: '24h', label: '24-hour' },
