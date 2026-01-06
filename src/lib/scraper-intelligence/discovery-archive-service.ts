@@ -18,10 +18,10 @@
  * - 30-day cache reduces token costs and builds competitive moat
  */
 
-import { db } from '@/lib/firebase-admin';
-import { logger } from '@/lib/logger/logger';
+import { db } from '../firebase-admin';
+import { logger } from '../logger/logger';
 import crypto from 'crypto';
-import type { TemporaryScrape, ExtractedSignal } from '@/types/scraper-intelligence';
+import type { TemporaryScrape, ExtractedSignal } from '../../types/scraper-intelligence';
 
 // ============================================================================
 // CONSTANTS

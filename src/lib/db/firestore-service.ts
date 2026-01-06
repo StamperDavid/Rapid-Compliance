@@ -25,8 +25,8 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config'
-import { logger } from '@/lib/logger/logger';;
+import { db } from '../firebase/config'
+import { logger } from '../logger/logger';;
 
 // Helper to check if Firestore is available
 function ensureFirestore() {

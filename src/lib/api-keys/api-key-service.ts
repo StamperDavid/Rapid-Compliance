@@ -3,7 +3,7 @@
  * Centralized service for managing and accessing API keys
  */
 
-import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '@/types/api-keys'
+import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '../../types/api-keys'
 import { logger } from '../logger/logger';;
 
 class APIKeyService {
