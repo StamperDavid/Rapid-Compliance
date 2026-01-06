@@ -121,7 +121,7 @@ export async function scheduleMeeting(
 
         logger.info('Zoom meeting created for scheduled meeting', { meetingId, zoomMeetingId: zoomMeeting.id });
       } catch (zoomError) {
-        logger.warn('Failed to create Zoom meeting, continuing without it', zoomError);
+        logger.warn('Failed to create Zoom meeting, continuing without it', zoomError as unknown);
       }
     }
 

@@ -132,7 +132,6 @@ export function withSentryMonitoring<T = any>(
           handler: operation,
         },
         extra: {
-          url: request.url,
           duration: Date.now() - startTime,
           ...getRequestMetadata(request),
         },

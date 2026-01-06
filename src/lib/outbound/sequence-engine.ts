@@ -375,7 +375,7 @@ export class SequenceEngine {
     await sendLinkedInMessage(
       linkedInToken,
       prospect.linkedInUrl || prospect.email,
-      step.content,
+      step.content || '',
       organizationId
     );
     
@@ -408,7 +408,7 @@ export class SequenceEngine {
     
     const result = await sendSMS({
       to: prospect.phone,
-      message: step.content,
+      message: step.content || '',
       organizationId,
     });
     
@@ -744,29 +744,31 @@ export class SequenceEngine {
     if (!sequence) {return;}
 
     // Increment analytics
-    Object.keys(updates).forEach((key) => {
-      const value = updates[key as keyof typeof updates];
-      if (typeof value === 'number') {
-        (sequence.analytics as any)[key] = ((sequence.analytics as any)[key] || 0) + value;
-      }
-    });
+    if (updates && sequence.analytics) {
+      Object.keys(updates).forEach((key) => {
+        const value = updates[key as keyof typeof updates];
+        if (typeof value === 'number' && sequence.analytics) {
+          (sequence.analytics as any)[key] = ((sequence.analytics as any)[key] || 0) + value;
+        }
+      });
 
-    // Recalculate rates
-    sequence.analytics.deliveryRate = sequence.analytics.totalSent > 0
-      ? (sequence.analytics.totalDelivered / sequence.analytics.totalSent) * 100
-      : 0;
+      // Recalculate rates
+      sequence.analytics.deliveryRate = sequence.analytics.totalSent > 0
+        ? (sequence.analytics.totalDelivered / sequence.analytics.totalSent) * 100
+        : 0;
 
-    sequence.analytics.openRate = sequence.analytics.totalDelivered > 0
-      ? (sequence.analytics.totalOpened / sequence.analytics.totalDelivered) * 100
-      : 0;
+      sequence.analytics.openRate = sequence.analytics.totalDelivered > 0
+        ? (sequence.analytics.totalOpened / sequence.analytics.totalDelivered) * 100
+        : 0;
 
-    sequence.analytics.clickRate = sequence.analytics.totalDelivered > 0
-      ? (sequence.analytics.totalClicked / sequence.analytics.totalDelivered) * 100
-      : 0;
+      sequence.analytics.clickRate = sequence.analytics.totalDelivered > 0
+        ? (sequence.analytics.totalClicked / sequence.analytics.totalDelivered) * 100
+        : 0;
 
-    sequence.analytics.replyRate = sequence.analytics.totalDelivered > 0
-      ? (sequence.analytics.totalReplied / sequence.analytics.totalDelivered) * 100
-      : 0;
+      sequence.analytics.replyRate = sequence.analytics.totalDelivered > 0
+        ? (sequence.analytics.totalReplied / sequence.analytics.totalDelivered) * 100
+        : 0;
+    }
 
     sequence.analytics.conversionRate = sequence.analytics.totalEnrolled > 0
       ? (sequence.analytics.meetingsBooked / sequence.analytics.totalEnrolled) * 100
