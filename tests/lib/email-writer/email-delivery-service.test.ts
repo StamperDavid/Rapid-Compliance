@@ -4,7 +4,19 @@
  * Tests for SendGrid email delivery, tracking, and Signal Bus integration
  */
 
-import type { EmailDeliveryOptions, EmailDeliveryResult, EmailDeliveryRecord } from '@/lib/email-writer/email-delivery-service';
+import {
+  sendEmail,
+  updateDeliveryStatus,
+  incrementOpenCount,
+  incrementClickCount,
+  getDeliveryStatsForUser,
+  type EmailDeliveryOptions,
+  type EmailDeliveryResult,
+  type EmailDeliveryRecord,
+} from '@/lib/email-writer/email-delivery-service';
+import sgMail from '@sendgrid/mail';
+import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { adminDb } from '@/lib/firebase/admin';
 
 // Mock dependencies
 jest.mock('@sendgrid/mail');
@@ -70,9 +82,9 @@ describe('Email Delivery Service', () => {
   
   beforeAll(() => {
     // Set up mocks
-    require('@sendgrid/mail').default = mockSgMail;
-    require('@/lib/orchestration/coordinator-factory-server').getServerSignalCoordinator = jest.fn(() => mockCoordinator);
-    require('@/lib/firebase/admin').adminDb = mockAdminDb;
+    Object.assign(sgMail, mockSgMail);
+    jest.mocked(getServerSignalCoordinator).mockReturnValue(mockCoordinator as ReturnType<typeof getServerSignalCoordinator>);
+    Object.assign(adminDb, mockAdminDb);
     
     // Set required environment variables
     process.env.SENDGRID_API_KEY = 'test-api-key';
@@ -109,7 +121,6 @@ describe('Email Delivery Service', () => {
       }]);
       
       // Act
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
       const result: EmailDeliveryResult = await sendEmail(options);
       
       // Assert
@@ -149,7 +160,6 @@ describe('Email Delivery Service', () => {
       mockSgMail.send.mockRejectedValue(new Error('SendGrid API error'));
       
       // Act
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
       const result: EmailDeliveryResult = await sendEmail(options);
       
       // Assert
@@ -178,7 +188,6 @@ describe('Email Delivery Service', () => {
       }]);
       
       // Act
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
       await sendEmail(options);
       
       // Assert
@@ -218,7 +227,6 @@ describe('Email Delivery Service', () => {
       }]);
       
       // Act
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
       await sendEmail(options);
       
       // Assert
@@ -255,7 +263,6 @@ describe('Email Delivery Service', () => {
       }]);
       
       // Act
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
       await sendEmail(options);
       
       // Assert
@@ -288,7 +295,6 @@ describe('Email Delivery Service', () => {
       mockSgMail.send.mockRejectedValue(new Error('API error'));
       
       // Act
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
       await sendEmail(options);
       
       // Assert
@@ -309,7 +315,6 @@ describe('Email Delivery Service', () => {
   describe('updateDeliveryStatus', () => {
     it('should update delivery status', async () => {
       // Act
-      const { updateDeliveryStatus } = require('@/lib/email-writer/email-delivery-service');
       await updateDeliveryStatus('org_123', 'delivery_123', 'delivered', {
         deliveredAt: new Date('2026-01-02T12:00:00Z'),
       });
@@ -322,7 +327,6 @@ describe('Email Delivery Service', () => {
   describe('incrementOpenCount', () => {
     it('should increment open count and emit signal', async () => {
       // Act
-      const { incrementOpenCount } = require('@/lib/email-writer/email-delivery-service');
       await incrementOpenCount('org_123', 'delivery_123');
       
       // Assert
@@ -339,7 +343,6 @@ describe('Email Delivery Service', () => {
   describe('incrementClickCount', () => {
     it('should increment click count and emit signal', async () => {
       // Act
-      const { incrementClickCount } = require('@/lib/email-writer/email-delivery-service');
       await incrementClickCount('org_123', 'delivery_123');
       
       // Assert
@@ -385,7 +388,6 @@ describe('Email Delivery Service', () => {
       mockAdminDb.collection.mockReturnValue(mockQuery as unknown as ReturnType<typeof mockAdminDb.collection>);
       
       // Act
-      const { getDeliveryStatsForUser } = require('@/lib/email-writer/email-delivery-service');
       const stats = await getDeliveryStatsForUser('org_123', 'user_123');
       
       // Assert
@@ -404,53 +406,75 @@ describe('Email Delivery Service', () => {
     it('should throw error if SENDGRID_API_KEY is missing', async () => {
       // Arrange
       const originalKey = process.env.SENDGRID_API_KEY;
-      delete process.env.SENDGRID_API_KEY;
+      const originalEmail = process.env.FROM_EMAIL;
+      const originalName = process.env.FROM_NAME;
       
-      const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
-        workspaceId: 'workspace_123',
-        userId: 'user_123',
-        to: 'recipient@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-        text: 'Test',
-      };
-      
-      // Act & Assert
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
-      const result = await sendEmail(options);
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-      
-      // Restore
-      process.env.SENDGRID_API_KEY = originalKey;
+      try {
+        // Temporarily unset required env vars
+        process.env.SENDGRID_API_KEY = '';
+        process.env.FROM_EMAIL = originalEmail ?? '';
+        process.env.FROM_NAME = originalName ?? '';
+        
+        const options: EmailDeliveryOptions = {
+          organizationId: 'org_123',
+          workspaceId: 'workspace_123',
+          userId: 'user_123',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          html: '<p>Test</p>',
+          text: 'Test',
+        };
+        
+        // Act & Assert
+        const result = await sendEmail(options);
+        
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
+      } finally {
+        // Restore
+        if (originalKey !== undefined) {
+          process.env.SENDGRID_API_KEY = originalKey;
+        } else {
+          delete process.env.SENDGRID_API_KEY;
+        }
+      }
     });
     
     it('should throw error if FROM_EMAIL is missing', async () => {
       // Arrange
+      const originalKey = process.env.SENDGRID_API_KEY;
       const originalEmail = process.env.FROM_EMAIL;
-      delete process.env.FROM_EMAIL;
+      const originalName = process.env.FROM_NAME;
       
-      const options: EmailDeliveryOptions = {
-        organizationId: 'org_123',
-        workspaceId: 'workspace_123',
-        userId: 'user_123',
-        to: 'recipient@example.com',
-        subject: 'Test',
-        html: '<p>Test</p>',
-        text: 'Test',
-      };
-      
-      // Act & Assert
-      const { sendEmail } = require('@/lib/email-writer/email-delivery-service');
-      const result = await sendEmail(options);
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
-      
-      // Restore
-      process.env.FROM_EMAIL = originalEmail;
+      try {
+        // Temporarily unset required env vars
+        process.env.SENDGRID_API_KEY = originalKey ?? '';
+        process.env.FROM_EMAIL = '';
+        process.env.FROM_NAME = originalName ?? '';
+        
+        const options: EmailDeliveryOptions = {
+          organizationId: 'org_123',
+          workspaceId: 'workspace_123',
+          userId: 'user_123',
+          to: 'recipient@example.com',
+          subject: 'Test',
+          html: '<p>Test</p>',
+          text: 'Test',
+        };
+        
+        // Act & Assert
+        const result = await sendEmail(options);
+        
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
+      } finally {
+        // Restore
+        if (originalEmail !== undefined) {
+          process.env.FROM_EMAIL = originalEmail;
+        } else {
+          delete process.env.FROM_EMAIL;
+        }
+      }
     });
   });
 });
