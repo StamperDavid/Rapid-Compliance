@@ -485,7 +485,8 @@ export class FeatureGate {
       const subscription = await this.getSubscription(orgId);
       
       // Check if plan allows this feature
-      const planLimits = PLAN_LIMITS[subscription.plan || 'free'];
+      const plan = (subscription.plan || 'free') as SubscriptionPlan;
+      const planLimits = PLAN_LIMITS[plan];
       const featureConfig = planLimits[feature];
       
       // Handle both boolean and object feature configs

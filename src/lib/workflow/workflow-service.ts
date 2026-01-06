@@ -300,7 +300,7 @@ export class WorkflowService {
       return null;
     }
     
-    return { id: executionId, ...docSnap.data() } as WorkflowExecution;
+    return { ...docSnap.data(), id: executionId } as WorkflowExecution;
   }
   
   /**

@@ -585,16 +585,18 @@ export class WorkflowCoordinator {
         lastExecutedAt: Timestamp.now(),
       };
       
+      const statsRecord = stats as Record<string, unknown>;
+      
       if (result.success) {
-        stats['lastSuccessAt'] = Timestamp.now();
+        statsRecord['lastSuccessAt'] = Timestamp.now();
       } else {
-        stats['lastFailureAt'] = Timestamp.now();
+        statsRecord['lastFailureAt'] = Timestamp.now();
       }
       
       // Update average execution time
       const totalTime = workflow.stats.averageExecutionTimeMs * workflow.stats.totalExecutions;
       const newAverage = (totalTime + (result.durationMs || 0)) / (workflow.stats.totalExecutions + 1);
-      stats['averageExecutionTimeMs'] = Math.round(newAverage);
+      statsRecord['averageExecutionTimeMs'] = Math.round(newAverage);
       
       // Update workflow in Firestore
       const workflowsPath = `${this.dal.getColPath('organizations')}/${workflow.organizationId}/${this.dal.getSubColPath('workflows')}`;
