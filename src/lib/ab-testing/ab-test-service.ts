@@ -4,7 +4,7 @@
  */
 
 import { cacheService, CacheTTL } from '../cache/redis-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface ABTest {
   id: string;
@@ -27,7 +27,7 @@ export interface ABVariant {
   name: string;
   description?: string;
   trafficWeight: number; // Percentage of test traffic (must sum to 100)
-  config: Record<string, any>; // Variant-specific configuration
+  config: Record<string, unknown>; // Variant-specific configuration
   metrics: ABMetrics;
 }
 
@@ -89,7 +89,7 @@ export async function getVariantForUser(
   
   if (cached) {
     const test = await getABTest(testId);
-    return test?.variants.find(v => v.id === cached) || null;
+    return test?.variants.find(v => v.id === cached) ?? null;
   }
   
   // Get test
@@ -172,7 +172,7 @@ export async function trackConversion(
   variant.metrics.conversions++;
   
   if (revenue) {
-    variant.metrics.revenue = (variant.metrics.revenue || 0) + revenue;
+    variant.metrics.revenue = (variant.metrics.revenue ?? 0) + revenue;
   }
   
   variant.metrics.conversionRate = calculateConversionRate(variant.metrics);
@@ -237,19 +237,22 @@ async function checkForWinner(test: ABTest): Promise<void> {
   if (winner && confidence >= 95) {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
-    test.status = 'completed';
-    test.winner = winner.id;
-    test.confidence = confidence;
-    test.endDate = new Date().toISOString();
+    const updatedTest: ABTest = {
+      ...test,
+      status: 'completed',
+      winner: winner.id,
+      confidence,
+      endDate: new Date().toISOString(),
+    };
     
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/*/abTests`,
       test.id,
-      test,
+      updatedTest,
       true
     );
     
-    logger.info('A/B Test Winner declared for test.name}: winner.name} (confidence.toFixed(1)}% confidence)', { file: 'ab-test-service.ts' });
+    logger.info(`A/B Test Winner declared for ${test.name}: ${winner.name} (${confidence.toFixed(1)}% confidence)`, { file: 'ab-test-service.ts' });
   }
 }
 
@@ -356,10 +359,11 @@ function generateInsights(variants: ABVariant[]): string[] {
 
 async function getABTest(testId: string): Promise<ABTest | null> {
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  return FirestoreService.get<ABTest>(
+  const result = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/*/abTests`,
     testId
   );
+  return result as ABTest | null;
 }
 
 async function saveAssignment(assignment: ABAssignment): Promise<void> {
