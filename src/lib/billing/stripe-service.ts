@@ -370,7 +370,7 @@ export async function handleWebhook(
 
   switch (event.type) {
     case 'customer.subscription.created':
-    case 'customer.subscription.updated':
+    case 'customer.subscription.updated': {
       const subscription = event.data.object;
       const orgId = subscription.metadata?.organizationId;
       
@@ -383,8 +383,9 @@ export async function handleWebhook(
         });
       }
       break;
+    }
 
-    case 'customer.subscription.deleted':
+    case 'customer.subscription.deleted': {
       const deletedSubscription = event.data.object;
       const deletedOrgId = deletedSubscription.metadata?.organizationId;
       
@@ -394,8 +395,9 @@ export async function handleWebhook(
         });
       }
       break;
+    }
 
-    case 'invoice.payment_succeeded':
+    case 'invoice.payment_succeeded': {
       const invoice = event.data.object;
       const invoiceOrgId = invoice.metadata?.organizationId;
       
@@ -404,8 +406,9 @@ export async function handleWebhook(
         // Implementation depends on your billing history structure
       }
       break;
+    }
 
-    case 'invoice.payment_failed':
+    case 'invoice.payment_failed': {
       const failedInvoice = event.data.object;
       const failedOrgId = failedInvoice.metadata?.organizationId;
       
@@ -416,6 +419,7 @@ export async function handleWebhook(
         });
       }
       break;
+    }
   }
 }
 
