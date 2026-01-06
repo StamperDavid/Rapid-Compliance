@@ -54,7 +54,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
 
   const addCustomField = () => {
     const key = prompt('Field key (e.g., company_size):');
-    if (!key) return;
+    if (!key) {return;}
 
     const newField = {
       key,

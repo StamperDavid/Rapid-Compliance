@@ -53,17 +53,17 @@ export function DevelopmentPlanCard({
 
   // Get priority color
   const getPriorityColor = (importance: number) => {
-    if (importance >= 90) return 'bg-red-500';
-    if (importance >= 80) return 'bg-orange-500';
-    if (importance >= 70) return 'bg-yellow-500';
+    if (importance >= 90) {return 'bg-red-500';}
+    if (importance >= 80) {return 'bg-orange-500';}
+    if (importance >= 70) {return 'bg-yellow-500';}
     return 'bg-blue-500';
   };
 
   // Get priority badge
   const getPriorityBadge = (importance: number) => {
-    if (importance >= 90) return { label: 'Critical', color: 'bg-red-100 text-red-800 border-red-200' };
-    if (importance >= 80) return { label: 'High', color: 'bg-orange-100 text-orange-800 border-orange-200' };
-    if (importance >= 70) return { label: 'Medium', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+    if (importance >= 90) {return { label: 'Critical', color: 'bg-red-100 text-red-800 border-red-200' };}
+    if (importance >= 80) {return { label: 'High', color: 'bg-orange-100 text-orange-800 border-orange-200' };}
+    if (importance >= 70) {return { label: 'Medium', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };}
     return { label: 'Low', color: 'bg-blue-100 text-blue-800 border-blue-200' };
   };
 

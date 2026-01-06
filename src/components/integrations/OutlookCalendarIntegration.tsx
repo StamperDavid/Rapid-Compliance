@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { OutlookCalendarIntegration as OutlookCalendarType } from '@/types/integrations';
+import type { OutlookCalendarIntegration as OutlookCalendarType } from '@/types/integrations';
 
 interface OutlookCalendarIntegrationProps {
   integration: OutlookCalendarType | null;
@@ -47,7 +47,7 @@ export default function OutlookCalendarIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

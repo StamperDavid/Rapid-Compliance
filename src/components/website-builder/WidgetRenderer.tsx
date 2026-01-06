@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Widget, WidgetStyle, Spacing } from '@/types/website';
+import type { Widget, WidgetStyle, Spacing } from '@/types/website';
 
 interface WidgetRendererProps {
   widget: Widget;
@@ -526,7 +526,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
 
 // Helper functions
 function convertWidgetStyleToCSS(widgetStyle?: WidgetStyle): React.CSSProperties {
-  if (!widgetStyle) return {};
+  if (!widgetStyle) {return {};}
 
   return {
     padding: widgetStyle.padding ? convertSpacingToCSS(widgetStyle.padding) : undefined,
@@ -571,7 +571,7 @@ function convertSpacingToCSS(spacing: Spacing): string {
 }
 
 function getVideoEmbedUrl(url: string, provider: string): string {
-  if (!url) return '';
+  if (!url) {return '';}
   
   if (provider === 'youtube') {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];

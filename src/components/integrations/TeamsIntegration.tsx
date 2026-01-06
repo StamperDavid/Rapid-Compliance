@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TeamsIntegration as TeamsType } from '@/types/integrations';
+import type { TeamsIntegration as TeamsType } from '@/types/integrations';
 
 interface TeamsIntegrationProps {
   integration: TeamsType | null;
@@ -68,7 +68,7 @@ export default function TeamsIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

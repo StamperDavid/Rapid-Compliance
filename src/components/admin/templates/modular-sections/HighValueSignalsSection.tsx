@@ -25,7 +25,7 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
 
   const addSignal = () => {
     const id = prompt('Signal ID (e.g., hiring_staff):');
-    if (!id) return;
+    if (!id) {return;}
 
     const newSignal = {
       id,

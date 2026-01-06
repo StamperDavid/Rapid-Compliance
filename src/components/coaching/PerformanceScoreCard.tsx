@@ -47,19 +47,19 @@ export function PerformanceScoreCard({ performance, loading = false }: Performan
 
   // Get score color
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-blue-600';
-    if (score >= 40) return 'text-yellow-600';
-    if (score >= 20) return 'text-orange-600';
+    if (score >= 80) {return 'text-green-600';}
+    if (score >= 60) {return 'text-blue-600';}
+    if (score >= 40) {return 'text-yellow-600';}
+    if (score >= 20) {return 'text-orange-600';}
     return 'text-red-600';
   };
 
   // Get score background
   const getScoreBackground = (score: number) => {
-    if (score >= 80) return 'bg-green-50';
-    if (score >= 60) return 'bg-blue-50';
-    if (score >= 40) return 'bg-yellow-50';
-    if (score >= 20) return 'bg-orange-50';
+    if (score >= 80) {return 'bg-green-50';}
+    if (score >= 60) {return 'bg-blue-50';}
+    if (score >= 40) {return 'bg-yellow-50';}
+    if (score >= 20) {return 'bg-orange-50';}
     return 'bg-red-50';
   };
 

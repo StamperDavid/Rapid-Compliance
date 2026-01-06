@@ -177,7 +177,7 @@ function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps)
   const isUnread = !notification.metadata.read;
   const content = notification.content.inApp;
 
-  if (!content) return null;
+  if (!content) {return null;}
 
   const priorityColors = {
     critical: 'bg-red-50 border-red-200',
@@ -253,7 +253,7 @@ function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps)
 }
 
 function formatTimestamp(timestamp: any): string {
-  if (!timestamp) return '';
+  if (!timestamp) {return '';}
   
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   const now = new Date();
@@ -263,10 +263,10 @@ function formatTimestamp(timestamp: any): string {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
+  if (minutes < 1) {return 'Just now';}
+  if (minutes < 60) {return `${minutes}m ago`;}
+  if (hours < 24) {return `${hours}h ago`;}
+  if (days < 7) {return `${days}d ago`;}
   
   return date.toLocaleDateString();
 }

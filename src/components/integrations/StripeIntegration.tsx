@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { StripeIntegration as StripeType } from '@/types/integrations';
+import type { StripeIntegration as StripeType } from '@/types/integrations';
 
 interface StripeIntegrationProps {
   integration: StripeType | null;
@@ -52,7 +52,7 @@ export default function StripeIntegration({
         }),
       });
       
-      if (!response.ok) throw new Error('Failed to save Stripe API key');
+      if (!response.ok) {throw new Error('Failed to save Stripe API key');}
       
       onConnect({
         id: 'stripe',
@@ -62,7 +62,7 @@ export default function StripeIntegration({
         category: 'payment',
         status: 'active',
         organizationId: orgId,
-        apiKey: apiKey.substring(0, 10) + '...', // Show partial key
+        apiKey: `${apiKey.substring(0, 10)  }...`, // Show partial key
         settings: {
           autoCreateCustomers: true,
           autoCreateInvoices: true,
@@ -78,7 +78,7 @@ export default function StripeIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

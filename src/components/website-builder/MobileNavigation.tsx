@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { NavItem } from '@/types/website';
+import type { NavItem } from '@/types/website';
 
 interface MobileNavigationProps {
   items: NavItem[];

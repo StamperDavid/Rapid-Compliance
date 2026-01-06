@@ -81,7 +81,7 @@ export function useAdminAuth() {
   }, []);
 
   const hasPermission = (permission: keyof AdminPermissions): boolean => {
-    if (!adminUser) return false;
+    if (!adminUser) {return false;}
     return adminUser.permissions[permission];
   };
 

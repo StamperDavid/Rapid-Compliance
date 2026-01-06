@@ -6,7 +6,7 @@
 
 'use client';
 
-import { PageSection, Widget } from '@/types/website';
+import type { PageSection, Widget } from '@/types/website';
 import { OptimizedImage } from './OptimizedImage';
 import { AccessibleWidget, SkipToMain } from './AccessibleWidget';
 
@@ -186,8 +186,8 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
 
 function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: string }) {
   const convertSpacing = (spacing?: any): string => {
-    if (!spacing) return '0';
-    if (typeof spacing === 'string') return spacing;
+    if (!spacing) {return '0';}
+    if (typeof spacing === 'string') {return spacing;}
     return `${spacing.top || 0} ${spacing.right || 0} ${spacing.bottom || 0} ${spacing.left || 0}`;
   };
 

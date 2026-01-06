@@ -88,7 +88,7 @@ export default function VersionHistory({
   }
 
   function formatDate(timestamp: any): string {
-    if (!timestamp) return 'Unknown';
+    if (!timestamp) {return 'Unknown';}
     
     let date: Date;
     if (timestamp.toDate) {

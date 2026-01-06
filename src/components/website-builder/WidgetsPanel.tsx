@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Widget, WidgetType } from '@/types/website';
+import type { Widget, WidgetType } from '@/types/website';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
 
 interface WidgetsPanelProps {
@@ -36,7 +36,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
 
   function handleAddWidget(type: WidgetType) {
     const definition = widgetDefinitions[type];
-    if (!definition) return;
+    if (!definition) {return;}
 
     const newWidget: Widget = {
       id: `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,

@@ -93,7 +93,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
   };
 
   const getTotal = () => {
-    if (!cart || !cart.items) return 0;
+    if (!cart?.items) {return 0;}
     return cart.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
   };
 
@@ -318,7 +318,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
               Order Summary
             </h3>
 
-            {cart && cart.items && cart.items.map((item: any) => (
+            {cart?.items?.map((item: any) => (
               <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
                 <span>{item.name} × {item.quantity}</span>
                 <span style={{ fontWeight: '600' }}>{formatPrice(item.price * item.quantity)}</span>

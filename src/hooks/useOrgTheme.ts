@@ -110,7 +110,7 @@ export function useOrgTheme() {
 
   // Apply CSS variables whenever theme changes
   useEffect(() => {
-    if (loading) return;
+    if (loading) {return;}
 
     const root = document.documentElement;
 

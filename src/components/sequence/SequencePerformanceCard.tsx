@@ -9,7 +9,7 @@
 'use client';
 
 import React from 'react';
-import { SequenceAnalysis } from '@/lib/sequence';
+import type { SequenceAnalysis } from '@/lib/sequence';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Mail, MousePointerClick, MessageSquare, TrendingUp } from 'lucide-react';
 

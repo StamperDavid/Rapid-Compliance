@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FieldType } from '@/types/schema';
+import type { FieldType } from '@/types/schema';
 
 interface FieldTypeConversionPreviewProps {
   organizationId: string;

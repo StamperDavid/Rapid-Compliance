@@ -21,7 +21,7 @@ interface CRMFieldsSectionProps {
 export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRemove }: CRMFieldsSectionProps) {
   const addCustomField = () => {
     const key = prompt('Field key (e.g., company_size):');
-    if (!key) return;
+    if (!key) {return;}
 
     const newField = {
       key,
