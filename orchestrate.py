@@ -78,6 +78,8 @@ def execute_on_worker(worker: Worker, command: str, stream_output: bool = True) 
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             bufsize=1
         )
         

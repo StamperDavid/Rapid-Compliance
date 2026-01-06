@@ -9,9 +9,8 @@ import { logger } from '@/lib/logger/logger';
 let pdfParse: any;
 async function getPdfParse() {
   if (!pdfParse) {
-    const module = await import('pdf-parse');
-    // Try default export first, fall back to module itself
-    pdfParse = module.default || module;
+    // pdf-parse is a CommonJS module, import it directly as the function
+    pdfParse = (await import('pdf-parse')) as unknown as (dataBuffer: Buffer) => Promise<{ text: string; numpages: number; info: Record<string, unknown> }>;
   }
   return pdfParse;
 }

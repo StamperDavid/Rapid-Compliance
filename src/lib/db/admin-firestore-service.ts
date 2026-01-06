@@ -13,13 +13,23 @@ import type {
   OrderByDirection,
 } from 'firebase/firestore';
 
+/**
+ * Ensure adminDb is initialized, throw if not
+ */
+function ensureAdminDb() {
+  if (!adminDb) {
+    throw new Error('Admin Firestore DB not initialized. Check Firebase Admin SDK configuration.');
+  }
+  return adminDb;
+}
+
 export class AdminFirestoreService {
   /**
    * Get a single document by ID
    */
   static async get(collectionPath: string, docId: string): Promise<any | null> {
     try {
-      const docRef = adminDb.collection(collectionPath).doc(docId);
+      const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       const doc = await docRef.get();
       
       if (!doc.exists) {
@@ -44,7 +54,7 @@ export class AdminFirestoreService {
     constraints: QueryConstraint[] = []
   ): Promise<any[]> {
     try {
-      let query: FirebaseFirestore.Query = adminDb.collection(collectionPath);
+      let query: FirebaseFirestore.Query = ensureAdminDb().collection(collectionPath);
       
       // Apply constraints (where, orderBy, limit)
       for (const constraint of constraints) {
@@ -116,7 +126,7 @@ export class AdminFirestoreService {
     hasMore: boolean;
   }> {
     try {
-      let query: FirebaseFirestore.Query = adminDb.collection(collectionPath);
+      let query: FirebaseFirestore.Query = ensureAdminDb().collection(collectionPath);
       
       
       // Apply constraints (where, orderBy, limit)
@@ -202,7 +212,7 @@ export class AdminFirestoreService {
     merge: boolean = false
   ): Promise<void> {
     try {
-      const docRef = adminDb.collection(collectionPath).doc(docId);
+      const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       
       if (merge) {
         await docRef.set(data, { merge: true });
@@ -220,7 +230,7 @@ export class AdminFirestoreService {
    */
   static async add(collectionPath: string, data: any): Promise<string> {
     try {
-      const docRef = await adminDb.collection(collectionPath).add(data);
+      const docRef = await ensureAdminDb().collection(collectionPath).add(data);
       return docRef.id;
     } catch (error) {
       logger.error('[Admin Firestore] Error adding document to ${collectionPath}:', error, { file: 'admin-firestore-service.ts' });
@@ -237,7 +247,7 @@ export class AdminFirestoreService {
     data: any
   ): Promise<void> {
     try {
-      const docRef = adminDb.collection(collectionPath).doc(docId);
+      const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       await docRef.update(data);
     } catch (error) {
       logger.error('[Admin Firestore] Error updating document ${collectionPath}/${docId}:', error, { file: 'admin-firestore-service.ts' });
@@ -250,7 +260,7 @@ export class AdminFirestoreService {
    */
   static async delete(collectionPath: string, docId: string): Promise<void> {
     try {
-      const docRef = adminDb.collection(collectionPath).doc(docId);
+      const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       await docRef.delete();
     } catch (error) {
       logger.error('[Admin Firestore] Error deleting document ${collectionPath}/${docId}:', error, { file: 'admin-firestore-service.ts' });
@@ -262,7 +272,7 @@ export class AdminFirestoreService {
    * Batch operations
    */
   static batch() {
-    return adminDb.batch();
+    return ensureAdminDb().batch();
   }
 
   /**
@@ -271,21 +281,21 @@ export class AdminFirestoreService {
   static async runTransaction<T>(
     updateFunction: (transaction: FirebaseFirestore.Transaction) => Promise<T>
   ): Promise<T> {
-    return adminDb.runTransaction(updateFunction);
+    return ensureAdminDb().runTransaction(updateFunction);
   }
 
   /**
    * Get a collection reference (for advanced queries)
    */
   static collection(path: string) {
-    return adminDb.collection(path);
+    return ensureAdminDb().collection(path);
   }
 
   /**
    * Get a document reference
    */
   static doc(collectionPath: string, docId: string) {
-    return adminDb.collection(collectionPath).doc(docId);
+    return ensureAdminDb().collection(collectionPath).doc(docId);
   }
 }
 

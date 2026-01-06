@@ -135,7 +135,7 @@ async function triggerFineTuning(
   const examples = await FirestoreService.getAll(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
     [where('status', '==', 'approved')] as any
-  );
+  ) as unknown as TrainingExample[];
   
   if (examples.length === 0) {
     throw new Error('No approved examples found');
