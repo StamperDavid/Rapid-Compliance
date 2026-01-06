@@ -73,14 +73,20 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processPayPalPayment(request, defaultProvider);
     
     case 'authorizenet':
+{
       const { processAuthorizeNetPayment } = await import('./payment-providers');
       return processAuthorizeNetPayment(request, defaultProvider);
+}
     
+{
     case '2checkout':
       const { process2CheckoutPayment } = await import('./payment-providers');
+}
       return process2CheckoutPayment(request, defaultProvider);
+{
     
     case 'mollie':
+}
       const { processMolliePayment } = await import('./payment-providers');
       return processMolliePayment(request, defaultProvider);
     
