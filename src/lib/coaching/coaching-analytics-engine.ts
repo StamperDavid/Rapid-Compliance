@@ -70,7 +70,7 @@ export class CoachingAnalyticsEngine {
       
       const repData = repDoc.data();
       const repName = repData?.name || 'Unknown';
-      const repEmail = repData?.email || '';
+      const repEmail = repData?.email ?? '';
       
       // Fetch all metrics in parallel
       const [
@@ -173,7 +173,7 @@ export class CoachingAnalyticsEngine {
       const deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       
       const totalDeals = deals.length;
-      const activeDeals = deals.filter((d: any) => !['won', 'lost', 'closed'].includes(d.status || '')).length;
+      const activeDeals = deals.filter((d: any) => !['won', 'lost', 'closed'].includes(d.status ?? '')).length;
       const dealsWon = deals.filter((d: any) => d.status === 'won').length;
       const dealsLost = deals.filter((d: any) => d.status === 'lost').length;
       const closedDeals = dealsWon + dealsLost;
@@ -181,7 +181,7 @@ export class CoachingAnalyticsEngine {
       
       // Calculate average deal size
       const wonDeals = deals.filter((d: any) => d.status === 'won');
-      const totalValue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+      const totalValue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
       const averageDealSize = wonDeals.length > 0 ? totalValue / wonDeals.length : 0;
       
       // Calculate average deal cycle
@@ -383,7 +383,7 @@ export class CoachingAnalyticsEngine {
       
       // CRM updates (deal updates + contact updates)
       const crmUpdates = activities.filter((a: any) => 
-        ['deal_update', 'contact_update', 'note_added'].includes(a.type || '')
+        ['deal_update', 'contact_update', 'note_added'].includes(a.type ?? '')
       ).length;
       
       return {
@@ -433,10 +433,10 @@ export class CoachingAnalyticsEngine {
       // Count deals at each stage
       const leadCount = deals.filter((d: any) => d.stage === 'lead' || d.stage === 'prospecting').length;
       const opportunityCount = deals.filter((d: any) => 
-        ['qualification', 'needs_analysis', 'discovery'].includes(d.stage || '')
+        ['qualification', 'needs_analysis', 'discovery'].includes(d.stage ?? '')
       ).length;
       const proposalCount = deals.filter((d: any) => 
-        ['proposal', 'negotiation'].includes(d.stage || '')
+        ['proposal', 'negotiation'].includes(d.stage ?? '')
       ).length;
       const closedCount = deals.filter((d: any) => d.status === 'won').length;
       
@@ -512,23 +512,23 @@ export class CoachingAnalyticsEngine {
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) >= startDate &&
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) <= endDate
       );
-      const totalRevenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+      const totalRevenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
       
       // Get quota from user profile
       const repDoc = await this.adminDal.getCollection('USERS').doc(repId).get();
-      const quota = repDoc.data()?.quota || 0;
+      const quota = repDoc.data()?.quota ?? 0;
       const quotaAttainment = quota > 0 ? totalRevenue / quota : 0;
       
       // Pipeline value (active deals)
       const activeDeals = allDeals.filter((d: any) => 
-        !['won', 'lost', 'closed'].includes(d.status || '')
+        !['won', 'lost', 'closed'].includes(d.status ?? '')
       );
-      const pipelineValue = activeDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+      const pipelineValue = activeDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
       
       // Weighted pipeline (value * probability)
       const weightedPipeline = activeDeals.reduce((sum: number, d: any) => {
-        const value = d.value || 0;
-        const probability = d.winProbability || 0.5;
+        const value = d.value ?? 0;
+        const probability = d.winProbability ?? 0.5;
         return sum + (value * probability);
       }, 0);
       
@@ -547,7 +547,7 @@ export class CoachingAnalyticsEngine {
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) >= previousPeriodStart &&
         new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) < startDate
       );
-      const previousRevenue = previousWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+      const previousRevenue = previousWonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
       const growthRate = previousRevenue > 0 ? (totalRevenue - previousRevenue) / previousRevenue : 0;
       
       return {

@@ -63,7 +63,7 @@ export async function getPipelineReport(
   const openDeals = await getOpenDeals(workspaceId, organizationId);
   
   // Calculate pipeline metrics
-  const totalValue = openDeals.reduce((sum, deal) => sum + (deal.value || 0), 0);
+  const totalValue = openDeals.reduce((sum, deal) => sum + (deal.value ?? 0), 0);
   const totalDeals = openDeals.length;
   const averageDealSize = totalDeals > 0 ? totalValue / totalDeals : 0;
   
@@ -148,9 +148,9 @@ export async function getWinLossAnalysis(
   
   // Calculate averages
   const averageDealSize = {
-    won: won.length > 0 ? won.reduce((sum, d) => sum + (d.value || 0), 0) / won.length : 0,
-    lost: lost.length > 0 ? lost.reduce((sum, d) => sum + (d.value || 0), 0) / lost.length : 0,
-    total: totalDeals > 0 ? deals.reduce((sum, d) => sum + (d.value || 0), 0) / totalDeals : 0,
+    won: won.length > 0 ? won.reduce((sum, d) => sum + (d.value ?? 0), 0) / won.length : 0,
+    lost: lost.length > 0 ? lost.reduce((sum, d) => sum + (d.value ?? 0), 0) / lost.length : 0,
+    total: totalDeals > 0 ? deals.reduce((sum, d) => sum + (d.value ?? 0), 0) / totalDeals : 0,
   };
   
   // Analyze loss reasons
@@ -214,9 +214,9 @@ async function getOrdersInPeriod(workspaceId: string, organizationId: string, st
 function calculateTotalRevenue(deals: any[], orders: any[]): number {
   const dealRevenue = deals
     .filter(d => d.status === 'won' || d.stage === 'closed_won')
-    .reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0);
+    .reduce((sum, d) => sum + (parseFloat(d.value) ?? 0), 0);
   
-  const orderRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+  const orderRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) ?? 0), 0);
   
   return dealRevenue + orderRevenue;
 }
@@ -227,7 +227,7 @@ function calculateRevenueBySource(deals: any[], orders: any[]): any[] {
   // From deals
   deals.forEach(deal => {
     const source = deal.source || 'unknown';
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     const existing = sourceMap.get(source) || { revenue: 0, deals: 0 };
     sourceMap.set(source, {
       revenue: existing.revenue + value,
@@ -238,7 +238,7 @@ function calculateRevenueBySource(deals: any[], orders: any[]): any[] {
   // From orders
   orders.forEach(order => {
     const source = order.source || 'ecommerce';
-    const total = parseFloat(order.total) || 0;
+    const total = parseFloat(order.total) ?? 0;
     const existing = sourceMap.get(source) || { revenue: 0, deals: 0 };
     sourceMap.set(source, {
       revenue: existing.revenue + total,
@@ -266,7 +266,7 @@ async function calculateRevenueByProduct(workspaceId: string, deals: any[], orde
         const productId = product.productId || product.id;
         const productName = product.name || 'Unknown';
         const quantity = product.quantity || 1;
-        const price = parseFloat(product.price) || 0;
+        const price = parseFloat(product.price) ?? 0;
         const revenue = quantity * price;
         
         const existing = productMap.get(productId) || { revenue: 0, units: 0, name: productName };
@@ -286,7 +286,7 @@ async function calculateRevenueByProduct(workspaceId: string, deals: any[], orde
         const productId = item.productId;
         const productName = item.productName || 'Unknown';
         const quantity = item.quantity || 1;
-        const price = parseFloat(item.price) || 0;
+        const price = parseFloat(item.price) ?? 0;
         const revenue = quantity * price;
         
         const existing = productMap.get(productId) || { revenue: 0, units: 0, name: productName };
@@ -314,7 +314,7 @@ function calculateRevenueBySalesRep(deals: any[]): any[] {
   deals.forEach(deal => {
     const repId = deal.assignedTo || deal.ownerId || 'unassigned';
     const repName = deal.assignedToName || deal.ownerName || 'Unassigned';
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     
     const existing = repMap.get(repId) || { revenue: 0, deals: 0, name: repName };
     repMap.set(repId, {
@@ -405,7 +405,7 @@ function calculatePipelineByStage(deals: any[]): any[] {
   deals.forEach(deal => {
     const stage = deal.stage || 'unknown';
     const stageName = deal.stageName || stage;
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     const daysInStage = calculateDaysInStage(deal, stage);
     
     const existing = stageMap.get(stage) || { value: 0, deals: 0, name: stageName, days: [] };
@@ -430,7 +430,7 @@ function calculatePipelineByStage(deals: any[]): any[] {
 }
 
 function calculateDaysInStage(deal: any, stage: string): number {
-  const stageHistory = deal.stageHistory || [];
+  const stageHistory = deal.stageHistory ?? [];
   const stageEntry = stageHistory.find((h: any) => h.stage === stage);
   
   if (stageEntry?.enteredAt) {
@@ -488,7 +488,7 @@ async function calculatePipelineVelocity(workspaceId: string, organizationId: st
   // Calculate average time per stage
   const stageTimes: Record<string, number[]> = {};
   closedDeals.forEach(deal => {
-    const history = deal.stageHistory || [];
+    const history = deal.stageHistory ?? [];
     history.forEach((entry: any) => {
       if (entry.exitedAt && entry.enteredAt) {
         const entered = entry.enteredAt.toDate?.() || new Date(entry.enteredAt);
@@ -526,7 +526,7 @@ async function calculateConversionRates(workspaceId: string, organizationId: str
   const transitions = new Map<string, { from: string; to: string; count: number }>();
   
   deals.forEach(deal => {
-    const history = deal.stageHistory || [];
+    const history = deal.stageHistory ?? [];
     for (let i = 0; i < history.length - 1; i++) {
       const from = history[i].stage;
       const to = history[i + 1].stage;
@@ -574,7 +574,7 @@ async function calculatePipelineTrends(workspaceId: string, organizationId: stri
   deals.forEach(deal => {
     const date = new Date(deal.createdAt?.toDate?.() || deal.createdAt);
     const dateKey = date.toISOString().split('T')[0];
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     const stage = deal.stage || 'unknown';
     
     const existing = dateMap.get(dateKey) || { value: 0, deals: 0, byStage: new Map() };
@@ -612,7 +612,7 @@ async function calculatePipelineTrends(workspaceId: string, organizationId: stri
 
 function calculateWeightedForecast(deals: any[]): number {
   return deals.reduce((sum, deal) => {
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     const probability = parseFloat(deal.probability) || 50; // Default 50%
     return sum + (value * probability / 100);
 }, 0);
@@ -662,7 +662,7 @@ function calculateForecastByRep(deals: any[]): any[] {
   deals.forEach(deal => {
     const repId = deal.assignedTo || deal.ownerId || 'unassigned';
     const repName = deal.assignedToName || deal.ownerName || 'Unassigned';
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     const probability = parseFloat(deal.probability) || 50;
     const weighted = value * probability / 100;
     
@@ -693,7 +693,7 @@ async function calculateForecastByProduct(workspaceId: string, deals: any[]): Pr
         const productId = product.productId || product.id;
         const productName = product.name || 'Unknown';
         const quantity = product.quantity || 1;
-        const price = parseFloat(product.price) || 0;
+        const price = parseFloat(product.price) ?? 0;
         const probability = parseFloat(deal.probability) || 50;
         const forecast = (quantity * price) * probability / 100;
         
@@ -764,7 +764,7 @@ function analyzeLossReasons(lostDeals: any[]): any[] {
   
   lostDeals.forEach(deal => {
     const reason = deal.lostReason || deal.reason || 'No reason provided';
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     
     const existing = reasonMap.get(reason) || { count: 0, totalValue: 0 };
     reasonMap.set(reason, {
@@ -790,10 +790,10 @@ function analyzeWinFactors(wonDeals: any[]): any[] {
   const factorMap = new Map<string, { count: number; totalValue: number }>();
   
   wonDeals.forEach(deal => {
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     
     // Extract factors from deal notes, tags, etc.
-    const tags = deal.tags || [];
+    const tags = deal.tags ?? [];
     tags.forEach((tag: string) => {
       const existing = factorMap.get(tag) || { count: 0, totalValue: 0 };
       factorMap.set(tag, {
@@ -827,12 +827,12 @@ function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
       
       // Extract loss reason
       const reason = deal.lostReason || deal.lossReason || 'Unknown';
-      existing.reasons.set(reason, (existing.reasons.get(reason) || 0) + 1);
+      existing.reasons.set(reason, (existing.reasons.get(reason) ?? 0) + 1);
       
       competitorMap.set(competitor, {
         ...existing,
         losses: existing.losses + 1,
-        totalValue: existing.totalValue + (parseFloat(deal.value) || 0),
+        totalValue: existing.totalValue + (parseFloat(deal.value) ?? 0),
       });
     }
   });
@@ -875,7 +875,7 @@ function analyzeWinLossByRep(wonDeals: any[], lostDeals: any[]): any[] {
     const repId = deal.assignedTo || deal.ownerId || 'unassigned';
     const repName = deal.assignedToName || deal.ownerName || 'Unassigned';
     const isWon = deal.status === 'won' || deal.stage === 'closed_won';
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value) ?? 0;
     
     const existing = repMap.get(repId) || { won: 0, lost: 0, totalValue: 0, name: repName };
     repMap.set(repId, {
