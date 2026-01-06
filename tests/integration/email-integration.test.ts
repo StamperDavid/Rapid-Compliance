@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
+import { generateTrackingPixel, wrapLinksWithTracking, classifyBounce } from @/lib/email/email-tracking\\;
 import { sendEmail } from '@/lib/email/email-service';
 
 describe('Email Integration Tests', () => {
@@ -87,7 +88,6 @@ describe('Email Integration Tests', () => {
 
   describe('Email Tracking', () => {
     it('should generate tracking pixels', () => {
-      const { generateTrackingPixel } = require('@/lib/email/email-tracking');
       
       const trackingId = 'track-12345';
       const pixel = generateTrackingPixel(trackingId);
@@ -99,7 +99,6 @@ describe('Email Integration Tests', () => {
     });
 
     it('should wrap links with tracking', () => {
-      const { wrapLinksWithTracking } = require('@/lib/email/email-tracking');
       
       const html = '<a href="https://example.com">Click here</a>';
       const wrapped = wrapLinksWithTracking(html, 'track-12345');
@@ -111,7 +110,6 @@ describe('Email Integration Tests', () => {
 
   describe('Email Bounce Handling', () => {
     it('should classify bounce types', () => {
-      const { classifyBounce } = require('@/lib/email/email-tracking');
       
       // Hard bounces (permanent)
       expect(classifyBounce('550 5.1.1 User unknown')).toBe('hard');
