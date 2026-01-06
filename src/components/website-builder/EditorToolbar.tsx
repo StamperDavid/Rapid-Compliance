@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Page } from '@/types/website';
+import type { Page } from '@/types/website';
 
 interface EditorToolbarProps {
   page: Page;

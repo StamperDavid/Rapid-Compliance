@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { QueryDocumentSnapshot } from 'firebase/firestore'
+import type { QueryDocumentSnapshot } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';;
 
 export interface PaginationState<T> {
@@ -36,7 +36,7 @@ export function usePagination<T>({
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
 
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore) {return;}
 
     try {
       setLoading(true);

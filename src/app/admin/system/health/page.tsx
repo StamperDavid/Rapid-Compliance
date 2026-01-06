@@ -59,7 +59,7 @@ export default function SystemHealthPage() {
     );
   }
 
-  if (!systemHealth) return null;
+  if (!systemHealth) {return null;}
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
@@ -260,7 +260,7 @@ function ServiceCard({ service, status }: { service: string; status: any }) {
         </div>
       )}
       <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-        Last checked: {new Date(status.lastChecked as any).toLocaleTimeString()}
+        Last checked: {new Date(status.lastChecked).toLocaleTimeString()}
       </div>
     </div>
   );

@@ -47,7 +47,7 @@ export default function DealDetailPage() {
     }
   };
 
-  if (loading || !deal) return <div className="p-8">Loading...</div>;
+  if (loading || !deal) {return <div className="p-8">Loading...</div>;}
 
   const healthColor = healthScore?.status === 'healthy' ? 'bg-green-900/20 border-green-600' :
                       healthScore?.status === 'at-risk' ? 'bg-yellow-900/20 border-yellow-600' :
@@ -226,7 +226,7 @@ export default function DealDetailPage() {
               </button>
               <button 
                 onClick={async () => {
-                  if (!confirm('Mark this deal as won?')) return;
+                  if (!confirm('Mark this deal as won?')) {return;}
                   try {
                     await FirestoreService.update(
                       `organizations/${orgId}/workspaces/default/entities/deals/records`,
@@ -247,7 +247,7 @@ export default function DealDetailPage() {
               <button 
                 onClick={async () => {
                   const reason = prompt('Reason for loss:');
-                  if (!reason) return;
+                  if (!reason) {return;}
                   try {
                     await FirestoreService.update(
                       `organizations/${orgId}/workspaces/default/entities/deals/records`,

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { QuickBooksIntegration as QuickBooksType } from '@/types/integrations';
+import type { QuickBooksIntegration as QuickBooksType } from '@/types/integrations';
 
 interface QuickBooksIntegrationProps {
   integration: QuickBooksType | null;
@@ -47,7 +47,7 @@ export default function QuickBooksIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

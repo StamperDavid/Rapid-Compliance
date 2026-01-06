@@ -6,7 +6,8 @@
  */
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChange, AuthUser } from '@/lib/auth/auth-service';
+import type { AuthUser } from '@/lib/auth/auth-service';
+import { onAuthStateChange } from '@/lib/auth/auth-service';
 import { logger } from '@/lib/logger/logger';
 
 interface AuthContextType {

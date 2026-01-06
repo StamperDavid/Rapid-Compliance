@@ -31,9 +31,9 @@ export function PatternsCard({ patterns, className = '' }: PatternsCardProps) {
   
   // Success rate color
   const getSuccessRateColor = (rate: number) => {
-    if (rate >= 80) return 'text-green-600';
-    if (rate >= 60) return 'text-blue-600';
-    if (rate >= 40) return 'text-yellow-600';
+    if (rate >= 80) {return 'text-green-600';}
+    if (rate >= 60) {return 'text-blue-600';}
+    if (rate >= 40) {return 'text-yellow-600';}
     return 'text-red-600';
   };
   
@@ -76,7 +76,7 @@ export function PatternsCard({ patterns, className = '' }: PatternsCardProps) {
           </button>
           {(['opening', 'discovery_question', 'value_proposition', 'objection_response', 'closing_technique'] as PatternCategory[]).map((category) => {
             const count = patterns.filter(p => p.category === category).length;
-            if (count === 0) return null;
+            if (count === 0) {return null;}
             return (
               <button
                 key={category}

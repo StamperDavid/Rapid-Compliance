@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Page, PageSection, Widget } from '@/types/website';
+import type { Page, PageSection, Widget } from '@/types/website';
 import WidgetRenderer from '@/components/website-builder/WidgetRenderer';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
 

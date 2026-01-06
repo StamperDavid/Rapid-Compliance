@@ -73,7 +73,7 @@ export default function LookupFieldPicker({
         const searchLower = searchTerm.toLowerCase();
         filtered = allRecords.filter((record: any) => {
           // Search across common name fields
-          const name = record.name || record.firstName + ' ' + record.lastName || record.title || record.companyName || record.id;
+          const name = record.name || `${record.firstName  } ${  record.lastName}` || record.title || record.companyName || record.id;
           return name.toLowerCase().includes(searchLower);
         });
       }
@@ -101,7 +101,7 @@ export default function LookupFieldPicker({
   };
 
   const getDisplayName = (record: any) => {
-    if (!record) return '';
+    if (!record) {return '';}
     return record.name || 
            (record.firstName && record.lastName ? `${record.firstName} ${record.lastName}` : '') ||
            record.title ||

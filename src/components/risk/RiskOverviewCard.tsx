@@ -54,19 +54,19 @@ export function RiskOverviewCard({
 
   // Get probability color
   const getProbabilityColor = (prob: number) => {
-    if (prob >= 80) return 'text-red-600';
-    if (prob >= 60) return 'text-orange-600';
-    if (prob >= 40) return 'text-yellow-600';
-    if (prob >= 20) return 'text-blue-600';
+    if (prob >= 80) {return 'text-red-600';}
+    if (prob >= 60) {return 'text-orange-600';}
+    if (prob >= 40) {return 'text-yellow-600';}
+    if (prob >= 20) {return 'text-blue-600';}
     return 'text-green-600';
   };
 
   // Get probability background
   const getProbabilityBackground = (prob: number) => {
-    if (prob >= 80) return 'bg-red-50';
-    if (prob >= 60) return 'bg-orange-50';
-    if (prob >= 40) return 'bg-yellow-50';
-    if (prob >= 20) return 'bg-blue-50';
+    if (prob >= 80) {return 'bg-red-50';}
+    if (prob >= 60) {return 'bg-orange-50';}
+    if (prob >= 40) {return 'bg-yellow-50';}
+    if (prob >= 20) {return 'bg-blue-50';}
     return 'bg-green-50';
   };
 

@@ -44,7 +44,7 @@ export default function EditDealPage() {
     }
   };
 
-  if (loading || !deal) return <div className="p-8">Loading...</div>;
+  if (loading || !deal) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

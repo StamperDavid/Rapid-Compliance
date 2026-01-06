@@ -74,7 +74,7 @@ export default function EmailBuilderPage() {
   const moveBlock = (blockId: string, direction: 'up' | 'down') => {
     const blocks = [...(template.blocks || [])];
     const index = blocks.findIndex(b => b.id === blockId);
-    if (index === -1) return;
+    if (index === -1) {return;}
 
     if (direction === 'up' && index > 0) {
       [blocks[index], blocks[index - 1]] = [blocks[index - 1], blocks[index]];
@@ -199,7 +199,7 @@ export default function EmailBuilderPage() {
           <div className="flex-1 bg-gray-950 p-8 overflow-y-auto">
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-2xl">
               <div className="p-8">
-                {template.blocks && template.blocks.length === 0 ? (
+                {template.blocks?.length === 0 ? (
                   <div className="text-center py-20 text-gray-400">
                     <p className="text-lg mb-2">Your email is empty</p>
                     <p className="text-sm">Add blocks from the left sidebar</p>

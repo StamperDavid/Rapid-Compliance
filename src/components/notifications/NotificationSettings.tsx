@@ -48,7 +48,7 @@ export function NotificationSettings({ userId, orgId, className = '' }: Notifica
   }
 
   async function savePreferences() {
-    if (!preferences) return;
+    if (!preferences) {return;}
 
     try {
       setSaving(true);

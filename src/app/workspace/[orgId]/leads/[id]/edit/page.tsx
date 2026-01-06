@@ -44,7 +44,7 @@ export default function EditLeadPage() {
     }
   };
 
-  if (loading || !lead) return <div className="p-8">Loading...</div>;
+  if (loading || !lead) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

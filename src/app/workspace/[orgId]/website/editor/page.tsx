@@ -16,7 +16,7 @@ import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
 import EditorToolbar from '@/components/website-builder/EditorToolbar';
 import VersionHistory from '@/components/website-builder/VersionHistory';
 import SchedulePublishModal from '@/components/website-builder/SchedulePublishModal';
-import { Page, PageSection, Widget } from '@/types/website';
+import type { Page, PageSection, Widget } from '@/types/website';
 import { useEditorHistory } from '@/hooks/useEditorHistory';
 
 export default function PageEditorPage() {
@@ -62,7 +62,7 @@ export default function PageEditorPage() {
 
   // Auto-save every 30 seconds
   useEffect(() => {
-    if (!autoSaveEnabled || !page) return;
+    if (!autoSaveEnabled || !page) {return;}
     
     const interval = setInterval(() => {
       savePage(true); // Auto-save flag
@@ -79,7 +79,7 @@ export default function PageEditorPage() {
         e.preventDefault();
         if (canUndo) {
           const previousState = undo();
-          if (previousState) setPage(previousState);
+          if (previousState) {setPage(previousState);}
         }
       }
       
@@ -88,7 +88,7 @@ export default function PageEditorPage() {
         e.preventDefault();
         if (canRedo) {
           const nextState = redo();
-          if (nextState) setPage(nextState);
+          if (nextState) {setPage(nextState);}
         }
       }
 
@@ -108,7 +108,7 @@ export default function PageEditorPage() {
       setLoading(true);
       const response = await fetch(`/api/website/pages/${id}?organizationId=${orgId}`);
       
-      if (!response.ok) throw new Error('Failed to load page');
+      if (!response.ok) {throw new Error('Failed to load page');}
       
       const data = await response.json();
       setPage(data.page);
@@ -146,7 +146,7 @@ export default function PageEditorPage() {
   }
 
   async function savePage(isAutoSave: boolean = false) {
-    if (!page) return;
+    if (!page) {return;}
 
     try {
       setSaving(true);
@@ -170,7 +170,7 @@ export default function PageEditorPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save page');
+      if (!response.ok) {throw new Error('Failed to save page');}
 
       if (!isAutoSave) {
         alert('Page saved successfully!');
@@ -186,10 +186,10 @@ export default function PageEditorPage() {
   }
 
   async function saveAsTemplate() {
-    if (!page) return;
+    if (!page) {return;}
 
     const templateName = prompt('Enter a name for this template:', page.title);
-    if (!templateName) return;
+    if (!templateName) {return;}
 
     const templateDescription = prompt('Enter a description (optional):', '');
 
@@ -203,7 +203,7 @@ export default function PageEditorPage() {
             name: templateName,
             description: templateDescription || `Custom template based on ${page.title}`,
             category: 'other',
-            thumbnail: 'https://via.placeholder.com/400x300/6c757d/ffffff?text=' + encodeURIComponent(templateName),
+            thumbnail: `https://via.placeholder.com/400x300/6c757d/ffffff?text=${  encodeURIComponent(templateName)}`,
             content: page.content,
             isPublic: false,
             createdBy: user?.email || user?.displayName || 'anonymous',
@@ -211,7 +211,7 @@ export default function PageEditorPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save template');
+      if (!response.ok) {throw new Error('Failed to save template');}
 
       alert('Template saved successfully! You can find it in the Templates page.');
     } catch (error) {
@@ -268,7 +268,7 @@ export default function PageEditorPage() {
   }
 
   function handleRestoreVersion(version: any) {
-    if (!page) return;
+    if (!page) {return;}
 
     // Restore the version content
     const restoredPage: Page = {
@@ -288,9 +288,9 @@ export default function PageEditorPage() {
   }
 
   async function unpublishPage() {
-    if (!page || !pageId) return;
+    if (!page || !pageId) {return;}
 
-    if (!confirm('Unpublish this page? It will revert to draft status.')) return;
+    if (!confirm('Unpublish this page? It will revert to draft status.')) {return;}
 
     try {
       setPublishing(true);
@@ -349,7 +349,7 @@ export default function PageEditorPage() {
   }
 
   function updatePage(updates: Partial<Page>) {
-    if (!page) return;
+    if (!page) {return;}
     
     const updatedPage = { ...page, ...updates };
     setPage(updatedPage);
@@ -357,7 +357,7 @@ export default function PageEditorPage() {
   }
 
   function addSection(sectionData?: Partial<PageSection>) {
-    if (!page) return;
+    if (!page) {return;}
 
     const newSection: PageSection = {
       id: `section_${Date.now()}`,
@@ -379,7 +379,7 @@ export default function PageEditorPage() {
   }
 
   function updateSection(sectionId: string, updates: Partial<PageSection>) {
-    if (!page) return;
+    if (!page) {return;}
 
     const updatedContent = page.content.map(section =>
       section.id === sectionId ? { ...section, ...updates } : section
@@ -389,8 +389,8 @@ export default function PageEditorPage() {
   }
 
   function deleteSection(sectionId: string) {
-    if (!page) return;
-    if (!confirm('Delete this section?')) return;
+    if (!page) {return;}
+    if (!confirm('Delete this section?')) {return;}
 
     updatePage({
       content: page.content.filter(s => s.id !== sectionId),
@@ -403,7 +403,7 @@ export default function PageEditorPage() {
   }
 
   function addWidget(sectionId: string, widget: Widget, columnIndex: number = 0) {
-    if (!page) return;
+    if (!page) {return;}
 
     const updatedContent = page.content.map(section => {
       if (section.id === sectionId) {
@@ -421,7 +421,7 @@ export default function PageEditorPage() {
   }
 
   function updateWidget(sectionId: string, widgetId: string, updates: Partial<Widget>) {
-    if (!page) return;
+    if (!page) {return;}
 
     const updatedContent = page.content.map(section => {
       if (section.id === sectionId) {
@@ -440,7 +440,7 @@ export default function PageEditorPage() {
   }
 
   function deleteWidget(sectionId: string, widgetId: string) {
-    if (!page) return;
+    if (!page) {return;}
 
     const updatedContent = page.content.map(section => {
       if (section.id === sectionId) {
@@ -498,11 +498,11 @@ export default function PageEditorPage() {
         canRedo={canRedo}
         onUndo={() => {
           const prev = undo();
-          if (prev) setPage(prev);
+          if (prev) {setPage(prev);}
         }}
         onRedo={() => {
           const next = redo();
-          if (next) setPage(next);
+          if (next) {setPage(next);}
         }}
         onSave={() => void savePage(false)}
         onSaveAsTemplate={() => void saveAsTemplate()}

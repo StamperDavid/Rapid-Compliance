@@ -121,7 +121,7 @@ export default function ProposalBuilderPage() {
 
         <div className="flex-1 bg-gray-950 p-8 overflow-y-auto">
           <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-2xl p-12">
-            {template.sections && template.sections.length === 0 ? (
+            {template.sections?.length === 0 ? (
               <div className="text-center py-20 text-gray-400">
                 <p className="text-lg mb-2">Your proposal is empty</p>
                 <p className="text-sm">Add sections from the left sidebar</p>

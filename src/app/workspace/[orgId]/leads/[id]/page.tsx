@@ -57,7 +57,7 @@ export default function LeadDetailPage() {
     }
   };
 
-  if (loading || !lead) return <div className="p-8">Loading...</div>;
+  if (loading || !lead) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -244,7 +244,7 @@ export default function LeadDetailPage() {
               </button>
               <button 
                 onClick={async () => {
-                  if (!confirm('Convert this lead to a deal?')) return;
+                  if (!confirm('Convert this lead to a deal?')) {return;}
                   try {
                     const dealId = `deal-${Date.now()}`;
                     await FirestoreService.set(

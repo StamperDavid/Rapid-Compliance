@@ -100,9 +100,9 @@ export function InterventionsCard({
 
   // Get ROI color
   const getROIColor = (score: number) => {
-    if (score >= 15) return 'text-green-600';
-    if (score >= 10) return 'text-blue-600';
-    if (score >= 5) return 'text-yellow-600';
+    if (score >= 15) {return 'text-green-600';}
+    if (score >= 10) {return 'text-blue-600';}
+    if (score >= 5) {return 'text-yellow-600';}
     return 'text-gray-600';
   };
 

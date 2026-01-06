@@ -114,7 +114,7 @@ export default function TemplatesPage() {
       if (!data.success) {
         if (data.validationErrors) {
           throw new Error(
-            'Validation errors:\n' + data.validationErrors.join('\n')
+            `Validation errors:\n${  data.validationErrors.join('\n')}`
           );
         }
         throw new Error(data.error || 'Failed to save template');

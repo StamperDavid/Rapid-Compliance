@@ -56,7 +56,7 @@ export default function LeadResearchPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading) {return;}
     
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -261,7 +261,7 @@ export default function LeadResearchPage() {
                             flex: 1,
                             padding: '0.5rem',
                             backgroundColor: lead.isGoodLead === true ? '#10b981' : '#1a1a1a',
-                            border: '1px solid ' + (lead.isGoodLead === true ? '#10b981' : '#333'),
+                            border: `1px solid ${  lead.isGoodLead === true ? '#10b981' : '#333'}`,
                             borderRadius: '0.5rem',
                             color: lead.isGoodLead === true ? '#fff' : '#999',
                             cursor: 'pointer',
@@ -277,7 +277,7 @@ export default function LeadResearchPage() {
                             flex: 1,
                             padding: '0.5rem',
                             backgroundColor: lead.isGoodLead === false ? '#ef4444' : '#1a1a1a',
-                            border: '1px solid ' + (lead.isGoodLead === false ? '#ef4444' : '#333'),
+                            border: `1px solid ${  lead.isGoodLead === false ? '#ef4444' : '#333'}`,
                             borderRadius: '0.5rem',
                             color: lead.isGoodLead === false ? '#fff' : '#999',
                             cursor: 'pointer',

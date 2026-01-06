@@ -9,7 +9,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
-import { BlogPost } from '@/types/website';
+import type { BlogPost } from '@/types/website';
 
 export default function BlogManagementPage() {
   const params = useParams();
@@ -42,7 +42,7 @@ export default function BlogManagementPage() {
       
       const response = await fetch(url);
       
-      if (!response.ok) throw new Error('Failed to load posts');
+      if (!response.ok) {throw new Error('Failed to load posts');}
       
       const data = await response.json();
       setPosts(data.posts || []);
@@ -68,7 +68,7 @@ export default function BlogManagementPage() {
   }
 
   async function deletePost(postId: string) {
-    if (!confirm('Are you sure you want to delete this post?')) return;
+    if (!confirm('Are you sure you want to delete this post?')) {return;}
 
     try {
       const response = await fetch(
@@ -76,7 +76,7 @@ export default function BlogManagementPage() {
         { method: 'DELETE' }
       );
 
-      if (!response.ok) throw new Error('Failed to delete post');
+      if (!response.ok) {throw new Error('Failed to delete post');}
 
       alert('Post deleted successfully');
       loadPosts();
@@ -100,7 +100,7 @@ export default function BlogManagementPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to update post');
+      if (!response.ok) {throw new Error('Failed to update post');}
 
       loadPosts();
     } catch (error) {

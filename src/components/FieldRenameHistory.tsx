@@ -119,7 +119,7 @@ export default function FieldRenameHistory({
   };
 
   const formatTimestamp = (timestamp: any): string => {
-    if (!timestamp) return 'Unknown';
+    if (!timestamp) {return 'Unknown';}
     
     try {
       const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);

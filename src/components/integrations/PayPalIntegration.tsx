@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PayPalIntegration as PayPalType } from '@/types/integrations';
+import type { PayPalIntegration as PayPalType } from '@/types/integrations';
 
 interface PayPalIntegrationProps {
   integration: PayPalType | null;
@@ -56,7 +56,7 @@ export default function PayPalIntegration({
         }),
       });
       
-      if (!response.ok) throw new Error('Failed to save PayPal credentials');
+      if (!response.ok) {throw new Error('Failed to save PayPal credentials');}
       
       onConnect({
         id: 'paypal',
@@ -66,7 +66,7 @@ export default function PayPalIntegration({
         category: 'payment',
         status: 'active',
         organizationId: orgId,
-        clientId: clientId.substring(0, 10) + '...',
+        clientId: `${clientId.substring(0, 10)  }...`,
         clientSecret: '***',
         mode,
         settings: {
@@ -85,7 +85,7 @@ export default function PayPalIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

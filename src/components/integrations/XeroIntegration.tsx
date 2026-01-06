@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { XeroIntegration as XeroType } from '@/types/integrations';
+import type { XeroIntegration as XeroType } from '@/types/integrations';
 
 interface XeroIntegrationProps {
   integration: XeroType | null;
@@ -49,7 +49,7 @@ export default function XeroIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

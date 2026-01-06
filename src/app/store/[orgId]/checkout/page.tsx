@@ -59,7 +59,7 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!cart) return;
+    if (!cart) {return;}
     
     try {
       setProcessing(true);

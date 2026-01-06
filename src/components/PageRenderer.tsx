@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { PageContent } from '@/hooks/usePageContent';
+import type { PageContent } from '@/hooks/usePageContent';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 
 interface WidgetElement {
@@ -304,7 +304,7 @@ interface PageRendererProps {
 }
 
 export default function PageRenderer({ page }: PageRendererProps) {
-  if (!page || !page.sections) {
+  if (!page?.sections) {
     return null;
   }
 

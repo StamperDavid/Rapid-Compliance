@@ -44,7 +44,7 @@ export default function EditProductPage() {
     }
   };
 
-  if (loading || !product) return <div className="p-8">Loading...</div>;
+  if (loading || !product) {return <div className="p-8">Loading...</div>;}
 
   return (
     <div className="p-8">

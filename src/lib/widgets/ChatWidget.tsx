@@ -111,7 +111,7 @@ export function ChatWidget({
   }, [onClose]);
 
   const sendMessage = async () => {
-    if (!inputValue.trim() || !customerId) return;
+    if (!inputValue.trim() || !customerId) {return;}
 
     const userMessage: Message = {
       id: `msg_${Date.now()}`,

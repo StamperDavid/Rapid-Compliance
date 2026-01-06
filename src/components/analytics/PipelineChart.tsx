@@ -46,7 +46,7 @@ export default function PipelineChart({ data, showDeals = false }: PipelineChart
   ];
 
   const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
+    if (active && payload?.length) {
       return (
         <div style={{
           backgroundColor: 'var(--color-bg-elevated)',

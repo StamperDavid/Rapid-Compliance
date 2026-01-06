@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ReportFilter, ReportMetric, ReportVisualization, CustomReport } from '@/types/analytics';
+import type { ReportFilter, ReportMetric, ReportVisualization, CustomReport } from '@/types/analytics';
 
 interface ReportBuilderProps {
   report?: CustomReport;

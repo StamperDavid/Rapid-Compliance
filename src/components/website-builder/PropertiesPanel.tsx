@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Page, PageSection, Widget, WidgetStyle, Spacing } from '@/types/website';
+import type { Page, PageSection, Widget, WidgetStyle, Spacing } from '@/types/website';
 import { widgetDefinitions } from '@/lib/website-builder/widget-definitions';
 
 interface PropertiesPanelProps {
@@ -52,7 +52,7 @@ export default function PropertiesPanel({
 
   // Find selected section
   const section = page.content.find(s => s.id === selectedElement.sectionId);
-  if (!section) return null;
+  if (!section) {return null;}
 
   // Find selected widget if applicable
   let widget: Widget | null = null;
@@ -145,7 +145,7 @@ export default function PropertiesPanel({
           selectedElement.type === 'widget' && widget ? (
             <WidgetContentEditor
               widget={widget}
-              onUpdate={(updates) => onUpdateWidget(section.id, widget!.id, updates)}
+              onUpdate={(updates) => onUpdateWidget(section.id, widget.id, updates)}
             />
           ) : (
             <SectionContentEditor
@@ -157,7 +157,7 @@ export default function PropertiesPanel({
           selectedElement.type === 'widget' && widget ? (
             <StyleEditor
               style={widget.style || {}}
-              onUpdate={(style) => onUpdateWidget(section.id, widget!.id, { style })}
+              onUpdate={(style) => onUpdateWidget(section.id, widget.id, { style })}
             />
           ) : (
             <SectionStyleEditor

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SlackIntegration as SlackType } from '@/types/integrations';
+import type { SlackIntegration as SlackType } from '@/types/integrations';
 
 interface SlackIntegrationProps {
   integration: SlackType | null;
@@ -47,7 +47,7 @@ export default function SlackIntegration({
     }
   };
 
-  if (!integration || integration.status !== 'active') {
+  if (integration?.status !== 'active') {
     return (
       <div style={{
         backgroundColor: 'var(--color-bg-paper)',

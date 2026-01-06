@@ -84,15 +84,15 @@ interface SkillBarProps {
 function SkillBar({ name, score }: SkillBarProps) {
   // Get color based on score
   const getColor = (score: number) => {
-    if (score >= 70) return 'bg-green-500';
-    if (score >= 40) return 'bg-yellow-500';
+    if (score >= 70) {return 'bg-green-500';}
+    if (score >= 40) {return 'bg-yellow-500';}
     return 'bg-red-500';
   };
 
   // Get text color
   const getTextColor = (score: number) => {
-    if (score >= 70) return 'text-green-700';
-    if (score >= 40) return 'text-yellow-700';
+    if (score >= 70) {return 'text-green-700';}
+    if (score >= 40) {return 'text-yellow-700';}
     return 'text-red-700';
   };
 

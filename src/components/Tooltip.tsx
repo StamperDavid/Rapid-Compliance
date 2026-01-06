@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, ReactNode, useRef, useEffect } from 'react';
+import type { ReactNode} from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {
@@ -69,11 +70,11 @@ export default function Tooltip({
 
       // Keep tooltip within viewport bounds
       const padding = 8;
-      if (left < padding) left = padding;
+      if (left < padding) {left = padding;}
       if (left + tooltipRect.width > window.innerWidth - padding) {
         left = window.innerWidth - tooltipRect.width - padding;
       }
-      if (top < padding) top = padding;
+      if (top < padding) {top = padding;}
       if (top + tooltipRect.height > window.innerHeight + scrollY - padding) {
         top = window.innerHeight + scrollY - tooltipRect.height - padding;
       }

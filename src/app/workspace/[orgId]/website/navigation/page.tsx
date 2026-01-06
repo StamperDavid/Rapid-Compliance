@@ -11,7 +11,7 @@ import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import AdminBar from '@/components/AdminBar';
-import { Navigation, NavItem, Page } from '@/types/website';
+import type { Navigation, NavItem, Page } from '@/types/website';
 
 export default function NavigationManagementPage() {
   const params = useParams();
@@ -75,7 +75,7 @@ export default function NavigationManagementPage() {
   }
 
   async function saveNavigation() {
-    if (!navigation) return;
+    if (!navigation) {return;}
 
     try {
       setSaving(true);
@@ -93,7 +93,7 @@ export default function NavigationManagementPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save navigation');
+      if (!response.ok) {throw new Error('Failed to save navigation');}
 
       alert('Navigation saved successfully!');
     } catch (error) {
@@ -117,7 +117,7 @@ export default function NavigationManagementPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to save homepage');
+      if (!response.ok) {throw new Error('Failed to save homepage');}
 
       alert('Homepage updated successfully!');
     } catch (error) {
@@ -127,13 +127,13 @@ export default function NavigationManagementPage() {
   }
 
   function addHeaderLink() {
-    if (!navigation) return;
+    if (!navigation) {return;}
 
     const label = prompt('Link label:');
-    if (!label) return;
+    if (!label) {return;}
 
     const url = prompt('Link URL (e.g., /about or https://...):');
-    if (!url) return;
+    if (!url) {return;}
 
     const newLink: NavItem = {
       id: `link_${Date.now()}`,
@@ -150,7 +150,7 @@ export default function NavigationManagementPage() {
   }
 
   function removeHeaderLink(linkId: string) {
-    if (!navigation) return;
+    if (!navigation) {return;}
 
     setNavigation({
       ...navigation,
@@ -159,12 +159,12 @@ export default function NavigationManagementPage() {
   }
 
   function moveHeaderLink(index: number, direction: 'up' | 'down') {
-    if (!navigation) return;
+    if (!navigation) {return;}
 
     const newHeader = [...navigation.header];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
 
-    if (targetIndex < 0 || targetIndex >= newHeader.length) return;
+    if (targetIndex < 0 || targetIndex >= newHeader.length) {return;}
 
     [newHeader[index], newHeader[targetIndex]] = [newHeader[targetIndex], newHeader[index]];
 
