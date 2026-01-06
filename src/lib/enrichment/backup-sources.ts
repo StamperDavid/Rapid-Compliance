@@ -5,7 +5,7 @@
  */
 
 import type { CompanyEnrichmentData } from './types'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '../logger/logger';;
 
 /**
  * Get company data from WHOIS (free)

@@ -27,17 +27,17 @@ import { extractCompanyData, calculateConfidence } from './ai-extractor';
 import { getCachedEnrichment, cacheEnrichment } from './cache-service';
 import { validateEnrichmentData } from './validation-service';
 import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { logger } from '@/lib/logger/logger';
+import { FirestoreService, COLLECTIONS } from '../db/firestore-service';
+import { logger } from '../logger/logger';
 
 // NEW: Import distillation engine and industry templates
-import { distillScrape, calculateLeadScore } from '@/lib/scraper-intelligence/distillation-engine';
-import { getResearchIntelligenceById } from '@/lib/persona/industry-templates';
+import { distillScrape, calculateLeadScore } from '../scraper-intelligence/distillation-engine';
+import { getResearchIntelligenceById } from '../persona/industry-templates';
 import { 
   saveTemporaryScrape, 
   calculateContentHash,
   getTemporaryScrapeByHash 
-} from '@/lib/scraper-intelligence/discovery-archive-service';
+} from '../scraper-intelligence/discovery-archive-service';
 
 /**
  * Feature flag for distillation engine

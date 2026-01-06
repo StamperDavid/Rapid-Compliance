@@ -6,7 +6,7 @@
  */
 
 import type { ScrapedContent } from './types'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '../logger/logger';;
 
 /**
  * Scrape a website using Playwright (handles JavaScript)

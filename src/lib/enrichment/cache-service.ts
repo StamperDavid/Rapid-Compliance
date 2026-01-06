@@ -4,9 +4,9 @@
  * Reduces costs by 85%+ (only re-scrape when cache expires)
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '../db/firestore-service';
 import type { CompanyEnrichmentData } from './types'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '../logger/logger';;
 
 const CACHE_TTL_DAYS = 7; // Cache for 7 days
 

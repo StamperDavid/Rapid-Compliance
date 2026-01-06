@@ -4,7 +4,7 @@
  */
 
 import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '@/types/api-keys'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '../logger/logger';;
 
 class APIKeyService {
   private static instance: APIKeyService;
@@ -137,7 +137,7 @@ class APIKeyService {
     };
 
     // Save to Firestore
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.API_KEYS}`,
       organizationId,
@@ -197,7 +197,7 @@ class APIKeyService {
     if (organizationId === 'platform' || organizationId === 'platform-admin') {
       try {
         // Prefer admin SDK to bypass security rules
-        const { adminDb } = await import('@/lib/firebase/admin');
+        const { adminDb } = await import('../firebase/admin');
         let platformKeys: any = null;
         
         if (adminDb) {
@@ -207,7 +207,7 @@ class APIKeyService {
           }
         } else {
           // Fallback to client SDK
-          const { FirestoreService } = await import('@/lib/db/firestore-service');
+          const { FirestoreService } = await import('../db/firestore-service');
           platformKeys = await FirestoreService.get('admin', 'platform-api-keys');
         }
         
@@ -247,8 +247,8 @@ class APIKeyService {
 
     try {
       // Prefer admin SDK (bypasses client-side security rules) when available
-      const { adminDb } = await import('@/lib/firebase/admin');
-      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+      const { adminDb } = await import('../firebase/admin');
+      const { getOrgSubCollection } = await import('../firebase/collections');
       if (adminDb) {
         const apiKeysPath = getOrgSubCollection(organizationId, 'apiKeys');
         const snap = await adminDb
@@ -269,7 +269,7 @@ class APIKeyService {
     }
 
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
       const keysData = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.API_KEYS}`,
         organizationId
