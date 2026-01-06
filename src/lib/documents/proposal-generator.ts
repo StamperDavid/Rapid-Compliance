@@ -112,7 +112,7 @@ export async function generateProposal(
     try {
       pdfUrl = await generatePDF(htmlContent, organizationId);
     } catch (pdfError) {
-      logger.warn('PDF generation failed, continuing without PDF', pdfError);
+      logger.warn('PDF generation failed, continuing without PDF', pdfError as unknown);
     }
 
     const proposalId = `proposal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

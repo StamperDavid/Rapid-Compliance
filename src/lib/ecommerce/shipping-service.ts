@@ -80,7 +80,7 @@ export async function calculateShipping(
   
   // Calculate costs for all methods and return cheapest
   const calculations = await Promise.all(
-    availableMethods.map(method => calculateMethodCost(method, cart, address))
+    availableMethods.map((method: Record<string, unknown>) => calculateMethodCost(method, cart, address))
   );
   
   return calculations.sort((a, b) => a.cost - b.cost)[0];

@@ -357,7 +357,7 @@ export async function sendEmail(
  * Save delivery record to Firestore
  */
 async function saveDeliveryRecord(record: EmailDeliveryRecord): Promise<void> {
-  const deliveriesRef = adminDb
+  const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection(record.organizationId, 'email_deliveries'))
     .doc(record.id);
   
@@ -378,7 +378,7 @@ export async function updateDeliveryStatus(
     deliveredAt?: Date;
   }
 ): Promise<void> {
-  const deliveriesRef = adminDb
+  const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
     .doc(deliveryId);
   
@@ -415,7 +415,7 @@ export async function incrementOpenCount(
   organizationId: string,
   deliveryId: string
 ): Promise<void> {
-  const deliveriesRef = adminDb
+  const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
     .doc(deliveryId);
   
@@ -436,7 +436,7 @@ export async function incrementClickCount(
   organizationId: string,
   deliveryId: string
 ): Promise<void> {
-  const deliveriesRef = adminDb
+  const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
     .doc(deliveryId);
   
@@ -457,7 +457,7 @@ export async function getDeliveryRecord(
   organizationId: string,
   deliveryId: string
 ): Promise<EmailDeliveryRecord | null> {
-  const deliveriesRef = adminDb
+  const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
     .doc(deliveryId);
   
@@ -477,7 +477,7 @@ export async function getDeliveryRecordsForDeal(
   organizationId: string,
   dealId: string
 ): Promise<EmailDeliveryRecord[]> {
-  const deliveriesRef = adminDb
+  const deliveriesRef = ensureAdminDb()
     .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
     .where('dealId', '==', dealId)
     .orderBy('createdAt', 'desc')
@@ -507,7 +507,7 @@ export async function getDeliveryStatsForUser(
   clickRate: number;
   bounceRate: number;
 }> {
-  let query = adminDb
+  let query = ensureAdminDb()
     .collection(getOrgSubCollection(organizationId, 'email_deliveries'))
     .where('userId', '==', userId);
   
