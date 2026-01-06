@@ -7,7 +7,7 @@
  * 3. Clean up in afterAll (runs even if tests fail)
  */
 
-import { TestCleanupTracker, createTestOrganization, createTestUser } from './helpers/test-cleanup';
+import { TestCleanupTracker, createTestOrganization } from './helpers/test-cleanup';
 import { adminDb } from '@/lib/firebase/admin';
 
 describe('Example Test Suite with Cleanup', () => {
@@ -38,8 +38,8 @@ describe('Example Test Suite with Cleanup', () => {
 
   it('creates multiple organizations', async () => {
     // Create multiple orgs - all tracked for cleanup
-    const org1 = await createTestOrganization(cleanup, 'Test Org 1');
-    const org2 = await createTestOrganization(cleanup, 'Test Org 2');
+    const _org1 = await createTestOrganization(cleanup, 'Test Org 1');
+    const _org2 = await createTestOrganization(cleanup, 'Test Org 2');
     
     // Your test logic...
     
