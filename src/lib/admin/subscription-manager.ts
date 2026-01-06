@@ -5,8 +5,30 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where } from 'firebase/firestore';
-import type { SubscriptionPlan, CustomerSubscription, RevenueMetrics, AdminCustomer, PlanDetails } from '@/types/subscription'
-import { logger } from '@/lib/logger/logger';;
+import type { CustomerSubscription, RevenueMetrics, AdminCustomer, PlanDetails } from '@/types/subscription'
+import { logger } from '@/lib/logger/logger';
+
+interface OrganizationData {
+  id: string;
+  name?: string;
+  industry?: string;
+  website?: string;
+  primaryContact?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+  lastActive?: string;
+  createdAt?: string;
+}
+
+interface SupportTicket {
+  status?: string;
+}
+
+interface UsageData {
+  conversations: number;
+}
 
 /**
  * Get all subscription plans
@@ -29,16 +51,16 @@ export async function getAllPlans(): Promise<PlanDetails[]> {
  * Create or update a subscription plan
  */
 export async function savePlan(plan: Partial<PlanDetails>): Promise<void> {
-  const planId = plan.id || `plan_${Date.now()}`;
+  const planId = plan.id ?? `plan_${Date.now()}`;
   
   const planData: PlanDetails = {
     id: planId,
-    name: plan.name || '',
-    description: plan.description || '',
+    name: plan.name ?? '',
+    description: plan.description ?? '',
     monthlyPrice: plan.monthlyPrice ?? undefined,
     yearlyPrice: plan.yearlyPrice ?? undefined,
-    currency: plan.currency || 'usd',
-    limits: plan.limits || {
+    currency: plan.currency ?? 'usd',
+    limits: plan.limits ?? {
       agents: undefined,
       conversationsPerMonth: undefined,
       crmRecords: undefined,
@@ -47,11 +69,11 @@ export async function savePlan(plan: Partial<PlanDetails>): Promise<void> {
       apiCallsPerMonth: undefined,
       storageGB: undefined,
     },
-    features: plan.features || [],
+    features: plan.features ?? [],
     displayOrder: plan.displayOrder ?? 0,
     isPopular: plan.isPopular ?? false,
     isActive: plan.isActive ?? true,
-    createdAt: plan.createdAt || new Date().toISOString(),
+    createdAt: plan.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
   
@@ -85,14 +107,14 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
     
     for (const org of organizations) {
       // Get subscription
-      const subscription = await FirestoreService.get(
+      const subscription = await FirestoreService.get<CustomerSubscription>(
         `${COLLECTIONS.ORGANIZATIONS}/${org.id}/subscription`,
         'current'
-      ) as CustomerSubscription | null;
+      );
       
       if (subscription) {
         // Get usage stats
-        const usage = await getOrganizationUsage(org.id);
+        const usage = await getOrganizationUsage(String(org.id));
         
         // Calculate health score
         const healthScore = calculateHealthScore(subscription, usage);
@@ -101,37 +123,39 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
         let openTickets = 0;
         let totalTickets = 0;
         try {
-          const tickets = await FirestoreService.getAll(
+          const tickets = await FirestoreService.getAll<SupportTicket>(
             `${COLLECTIONS.ORGANIZATIONS}/${org.id}/support_tickets`,
             []
           );
           totalTickets = tickets.length;
-          openTickets = tickets.filter((t: any) => 
+          openTickets = tickets.filter((t) => 
             t.status === 'open' || t.status === 'in_progress'
           ).length;
-        } catch (error) {
+        } catch (_error) {
           // No support tickets collection exists yet, that's fine
         }
         
+        const orgData = org as OrganizationData;
+        const orgId = String(org.id);
         customers.push({
-          id: org.id,
-          organizationId: org.id,
-          companyName: (org as any).name || 'Unknown',
-          industry: (org as any).industry,
-          website: (org as any).website,
+          id: orgId,
+          organizationId: orgId,
+          companyName: orgData.name ?? 'Unknown',
+          industry: orgData.industry,
+          website: orgData.website,
           primaryContact: {
-            name: (org as any).primaryContact?.name || 'Unknown',
-            email: (org as any).primaryContact?.email || 'Unknown',
-            phone: (org as any).primaryContact?.phone,
+            name: orgData.primaryContact?.name ?? 'Unknown',
+            email: orgData.primaryContact?.email ?? 'Unknown',
+            phone: orgData.primaryContact?.phone,
           },
           subscription,
           usage,
           healthScore,
           riskLevel: healthScore >= 70 ? 'low' : healthScore >= 40 ? 'medium' : 'high',
-          lastActive: (org as any).lastActive || new Date().toISOString(),
+          lastActive: orgData.lastActive ?? new Date().toISOString(),
           openTickets,
           totalTickets,
-          createdAt: (org as any).createdAt || new Date().toISOString(),
+          createdAt: orgData.createdAt ?? new Date().toISOString(),
           trialStartedAt: subscription.status === 'trialing' ? subscription.createdAt : undefined,
           convertedAt: subscription.status === 'active' ? subscription.currentPeriodStart : undefined,
         });
@@ -186,7 +210,7 @@ async function getOrganizationUsage(organizationId: string): Promise<{
         ),
       ]);
       crmRecords = leads.length + deals.length + contacts.length;
-    } catch (error) {
+    } catch (_error) {
       // If collection doesn't exist, that's okay
       crmRecords = 0;
     }
@@ -199,7 +223,7 @@ async function getOrganizationUsage(organizationId: string): Promise<{
         []
       );
       conversations = instances.length;
-    } catch (error) {
+    } catch (_error) {
       conversations = 0;
     }
     
@@ -209,7 +233,7 @@ async function getOrganizationUsage(organizationId: string): Promise<{
       crmRecords,
       users,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       agents: 0,
       conversations: 0,
@@ -224,7 +248,7 @@ async function getOrganizationUsage(organizationId: string): Promise<{
  */
 function calculateHealthScore(
   subscription: CustomerSubscription,
-  usage: any
+  usage: UsageData
 ): number {
   let score = 100;
   
@@ -261,11 +285,11 @@ export async function calculateRevenueMetrics(
     // Calculate MRR
     let mrr = 0;
     for (const customer of activeSubscriptions) {
-      const sub = customer.subscription as any;
+      const sub = customer.subscription;
       if (sub.billingCycle === 'monthly') {
-        mrr += sub.amount || sub.mrr || 0;
+        mrr += sub.amount ?? sub.mrr ?? 0;
       } else if (sub.billingCycle === 'yearly') {
-        mrr += (sub.amount || sub.mrr || 0) / 12;
+        mrr += (sub.amount ?? sub.mrr ?? 0) / 12;
       }
     }
     
@@ -296,21 +320,24 @@ export async function calculateRevenueMetrics(
     // Revenue by plan
     const revenueByPlan = new Map<string, { planName: string; customers: number; mrr: number }>();
     for (const customer of activeSubscriptions) {
-      const sub = customer.subscription as any;
-      const planId = sub.planId || sub.plan || 'unknown';
-      const planName = sub.planName || sub.plan || 'Unknown Plan';
+      const sub = customer.subscription;
+      const planId = String(sub.planId ?? 'unknown');
+      const planName = String(sub.planId ?? 'Unknown Plan');
       
-      if (!revenueByPlan.has(planId)) {
+      const existingPlan = revenueByPlan.get(planId);
+      if (!existingPlan) {
         revenueByPlan.set(planId, { planName, customers: 0, mrr: 0 });
       }
       
-      const plan = revenueByPlan.get(planId)!;
-      plan.customers += 1;
-      
-      if (sub.billingCycle === 'monthly') {
-        plan.mrr += sub.amount || sub.mrr || 0;
-      } else {
-        plan.mrr += (sub.amount || sub.mrr || 0) / 12;
+      const plan = revenueByPlan.get(planId);
+      if (plan) {
+        plan.customers += 1;
+        
+        if (sub.billingCycle === 'monthly') {
+          plan.mrr += sub.amount ?? sub.mrr ?? 0;
+        } else {
+          plan.mrr += (sub.amount ?? sub.mrr ?? 0) / 12;
+        }
       }
     }
     
@@ -332,11 +359,11 @@ export async function calculateRevenueMetrics(
         new Date(c.subscription.canceledAt) >= periodStart &&
         new Date(c.subscription.canceledAt) <= periodEnd
       )) {
-        const sub = customer.subscription as any;
-        if (sub.billingCycle === 'monthly') {
-          lostMrr += sub.amount || sub.mrr || 0;
-        } else {
-          lostMrr += (sub.amount || sub.mrr || 0) / 12;
+        const sub = customer.subscription;
+        if (sub?.billingCycle === 'monthly') {
+          lostMrr += sub.amount ?? sub.mrr ?? 0;
+        } else if (sub?.billingCycle === 'yearly') {
+          lostMrr += (sub.amount ?? sub.mrr ?? 0) / 12;
         }
       }
       revenueChurnRate = (lostMrr / mrr) * 100;
@@ -352,11 +379,11 @@ export async function calculateRevenueMetrics(
     for (const customer of customers) {
       const createdAt = new Date(customer.createdAt);
       if (createdAt < previousPeriodEnd && customer.subscription?.status === 'active') {
-        const sub = customer.subscription as any;
-        if (sub.billingCycle === 'monthly') {
-          previousMrr += sub.amount || sub.mrr || 0;
-        } else {
-          previousMrr += (sub.amount || sub.mrr || 0) / 12;
+        const sub = customer.subscription;
+        if (sub?.billingCycle === 'monthly') {
+          previousMrr += sub.amount ?? sub.mrr ?? 0;
+        } else if (sub?.billingCycle === 'yearly') {
+          previousMrr += (sub.amount ?? sub.mrr ?? 0) / 12;
         }
       }
     }
