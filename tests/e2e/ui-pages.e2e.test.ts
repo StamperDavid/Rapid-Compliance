@@ -6,7 +6,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { getOrCreateCart, addToCart } from '@/lib/ecommerce/cart-service';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
-import { executeWorkflow } from '@/lib/workflows/workflow-engine';
+import { executeWorkflow } from '@/lib/workflows/workflow-executor';
 import { createCampaign, listCampaigns } from '@/lib/email/campaign-manager';
 import { FirestoreService } from '@/lib/db/firestore-service';
 

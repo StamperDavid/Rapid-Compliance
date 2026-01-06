@@ -97,7 +97,7 @@ const mockResearch: ResearchIntelligence = {
     },
   ],
   metadata: {
-    lastUpdated: new Date(),
+    lastUpdated: new Date().toISOString(),
     version: 1,
     updatedBy: 'system',
   },

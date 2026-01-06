@@ -109,7 +109,7 @@ describe('Distillation Engine Integration Tests', () => {
     ],
     customFields: [],
     metadata: {
-      lastUpdated: new Date(),
+      lastUpdated: new Date().toISOString(),
       version: 1,
       updatedBy: 'system',
     },

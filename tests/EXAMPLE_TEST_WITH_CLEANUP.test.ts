@@ -21,6 +21,10 @@ describe('Example Test Suite with Cleanup', () => {
   });
 
   it('creates a test organization', async () => {
+    if (!adminDb) {
+      throw new Error('Firebase Admin DB is not initialized');
+    }
+    
     // Create org and automatically track it for cleanup
     const orgId = await createTestOrganization(cleanup, 'Test Company ABC');
     
@@ -57,6 +61,10 @@ describe('Example Test Suite with Cleanup', () => {
 
 describe('Alternative Pattern: Manual Cleanup', () => {
   it('creates org with manual cleanup', async () => {
+    if (!adminDb) {
+      throw new Error('Firebase Admin DB is not initialized');
+    }
+    
     const orgId = `test-org-${Date.now()}`;
     
     try {
@@ -75,8 +83,10 @@ describe('Alternative Pattern: Manual Cleanup', () => {
     } finally {
       // CRITICAL: Cleanup runs even if test fails
       try {
-        await adminDb.collection('organizations').doc(orgId).delete();
-        console.log(`✅ Cleaned up: ${orgId}`);
+        if (adminDb) {
+          await adminDb.collection('organizations').doc(orgId).delete();
+          console.log(`✅ Cleaned up: ${orgId}`);
+        }
       } catch (error) {
         console.error(`❌ Cleanup failed for ${orgId}:`, error);
       }

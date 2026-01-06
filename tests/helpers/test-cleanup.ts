@@ -23,6 +23,7 @@
  */
 
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import type { DocumentReference } from 'firebase-admin/firestore';
 
 export class TestCleanupTracker {
   private organizationsToCleanup: Set<string> = new Set();
@@ -68,6 +69,13 @@ export class TestCleanupTracker {
    */
   async cleanupAll() {
     console.log('\n🧹 Cleaning up test data...');
+    
+    if (!adminDb) {
+      throw new Error('Firebase Admin DB is not initialized');
+    }
+    if (!adminAuth) {
+      throw new Error('Firebase Admin Auth is not initialized');
+    }
     
     let deletedOrgs = 0;
     let deletedUsers = 0;
@@ -136,7 +144,11 @@ export class TestCleanupTracker {
   /**
    * Recursively delete all subcollections
    */
-  private async deleteSubcollections(docRef: any) {
+  private async deleteSubcollections(docRef: DocumentReference) {
+    if (!adminDb) {
+      throw new Error('Firebase Admin DB is not initialized');
+    }
+    
     const subcollections = await docRef.listCollections();
     
     for (const subcollection of subcollections) {
@@ -173,6 +185,10 @@ export async function createTestOrganization(
   cleanup: TestCleanupTracker,
   name: string = 'Test Organization'
 ): Promise<string> {
+  if (!adminDb) {
+    throw new Error('Firebase Admin DB is not initialized');
+  }
+  
   const orgId = `test-org-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   
   const orgData = {
@@ -201,6 +217,13 @@ export async function createTestUser(
   orgId: string,
   email: string = `test-${Date.now()}@test.com`
 ): Promise<string> {
+  if (!adminAuth) {
+    throw new Error('Firebase Admin Auth is not initialized');
+  }
+  if (!adminDb) {
+    throw new Error('Firebase Admin DB is not initialized');
+  }
+  
   const userRecord = await adminAuth.createUser({
     email,
     password: 'TestPassword123!',
