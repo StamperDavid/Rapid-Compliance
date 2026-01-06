@@ -239,20 +239,29 @@ export const screenReader = {
 /**
  * Get ARIA label for element type
  */
-export function getAriaLabel(elementType: string, data: any): string {
+export function getAriaLabel(elementType: string, data: unknown): string {
+  const dataObj = data as Record<string, unknown> | null | undefined;
+  
   switch (elementType) {
     case 'button':
-      return data.text || data.label || 'Button';
+      return (typeof dataObj?.text === 'string' ? dataObj.text : null) 
+        ?? (typeof dataObj?.label === 'string' ? dataObj.label : null) 
+        ?? 'Button';
     case 'link':
-      return data.text || data.label || 'Link';
+      return (typeof dataObj?.text === 'string' ? dataObj.text : null) 
+        ?? (typeof dataObj?.label === 'string' ? dataObj.label : null) 
+        ?? 'Link';
     case 'image':
-      return data.alt || 'Image';
+      return (typeof dataObj?.alt === 'string' ? dataObj.alt : null) 
+        ?? 'Image';
     case 'heading':
-      return data.text || 'Heading';
+      return (typeof dataObj?.text === 'string' ? dataObj.text : null) 
+        ?? 'Heading';
     case 'nav':
       return 'Navigation menu';
     case 'modal':
-      return data.title || 'Dialog';
+      return (typeof dataObj?.title === 'string' ? dataObj.title : null) 
+        ?? 'Dialog';
     default:
       return '';
   }
