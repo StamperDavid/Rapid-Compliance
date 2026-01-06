@@ -16,6 +16,12 @@ import time
 from pathlib import Path
 from typing import List, Optional, Dict
 from enum import Enum
+import io
+
+# Fix Windows Unicode encoding issues
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 class WorkerRole(Enum):
     BUILD = "Build/Error Resolution"
