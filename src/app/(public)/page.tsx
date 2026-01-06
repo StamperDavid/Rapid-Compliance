@@ -19,7 +19,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-function _LiveChatDemo({ primaryColor }: { primaryColor: string }) {
+export function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',

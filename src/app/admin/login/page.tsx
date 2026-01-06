@@ -5,7 +5,18 @@ import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+
+interface AdminVerifyResponse {
+  name?: string;
+  role?: 'super_admin' | 'admin';
+  error?: string;
+}
+
+interface FirebaseError {
+  code?: string;
+  message?: string;
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -62,18 +73,18 @@ export default function AdminLoginPage() {
       });
       
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Not authorized as admin');
+        const data = await response.json() as AdminVerifyResponse;
+        throw new Error(data.error ?? 'Not authorized as admin');
       }
       
-      const userData = await response.json();
+      const userData = await response.json() as AdminVerifyResponse;
       
       // Create admin user session
       const adminUserData = {
         id: user.uid,
-        email: user.email || email,
-        displayName: userData.name || user.displayName || 'Admin User',
-        role: userData.role as 'super_admin' | 'admin',
+        email: user.email ?? email,
+        displayName: userData.name ?? user.displayName ?? 'Admin User',
+        role: (userData.role === 'super_admin' ? 'super_admin' : 'admin'),
         permissions: {
           canViewOrganizations: true,
           canCreateOrganizations: true,
@@ -101,8 +112,8 @@ export default function AdminLoginPage() {
           canManageTemplates: true,
           canManageCompliance: true,
         },
-        createdAt: new Date() as any,
-        updatedAt: new Date() as any,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         status: 'active' as const,
         mfaEnabled: false,
       };
@@ -113,8 +124,9 @@ export default function AdminLoginPage() {
       // Redirect to admin dashboard
       router.push('/admin');
       
-    } catch (err: any) {
-      logger.error('Login error:', err, { file: 'page.tsx' });
+    } catch (err) {
+      const error = err as FirebaseError;
+      logger.error('Login error:', error, { file: 'page.tsx' });
       
       // Map Firebase error codes to user-friendly messages
       const errorMessages: Record<string, string> = {
@@ -126,7 +138,7 @@ export default function AdminLoginPage() {
         'auth/network-request-failed': 'Network error. Please check your connection',
       };
       
-      setError(errorMessages[err.code] || err.message || 'Login failed');
+      setError(errorMessages[error.code ?? ''] ?? error.message ?? 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -190,7 +202,7 @@ export default function AdminLoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={(e) => { void handleLogin(e); }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#999' }}>
               Email
