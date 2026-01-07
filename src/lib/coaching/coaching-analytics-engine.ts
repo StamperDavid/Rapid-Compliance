@@ -929,10 +929,11 @@ export class CoachingAnalyticsEngine {
       case 'last_12_months':
         startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
         break;
-      case 'this_quarter':
+      case 'this_quarter': {
         const quarter = Math.floor(now.getMonth() / 3);
         startDate = new Date(now.getFullYear(), quarter * 3, 1);
         break;
+      }
       case 'this_year':
         startDate = new Date(now.getFullYear(), 0, 1);
         break;

@@ -799,10 +799,11 @@ export class TeamCoachingEngine {
       case 'last_12_months':
         startDate.setFullYear(endDate.getFullYear() - 1);
         break;
-      case 'this_quarter':
+      case 'this_quarter': {
         const quarter = Math.floor(endDate.getMonth() / 3);
         startDate = new Date(endDate.getFullYear(), quarter * 3, 1);
         break;
+      }
       case 'this_year':
         startDate = new Date(endDate.getFullYear(), 0, 1);
         break;

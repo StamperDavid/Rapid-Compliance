@@ -230,7 +230,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
   const style = getResponsiveStyle();
 
   switch (widget.type) {
-    case 'heading':
+    case 'heading': {
       const level = widget.data.level || 1;
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
       return (
@@ -238,6 +238,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           {String(widget.data.text || 'Heading')}
         </HeadingTag>
       );
+    }
 
     case 'text':
       return (
@@ -348,7 +349,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
         </div>
       );
 
-    case 'features':
+    case 'features': {
       const features = (widget.data.features as any[]) || [];
       return (
         <div className="feature-grid">
@@ -377,8 +378,9 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           ))}
         </div>
       );
+    }
 
-    case 'pricing':
+    case 'pricing': {
       const plans = (widget.data.plans as any[]) || [];
       return (
         <div className="pricing-grid">
@@ -421,6 +423,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           ))}
         </div>
       );
+    }
 
     case 'testimonial':
       return (
@@ -493,7 +496,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
         </div>
       );
 
-    case 'logo-grid':
+    case 'logo-grid': {
       const logos = (widget.data.logos as any[]) || [];
       return (
         <div className="logo-grid">
@@ -522,6 +525,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           ))}
         </div>
       );
+    }
 
     default:
       return (

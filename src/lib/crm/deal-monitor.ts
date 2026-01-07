@@ -249,7 +249,7 @@ async function handleSpecificSignalType(
       });
       break;
 
-    case 'deal.stage.changed':
+    case 'deal.stage.changed': {
       // Stage changed - recalculate and notify
       const oldStage = signal.metadata?.oldStage;
       const newStage = signal.metadata?.newStage;
@@ -278,6 +278,7 @@ async function handleSpecificSignalType(
         });
       }
       break;
+    }
 
     case 'deal.won':
       // Deal won - emit onboarding signal

@@ -39,7 +39,7 @@ export async function executeOutlookFunction(
         body: parameters.body,
       });
       
-    case 'getCalendar':
+    case 'getCalendar': {
       // Optional parameters
       const startDateTime = parameters.startDateTime;
       const endDateTime = parameters.endDateTime;
@@ -48,6 +48,7 @@ export async function executeOutlookFunction(
         startDateTime,
         endDateTime,
       });
+    }
       
     case 'createCalendarEvent':
       // Validate required parameters

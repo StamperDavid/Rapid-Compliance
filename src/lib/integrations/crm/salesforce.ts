@@ -25,7 +25,7 @@ export async function executeSalesforceFunction(
   }
   
   switch (functionName) {
-    case 'createSalesforceLead':
+    case 'createSalesforceLead': {
       // Validate required parameters
       const requiredFields = ['firstName', 'lastName', 'email', 'company'];
       const missingFields = requiredFields.filter(field => !parameters[field]);
@@ -60,6 +60,7 @@ export async function executeSalesforceFunction(
         instanceUrl,
         accessToken
       );
+    }
       
     default:
       throw new Error(`Unknown Salesforce function: ${functionName}`);
