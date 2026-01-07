@@ -209,8 +209,8 @@ export async function getSequence(sequenceId: string): Promise<Sequence | null> 
 
     return {
       ...data,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
+      createdAt: data.createdAt?.toDate() ?? new Date(),
+      updatedAt: data.updatedAt?.toDate() ?? new Date(),
     } as Sequence;
   } catch (error) {
     logger.error('Failed to get sequence', error, { sequenceId });
@@ -263,8 +263,8 @@ export async function listSequences(organizationId: string): Promise<Sequence[]>
       const data = doc.data();
       return {
         ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() ?? new Date(),
+        updatedAt: data.updatedAt?.toDate() ?? new Date(),
       } as Sequence;
     });
   } catch (error) {
@@ -343,8 +343,8 @@ export async function enrollInSequence(params: {
 
     // Update sequence stats
     await adminDal.safeUpdateDoc('SEQUENCES', sequenceId, {
-      'stats.totalEnrolled': (sequence.stats.totalEnrolled || 0) + 1,
-      'stats.activeEnrollments': (sequence.stats.activeEnrollments || 0) + 1,
+      'stats.totalEnrolled': (sequence.stats.totalEnrolled ?? 0) + 1,
+      'stats.activeEnrollments': (sequence.stats.activeEnrollments ?? 0) + 1,
     });
 
     logger.info('Lead enrolled in sequence', {
@@ -467,8 +467,8 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
 
       // Update sequence stats
       await adminDal.safeUpdateDoc('SEQUENCES', enrollment.sequenceId, {
-        'stats.activeEnrollments': Math.max(0, (sequence.stats.activeEnrollments || 0) - 1),
-        'stats.completedEnrollments': (sequence.stats.completedEnrollments || 0) + 1,
+        'stats.activeEnrollments': Math.max(0, (sequence.stats.activeEnrollments ?? 0) - 1),
+        'stats.completedEnrollments': (sequence.stats.completedEnrollments ?? 0) + 1,
       });
 
       // Emit sequence.completed signal
@@ -603,7 +603,7 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
     await adminDal.safeUpdateDoc('SEQUENCE_ENROLLMENTS', enrollmentId, {
       status: 'stopped',
       completedAt: Timestamp.now(),
-      'metadata.stopReason': reason || 'Manual stop',
+      'metadata.stopReason': (reason !== '' && reason != null) ? reason : 'Manual stop',
     });
 
     // Get enrollment to update sequence stats
@@ -611,7 +611,7 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
     const enrollmentData = enrollmentDoc.data();
     if (enrollmentData) {
       await adminDal.safeUpdateDoc('SEQUENCES', enrollmentData.sequenceId, {
-        'stats.activeEnrollments': Math.max(0, (enrollmentData.stats?.activeEnrollments || 0) - 1),
+        'stats.activeEnrollments': Math.max(0, (enrollmentData.stats?.activeEnrollments ?? 0) - 1),
       });
     }
 
@@ -634,7 +634,7 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
         organizationId: enrollment.organizationId,
         enrollment,
         sequence: null,
-        metadata: { reason: reason || 'Manual stop' },
+        metadata: { reason: (reason !== '' && reason != null) ? reason : 'Manual stop' },
       });
     }
   } catch (error) {
@@ -762,14 +762,14 @@ function substituteVariables(template: string, leadData: any): string {
   
   // Common variable substitutions
   const substitutions: Record<string, string> = {
-    '{{firstName}}': leadData.firstName || '',
-    '{{lastName}}': leadData.lastName || '',
-    '{{name}}': leadData.name || `${leadData.firstName || ''} ${leadData.lastName || ''}`.trim(),
-    '{{email}}': leadData.email || '',
-    '{{phone}}': leadData.phone || '',
-    '{{company}}': leadData.company || leadData.companyName || '',
-    '{{title}}': leadData.title || '',
-    '{{linkedInUrl}}': leadData.linkedInUrl || '',
+    '{{firstName}}': leadData.firstName ?? '',
+    '{{lastName}}': leadData.lastName ?? '',
+    '{{name}}': leadData.name ?? `${leadData.firstName ?? ''} ${leadData.lastName ?? ''}`.trim(),
+    '{{email}}': leadData.email ?? '',
+    '{{phone}}': leadData.phone ?? '',
+    '{{company}}': leadData.company ?? leadData.companyName ?? '',
+    '{{title}}': leadData.title ?? '',
+    '{{linkedInUrl}}': leadData.linkedInUrl ?? '',
   };
   
   // Also substitute any custom fields
@@ -800,7 +800,9 @@ async function executeEmailAction(
     throw new Error('Lead has no email address');
   }
   
-  const subject = step.data?.subject || 'Following up';
+  const subject = (step.data?.subject !== '' && step.data?.subject != null) 
+    ? step.data.subject 
+    : 'Following up';
   
   // In test mode, just log the action without actually sending
   if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
@@ -827,7 +829,9 @@ async function executeEmailAction(
   });
   
   if (!result.success) {
-    throw new Error(result.error || 'Failed to send email');
+    throw new Error((result.error !== '' && result.error != null) 
+      ? result.error 
+      : 'Failed to send email');
   }
   
   logger.info('Email sent via sequence', {
@@ -845,7 +849,7 @@ async function executeLinkedInAction(
   step: SequenceStep,
   enrollment: SequenceEnrollment
 ): Promise<void> {
-  const linkedInIdentifier = leadData.linkedInUrl || leadData.email;
+  const linkedInIdentifier = leadData.linkedInUrl ?? leadData.email;
   
   if (!linkedInIdentifier) {
     throw new Error('Lead has no LinkedIn URL or email');
@@ -861,7 +865,7 @@ async function executeLinkedInAction(
   }
   
   // Note: LinkedIn requires access token - this would need to be configured per organization
-  const accessToken = step.data?.linkedInAccessToken || '';
+  const accessToken = step.data?.linkedInAccessToken ?? '';
   
   const result = await sendLinkedInMessage(
     accessToken,
@@ -871,7 +875,9 @@ async function executeLinkedInAction(
   );
   
   if (!result.success) {
-    throw new Error(result.error || 'Failed to send LinkedIn message');
+    throw new Error((result.error !== '' && result.error != null) 
+      ? result.error 
+      : 'Failed to send LinkedIn message');
   }
   
   logger.info('LinkedIn message sent via sequence', {
@@ -915,7 +921,9 @@ async function executeSMSAction(
   });
   
   if (!result.success) {
-    throw new Error(result.error || 'Failed to send SMS');
+    throw new Error((result.error !== '' && result.error != null) 
+      ? result.error 
+      : 'Failed to send SMS');
   }
   
   logger.info('SMS sent via sequence', {
@@ -947,7 +955,7 @@ async function executePhoneAction(
   }
   
   // Use the organization's AI agent for the call
-  const agentId = step.data?.agentId || 'default';
+  const agentId = step.data?.agentId ?? 'default';
   
   const call = await initiateCall(
     enrollment.organizationId,
@@ -1141,8 +1149,8 @@ async function emitSequenceSignal(params: {
         sequenceId: enrollment.sequenceId,
         sequenceName: sequence?.name,
         status: enrollment.status,
-        currentStepIndex: enrollment.currentStepIndex,
-        executedStepsCount: enrollment.executedSteps.length,
+        currentStepIndex: enrollment.currentStepIndex ?? 0,
+        executedStepsCount: enrollment.executedSteps?.length ?? 0,
         enrolledAt: enrollment.enrolledAt.toISOString(),
         completedAt: enrollment.completedAt?.toISOString(),
         ...metadata,
@@ -1234,8 +1242,8 @@ export async function initializeSequencerSignalObservers(
                 source: 'signal-observer',
                 trigger: 'lead.qualified',
                 signalId: signal.id,
-                score: signal.metadata.totalScore,
-                grade: signal.metadata.grade,
+                score: signal.metadata?.totalScore,
+                grade: signal.metadata?.grade,
               },
             });
 
@@ -1313,9 +1321,9 @@ export async function initializeSequencerSignalObservers(
                 source: 'signal-observer',
                 trigger: 'lead.intent.high',
                 signalId: signal.id,
-                intentScore: signal.metadata.intentScore,
-                detectedSignals: signal.metadata.detectedSignals,
-                nextBestAction: signal.metadata.nextBestAction,
+                intentScore: signal.metadata?.intentScore,
+                detectedSignals: signal.metadata?.detectedSignals,
+                nextBestAction: signal.metadata?.nextBestAction,
               },
             });
 

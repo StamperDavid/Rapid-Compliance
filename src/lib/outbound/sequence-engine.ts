@@ -275,8 +275,12 @@ export class SequenceEngine {
 
     // Get organization settings to determine email provider
     const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-    const emailProvider = org?.emailProvider || 'gmail'; // Default to Gmail
-    const fromEmail = org?.fromEmail || process.env.FROM_EMAIL;
+    const emailProvider = (org?.emailProvider !== '' && org?.emailProvider != null) 
+      ? org.emailProvider 
+      : 'gmail'; // Default to Gmail
+    const fromEmail = (org?.fromEmail !== '' && org?.fromEmail != null) 
+      ? org.fromEmail 
+      : process.env.FROM_EMAIL;
 
     if (!fromEmail) {
       throw new Error('FROM_EMAIL not configured for this organization');
@@ -316,7 +320,9 @@ export class SequenceEngine {
         const { sendEmail } = await import('@/lib/email/sendgrid-service');
         const result = await sendEmail({
           to: prospect.email,
-          subject: step.subject || 'Follow-up',
+          subject: (step.subject !== '' && step.subject != null) 
+            ? step.subject 
+            : 'Follow-up',
           html: step.body,
           tracking: {
             trackOpens: true,
@@ -331,7 +337,9 @@ export class SequenceEngine {
         }, sendgridKey);
 
         if (!result.success) {
-          throw new Error(result.error || 'Failed to send email via SendGrid');
+          throw new Error((result.error !== '' && result.error != null) 
+            ? result.error 
+            : 'Failed to send email via SendGrid');
         }
 
         logger.info('Sequence Engine Email sent via SendGrid to prospect.email}', { file: 'sequence-engine.ts' });
@@ -378,8 +386,8 @@ export class SequenceEngine {
     
     await sendLinkedInMessage(
       linkedInToken,
-      prospect.linkedInUrl || prospect.email,
-      step.content || '',
+      prospect.linkedInUrl ?? prospect.email,
+      step.content ?? '',
       organizationId
     );
     
@@ -412,16 +420,18 @@ export class SequenceEngine {
     
     const result = await sendSMS({
       to: prospect.phone,
-      message: step.content || '',
+      message: step.content ?? '',
       organizationId,
     });
     
     if (!result.success) {
-      throw new Error(result.error || 'Failed to send SMS');
+      throw new Error((result.error !== '' && result.error != null) 
+        ? result.error 
+        : 'Failed to send SMS');
     }
     
     // Save SMS record with Twilio message ID for webhook tracking
-    const smsRecordId = result.messageId || `${Date.now()}-${enrollment.prospectId}`;
+    const smsRecordId = result.messageId ?? `${Date.now()}-${enrollment.prospectId}`;
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/smsMessages`,
       smsRecordId,
@@ -436,7 +446,9 @@ export class SequenceEngine {
         message: step.content,
         status: 'sent',
         sentAt: new Date().toISOString(),
-        provider: result.provider || 'twilio',
+        provider: (result.provider !== '' && result.provider != null) 
+          ? result.provider 
+          : 'twilio',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }
@@ -468,18 +480,22 @@ export class SequenceEngine {
     
     // Calculate task due date
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + (step.taskDueDays || 1));
+    dueDate.setDate(dueDate.getDate() + (step.taskDueDays ?? 1));
     
     // Create task in CRM
     const taskId = `task-${Date.now()}-${enrollment.prospectId}`;
     const task = {
       id: taskId,
       organizationId,
-      title: step.taskTitle || `Follow up with ${prospect.name}`,
-      description: step.content || `Automated task from sequence: ${enrollment.sequenceId}`,
+      title: (step.taskTitle !== '' && step.taskTitle != null) 
+        ? step.taskTitle 
+        : `Follow up with ${prospect.name}`,
+      description: step.content ?? `Automated task from sequence: ${enrollment.sequenceId}`,
       type: 'follow-up',
       status: 'pending',
-      priority: step.taskPriority || 'medium',
+      priority: (step.taskPriority !== '' && step.taskPriority != null) 
+        ? step.taskPriority 
+        : 'medium',
       dueDate,
       relatedTo: {
         type: 'prospect',
@@ -488,7 +504,9 @@ export class SequenceEngine {
       },
       sequenceId: enrollment.sequenceId,
       stepId: step.id,
-      assignedTo: step.taskAssignee || 'unassigned',
+      assignedTo: (step.taskAssignee !== '' && step.taskAssignee != null) 
+        ? step.taskAssignee 
+        : 'unassigned',
       createdBy: 'sequence-engine',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -537,7 +555,7 @@ export class SequenceEngine {
         statsId
       );
       
-      const stats = currentStats || {
+      const stats = currentStats ?? {
         stepId,
         totalExecutions: 0,
         successCount: 0,
@@ -545,10 +563,10 @@ export class SequenceEngine {
         skippedCount: 0,
       };
       
-      stats.totalExecutions += 1;
-      if (status === 'success') {stats.successCount += 1;}
-      if (status === 'failed') {stats.failedCount += 1;}
-      if (status === 'skipped') {stats.skippedCount += 1;}
+      stats.totalExecutions = (stats.totalExecutions ?? 0) + 1;
+      if (status === 'success') {stats.successCount = (stats.successCount ?? 0) + 1;}
+      if (status === 'failed') {stats.failedCount = (stats.failedCount ?? 0) + 1;}
+      if (status === 'skipped') {stats.skippedCount = (stats.skippedCount ?? 0) + 1;}
       stats.successRate = (stats.successCount / stats.totalExecutions) * 100;
       stats.updatedAt = new Date();
       
@@ -571,9 +589,9 @@ export class SequenceEngine {
     fromDate: Date = new Date()
   ): string {
     const nextTime = new Date(fromDate);
-    nextTime.setDate(nextTime.getDate() + step.delayDays);
+    nextTime.setDate(nextTime.getDate() + (step.delayDays ?? 0));
     
-    if (step.delayHours) {
+    if (step.delayHours !== null && step.delayHours !== undefined) {
       nextTime.setHours(nextTime.getHours() + step.delayHours);
     }
 
@@ -756,29 +774,33 @@ export class SequenceEngine {
       Object.keys(updates).forEach((key) => {
         const value = updates[key as keyof typeof updates];
         if (typeof value === 'number' && sequence.analytics) {
-          (sequence.analytics as any)[key] = ((sequence.analytics as any)[key] || 0) + value;
+          (sequence.analytics as any)[key] = ((sequence.analytics as any)[key] ?? 0) + value;
         }
       });
 
       // Recalculate rates
-      sequence.analytics.deliveryRate = sequence.analytics.totalSent > 0
-        ? (sequence.analytics.totalDelivered / sequence.analytics.totalSent) * 100
+      const totalSent = sequence.analytics.totalSent ?? 0;
+      const totalDelivered = sequence.analytics.totalDelivered ?? 0;
+      const totalEnrolled = sequence.analytics.totalEnrolled ?? 0;
+      
+      sequence.analytics.deliveryRate = totalSent > 0
+        ? ((totalDelivered / totalSent) * 100)
         : 0;
 
-      sequence.analytics.openRate = sequence.analytics.totalDelivered > 0
-        ? (sequence.analytics.totalOpened / sequence.analytics.totalDelivered) * 100
+      sequence.analytics.openRate = totalDelivered > 0
+        ? (((sequence.analytics.totalOpened ?? 0) / totalDelivered) * 100)
         : 0;
 
-      sequence.analytics.clickRate = sequence.analytics.totalDelivered > 0
-        ? (sequence.analytics.totalClicked / sequence.analytics.totalDelivered) * 100
+      sequence.analytics.clickRate = totalDelivered > 0
+        ? (((sequence.analytics.totalClicked ?? 0) / totalDelivered) * 100)
         : 0;
 
-      sequence.analytics.replyRate = sequence.analytics.totalDelivered > 0
-        ? (sequence.analytics.totalReplied / sequence.analytics.totalDelivered) * 100
+      sequence.analytics.replyRate = totalDelivered > 0
+        ? (((sequence.analytics.totalReplied ?? 0) / totalDelivered) * 100)
         : 0;
 
-      sequence.analytics.conversionRate = sequence.analytics.totalEnrolled > 0
-        ? (sequence.analytics.meetingsBooked / sequence.analytics.totalEnrolled) * 100
+      sequence.analytics.conversionRate = totalEnrolled > 0
+        ? (((sequence.analytics.meetingsBooked ?? 0) / totalEnrolled) * 100)
         : 0;
 
       sequence.analytics.lastRun = new Date().toISOString();
@@ -828,11 +850,11 @@ export class SequenceEngine {
       // Update analytics fields with increments
       const updatedStep = {
         ...step,
-        sent: (step.sent || 0) + (updates.sent || 0),
-        delivered: (step.delivered || 0) + (updates.delivered || 0),
-        opened: (step.opened || 0) + (updates.opened || 0),
-        clicked: (step.clicked || 0) + (updates.clicked || 0),
-        replied: (step.replied || 0) + (updates.replied || 0),
+        sent: (step.sent ?? 0) + (updates.sent ?? 0),
+        delivered: (step.delivered ?? 0) + (updates.delivered ?? 0),
+        opened: (step.opened ?? 0) + (updates.opened ?? 0),
+        clicked: (step.clicked ?? 0) + (updates.clicked ?? 0),
+        replied: (step.replied ?? 0) + (updates.replied ?? 0),
         updatedAt: new Date().toISOString(),
       };
       
