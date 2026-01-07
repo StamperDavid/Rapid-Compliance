@@ -163,12 +163,14 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
       return String(fieldValue || '').toLowerCase().startsWith(String(condition.value || '').toLowerCase());
     case 'ends_with':
       return String(fieldValue || '').toLowerCase().endsWith(String(condition.value || '').toLowerCase());
-    case 'in':
+    case 'in': {
       const inArray = Array.isArray(condition.value) ? condition.value : String(condition.value).split(',');
       return inArray.includes(fieldValue);
-    case 'not_in':
+    }
+    case 'not_in': {
       const notInArray = Array.isArray(condition.value) ? condition.value : String(condition.value).split(',');
       return !notInArray.includes(fieldValue);
+    }
     case 'is_empty':
       return !fieldValue || (Array.isArray(fieldValue) && fieldValue.length === 0);
     case 'is_not_empty':
