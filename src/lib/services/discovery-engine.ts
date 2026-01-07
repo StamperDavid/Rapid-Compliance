@@ -565,13 +565,13 @@ async function synthesizeLeadObject(
       
       teamMembers: rawData.teamMembers.length > 0 
         ? rawData.teamMembers 
-        : (synthesized.teamMembers || []),
+        : (synthesized.teamMembers ?? []),
       
       techStack: rawData.techStack.length > 0 
         ? rawData.techStack 
-        : (synthesized.techStack || []),
+        : (synthesized.techStack ?? []),
       
-      pressmentions: synthesized.pressmentions || [],
+      pressmentions: synthesized.pressmentions ?? [],
       
       contactInfo: synthesized.contactInfo || {
         socialMedia: {},
@@ -582,7 +582,7 @@ async function synthesizeLeadObject(
         jobCount: rawData.careerData?.jobCount || 0,
         recentActivity: true,
         fundingStage: synthesized.signals?.fundingStage,
-        growthIndicators: synthesized.signals?.growthIndicators || [],
+        growthIndicators: synthesized.signals?.growthIndicators ?? [],
       },
       
       metadata: {
@@ -609,8 +609,8 @@ async function synthesizeLeadObject(
     return {
       domain,
       companyName: extractDomainName(domain),
-      teamMembers: rawData.teamMembers || [],
-      techStack: rawData.techStack || [],
+      teamMembers: rawData.teamMembers ?? [],
+      techStack: rawData.techStack ?? [],
       pressmentions: [],
       contactInfo: { socialMedia: {} },
       signals: {
@@ -1191,7 +1191,7 @@ async function discoverPersonData(
     return {
       email,
       fullName: personData.fullName || email,
-      socialProfiles: personData.socialProfiles || {},
+      socialProfiles: personData.socialProfiles ?? {},
       metadata: {
         discoveredAt: new Date(),
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

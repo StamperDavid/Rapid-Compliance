@@ -72,7 +72,7 @@ export async function listEmails(
     labelIds: options?.labelIds,
   });
 
-  const messages = response.data.messages || [];
+  const messages = response.data.messages ?? [];
   
   // Fetch full message details for each
   const fullMessages = await Promise.all(
@@ -192,7 +192,7 @@ export async function getHistory(
     startHistoryId,
   });
 
-  return response.data.history || [];
+  return response.data.history ?? [];
 }
 
 /**
@@ -207,7 +207,7 @@ export function parseEmailHeaders(message: any): {
   inReplyTo?: string;
   references?: string;
 } {
-  const headers = message.payload?.headers || [];
+  const headers = message.payload?.headers ?? [];
   
   const getHeader = (name: string) => {
     const header = headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase());

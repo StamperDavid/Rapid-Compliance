@@ -168,7 +168,7 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
     workspaceId: sequence.workspaceId,
     trigger: sequence.trigger || 'new_lead',
     triggerConditions: sequence.triggerConditions,
-    emails: sequence.emails || [],
+    emails: sequence.emails ?? [],
     sendFrequency: sequence.sendFrequency || 'weekly',
     customSchedule: sequence.customSchedule,
     maxEmails: sequence.maxEmails,
@@ -431,7 +431,7 @@ export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<
     id: segmentId,
     name: segment.name || 'Untitled Segment',
     organizationId: segment.organizationId!,
-    criteria: segment.criteria || {},
+    criteria: segment.criteria ?? {},
     leadCount: 0,
     createdAt: new Date(),
   };

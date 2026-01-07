@@ -167,8 +167,8 @@ export async function createProduct(
       inStock: data.inStock !== undefined ? data.inStock : true,
       trackInventory: data.trackInventory || false,
       isDigital: data.isDigital || false,
-      tags: data.tags || [],
-      images: data.images || [],
+      tags: data.tags ?? [],
+      images: data.images ?? [],
       createdAt: now,
       updatedAt: now,
     };

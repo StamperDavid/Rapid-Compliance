@@ -22,7 +22,7 @@ export async function getWhoisData(domain: string): Promise<Partial<CompanyEnric
     }
     
     const data = await response.json();
-    const registrant = data.WhoisRecord?.registrant || {};
+    const registrant = data.WhoisRecord?.registrant ?? {};
     
     return {
       headquarters: {
@@ -131,7 +131,7 @@ export async function getCrunchbaseData(companyName: string): Promise<Partial<Co
     }
     
     const details = await detailsResponse.json();
-    const props = details.properties || {};
+    const props = details.properties ?? {};
     
     return {
       description: props.short_description,
@@ -223,7 +223,7 @@ export async function getWikipediaData(companyName: string): Promise<Partial<Com
     }
     
     const extractData = await extractResponse.json();
-    const pages = extractData.query?.pages || {};
+    const pages = extractData.query?.pages ?? {};
     const page = Object.values(pages)[0] as any;
     
     if (!page?.extract) {
@@ -274,7 +274,7 @@ export async function getAllBackupData(
   
   // Add tech stack from DNS
   if (dns.length > 0) {
-    merged.techStack = [...(merged.techStack || []), ...dns];
+    merged.techStack = [...(merged.techStack ?? []), ...dns];
   }
   
   logger.info('[Backup Sources] Merged data from backup sources', { file: 'backup-sources.ts' });

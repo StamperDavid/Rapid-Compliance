@@ -483,7 +483,7 @@ export async function recordEmailOpen(
       opened: true,
       openedAt: new Date().toISOString(),
       clicked: existing?.clicked || false,
-      clickLinks: existing?.clickLinks || [],
+      clickLinks: existing?.clickLinks ?? [],
       ipAddress,
       userAgent,
     },
@@ -510,7 +510,7 @@ export async function recordEmailClick(
     messageId
   );
 
-  const clickLinks = existing?.clickLinks || [];
+  const clickLinks = existing?.clickLinks ?? [];
   clickLinks.push({
     url,
     clickedAt: new Date().toISOString(),

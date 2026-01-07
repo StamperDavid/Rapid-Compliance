@@ -151,7 +151,7 @@ export async function createContact(
       organizationId,
       workspaceId,
       isVIP: data.isVIP || false,
-      tags: data.tags || [],
+      tags: data.tags ?? [],
       createdAt: now,
       updatedAt: now,
     };
@@ -272,7 +272,7 @@ export async function addTags(
       throw new Error('Contact not found');
     }
 
-    const existingTags = contact.tags || [];
+    const existingTags = contact.tags ?? [];
     const mergedTags = [...new Set([...existingTags, ...newTags])];
 
     const updated = await updateContact(organizationId, contactId, { tags: mergedTags }, workspaceId);

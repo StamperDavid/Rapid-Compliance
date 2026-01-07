@@ -275,7 +275,7 @@ function calculateTopWorkflows(
   
   // Group executions by workflow
   executions.forEach((execution: WorkflowExecution) => {
-    const existing = workflowMap.get(execution.workflowId) || {
+    const existing = workflowMap.get(execution.workflowId) ?? {
       workflow: workflows.find((w: Workflow) => w.id === execution.workflowId)!,
       executions: [],
     };
@@ -341,7 +341,7 @@ function calculateActionBreakdown(
     const results = execution.actionsExecuted ?? [];
     results.forEach((result: any) => {
       const actionType = result.actionType || 'unknown';
-      const existing = actionMap.get(actionType) || {
+      const existing = actionMap.get(actionType) ?? {
         count: 0,
         success: 0,
         times: [],
@@ -466,7 +466,7 @@ function calculateEmailsByType(emails: any[], total: number): EmailTypeMetrics[]
   
   emails.forEach((email: any) => {
     const type = email.type || 'unknown';
-    const existing = typeMap.get(type) || { count: 0, times: [] };
+    const existing = typeMap.get(type) ?? { count: 0, times: [] };
     
     typeMap.set(type, {
       count: existing.count + 1,
@@ -605,7 +605,7 @@ function calculateDealsByStage(deals: any[]): StageMetrics[] {
   
   deals.forEach((deal: any) => {
     const stage = deal.stage || 'unknown';
-    const existing = stageMap.get(stage) || { count: 0, value: 0, times: [] };
+    const existing = stageMap.get(stage) ?? { count: 0, value: 0, times: [] };
     
     stageMap.set(stage, {
       count: existing.count + 1,
@@ -641,7 +641,7 @@ function calculateDealsByTier(deals: any[]): TierMetrics[] {
   
   deals.forEach((deal: any) => {
     const tier = deal.tier || 'unknown';
-    const existing = tierMap.get(tier) || { count: 0, value: 0, scores: [] };
+    const existing = tierMap.get(tier) ?? { count: 0, value: 0, scores: [] };
     
     tierMap.set(tier, {
       count: existing.count + 1,
@@ -829,7 +829,7 @@ async function getTeamMetrics(
   
   // Calculate rep performance
   const repPerformance: RepPerformanceSummary[] = reps.map((rep: any, index: number) => {
-    const deals = repDeals[index] || [];
+    const deals = repDeals[index] ?? [];
     const wonDeals = deals.filter((d: any) => d.status === 'won');
     const revenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
     const quota = rep.quota || 100000;

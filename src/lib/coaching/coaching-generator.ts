@@ -294,7 +294,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.bestPractices || [];
+      return parsed.bestPractices ?? [];
     } catch (error) {
       logger.error('Error parsing best practices', { error });
       return [];
@@ -347,7 +347,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.trainingSuggestions || [];
+      return parsed.trainingSuggestions ?? [];
     } catch (error) {
       logger.error('Error parsing training suggestions', { error });
       return [];
@@ -374,7 +374,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.actionItems || [];
+      return parsed.actionItems ?? [];
     } catch (error) {
       logger.error('Error parsing action items', { error });
       return [];

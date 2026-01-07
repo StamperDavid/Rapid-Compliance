@@ -62,7 +62,7 @@ export async function executeCreateEntityAction(
         break;
       case 'variable': {
         // Get from workflow variables stored in triggerData._variables
-        const variables = triggerData?._variables || triggerData?.variables || {};
+        const variables = (triggerData?._variables || triggerData?.variables) ?? {};
         value = FieldResolver.getFieldValue(variables, mapping.sourceField || '');
         // Fallback to trigger data if not found in variables
         if (value === undefined) {

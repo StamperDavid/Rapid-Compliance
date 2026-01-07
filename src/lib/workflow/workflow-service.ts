@@ -86,7 +86,7 @@ export class WorkflowService {
       createdAt: now,
       updatedAt: now,
       stats: this.getDefaultStats(),
-      tags: input.tags || [],
+      tags: input.tags ?? [],
     };
     
     // Save to Firestore (use collection path as string)
@@ -334,10 +334,10 @@ export class WorkflowService {
       executeOnWeekends: settings?.executeOnWeekends ?? true,
       executeOnHolidays: settings?.executeOnHolidays ?? true,
       applyToNewDealsOnly: settings?.applyToNewDealsOnly ?? false,
-      dealFilters: settings?.dealFilters || [],
+      dealFilters: settings?.dealFilters ?? [],
       notifyOnSuccess: settings?.notifyOnSuccess ?? false,
       notifyOnFailure: settings?.notifyOnFailure ?? true,
-      notificationRecipients: settings?.notificationRecipients || [],
+      notificationRecipients: settings?.notificationRecipients ?? [],
     };
   }
   

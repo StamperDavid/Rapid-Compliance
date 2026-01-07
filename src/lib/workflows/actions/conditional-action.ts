@@ -26,7 +26,7 @@ export async function executeConditionalAction(
   }
   
   // Execute matched branch or default branch
-  const actionsToExecute = matchedBranch ? matchedBranch.actions : (action.defaultBranch || []);
+  const actionsToExecute = matchedBranch ? matchedBranch.actions : (action.defaultBranch ?? []);
   const conditionMet = matchedBranch !== null;
   
   if (!actionsToExecute || actionsToExecute.length === 0) {
@@ -104,7 +104,7 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
     }
     case 'variable': {
       // Get from workflow variables stored in triggerData._variables
-      const variables = triggerData?._variables || triggerData?.variables || {};
+      const variables = (triggerData?._variables || triggerData?.variables) ?? {};
       fieldValue = getNestedValue(variables, condition.field);
       break;
     }

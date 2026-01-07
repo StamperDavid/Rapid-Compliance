@@ -82,7 +82,7 @@ export async function searchKnowledgeBase(
         score,
         source: embeddingDoc.source || 'document',
         sourceId: embeddingDoc.sourceId || '',
-        metadata: embeddingDoc.metadata || {},
+        metadata: embeddingDoc.metadata ?? {},
       });
     }
     
@@ -118,7 +118,7 @@ export async function storeEmbedding(
         text: embedding.embedding.text,
         source,
         sourceId,
-        metadata: metadata || {},
+        metadata: metadata ?? {},
         model: embedding.model,
         createdAt: new Date().toISOString(),
       },
