@@ -83,7 +83,7 @@ export async function getLeads(
     const result = await FirestoreService.getAllPaginated<Lead>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/leads/records`,
       constraints,
-      options?.pageSize || 50,
+      (options?.pageSize !== 0 && options?.pageSize != null) ? options.pageSize : 50,
       options?.lastDoc
     );
 
@@ -179,7 +179,7 @@ export async function createLead(
       id: leadId,
       organizationId,
       workspaceId,
-      status: data.status || 'new',
+      status: (data.status !== '' && data.status != null) ? data.status : 'new',
       score: enrichedScore,
       ...(cleanEnrichmentData && { enrichmentData: cleanEnrichmentData }),
       createdAt: now,
@@ -384,7 +384,7 @@ export async function enrichLead(
  * Calculate lead score based on enrichment data
  */
 function calculateEnrichedScore(lead: Lead, enrichmentData: any): number {
-  let score = lead.score || 50;
+  let score = (lead.score !== 0 && lead.score != null) ? lead.score : 50;
 
   // Boost score based on enrichment data quality
   if (enrichmentData?.linkedInUrl) {score += 10;}

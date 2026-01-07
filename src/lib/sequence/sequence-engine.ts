@@ -66,8 +66,8 @@ export class SequenceIntelligenceEngine {
     const validatedInput = sequenceAnalysisInputSchema.parse(input);
     
     // Set default time range if not provided
-    const endDate = validatedInput.endDate || new Date();
-    const startDate = validatedInput.startDate || new Date(endDate.getTime() - (DEFAULT_TIME_RANGE_DAYS * 24 * 60 * 60 * 1000));
+    const endDate = validatedInput.endDate != null ? validatedInput.endDate : new Date();
+    const startDate = validatedInput.startDate != null ? validatedInput.startDate : new Date(endDate.getTime() - (DEFAULT_TIME_RANGE_DAYS * 24 * 60 * 60 * 1000));
     
     // TODO: In production, fetch from database
     // For now, we'll use mock data structure
@@ -123,8 +123,8 @@ export class SequenceIntelligenceEngine {
     // Validate request
     const validatedRequest = patternDetectionRequestSchema.parse(request);
     
-    const minimumSampleSize = validatedRequest.minimumSampleSize || MIN_SAMPLE_SIZE_FOR_PATTERNS;
-    const minimumLift = validatedRequest.minimumLift || MIN_LIFT_FOR_PATTERN;
+    const minimumSampleSize = (validatedRequest.minimumSampleSize !== 0 && validatedRequest.minimumSampleSize != null) ? validatedRequest.minimumSampleSize : MIN_SAMPLE_SIZE_FOR_PATTERNS;
+    const minimumLift = (validatedRequest.minimumLift !== 0 && validatedRequest.minimumLift != null) ? validatedRequest.minimumLift : MIN_LIFT_FOR_PATTERN;
     
     // Filter sequences with sufficient data
     const qualifiedMetrics = (validatedRequest.sequenceMetrics as SequenceMetrics[]).filter(
@@ -452,11 +452,11 @@ ${metrics.map(m => `
 - ${m.sequenceName}: ${m.overallReplyRate.toFixed(1)}% reply, ${m.meetingRate.toFixed(1)}% meeting
 `).join('\n')}
 
-PATTERNS FOUND: ${patterns?.length || 0}
-TOP PATTERN: ${patterns?.[0]?.name || 'None'}
+PATTERNS FOUND: ${patterns?.length ?? 0}
+TOP PATTERN: ${(patterns?.[0]?.name !== '' && patterns?.[0]?.name != null) ? patterns[0].name : 'None'}
 
-OPTIMIZATIONS: ${optimizations?.length || 0}
-TOP PRIORITY: ${optimizations?.[0]?.title || 'None'}
+OPTIMIZATIONS: ${optimizations?.length ?? 0}
+TOP PRIORITY: ${(optimizations?.[0]?.title !== '' && optimizations?.[0]?.title != null) ? optimizations[0].title : 'None'}
 
 Provide:
 1. 3-5 key findings (what's working well)
@@ -518,7 +518,7 @@ Return concise JSON:
   private async fetchSequences(input: SequenceAnalysisInput): Promise<EmailSequence[]> {
     // TODO: Implement database fetching
     // For now, return mock structure
-    const sequenceIds = input.sequenceIds || (input.sequenceId ? [input.sequenceId] : []);
+    const sequenceIds = input.sequenceIds != null ? input.sequenceIds : (input.sequenceId ? [input.sequenceId] : []);
     
     return sequenceIds.map((id, index) => ({
       id,

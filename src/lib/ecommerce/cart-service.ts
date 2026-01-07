@@ -369,7 +369,7 @@ async function getProduct(workspaceId: string, productId: string, organizationId
   return {
     id: product.id,
     name: product[mappings.name],
-    price: parseFloat(product[mappings.price] || 0),
+    price: parseFloat((product[mappings.price] !== '' && product[mappings.price] != null) ? product[mappings.price] : 0),
     description: product[mappings.description],
     images: product[mappings.images] ?? [],
     sku: product[mappings.sku],
