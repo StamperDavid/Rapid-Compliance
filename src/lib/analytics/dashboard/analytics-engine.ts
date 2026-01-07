@@ -340,7 +340,7 @@ function calculateActionBreakdown(
   executions.forEach((execution: WorkflowExecution) => {
     const results = execution.actionsExecuted ?? [];
     results.forEach((result: any) => {
-      const actionType = result.actionType || 'unknown';
+      const actionType = result.actionType ?? 'unknown';
       const existing = actionMap.get(actionType) ?? {
         count: 0,
         success: 0,
@@ -350,7 +350,7 @@ function calculateActionBreakdown(
       actionMap.set(actionType, {
         count: existing.count + 1,
         success: existing.success + (result.status === 'success' ? 1 : 0),
-        times: [...existing.times, result.duration || 0],
+        times: [...existing.times, result.duration ?? 0],
       });
     });
   });
@@ -425,12 +425,12 @@ async function getEmailMetrics(
   // Get most used type
   const typeCount = new Map<string, number>();
   emails.forEach((e: any) => {
-    const type = e.type || 'unknown';
-    typeCount.set(type, (typeCount.get(type) || 0) + 1);
+    const type = e.type ?? 'unknown';
+    typeCount.set(type, (typeCount.get(type) ?? 0) + 1);
   });
   
   const mostUsedType = Array.from(typeCount.entries())
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || 'intro';
+    .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'intro';
   
   // Calculate trend
   const generationTrend = previousEmails.length > 0
@@ -465,12 +465,12 @@ function calculateEmailsByType(emails: any[], total: number): EmailTypeMetrics[]
   const typeMap = new Map<string, { count: number; times: number[] }>();
   
   emails.forEach((email: any) => {
-    const type = email.type || 'unknown';
+    const type = email.type ?? 'unknown';
     const existing = typeMap.get(type) ?? { count: 0, times: [] };
     
     typeMap.set(type, {
       count: existing.count + 1,
-      times: [...existing.times, email.generationTime || 0],
+      times: [...existing.times, email.generationTime ?? 0],
     });
   });
   
@@ -493,8 +493,8 @@ function calculateEmailsByTier(emails: any[], total: number): TierDistribution[]
   const tierMap = new Map<string, number>();
   
   emails.forEach((email: any) => {
-    const tier = email.dealTier || 'unknown';
-    tierMap.set(tier, (tierMap.get(tier) || 0) + 1);
+    const tier = email.dealTier ?? 'unknown';
+    tierMap.set(tier, (tierMap.get(tier) ?? 0) + 1);
   });
   
   return Array.from(tierMap.entries())
@@ -544,7 +544,7 @@ async function getDealMetrics(
   );
   
   const totalActiveDeals = deals.length;
-  const totalValue = deals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+  const totalValue = deals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
   const averageValue = totalActiveDeals > 0 ? totalValue / totalActiveDeals : 0;
   
   // Count hot and at-risk deals
@@ -604,13 +604,13 @@ function calculateDealsByStage(deals: any[]): StageMetrics[] {
   }>();
   
   deals.forEach((deal: any) => {
-    const stage = deal.stage || 'unknown';
+    const stage = deal.stage ?? 'unknown';
     const existing = stageMap.get(stage) ?? { count: 0, value: 0, times: [] };
     
     stageMap.set(stage, {
       count: existing.count + 1,
-      value: existing.value + (deal.value || 0),
-      times: [...existing.times, deal.timeInStage || 0],
+      value: existing.value + (deal.value ?? 0),
+      times: [...existing.times, deal.timeInStage ?? 0],
     });
   });
   
@@ -640,13 +640,13 @@ function calculateDealsByTier(deals: any[]): TierMetrics[] {
   }>();
   
   deals.forEach((deal: any) => {
-    const tier = deal.tier || 'unknown';
+    const tier = deal.tier ?? 'unknown';
     const existing = tierMap.get(tier) ?? { count: 0, value: 0, scores: [] };
     
     tierMap.set(tier, {
       count: existing.count + 1,
-      value: existing.value + (deal.value || 0),
-      scores: [...existing.scores, deal.score || 0],
+      value: existing.value + (deal.value ?? 0),
+      scores: [...existing.scores, deal.score ?? 0],
     });
   });
   
@@ -744,8 +744,8 @@ async function getRevenueMetrics(
     previousDateRange.end
   );
   
-  const totalRevenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
-  const previousRevenue = previousWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+  const totalRevenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+  const previousRevenue = previousWonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
   
   // Get quota (would come from workspace settings)
   const quota = 100000; // TODO: Get from workspace settings
@@ -764,7 +764,7 @@ async function getRevenueMetrics(
     wonDeals,
     startDate,
     endDate,
-    (d: any) => d.value || 0
+    (d: any) => d.value ?? 0
   );
   
   // Calculate win rate
@@ -782,9 +782,9 @@ async function getRevenueMetrics(
     totalRevenue,
     quota,
     quotaAttainment,
-    forecastOptimistic: forecast?.optimistic || 0,
-    forecastRealistic: forecast?.realistic || 0,
-    forecastPessimistic: forecast?.pessimistic || 0,
+    forecastOptimistic: forecast?.optimistic ?? 0,
+    forecastRealistic: forecast?.realistic ?? 0,
+    forecastPessimistic: forecast?.pessimistic ?? 0,
     revenueTrend,
     revenueByDay,
     winRate,
@@ -831,12 +831,12 @@ async function getTeamMetrics(
   const repPerformance: RepPerformanceSummary[] = reps.map((rep: any, index: number) => {
     const deals = repDeals[index] ?? [];
     const wonDeals = deals.filter((d: any) => d.status === 'won');
-    const revenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
-    const quota = rep.quota || 100000;
+    const revenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+    const quota = rep.quota ?? 100000;
     
     return {
       repId: rep.id,
-      repName: rep.name || rep.email,
+      repName: rep.name ?? rep.email,
       deals: deals.length,
       revenue,
       quotaAttainment: quota > 0 ? (revenue / quota) * 100 : 0,
@@ -883,7 +883,7 @@ function calculateDateRange(
   customEnd?: Date
 ): { start: Date; end: Date } {
   const now = new Date();
-  const end = customEnd || now;
+  const end = customEnd ?? now;
   let start: Date;
   
   switch (period) {
@@ -911,7 +911,7 @@ function calculateDateRange(
       start = new Date(now.getFullYear(), 0, 1);
       break;
     case 'custom':
-      start = customStart || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      start = customStart ?? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       break;
     default:
       start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -955,11 +955,11 @@ function generateTimeSeries<T>(
   
   // Add item values
   items.forEach((item: any) => {
-    const date = item.createdAt || item.startedAt || item.date;
+    const date = item.createdAt ?? item.startedAt ?? item.date;
     if (date) {
       const dateObj = toDate(date);
       const key = dateObj.toISOString().split('T')[0];
-      const existing = dayMap.get(key) || 0;
+      const existing = dayMap.get(key) ?? 0;
       dayMap.set(key, existing + valueExtractor(item));
     }
   });

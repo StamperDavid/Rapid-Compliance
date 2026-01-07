@@ -67,7 +67,7 @@ export async function enrichCompany(
   
   try {
     // Step 1: Validate input
-    const companyIdentifier = request.companyName || request.domain || request.website;
+    const companyIdentifier = request.companyName ?? request.domain ?? request.website;
     
     if (!companyIdentifier) {
       return createErrorResponse(
@@ -249,7 +249,7 @@ export async function enrichCompany(
           distillationResult = await distillScrape({
             organizationId,
             url: website,
-            rawHtml: scrapedContent.rawHtml || '',
+            rawHtml: scrapedContent.rawHtml ?? '',
             cleanedContent: scrapedContent.cleanedText,
             metadata: {
               title: scrapedContent.title,
@@ -313,12 +313,12 @@ export async function enrichCompany(
     
     // Step 9: Compile enrichment data (with distillation results)
     const enrichmentData: CompanyEnrichmentData = {
-      name: extractedData.name || companyIdentifier,
+      name: extractedData.name ?? companyIdentifier,
       website: website,
       domain: domain,
-      description: extractedData.description || scrapedContent.description,
-      industry: extractedData.industry || request.industry || 'Unknown',
-      size: extractedData.size || 'unknown',
+      description: extractedData.description ?? scrapedContent.description,
+      industry: extractedData.industry ?? request.industry ?? 'Unknown',
+      size: extractedData.size ?? 'unknown',
       employeeCount: extractedData.employeeCount,
       employeeRange: extractedData.employeeRange,
       headquarters: extractedData.headquarters,
@@ -409,9 +409,9 @@ export async function enrichCompany(
     logger.info('  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms', { file: 'enrichment-service.ts' });
     
     if (distillationResult) {
-      logger.info('  Signals: ${distillationResult.signals.length} detected | Lead Score: ${leadScore || 0}', { file: 'enrichment-service.ts' });
+      logger.info('  Signals: ${distillationResult.signals.length} detected | Lead Score: ${leadScore ?? 0}', { file: 'enrichment-service.ts' });
       logger.info('  Storage: ${distillationResult.storageReduction.reductionPercent}% reduction (${distillationResult.storageReduction.rawSizeBytes} → ${distillationResult.storageReduction.signalsSizeBytes} bytes)', { file: 'enrichment-service.ts' });
-      logger.info(`  Temporary Scrape: ${temporaryScrapeId || 'none'} | Duplicate: ${isDuplicate}`, { file: 'enrichment-service.ts' });
+      logger.info(`  Temporary Scrape: ${temporaryScrapeId ?? 'none'} | Duplicate: ${isDuplicate}`, { file: 'enrichment-service.ts' });
     }
     
     return {
@@ -436,7 +436,7 @@ export async function enrichCompany(
     await logEnrichmentCost(organizationId, {
       organizationId,
       timestamp: new Date(),
-      companyDomain: request.domain || 'unknown',
+      companyDomain: request.domain ?? 'unknown',
       searchAPICost: 0,
       scrapingCost: 0,
       aiProcessingCost: 0,
@@ -472,12 +472,12 @@ async function useBackupSources(
     // If we got SOME data, return it with low confidence
     if (Object.keys(backupData).length > 0) {
       const enrichmentData: CompanyEnrichmentData = {
-        name: backupData.name || companyName,
+        name: backupData.name ?? companyName,
         website: website,
         domain: domain,
-        description: backupData.description || '',
-        industry: backupData.industry || 'Unknown',
-        size: backupData.size || 'unknown',
+        description: backupData.description ?? '',
+        industry: backupData.industry ?? 'Unknown',
+        size: backupData.size ?? 'unknown',
         employeeCount: backupData.employeeCount,
         employeeRange: backupData.employeeRange,
         headquarters: backupData.headquarters,
@@ -499,7 +499,7 @@ async function useBackupSources(
       // Cache it (even low confidence is better than re-trying)
       await cacheEnrichment(domain, enrichmentData, organizationId, 3); // Shorter TTL
       
-      const totalCost = calculateCost(costs.searchCalls, costs.scrapeCalls, costs.aiTokens || 0);
+      const totalCost = calculateCost(costs.searchCalls, costs.scrapeCalls, costs.aiTokens ?? 0);
       
       await logEnrichmentCost(organizationId, {
         organizationId,
@@ -507,7 +507,7 @@ async function useBackupSources(
         companyDomain: domain,
         searchAPICost: costs.searchCalls * 0.001,
         scrapingCost: costs.scrapeCalls * 0.0001,
-        aiProcessingCost: ((costs.aiTokens || 0) / 1000) * 0.00015,
+        aiProcessingCost: ((costs.aiTokens ?? 0) / 1000) * 0.00015,
         totalCost,
         clearbitEquivalentCost: 0.75,
         savings: 0.75 - totalCost,
@@ -523,7 +523,7 @@ async function useBackupSources(
         cost: {
           searchAPICalls: costs.searchCalls,
           scrapingCalls: costs.scrapeCalls,
-          aiTokensUsed: costs.aiTokens || 0,
+          aiTokensUsed: costs.aiTokens ?? 0,
           totalCostUSD: totalCost,
         },
         metrics: {
@@ -542,7 +542,7 @@ async function useBackupSources(
       {
         searchAPICalls: costs.searchCalls,
         scrapingCalls: costs.scrapeCalls,
-        aiTokensUsed: costs.aiTokens || 0
+        aiTokensUsed: costs.aiTokens ?? 0
       }
     );
   } catch (error: any) {
@@ -552,7 +552,7 @@ async function useBackupSources(
       {
         searchAPICalls: costs.searchCalls,
         scrapingCalls: costs.scrapeCalls,
-        aiTokensUsed: costs.aiTokens || 0
+        aiTokensUsed: costs.aiTokens ?? 0
       }
     );
   }
@@ -566,18 +566,18 @@ function createErrorResponse(
   startTime: number,
   costs?: { searchAPICalls?: number; scrapingCalls?: number; aiTokensUsed?: number }
 ): EnrichmentResponse {
-  return {
-    success: false,
-    error: errorMessage,
-    cost: {
-      searchAPICalls: costs?.searchAPICalls || 0,
-      scrapingCalls: costs?.scrapingCalls || 0,
-      aiTokensUsed: costs?.aiTokensUsed || 0,
-      totalCostUSD: calculateCost(
-        costs?.searchAPICalls || 0,
-        costs?.scrapingCalls || 0,
-        costs?.aiTokensUsed || 0
-      ),
+      return {
+        success: false,
+        error: errorMessage,
+        cost: {
+          searchAPICalls: costs?.searchAPICalls ?? 0,
+          scrapingCalls: costs?.scrapingCalls ?? 0,
+          aiTokensUsed: costs?.aiTokensUsed ?? 0,
+          totalCostUSD: calculateCost(
+            costs?.searchAPICalls ?? 0,
+            costs?.scrapingCalls ?? 0,
+            costs?.aiTokensUsed ?? 0
+          ),
     },
     metrics: {
       durationMs: Date.now() - startTime,
@@ -611,7 +611,7 @@ export async function enrichCompanies(
   }
   
   // Parallel processing with concurrency limit
-  const maxConcurrent = options?.maxConcurrent || 5;
+  const maxConcurrent = options?.maxConcurrent ?? 5;
   const results: EnrichmentResponse[] = [];
   
   for (let i = 0; i < companies.length; i += maxConcurrent) {
@@ -788,16 +788,16 @@ export async function getStorageOptimizationAnalytics(
     const duplicatesDetected = logsWithMetrics.filter(log => log.storageMetrics?.isDuplicate).length;
     
     const totalRawBytes = logsWithMetrics.reduce(
-      (sum, log) => sum + (log.storageMetrics?.rawScrapeSize || 0), 
+      (sum, log) => sum + (log.storageMetrics?.rawScrapeSize ?? 0), 
       0
     );
     const totalSignalsBytes = logsWithMetrics.reduce(
-      (sum, log) => sum + (log.storageMetrics?.signalsSize || 0), 
+      (sum, log) => sum + (log.storageMetrics?.signalsSize ?? 0), 
       0
     );
     
     const reductions = logsWithMetrics
-      .map(log => log.storageMetrics?.reductionPercent || 0)
+      .map(log => log.storageMetrics?.reductionPercent ?? 0)
       .filter(r => r > 0);
     const averageReductionPercent = reductions.length > 0
       ? reductions.reduce((sum, r) => sum + r, 0) / reductions.length
