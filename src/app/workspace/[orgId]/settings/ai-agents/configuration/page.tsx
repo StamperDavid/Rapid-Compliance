@@ -136,9 +136,9 @@ export default function AgentConfigurationPage() {
   ];
 
   const renderSection = () => {
-    const ctx = baseModel.businessContext || {};
-    const persona = baseModel.agentPersona || {};
-    const behavior = baseModel.behaviorConfig || {};
+    const ctx = baseModel.businessContext ?? {};
+    const persona = baseModel.agentPersona ?? {};
+    const behavior = baseModel.behaviorConfig ?? {};
 
     switch (activeSection) {
       case 'business':
@@ -154,7 +154,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="text"
-                value={ctx.businessName || ''}
+                value={ctx.businessName ?? ''}
                 onChange={(e) => updateField('businessContext', 'businessName', e.target.value)}
                 style={{
                   width: '100%',
@@ -174,7 +174,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="text"
-                value={ctx.industry || ''}
+                value={ctx.industry ?? ''}
                 onChange={(e) => updateField('businessContext', 'industry', e.target.value)}
                 style={{
                   width: '100%',
@@ -194,7 +194,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="url"
-                value={ctx.website || ''}
+                value={ctx.website ?? ''}
                 onChange={(e) => updateField('businessContext', 'website', e.target.value)}
                 style={{
                   width: '100%',
@@ -213,7 +213,7 @@ export default function AgentConfigurationPage() {
                 What problem do you solve for customers?
               </label>
               <textarea
-                value={ctx.problemSolved || ''}
+                value={ctx.problemSolved ?? ''}
                 onChange={(e) => updateField('businessContext', 'problemSolved', e.target.value)}
                 rows={4}
                 style={{
@@ -235,7 +235,7 @@ export default function AgentConfigurationPage() {
                 What makes you unique? (Competitive advantage)
               </label>
               <textarea
-                value={ctx.uniqueValue || ''}
+                value={ctx.uniqueValue ?? ''}
                 onChange={(e) => updateField('businessContext', 'uniqueValue', e.target.value)}
                 rows={4}
                 style={{
@@ -257,7 +257,7 @@ export default function AgentConfigurationPage() {
                 Why do customers buy from you?
               </label>
               <textarea
-                value={ctx.whyBuy || ''}
+                value={ctx.whyBuy ?? ''}
                 onChange={(e) => updateField('businessContext', 'whyBuy', e.target.value)}
                 rows={3}
                 style={{
@@ -279,7 +279,7 @@ export default function AgentConfigurationPage() {
                 Why might customers NOT buy? (Common hesitations)
               </label>
               <textarea
-                value={ctx.whyNotBuy || ''}
+                value={ctx.whyNotBuy ?? ''}
                 onChange={(e) => updateField('businessContext', 'whyNotBuy', e.target.value)}
                 rows={3}
                 style={{
@@ -311,7 +311,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="text"
-                value={ctx.primaryOffering || ''}
+                value={ctx.primaryOffering ?? ''}
                 onChange={(e) => updateField('businessContext', 'primaryOffering', e.target.value)}
                 placeholder="e.g., B2B SaaS Platform, Physical Products, Consulting Services"
                 style={{
@@ -331,7 +331,7 @@ export default function AgentConfigurationPage() {
                 Top Products/Services (List your best sellers)
               </label>
               <textarea
-                value={ctx.topProducts || ''}
+                value={ctx.topProducts ?? ''}
                 onChange={(e) => updateField('businessContext', 'topProducts', e.target.value)}
                 rows={6}
                 placeholder="Product 1: Description, key features, who it's for&#10;Product 2: Description, key features, who it's for&#10;..."
@@ -354,7 +354,7 @@ export default function AgentConfigurationPage() {
                 Product Comparison Guide
               </label>
               <textarea
-                value={ctx.productComparison || ''}
+                value={ctx.productComparison ?? ''}
                 onChange={(e) => updateField('businessContext', 'productComparison', e.target.value)}
                 rows={4}
                 placeholder="When to recommend Product A vs Product B..."
@@ -377,7 +377,7 @@ export default function AgentConfigurationPage() {
                 Target Customer Profile
               </label>
               <textarea
-                value={ctx.targetCustomer || ''}
+                value={ctx.targetCustomer ?? ''}
                 onChange={(e) => updateField('businessContext', 'targetCustomer', e.target.value)}
                 rows={3}
                 placeholder="Demographics, company size, industry, role..."
@@ -400,7 +400,7 @@ export default function AgentConfigurationPage() {
                 Who Should NOT Buy? (Qualify out poor fits)
               </label>
               <textarea
-                value={ctx.whoShouldNotBuy || ''}
+                value={ctx.whoShouldNotBuy ?? ''}
                 onChange={(e) => updateField('businessContext', 'whoShouldNotBuy', e.target.value)}
                 rows={3}
                 placeholder="Too small budget, wrong industry, specific requirements we can't meet..."
@@ -433,7 +433,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="text"
-                value={ctx.priceRange || ''}
+                value={ctx.priceRange ?? ''}
                 onChange={(e) => updateField('businessContext', 'priceRange', e.target.value)}
                 placeholder="e.g., $49-$499/month, $5,000-$50,000 per project"
                 style={{
@@ -453,7 +453,7 @@ export default function AgentConfigurationPage() {
                 Pricing Strategy
               </label>
               <textarea
-                value={ctx.pricingStrategy || ''}
+                value={ctx.pricingStrategy ?? ''}
                 onChange={(e) => updateField('businessContext', 'pricingStrategy', e.target.value)}
                 rows={4}
                 placeholder="Value-based, tiered pricing, usage-based, etc. Explain your pricing model..."
@@ -476,7 +476,7 @@ export default function AgentConfigurationPage() {
                 Discount Policy
               </label>
               <textarea
-                value={ctx.discountPolicy || ''}
+                value={ctx.discountPolicy ?? ''}
                 onChange={(e) => updateField('businessContext', 'discountPolicy', e.target.value)}
                 rows={3}
                 placeholder="When can agent offer discounts? What's the maximum? Any restrictions?"
@@ -499,7 +499,7 @@ export default function AgentConfigurationPage() {
                 Volume Discounts
               </label>
               <textarea
-                value={ctx.volumeDiscounts || ''}
+                value={ctx.volumeDiscounts ?? ''}
                 onChange={(e) => updateField('businessContext', 'volumeDiscounts', e.target.value)}
                 rows={3}
                 placeholder="Discounts for bulk orders, annual contracts, etc."
@@ -523,7 +523,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="text"
-                value={ctx.firstTimeBuyerIncentive || ''}
+                value={ctx.firstTimeBuyerIncentive ?? ''}
                 onChange={(e) => updateField('businessContext', 'firstTimeBuyerIncentive', e.target.value)}
                 placeholder="e.g., 10% off first order, free trial, bonus features"
                 style={{
@@ -543,7 +543,7 @@ export default function AgentConfigurationPage() {
                 Financing Options
               </label>
               <textarea
-                value={ctx.financingOptions || ''}
+                value={ctx.financingOptions ?? ''}
                 onChange={(e) => updateField('businessContext', 'financingOptions', e.target.value)}
                 rows={3}
                 placeholder="Payment plans, net terms, financing partners, etc."
@@ -576,7 +576,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="text"
-                value={ctx.geographicCoverage || ''}
+                value={ctx.geographicCoverage ?? ''}
                 onChange={(e) => updateField('businessContext', 'geographicCoverage', e.target.value)}
                 placeholder="e.g., Worldwide, US only, North America, Specific states"
                 style={{
@@ -596,7 +596,7 @@ export default function AgentConfigurationPage() {
                 Delivery Timeframes
               </label>
               <textarea
-                value={ctx.deliveryTimeframes || ''}
+                value={ctx.deliveryTimeframes ?? ''}
                 onChange={(e) => updateField('businessContext', 'deliveryTimeframes', e.target.value)}
                 rows={3}
                 placeholder="Standard: 5-7 business days, Express: 2-3 days, etc."
@@ -619,7 +619,7 @@ export default function AgentConfigurationPage() {
                 Inventory Constraints
               </label>
               <textarea
-                value={ctx.inventoryConstraints || ''}
+                value={ctx.inventoryConstraints ?? ''}
                 onChange={(e) => updateField('businessContext', 'inventoryConstraints', e.target.value)}
                 rows={3}
                 placeholder="Out of stock items, seasonal availability, lead times, etc."
@@ -642,7 +642,7 @@ export default function AgentConfigurationPage() {
                 Capacity Limitations
               </label>
               <textarea
-                value={ctx.capacityLimitations || ''}
+                value={ctx.capacityLimitations ?? ''}
                 onChange={(e) => updateField('businessContext', 'capacityLimitations', e.target.value)}
                 rows={3}
                 placeholder="Maximum order size, concurrent projects, onboarding timeline, etc."
@@ -674,7 +674,7 @@ export default function AgentConfigurationPage() {
                 Return Policy
               </label>
               <textarea
-                value={ctx.returnPolicy || ''}
+                value={ctx.returnPolicy ?? ''}
                 onChange={(e) => updateField('businessContext', 'returnPolicy', e.target.value)}
                 rows={4}
                 placeholder="30-day money-back guarantee, conditions, restocking fees, process, etc."
@@ -697,7 +697,7 @@ export default function AgentConfigurationPage() {
                 Warranty Terms
               </label>
               <textarea
-                value={ctx.warrantyTerms || ''}
+                value={ctx.warrantyTerms ?? ''}
                 onChange={(e) => updateField('businessContext', 'warrantyTerms', e.target.value)}
                 rows={4}
                 placeholder="What's covered, how long, what's excluded, claim process..."
@@ -720,7 +720,7 @@ export default function AgentConfigurationPage() {
                 Cancellation Policy
               </label>
               <textarea
-                value={ctx.cancellationPolicy || ''}
+                value={ctx.cancellationPolicy ?? ''}
                 onChange={(e) => updateField('businessContext', 'cancellationPolicy', e.target.value)}
                 rows={3}
                 placeholder="Notice required, cancellation fees, refund terms..."
@@ -743,7 +743,7 @@ export default function AgentConfigurationPage() {
                 Satisfaction Guarantee
               </label>
               <textarea
-                value={ctx.satisfactionGuarantee || ''}
+                value={ctx.satisfactionGuarantee ?? ''}
                 onChange={(e) => updateField('businessContext', 'satisfactionGuarantee', e.target.value)}
                 rows={3}
                 placeholder="100% satisfaction guarantee, performance guarantees, what's promised..."
@@ -775,7 +775,7 @@ export default function AgentConfigurationPage() {
                 Typical Sales Flow
               </label>
               <textarea
-                value={ctx.typicalSalesFlow || ''}
+                value={ctx.typicalSalesFlow ?? ''}
                 onChange={(e) => updateField('businessContext', 'typicalSalesFlow', e.target.value)}
                 rows={6}
                 placeholder="Step 1: Discovery questions&#10;Step 2: Understand needs&#10;Step 3: Recommend solution&#10;Step 4: Handle objections&#10;Step 5: Close sale&#10;..."
@@ -798,7 +798,7 @@ export default function AgentConfigurationPage() {
                 Qualification Criteria
               </label>
               <textarea
-                value={ctx.qualificationCriteria || ''}
+                value={ctx.qualificationCriteria ?? ''}
                 onChange={(e) => updateField('businessContext', 'qualificationCriteria', e.target.value)}
                 rows={4}
                 placeholder="BANT: Budget, Authority, Need, Timeline... or your criteria"
@@ -821,7 +821,7 @@ export default function AgentConfigurationPage() {
                 Discovery Questions to Ask
               </label>
               <textarea
-                value={ctx.discoveryQuestions || ''}
+                value={ctx.discoveryQuestions ?? ''}
                 onChange={(e) => updateField('businessContext', 'discoveryQuestions', e.target.value)}
                 rows={5}
                 placeholder="- What brings you here today?&#10;- What challenges are you facing?&#10;- What have you tried so far?&#10;- What's your timeline?&#10;..."
@@ -844,7 +844,7 @@ export default function AgentConfigurationPage() {
                 Closing Strategy
               </label>
               <textarea
-                value={ctx.closingStrategy || ''}
+                value={ctx.closingStrategy ?? ''}
                 onChange={(e) => updateField('businessContext', 'closingStrategy', e.target.value)}
                 rows={4}
                 placeholder="How to ask for the sale, trial closes, assumptive close, etc."
@@ -876,7 +876,7 @@ export default function AgentConfigurationPage() {
                 Common Objections
               </label>
               <textarea
-                value={ctx.commonObjections || ''}
+                value={ctx.commonObjections ?? ''}
                 onChange={(e) => updateField('businessContext', 'commonObjections', e.target.value)}
                 rows={5}
                 placeholder="List common objections and how to handle each one..."
@@ -899,7 +899,7 @@ export default function AgentConfigurationPage() {
                 Price Objections
               </label>
               <textarea
-                value={ctx.priceObjections || ''}
+                value={ctx.priceObjections ?? ''}
                 onChange={(e) => updateField('businessContext', 'priceObjections', e.target.value)}
                 rows={5}
                 placeholder='"Too expensive" → Focus on ROI, payment plans, value not price&#10;"Competitor is cheaper" → Emphasize unique value, quality, support&#10;...'
@@ -922,7 +922,7 @@ export default function AgentConfigurationPage() {
                 Time Objections
               </label>
               <textarea
-                value={ctx.timeObjections || ''}
+                value={ctx.timeObjections ?? ''}
                 onChange={(e) => updateField('businessContext', 'timeObjections', e.target.value)}
                 rows={4}
                 placeholder='"Need to think about it" → What specific concerns can I address?&#10;"Wrong timing" → Ask about future timeline&#10;...'
@@ -945,7 +945,7 @@ export default function AgentConfigurationPage() {
                 Competitor Objections
               </label>
               <textarea
-                value={ctx.competitorObjections || ''}
+                value={ctx.competitorObjections ?? ''}
                 onChange={(e) => updateField('businessContext', 'competitorObjections', e.target.value)}
                 rows={5}
                 placeholder={'"Already using [competitor]" → What\'s working? What\'s not?\n"Considering [competitor]" → Here\'s how we\'re different...\n...'}
@@ -978,7 +978,7 @@ export default function AgentConfigurationPage() {
               </label>
               <input
                 type="text"
-                value={persona.name || ''}
+                value={persona.name ?? ''}
                 onChange={(e) => updateField('agentPersona', 'name', e.target.value)}
                 placeholder="e.g., Sarah, Alex, or leave blank for 'AI Assistant'"
                 style={{
@@ -1024,7 +1024,7 @@ export default function AgentConfigurationPage() {
                 Greeting Message
               </label>
               <textarea
-                value={persona.greeting || ''}
+                value={persona.greeting ?? ''}
                 onChange={(e) => updateField('agentPersona', 'greeting', e.target.value)}
                 rows={3}
                 placeholder="Hi! How can I help you today?"
@@ -1047,7 +1047,7 @@ export default function AgentConfigurationPage() {
                 Closing Message
               </label>
               <textarea
-                value={persona.closingMessage || ''}
+                value={persona.closingMessage ?? ''}
                 onChange={(e) => updateField('agentPersona', 'closingMessage', e.target.value)}
                 rows={3}
                 placeholder="Thanks for chatting! Feel free to reach out anytime."
@@ -1168,7 +1168,7 @@ export default function AgentConfigurationPage() {
                 Required Disclosures
               </label>
               <textarea
-                value={ctx.requiredDisclosures || ''}
+                value={ctx.requiredDisclosures ?? ''}
                 onChange={(e) => updateField('businessContext', 'requiredDisclosures', e.target.value)}
                 rows={4}
                 placeholder="Legal disclaimers agent must mention, medical disclaimers, financial disclaimers, etc."
@@ -1191,7 +1191,7 @@ export default function AgentConfigurationPage() {
                 Industry Regulations
               </label>
               <textarea
-                value={ctx.industryRegulations || ''}
+                value={ctx.industryRegulations ?? ''}
                 onChange={(e) => updateField('businessContext', 'industryRegulations', e.target.value)}
                 rows={4}
                 placeholder="GDPR, CCPA, SOC 2, financial regulations, industry-specific compliance..."
@@ -1214,7 +1214,7 @@ export default function AgentConfigurationPage() {
                 Prohibited Topics
               </label>
               <textarea
-                value={ctx.prohibitedTopics || ''}
+                value={ctx.prohibitedTopics ?? ''}
                 onChange={(e) => updateField('businessContext', 'prohibitedTopics', e.target.value)}
                 rows={4}
                 placeholder="Topics the agent should NEVER discuss or must escalate to human (medical advice, legal advice, etc.)"

@@ -169,63 +169,63 @@ export function buildBusinessContextFromOnboarding(
   return {
     businessName: data.businessName || 'the company',
     industry: data.industry || 'general',
-    website: data.website || '',
-    companySize: data.companySize || '',
+    website: data.website ?? '',
+    companySize: data.companySize ?? '',
     
     // Business understanding
-    problemSolved: data.problemSolved || '',
-    uniqueValue: data.uniqueValue || '',
-    whyBuy: data.whyBuy || '',
-    whyNotBuy: data.whyNotBuy || '',
+    problemSolved: data.problemSolved ?? '',
+    uniqueValue: data.uniqueValue ?? '',
+    whyBuy: data.whyBuy ?? '',
+    whyNotBuy: data.whyNotBuy ?? '',
     
     // Products/Services
-    primaryOffering: data.primaryOffering || '',
-    topProducts: data.topProducts || '',
-    productComparison: data.productComparison || '',
-    seasonalOfferings: data.seasonalOfferings || '',
-    whoShouldNotBuy: data.whoShouldNotBuy || '',
+    primaryOffering: data.primaryOffering ?? '',
+    topProducts: data.topProducts ?? '',
+    productComparison: data.productComparison ?? '',
+    seasonalOfferings: data.seasonalOfferings ?? '',
+    whoShouldNotBuy: data.whoShouldNotBuy ?? '',
     
     // Pricing
-    pricingStrategy: data.pricingStrategy || '',
-    discountPolicy: data.discountPolicy || '',
-    volumeDiscounts: data.volumeDiscounts || '',
-    firstTimeBuyerIncentive: data.firstTimeBuyerIncentive || '',
-    financingOptions: data.financingOptions || '',
+    pricingStrategy: data.pricingStrategy ?? '',
+    discountPolicy: data.discountPolicy ?? '',
+    volumeDiscounts: data.volumeDiscounts ?? '',
+    firstTimeBuyerIncentive: data.firstTimeBuyerIncentive ?? '',
+    financingOptions: data.financingOptions ?? '',
     
     // Operations
-    geographicCoverage: data.geographicCoverage || '',
-    deliveryTimeframes: data.deliveryTimeframes || '',
-    inventoryConstraints: data.inventoryConstraints || '',
-    capacityLimitations: data.capacityLimitations || '',
+    geographicCoverage: data.geographicCoverage ?? '',
+    deliveryTimeframes: data.deliveryTimeframes ?? '',
+    inventoryConstraints: data.inventoryConstraints ?? '',
+    capacityLimitations: data.capacityLimitations ?? '',
     
     // Policies
-    returnPolicy: data.returnPolicy || '',
-    warrantyTerms: data.warrantyTerms || '',
-    cancellationPolicy: data.cancellationPolicy || '',
-    satisfactionGuarantee: data.satisfactionGuarantee || '',
+    returnPolicy: data.returnPolicy ?? '',
+    warrantyTerms: data.warrantyTerms ?? '',
+    cancellationPolicy: data.cancellationPolicy ?? '',
+    satisfactionGuarantee: data.satisfactionGuarantee ?? '',
     
     // Sales process
-    typicalSalesFlow: data.typicalSalesFlow || '',
-    qualificationCriteria: data.qualificationCriteria || '',
-    discoveryQuestions: data.discoveryQuestions || '',
-    closingStrategy: data.closingStrategy || '',
+    typicalSalesFlow: data.typicalSalesFlow ?? '',
+    qualificationCriteria: data.qualificationCriteria ?? '',
+    discoveryQuestions: data.discoveryQuestions ?? '',
+    closingStrategy: data.closingStrategy ?? '',
     
     // Objection handling
-    commonObjections: data.commonObjections || '',
-    priceObjections: data.priceObjections || '',
-    timeObjections: data.timeObjections || '',
-    competitorObjections: data.competitorObjections || '',
+    commonObjections: data.commonObjections ?? '',
+    priceObjections: data.priceObjections ?? '',
+    timeObjections: data.timeObjections ?? '',
+    competitorObjections: data.competitorObjections ?? '',
     
     // Customer service
-    supportScope: data.supportScope || '',
-    technicalSupport: data.technicalSupport || '',
-    orderTracking: data.orderTracking || '',
-    complaintResolution: data.complaintResolution || '',
+    supportScope: data.supportScope ?? '',
+    technicalSupport: data.technicalSupport ?? '',
+    orderTracking: data.orderTracking ?? '',
+    complaintResolution: data.complaintResolution ?? '',
     
     // Target customer
-    targetCustomer: data.targetCustomer || '',
-    customerDemographics: data.customerDemographics || '',
-    priceRange: data.priceRange || '',
+    targetCustomer: data.targetCustomer ?? '',
+    customerDemographics: data.customerDemographics ?? '',
+    priceRange: data.priceRange ?? '',
   };
 }
 
