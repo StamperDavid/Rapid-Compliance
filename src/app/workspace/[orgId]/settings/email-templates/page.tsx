@@ -454,10 +454,10 @@ Best regards,
                                 setTestEmailResult({ success: true, message: `Test email sent! Message ID: ${result.messageId}` });
                                 setTestEmailAddress('');
                               } else {
-                                setTestEmailResult({ success: false, message: result.error || 'Failed to send email' });
+                                setTestEmailResult({ success: false, message: (result.error !== '' && result.error != null) ? result.error : 'Failed to send email' });
                               }
                             } catch (error: any) {
-                              setTestEmailResult({ success: false, message: error.message || 'Failed to send email' });
+                              setTestEmailResult({ success: false, message: (error.message !== '' && error.message != null) ? error.message : 'Failed to send email' });
                             } finally {
                               setIsSendingTest(false);
                             }
@@ -646,14 +646,14 @@ Best regards,
                                 const link = block.content.linkUrl ? `<a href="${block.content.linkUrl}">` : '';
                                 const linkClose = block.content.linkUrl ? '</a>' : '';
                                 generatedHtml += `
-    <div style="width: 100%; height: ${block.content.height || '400px'}; overflow: hidden;">
+    <div style="width: 100%; height: ${(block.content.height !== '' && block.content.height != null) ? block.content.height : '400px'}; overflow: hidden;">
       ${link}<img src="${block.content.imageUrl}" alt="Hero" style="width: 100%; height: 100%; object-fit: cover; display: block;" />${linkClose}
     </div>`;
                               }
                               
                               if (block.type === 'text') {
                                 generatedHtml += `
-    <div style="padding: 20px; font-size: ${block.content.fontSize || '16px'}; color: ${block.content.color || '#000000'}; text-align: ${block.content.align || 'left'};">
+    <div style="padding: 20px; font-size: ${(block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px'}; color: ${(block.content.color !== '' && block.content.color != null) ? block.content.color : '#000000'}; text-align: ${(block.content.align !== '' && block.content.align != null) ? block.content.align : 'left'};">
       ${block.content.text ?? ''}
     </div>`;
                               }
@@ -661,8 +661,8 @@ Best regards,
                               if (block.type === 'button') {
                                 generatedHtml += `
     <div style="padding: 20px; text-align: center;">
-      <a href="${block.content.url || '#'}" style="display: inline-block; padding: 14px 40px; background-color: ${block.content.bgColor || primaryColor}; color: ${block.content.textColor || '#ffffff'}; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-        ${block.content.text || 'Button'}
+      <a href="${(block.content.url !== '' && block.content.url != null) ? block.content.url : '#'}" style="display: inline-block; padding: 14px 40px; background-color: ${(block.content.bgColor !== '' && block.content.bgColor != null) ? block.content.bgColor : primaryColor}; color: ${(block.content.textColor !== '' && block.content.textColor != null) ? block.content.textColor : '#ffffff'}; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+        ${(block.content.text !== '' && block.content.text != null) ? block.content.text : 'Button'}
       </a>
     </div>`;
                               }
@@ -672,20 +672,20 @@ Best regards,
                                 const linkClose = block.content.linkUrl ? '</a>' : '';
                                 generatedHtml += `
     <div style="padding: 10px;">
-      ${link}<img src="${block.content.imageUrl}" alt="${block.content.alt || 'Image'}" style="width: ${block.content.width || '100%'}; height: auto; display: block;" />${linkClose}
+      ${link}<img src="${block.content.imageUrl}" alt="${(block.content.alt !== '' && block.content.alt != null) ? block.content.alt : 'Image'}" style="width: ${(block.content.width !== '' && block.content.width != null) ? block.content.width : '100%'}; height: auto; display: block;" />${linkClose}
     </div>`;
                               }
                               
                               if (block.type === 'divider') {
                                 generatedHtml += `
     <div style="padding: 10px 20px;">
-      <hr style="border: none; border-top: ${block.content.thickness || '1px'} ${block.content.style || 'solid'} ${block.content.color || '#cccccc'}; margin: 0;" />
+      <hr style="border: none; border-top: ${(block.content.thickness !== '' && block.content.thickness != null) ? block.content.thickness : '1px'} ${(block.content.style !== '' && block.content.style != null) ? block.content.style : 'solid'} ${(block.content.color !== '' && block.content.color != null) ? block.content.color : '#cccccc'}; margin: 0;" />
     </div>`;
                               }
                               
                               if (block.type === 'spacer') {
                                 generatedHtml += `
-    <div style="height: ${block.content.height || '40px'};"></div>`;
+    <div style="height: ${(block.content.height !== '' && block.content.height != null) ? block.content.height : '40px'};"></div>`;
                               }
                               
                               if (block.type === 'html') {
@@ -956,7 +956,7 @@ Best regards,
                               >
                                 {/* Block Content */}
                                 {block.type === 'hero' && (
-                                  <div style={{ width: '100%', height: block.content.height || '400px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                  <div style={{ width: '100%', height: (block.content.height !== '' && block.content.height != null) ? block.content.height : '400px', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                     {block.content.imageUrl ? (
                                       <img src={block.content.imageUrl} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
@@ -969,15 +969,15 @@ Best regards,
                                 )}
                                 
                                 {block.type === 'text' && (
-                                  <div style={{ padding: '20px', fontSize: block.content.fontSize || '16px', color: block.content.color || '#000000', textAlign: block.content.align || 'left' }}>
-                                    {block.content.text || 'Text block'}
+                                  <div style={{ padding: '20px', fontSize: (block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px', color: (block.content.color !== '' && block.content.color != null) ? block.content.color : '#000000', textAlign: (block.content.align !== '' && block.content.align != null) ? block.content.align : 'left' }}>
+                                    {(block.content.text !== '' && block.content.text != null) ? block.content.text : 'Text block'}
                                   </div>
                                 )}
                                 
                                 {block.type === 'button' && (
                                   <div style={{ padding: '20px', textAlign: 'center' }}>
-                                    <a href={block.content.url || '#'} style={{ display: 'inline-block', padding: '14px 40px', backgroundColor: block.content.bgColor || primaryColor, color: block.content.textColor || '#ffffff', textDecoration: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '16px' }}>
-                                      {block.content.text || 'Button'}
+                                    <a href={(block.content.url !== '' && block.content.url != null) ? block.content.url : '#'} style={{ display: 'inline-block', padding: '14px 40px', backgroundColor: (block.content.bgColor !== '' && block.content.bgColor != null) ? block.content.bgColor : primaryColor, color: (block.content.textColor !== '' && block.content.textColor != null) ? block.content.textColor : '#ffffff', textDecoration: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '16px' }}>
+                                      {(block.content.text !== '' && block.content.text != null) ? block.content.text : 'Button'}
                                     </a>
                                   </div>
                                 )}
@@ -985,7 +985,7 @@ Best regards,
                                 {block.type === 'image' && (
                                   <div style={{ padding: '10px' }}>
                                     {block.content.imageUrl ? (
-                                      <img src={block.content.imageUrl} alt={block.content.alt || 'Image'} style={{ width: block.content.width || '100%', height: 'auto', display: 'block' }} />
+                                      <img src={block.content.imageUrl} alt={(block.content.alt !== '' && block.content.alt != null) ? block.content.alt : 'Image'} style={{ width: (block.content.width !== '' && block.content.width != null) ? block.content.width : '100%', height: 'auto', display: 'block' }} />
                                     ) : (
                                       <div style={{ backgroundColor: '#e5e7eb', padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📷</div>
@@ -997,7 +997,7 @@ Best regards,
                                 
                                 {block.type === 'productGrid' && (
                                   <div style={{ padding: '20px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${block.content.columns || 3}, 1fr)`, gap: '15px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${(block.content.columns !== '' && block.content.columns != null) ? block.content.columns : 3}, 1fr)`, gap: '15px' }}>
                                       {[1, 2, 3].map(i => (
                                         <div key={i} style={{ border: '1px dashed #d1d5db', padding: '15px', borderRadius: '8px', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
                                           <div style={{ backgroundColor: '#f3f4f6', height: '120px', marginBottom: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🛍️</div>
@@ -1014,19 +1014,19 @@ Best regards,
                                 
                                 {block.type === 'divider' && (
                                   <div style={{ padding: '10px 20px' }}>
-                                    <hr style={{ border: 'none', borderTop: `${block.content.thickness || '1px'} ${block.content.style || 'solid'} ${block.content.color || '#cccccc'}`, margin: 0 }} />
+                                    <hr style={{ border: 'none', borderTop: `${(block.content.thickness !== '' && block.content.thickness != null) ? block.content.thickness : '1px'} ${(block.content.style !== '' && block.content.style != null) ? block.content.style : 'solid'} ${(block.content.color !== '' && block.content.color != null) ? block.content.color : '#cccccc'}`, margin: 0 }} />
                                   </div>
                                 )}
                                 
                                 {block.type === 'spacer' && (
-                                  <div style={{ height: block.content.height || '40px', backgroundColor: 'transparent' }} />
+                                  <div style={{ height: (block.content.height !== '' && block.content.height != null) ? block.content.height : '40px', backgroundColor: 'transparent' }} />
                                 )}
                                 
                                 {block.type === 'social' && (
                                   <div style={{ padding: '20px', textAlign: 'center' }}>
                                     <div style={{ display: 'inline-flex', gap: '15px' }}>
                                       {(block.content.links ?? []).map((link: any, i: number) => (
-                                        <div key={i} style={{ width: block.content.iconSize || '32px', height: block.content.iconSize || '32px', backgroundColor: '#3b5998', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>
+                                        <div key={i} style={{ width: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', height: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', backgroundColor: '#3b5998', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>
                                           {link.platform[0].toUpperCase()}
                                         </div>
                                       ))}
@@ -1167,7 +1167,7 @@ Best regards,
                                     Height
                                   </label>
                                   <select
-                                    value={selectedBlock.content.height || '400px'}
+                                    value={(selectedBlock.content.height !== '' && selectedBlock.content.height != null) ? selectedBlock.content.height : '400px'}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, height: e.target.value } } : b
@@ -1213,7 +1213,7 @@ Best regards,
                                     Text Size
                                   </label>
                                   <select
-                                    value={selectedBlock.content.fontSize || '16px'}
+                                    value={(selectedBlock.content.fontSize !== '' && selectedBlock.content.fontSize != null) ? selectedBlock.content.fontSize : '16px'}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, fontSize: e.target.value } } : b
@@ -1239,7 +1239,7 @@ Best regards,
                                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                     <input
                                       type="color"
-                                      value={selectedBlock.content.color || '#000000'}
+                                      value={(selectedBlock.content.color !== '' && selectedBlock.content.color != null) ? selectedBlock.content.color : '#000000'}
                                       onChange={(e) => {
                                         const newBlocks = designerBlocks.map(b => 
                                           b.id === selectedBlock.id ? { ...b, content: { ...b.content, color: e.target.value } } : b
@@ -1251,7 +1251,7 @@ Best regards,
                                     />
                                     <input
                                       type="text"
-                                      value={selectedBlock.content.color || '#000000'}
+                                      value={(selectedBlock.content.color !== '' && selectedBlock.content.color != null) ? selectedBlock.content.color : '#000000'}
                                       onChange={(e) => {
                                         const newBlocks = designerBlocks.map(b => 
                                           b.id === selectedBlock.id ? { ...b, content: { ...b.content, color: e.target.value } } : b
@@ -1368,7 +1368,7 @@ Best regards,
                                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                     <input
                                       type="color"
-                                      value={selectedBlock.content.bgColor || primaryColor}
+                                      value={(selectedBlock.content.bgColor !== '' && selectedBlock.content.bgColor != null) ? selectedBlock.content.bgColor : primaryColor}
                                       onChange={(e) => {
                                         const newBlocks = designerBlocks.map(b => 
                                           b.id === selectedBlock.id ? { ...b, content: { ...b.content, bgColor: e.target.value } } : b
@@ -1453,7 +1453,7 @@ Best regards,
                                     Image Width
                                   </label>
                                   <select
-                                    value={selectedBlock.content.width || '100%'}
+                                    value={(selectedBlock.content.width !== '' && selectedBlock.content.width != null) ? selectedBlock.content.width : '100%'}
                                     onChange={(e) => {
                                       const newBlocks = designerBlocks.map(b => 
                                         b.id === selectedBlock.id ? { ...b, content: { ...b.content, width: e.target.value } } : b
@@ -1570,7 +1570,7 @@ Best regards,
                                   Space Height
                                 </label>
                                 <select
-                                  value={selectedBlock.content.height || '40px'}
+                                  value={(selectedBlock.content.height !== '' && selectedBlock.content.height != null) ? selectedBlock.content.height : '40px'}
                                   onChange={(e) => {
                                     const newBlocks = designerBlocks.map(b => 
                                       b.id === selectedBlock.id ? { ...b, content: { ...b.content, height: e.target.value } } : b
@@ -1745,7 +1745,7 @@ Best regards,
                   {selectedSmsTemplate ? (
                     <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
                       <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
-                        {smsTemplates.find(t => t.id === selectedSmsTemplate)?.name || 'SMS Template'}
+                        {(() => { const name = smsTemplates.find(t => t.id === selectedSmsTemplate)?.name; return (name !== '' && name != null) ? name : 'SMS Template'; })()}
                       </h2>
 
                       <div style={{ marginBottom: '1.5rem' }}>
@@ -1941,7 +1941,7 @@ Best regards,
                                 {campaign.clicked ? `${campaign.clicked.toLocaleString()} (${clickRate}%)` : '-'}
                               </td>
                               <td style={{ padding: '1rem 0.75rem', fontSize: '0.875rem', color: '#999' }}>
-                                {campaign.sentDate || campaign.scheduledDate || 'Draft'}
+                                {(campaign.sentDate !== '' && campaign.sentDate != null) ? campaign.sentDate : ((campaign.scheduledDate !== '' && campaign.scheduledDate != null) ? campaign.scheduledDate : 'Draft')}
                               </td>
                               <td style={{ padding: '1rem 0.75rem', textAlign: 'right' }}>
                                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>

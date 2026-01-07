@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const period = searchParams.get('period') || '30d';
+    const periodParam = searchParams.get('period');
+    const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';
 
     if (!orgId) {
       return errors.badRequest('orgId is required');
@@ -97,7 +98,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       const isWon = deal.status === 'won' || deal.status === 'closed_won' || deal.stage === 'closed_won';
       if (!isWon) {return false;}
       
-      const closedDate = deal.closedDate?.toDate?.() || (deal.closedDate ? new Date(deal.closedDate) : deal.createdAt?.toDate?.() || new Date(deal.createdAt));
+      const closedDate = deal.closedDate?.toDate?.() ?? (deal.closedDate ? new Date(deal.closedDate) : (deal.createdAt?.toDate?.() ?? new Date(deal.createdAt)));
       return closedDate >= startDate && closedDate <= now;
     });
 
@@ -113,13 +114,13 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
 
     const completedOrders = allOrders.filter(order => {
       if (order.status !== 'completed' && order.status !== 'paid') {return false;}
-      const orderDate = order.createdAt?.toDate?.() || new Date(order.createdAt);
+      const orderDate = order.createdAt?.toDate?.() ?? new Date(order.createdAt);
       return orderDate >= startDate && orderDate <= now;
     });
 
     // Calculate totals
-    const dealRevenue = closedDeals.reduce((sum, deal) => sum + (parseFloat(deal.value) || parseFloat(deal.amount) || 0), 0);
-    const orderRevenue = completedOrders.reduce((sum, order) => sum + (parseFloat(order.total) || parseFloat(order.amount) || 0), 0);
+    const dealRevenue = closedDeals.reduce((sum, deal) => sum + (Number(deal.value) || Number(deal.amount) || 0), 0);
+    const orderRevenue = completedOrders.reduce((sum, order) => sum + (Number(order.total) || Number(order.amount) || 0), 0);
     const totalRevenue = dealRevenue + orderRevenue;
     const dealsCount = closedDeals.length + completedOrders.length;
     const avgDealSize = dealsCount > 0 ? totalRevenue / dealsCount : 0;
@@ -134,18 +135,18 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       const prevDeals = allDeals.filter(deal => {
         const isWon = deal.status === 'won' || deal.status === 'closed_won' || deal.stage === 'closed_won';
         if (!isWon) {return false;}
-        const closedDate = deal.closedDate?.toDate?.() || (deal.closedDate ? new Date(deal.closedDate) : deal.createdAt?.toDate?.() || new Date(deal.createdAt));
+        const closedDate = deal.closedDate?.toDate?.() ?? (deal.closedDate ? new Date(deal.closedDate) : (deal.createdAt?.toDate?.() ?? new Date(deal.createdAt)));
         return closedDate >= prevStart && closedDate < prevEnd;
       });
 
       const prevOrders = allOrders.filter(order => {
         if (order.status !== 'completed' && order.status !== 'paid') {return false;}
-        const orderDate = order.createdAt?.toDate?.() || new Date(order.createdAt);
+        const orderDate = order.createdAt?.toDate?.() ?? new Date(order.createdAt);
         return orderDate >= prevStart && orderDate < prevEnd;
       });
 
-      const prevRevenue = prevDeals.reduce((sum, d) => sum + (parseFloat(d.value) || parseFloat(d.amount) || 0), 0)
-        + prevOrders.reduce((sum, o) => sum + (parseFloat(o.total) || parseFloat(o.amount) || 0), 0);
+      const prevRevenue = prevDeals.reduce((sum, d) => sum + (Number(d.value) || Number(d.amount) || 0), 0)
+        + prevOrders.reduce((sum, o) => sum + (Number(o.total) || Number(o.amount) || 0), 0);
 
       if (prevRevenue > 0) {
         growth = ((totalRevenue - prevRevenue) / prevRevenue) * 100;
@@ -156,19 +157,19 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
 
     // Calculate MRR (Monthly Recurring Revenue from subscriptions)
     const subscriptions = allDeals.filter(d => d.type === 'subscription' || d.isRecurring);
-    const mrr = subscriptions.reduce((sum, d) => sum + (parseFloat(d.mrr) || parseFloat(d.value) / 12 || 0), 0);
+    const mrr = subscriptions.reduce((sum, d) => sum + (Number(d.mrr) || Number(d.value) / 12 || 0), 0);
 
     // Revenue by source
     const sourceMap = new Map<string, number>();
     closedDeals.forEach(deal => {
-      const source = deal.source || deal.lead_source || 'direct';
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      sourceMap.set(source, (sourceMap.get(source) || 0) + value);
+      const source = (deal.source !== '' && deal.source != null) ? deal.source : ((deal.lead_source !== '' && deal.lead_source != null) ? deal.lead_source : 'direct');
+      const value = Number(deal.value) || Number(deal.amount) || 0;
+      sourceMap.set(source, (sourceMap.get(source) ?? 0) + value);
     });
     completedOrders.forEach(order => {
-      const source = order.source || 'ecommerce';
-      const value = parseFloat(order.total) || parseFloat(order.amount) || 0;
-      sourceMap.set(source, (sourceMap.get(source) || 0) + value);
+      const source = (order.source !== '' && order.source != null) ? order.source : 'ecommerce';
+      const value = Number(order.total) || Number(order.amount) || 0;
+      sourceMap.set(source, (sourceMap.get(source) ?? 0) + value);
     });
     const bySource = Array.from(sourceMap.entries())
       .map(([source, revenue]) => ({ source, revenue }))
@@ -179,22 +180,22 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     closedDeals.forEach(deal => {
       if (deal.products && Array.isArray(deal.products)) {
         deal.products.forEach((p: any) => {
-          const name = p.name || p.productName || 'Unknown Product';
-          const value = (parseFloat(p.price) || 0) * (p.quantity || 1);
-          productMap.set(name, (productMap.get(name) || 0) + value);
+          const name = (p.name !== '' && p.name != null) ? p.name : ((p.productName !== '' && p.productName != null) ? p.productName : 'Unknown Product');
+          const value = (Number(p.price) || 0) * (p.quantity ?? 1);
+          productMap.set(name, (productMap.get(name) ?? 0) + value);
         });
       } else if (deal.productName || deal.product) {
-        const name = deal.productName || deal.product;
-        const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-        productMap.set(name, (productMap.get(name) || 0) + value);
+        const name = (deal.productName !== '' && deal.productName != null) ? deal.productName : deal.product;
+        const value = Number(deal.value) || Number(deal.amount) || 0;
+        productMap.set(name, (productMap.get(name) ?? 0) + value);
       }
     });
     completedOrders.forEach(order => {
       if (order.items && Array.isArray(order.items)) {
         order.items.forEach((item: any) => {
-          const name = item.productName || item.name || 'Unknown Product';
-          const value = (parseFloat(item.price) || 0) * (item.quantity || 1);
-          productMap.set(name, (productMap.get(name) || 0) + value);
+          const name = (item.productName !== '' && item.productName != null) ? item.productName : ((item.name !== '' && item.name != null) ? item.name : 'Unknown Product');
+          const value = (Number(item.price) || 0) * (item.quantity ?? 1);
+          productMap.set(name, (productMap.get(name) ?? 0) + value);
         });
       }
     });
@@ -205,9 +206,9 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     // Revenue by sales rep
     const repMap = new Map<string, { revenue: number; deals: number; name: string }>();
     closedDeals.forEach(deal => {
-      const repId = deal.assignedTo || deal.ownerId || deal.owner || 'unassigned';
-      const repName = deal.assignedToName || deal.ownerName || deal.owner || 'Unassigned';
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
+      const repId = (deal.assignedTo !== '' && deal.assignedTo != null) ? deal.assignedTo : ((deal.ownerId !== '' && deal.ownerId != null) ? deal.ownerId : ((deal.owner !== '' && deal.owner != null) ? deal.owner : 'unassigned'));
+      const repName = (deal.assignedToName !== '' && deal.assignedToName != null) ? deal.assignedToName : ((deal.ownerName !== '' && deal.ownerName != null) ? deal.ownerName : ((deal.owner !== '' && deal.owner != null) ? deal.owner : 'Unassigned'));
+      const value = Number(deal.value) || Number(deal.amount) || 0;
       const existing = repMap.get(repId) ?? { revenue: 0, deals: 0, name: repName };
       repMap.set(repId, {
         revenue: existing.revenue + value,

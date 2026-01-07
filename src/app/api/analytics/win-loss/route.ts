@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const period = searchParams.get('period') || '90d';
+    const periodParam = searchParams.get('period');
+    const period = (periodParam !== '' && periodParam != null) ? periodParam : '90d';
 
     if (!orgId) {
       return errors.badRequest('orgId is required');
@@ -89,22 +90,22 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     const lostStatuses = ['lost', 'closed_lost'];
 
     const closedDealsInPeriod = allDeals.filter(deal => {
-      const status = (deal.status || deal.stage || '').toLowerCase();
+      const status = ((deal.status ?? deal.stage) ?? '').toLowerCase();
       const isClosed = wonStatuses.some(s => status.includes(s)) || lostStatuses.some(s => status.includes(s));
       if (!isClosed) {return false;}
 
-      const closedDate = deal.closedDate?.toDate?.() || deal.closedAt?.toDate?.() || 
+      const closedDate = deal.closedDate?.toDate?.() ?? deal.closedAt?.toDate?.() ?? 
                         (deal.closedDate ? new Date(deal.closedDate) : new Date(deal.updatedAt));
       return closedDate >= startDate && closedDate <= now;
     });
 
     const wonDeals = closedDealsInPeriod.filter(deal => {
-      const status = (deal.status || deal.stage || '').toLowerCase();
+      const status = ((deal.status ?? deal.stage) ?? '').toLowerCase();
       return wonStatuses.some(s => status.includes(s));
     });
 
     const lostDeals = closedDealsInPeriod.filter(deal => {
-      const status = (deal.status || deal.stage || '').toLowerCase();
+      const status = ((deal.status ?? deal.stage) ?? '').toLowerCase();
       return lostStatuses.some(s => status.includes(s));
     });
 
@@ -113,8 +114,8 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     const winRate = totalDeals > 0 ? (wonDeals.length / totalDeals) * 100 : 0;
 
     // Revenue
-    const wonRevenue = wonDeals.reduce((sum, d) => sum + (parseFloat(d.value) || parseFloat(d.amount) || 0), 0);
-    const lostRevenue = lostDeals.reduce((sum, d) => sum + (parseFloat(d.value) || parseFloat(d.amount) || 0), 0);
+    const wonRevenue = wonDeals.reduce((sum, d) => sum + (Number(d.value) || Number(d.amount) || 0), 0);
+    const lostRevenue = lostDeals.reduce((sum, d) => sum + (Number(d.value) || Number(d.amount) || 0), 0);
 
     // Average deal sizes
     const avgWonDeal = wonDeals.length > 0 ? wonRevenue / wonDeals.length : 0;
@@ -123,8 +124,8 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     // Loss reasons
     const reasonMap = new Map<string, { count: number; value: number }>();
     lostDeals.forEach(deal => {
-      const reason = deal.lostReason || deal.reason || deal.lossReason || 'No reason provided';
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
+      const reason = (deal.lostReason !== '' && deal.lostReason != null) ? deal.lostReason : ((deal.reason !== '' && deal.reason != null) ? deal.reason : ((deal.lossReason !== '' && deal.lossReason != null) ? deal.lossReason : 'No reason provided'));
+      const value = Number(deal.value) || Number(deal.amount) || 0;
       const existing = reasonMap.get(reason) ?? { count: 0, value: 0 };
       reasonMap.set(reason, {
         count: existing.count + 1,
@@ -144,10 +145,10 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     // By sales rep
     const repMap = new Map<string, { won: number; lost: number; wonValue: number; lostValue: number; name: string }>();
     closedDealsInPeriod.forEach(deal => {
-      const repId = deal.assignedTo || deal.ownerId || 'unassigned';
-      const repName = deal.assignedToName || deal.ownerName || 'Unassigned';
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const status = (deal.status || deal.stage || '').toLowerCase();
+      const repId = (deal.assignedTo !== '' && deal.assignedTo != null) ? deal.assignedTo : ((deal.ownerId !== '' && deal.ownerId != null) ? deal.ownerId : 'unassigned');
+      const repName = (deal.assignedToName !== '' && deal.assignedToName != null) ? deal.assignedToName : ((deal.ownerName !== '' && deal.ownerName != null) ? deal.ownerName : 'Unassigned');
+      const value = Number(deal.value) || Number(deal.amount) || 0;
+      const status = ((deal.status ?? deal.stage) ?? '').toLowerCase();
       const isWon = wonStatuses.some(s => status.includes(s));
       
       const existing = repMap.get(repId) ?? { won: 0, lost: 0, wonValue: 0, lostValue: 0, name: repName };
@@ -176,9 +177,9 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     // By competitor (if tracked)
     const competitorMap = new Map<string, { won: number; lost: number }>();
     closedDealsInPeriod.forEach(deal => {
-      const competitor = deal.competitor || deal.lostToCompetitor;
+      const competitor = (deal.competitor !== '' && deal.competitor != null) ? deal.competitor : deal.lostToCompetitor;
       if (competitor) {
-        const status = (deal.status || deal.stage || '').toLowerCase();
+        const status = ((deal.status ?? deal.stage) ?? '').toLowerCase();
         const isWon = wonStatuses.some(s => status.includes(s));
         const existing = competitorMap.get(competitor) ?? { won: 0, lost: 0 };
         competitorMap.set(competitor, {
@@ -200,12 +201,12 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     // Weekly trends
     const weeklyMap = new Map<string, { won: number; lost: number }>();
     closedDealsInPeriod.forEach(deal => {
-      const closedDate = deal.closedDate?.toDate?.() || deal.closedAt?.toDate?.() || new Date(deal.closedDate || deal.updatedAt);
+      const closedDate = deal.closedDate?.toDate?.() ?? deal.closedAt?.toDate?.() ?? new Date((deal.closedDate !== '' && deal.closedDate != null) ? deal.closedDate : deal.updatedAt);
       const weekStart = new Date(closedDate);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekKey = weekStart.toISOString().split('T')[0];
       
-      const status = (deal.status || deal.stage || '').toLowerCase();
+      const status = ((deal.status ?? deal.stage) ?? '').toLowerCase();
       const isWon = wonStatuses.some(s => status.includes(s));
       
       const existing = weeklyMap.get(weekKey) ?? { won: 0, lost: 0 };
