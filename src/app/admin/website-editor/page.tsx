@@ -1106,7 +1106,7 @@ function StyleEditor({
   onChange: (styles: ResponsiveStyles) => void;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
 }) {
-  const currentStyles = styles[breakpoint] || styles.desktop ?? {};
+  const currentStyles = (styles[breakpoint] || styles.desktop) ?? {};
   
   const updateStyle = (key: string, value: string) => {
     onChange({
