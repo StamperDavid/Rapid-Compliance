@@ -76,7 +76,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       goldenMasterId: goldenMaster.id,
       goldenMasterVersion: goldenMaster.version,
       systemPrompt,
-      knowledgeBase: goldenMaster.knowledgeBase?.documents?.map(d => d.id) || [],
+      knowledgeBase: goldenMaster.knowledgeBase?.documents?.map(d => d.id) ?? [],
       customerMemory,
       status: 'active',
       spawnedAt: new Date().toISOString(),
@@ -107,23 +107,23 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     const businessContext: any = goldenMaster.businessContext || {
       businessName: (goldenMaster as any).businessName || 'Your Business',
       industry: (goldenMaster as any).industry || 'General',
-      problemSolved: (goldenMaster as any).problemSolved || '',
-      uniqueValue: (goldenMaster as any).uniqueValue || '',
-      topProducts: (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') || '',
-      pricingStrategy: (goldenMaster as any).pricingStrategy || '',
-      discountPolicy: (goldenMaster as any).discountPolicy || '',
-      returnPolicy: (goldenMaster as any).returnPolicy || '',
-      warrantyTerms: (goldenMaster as any).warrantyTerms || '',
-      geographicCoverage: (goldenMaster as any).geographicCoverage || '',
-      deliveryTimeframes: (goldenMaster as any).deliveryTimeframes || '',
-      typicalSalesFlow: (goldenMaster as any).typicalSalesFlow || '',
-      discoveryQuestions: (goldenMaster as any).discoveryQuestions || '',
-      commonObjections: (goldenMaster as any).commonObjections || '',
-      priceObjections: (goldenMaster as any).priceObjections || '',
-      timeObjections: (goldenMaster as any).timeObjections || '',
-      competitorObjections: (goldenMaster as any).competitorObjections || '',
-      requiredDisclosures: (goldenMaster as any).requiredDisclosures || '',
-      prohibitedTopics: (goldenMaster as any).prohibitedTopics || ''
+      problemSolved: (goldenMaster as any).problemSolved ?? '',
+      uniqueValue: (goldenMaster as any).uniqueValue ?? '',
+      topProducts: (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') ?? '',
+      pricingStrategy: (goldenMaster as any).pricingStrategy ?? '',
+      discountPolicy: (goldenMaster as any).discountPolicy ?? '',
+      returnPolicy: (goldenMaster as any).returnPolicy ?? '',
+      warrantyTerms: (goldenMaster as any).warrantyTerms ?? '',
+      geographicCoverage: (goldenMaster as any).geographicCoverage ?? '',
+      deliveryTimeframes: (goldenMaster as any).deliveryTimeframes ?? '',
+      typicalSalesFlow: (goldenMaster as any).typicalSalesFlow ?? '',
+      discoveryQuestions: (goldenMaster as any).discoveryQuestions ?? '',
+      commonObjections: (goldenMaster as any).commonObjections ?? '',
+      priceObjections: (goldenMaster as any).priceObjections ?? '',
+      timeObjections: (goldenMaster as any).timeObjections ?? '',
+      competitorObjections: (goldenMaster as any).competitorObjections ?? '',
+      requiredDisclosures: (goldenMaster as any).requiredDisclosures ?? '',
+      prohibitedTopics: (goldenMaster as any).prohibitedTopics ?? ''
     };
     
     const agentPersona = goldenMaster.agentPersona || {
@@ -131,8 +131,8 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       tone: (goldenMaster as any).tone || 'Professional and helpful',
       greeting: (goldenMaster as any).greeting || 'Hello! How can I help you today?',
       closingMessage: (goldenMaster as any).closingMessage || 'Thanks for chatting!',
-      objectives: (goldenMaster as any).objectives || [],
-      escalationRules: (goldenMaster as any).escalationRules || []
+      objectives: (goldenMaster as any).objectives ?? [],
+      escalationRules: (goldenMaster as any).escalationRules ?? []
     };
     
     const behaviorConfig = goldenMaster.behaviorConfig || {
@@ -143,7 +143,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     };
     
     // Include training learnings in system prompt (from Golden Master)
-    const trainingNotes = goldenMaster.trainedScenarios || [];
+    const trainingNotes = goldenMaster.trainedScenarios ?? [];
     const recentLearnings = trainingNotes.length > 0
       ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${goldenMaster.trainingCompletedAt || 'Not yet'}.`
       : '';
@@ -203,7 +203,7 @@ Closing: "${agentPersona.closingMessage}"
 ${agentPersona.escalationRules.join('\n')}
 
 # Compliance & Legal
-${businessContext.requiredDisclosures || ''}
+${businessContext.requiredDisclosures ?? ''}
 Prohibited Topics: ${businessContext.prohibitedTopics}
 `;
 

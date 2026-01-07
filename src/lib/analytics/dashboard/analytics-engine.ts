@@ -338,7 +338,7 @@ function calculateActionBreakdown(
   }>();
   
   executions.forEach((execution: WorkflowExecution) => {
-    const results = execution.actionsExecuted || [];
+    const results = execution.actionsExecuted ?? [];
     results.forEach((result: any) => {
       const actionType = result.actionType || 'unknown';
       const existing = actionMap.get(actionType) || {
