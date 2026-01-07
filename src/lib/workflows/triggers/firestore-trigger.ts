@@ -6,7 +6,7 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, EntityTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Register Firestore trigger for workflow

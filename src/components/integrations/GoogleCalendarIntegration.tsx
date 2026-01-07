@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import type { GoogleCalendarIntegration as GoogleCalendarType } from '@/types/integrations'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface GoogleCalendarIntegrationProps {
   integration: GoogleCalendarType | null;

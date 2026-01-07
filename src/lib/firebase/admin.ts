@@ -4,7 +4,7 @@
  */
 
 import * as admin from 'firebase-admin'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 // Initialize Firebase Admin SDK (singleton)
 let adminApp: admin.app.App | null = null;

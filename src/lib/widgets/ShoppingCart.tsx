@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface CartItem {
   id: string;

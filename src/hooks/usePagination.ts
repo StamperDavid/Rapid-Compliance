@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import type { QueryDocumentSnapshot } from 'firebase/firestore'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface PaginationState<T> {
   data: T[];

@@ -6,7 +6,7 @@
 import type { gmail_v1} from 'googleapis';
 import { google } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',

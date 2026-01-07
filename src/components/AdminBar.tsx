@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useParams } from 'next/navigation'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export default function AdminBar() {
   const { user, loading } = useAuth();

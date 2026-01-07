@@ -12,7 +12,7 @@ import type {
   IntelligentResponse,
 } from '@/types/ai-models';
 import { OpenRouterProvider, getAIProvider } from './openrouter-provider'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Base interface that all providers must implement

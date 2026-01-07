@@ -5,7 +5,7 @@
 
 import type { KnowledgeBase, KnowledgeDocument, KnowledgeURL, FAQ } from '@/types/agent-memory';
 import { analyzeCompanyKnowledge } from './knowledge-analyzer'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface KnowledgeProcessorOptions {
   organizationId: string;

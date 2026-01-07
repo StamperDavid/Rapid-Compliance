@@ -13,7 +13,7 @@ import type { KnowledgeProcessorOptions } from './knowledge-processor';
 import { processKnowledgeBase } from './knowledge-processor';
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 // Dynamic import of AdminFirestoreService to prevent client-side bundling
 

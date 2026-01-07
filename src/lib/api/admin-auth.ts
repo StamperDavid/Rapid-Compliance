@@ -5,7 +5,7 @@
 
 import type { NextRequest } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface AdminUser {
   uid: string;

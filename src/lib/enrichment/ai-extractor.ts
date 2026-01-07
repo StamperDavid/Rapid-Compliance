@@ -5,7 +5,7 @@
  */
 
 import type { CompanyEnrichmentData, ScrapedContent } from './types'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 /**
  * Extract structured company data from scraped content using AI

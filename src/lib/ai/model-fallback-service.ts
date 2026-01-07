@@ -11,7 +11,7 @@
 
 import type { UnifiedChatMessage, UnifiedChatResponse } from './unified-ai-service';
 import { sendUnifiedChatMessage } from './unified-ai-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface FallbackRequest {
   model: string;

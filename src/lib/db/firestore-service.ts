@@ -27,7 +27,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase/config'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 // Helper to check if Firestore is available
 function ensureFirestore() {

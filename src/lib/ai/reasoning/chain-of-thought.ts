@@ -5,7 +5,7 @@
 
 import type { ReasoningStep, ChatRequest, ChatResponse } from '@/types/ai-models';
 import { sendChatRequest } from '../model-provider'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Execute chain-of-thought reasoning

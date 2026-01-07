@@ -5,7 +5,7 @@
  */
 
 import type { CompanySearchResult } from './types'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 /**
  * Search for a company using multiple strategies

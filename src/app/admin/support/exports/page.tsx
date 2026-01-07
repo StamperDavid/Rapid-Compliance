@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { BulkOperation } from '@/types/admin'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export default function DataExportsPage() {
   const { adminUser, hasPermission } = useAdminAuth();

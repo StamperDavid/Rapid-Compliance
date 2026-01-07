@@ -5,7 +5,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface OutlookMessage {
   id: string;

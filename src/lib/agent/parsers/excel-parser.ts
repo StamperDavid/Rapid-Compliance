@@ -4,7 +4,7 @@
  */
 
 import * as XLSX from 'xlsx'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface ExcelParseResult {
   sheets: Array<{

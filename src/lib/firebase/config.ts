@@ -11,7 +11,7 @@ import type { Firestore } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import type { FirebaseStorage } from 'firebase/storage';
 import { getStorage } from 'firebase/storage'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 // Firebase config from environment variables
 // Loads from .env.local (local overrides) and .env.development/.env.production (defaults)

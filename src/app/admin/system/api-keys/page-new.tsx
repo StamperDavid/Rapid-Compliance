@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import { FirestoreService } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface IntegrationCard {
   id: string;

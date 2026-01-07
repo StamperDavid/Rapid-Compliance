@@ -4,7 +4,7 @@
  */
 
 import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '../../types/api-keys'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 class APIKeyService {
   private static instance: APIKeyService;

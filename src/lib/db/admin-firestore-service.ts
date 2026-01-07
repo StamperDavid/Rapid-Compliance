@@ -5,7 +5,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 import type { 
   QueryConstraint, 
   DocumentData, 

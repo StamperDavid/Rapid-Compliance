@@ -5,7 +5,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 let cachedGenAI: GoogleGenerativeAI | null = null;
 let lastKeyFetch = 0;

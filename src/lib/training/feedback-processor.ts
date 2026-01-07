@@ -4,7 +4,7 @@
  */
 
 import { generateText } from '@/lib/ai/gemini-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 import type {
   TrainingSession,
   TrainingAnalysis,

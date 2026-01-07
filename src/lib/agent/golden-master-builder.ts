@@ -14,7 +14,7 @@ import type {
 import { buildPersonaFromOnboarding, buildBusinessContextFromOnboarding, buildBehaviorConfigFromOnboarding } from './persona-builder';
 import { compileSystemPrompt } from './prompt-compiler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface GoldenMasterBuilderOptions {
   onboardingData: OnboardingData;

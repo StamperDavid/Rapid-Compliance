@@ -13,7 +13,7 @@ import ForecastChart from '@/components/analytics/ForecastChart';
 import WinLossChart from '@/components/analytics/WinLossChart';
 import ReportBuilder from '@/components/analytics/ReportBuilder';
 import type { CustomReport } from '@/types/analytics'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 type AnalyticsView = 'overview' | 'revenue' | 'pipeline' | 'forecasting' | 'win-loss' | 'reports';
 type RevenueSubView = 'overview' | 'by-source' | 'by-product' | 'by-rep';

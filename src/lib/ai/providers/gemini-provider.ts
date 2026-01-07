@@ -12,7 +12,7 @@ import type {
 } from '@/types/ai-models';
 import { MODEL_CAPABILITIES } from '@/types/ai-models';
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export class GeminiProvider implements ModelProvider {
   provider = 'google' as const;

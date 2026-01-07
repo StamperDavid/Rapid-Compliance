@@ -6,7 +6,7 @@
 import type { TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { formatForVertexAI, validateTrainingData } from './data-formatter';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Create fine-tuning job with Vertex AI

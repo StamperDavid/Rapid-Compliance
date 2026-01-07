@@ -5,7 +5,7 @@
 
 import type { ChatRequest } from '@/types/ai-models';
 import { sendChatRequest } from '../model-provider'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface VerificationResult {
   isAccurate: boolean;

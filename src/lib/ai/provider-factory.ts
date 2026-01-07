@@ -9,7 +9,7 @@ import { AnthropicProvider } from './providers/anthropic-provider';
 import { GeminiProvider } from './providers/gemini-provider';
 import { OpenRouterProvider } from './openrouter-provider';
 import type { ModelName } from '@/types/ai-models'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Simple provider interface for chat routes

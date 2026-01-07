@@ -5,7 +5,7 @@
 
 import { sendEmail } from '@/lib/email/email-service';
 import { calculateLeadScore, LeadScoringFactors } from './lead-scoring'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface LeadNurtureSequence {
   id: string;

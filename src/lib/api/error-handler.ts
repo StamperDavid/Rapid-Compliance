@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export class APIError extends Error {
   constructor(

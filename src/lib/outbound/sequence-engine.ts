@@ -13,7 +13,7 @@ import {
   StepActionStatus 
 } from '@/types/outbound-sequence';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export class SequenceEngine {
   /**

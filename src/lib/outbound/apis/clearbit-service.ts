@@ -15,7 +15,7 @@
  */
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 const CLEARBIT_API_BASE = 'https://company.clearbit.com/v2';
 const CLEARBIT_PERSON_API = 'https://person.clearbit.com/v2';

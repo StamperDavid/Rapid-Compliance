@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductGrid } from './ProductGrid';
 import { ShoppingCart } from './ShoppingCart'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface FullStorefrontProps {
   organizationId: string;

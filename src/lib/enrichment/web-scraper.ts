@@ -7,7 +7,7 @@
 
 import * as cheerio from 'cheerio';
 import type { ScrapedContent } from './types'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 /**
  * Scrape and clean a website

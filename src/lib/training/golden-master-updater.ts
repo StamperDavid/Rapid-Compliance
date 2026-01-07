@@ -6,7 +6,7 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { compileSystemPrompt } from '@/lib/agent/prompt-compiler';
 import type { GoldenMaster } from '@/types/agent-memory'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 import type {
   GoldenMasterUpdateRequest,
   ImprovementSuggestion,

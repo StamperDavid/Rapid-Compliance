@@ -7,7 +7,7 @@
 
 import { useEffect } from 'react';
 import toast from 'react-hot-toast'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface APIErrorResponse {
   success: false;

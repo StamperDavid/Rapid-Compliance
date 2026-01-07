@@ -10,7 +10,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import type { AdminRole, AdminUser, AdminPermissions } from '@/types/admin';
 import { ADMIN_ROLE_PERMISSIONS } from '@/types/admin'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export function useAdminAuth() {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);

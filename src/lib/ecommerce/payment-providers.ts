@@ -5,7 +5,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import type { PaymentRequest, PaymentResult } from './payment-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Process Authorize.Net payment

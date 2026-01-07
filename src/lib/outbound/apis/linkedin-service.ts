@@ -5,7 +5,7 @@
  */
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export interface LinkedInJob {
   title: string;

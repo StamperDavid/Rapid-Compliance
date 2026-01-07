@@ -7,7 +7,7 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { FeatureGate } from './feature-gate';
 import type { OrganizationSubscription } from '@/types/subscription'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * NEW: All features are available to all active/trialing subscriptions

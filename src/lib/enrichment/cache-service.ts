@@ -6,7 +6,7 @@
 
 import { FirestoreService, COLLECTIONS } from '../db/firestore-service';
 import type { CompanyEnrichmentData } from './types'
-import { logger } from '../logger/logger';;
+import { logger } from '../logger/logger';
 
 const CACHE_TTL_DAYS = 7; // Cache for 7 days
 

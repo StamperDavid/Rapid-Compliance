@@ -5,7 +5,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import Tooltip from '@/components/Tooltip';
 import type { Organization } from '@/types/organization'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export default function OrganizationsPage() {
   const { adminUser, hasPermission, isSuperAdmin } = useAdminAuth();

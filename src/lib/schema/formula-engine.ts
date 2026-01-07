@@ -5,7 +5,7 @@
 
 import type { SchemaField } from '@/types/schema';
 import type { EntityRecord } from '@/types/entity'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export class FormulaEngine {
   /**

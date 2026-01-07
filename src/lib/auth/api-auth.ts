@@ -6,7 +6,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 // Firebase Admin SDK (optional - only if configured)
 let adminAuth: any = null;

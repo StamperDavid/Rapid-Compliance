@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import type { UserRole } from '@/types/permissions'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface AuthContextType {
   user: {

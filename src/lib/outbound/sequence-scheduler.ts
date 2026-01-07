@@ -7,7 +7,7 @@
 import { SequenceEngine } from './sequence-engine';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { ProspectEnrollment } from '@/types/outbound-sequence'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Process all due sequence steps

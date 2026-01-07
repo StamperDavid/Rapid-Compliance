@@ -6,7 +6,7 @@
 import type { calendar_v3} from 'googleapis';
 import { google } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 const CALENDAR_SCOPES = [
   'https://www.googleapis.com/auth/calendar',

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { RevenueMetrics } from '@/types/subscription'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export default function RevenueAdminPage() {
   const [metrics, setMetrics] = useState<RevenueMetrics | null>(null);
