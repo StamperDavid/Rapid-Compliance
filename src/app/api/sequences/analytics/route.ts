@@ -305,7 +305,7 @@ function buildNativeSequencePerformance(
   };
 
   // Aggregate step metrics
-  const stepPerformance: StepPerformance[] = (data.steps || []).map((step: any) => {
+  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: any) => {
     const sent = step.metrics?.sent || 0;
     const delivered = step.metrics?.delivered || 0;
     const opened = step.metrics?.opened || 0;
@@ -379,7 +379,7 @@ function buildLegacySequencePerformance(
   const analytics = data.analytics || {};
   
   // Build step performance from legacy steps
-  const stepPerformance: StepPerformance[] = (data.steps || []).map((step: any, index: number) => {
+  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: any, index: number) => {
     const sent = step.sent || 0;
     const delivered = step.delivered || 0;
     const opened = step.opened || 0;

@@ -94,9 +94,9 @@ function getCacheKey(request: PerformanceAnalyticsRequest): string {
     request.organizationId,
     request.workspaceId || 'default',
     request.periodType || 'month',
-    request.startDate?.toString() || '',
-    request.endDate?.toString() || '',
-    request.repIds?.join(',') || '',
+    request.startDate?.toString() ?? '',
+    request.endDate?.toString() ?? '',
+    request.repIds?.join(',') ?? '',
   ];
   return parts.join(':');
 }

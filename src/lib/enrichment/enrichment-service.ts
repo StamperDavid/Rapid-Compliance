@@ -322,12 +322,12 @@ export async function enrichCompany(
       employeeCount: extractedData.employeeCount,
       employeeRange: extractedData.employeeRange,
       headquarters: extractedData.headquarters,
-      techStack: [...(extractedData.techStack || []), ...techStack],
+      techStack: [...(extractedData.techStack ?? []), ...techStack],
       foundedYear: extractedData.foundedYear,
       revenue: extractedData.revenue,
       fundingStage: extractedData.fundingStage,
       socialMedia: {
-        linkedin: linkedin || undefined,
+        linkedin: linkedin ?? undefined,
       },
       contactEmail: extractedData.contactEmail,
       contactPhone: extractedData.contactPhone,
@@ -336,7 +336,7 @@ export async function enrichCompany(
       jobPostings: [],
       
       // NEW: Include distillation results
-      extractedSignals: distillationResult?.signals || [],
+      extractedSignals: distillationResult?.signals ?? [],
       leadScore: leadScore,
       customFields: {}, // Can be populated from custom field extraction
       
@@ -488,7 +488,7 @@ async function useBackupSources(
         socialMedia: backupData.socialMedia,
         contactEmail: backupData.contactEmail,
         contactPhone: backupData.contactPhone,
-        recentNews: backupData.recentNews || [],
+        recentNews: backupData.recentNews ?? [],
         hiringStatus: 'unknown',
         jobPostings: [],
         lastUpdated: new Date(),

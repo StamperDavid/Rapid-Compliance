@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
     const signalCounts = new Map<IntentSignalType, { count: number; totalPoints: number }>();
     scores.forEach((score) => {
       score.detectedSignals.forEach((signal) => {
-        const current = signalCounts.get(signal.type) || { count: 0, totalPoints: 0 };
+        const current = signalCounts.get(signal.type) ?? { count: 0, totalPoints: 0 };
         signalCounts.set(signal.type, {
           count: current.count + 1,
           totalPoints: current.totalPoints + signal.points,
@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
     const trendsMap = new Map<string, { sum: number; count: number }>();
     scores.forEach((score) => {
       const dateKey = score.metadata.scoredAt.toISOString().split('T')[0];
-      const current = trendsMap.get(dateKey) || { sum: 0, count: 0 };
+      const current = trendsMap.get(dateKey) ?? { sum: 0, count: 0 };
       trendsMap.set(dateKey, {
         sum: current.sum + score.totalScore,
         count: current.count + 1,

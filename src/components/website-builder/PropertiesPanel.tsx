@@ -156,7 +156,7 @@ export default function PropertiesPanel({
         ) : (
           selectedElement.type === 'widget' && widget ? (
             <StyleEditor
-              style={widget.style || {}}
+              style={widget.style ?? {}}
               onUpdate={(style) => onUpdateWidget(section.id, widget.id, { style })}
             />
           ) : (
@@ -274,7 +274,7 @@ function SectionContentEditor({ section, onUpdate }: SectionContentEditorProps) 
         <label style={labelStyle}>Section Name</label>
         <input
           type="text"
-          value={section.name || ''}
+          value={section.name ?? ''}
           onChange={(e) => onUpdate({ name: e.target.value })}
           placeholder="Section name (optional)"
           style={inputStyle}
@@ -327,7 +327,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
   };
 
   const updateSpacing = (type: 'padding' | 'margin', side: keyof Spacing, value: string) => {
-    const current = style[type] || {};
+    const current = style[type] ?? {};
     onUpdate({
       ...style,
       [type]: { ...current, [side]: value },
@@ -345,28 +345,28 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <input
             type="text"
             placeholder="Top"
-            value={style.padding?.top || ''}
+            value={style.padding?.top ?? ''}
             onChange={(e) => updateSpacing('padding', 'top', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Right"
-            value={style.padding?.right || ''}
+            value={style.padding?.right ?? ''}
             onChange={(e) => updateSpacing('padding', 'right', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Bottom"
-            value={style.padding?.bottom || ''}
+            value={style.padding?.bottom ?? ''}
             onChange={(e) => updateSpacing('padding', 'bottom', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Left"
-            value={style.padding?.left || ''}
+            value={style.padding?.left ?? ''}
             onChange={(e) => updateSpacing('padding', 'left', e.target.value)}
             style={smallInputStyle}
           />
@@ -377,28 +377,28 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <input
             type="text"
             placeholder="Top"
-            value={style.margin?.top || ''}
+            value={style.margin?.top ?? ''}
             onChange={(e) => updateSpacing('margin', 'top', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Right"
-            value={style.margin?.right || ''}
+            value={style.margin?.right ?? ''}
             onChange={(e) => updateSpacing('margin', 'right', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Bottom"
-            value={style.margin?.bottom || ''}
+            value={style.margin?.bottom ?? ''}
             onChange={(e) => updateSpacing('margin', 'bottom', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Left"
-            value={style.margin?.left || ''}
+            value={style.margin?.left ?? ''}
             onChange={(e) => updateSpacing('margin', 'left', e.target.value)}
             style={smallInputStyle}
           />
@@ -413,7 +413,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Font Size</label>
           <input
             type="text"
-            value={style.fontSize || ''}
+            value={style.fontSize ?? ''}
             onChange={(e) => updateStyle('fontSize', e.target.value)}
             placeholder="1rem, 16px, etc."
             style={inputStyle}
@@ -423,7 +423,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
         <div style={{ marginBottom: '0.75rem' }}>
           <label style={labelStyle}>Font Weight</label>
           <select
-            value={style.fontWeight || ''}
+            value={style.fontWeight ?? ''}
             onChange={(e) => updateStyle('fontWeight', e.target.value)}
             style={inputStyle}
           >
@@ -439,7 +439,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
         <div style={{ marginBottom: '0.75rem' }}>
           <label style={labelStyle}>Text Align</label>
           <select
-            value={style.textAlign || ''}
+            value={style.textAlign ?? ''}
             onChange={(e) => updateStyle('textAlign', e.target.value as any)}
             style={inputStyle}
           >
@@ -485,7 +485,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Border Radius</label>
           <input
             type="text"
-            value={style.borderRadius || ''}
+            value={style.borderRadius ?? ''}
             onChange={(e) => updateStyle('borderRadius', e.target.value)}
             placeholder="4px, 0.5rem, etc."
             style={inputStyle}
@@ -496,7 +496,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Box Shadow</label>
           <input
             type="text"
-            value={style.boxShadow || ''}
+            value={style.boxShadow ?? ''}
             onChange={(e) => updateStyle('boxShadow', e.target.value)}
             placeholder="0 2px 4px rgba(0,0,0,0.1)"
             style={inputStyle}
@@ -528,7 +528,7 @@ interface SectionStyleEditorProps {
 
 function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
   const updateSpacing = (type: 'padding' | 'margin', side: keyof Spacing, value: string) => {
-    const current = section[type] || {};
+    const current = section[type] ?? {};
     onUpdate({
       [type]: { ...current, [side]: value },
     });
@@ -550,7 +550,7 @@ function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
         <label style={labelStyle}>Background Image URL</label>
         <input
           type="text"
-          value={section.backgroundImage || ''}
+          value={section.backgroundImage ?? ''}
           onChange={(e) => onUpdate({ backgroundImage: e.target.value })}
           placeholder="https://..."
           style={inputStyle}
@@ -563,28 +563,28 @@ function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
           <input
             type="text"
             placeholder="Top"
-            value={section.padding?.top || ''}
+            value={section.padding?.top ?? ''}
             onChange={(e) => updateSpacing('padding', 'top', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Right"
-            value={section.padding?.right || ''}
+            value={section.padding?.right ?? ''}
             onChange={(e) => updateSpacing('padding', 'right', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Bottom"
-            value={section.padding?.bottom || ''}
+            value={section.padding?.bottom ?? ''}
             onChange={(e) => updateSpacing('padding', 'bottom', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Left"
-            value={section.padding?.left || ''}
+            value={section.padding?.left ?? ''}
             onChange={(e) => updateSpacing('padding', 'left', e.target.value)}
             style={smallInputStyle}
           />
@@ -597,28 +597,28 @@ function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
           <input
             type="text"
             placeholder="Top"
-            value={section.margin?.top || ''}
+            value={section.margin?.top ?? ''}
             onChange={(e) => updateSpacing('margin', 'top', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Right"
-            value={section.margin?.right || ''}
+            value={section.margin?.right ?? ''}
             onChange={(e) => updateSpacing('margin', 'right', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Bottom"
-            value={section.margin?.bottom || ''}
+            value={section.margin?.bottom ?? ''}
             onChange={(e) => updateSpacing('margin', 'bottom', e.target.value)}
             style={smallInputStyle}
           />
           <input
             type="text"
             placeholder="Left"
-            value={section.margin?.left || ''}
+            value={section.margin?.left ?? ''}
             onChange={(e) => updateSpacing('margin', 'left', e.target.value)}
             style={smallInputStyle}
           />
