@@ -35,9 +35,9 @@ export default function AdminBar() {
     return null;
   }
 
-  const brandName = theme?.branding?.companyName || 'CRM Platform';
+  const brandName = (theme?.branding?.companyName !== '' && theme?.branding?.companyName != null) ? theme.branding.companyName : 'CRM Platform';
   const logoUrl = theme?.branding?.logoUrl;
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
 
   // Settings button should show for admin, owner, or manager roles
   const shouldShowSettings = user.role === 'admin' || user.role === 'owner' || user.role === 'manager' || canAccessSettings;
@@ -134,11 +134,11 @@ export default function AdminBar() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: '#222', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', cursor: 'pointer', fontSize: '0.875rem' }}
           >
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 'bold' }}>
-              {user?.displayName?.charAt(0) || 'A'}
+              {user?.displayName && user.displayName !== '' ? user.displayName.charAt(0) : 'A'}
             </div>
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontWeight: '600' }}>{user?.displayName}</div>
-              <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'capitalize' }}>{user?.role}</div>
+              <div style={{ fontWeight: '600' }}>{(user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'User'}</div>
+              <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'capitalize' }}>{(user?.role !== '' && user?.role != null) ? user.role : 'member'}</div>
             </div>
             <span style={{ color: '#666' }}>▼</span>
           </button>
@@ -151,7 +151,7 @@ export default function AdminBar() {
               />
               <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '0.5rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', minWidth: '200px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 20 }}>
                 <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #222' }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{user?.email}</div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{(user?.email !== '' && user?.email != null) ? user.email : 'No email'}</div>
                   <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>Organization: Demo</div>
                 </div>
 

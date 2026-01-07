@@ -70,7 +70,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
-        content: data.response || "I apologize, but I'm having trouble responding right now. Please try again or contact us directly.",
+        content: (data.response !== '' && data.response != null) ? data.response : "I apologize, but I'm having trouble responding right now. Please try again or contact us directly.",
         timestamp: new Date(),
       };
 
@@ -90,14 +90,14 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   };
 
   // Calculate nav height based on logo height
-  const navHeight = Math.max(80, (theme.logoHeight || 48) + 32);
+  const navHeight = Math.max(80, (theme.logoHeight ?? 48) + 32);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.backgroundColor, color: theme.textColor, fontFamily: theme.fontFamily }}>
       {/* Navigation */}
       <nav 
         className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg border-b border-white/10"
-        style={{ backgroundColor: theme.navBackground || 'rgba(15, 23, 42, 0.8)' }}
+        style={{ backgroundColor: theme.navBackground ?? 'rgba(15, 23, 42, 0.8)' }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center" style={{ height: `${navHeight}px` }}>
@@ -105,9 +105,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               {theme.logoUrl ? (
                 <img 
                   src={theme.logoUrl} 
-                  alt={theme.companyName || 'SalesVelocity.ai'} 
+                  alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'} 
                   style={{ 
-                    height: `${theme.logoHeight || 48}px`, 
+                    height: `${theme.logoHeight ?? 48}px`, 
                     width: 'auto', 
                     objectFit: 'contain',
                   }} 
@@ -117,7 +117,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   className="text-2xl font-bold"
                   style={{ color: theme.textColor, fontFamily: theme.headingFont }}
                 >
-                  {theme.companyName || 'SalesVelocity.ai'}
+                  {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}
                 </span>
               )}
             </Link>
@@ -145,7 +145,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <Link
                 href="/signup"
                 className="px-4 py-2 rounded-lg font-semibold transition hover:opacity-90"
-                style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
+                style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#ffffff' }}
               >
                 Start Free Trial
               </Link>
@@ -192,7 +192,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 <Link
                   href="/signup"
                   className="px-4 py-2 rounded-lg font-semibold transition text-center"
-                  style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
+                  style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#ffffff' }}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Start Free Trial
@@ -211,7 +211,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       {/* Footer */}
       <footer 
         className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/10"
-        style={{ backgroundColor: theme.footerBackground || '#0a0a0a' }}
+        style={{ backgroundColor: theme.footerBackground ?? '#0a0a0a' }}
       >
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
@@ -250,7 +250,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center" style={{ color: theme.textColor, opacity: 0.6 }}>
-            <p>© {new Date().getFullYear()} {theme.companyName || 'SalesVelocity.ai'}. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} {(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -275,7 +275,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             {/* Header */}
             <div 
               className="px-4 py-3 flex items-center justify-between"
-              style={{ backgroundColor: theme.primaryColor }}
+              style={{ backgroundColor: theme.primaryColor ?? '#6366f1' }}
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
@@ -347,7 +347,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   onClick={sendMessage}
                   disabled={!inputValue.trim() || isTyping}
                   className="px-3 py-2 rounded-xl transition disabled:opacity-50"
-                  style={{ backgroundColor: theme.primaryColor, color: '#fff' }}
+                  style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#fff' }}
                 >
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -364,7 +364,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           id="platform-chat-toggle"
           onClick={() => setIsChatOpen(!isChatOpen)}
           className="w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-white text-2xl hover:scale-110 transition"
-          style={{ backgroundColor: theme.primaryColor }}
+          style={{ backgroundColor: theme.primaryColor ?? '#6366f1' }}
         >
           {isChatOpen ? '✕' : '💬'}
         </button>

@@ -24,13 +24,13 @@ export interface APIErrorResponse {
  * Show error toast with user-friendly message
  */
 export function showErrorToast(error: unknown, fallbackMessage = 'An error occurred') {
-  let message = fallbackMessage;
+  let message = (fallbackMessage !== '' && fallbackMessage != null) ? fallbackMessage : 'An error occurred';
   let details: any = null;
 
   // Handle API error responses
   if (error && typeof error === 'object' && 'error' in error) {
     const apiError = error as APIErrorResponse;
-    message = apiError.error.message || fallbackMessage;
+    message = (apiError.error.message !== '' && apiError.error.message != null) ? apiError.error.message : message;
     details = apiError.error.details;
     
     // Add helpful context for common errors
@@ -70,7 +70,8 @@ export function showErrorToast(error: unknown, fallbackMessage = 'An error occur
  * Show success toast
  */
 export function showSuccessToast(message: string) {
-  toast.success(message, {
+  const displayMessage = (message !== '' && message != null) ? message : 'Operation successful';
+  toast.success(displayMessage, {
     duration: 3000,
     position: 'top-right',
     style: {
@@ -87,7 +88,8 @@ export function showSuccessToast(message: string) {
  * Show loading toast (returns ID for dismissal)
  */
 export function showLoadingToast(message: string) {
-  return toast.loading(message, {
+  const displayMessage = (message !== '' && message != null) ? message : 'Loading...';
+  return toast.loading(displayMessage, {
     position: 'top-right',
     style: {
       background: '#1e3a8a',
@@ -127,7 +129,7 @@ export async function fetchWithToast<T = any>(
       return { success: false, error: data };
     }
 
-    if (successMessage) {
+    if (successMessage && successMessage !== '') {
       showSuccessToast(successMessage);
     }
 
