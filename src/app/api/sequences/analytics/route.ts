@@ -306,11 +306,11 @@ function buildNativeSequencePerformance(
 
   // Aggregate step metrics
   const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: any) => {
-    const sent = (step.metrics?.sent !== 0 && step.metrics?.sent != null) ? step.metrics.sent : 0;
-    const delivered = (step.metrics?.delivered !== 0 && step.metrics?.delivered != null) ? step.metrics.delivered : 0;
-    const opened = (step.metrics?.opened !== 0 && step.metrics?.opened != null) ? step.metrics.opened : 0;
-    const clicked = (step.metrics?.clicked !== 0 && step.metrics?.clicked != null) ? step.metrics.clicked : 0;
-    const replied = (step.metrics?.replied !== 0 && step.metrics?.replied != null) ? step.metrics.replied : 0;
+    const sent = step.metrics?.sent ?? 0;
+    const delivered = step.metrics?.delivered ?? 0;
+    const opened = step.metrics?.opened ?? 0;
+    const clicked = step.metrics?.clicked ?? 0;
+    const replied = step.metrics?.replied ?? 0;
 
     return {
       stepId: step.id,
@@ -338,13 +338,14 @@ function buildNativeSequencePerformance(
 
   // Determine primary channel
   const channelCounts = stepPerformance.reduce((acc, step) => {
-    acc[step.channel] = ((acc[step.channel] !== 0 && acc[step.channel] != null) ? acc[step.channel] : 0) + 1;
+    acc[step.channel] = (acc[step.channel] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>);
   
+  const primaryChannelKey = Object.keys(channelCounts)[0] as any;
   const primaryChannel = Object.entries(channelCounts).length > 1 
     ? 'multi-channel' 
-    : ((Object.keys(channelCounts)[0] as any) !== '' && (Object.keys(channelCounts)[0] as any) != null) ? (Object.keys(channelCounts)[0] as any) : 'email';
+    : ((primaryChannelKey !== '' && primaryChannelKey != null) ? primaryChannelKey : 'email');
 
   return {
     sequenceId,
@@ -380,11 +381,11 @@ function buildLegacySequencePerformance(
   
   // Build step performance from legacy steps
   const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: any, index: number) => {
-    const sent = (step.sent !== 0 && step.sent != null) ? step.sent : 0;
-    const delivered = (step.delivered !== 0 && step.delivered != null) ? step.delivered : 0;
-    const opened = (step.opened !== 0 && step.opened != null) ? step.opened : 0;
-    const clicked = (step.clicked !== 0 && step.clicked != null) ? step.clicked : 0;
-    const replied = (step.replied !== 0 && step.replied != null) ? step.replied : 0;
+    const sent = step.sent ?? 0;
+    const delivered = step.delivered ?? 0;
+    const opened = step.opened ?? 0;
+    const clicked = step.clicked ?? 0;
+    const replied = step.replied ?? 0;
 
     return {
       stepId: step.id,
@@ -408,18 +409,18 @@ function buildLegacySequencePerformance(
     sequenceName: data.name,
     isActive: data.status === 'active',
     channel: 'email', // Legacy system is email-only
-    totalEnrolled: (analytics.totalEnrolled !== 0 && analytics.totalEnrolled != null) ? analytics.totalEnrolled : 0,
-    activeEnrollments: (analytics.activeProspects !== 0 && analytics.activeProspects != null) ? analytics.activeProspects : 0,
-    completedEnrollments: (analytics.completedProspects !== 0 && analytics.completedProspects != null) ? analytics.completedProspects : 0,
-    totalSent: (analytics.totalSent !== 0 && analytics.totalSent != null) ? analytics.totalSent : 0,
-    totalDelivered: (analytics.totalDelivered !== 0 && analytics.totalDelivered != null) ? analytics.totalDelivered : 0,
-    totalOpened: (analytics.totalOpened !== 0 && analytics.totalOpened != null) ? analytics.totalOpened : 0,
-    totalClicked: (analytics.totalClicked !== 0 && analytics.totalClicked != null) ? analytics.totalClicked : 0,
-    totalReplied: (analytics.totalReplied !== 0 && analytics.totalReplied != null) ? analytics.totalReplied : 0,
-    deliveryRate: (analytics.deliveryRate !== 0 && analytics.deliveryRate != null) ? analytics.deliveryRate : 0,
-    openRate: (analytics.openRate !== 0 && analytics.openRate != null) ? analytics.openRate : 0,
-    clickRate: (analytics.clickRate !== 0 && analytics.clickRate != null) ? analytics.clickRate : 0,
-    replyRate: (analytics.replyRate !== 0 && analytics.replyRate != null) ? analytics.replyRate : 0,
+    totalEnrolled: analytics.totalEnrolled ?? 0,
+    activeEnrollments: analytics.activeProspects ?? 0,
+    completedEnrollments: analytics.completedProspects ?? 0,
+    totalSent: analytics.totalSent ?? 0,
+    totalDelivered: analytics.totalDelivered ?? 0,
+    totalOpened: analytics.totalOpened ?? 0,
+    totalClicked: analytics.totalClicked ?? 0,
+    totalReplied: analytics.totalReplied ?? 0,
+    deliveryRate: analytics.deliveryRate ?? 0,
+    openRate: analytics.openRate ?? 0,
+    clickRate: analytics.clickRate ?? 0,
+    replyRate: analytics.replyRate ?? 0,
     stepPerformance,
     createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
     lastExecutedAt: analytics.lastRun ? new Date(analytics.lastRun) : undefined,

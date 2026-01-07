@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create billing portal session
-    const returnUrl = `${request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/billing`;
+    const originHeader = request.headers.get('origin');
+    const baseUrl = (originHeader !== '' && originHeader != null) ? originHeader : process.env.NEXT_PUBLIC_APP_URL;
+    const returnUrl = `${baseUrl}/workspace/${organizationId}/settings/billing`;
     
     const session = await createBillingPortalSession(
       org.stripeCustomerId,

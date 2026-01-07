@@ -55,7 +55,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get('sessionId') || request.headers.get('x-session-id') || 'anonymous';
+    const sessionIdParam = searchParams.get('sessionId');
+    const sessionIdHeader = request.headers.get('x-session-id');
+    const sessionId = (sessionIdParam !== '' && sessionIdParam != null) ? sessionIdParam :
+      ((sessionIdHeader !== '' && sessionIdHeader != null) ? sessionIdHeader : 'anonymous');
     const workspaceId = searchParams.get('workspaceId');
     const organizationId = searchParams.get('organizationId');
 
@@ -191,7 +194,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get('sessionId') || request.headers.get('x-session-id');
+    const sessionIdParam = searchParams.get('sessionId');
+    const sessionIdHeader = request.headers.get('x-session-id');
+    const sessionId = (sessionIdParam !== '' && sessionIdParam != null) ? sessionIdParam : sessionIdHeader;
     const workspaceId = searchParams.get('workspaceId');
     const organizationId = searchParams.get('organizationId');
     const itemId = searchParams.get('itemId');

@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     
     // Parse filters
     const entityType = searchParams.get('entityType') as any;
@@ -32,8 +33,10 @@ export async function GET(request: NextRequest) {
     const typesParam = searchParams.get('types');
     const types = typesParam ? typesParam.split(',') as any[] : undefined;
     const direction = searchParams.get('direction') as any;
-    const createdBy = searchParams.get('createdBy') || undefined;
-    const pageSize = parseInt(searchParams.get('pageSize') || '50');
+    const createdByParam = searchParams.get('createdBy');
+    const createdBy = (createdByParam !== '' && createdByParam != null) ? createdByParam : undefined;
+    const pageSizeParam = searchParams.get('pageSize');
+    const pageSize = parseInt((pageSizeParam !== '' && pageSizeParam != null) ? pageSizeParam : '50');
 
     const filters = {
       entityType,
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = body.workspaceId || 'default';
+    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId : 'default';
 
     // Add user attribution if not provided
     if (!body.createdBy) {

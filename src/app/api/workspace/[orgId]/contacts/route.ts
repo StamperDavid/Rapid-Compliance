@@ -8,9 +8,11 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const company = searchParams.get('company');
-    const pageSize = parseInt(searchParams.get('pageSize') || '50');
+    const pageSizeParam = searchParams.get('pageSize');
+    const pageSize = parseInt((pageSizeParam !== '' && pageSizeParam != null) ? pageSizeParam : '50');
 
     const filters = company ? { company } : undefined;
     const pagination = { pageSize };

@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const pageSize = parseInt(searchParams.get('limit') || '50');
+    const limitParam = searchParams.get('limit');
+    const pageSize = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
     const cursor = searchParams.get('cursor'); // For pagination
 
     if (!orgId) {

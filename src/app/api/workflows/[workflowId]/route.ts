@@ -31,7 +31,8 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
@@ -183,7 +184,8 @@ export async function DELETE(
 
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
 
     if (!organizationId) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });

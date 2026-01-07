@@ -52,16 +52,19 @@ export async function GET(request: NextRequest) {
     const { user } = authResult;
     const organizationId = user.organizationId!;
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limitParam = searchParams.get('limit');
+    const limit = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
     const sequenceId = searchParams.get('sequenceId');
+    const sequenceIdForLog = (sequenceId !== '' && sequenceId != null) ? sequenceId : 'all';
 
     logger.info('[Executions API] Fetching recent executions', {
       organizationId,
       limit,
-      sequenceId: sequenceId || 'all',
+      sequenceId: sequenceIdForLog,
     });
 
-    const executions = await getRecentExecutions(organizationId, limit, sequenceId || undefined);
+    const sequenceIdFilter = (sequenceId !== '' && sequenceId != null) ? sequenceId : undefined;
+    const executions = await getRecentExecutions(organizationId, limit, sequenceIdFilter);
 
     return NextResponse.json({ executions });
 

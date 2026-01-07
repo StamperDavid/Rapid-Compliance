@@ -24,8 +24,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = searchParams.get('workspaceId') || 'default';
-    const userId = searchParams.get('userId') || token.uid;
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
+    const userIdParam = searchParams.get('userId');
+    const userId = (userIdParam !== '' && userIdParam != null) ? userIdParam : token.uid;
     const status = searchParams.get('status') as any;
 
     const tasks = await getUserTasks(organizationId, workspaceId, userId, status);
@@ -58,7 +60,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = body.workspaceId || 'default';
+    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId : 'default';
+    const assignedByName = (token.email !== '' && token.email != null) ? token.email : undefined;
+    const priorityVal = body.priority;
+    const priority = (priorityVal !== '' && priorityVal != null) ? priorityVal : 'normal';
 
     const task = await createTask(organizationId, workspaceId, {
       title: body.title,
@@ -66,9 +71,9 @@ export async function POST(request: NextRequest) {
       assignedTo: body.assignedTo,
       assignedToName: body.assignedToName,
       assignedBy: token.uid,
-      assignedByName: token.email || undefined,
+      assignedByName,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-      priority: body.priority || 'normal',
+      priority,
       status: 'todo',
       relatedEntityType: body.relatedEntityType,
       relatedEntityId: body.relatedEntityId,

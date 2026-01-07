@@ -23,8 +23,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = searchParams.get('workspaceId') || 'default';
-    const period = (searchParams.get('period') || 'month') as 'week' | 'month' | 'quarter' | 'year';
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
+    const periodParam = searchParams.get('period');
+    const period = ((periodParam !== '' && periodParam != null) ? periodParam : 'month') as 'week' | 'month' | 'quarter' | 'year';
 
     const leaderboard = await calculateLeaderboard(organizationId, workspaceId, period);
 

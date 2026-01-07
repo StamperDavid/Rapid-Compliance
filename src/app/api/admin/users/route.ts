@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
     // Parse query params for filtering and pagination
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
-    const pageSize = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const limitParam = searchParams.get('limit');
+    const pageSize = Math.min(parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50'), 100);
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
     // Build query using Admin DAL

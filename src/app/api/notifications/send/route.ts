@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
 
     // Get organization ID (from session/auth)
     // TODO: Implement proper authentication
-    const orgId = request.headers.get('x-org-id') || 'default_org';
+    const orgIdHeader = request.headers.get('x-org-id');
+    const orgId = (orgIdHeader !== '' && orgIdHeader != null) ? orgIdHeader : 'default_org';
 
     // Check rate limit (50 req/min per org)
     const rateLimit = checkRateLimit(`send:${orgId}`, 50, 60000);

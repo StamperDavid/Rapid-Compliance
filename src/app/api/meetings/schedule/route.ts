@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = body.workspaceId || 'default';
+    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId : 'default';
 
     const meeting = await scheduleMeeting(organizationId, workspaceId, {
       schedulerConfigId: body.schedulerConfigId,

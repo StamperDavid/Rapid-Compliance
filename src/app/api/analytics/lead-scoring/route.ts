@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const period = searchParams.get('period') || '30d';
+    const periodParam = searchParams.get('period');
+    const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';
 
     if (!orgId) {
       return errors.badRequest('orgId is required');

@@ -17,19 +17,23 @@ export async function POST(request: NextRequest) {
   try {
     // Get config from request body
     const body = await request.json().catch(() => ({}));
-    const organizationId =
-      body.organizationId ||
-      request.headers.get('x-organization-id') ||
-      'default-org';
-    const workspaceId =
-      body.workspaceId || request.headers.get('x-workspace-id') || 'default';
+    const bodyOrgId = body.organizationId;
+    const headerOrgId = request.headers.get('x-organization-id');
+    const organizationId = (bodyOrgId !== '' && bodyOrgId != null) ? bodyOrgId : 
+      ((headerOrgId !== '' && headerOrgId != null) ? headerOrgId : 'default-org');
+    
+    const bodyWorkspaceId = body.workspaceId;
+    const headerWorkspaceId = request.headers.get('x-workspace-id');
+    const workspaceId = (bodyWorkspaceId !== '' && bodyWorkspaceId != null) ? bodyWorkspaceId :
+      ((headerWorkspaceId !== '' && headerWorkspaceId != null) ? headerWorkspaceId : 'default');
 
+    const signalPriorityVal = body.signalPriority;
     const config = {
       organizationId,
       workspaceId,
       autoGenerateRecommendations: body.autoGenerateRecommendations ?? true,
       autoRecalculateHealth: body.autoRecalculateHealth ?? true,
-      signalPriority: body.signalPriority || 'Medium',
+      signalPriority: (signalPriorityVal !== '' && signalPriorityVal != null) ? signalPriorityVal : 'Medium',
     };
 
     logger.info('Starting deal monitor', config);

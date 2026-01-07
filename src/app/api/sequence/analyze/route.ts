@@ -140,7 +140,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SequenceA
   
   try {
     // Extract user ID from request (in production, use actual auth)
-    const userId = request.headers.get('x-user-id') || 'default-user';
+    const userIdHeader = request.headers.get('x-user-id');
+    const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default-user';
     
     // Check rate limit
     const rateLimit = checkRateLimit(userId);

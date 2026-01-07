@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
-    const action = searchParams.get('action') || 'stats';
+    const actionParam = searchParams.get('action');
+    const action = (actionParam !== '' && actionParam != null) ? actionParam : 'stats';
     
     if (!organizationId) {
       return errors.badRequest('Organization ID required');

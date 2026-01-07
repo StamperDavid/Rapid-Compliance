@@ -59,8 +59,10 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
 export async function GET(request: NextRequest) {
   try {
     // Get user ID and org ID (from session/auth)
-    const userId = request.headers.get('x-user-id') || 'default_user';
-    const orgId = request.headers.get('x-org-id') || 'default_org';
+    const userIdHeader = request.headers.get('x-user-id');
+    const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
+    const orgIdHeader = request.headers.get('x-org-id');
+    const orgId = (orgIdHeader !== '' && orgIdHeader != null) ? orgIdHeader : 'default_org';
 
     // Check rate limit
     const rateLimit = checkRateLimit(`list:${userId}`, 60, 60000);
@@ -88,7 +90,10 @@ export async function GET(request: NextRequest) {
       statuses: searchParams.get('statuses')?.split(','),
       channels: searchParams.get('channels')?.split(','),
       unreadOnly: searchParams.get('unreadOnly') === 'true',
-      limit: parseInt(searchParams.get('limit') || '50'),
+      limit: (() => {
+        const limitParam = searchParams.get('limit');
+        return parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
+      })(),
       startAfter: searchParams.get('startAfter'),
     };
 
@@ -212,8 +217,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // Get user ID and org ID
-    const userId = request.headers.get('x-user-id') || 'default_user';
-    const orgId = request.headers.get('x-org-id') || 'default_org';
+    const userIdHeader = request.headers.get('x-user-id');
+    const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
+    const orgIdHeader = request.headers.get('x-org-id');
+    const orgId = (orgIdHeader !== '' && orgIdHeader != null) ? orgIdHeader : 'default_org';
 
     // Validate notification IDs
     const { notificationIds } = body;

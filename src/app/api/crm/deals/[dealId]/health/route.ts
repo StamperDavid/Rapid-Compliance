@@ -26,7 +26,8 @@ export async function GET(
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceIdParam = searchParams.get('workspaceId');
+    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const { dealId } = params;
 
     const health = await calculateDealHealth(organizationId, workspaceId, dealId);

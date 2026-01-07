@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // Filter by event type
     const pageId = searchParams.get('pageId'); // Filter by page
     const postId = searchParams.get('postId'); // Filter by blog post
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const limitParam = searchParams.get('limit');
+    const limit = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50', 10);
 
     // CRITICAL: Validate organizationId
     if (!organizationId) {
