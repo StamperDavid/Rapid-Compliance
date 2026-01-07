@@ -176,26 +176,30 @@ export class SequenceEngine {
 
       // Execute based on step type
       switch (step.type) {
-        case 'email':
+        case 'email': {
           await this.sendEmail(enrollment, step, organizationId);
           action.sentAt = new Date().toISOString();
           break;
+        }
 
-        case 'linkedin_message':
+        case 'linkedin_message': {
           await this.sendLinkedInMessage(enrollment, step, organizationId);
           action.sentAt = new Date().toISOString();
           break;
+        }
 
-        case 'sms':
+        case 'sms': {
           await this.sendSMS(enrollment, step, organizationId);
           action.sentAt = new Date().toISOString();
           break;
+        }
 
         case 'call_task':
-        case 'manual_task':
+        case 'manual_task': {
           await this.createTask(enrollment, step, organizationId);
           action.status = 'scheduled';
           break;
+        }
       }
 
       // Add action to enrollment
@@ -594,29 +598,33 @@ export class SequenceEngine {
 
     for (const condition of step.conditions) {
       switch (condition.type) {
-        case 'opened_previous':
+        case 'opened_previous': {
           const previousOpened = enrollment.stepActions.some(
             a => a.stepOrder === step.order - 1 && a.openedAt
           );
           if (!previousOpened) {return false;}
           break;
+        }
 
-        case 'not_opened_previous':
+        case 'not_opened_previous': {
           const previousNotOpened = !enrollment.stepActions.some(
             a => a.stepOrder === step.order - 1 && a.openedAt
           );
           if (!previousNotOpened) {return false;}
           break;
+        }
 
-        case 'replied':
+        case 'replied': {
           const hasReplied = enrollment.stepActions.some(a => a.repliedAt);
           if (!hasReplied) {return false;}
           break;
+        }
 
-        case 'not_replied':
+        case 'not_replied': {
           const hasNotReplied = !enrollment.stepActions.some(a => a.repliedAt);
           if (!hasNotReplied) {return false;}
           break;
+        }
       }
     }
 

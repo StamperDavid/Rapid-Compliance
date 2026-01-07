@@ -91,21 +91,24 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
   let fieldValue: any;
   
   switch (condition.source) {
-    case 'trigger_data':
+    case 'trigger_data': {
       fieldValue = getNestedValue(triggerData, condition.field);
       break;
-    case 'entity':
+    }
+    case 'entity': {
       // Query entity from trigger data context
       // The entity data should be populated in triggerData.entity or triggerData.entities
       const entityData = triggerData?.entity || triggerData?.record || triggerData;
       fieldValue = getNestedValue(entityData, condition.field);
       break;
-    case 'variable':
+    }
+    case 'variable': {
       // Get from workflow variables stored in triggerData._variables
       const variables = triggerData?._variables || triggerData?.variables || {};
       fieldValue = getNestedValue(variables, condition.field);
       break;
-    case 'date':
+    }
+    case 'date': {
       // Handle date comparisons
       if (condition.field === 'now') {
         fieldValue = new Date();
@@ -117,8 +120,10 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
         fieldValue = new Date(getNestedValue(triggerData, condition.field));
       }
       break;
-    default:
+    }
+    default: {
       fieldValue = null;
+    }
   }
   
   // Compare based on operator
@@ -190,20 +195,26 @@ async function executeAction(
   const { executeDelayAction } = await import('./delay-action');
   
   switch (action.type) {
-    case 'send_email':
+    case 'send_email': {
       return executeEmailAction(action, triggerData, organizationId);
-    case 'send_sms':
+    }
+    case 'send_sms': {
       return executeSMSAction(action, triggerData, organizationId);
+    }
     case 'create_entity':
     case 'update_entity':
-    case 'delete_entity':
+    case 'delete_entity': {
       return executeEntityAction(action, triggerData, organizationId);
-    case 'http_request':
+    }
+    case 'http_request': {
       return executeHTTPAction(action, triggerData);
-    case 'delay':
+    }
+    case 'delay': {
       return executeDelayAction(action, triggerData);
-    default:
+    }
+    default: {
       throw new Error(`Unknown action type: ${action.type}`);
+    }
   }
 }
 
