@@ -127,8 +127,8 @@ export function buildEmailHTML(template: EmailTemplate, variables: Record<string
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${replaceVariables(template.subject, variables)}</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: ${template.styling.backgroundColor || '#f4f4f4'}; font-family: ${template.styling.fontFamily || 'Arial, sans-serif'};">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${template.styling.backgroundColor || '#f4f4f4'};">
+<body style="margin: 0; padding: 0; background-color: ${(template.styling.backgroundColor !== '' && template.styling.backgroundColor != null) ? template.styling.backgroundColor : '#f4f4f4'}; font-family: ${(template.styling.fontFamily !== '' && template.styling.fontFamily != null) ? template.styling.fontFamily : 'Arial, sans-serif'};">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${(template.styling.backgroundColor !== '' && template.styling.backgroundColor != null) ? template.styling.backgroundColor : '#f4f4f4'};">
     <tr>
       <td align="center" style="padding: 40px 20px;">
         <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -151,14 +151,14 @@ export function buildEmailHTML(template: EmailTemplate, variables: Record<string
  */
 function buildBlockHTML(block: EmailBlock, globalStyling: EmailTemplate['styling']): string {
   const style = block.styling ?? {};
-  const alignment = style.alignment || 'left';
-  const padding = style.padding || '10px 0';
+  const alignment = (style.alignment !== '' && style.alignment != null) ? style.alignment : 'left';
+  const padding = (style.padding !== '' && style.padding != null) ? style.padding : '10px 0';
 
   switch (block.type) {
     case 'header':
       return `
         <div style="text-align: ${alignment}; padding: ${padding};">
-          <h1 style="margin: 0; color: ${style.textColor || globalStyling.primaryColor || '#333'}; font-size: ${style.fontSize || '28px'};">
+          <h1 style="margin: 0; color: ${(style.textColor !== '' && style.textColor != null) ? style.textColor : ((globalStyling.primaryColor !== '' && globalStyling.primaryColor != null) ? globalStyling.primaryColor : '#333')}; font-size: ${(style.fontSize !== '' && style.fontSize != null) ? style.fontSize : '28px'};">
             ${block.content}
           </h1>
         </div>
@@ -166,7 +166,7 @@ function buildBlockHTML(block: EmailBlock, globalStyling: EmailTemplate['styling
 
     case 'text':
       return `
-        <div style="text-align: ${alignment}; padding: ${padding}; color: ${style.textColor || '#333'}; font-size: ${style.fontSize || '16px'}; line-height: 1.6;">
+        <div style="text-align: ${alignment}; padding: ${padding}; color: ${(style.textColor !== '' && style.textColor != null) ? style.textColor : '#333'}; font-size: ${(style.fontSize !== '' && style.fontSize != null) ? style.fontSize : '16px'}; line-height: 1.6;">
           ${block.content}
         </div>
       `;
@@ -181,7 +181,7 @@ function buildBlockHTML(block: EmailBlock, globalStyling: EmailTemplate['styling
     case 'button':
       return `
         <div style="text-align: ${alignment}; padding: ${padding};">
-          <a href="${style.buttonUrl || '#'}" style="display: inline-block; padding: 14px 28px; background-color: ${style.buttonColor || globalStyling.primaryColor || '#0066cc'}; color: ${style.buttonTextColor || '#ffffff'}; text-decoration: none; border-radius: 6px; font-weight: bold;">
+          <a href="${(style.buttonUrl !== '' && style.buttonUrl != null) ? style.buttonUrl : '#'}" style="display: inline-block; padding: 14px 28px; background-color: ${(style.buttonColor !== '' && style.buttonColor != null) ? style.buttonColor : ((globalStyling.primaryColor !== '' && globalStyling.primaryColor != null) ? globalStyling.primaryColor : '#0066cc')}; color: ${(style.buttonTextColor !== '' && style.buttonTextColor != null) ? style.buttonTextColor : '#ffffff'}; text-decoration: none; border-radius: 6px; font-weight: bold;">
             ${block.content}
           </a>
         </div>
@@ -214,7 +214,7 @@ export function replaceVariables(content: string, variables: Record<string, any>
   
   Object.entries(variables).forEach(([key, value]) => {
     const placeholder = new RegExp(`{{${key}}}`, 'g');
-    result = result.replace(placeholder, String(value || ''));
+    result = result.replace(placeholder, String(value ?? ''));
   });
 
   // Replace any remaining unreplaced variables with empty string
@@ -342,7 +342,7 @@ export async function calculateABTestResults(
       testId
     );
 
-    const metric = test?.winnerMetric || 'open_rate';
+    const metric = (test?.winnerMetric !== '' && test?.winnerMetric != null) ? test.winnerMetric : 'open_rate';
     const aValue = (variantAResults as any)[metric.replace('_rate', 'Rate')];
     const bValue = (variantBResults as any)[metric.replace('_rate', 'Rate')];
 
