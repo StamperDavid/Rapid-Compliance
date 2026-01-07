@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { sendSMS, getDeliveryStatus, validatePhoneNumber } from '@/lib/sms/sms-service';
+import { sendSMS, getDeliveryStatus, validatePhoneNumber, SMS_PROVIDERS, renderSMSTemplate } from '@/lib/sms/sms-service';
 
 describe('SMS Integration Tests', () => {
   describe('SMS Sending (Requires Twilio Test Account)', () => {
@@ -46,7 +46,6 @@ describe('SMS Integration Tests', () => {
   describe('SMS Provider Configuration', () => {
     it('should have Twilio and Vonage providers configured', () => {
       // This test verifies provider configurations exist
-      const { SMS_PROVIDERS } = require('@/lib/sms/sms-service');
       
       expect(SMS_PROVIDERS).toBeDefined();
       expect(Array.isArray(SMS_PROVIDERS)).toBe(true);
@@ -72,7 +71,6 @@ describe('SMS Integration Tests', () => {
 
   describe('SMS Templates', () => {
     it('should support variable replacement in templates', () => {
-      const { renderSMSTemplate } = require('@/lib/sms/sms-service');
       
       const template = 'Hello {{firstName}}, your order {{orderNumber}} is ready!';
       const variables = {
