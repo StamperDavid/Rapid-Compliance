@@ -144,17 +144,17 @@ function Section({ section, breakpoint }: { section: PageSection; breakpoint: st
       return '60px 40px';
     }
     return section.padding
-      ? `${section.padding.top || '80px'} ${section.padding.right || '40px'} ${section.padding.bottom || '80px'} ${section.padding.left || '40px'}`
+      ? `${section.padding.top ?? '80px'} ${section.padding.right ?? '40px'} ${section.padding.bottom ?? '80px'} ${section.padding.left ?? '40px'}`
       : '80px 40px';
   };
 
   const sectionStyle: React.CSSProperties = {
-    backgroundColor: section.backgroundColor || 'transparent',
+    backgroundColor: section.backgroundColor ?? 'transparent',
     backgroundImage: section.backgroundImage ? `url(${section.backgroundImage})` : undefined,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     padding: getResponsivePadding(),
-    maxWidth: section.fullWidth ? '100%' : section.maxWidth || '1200px',
+    maxWidth: section.fullWidth ? '100%' : section.maxWidth ?? '1200px',
     margin: '0 auto',
     width: '100%',
   };
@@ -188,11 +188,11 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
   const convertSpacing = (spacing?: any): string => {
     if (!spacing) {return '0';}
     if (typeof spacing === 'string') {return spacing;}
-    return `${spacing.top || 0} ${spacing.right || 0} ${spacing.bottom || 0} ${spacing.left || 0}`;
+    return `${spacing.top ?? 0} ${spacing.right ?? 0} ${spacing.bottom ?? 0} ${spacing.left ?? 0}`;
   };
 
   const getResponsiveStyle = (): React.CSSProperties => {
-    const baseStyle: any = { ...(widget.style || {}) };
+    const baseStyle: any = { ...(widget.style ?? {}) };
     
     // Convert Spacing objects to CSS strings
     if (baseStyle.padding && typeof baseStyle.padding === 'object') {
@@ -231,28 +231,32 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
 
   switch (widget.type) {
     case 'heading': {
-      const level = widget.data.level || 1;
+      const level = widget.data.level ?? 1;
       const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
+      const textVal = widget.data.text as string | null | undefined;
       return (
         <HeadingTag style={style}>
-          {String(widget.data.text || 'Heading')}
+          {String(textVal !== '' && textVal != null ? textVal : 'Heading')}
         </HeadingTag>
       );
     }
 
-    case 'text':
+    case 'text': {
+      const contentVal = widget.data.content as string | null | undefined;
       return (
         <p style={style}>
-          {String(widget.data.content || 'Text content')}
+          {String(contentVal !== '' && contentVal != null ? contentVal : 'Text content')}
         </p>
       );
+    }
 
-    case 'button':
+    case 'button': {
+      const buttonTextVal = widget.data.text as string | null | undefined;
       return (
         <button
           style={{
             padding: '12px 24px',
-            backgroundColor: (widget.data.color as string) || '#3b82f6',
+            backgroundColor: (widget.data.color as string) ?? '#3b82f6',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -267,15 +271,17 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
             }
           }}
         >
-          {String(widget.data.text || 'Button')}
+          {String(buttonTextVal !== '' && buttonTextVal != null ? buttonTextVal : 'Button')}
         </button>
       );
+    }
 
-    case 'image':
+    case 'image': {
+      const altVal = widget.data.alt as string | null | undefined;
       return (
         <OptimizedImage
-          src={(widget.data.src as string) || 'https://via.placeholder.com/800x400'}
-          alt={(widget.data.alt as string) || 'Image'}
+          src={(widget.data.src as string) ?? 'https://via.placeholder.com/800x400'}
+          alt={altVal !== '' && altVal != null ? altVal : 'Image'}
           style={{
             width: '100%',
             height: 'auto',
@@ -289,8 +295,11 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           }}
         />
       );
+    }
 
-    case 'hero':
+    case 'hero': {
+      const heroHeadingVal = widget.data.heading as string | null | undefined;
+      const heroSubheadingVal = widget.data.subheading as string | null | undefined;
       return (
         <div
           style={{
@@ -313,7 +322,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               marginBottom: '16px',
             }}
           >
-            {String(widget.data.heading || 'Hero Heading')}
+            {String(heroHeadingVal !== '' && heroHeadingVal != null ? heroHeadingVal : 'Hero Heading')}
           </h1>
           <p
             style={{
@@ -323,7 +332,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               margin: '0 auto 32px',
             }}
           >
-            {String(widget.data.subheading || 'Hero subheading')}
+            {String(heroSubheadingVal !== '' && heroSubheadingVal != null ? heroSubheadingVal : 'Hero subheading')}
           </p>
           {(widget.data.buttonText as string) && (
             <button
@@ -348,6 +357,7 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
           )}
         </div>
       );
+    }
 
     case 'features': {
       const features = (widget.data.features as any[]) || [];
@@ -425,7 +435,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
       );
     }
 
-    case 'testimonial':
+    case 'testimonial': {
+      const quoteVal = widget.data.quote as string | null | undefined;
+      const authorVal = widget.data.author as string | null | undefined;
+      const roleVal = widget.data.role as string | null | undefined;
       return (
         <div
           style={{
@@ -444,18 +457,22 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               marginBottom: '16px',
             }}
           >
-            "{String(widget.data.quote || 'Testimonial quote')}"
+            &quot;{String(quoteVal !== '' && quoteVal != null ? quoteVal : 'Testimonial quote')}&quot;
           </p>
           <div style={{ fontWeight: '600', color: '#111827' }}>
-            {String(widget.data.author || 'Author Name')}
+            {String(authorVal !== '' && authorVal != null ? authorVal : 'Author Name')}
           </div>
           <div style={{ fontSize: '14px', color: '#6b7280' }}>
-            {String(widget.data.role || 'Role / Company')}
+            {String(roleVal !== '' && roleVal != null ? roleVal : 'Role / Company')}
           </div>
         </div>
       );
+    }
 
-    case 'cta':
+    case 'cta': {
+      const ctaHeadingVal = widget.data.heading as string | null | undefined;
+      const ctaTextVal = widget.data.text as string | null | undefined;
+      const ctaButtonTextVal = widget.data.buttonText as string | null | undefined;
       return (
         <div
           style={{
@@ -474,10 +491,10 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               marginBottom: '16px',
             }}
           >
-            {String(widget.data.heading || 'Ready to get started?')}
+            {String(ctaHeadingVal !== '' && ctaHeadingVal != null ? ctaHeadingVal : 'Ready to get started?')}
           </h2>
           <p style={{ fontSize: '18px', marginBottom: '24px' }}>
-            {String(widget.data.text || 'Join thousands of satisfied customers')}
+            {String(ctaTextVal !== '' && ctaTextVal != null ? ctaTextVal : 'Join thousands of satisfied customers')}
           </p>
           <button
             style={{
@@ -491,10 +508,11 @@ function WidgetRenderer({ widget, breakpoint }: { widget: Widget; breakpoint: st
               cursor: 'pointer',
             }}
           >
-            {String(widget.data.buttonText || 'Get Started')}
+            {String(ctaButtonTextVal !== '' && ctaButtonTextVal != null ? ctaButtonTextVal : 'Get Started')}
           </button>
         </div>
       );
+    }
 
     case 'logo-grid': {
       const logos = (widget.data.logos as any[]) || [];

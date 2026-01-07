@@ -72,8 +72,19 @@ export default function LookupFieldPicker({
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         filtered = allRecords.filter((record: any) => {
-          // Search across common name fields
-          const name = record.name || `${record.firstName  } ${  record.lastName}` || record.title || record.companyName || record.id;
+          // Search across common name fields - explicit empty string checks for UI strings
+          const recName = record.name as string | null | undefined;
+          const recFirstName = record.firstName as string | null | undefined;
+          const recLastName = record.lastName as string | null | undefined;
+          const recTitle = record.title as string | null | undefined;
+          const recCompanyName = record.companyName as string | null | undefined;
+          const recId = record.id as string | null | undefined;
+          
+          const name = (recName !== '' && recName != null) ? recName
+            : (recFirstName && recLastName) ? `${recFirstName} ${recLastName}`
+            : (recTitle !== '' && recTitle != null) ? recTitle
+            : (recCompanyName !== '' && recCompanyName != null) ? recCompanyName
+            : recId ?? '';
           return name.toLowerCase().includes(searchLower);
         });
       }
@@ -100,17 +111,25 @@ export default function LookupFieldPicker({
     onChange(null, null);
   };
 
-  const getDisplayName = (record: any) => {
+  const getDisplayName = (record: any): string => {
     if (!record) {return '';}
-    return record.name || 
-           (record.firstName && record.lastName ? `${record.firstName} ${record.lastName}` : '') ||
-           record.title ||
-           record.companyName ||
-           record.email ||
-           record.id;
+    const recName = record.name as string | null | undefined;
+    const recFirstName = record.firstName as string | null | undefined;
+    const recLastName = record.lastName as string | null | undefined;
+    const recTitle = record.title as string | null | undefined;
+    const recCompanyName = record.companyName as string | null | undefined;
+    const recEmail = record.email as string | null | undefined;
+    const recId = record.id as string | null | undefined;
+    
+    if (recName !== '' && recName != null) return recName;
+    if (recFirstName && recLastName) return `${recFirstName} ${recLastName}`;
+    if (recTitle !== '' && recTitle != null) return recTitle;
+    if (recCompanyName !== '' && recCompanyName != null) return recCompanyName;
+    if (recEmail !== '' && recEmail != null) return recEmail;
+    return recId ?? '';
   };
 
-  const baseInputStyle = style || {
+  const baseInputStyle = style ?? {
     width: '100%',
     padding: '0.625rem',
     backgroundColor: 'var(--color-bg-main)',

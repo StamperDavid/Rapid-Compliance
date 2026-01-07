@@ -17,36 +17,43 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
 
   switch (widget.type) {
     case 'heading': {
-      const HeadingTag = (widget.data.tag || 'h2') as keyof JSX.IntrinsicElements;
-      return <HeadingTag style={style}>{String(widget.data.text || 'Heading')}</HeadingTag>;
+      const HeadingTag = (widget.data.tag ?? 'h2') as keyof JSX.IntrinsicElements;
+      const textVal = widget.data.text as string | null | undefined;
+      return <HeadingTag style={style}>{String(textVal !== '' && textVal != null ? textVal : 'Heading')}</HeadingTag>;
     }
 
-    case 'text':
-      return <p style={style}>{String(widget.data.content || 'Text content')}</p>;
+    case 'text': {
+      const contentVal = widget.data.content as string | null | undefined;
+      return <p style={style}>{String(contentVal !== '' && contentVal != null ? contentVal : 'Text content')}</p>;
+    }
 
-    case 'button':
+    case 'button': {
+      const buttonTextVal = widget.data.text as string | null | undefined;
       return (
         <a 
-          href={(widget.data.url as string) || '#'} 
+          href={(widget.data.url as string) ?? '#'} 
           target={widget.data.openInNewTab ? '_blank' : undefined}
           rel={widget.data.openInNewTab ? 'noopener noreferrer' : undefined}
           style={{ ...style, display: 'inline-block', textDecoration: 'none' }}
         >
-          {String(widget.data.text || 'Button')}
+          {String(buttonTextVal !== '' && buttonTextVal != null ? buttonTextVal : 'Button')}
         </a>
       );
+    }
 
-    case 'link':
+    case 'link': {
+      const linkTextVal = widget.data.text as string | null | undefined;
       return (
         <a 
-          href={(widget.data.url as string) || '#'}
+          href={(widget.data.url as string) ?? '#'}
           target={widget.data.openInNewTab ? '_blank' : undefined}
           rel={widget.data.openInNewTab ? 'noopener noreferrer' : undefined}
           style={style}
         >
-          {String(widget.data.text || 'Link')}
+          {String(linkTextVal !== '' && linkTextVal != null ? linkTextVal : 'Link')}
         </a>
       );
+    }
 
     case 'image':
       return (
@@ -96,14 +103,14 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
       );
 
     case 'spacer':
-      return <div style={{ height: (widget.data.height as string) || '2rem', ...style }} />;
+      return <div style={{ height: (widget.data.height as string) ?? '2rem', ...style }} />;
 
     case 'divider':
       return (
         <hr style={{
           border: 'none',
-          height: (widget.data.thickness as string) || '1px',
-          backgroundColor: (widget.data.color as string) || '#dee2e6',
+          height: (widget.data.thickness as string) ?? '1px',
+          backgroundColor: (widget.data.color as string) ?? '#dee2e6',
           ...style,
         }} />
       );
@@ -117,7 +124,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           backgroundPosition: 'center',
         }}>
           <h1 style={{ fontSize: '3rem', fontWeight: '700', marginBottom: '1rem' }}>
-            {String(widget.data.heading || 'Welcome')}
+            {String((widget.data.heading as string | null | undefined) !== '' && widget.data.heading != null ? widget.data.heading : 'Welcome')}
           </h1>
           {(widget.data.subheading as string) && (
             <p style={{ fontSize: '1.25rem', marginBottom: '2rem' }}>
@@ -126,7 +133,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           )}
           {(widget.data.buttonText as string) && (
             <a 
-              href={(widget.data.buttonUrl as string) || '#'}
+              href={(widget.data.buttonUrl as string) ?? '#'}
               style={{
                 display: 'inline-block',
                 padding: '1rem 2rem',
@@ -198,7 +205,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
                 ))}
               </ul>
               <a 
-                href={plan.buttonUrl || '#'}
+                href={plan.buttonUrl ?? '#'}
                 style={{
                   display: 'inline-block',
                   padding: '0.75rem 1.5rem',
@@ -256,7 +263,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
             <p style={{ fontSize: '1.125rem', marginBottom: '1.5rem' }}>{String(widget.data.subheading)}</p>
           )}
           <a 
-            href={(widget.data.buttonUrl as string) || '#'}
+            href={(widget.data.buttonUrl as string) ?? '#'}
             style={{
               display: 'inline-block',
               padding: '1rem 2rem',
@@ -332,7 +339,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
             <textarea rows={4} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Your message" />
           </div>
           <button type="submit" style={buttonStyle}>
-            {String(widget.data.submitText || 'Send Message')}
+            {String((widget.data.submitText as string | null | undefined) !== '' && widget.data.submitText != null ? widget.data.submitText : 'Send Message')}
           </button>
         </form>
       );
@@ -344,11 +351,11 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
           <form style={{ display: 'flex', gap: '0.5rem' }} onSubmit={(e) => e.preventDefault()}>
             <input 
               type="email" 
-              placeholder={(widget.data.placeholder as string) || 'Enter your email'}
+              placeholder={(widget.data.placeholder as string | null | undefined) !== '' && widget.data.placeholder != null ? (widget.data.placeholder as string) : 'Enter your email'}
               style={{ ...inputStyle, flex: 1 }}
             />
             <button type="submit" style={buttonStyle}>
-              {String(widget.data.buttonText || 'Subscribe')}
+              {String((widget.data.buttonText as string | null | undefined) !== '' && widget.data.buttonText != null ? widget.data.buttonText : 'Subscribe')}
             </button>
           </form>
         </div>
@@ -357,7 +364,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
     case 'social-icons':
       return (
         <div style={{ ...style, display: 'flex', gap: '1rem' }}>
-          {((widget.data.icons as any[]) || []).map((icon: any, i: number) => (
+          {((widget.data.icons as any[]) ?? []).map((icon: any, i: number) => (
             <a 
               key={i}
               href={icon.url}
@@ -392,22 +399,23 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
       );
 
     case 'html':
-      return <div style={style} dangerouslySetInnerHTML={{ __html: widget.data.html || '' }} />;
+      return <div style={style} dangerouslySetInnerHTML={{ __html: (widget.data.html as string) ?? '' }} />;
 
     case 'code':
       return (
         <pre style={style}>
-          <code>{String(widget.data.code || '')}</code>
+          <code>{String((widget.data.code as string) ?? '')}</code>
         </pre>
       );
 
-    case 'modal':
+    case 'modal': {
+      const modalButtonTextVal = widget.data.buttonText as string | null | undefined;
       return (
         <div style={style}>
           <button
             style={{
               padding: '12px 24px',
-              background: (widget.data.buttonColor as string) || '#007bff',
+              background: (widget.data.buttonColor as string) ?? '#007bff',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -416,13 +424,15 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
               fontWeight: '500',
             }}
           >
-            {String(widget.data.buttonText || 'Open Modal')}
+            {String(modalButtonTextVal !== '' && modalButtonTextVal != null ? modalButtonTextVal : 'Open Modal')}
           </button>
         </div>
       );
+    }
 
     case 'tabs': {
-      const tabs = (widget.data.tabs as any[]) || [{ title: 'Tab 1', content: 'Content 1' }];
+      const tabs = (widget.data.tabs as any[]) ?? [{ title: 'Tab 1', content: 'Content 1' }];
+      const tabContentVal = tabs[0]?.content as string | null | undefined;
       return (
         <div style={style}>
           <div style={{ borderBottom: '2px solid #dee2e6', display: 'flex' }}>
@@ -445,7 +455,7 @@ export default function WidgetRenderer({ widget, isEditable = false }: WidgetRen
             ))}
           </div>
           <div style={{ padding: '20px', background: 'white' }}>
-            {tabs[0]?.content || 'Tab content'}
+            {tabContentVal !== '' && tabContentVal != null ? tabContentVal : 'Tab content'}
           </div>
         </div>
       );
@@ -545,10 +555,10 @@ function convertWidgetStyleToCSS(widgetStyle?: WidgetStyle): React.CSSProperties
 }
 
 function convertSpacingToCSS(spacing: Spacing): string {
-  const top = spacing.top || '0';
-  const right = spacing.right || spacing.top || '0';
-  const bottom = spacing.bottom || spacing.top || '0';
-  const left = spacing.left || spacing.right || spacing.top || '0';
+  const top = spacing.top ?? '0';
+  const right = spacing.right ?? spacing.top ?? '0';
+  const bottom = spacing.bottom ?? spacing.top ?? '0';
+  const left = spacing.left ?? spacing.right ?? spacing.top ?? '0';
   return `${top} ${right} ${bottom} ${left}`;
 }
 
