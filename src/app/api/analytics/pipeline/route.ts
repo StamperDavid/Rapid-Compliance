@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const period = searchParams.get('period') || '30d';
+    const period = (searchParams.get('period') !== '' && searchParams.get('period') != null) 
+      ? searchParams.get('period') 
+      : '30d';
 
     if (!orgId) {
       return errors.badRequest('orgId is required');
@@ -69,25 +71,43 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
 
     // Filter to open deals (in pipeline)
     const openDeals = allDeals.filter(deal => {
-      const status = (deal.status || deal.stage || '').toLowerCase();
-      return openStatuses.some(s => status.includes(s)) || 
-             (!wonStatuses.some(s => status.includes(s)) && !lostStatuses.some(s => status.includes(s)));
+      const status = (deal.status !== '' && deal.status != null) 
+        ? deal.status 
+        : (deal.stage !== '' && deal.stage != null) 
+          ? deal.stage 
+          : '';
+      const statusLower = status.toLowerCase();
+      return openStatuses.some(s => statusLower.includes(s)) || 
+             (!wonStatuses.some(s => statusLower.includes(s)) && !lostStatuses.some(s => statusLower.includes(s)));
     });
 
     // Calculate pipeline totals
-    const totalValue = openDeals.reduce((sum, deal) => sum + (parseFloat(deal.value) || parseFloat(deal.amount) || 0), 0);
+    const totalValue = openDeals.reduce((sum, deal) => {
+      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
+      return sum + value;
+    }, 0);
     const dealsCount = openDeals.length;
     const avgDealSize = dealsCount > 0 ? totalValue / dealsCount : 0;
 
     // Calculate win rate from closed deals
     const closedDeals = allDeals.filter(deal => {
-      const status = (deal.status || deal.stage || '').toLowerCase();
-      return wonStatuses.some(s => status.includes(s)) || lostStatuses.some(s => status.includes(s));
+      const status = (deal.status !== '' && deal.status != null) 
+        ? deal.status 
+        : (deal.stage !== '' && deal.stage != null) 
+          ? deal.stage 
+          : '';
+      const statusLower = status.toLowerCase();
+      return wonStatuses.some(s => statusLower.includes(s)) || lostStatuses.some(s => statusLower.includes(s));
     });
     
     const wonDeals = closedDeals.filter(deal => {
-      const status = (deal.status || deal.stage || '').toLowerCase();
-      return wonStatuses.some(s => status.includes(s));
+      const status = (deal.status !== '' && deal.status != null) 
+        ? deal.status 
+        : (deal.stage !== '' && deal.stage != null) 
+          ? deal.stage 
+          : '';
+      const statusLower = status.toLowerCase();
+      return wonStatuses.some(s => statusLower.includes(s));
     });
     
     const winRate = closedDeals.length > 0 ? (wonDeals.length / closedDeals.length) * 100 : 0;
@@ -109,10 +129,15 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
     const stageMap = new Map<string, { value: number; count: number }>();
     
     openDeals.forEach(deal => {
-      const stage = (deal.stage || deal.status || 'new').toLowerCase();
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const existing = stageMap.get(stage) ?? { value: 0, count: 0 };
-      stageMap.set(stage, {
+      const stage = (deal.stage !== '' && deal.stage != null) 
+        ? deal.stage 
+        : (deal.status !== '' && deal.status != null) 
+          ? deal.status 
+          : 'new';
+      const stageLower = stage.toLowerCase();
+      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
+      const existing = stageMap.get(stageLower) ?? { value: 0, count: 0 };
+      stageMap.set(stageLower, {
         value: existing.value + value,
         count: existing.count + 1,
       });
@@ -121,7 +146,7 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
     // Convert to array and sort by stage order
     const byStage = Array.from(stageMap.entries())
       .map(([stageKey, data]) => ({
-        stage: stageLabels[stageKey] || stageKey.charAt(0).toUpperCase() + stageKey.slice(1),
+        stage: stageLabels[stageKey] ?? (stageKey.charAt(0).toUpperCase() + stageKey.slice(1)),
         stageKey,
         value: data.value,
         count: data.count,
@@ -135,8 +160,10 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
 
     // Calculate velocity (average days to close)
     const salesCycles = wonDeals.map(deal => {
-      const createdAt = deal.createdAt?.toDate?.() || new Date(deal.createdAt);
-      const closedAt = deal.closedDate?.toDate?.() || deal.closedAt?.toDate?.() || new Date(deal.closedDate || deal.closedAt || deal.updatedAt);
+      const createdAt = deal.createdAt?.toDate?.() ?? new Date(deal.createdAt);
+      const closedAt = deal.closedDate?.toDate?.() 
+        ?? deal.closedAt?.toDate?.() 
+        ?? new Date(deal.closedDate ?? deal.closedAt ?? deal.updatedAt);
       const days = Math.ceil((closedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
       return Math.max(1, days); // At least 1 day
     });
@@ -155,25 +182,35 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
       // Count deals that passed through each stage
       const fromCount = allDeals.filter(d => {
         const history = d.stageHistory ?? [];
-        const currentStage = (d.stage || d.status || '').toLowerCase();
+        const currentStage = (d.stage !== '' && d.stage != null) 
+          ? d.stage 
+          : (d.status !== '' && d.status != null) 
+            ? d.status 
+            : '';
+        const currentStageLower = currentStage.toLowerCase();
         return history.some((h: any) => h.stage?.toLowerCase() === fromStage) || 
-               currentStage === fromStage ||
-               funnelStages.indexOf(currentStage) > i;
+               currentStageLower === fromStage ||
+               funnelStages.indexOf(currentStageLower) > i;
       }).length;
 
       const toCount = allDeals.filter(d => {
         const history = d.stageHistory ?? [];
-        const currentStage = (d.stage || d.status || '').toLowerCase();
+        const currentStage = (d.stage !== '' && d.stage != null) 
+          ? d.stage 
+          : (d.status !== '' && d.status != null) 
+            ? d.status 
+            : '';
+        const currentStageLower = currentStage.toLowerCase();
         return history.some((h: any) => h.stage?.toLowerCase() === toStage) || 
-               currentStage === toStage ||
-               funnelStages.indexOf(currentStage) > i + 1;
+               currentStageLower === toStage ||
+               funnelStages.indexOf(currentStageLower) > i + 1;
       }).length;
 
       const rate = fromCount > 0 ? (toCount / fromCount) * 100 : 0;
       
       conversionRates.push({
-        fromStage: stageLabels[fromStage] || fromStage,
-        toStage: stageLabels[toStage] || toStage,
+        fromStage: stageLabels[fromStage] ?? fromStage,
+        toStage: stageLabels[toStage] ?? toStage,
         rate: Math.round(rate),
       });
     }

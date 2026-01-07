@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const period = searchParams.get('period') || 'month';
+    const period = (searchParams.get('period') !== '' && searchParams.get('period') != null) 
+      ? searchParams.get('period') 
+      : 'month';
 
     if (!orgId) {
       return errors.badRequest('orgId is required');
@@ -38,29 +40,34 @@ export async function GET(request: NextRequest) {
     // Filter to open deals (still in pipeline)
     const openStatuses = ['open', 'new', 'qualified', 'proposal', 'negotiation', 'pending', 'in_progress'];
     const openDeals = allDeals.filter(deal => {
-      const status = (deal.status || deal.stage || '').toLowerCase();
-      return openStatuses.some(s => status.includes(s));
+      const status = (deal.status !== '' && deal.status != null) 
+        ? deal.status 
+        : (deal.stage !== '' && deal.stage != null) 
+          ? deal.stage 
+          : '';
+      const statusLower = status.toLowerCase();
+      return openStatuses.some(s => statusLower.includes(s));
     });
 
     // Calculate weighted forecast (value × probability)
     const weightedForecast = openDeals.reduce((sum, deal) => {
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const probability = parseFloat(deal.probability) || 50; // Default 50%
+      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
+      const probability = parseFloat(deal.probability) ?? 50; // Default 50%
       return sum + (value * probability / 100);
     }, 0);
 
     // Best case (all deals at 100%)
     const bestCase = openDeals.reduce((sum, deal) => 
-      sum + (parseFloat(deal.value) || parseFloat(deal.amount) || 0), 0);
+      sum + (parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0), 0);
 
     // Worst case (only high probability deals)
     const worstCase = openDeals
-      .filter(deal => (parseFloat(deal.probability) || 50) >= 75)
-      .reduce((sum, deal) => sum + (parseFloat(deal.value) || parseFloat(deal.amount) || 0), 0);
+      .filter(deal => (parseFloat(deal.probability) ?? 50) >= 75)
+      .reduce((sum, deal) => sum + (parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0), 0);
 
     // Confidence based on deal quality
     const avgProbability = openDeals.length > 0
-      ? openDeals.reduce((sum, d) => sum + (parseFloat(d.probability) || 50), 0) / openDeals.length
+      ? openDeals.reduce((sum, d) => sum + (parseFloat(d.probability) ?? 50), 0) / openDeals.length
       : 0;
     const confidence = Math.round(Math.min(100, avgProbability * 1.2));
 
@@ -80,26 +87,34 @@ export async function GET(request: NextRequest) {
     }
 
     const dealsClosingInPeriod = openDeals.filter(deal => {
-      const closeDate = deal.expectedCloseDate?.toDate?.() || 
-                        deal.closeDate?.toDate?.() ||
-                        (deal.expectedCloseDate ? new Date(deal.expectedCloseDate) : null) ||
-                        (deal.closeDate ? new Date(deal.closeDate) : null);
+      const closeDate = deal.expectedCloseDate?.toDate?.() 
+                        ?? deal.closeDate?.toDate?.() 
+                        ?? (deal.expectedCloseDate ? new Date(deal.expectedCloseDate) : null) 
+                        ?? (deal.closeDate ? new Date(deal.closeDate) : null);
       return closeDate && closeDate >= now && closeDate <= periodEnd;
     });
 
     const forecastInPeriod = dealsClosingInPeriod.reduce((sum, deal) => {
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const probability = parseFloat(deal.probability) || 50;
+      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
+      const probability = parseFloat(deal.probability) ?? 50;
       return sum + (value * probability / 100);
     }, 0);
 
     // By sales rep
     const repMap = new Map<string, { forecast: number; deals: number; name: string }>();
     openDeals.forEach(deal => {
-      const repId = deal.assignedTo || deal.ownerId || 'unassigned';
-      const repName = deal.assignedToName || deal.ownerName || 'Unassigned';
-      const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const probability = parseFloat(deal.probability) || 50;
+      const repId = (deal.assignedTo !== '' && deal.assignedTo != null) 
+        ? deal.assignedTo 
+        : (deal.ownerId !== '' && deal.ownerId != null) 
+          ? deal.ownerId 
+          : 'unassigned';
+      const repName = (deal.assignedToName !== '' && deal.assignedToName != null) 
+        ? deal.assignedToName 
+        : (deal.ownerName !== '' && deal.ownerName != null) 
+          ? deal.ownerName 
+          : 'Unassigned';
+      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
+      const probability = parseFloat(deal.probability) ?? 50;
       const weighted = value * probability / 100;
       
       const existing = repMap.get(repId) ?? { forecast: 0, deals: 0, name: repName };
@@ -123,7 +138,7 @@ export async function GET(request: NextRequest) {
     const factors: any[] = [];
     
     // Check for large deals
-    const largeDeals = openDeals.filter(d => (parseFloat(d.value) || 0) > 10000);
+    const largeDeals = openDeals.filter(d => (parseFloat(d.value) ?? 0) > 10000);
     if (largeDeals.length > 0) {
       factors.push({
         factor: 'Large deals in pipeline',
@@ -134,7 +149,7 @@ export async function GET(request: NextRequest) {
 
     // Check for stale deals
     const staleDeals = openDeals.filter(d => {
-      const updated = d.updatedAt?.toDate?.() || new Date(d.updatedAt);
+      const updated = d.updatedAt?.toDate?.() ?? new Date(d.updatedAt);
       return (now.getTime() - updated.getTime()) > 30 * 24 * 60 * 60 * 1000;
     });
     if (staleDeals.length > 0) {
@@ -146,7 +161,7 @@ export async function GET(request: NextRequest) {
     }
 
     // High probability deals
-    const highProbDeals = openDeals.filter(d => (parseFloat(d.probability) || 50) >= 75);
+    const highProbDeals = openDeals.filter(d => (parseFloat(d.probability) ?? 50) >= 75);
     if (highProbDeals.length > 0) {
       factors.push({
         factor: 'High probability deals',

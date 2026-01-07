@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const period = searchParams.get('period') || '30d';
+    const period = (searchParams.get('period') !== '' && searchParams.get('period') != null) 
+      ? searchParams.get('period') 
+      : '30d';
 
     if (!orgId) {
       return errors.badRequest('orgId is required');
@@ -68,13 +70,17 @@ export async function GET(request: NextRequest) {
 
     // Filter executions by date
     const executionsInPeriod = allExecutions.filter(exec => {
-      const execDate = exec.startedAt?.toDate?.() || exec.createdAt?.toDate?.() || new Date(exec.startedAt || exec.createdAt);
+      const execDate = exec.startedAt?.toDate?.() 
+        ?? exec.createdAt?.toDate?.() 
+        ?? new Date(exec.startedAt ?? exec.createdAt);
       return execDate >= startDate && execDate <= now;
     });
 
     // Calculate metrics
     const totalWorkflows = allWorkflows.length;
-    const activeWorkflows = allWorkflows.filter(w => w.status === 'active' || w.enabled === true).length;
+    const activeWorkflows = allWorkflows.filter(w => 
+      w.status === 'active' || w.enabled === true
+    ).length;
     const totalExecutions = executionsInPeriod.length;
 
     // Success/failure rates
@@ -106,7 +112,11 @@ export async function GET(request: NextRequest) {
     executionsInPeriod.forEach(exec => {
       const workflowId = exec.workflowId;
       const workflow = allWorkflows.find(w => w.id === workflowId);
-      const name = workflow?.name || exec.workflowName || 'Unknown Workflow';
+      const name = (workflow?.name !== '' && workflow?.name != null) 
+        ? workflow.name 
+        : (exec.workflowName !== '' && exec.workflowName != null) 
+          ? exec.workflowName 
+          : 'Unknown Workflow';
       const isSuccess = exec.status === 'completed' || exec.status === 'success';
       const isFailed = exec.status === 'failed' || exec.status === 'error';
       
@@ -132,8 +142,12 @@ export async function GET(request: NextRequest) {
     // By trigger type
     const triggerMap = new Map<string, number>();
     executionsInPeriod.forEach(exec => {
-      const trigger = exec.triggerType || exec.trigger || 'manual';
-      triggerMap.set(trigger, (triggerMap.get(trigger) || 0) + 1);
+      const trigger = (exec.triggerType !== '' && exec.triggerType != null) 
+        ? exec.triggerType 
+        : (exec.trigger !== '' && exec.trigger != null) 
+          ? exec.trigger 
+          : 'manual';
+      triggerMap.set(trigger, (triggerMap.get(trigger) ?? 0) + 1);
     });
     const byTrigger = Array.from(triggerMap.entries())
       .map(([trigger, count]) => ({ trigger, count }))
@@ -142,9 +156,13 @@ export async function GET(request: NextRequest) {
     // Error breakdown
     const errorMap = new Map<string, number>();
     failedExecutions.forEach(exec => {
-      const error = exec.error || exec.errorMessage || 'Unknown error';
+      const error = (exec.error !== '' && exec.error != null) 
+        ? exec.error 
+        : (exec.errorMessage !== '' && exec.errorMessage != null) 
+          ? exec.errorMessage 
+          : 'Unknown error';
       const errorType = error.split(':')[0].substring(0, 50);
-      errorMap.set(errorType, (errorMap.get(errorType) || 0) + 1);
+      errorMap.set(errorType, (errorMap.get(errorType) ?? 0) + 1);
     });
     const topErrors = Array.from(errorMap.entries())
       .map(([error, count]) => ({ error, count }))
@@ -154,7 +172,9 @@ export async function GET(request: NextRequest) {
     // Daily trends
     const dailyMap = new Map<string, { executions: number; success: number; failed: number }>();
     executionsInPeriod.forEach(exec => {
-      const execDate = exec.startedAt?.toDate?.() || exec.createdAt?.toDate?.() || new Date(exec.startedAt || exec.createdAt);
+      const execDate = exec.startedAt?.toDate?.() 
+        ?? exec.createdAt?.toDate?.() 
+        ?? new Date(exec.startedAt ?? exec.createdAt);
       const dateKey = execDate.toISOString().split('T')[0];
       const isSuccess = exec.status === 'completed' || exec.status === 'success';
       const isFailed = exec.status === 'failed' || exec.status === 'error';
