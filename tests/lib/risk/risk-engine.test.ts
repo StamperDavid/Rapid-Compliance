@@ -41,10 +41,10 @@ describe('Deal Risk Predictor', () => {
     stage: 'negotiation' as const,
     probability: 60,
     expectedCloseDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days from now
-    actualCloseDate: null,
+    actualCloseDate: undefined,
     ownerId: 'user_123',
     source: 'inbound',
-    lostReason: null,
+    lostReason: undefined,
     notes: 'Important enterprise deal',
     customFields: {},
     createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
@@ -110,6 +110,25 @@ describe('Deal Risk Predictor', () => {
   };
 
   const mockAIResponse = {
+    text: JSON.stringify([
+      {
+        title: 'Executive Escalation',
+        type: 'executive_engagement',
+        priority: 'high',
+        description: 'Engage C-level executive to accelerate decision',
+        expectedImpact: 45,
+        estimatedEffort: 3,
+        actionSteps: [
+          'Schedule exec meeting',
+          'Prepare value deck',
+          'Address concerns',
+        ],
+        successMetrics: ['Meeting scheduled', 'Decision timeline confirmed'],
+        suggestedOwner: 'Account Executive',
+        deadlineDays: 3,
+        reasoning: 'Executive buy-in critical for closing',
+      },
+    ]),
     content: JSON.stringify([
       {
         title: 'Executive Escalation',
@@ -129,10 +148,12 @@ describe('Deal Risk Predictor', () => {
         reasoning: 'Executive buy-in critical for closing',
       },
     ]),
+    model: 'gpt-4',
+    provider: 'openai' as const,
     usage: {
-      prompt_tokens: 500,
-      completion_tokens: 300,
-      total_tokens: 800,
+      promptTokens: 500,
+      completionTokens: 300,
+      totalTokens: 800,
     },
   };
 
@@ -155,7 +176,7 @@ describe('Deal Risk Predictor', () => {
     // Mock signal coordinator
     jest.mocked(getServerSignalCoordinator).mockReturnValue({
       emitSignal: jest.fn().mockResolvedValue(undefined),
-    } as ReturnType<typeof getServerSignalCoordinator>);
+    } as unknown as ReturnType<typeof getServerSignalCoordinator>);
   });
 
   describe('predictDealRisk', () => {

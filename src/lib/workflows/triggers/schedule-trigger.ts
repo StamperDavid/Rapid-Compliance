@@ -7,7 +7,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Workflow, ScheduleTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
-import cronParser from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 
 /**
  * Register schedule trigger
@@ -76,14 +76,14 @@ function calculateNextRun(schedule: ScheduleTrigger['schedule']): string {
       const cronExpression = schedule.cron!;
       
       // Validate and parse cron expression
-      const interval = cronParser.parseExpression(cronExpression, {
+      const interval = CronExpressionParser.parse(cronExpression, {
         currentDate: now,
         tz: 'UTC' // Or get from organization settings
       });
       
       // Get next occurrence
-      const next = interval.next().toDate();
-      return next.toISOString();
+      const next = interval.next();
+      return next?.toISOString() ?? new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
     } catch (error) {
       logger.error('[Schedule] Invalid cron expression', error, {
         cron: schedule.cron,
@@ -193,7 +193,7 @@ export async function unregisterScheduleTrigger(
  */
 export function validateCronExpression(cron: string): { valid: boolean; error?: string } {
   try {
-    cronParser.parseExpression(cron);
+    CronExpressionParser.parse(cron);
     return { valid: true };
   } catch (error) {
     return { 

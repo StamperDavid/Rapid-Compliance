@@ -83,8 +83,8 @@ describe('Email Delivery Service', () => {
   beforeAll(() => {
     // Set up mocks
     Object.assign(sgMail, mockSgMail);
-    jest.mocked(getServerSignalCoordinator).mockReturnValue(mockCoordinator as ReturnType<typeof getServerSignalCoordinator>);
-    Object.assign(adminDb, mockAdminDb);
+    jest.mocked(getServerSignalCoordinator).mockReturnValue(mockCoordinator as unknown as ReturnType<typeof getServerSignalCoordinator>);
+    Object.assign(adminDb ?? {}, mockAdminDb);
     
     // Set required environment variables
     process.env.SENDGRID_API_KEY = 'test-api-key';

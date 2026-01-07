@@ -337,8 +337,8 @@ function buildSystemPrompt(params: {
     questionFrequency: number;
     responseLength: string;
     proactiveLevel: number;
-    discountAuthorization: number;
-    escalationTriggers: string[];
+    discountAuthorization?: number;
+    escalationTriggers?: string[];
     idleTimeoutMinutes: number;
   };
   template?: IndustryTemplate | null; // NEW: Optional template for enhancement

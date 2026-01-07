@@ -205,7 +205,7 @@ async function getIdentifier(
       }
       return customIdentifier;
       
-    case 'user':
+    case 'user': {
       // Extract user ID from request (e.g., from auth header)
       const authHeader = request.headers.get('authorization');
       if (authHeader) {
@@ -215,8 +215,9 @@ async function getIdentifier(
       }
       // Fallback to IP if no auth
       return `ip:${getClientIp(request)}`;
+    }
       
-    case 'org':
+    case 'org': {
       // Extract organization ID from request
       const orgId = request.headers.get('x-organization-id') || 
                     request.nextUrl.searchParams.get('organizationId');
@@ -225,6 +226,7 @@ async function getIdentifier(
       }
       // Fallback to IP if no org ID
       return `ip:${getClientIp(request)}`;
+    }
       
     case 'ip':
     default:

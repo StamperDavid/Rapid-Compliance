@@ -13,6 +13,7 @@ import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { getOrCreateCart, addToCart, clearCart } from '@/lib/ecommerce/cart-service';
 import { createProduct } from '@/lib/ecommerce/product-service';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { PAYMENT_PROVIDERS } from '@/lib/ecommerce/payment-providers';
 
 describe('E-Commerce Checkout E2E', () => {
   const testOrgId = `test-org-${Date.now()}`;
@@ -262,8 +263,6 @@ describe('E-Commerce Checkout E2E', () => {
 
   describe('Payment Providers', () => {
     it('should have multiple payment providers configured', () => {
-      const { PAYMENT_PROVIDERS } = require('@/lib/ecommerce/payment-providers');
-      
       expect(PAYMENT_PROVIDERS).toBeDefined();
       expect(PAYMENT_PROVIDERS.length).toBeGreaterThan(0);
       

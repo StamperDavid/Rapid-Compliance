@@ -4,6 +4,8 @@
  */
 
 import * as admin from 'firebase-admin'
+import fs from 'fs';
+import path from 'path';
 import { logger } from '../logger/logger';
 
 // Initialize Firebase Admin SDK (singleton)
@@ -57,8 +59,6 @@ function initializeAdmin() {
     // Option 3: Try to load from file (local development)
     if (!serviceAccount) {
       try {
-        const fs = require('fs');
-        const path = require('path');
         const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
         logger.info('🔍 Looking for serviceAccountKey.json', { path: keyPath, file: 'admin.ts' });
         if (fs.existsSync(keyPath)) {

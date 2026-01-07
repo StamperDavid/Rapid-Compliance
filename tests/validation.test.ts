@@ -3,7 +3,7 @@
  * Tests critical input validation to ensure security
  */
 
-const {
+import {
   emailSendSchema,
   smsSendSchema,
   paymentIntentSchema,
@@ -11,7 +11,7 @@ const {
   leadScoringSchema,
   campaignCreateSchema,
   validateInput,
-} = require('../src/lib/validation/schemas');
+} from '../src/lib/validation/schemas';
 
 describe('Validation Schemas', () => {
   describe('emailSendSchema', () => {

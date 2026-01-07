@@ -26,7 +26,7 @@ export async function executeZoomFunction(
   }
   
   switch (functionName) {
-    case 'createMeeting':
+    case 'createMeeting': {
       // Validate required parameters
       if (!parameters.topic || typeof parameters.topic !== 'string') {
         throw new Error('topic (string) is required for createMeeting');
@@ -46,8 +46,9 @@ export async function executeZoomFunction(
         agenda: parameters.agenda,
         attendees: parameters.attendees,
       });
+    }
       
-    case 'getRecordings':
+    case 'getRecordings': {
       // Get recordings using Zoom API
       const recordingsResponse = await fetch(
         `https://api.zoom.us/v2/users/me/recordings?from=${parameters.from || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`,
@@ -64,6 +65,7 @@ export async function executeZoomFunction(
       
       const recordingsData = await recordingsResponse.json();
       return recordingsData.meetings || [];
+    }
       
     case 'cancelMeeting':
       // Validate required parameters

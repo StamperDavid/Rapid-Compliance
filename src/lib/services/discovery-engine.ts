@@ -786,8 +786,7 @@ function calculateConfidence(rawData: RawScrapedData, synthesized: Partial<Disco
 
   // Team members found
   maxScore += 20;
-  if (rawData.teamMembers.length > 0) {score += 20;}
-  else if (rawData.teamMembers.length > 5) {score += 15;}
+  if (rawData.teamMembers.length > 5) {score += 20;}
   else if (rawData.teamMembers.length > 0) {score += 10;}
 
   // Tech stack found

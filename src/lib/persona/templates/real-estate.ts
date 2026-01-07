@@ -85,7 +85,7 @@ export const realEstateTemplates: Record<string, IndustryTemplate> = {
         {id: 'sold_count', label: 'Sales Volume', description: 'Number of homes sold', keywords: ["homes sold", "sales", "transactions"], regexPattern: '(\\d+)\\s*(homes?|properties)\\s*sold', priority: 'HIGH', action: 'increase-score', scoreBoost: 20, platform: 'website'},
         {id: 'mls_access', label: 'MLS Access', description: 'Has MLS search capability', keywords: ["mls", "multiple listing", "search homes", "property search"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
         {id: 'market_reports', label: 'Market Reports', description: 'Provides market analysis', keywords: ["market report", "market analysis", "market trends", "neighborhood stats"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'},
-        {id: 'home_valuation', label: 'Home Valuation Tool', description: 'Offers property valuation', keywords: ["home value", "property valuation", "what\'s my home worth", "cma"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'}
+        {id: 'home_valuation', label: 'Home Valuation Tool', description: 'Offers property valuation', keywords: ["home value", "property valuation", "what's my home worth", "cma"], priority: 'LOW', action: 'increase-score', scoreBoost: 5, platform: 'website'}
       ],
 
       fluffPatterns: [

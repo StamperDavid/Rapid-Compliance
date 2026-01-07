@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Timestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/config';
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { logger } from '@/lib/logger/logger';
+import type { AdminRole } from '@/types/admin';
 
 interface AdminVerifyResponse {
   name?: string;
@@ -84,7 +86,7 @@ export default function AdminLoginPage() {
         id: user.uid,
         email: user.email ?? email,
         displayName: userData.name ?? user.displayName ?? 'Admin User',
-        role: (userData.role === 'super_admin' ? 'super_admin' : 'admin'),
+        role: (userData.role === 'super_admin' ? 'super_admin' : 'admin') as AdminRole,
         permissions: {
           canViewOrganizations: true,
           canCreateOrganizations: true,
@@ -112,8 +114,8 @@ export default function AdminLoginPage() {
           canManageTemplates: true,
           canManageCompliance: true,
         },
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
         status: 'active' as const,
         mfaEnabled: false,
       };

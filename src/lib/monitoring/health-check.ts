@@ -3,6 +3,7 @@
  * System health monitoring and alerting
  */
 
+import os from 'os';
 import { logger } from '@/lib/logger/logger';
 
 export interface HealthCheckResult {
@@ -250,7 +251,7 @@ async function gatherMetrics(): Promise<{
     },
     cpu: {
       usage: process.cpuUsage().user / 1000000, // Convert to seconds
-      loadAverage: process.platform === 'win32' ? [0, 0, 0] : require('os').loadavg(),
+      loadAverage: process.platform === 'win32' ? [0, 0, 0] : os.loadavg(),
     },
     requests: {
       total: 0, // Would be tracked by middleware

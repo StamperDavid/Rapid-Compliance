@@ -333,24 +333,20 @@ export async function retryWithBackoffDetailed<T>(
   const startTime = Date.now();
   let attempts = 0;
   
-  try {
-    const result = await retryWithBackoff(
-      async () => {
-        attempts++;
-        return operation();
-      },
-      options
-    );
-    
-    return {
-      result,
-      attempts,
-      totalTimeMs: Date.now() - startTime,
-      success: true
-    };
-  } catch (error) {
-    throw error;
-  }
+  const result = await retryWithBackoff(
+    async () => {
+      attempts++;
+      return operation();
+    },
+    options
+  );
+  
+  return {
+    result,
+    attempts,
+    totalTimeMs: Date.now() - startTime,
+    success: true
+  };
 }
 
 /**

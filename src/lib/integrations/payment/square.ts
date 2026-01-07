@@ -36,7 +36,7 @@ export async function executeSquareFunction(
     : 'https://connect.squareupsandbox.com';
   
   switch (functionName) {
-    case 'processPayment':
+    case 'processPayment': {
       // Validate required parameters
       if (typeof parameters.amount !== 'number') {
         throw new Error('amount (number) is required for processPayment');
@@ -75,8 +75,9 @@ export async function executeSquareFunction(
         status: data.payment.status,
         receiptUrl: data.payment.receipt_url,
       };
+    }
       
-    case 'createCustomer':
+    case 'createCustomer': {
       // Validate required parameters
       if (!parameters.email || typeof parameters.email !== 'string') {
         throw new Error('email (string) is required for createCustomer');
@@ -105,6 +106,7 @@ export async function executeSquareFunction(
       
       const customerData = await customerResponse.json();
       return customerData.customer;
+    }
       
     default:
       throw new Error(`Unknown Square function: ${functionName}`);

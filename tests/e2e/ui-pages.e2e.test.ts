@@ -123,13 +123,11 @@ describe('Workflow UI Integration', () => {
       name: 'Test',
       trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false },
       actions: [
-        { id: 'action-1', type: 'delay', duration: 1, onError: 'stop' }
+        { id: 'action-1', type: 'delay', name: 'Wait 1 minute', duration: { value: 1, unit: 'minutes' as const }, continueOnError: false }
       ],
       settings: {
         onError: 'stop',
-        retryOnFailure: false,
-        maxRetries: 0,
-        timeoutSeconds: 300,
+        timeout: 300,
       },
       permissions: {
         canView: ['owner', 'admin'],

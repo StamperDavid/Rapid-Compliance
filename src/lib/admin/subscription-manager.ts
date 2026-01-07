@@ -286,10 +286,13 @@ export async function calculateRevenueMetrics(
     let mrr = 0;
     for (const customer of activeSubscriptions) {
       const sub = customer.subscription;
+      const amount = 'amount' in sub ? (sub.amount ?? 0) : 0;
+      const subMrr = 'mrr' in sub ? (sub.mrr ?? 0) : 0;
+      const revenue = amount || subMrr;
       if (sub.billingCycle === 'monthly') {
-        mrr += sub.amount ?? sub.mrr ?? 0;
+        mrr += revenue;
       } else if (sub.billingCycle === 'yearly') {
-        mrr += (sub.amount ?? sub.mrr ?? 0) / 12;
+        mrr += revenue / 12;
       }
     }
     
@@ -321,8 +324,8 @@ export async function calculateRevenueMetrics(
     const revenueByPlan = new Map<string, { planName: string; customers: number; mrr: number }>();
     for (const customer of activeSubscriptions) {
       const sub = customer.subscription;
-      const planId = String(sub.planId ?? 'unknown');
-      const planName = String(sub.planId ?? 'Unknown Plan');
+      const planId = 'planId' in sub ? String(sub.planId ?? 'unknown') : 'unknown';
+      const planName = 'planId' in sub ? String(sub.planId ?? 'Unknown Plan') : 'Unknown Plan';
       
       const existingPlan = revenueByPlan.get(planId);
       if (!existingPlan) {
@@ -332,11 +335,14 @@ export async function calculateRevenueMetrics(
       const plan = revenueByPlan.get(planId);
       if (plan) {
         plan.customers += 1;
+        const amount = 'amount' in sub ? (sub.amount ?? 0) : 0;
+        const subMrr = 'mrr' in sub ? (sub.mrr ?? 0) : 0;
+        const revenue = amount || subMrr;
         
         if (sub.billingCycle === 'monthly') {
-          plan.mrr += sub.amount ?? sub.mrr ?? 0;
+          plan.mrr += revenue;
         } else {
-          plan.mrr += (sub.amount ?? sub.mrr ?? 0) / 12;
+          plan.mrr += revenue / 12;
         }
       }
     }
@@ -360,10 +366,15 @@ export async function calculateRevenueMetrics(
         new Date(c.subscription.canceledAt) <= periodEnd
       )) {
         const sub = customer.subscription;
-        if (sub?.billingCycle === 'monthly') {
-          lostMrr += sub.amount ?? sub.mrr ?? 0;
-        } else if (sub?.billingCycle === 'yearly') {
-          lostMrr += (sub.amount ?? sub.mrr ?? 0) / 12;
+        if (sub) {
+          const amount = 'amount' in sub ? (sub.amount ?? 0) : 0;
+          const subMrr = 'mrr' in sub ? (sub.mrr ?? 0) : 0;
+          const revenue = amount || subMrr;
+          if (sub.billingCycle === 'monthly') {
+            lostMrr += revenue;
+          } else if (sub.billingCycle === 'yearly') {
+            lostMrr += revenue / 12;
+          }
         }
       }
       revenueChurnRate = (lostMrr / mrr) * 100;
@@ -380,10 +391,15 @@ export async function calculateRevenueMetrics(
       const createdAt = new Date(customer.createdAt);
       if (createdAt < previousPeriodEnd && customer.subscription?.status === 'active') {
         const sub = customer.subscription;
-        if (sub?.billingCycle === 'monthly') {
-          previousMrr += sub.amount ?? sub.mrr ?? 0;
-        } else if (sub?.billingCycle === 'yearly') {
-          previousMrr += (sub.amount ?? sub.mrr ?? 0) / 12;
+        if (sub) {
+          const amount = 'amount' in sub ? (sub.amount ?? 0) : 0;
+          const subMrr = 'mrr' in sub ? (sub.mrr ?? 0) : 0;
+          const revenue = amount || subMrr;
+          if (sub.billingCycle === 'monthly') {
+            previousMrr += revenue;
+          } else if (sub.billingCycle === 'yearly') {
+            previousMrr += revenue / 12;
+          }
         }
       }
     }

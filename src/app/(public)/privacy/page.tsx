@@ -54,8 +54,8 @@ export default function PrivacyPage() {
     <PublicLayout>
       {loading ? (
         <div className="pt-44 pb-20 text-center"><div className="text-gray-400">Loading...</div></div>
-      ) : page?.sections?.length > 0 ? (
-        <PageRenderer page={page} />
+      ) : (page?.sections?.length ?? 0) > 0 ? (
+        <PageRenderer page={page!} />
       ) : (
         <FallbackContent />
       )}

@@ -67,7 +67,7 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
             if (mx.includes('mailgun')) {techStack.push('Mailgun');}
             if (mx.includes('sendgrid')) {techStack.push('SendGrid');}
           }
-        } catch {}
+        } catch { /* MX records not available */ }
         
         // Check TXT records for verification codes
         try {
@@ -79,7 +79,7 @@ export async function getTechStackFromDNS(domain: string): Promise<string[]> {
           if (txtString.includes('stripe-verification')) {techStack.push('Stripe');}
           if (txtString.includes('v=spf') && txtString.includes('mailchimp')) {techStack.push('Mailchimp');}
           if (txtString.includes('hubspot')) {techStack.push('HubSpot');}
-        } catch {}
+        } catch { /* MX records not available */ }
       } catch (error) {
         logger.warn('[DNS] DNS module not available in this environment', { file: 'backup-sources.ts' });
       }

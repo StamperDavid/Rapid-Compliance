@@ -4,6 +4,7 @@
  * Comprehensive test coverage for SlackService class.
  */
 
+import crypto from 'crypto';
 import { SlackService } from '@/lib/slack/slack-service';
 import type { SlackServiceConfig, SlackWorkspace } from '@/lib/slack/types';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -349,7 +350,6 @@ describe('SlackService', () => {
       const body = JSON.stringify({ type: 'event_callback' });
       
       // Generate valid signature
-      const crypto = require('crypto');
       const sigBasestring = `v0:${timestamp}:${body}`;
       const signature = `v0=${crypto
         .createHmac('sha256', mockConfig.signingSecret)

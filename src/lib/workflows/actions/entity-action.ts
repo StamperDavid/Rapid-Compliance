@@ -60,7 +60,7 @@ export async function executeCreateEntityAction(
         // Use field resolver to get value with flexible matching
         value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
         break;
-      case 'variable':
+      case 'variable': {
         // Get from workflow variables stored in triggerData._variables
         const variables = triggerData?._variables || triggerData?.variables || {};
         value = FieldResolver.getFieldValue(variables, mapping.sourceField || '');
@@ -69,6 +69,7 @@ export async function executeCreateEntityAction(
           value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
         }
         break;
+      }
       case 'ai':
         // Generate using AI
         value = await generateWithAI({

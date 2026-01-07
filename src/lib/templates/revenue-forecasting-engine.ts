@@ -423,11 +423,12 @@ function calculateForecastDate(period: ForecastPeriod): Date {
       return new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
     case '90-day':
       return new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-    case 'quarter':
+    case 'quarter': {
       // End of current quarter
       const quarter = Math.floor(now.getMonth() / 3);
       const quarterEnd = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
       return quarterEnd;
+    }
     case 'annual':
       return new Date(now.getFullYear(), 11, 31);
     default:

@@ -176,7 +176,7 @@ export class MutationEngine {
       if (!current) {return undefined;}
 
       // Check for array index notation [id]
-      const arrayMatch = part.match(/^([^\[]+)\[([^\]]+)\]$/);
+      const arrayMatch = part.match(/^([^[]+)\[([^\]]+)\]$/);
       if (arrayMatch) {
         const [, arrayKey, idValue] = arrayMatch;
         const array = current[arrayKey];
@@ -204,7 +204,7 @@ export class MutationEngine {
       const part = parts[i];
       
       // Handle array notation
-      const arrayMatch = part.match(/^([^\[]+)\[([^\]]+)\]$/);
+      const arrayMatch = part.match(/^([^[]+)\[([^\]]+)\]$/);
       if (arrayMatch) {
         const [, arrayKey, idValue] = arrayMatch;
         const array = current[arrayKey];

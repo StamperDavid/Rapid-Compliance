@@ -205,8 +205,9 @@ export class ProductionScraperRunner implements ScraperRunner {
     timeoutMs: number = 60000
   ): Promise<ScrapeJobResult> {
     const startTime = Date.now();
+    let running = true;
 
-    while (true) {
+    while (running) {
       const result = await this.queue.getJob(jobId);
 
       if (!result) {
@@ -241,6 +242,9 @@ export class ProductionScraperRunner implements ScraperRunner {
       // Wait before checking again
       await new Promise(resolve => setTimeout(resolve, 100));
     }
+    
+    // Should never reach here, but TypeScript needs this
+    throw new ScrapeError('Unexpected loop exit', 'unknown_error', 500, false);
   }
 
   /**

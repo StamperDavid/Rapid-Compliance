@@ -415,11 +415,12 @@ export class InMemoryScrapeQueue implements JobQueue {
     const now = new Date();
 
     switch (newStatus) {
-      case 'running':
+      case 'running': {
         // Calculate wait time
         const waitTime = now.getTime() - job.enqueuedAt.getTime();
         this.stats.totalWaitTimeMs += waitTime;
         break;
+      }
 
       case 'completed':
         this.stats.totalCompleted++;
