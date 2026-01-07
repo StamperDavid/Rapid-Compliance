@@ -205,7 +205,7 @@ export class ProductionScraperRunner implements ScraperRunner {
     timeoutMs: number = 60000
   ): Promise<ScrapeJobResult> {
     const startTime = Date.now();
-    let running = true;
+    const running = true;
 
     while (running) {
       const result = await this.queue.getJob(jobId);

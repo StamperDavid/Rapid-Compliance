@@ -203,7 +203,7 @@ export async function applyTemplate(
         templateId: template.id
       });
     } catch (signalError) {
-      logger.warn('Failed to emit template.applied signal', { error: signalError as unknown });
+      logger.warn('Failed to emit template.applied signal', { error: signalError });
     }
     
     const duration = Date.now() - startTime;

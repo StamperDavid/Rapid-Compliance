@@ -162,7 +162,7 @@ async function notifyMentionedUsers(
     }
 
   } catch (error) {
-    logger.warn('Failed to notify mentioned users', { error: error as unknown });
+    logger.warn('Failed to notify mentioned users', { error: error });
   }
 }
 
@@ -234,7 +234,7 @@ async function notifyTaskAssignment(
     }
 
   } catch (error) {
-    logger.warn('Failed to notify task assignment', { error: error as unknown });
+    logger.warn('Failed to notify task assignment', { error: error });
   }
 }
 

@@ -240,7 +240,7 @@ export async function generateRevenueForecast(
         forecast: forecast.forecast
       });
     } catch (signalError) {
-      logger.warn('Failed to emit forecast.updated signal', { error: signalError as unknown });
+      logger.warn('Failed to emit forecast.updated signal', { error: signalError });
     }
     
     const duration = Date.now() - startTime;

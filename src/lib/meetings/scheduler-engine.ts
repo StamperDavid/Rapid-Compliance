@@ -121,7 +121,7 @@ export async function scheduleMeeting(
 
         logger.info('Zoom meeting created for scheduled meeting', { meetingId, zoomMeetingId: zoomMeeting.id });
       } catch (zoomError) {
-        logger.warn('Failed to create Zoom meeting, continuing without it', { error: zoomError as unknown });
+        logger.warn('Failed to create Zoom meeting, continuing without it', { error: zoomError });
       }
     }
 
@@ -237,7 +237,7 @@ async function getRoundRobinAssignment(
     return assignedUserId;
 
   } catch (error) {
-    logger.warn('Round-robin assignment failed, using first user', { error: error as unknown });
+    logger.warn('Round-robin assignment failed, using first user', { error: error });
     return userIds[0];
   }
 }
@@ -277,7 +277,7 @@ async function scheduleReminders(
     });
 
   } catch (error) {
-    logger.warn('Failed to schedule reminders', { error: error as unknown });
+    logger.warn('Failed to schedule reminders', { error: error });
   }
 }
 
