@@ -21,7 +21,7 @@ export async function executePayPalFunction(
   }
   
   switch (functionName) {
-    case 'createPayment':
+    case 'createPayment': {
       // Validate required parameters
       if (typeof parameters.amount !== 'number') {
         throw new Error('amount (number) is required for createPayment');
@@ -38,22 +38,25 @@ export async function executePayPalFunction(
         approvalUrl: order.links?.find((l: any) => l.rel === 'approve')?.href,
         status: order.status,
       };
+    }
       
-    case 'getTransaction':
+    case 'getTransaction': {
       // Validate required parameters
       if (!parameters.orderId || typeof parameters.orderId !== 'string') {
         throw new Error('orderId (string) is required for getTransaction');
       }
       
       return getOrderDetails(organizationId, parameters.orderId);
+    }
       
-    case 'capturePayment':
+    case 'capturePayment': {
       // Validate required parameters
       if (!parameters.orderId || typeof parameters.orderId !== 'string') {
         throw new Error('orderId (string) is required for capturePayment');
       }
       
       return captureOrder(organizationId, parameters.orderId);
+    }
       
     default:
       throw new Error(`Unknown PayPal function: ${functionName}`);

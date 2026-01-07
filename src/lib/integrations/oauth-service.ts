@@ -232,7 +232,7 @@ async function getOAuthConfig(
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com';
   
   switch (provider) {
-    case 'google':
+    case 'google': {
       const google = (apiKeys).integrations?.googleWorkspace;
       if (!google?.clientId || !google?.clientSecret) {
         throw new Error('Google OAuth credentials not configured');
@@ -250,8 +250,9 @@ async function getOAuthConfig(
         authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
         tokenUrl: 'https://oauth2.googleapis.com/token',
       };
+    }
     
-    case 'microsoft':
+    case 'microsoft': {
       const microsoft = (apiKeys).integrations?.microsoft365;
       if (!microsoft?.clientId || !microsoft?.clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
@@ -269,8 +270,9 @@ async function getOAuthConfig(
         authorizationUrl: `https://login.microsoftonline.com/${microsoft.tenantId || 'common'}/oauth2/v2.0/authorize`,
         tokenUrl: `https://login.microsoftonline.com/${microsoft.tenantId || 'common'}/oauth2/v2.0/token`,
       };
+    }
     
-    case 'slack':
+    case 'slack': {
       const slack = (apiKeys).integrations?.slack;
       if (!slack?.clientId || !slack?.clientSecret) {
         throw new Error('Slack OAuth credentials not configured');
@@ -289,8 +291,9 @@ async function getOAuthConfig(
         authorizationUrl: 'https://slack.com/oauth/v2/authorize',
         tokenUrl: 'https://slack.com/api/oauth.v2.access',
       };
+    }
     
-    case 'quickbooks':
+    case 'quickbooks': {
       const quickbooks = (apiKeys).integrations?.quickbooks;
       if (!quickbooks?.clientId || !quickbooks?.clientSecret) {
         throw new Error('QuickBooks OAuth credentials not configured');
@@ -309,8 +312,9 @@ async function getOAuthConfig(
           : 'https://appcenter.intuit.com/connect/oauth2', // Same for both
         tokenUrl: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
       };
+    }
     
-    case 'xero':
+    case 'xero': {
       const xero = (apiKeys).integrations?.xero;
       if (!xero?.clientId || !xero?.clientSecret) {
         throw new Error('Xero OAuth credentials not configured');
@@ -329,6 +333,7 @@ async function getOAuthConfig(
         authorizationUrl: 'https://login.xero.com/identity/connect/authorize',
         tokenUrl: 'https://identity.xero.com/connect/token',
       };
+    }
     
     default:
       throw new Error(`Unsupported provider: ${provider}`);

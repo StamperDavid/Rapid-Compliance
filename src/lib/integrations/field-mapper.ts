@@ -234,20 +234,22 @@ export class FieldMappingManager {
         
         switch (event.changeType) {
           case 'field_renamed':
-          case 'field_key_changed':
+          case 'field_key_changed': {
             updated = await this.handleFieldRenameInMapping(
               fieldMapping,
               event.oldFieldKey || event.oldFieldName || '',
               event.newFieldKey || event.newFieldName || ''
             );
             break;
+          }
           
-          case 'field_deleted':
+          case 'field_deleted': {
             updated = await this.handleFieldDeletionInMapping(
               fieldMapping,
               event.oldFieldKey || event.oldFieldName || ''
             );
             break;
+          }
         }
         
         if (updated) {
@@ -458,20 +460,22 @@ export class FieldMappingManager {
         // Normalize phone number (remove non-digits)
         return String(value).replace(/\D/g, '');
       
-      case 'currency':
+      case 'currency': {
         // Format as currency
         const amount = parseFloat(value);
         return isNaN(amount) ? value : amount.toFixed(2);
+      }
       
-      case 'date':
+      case 'date': {
         // Format date
         if (transform.format) {
           // Apply date formatting (would use date-fns or similar)
           return new Date(value).toISOString();
         }
         return value;
+      }
       
-      case 'custom':
+      case 'custom': {
         // Execute custom transform function from registry
         if (transform.customFunction) {
           const result = executeCustomTransform(
@@ -491,6 +495,7 @@ export class FieldMappingManager {
           }
         }
         return value;
+      }
       
       default:
         return value;
@@ -506,12 +511,13 @@ export class FieldMappingManager {
   ): Promise<boolean> {
     for (const rule of rules) {
       switch (rule.type) {
-        case 'regex':
+        case 'regex': {
           const regex = new RegExp(rule.value);
           if (!regex.test(String(value))) {
             return false;
           }
           break;
+        }
         
         case 'min':
           if (Number(value) < Number(rule.value)) {
