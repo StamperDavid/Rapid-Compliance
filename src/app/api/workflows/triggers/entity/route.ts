@@ -40,10 +40,14 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) ?? [];
+      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+        const pathStr = e.path?.join('.');
+        const msgStr = e.message;
+        return {
+          path: (pathStr !== '' && pathStr != null) ? pathStr : 'unknown',
+          message: (msgStr !== '' && msgStr != null) ? msgStr : 'Validation error',
+        };
+      }) ?? [];
       
       return errors.validation('Validation failed', errorDetails);
     }
