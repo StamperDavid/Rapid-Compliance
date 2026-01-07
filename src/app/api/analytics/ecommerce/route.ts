@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       items.forEach((item: any) => {
         const name = item.productName || item.name || 'Unknown Product';
         const revenue = (parseFloat(item.price) || 0) * (item.quantity || 1);
-        const existing = productMap.get(name) || { revenue: 0, quantity: 0, orders: 0 };
+        const existing = productMap.get(name) ?? { revenue: 0, quantity: 0, orders: 0 };
         productMap.set(name, {
           revenue: existing.revenue + revenue,
           quantity: existing.quantity + (item.quantity || 1),
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
       if (orderDate >= trendStartDate) {
         const dateKey = orderDate.toISOString().split('T')[0];
         const revenue = parseFloat(order.total) || parseFloat(order.amount) || 0;
-        const existing = dailyMap.get(dateKey) || { orders: 0, revenue: 0 };
+        const existing = dailyMap.get(dateKey) ?? { orders: 0, revenue: 0 };
         dailyMap.set(dateKey, {
           orders: existing.orders + 1,
           revenue: existing.revenue + revenue,

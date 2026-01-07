@@ -130,7 +130,7 @@ function calculateActionBreakdown(executions: any[]): any[] {
     const results = execution.actionResults || [];
     results.forEach((result: any) => {
       const actionType = result.actionType || 'unknown';
-      const existing = actionMap.get(actionType) || { count: 0, success: 0, totalTime: 0, times: [] };
+      const existing = actionMap.get(actionType) ?? { count: 0, success: 0, totalTime: 0, times: [] };
       
       actionMap.set(actionType, {
         count: existing.count + 1,
@@ -161,7 +161,7 @@ function calculateExecutionsByDay(executions: any[], startDate: Date, endDate: D
     const started = execution.startedAt.toDate?.() || new Date(execution.startedAt);
     const dayKey = started.toISOString().split('T')[0];
     
-    const existing = dayMap.get(dayKey) || { count: 0, success: 0, failed: 0 };
+    const existing = dayMap.get(dayKey) ?? { count: 0, success: 0, failed: 0 };
     dayMap.set(dayKey, {
       count: existing.count + 1,
       success: existing.success + (execution.status === 'completed' ? 1 : 0),

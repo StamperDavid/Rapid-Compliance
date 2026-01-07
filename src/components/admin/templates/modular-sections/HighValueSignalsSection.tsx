@@ -41,13 +41,13 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
     onUpdate({
       research: {
         ...template.research,
-        highValueSignals: [...(template.research?.highValueSignals || []), newSignal],
+        highValueSignals: [...(template.research?.highValueSignals ?? []), newSignal],
       } as any,
     });
   };
 
   const removeSignal = (index: number) => {
-    const signals = template.research?.highValueSignals || [];
+    const signals = template.research?.highValueSignals ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -57,7 +57,7 @@ export function HighValueSignalsSection({ template, onUpdate, disabled, onRemove
   };
 
   const updateSignal = (index: number, updates: any) => {
-    const signals = [...(template.research?.highValueSignals || [])];
+    const signals = [...(template.research?.highValueSignals ?? [])];
     signals[index] = { ...signals[index], ...updates };
     onUpdate({
       research: {

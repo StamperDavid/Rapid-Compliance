@@ -1123,7 +1123,7 @@ function calculateAnalysisSummary(
     
     // Aggregate coaching areas
     analysis.coachingInsights.forEach(insight => {
-      const existing = coachingMap.get(insight.category) || { count: 0, impact: 0 };
+      const existing = coachingMap.get(insight.category) ?? { count: 0, impact: 0 };
       coachingMap.set(insight.category, {
         count: existing.count + 1,
         impact: existing.impact + insight.impact,
@@ -1132,7 +1132,7 @@ function calculateAnalysisSummary(
     
     // Aggregate objections
     analysis.objections.forEach(objection => {
-      const existing = objectionMap.get(objection.type) || { count: 0, addressed: 0 };
+      const existing = objectionMap.get(objection.type) ?? { count: 0, addressed: 0 };
       objectionMap.set(objection.type, {
         count: existing.count + 1,
         addressed: existing.addressed + (objection.wasAddressed ? 1 : 0),
@@ -1141,7 +1141,7 @@ function calculateAnalysisSummary(
     
     // Aggregate competitors
     analysis.competitors.forEach(competitor => {
-      const existing = competitorMap.get(competitor.competitor) || { count: 0, sentiment: 0 };
+      const existing = competitorMap.get(competitor.competitor) ?? { count: 0, sentiment: 0 };
       competitorMap.set(competitor.competitor, {
         count: existing.count + competitor.mentions,
         sentiment: existing.sentiment + competitor.sentiment,

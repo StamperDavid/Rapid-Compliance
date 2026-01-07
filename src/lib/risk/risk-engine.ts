@@ -1059,7 +1059,7 @@ function calculateRiskSummary(
     
     // Count risk categories
     prediction.riskFactors.forEach(factor => {
-      const existing = riskCategoryCounts.get(factor.category) || { count: 0, totalImpact: 0 };
+      const existing = riskCategoryCounts.get(factor.category) ?? { count: 0, totalImpact: 0 };
       riskCategoryCounts.set(factor.category, {
         count: existing.count + 1,
         totalImpact: existing.totalImpact + factor.impact,

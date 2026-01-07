@@ -32,13 +32,13 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
     onUpdate({
       research: {
         ...template.research,
-        fluffPatterns: [...(template.research?.fluffPatterns || []), newPattern],
+        fluffPatterns: [...(template.research?.fluffPatterns ?? []), newPattern],
       } as any,
     });
   };
 
   const removeFluffPattern = (index: number) => {
-    const patterns = template.research?.fluffPatterns || [];
+    const patterns = template.research?.fluffPatterns ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -48,7 +48,7 @@ export function FluffPatternsSection({ template, onUpdate, disabled, onRemove, c
   };
 
   const updateFluffPattern = (index: number, updates: any) => {
-    const patterns = [...(template.research?.fluffPatterns || [])];
+    const patterns = [...(template.research?.fluffPatterns ?? [])];
     patterns[index] = { ...patterns[index], ...updates };
     onUpdate({
       research: {

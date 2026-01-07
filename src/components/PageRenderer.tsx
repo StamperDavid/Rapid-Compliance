@@ -20,7 +20,7 @@ interface WidgetElement {
 
 function ElementRenderer({ element }: { element: WidgetElement }) {
   const { theme } = useWebsiteTheme();
-  const styles = element.styles?.desktop || {};
+  const styles = element.styles?.desktop ?? {};
 
   switch (element.type) {
     case 'heading': {

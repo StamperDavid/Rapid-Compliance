@@ -163,7 +163,7 @@ export async function listCustomers(accessToken: string, realmId: string): Promi
   );
 
   const data = await response.json();
-  return data.QueryResponse?.Customer || [];
+  return data.QueryResponse?.Customer ?? [];
 }
 
 /**
@@ -181,7 +181,7 @@ export async function listInvoices(accessToken: string, realmId: string): Promis
   );
 
   const data = await response.json();
-  return data.QueryResponse?.Invoice || [];
+  return data.QueryResponse?.Invoice ?? [];
 }
 
 /**

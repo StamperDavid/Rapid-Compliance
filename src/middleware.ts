@@ -96,7 +96,7 @@ async function getOrgByCustomDomain(domain: string): Promise<string | null> {
  */
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const hostname = request.headers.get('host') || '';
+  const hostname = request.headers.get('host') ?? '';
 
   // Skip middleware for API routes, static files, and internal routes
   if (

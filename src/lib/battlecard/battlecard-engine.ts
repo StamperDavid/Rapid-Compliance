@@ -338,8 +338,8 @@ export async function discoverCompetitor(
       
       socialProof: {
         customerCount: competitiveIntel.socialProof?.customerCount,
-        notableCustomers: competitiveIntel.socialProof?.notableCustomers || [],
-        awards: competitiveIntel.socialProof?.awards || [],
+        notableCustomers: competitiveIntel.socialProof?.notableCustomers ?? [],
+        awards: competitiveIntel.socialProof?.awards ?? [],
         pressmentions: company.pressmentions,
         fundingRaised: competitiveIntel.socialProof?.fundingRaised,
         fundingStage: company.signals.fundingStage,
@@ -349,7 +349,7 @@ export async function discoverCompetitor(
         isHiring: company.signals.isHiring,
         jobCount: company.signals.jobCount,
         recentActivity: company.signals.growthIndicators,
-        expansionPlans: competitiveIntel.growthSignals?.expansionPlans || [],
+        expansionPlans: competitiveIntel.growthSignals?.expansionPlans ?? [],
       },
       
       metadata: {

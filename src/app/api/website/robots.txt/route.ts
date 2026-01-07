@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract domain or subdomain from request
-    const host = request.headers.get('host') || '';
+    const host = request.headers.get('host') ?? '';
     
     // Find organization by custom domain or subdomain
     let organizationId: string | null = null;

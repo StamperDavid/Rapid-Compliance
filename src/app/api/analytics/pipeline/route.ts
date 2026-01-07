@@ -111,7 +111,7 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
     openDeals.forEach(deal => {
       const stage = (deal.stage || deal.status || 'new').toLowerCase();
       const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const existing = stageMap.get(stage) || { value: 0, count: 0 };
+      const existing = stageMap.get(stage) ?? { value: 0, count: 0 };
       stageMap.set(stage, {
         value: existing.value + value,
         count: existing.count + 1,

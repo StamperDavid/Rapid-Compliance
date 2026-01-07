@@ -274,7 +274,7 @@ export class VoiceAgentHandler {
     speechResult: string
   ): Promise<string> {
     // Get conversation history
-    const history = this.conversationHistory.get(callSid) || [];
+    const history = this.conversationHistory.get(callSid) ?? [];
     
     // Add user input
     history.push({ role: 'user', content: speechResult });

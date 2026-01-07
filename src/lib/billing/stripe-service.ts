@@ -353,7 +353,7 @@ export async function recordUsage(
   // Update usage
   await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, {
     usage: {
-      ...(org?.usage || {}),
+      ...(org?.usage ?? {}),
       [metric]: currentUsage + amount,
       lastUpdated: new Date().toISOString(),
     },

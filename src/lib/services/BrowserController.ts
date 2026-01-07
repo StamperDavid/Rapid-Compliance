@@ -135,7 +135,7 @@ export class BrowserController {
           '--no-sandbox',
           '--disable-web-security',
           '--disable-features=IsolateOrigins,site-per-process',
-          ...(this.options?.args || []),
+          ...(this.options?.args ?? []),
         ],
       });
 

@@ -36,13 +36,13 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
     onUpdate({
       research: {
         ...template.research,
-        customFields: [...(template.research?.customFields || []), newField],
+        customFields: [...(template.research?.customFields ?? []), newField],
       } as any,
     });
   };
 
   const removeCustomField = (index: number) => {
-    const fields = template.research?.customFields || [];
+    const fields = template.research?.customFields ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -52,7 +52,7 @@ export function CRMFieldsSection({ template, onUpdate, disabled, onRemove, canRe
   };
 
   const updateCustomField = (index: number, updates: any) => {
-    const fields = [...(template.research?.customFields || [])];
+    const fields = [...(template.research?.customFields ?? [])];
     fields[index] = { ...fields[index], ...updates };
     onUpdate({
       research: {

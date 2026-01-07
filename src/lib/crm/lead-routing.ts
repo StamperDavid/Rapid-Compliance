@@ -205,7 +205,7 @@ async function getRoundRobinUser(
  * Get territory-based assignment
  */
 async function getTerritoryUser(lead: Lead, rule: RoutingRule): Promise<string | null> {
-  const territories = rule.metadata?.territories || [];
+  const territories = rule.metadata?.territories ?? [];
 
   for (const territory of territories) {
     // Check state match
@@ -313,7 +313,7 @@ async function getUserLeadCount(
  * Get skill-based assignment
  */
 async function getSkillBasedUser(lead: Lead, rule: RoutingRule): Promise<string | null> {
-  const skillMappings = rule.metadata?.skills || [];
+  const skillMappings = rule.metadata?.skills ?? [];
 
   // Check if lead requires specific skills
   // Example: Spanish-speaking leads need Spanish-speaking reps

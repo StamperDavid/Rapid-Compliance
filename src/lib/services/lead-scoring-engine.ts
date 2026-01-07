@@ -884,7 +884,7 @@ async function calculateEngagement(
     // Check for engagement signals in metadata
     enrollments.docs.forEach((doc) => {
       const data = doc.data();
-      const conditions = data.metadata?.conditions || {};
+      const conditions = data.metadata?.conditions ?? {};
 
       if (conditions.email_opened) {hasEmailOpened = true;}
       if (conditions.email_clicked) {hasEmailClicked = true;}

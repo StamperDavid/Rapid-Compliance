@@ -138,7 +138,7 @@ export class InMemoryProgressTracker implements ProgressTracker {
    * Get progress history for a job
    */
   getProgress(jobId: string): ProgressEvent[] {
-    return this.eventHistory.get(jobId) || [];
+    return this.eventHistory.get(jobId) ?? [];
   }
 
   /**

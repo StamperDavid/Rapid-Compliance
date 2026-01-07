@@ -38,7 +38,7 @@ export class SchemaChangeDebouncer {
     const key = this.getEventKey(event);
     
     // Add event to pending list
-    const events = this.pendingEvents.get(key) || [];
+    const events = this.pendingEvents.get(key) ?? [];
     events.push(event);
     this.pendingEvents.set(key, events);
     
@@ -66,7 +66,7 @@ export class SchemaChangeDebouncer {
    * Process batched events
    */
   private async processBatch(key: string): Promise<void> {
-    const events = this.pendingEvents.get(key) || [];
+    const events = this.pendingEvents.get(key) ?? [];
     
     if (events.length === 0) {
       return;

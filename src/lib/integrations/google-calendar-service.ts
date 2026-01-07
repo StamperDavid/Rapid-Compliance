@@ -148,7 +148,7 @@ export async function getFreeBusy(
     },
   });
 
-  const busyTimes = response.data.calendars?.[calendarId]?.busy || [];
+  const busyTimes = response.data.calendars?.[calendarId]?.busy ?? [];
   
   return {
     busy: busyTimes.map((slot: any) => ({

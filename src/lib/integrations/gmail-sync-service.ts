@@ -270,7 +270,7 @@ async function incrementalSync(
  * Parse Gmail message to our format
  */
 function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
-  const headers = message.payload?.headers || [];
+  const headers = message.payload?.headers ?? [];
   
   const getHeader = (name: string): string => {
     const header = headers.find(h => h.name?.toLowerCase() === name.toLowerCase());

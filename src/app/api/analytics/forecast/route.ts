@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       const probability = parseFloat(deal.probability) || 50;
       const weighted = value * probability / 100;
       
-      const existing = repMap.get(repId) || { forecast: 0, deals: 0, name: repName };
+      const existing = repMap.get(repId) ?? { forecast: 0, deals: 0, name: repName };
       repMap.set(repId, {
         forecast: existing.forecast + weighted,
         deals: existing.deals + 1,

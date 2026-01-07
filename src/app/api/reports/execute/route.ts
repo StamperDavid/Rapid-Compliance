@@ -200,7 +200,7 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
   allDeals.forEach((deal: any) => {
     const stage = deal.stage || deal.status || 'new';
     const value = parseFloat(deal.value) || 0;
-    const existing = stageMap.get(stage) || { count: 0, value: 0 };
+    const existing = stageMap.get(stage) ?? { count: 0, value: 0 };
     stageMap.set(stage, {
       count: existing.count + 1,
       value: existing.value + value,

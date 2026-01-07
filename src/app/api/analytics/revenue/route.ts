@@ -208,7 +208,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       const repId = deal.assignedTo || deal.ownerId || deal.owner || 'unassigned';
       const repName = deal.assignedToName || deal.ownerName || deal.owner || 'Unassigned';
       const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const existing = repMap.get(repId) || { revenue: 0, deals: 0, name: repName };
+      const existing = repMap.get(repId) ?? { revenue: 0, deals: 0, name: repName };
       repMap.set(repId, {
         revenue: existing.revenue + value,
         deals: existing.deals + 1,

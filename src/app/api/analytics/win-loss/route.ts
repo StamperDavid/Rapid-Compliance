@@ -125,7 +125,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     lostDeals.forEach(deal => {
       const reason = deal.lostReason || deal.reason || deal.lossReason || 'No reason provided';
       const value = parseFloat(deal.value) || parseFloat(deal.amount) || 0;
-      const existing = reasonMap.get(reason) || { count: 0, value: 0 };
+      const existing = reasonMap.get(reason) ?? { count: 0, value: 0 };
       reasonMap.set(reason, {
         count: existing.count + 1,
         value: existing.value + value,
@@ -150,7 +150,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
       const status = (deal.status || deal.stage || '').toLowerCase();
       const isWon = wonStatuses.some(s => status.includes(s));
       
-      const existing = repMap.get(repId) || { won: 0, lost: 0, wonValue: 0, lostValue: 0, name: repName };
+      const existing = repMap.get(repId) ?? { won: 0, lost: 0, wonValue: 0, lostValue: 0, name: repName };
       repMap.set(repId, {
         ...existing,
         name: typeof repName === 'string' ? repName : repId,
@@ -180,7 +180,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
       if (competitor) {
         const status = (deal.status || deal.stage || '').toLowerCase();
         const isWon = wonStatuses.some(s => status.includes(s));
-        const existing = competitorMap.get(competitor) || { won: 0, lost: 0 };
+        const existing = competitorMap.get(competitor) ?? { won: 0, lost: 0 };
         competitorMap.set(competitor, {
           won: existing.won + (isWon ? 1 : 0),
           lost: existing.lost + (isWon ? 0 : 1),
@@ -208,7 +208,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
       const status = (deal.status || deal.stage || '').toLowerCase();
       const isWon = wonStatuses.some(s => status.includes(s));
       
-      const existing = weeklyMap.get(weekKey) || { won: 0, lost: 0 };
+      const existing = weeklyMap.get(weekKey) ?? { won: 0, lost: 0 };
       weeklyMap.set(weekKey, {
         won: existing.won + (isWon ? 1 : 0),
         lost: existing.lost + (isWon ? 0 : 1),

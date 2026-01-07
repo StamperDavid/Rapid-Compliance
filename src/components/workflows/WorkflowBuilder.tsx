@@ -13,7 +13,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
   const [name, setName] = useState(workflow?.name || '');
   const [description, setDescription] = useState(workflow?.description || '');
   const [triggerType, setTriggerType] = useState<string>('entity.created');
-  const [actions, setActions] = useState<WorkflowAction[]>(workflow?.actions || []);
+  const [actions, setActions] = useState<WorkflowAction[]>(workflow?.actions ?? []);
   const [selectedActionType, setSelectedActionType] = useState<string>('');
 
   const textColor = typeof window !== 'undefined'

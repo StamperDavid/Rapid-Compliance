@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
       const isSuccess = exec.status === 'completed' || exec.status === 'success';
       const isFailed = exec.status === 'failed' || exec.status === 'error';
       
-      const existing = workflowMap.get(workflowId) || { name, executions: 0, success: 0, failed: 0 };
+      const existing = workflowMap.get(workflowId) ?? { name, executions: 0, success: 0, failed: 0 };
       workflowMap.set(workflowId, {
         name,
         executions: existing.executions + 1,
@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
       const isSuccess = exec.status === 'completed' || exec.status === 'success';
       const isFailed = exec.status === 'failed' || exec.status === 'error';
       
-      const existing = dailyMap.get(dateKey) || { executions: 0, success: 0, failed: 0 };
+      const existing = dailyMap.get(dateKey) ?? { executions: 0, success: 0, failed: 0 };
       dailyMap.set(dateKey, {
         executions: existing.executions + 1,
         success: existing.success + (isSuccess ? 1 : 0),

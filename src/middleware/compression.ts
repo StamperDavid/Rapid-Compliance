@@ -16,7 +16,7 @@ function shouldCompress(request: NextRequest, response: Response): boolean {
   }
   
   // Don't compress images, videos, or already compressed formats
-  const contentType = response.headers.get('Content-Type') || '';
+  const contentType = response.headers.get('Content-Type') ?? '';
   if (
     contentType.includes('image/') ||
     contentType.includes('video/') ||
@@ -28,7 +28,7 @@ function shouldCompress(request: NextRequest, response: Response): boolean {
   }
   
   // Check if client accepts compression
-  const acceptEncoding = request.headers.get('Accept-Encoding') || '';
+  const acceptEncoding = request.headers.get('Accept-Encoding') ?? '';
   if (!acceptEncoding.includes('gzip') && !acceptEncoding.includes('br')) {
     return false;
   }
@@ -40,7 +40,7 @@ function shouldCompress(request: NextRequest, response: Response): boolean {
  * Get compression format
  */
 function getCompressionFormat(request: NextRequest): 'br' | 'gzip' | null {
-  const acceptEncoding = request.headers.get('Accept-Encoding') || '';
+  const acceptEncoding = request.headers.get('Accept-Encoding') ?? '';
   
   // Prefer Brotli (better compression)
   if (acceptEncoding.includes('br')) {

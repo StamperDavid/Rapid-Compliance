@@ -64,7 +64,7 @@ export async function POST(
     const verification = await verifyDNSRecords(
       domainId,
       domainData?.verificationMethod || 'cname',
-      domainData?.dnsRecords || []
+      domainData?.dnsRecords ?? []
     );
 
     const now = new Date().toISOString();

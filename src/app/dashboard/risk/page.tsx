@@ -252,8 +252,8 @@ export default function RiskDashboardPage() {
             {/* Middle Column - Risk Factors */}
             <div className="lg:col-span-1">
               <RiskFactorsCard
-                riskFactors={prediction?.riskFactors || []}
-                protectiveFactors={prediction?.protectiveFactors || []}
+                riskFactors={prediction?.riskFactors ?? []}
+                protectiveFactors={prediction?.protectiveFactors ?? []}
                 loading={loading}
               />
             </div>
@@ -261,7 +261,7 @@ export default function RiskDashboardPage() {
             {/* Right Column - Interventions */}
             <div className="lg:col-span-1">
               <InterventionsCard
-                interventions={prediction?.interventions || []}
+                interventions={prediction?.interventions ?? []}
                 loading={loading}
                 onStartIntervention={handleStartIntervention}
               />

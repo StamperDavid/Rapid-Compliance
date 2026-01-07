@@ -42,13 +42,13 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
   const addSeedUrl = () => {
     const newUrl = prompt('Enter seed URL:');
     if (newUrl) {
-      const currentUrls = (template.research?.scrapingStrategy as any)?.seedUrls || [];
+      const currentUrls = (template.research?.scrapingStrategy as any)?.seedUrls ?? [];
       handleScrapingStrategyChange('seedUrls', [...currentUrls, newUrl]);
     }
   };
 
   const removeSeedUrl = (index: number) => {
-    const currentUrls = (template.research?.scrapingStrategy as any)?.seedUrls || [];
+    const currentUrls = (template.research?.scrapingStrategy as any)?.seedUrls ?? [];
     handleScrapingStrategyChange('seedUrls', currentUrls.filter((_: any, i: number) => i !== index));
   };
 
@@ -69,13 +69,13 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
     onUpdate({
       research: {
         ...template.research,
-        customFields: [...(template.research?.customFields || []), newField],
+        customFields: [...(template.research?.customFields ?? []), newField],
       } as any,
     });
   };
 
   const removeCustomField = (index: number) => {
-    const fields = template.research?.customFields || [];
+    const fields = template.research?.customFields ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -85,7 +85,7 @@ export function ScraperCRMTab({ template, onUpdate, disabled }: ScraperCRMTabPro
   };
 
   const updateCustomField = (index: number, updates: any) => {
-    const fields = [...(template.research?.customFields || [])];
+    const fields = [...(template.research?.customFields ?? [])];
     fields[index] = { ...fields[index], ...updates };
     onUpdate({
       research: {

@@ -171,8 +171,8 @@ export async function POST(
 
     // Restore the version content
     await pageRef.update({
-      content: versionData?.content || [],
-      seo: versionData?.seo || {},
+      content: versionData?.content ?? [],
+      seo: versionData?.seo ?? {},
       title: versionData?.title || '',
       slug: versionData?.slug || '',
       status: 'draft', // Restored versions become drafts

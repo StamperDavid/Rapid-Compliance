@@ -36,13 +36,13 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
     onUpdate({
       research: {
         ...template.research,
-        scoringRules: [...(template.research?.scoringRules || []), newRule],
+        scoringRules: [...(template.research?.scoringRules ?? []), newRule],
       } as any,
     });
   };
 
   const removeScoringRule = (index: number) => {
-    const rules = template.research?.scoringRules || [];
+    const rules = template.research?.scoringRules ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -52,7 +52,7 @@ export function ScoringRulesSection({ template, onUpdate, disabled, onRemove, ca
   };
 
   const updateScoringRule = (index: number, updates: any) => {
-    const rules = [...(template.research?.scoringRules || [])];
+    const rules = [...(template.research?.scoringRules ?? [])];
     rules[index] = { ...rules[index], ...updates };
     onUpdate({
       research: {

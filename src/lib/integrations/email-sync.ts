@@ -111,7 +111,7 @@ export async function fetchGmailInbox(
  * Parse Gmail API message format
  */
 function parseGmailMessage(data: any): EmailMessage {
-  const headers = data.payload?.headers || [];
+  const headers = data.payload?.headers ?? [];
   const getHeader = (name: string) => headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
 
   const from = getHeader('from');

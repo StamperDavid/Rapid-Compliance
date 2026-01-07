@@ -122,7 +122,7 @@ function calculateTopProducts(orders: any[]): any[] {
       const price = parseFloat(item.price) || 0;
       const revenue = quantity * price;
       
-      const existing = productMap.get(productId) || { revenue: 0, units: 0, orders: 0, name: productName };
+      const existing = productMap.get(productId) ?? { revenue: 0, units: 0, orders: 0, name: productName };
       productMap.set(productId, {
         revenue: existing.revenue + revenue,
         units: existing.units + quantity,
@@ -210,7 +210,7 @@ function calculateRevenueByDay(orders: any[], startDate: Date, endDate: Date): a
     const dayKey = createdAt.toISOString().split('T')[0];
     const revenue = parseFloat(order.total) || 0;
     
-    const existing = dayMap.get(dayKey) || { revenue: 0, orders: 0 };
+    const existing = dayMap.get(dayKey) ?? { revenue: 0, orders: 0 };
     dayMap.set(dayKey, {
       revenue: existing.revenue + revenue,
       orders: existing.orders + 1,

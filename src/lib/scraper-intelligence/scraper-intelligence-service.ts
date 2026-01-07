@@ -433,7 +433,7 @@ export async function saveExtractedSignals(
 
       if (doc.exists) {
         // Append to existing signals
-        const existing = doc.data()?.signals || [];
+        const existing = doc.data()?.signals ?? [];
         transaction.update(docRef, {
           signals: [...existing, ...validated],
           updatedAt: new Date(),
@@ -499,7 +499,7 @@ export async function getExtractedSignals(
     }
 
     const data = doc.data();
-    const signals = (data?.signals || []).map((signal: any) => ({
+    const signals = (data?.signals ?? []).map((signal: any) => ({
       ...signal,
       extractedAt: toDate(signal.extractedAt),
     })) as ExtractedSignal[];

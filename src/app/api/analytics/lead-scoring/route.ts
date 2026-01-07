@@ -159,7 +159,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
     const sourceMap = new Map<string, { total: number; count: number }>();
     scoredLeads.forEach(lead => {
       const source = lead.source || lead.lead_source || 'unknown';
-      const existing = sourceMap.get(source) || { total: 0, count: 0 };
+      const existing = sourceMap.get(source) ?? { total: 0, count: 0 };
       sourceMap.set(source, {
         total: existing.total + (lead.score || 0),
         count: existing.count + 1,

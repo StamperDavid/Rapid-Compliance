@@ -78,7 +78,7 @@ export function detectSuspiciousActivity(request: NextRequest): {
   reason?: string;
 } {
   const url = request.nextUrl.pathname;
-  const userAgent = request.headers.get('user-agent') || '';
+  const userAgent = request.headers.get('user-agent') ?? '';
   
   // Check for directory traversal
   if (url.includes('../') || url.includes('..\\')) {

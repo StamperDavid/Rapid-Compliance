@@ -45,13 +45,13 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
     onUpdate({
       research: {
         ...template.research,
-        highValueSignals: [...(template.research?.highValueSignals || []), newSignal],
+        highValueSignals: [...(template.research?.highValueSignals ?? []), newSignal],
       } as any,
     });
   };
 
   const removeSignal = (index: number) => {
-    const signals = template.research?.highValueSignals || [];
+    const signals = template.research?.highValueSignals ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -61,7 +61,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
   };
 
   const updateSignal = (index: number, updates: any) => {
-    const signals = [...(template.research?.highValueSignals || [])];
+    const signals = [...(template.research?.highValueSignals ?? [])];
     signals[index] = { ...signals[index], ...updates };
     onUpdate({
       research: {
@@ -85,13 +85,13 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
     onUpdate({
       research: {
         ...template.research,
-        fluffPatterns: [...(template.research?.fluffPatterns || []), newPattern],
+        fluffPatterns: [...(template.research?.fluffPatterns ?? []), newPattern],
       } as any,
     });
   };
 
   const removeFluffPattern = (index: number) => {
-    const patterns = template.research?.fluffPatterns || [];
+    const patterns = template.research?.fluffPatterns ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -101,7 +101,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
   };
 
   const updateFluffPattern = (index: number, updates: any) => {
-    const patterns = [...(template.research?.fluffPatterns || [])];
+    const patterns = [...(template.research?.fluffPatterns ?? [])];
     patterns[index] = { ...patterns[index], ...updates };
     onUpdate({
       research: {
@@ -128,13 +128,13 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
     onUpdate({
       research: {
         ...template.research,
-        scoringRules: [...(template.research?.scoringRules || []), newRule],
+        scoringRules: [...(template.research?.scoringRules ?? []), newRule],
       } as any,
     });
   };
 
   const removeScoringRule = (index: number) => {
-    const rules = template.research?.scoringRules || [];
+    const rules = template.research?.scoringRules ?? [];
     onUpdate({
       research: {
         ...template.research,
@@ -144,7 +144,7 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
   };
 
   const updateScoringRule = (index: number, updates: any) => {
-    const rules = [...(template.research?.scoringRules || [])];
+    const rules = [...(template.research?.scoringRules ?? [])];
     rules[index] = { ...rules[index], ...updates };
     onUpdate({
       research: {
