@@ -4,8 +4,8 @@
  */
 
 import type { ChatRequest } from '@/types/ai-models';
-import { sendChatRequest } from '../model-provider'
-import { logger } from '@/lib/logger/logger';;
+import { sendChatRequest } from '../model-provider';
+import { logger } from '@/lib/logger/logger';
 
 export interface ExtractedEntity {
   type: 'person' | 'company' | 'product' | 'email' | 'phone' | 'date' | 'money' | 'location' | 'custom';

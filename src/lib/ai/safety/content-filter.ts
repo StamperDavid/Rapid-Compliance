@@ -4,8 +4,8 @@
  */
 
 import type { ChatRequest } from '@/types/ai-models';
-import { sendChatRequest } from '../model-provider'
-import { logger } from '@/lib/logger/logger';;
+import { sendChatRequest } from '../model-provider';
+import { logger } from '@/lib/logger/logger';
 
 export interface SafetyCheckResult {
   isSafe: boolean;
@@ -171,7 +171,7 @@ async function checkForPII(content: string): Promise<SafetyCheckResult & { sanit
   }
   
   // Phone number detection (US format)
-  const phonePattern = /\b(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g;
+  const phonePattern = /\b(\+?1[.\s-]?)?\(?\d{3}\)?[.\s-]?\d{3}[.\s-]?\d{4}\b/g;
   const phones = content.match(phonePattern);
   if (phones) {
     flags.push({

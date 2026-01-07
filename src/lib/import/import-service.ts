@@ -78,7 +78,7 @@ export class ImportService {
     }
 
     // Phone detection
-    const phonePattern = /^[\d\s\-\+\(\)]+$/;
+    const phonePattern = /^[\d\s+()-]+$/;
     const phoneMatches = nonEmptyValues.filter(v => {
       const str = String(v);
       return phonePattern.test(str) && str.replace(/\D/g, '').length >= 10;

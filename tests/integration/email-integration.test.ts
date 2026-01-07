@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { generateTrackingPixel, wrapLinksWithTracking, classifyBounce } from @/lib/email/email-tracking\\;
+import { generateTrackingPixel, wrapLinksWithTracking, classifyBounce } from '@/lib/email/email-tracking';
 import { sendEmail } from '@/lib/email/email-service';
 
 describe('Email Integration Tests', () => {

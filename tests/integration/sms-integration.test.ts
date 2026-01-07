@@ -4,8 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { sendSMS, getDeliveryStatus, validatePhoneNumber } from @/lib/sms/sms-service\\;
-import { sendSMS } from '@/lib/sms/sms-service';
+import { sendSMS, getDeliveryStatus, validatePhoneNumber } from '@/lib/sms/sms-service';
 
 describe('SMS Integration Tests', () => {
   describe('SMS Sending (Requires Twilio Test Account)', () => {

@@ -8,7 +8,7 @@ import { z } from 'zod';
 // Common validation patterns
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const urlRegex = /^https?:\/\/.+/;
-const phoneRegex = /^\+?[\d\s\-()]+$/;
+const phoneRegex = /^\+?[\d\s()-]+$/;
 
 /**
  * Email validation schema

@@ -3,8 +3,8 @@
  * REAL email sending, tracking, and webhook handling
  */
 
-import sgMail from '@sendgrid/mail'
-import { logger } from '@/lib/logger/logger';;
+import sgMail from '@sendgrid/mail';
+import { logger } from '@/lib/logger/logger';
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
 const FROM_NAME = process.env.FROM_NAME || 'AI Sales Platform';

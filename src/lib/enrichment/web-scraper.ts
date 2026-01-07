@@ -168,7 +168,7 @@ export function extractDataPoints(content: ScrapedContent): {
   const potentialEmail = emailMatch ? emailMatch[0] : undefined;
   
   // Extract phone (US format)
-  const phoneMatch = cleanedText.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+  const phoneMatch = cleanedText.match(/\(?\d{3}\)?[.\s-]?\d{3}[.\s-]?\d{4}/);
   const potentialPhone = phoneMatch ? phoneMatch[0] : undefined;
   
   // Extract social media links

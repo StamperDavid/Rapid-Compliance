@@ -155,7 +155,7 @@ function validateEmail(email: string): boolean {
  */
 function validatePhone(phone: string): boolean {
   // Remove common formatting characters
-  const cleaned = phone.replace(/[\s\-\(\)\+\.]/g, '');
+  const cleaned = phone.replace(/[\s()+.-]/g, '');
   
   // Should be 10-15 digits
   if (cleaned.length < 10 || cleaned.length > 15) {
