@@ -50,13 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const userProfile = await dbModule.FirestoreService.get(dbModule.COLLECTIONS.USERS, authUser.uid);
               
               // Use organizationId from user profile (set during account creation)
-              const organizationId = userProfile?.organizationId || 'demo';
+              const organizationId = userProfile?.organizationId ?? 'demo';
               
               setUser({
                 id: authUser.uid,
-                email: authUser.email || '',
-                displayName: authUser.displayName || userProfile?.displayName || userProfile?.name || 'User',
-                role: (userProfile?.role as UserRole) || 'admin',
+                email: authUser.email ?? '',
+                displayName: (authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : (userProfile?.displayName !== '' && userProfile?.displayName != null) ? userProfile.displayName : (userProfile?.name !== '' && userProfile?.name != null) ? userProfile.name : 'User',
+                role: (userProfile?.role as UserRole) ?? 'admin',
                 organizationId: organizationId,
                 workspaceId: userProfile?.currentWorkspaceId,
               });
@@ -64,8 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               logger.error('Error loading user profile:', error, { file: 'AuthProvider.tsx' });
               setUser({
                 id: authUser.uid,
-                email: authUser.email || '',
-                displayName: authUser.displayName || 'User',
+                email: authUser.email ?? '',
+                displayName: (authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
                 role: 'admin',
                 organizationId: 'demo',
               });

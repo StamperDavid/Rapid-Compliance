@@ -40,9 +40,9 @@ const initialNodes: Node[] = [
 const initialEdges: Edge[] = [];
 
 function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkflowBuilderProps) {
-  const [name, setName] = useState(workflow?.name || '');
-  const [description, setDescription] = useState(workflow?.description || '');
-  const [trigger, setTrigger] = useState<string>(workflow?.trigger?.type || 'manual');
+  const [name, setName] = useState((workflow?.name !== '' && workflow?.name != null) ? workflow.name : '');
+  const [description, setDescription] = useState((workflow?.description !== '' && workflow?.description != null) ? workflow.description : '');
+  const [trigger, setTrigger] = useState<string>((workflow?.trigger?.type !== '' && workflow?.trigger?.type != null) ? workflow.trigger.type : 'manual');
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -97,7 +97,7 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
       notification: '🔔 Notification',
       end: '🏁 End',
     };
-    return labels[type] || `📌 ${type}`;
+    return (labels[type] !== '' && labels[type] != null) ? labels[type] : `📌 ${type}`;
   };
 
   // Update node configuration
@@ -121,9 +121,9 @@ function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkfl
       .filter(n => n.type !== 'input')
       .map((node, index) => ({
         id: node.id,
-        type: node.data.nodeType || 'action',
+        type: node.data.nodeType ?? 'action',
         order: index + 1,
-        config: node.data.config || {},
+        config: node.data.config ?? {},
         conditions: [],
       }));
 

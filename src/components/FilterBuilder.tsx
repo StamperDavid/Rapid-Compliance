@@ -11,7 +11,7 @@ interface FilterBuilderProps {
 }
 
 export default function FilterBuilder({ fields, onApply, onClose, initialFilter }: FilterBuilderProps) {
-  const [filter, setFilter] = useState<ViewFilter>(initialFilter || {
+  const [filter, setFilter] = useState<ViewFilter>(initialFilter ?? {
     id: Date.now().toString(),
     name: 'New Filter',
     logic: 'AND',
@@ -20,7 +20,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
       logic: 'AND',
       conditions: [{
         id: 'c1',
-        field: fields[0]?.key || '',
+        field: fields[0]?.key ?? '',
         operator: 'contains',
         value: '',
       }]
@@ -40,7 +40,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                 ...group.conditions,
                 {
                   id: `c${Date.now()}`,
-                  field: fields[0]?.key || '',
+                  field: fields[0]?.key ?? '',
                   operator: 'contains',
                   value: '',
                 }
@@ -91,12 +91,12 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
 
   const getFieldType = (fieldKey: string): string => {
     const field = fields.find(f => f.key === fieldKey);
-    return field?.type || 'text';
+    return field?.type ?? 'text';
   };
 
   const getOperators = (fieldKey: string) => {
     const fieldType = getFieldType(fieldKey);
-    return OPERATORS_BY_TYPE[fieldType] || OPERATORS_BY_TYPE.text;
+    return OPERATORS_BY_TYPE[fieldType] ?? OPERATORS_BY_TYPE.text;
   };
 
   return (
@@ -257,7 +257,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                   logic: 'AND',
                   conditions: [{
                     id: 'c1',
-                    field: fields[0]?.key || '',
+                    field: fields[0]?.key ?? '',
                     operator: 'contains',
                     value: '',
                   }]
