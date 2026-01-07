@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to monitoring service
-    logger.error(`Error in ${(this.props.componentName !== '' && this.props.componentName != null) ? this.props.componentName : 'component'}`, error, {
+    logger.error(`Error in ${this.props.componentName ?? 'component'}`, error, {
       componentStack: errorInfo.componentStack,
       errorInfo
     });

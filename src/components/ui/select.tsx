@@ -27,7 +27,7 @@ interface SelectProps {
 }
 
 const Select = ({ value: controlledValue, defaultValue, onValueChange, children }: SelectProps) => {
-  const [uncontrolledValue, setUncontrolledValue] = React.useState(defaultValue || "")
+  const [uncontrolledValue, setUncontrolledValue] = React.useState(defaultValue ?? "")
   const [open, setOpen] = React.useState(false)
   const value = controlledValue ?? uncontrolledValue
   const handleValueChange = onValueChange ?? setUncontrolledValue
@@ -75,7 +75,7 @@ const SelectValue = React.forwardRef<
 
   return (
     <span ref={ref} className={cn(className)} {...props}>
-      {value || placeholder}
+      {value ?? placeholder}
     </span>
   )
 })

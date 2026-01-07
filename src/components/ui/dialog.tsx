@@ -25,7 +25,7 @@ interface DialogProps {
 }
 
 const Dialog = ({ open: controlledOpen, defaultOpen, onOpenChange, children }: DialogProps) => {
-  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen || false)
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen ?? false)
   const open = controlledOpen ?? uncontrolledOpen
   const setOpen = onOpenChange ?? setUncontrolledOpen
 
