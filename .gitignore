@@ -61,3 +61,23 @@ firebase-debug.log
 .env.*.temp
 firebase-config-*.json
 serviceAccount*.json
+
+# Swarm/orchestration artifacts (prevent reintroduction)
+orchestrate.py
+worker-scripts/
+__pycache__/
+*.pyc
+agent.log
+workflow_state.md
+WORKER*_ASSIGNMENTS.txt
+INSTRUCTIONS_WORKER*.md
+worker*.sh
+*-worker*.py
+
+# ESLint temp outputs
+eslint-*.json
+eslint-*.txt
+audit_*.json
+*lint*.json
+CLUSTER_REPORT.txt
+error-cluster-report.json
