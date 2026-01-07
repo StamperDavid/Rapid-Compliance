@@ -105,7 +105,7 @@ async function searchWithSerper(query: string, apiKey: string): Promise<CompanyS
     
     const data = await response.json() as SerperResponse;
     
-    return (data.organic || []).slice(0, 5).map((result: SerperSearchResult) => ({
+    return (data.organic ?? []).slice(0, 5).map((result: SerperSearchResult) => ({
       name: extractCompanyName(result.title),
       website: result.link,
       domain: extractDomain(result.link),
@@ -149,7 +149,7 @@ async function searchWithGoogleCustomSearch(
     
     const data = await response.json() as GoogleCustomSearchResponse;
     
-    return (data.items || []).slice(0, 5).map((result: GoogleCustomSearchResult) => ({
+    return (data.items ?? []).slice(0, 5).map((result: GoogleCustomSearchResult) => ({
       name: extractCompanyName(result.title),
       website: result.link,
       domain: extractDomain(result.link),

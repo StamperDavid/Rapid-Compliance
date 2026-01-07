@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         workspaceId: validData.workspaceId,
         dealId: validData.dealId,
         triggeredBy: 'manual',
-        triggerData: validData.triggerData || {},
+        triggerData: validData.triggerData ?? {},
         userId: validData.userId,
       }
     );

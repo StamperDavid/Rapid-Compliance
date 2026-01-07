@@ -69,7 +69,7 @@ export async function calculateShipping(
   }
   
   // Get default/cheapest method
-  const availableMethods = shippingConfig.methods?.filter((m: any) => m.enabled) || [];
+  const availableMethods = shippingConfig.methods?.filter((m: any) => m.enabled) ?? [];
   if (availableMethods.length === 0) {
     return {
       cost: 0,

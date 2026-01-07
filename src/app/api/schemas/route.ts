@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
     
     const body = await request.json();
-    const { organizationId, workspaceId, schema, userId } = body || {};
+    const { organizationId, workspaceId, schema, userId } = body ?? {};
 
     if (!organizationId || !workspaceId || !schema?.name) {
       return NextResponse.json(
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const now = FieldValue.serverTimestamp();
     const schemaId = schema.id || buildSchemaId(schema.name);
 
-    const fields = (schema.fields || []).map((field: any) => ({
+    const fields = (schema.fields ?? []).map((field: any) => ({
       id: field.id || buildFieldId(field.key || field.label || 'field'),
       key: field.key || slugify(field.label || 'field'),
       label: field.label || field.key || 'Field',

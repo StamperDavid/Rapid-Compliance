@@ -154,7 +154,7 @@ async function semanticSearch(
       id: chunk.id,
       content: chunk.content,
       source: chunk.source || 'unknown',
-      relevanceScore: cosineSimilarity(queryEmbedding, chunk.embedding || []),
+      relevanceScore: cosineSimilarity(queryEmbedding, chunk.embedding ?? []),
       embedding: chunk.embedding,
       metadata: chunk.metadata,
     }));

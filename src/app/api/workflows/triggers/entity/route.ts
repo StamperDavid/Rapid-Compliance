@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
         path: e.path?.join('.') || 'unknown',
         message: e.message || 'Validation error',
-      })) || [];
+      })) ?? [];
       
       return errors.validation('Validation failed', errorDetails);
     }

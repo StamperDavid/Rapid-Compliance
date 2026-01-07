@@ -70,7 +70,7 @@ export async function fetchGmailInbox(
     }
 
     const listData = await listResponse.json();
-    const messageIds = listData.messages || [];
+    const messageIds = listData.messages ?? [];
 
     // Fetch full message details
     const messages: EmailMessage[] = [];
@@ -147,7 +147,7 @@ function parseGmailMessage(data: any): EmailMessage {
     htmlBody,
     receivedAt: new Date(parseInt(data.internalDate)),
     isRead: !data.labelIds?.includes('UNREAD'),
-    labels: data.labelIds || [],
+    labels: data.labelIds ?? [],
     inReplyTo,
   };
 }
@@ -188,8 +188,8 @@ export async function fetchOutlookInbox(
       id: msg.id,
       threadId: msg.conversationId,
       from: msg.from?.emailAddress?.address || '',
-      to: msg.toRecipients?.map((r: any) => r.emailAddress?.address) || [],
-      cc: msg.ccRecipients?.map((r: any) => r.emailAddress?.address) || [],
+      to: msg.toRecipients?.map((r: any) => r.emailAddress?.address) ?? [],
+      cc: msg.ccRecipients?.map((r: any) => r.emailAddress?.address) ?? [],
       subject: msg.subject || '',
       body: msg.body?.content || '',
       htmlBody: msg.body?.contentType === 'html' ? msg.body?.content : undefined,
@@ -230,7 +230,7 @@ export async function processEmailReply(
         subject: reply.subject,
         body: reply.body,
         summary: `Reply received: ${reply.subject}`,
-        relatedTo: originalEmail.relatedTo || [],
+        relatedTo: originalEmail.relatedTo ?? [],
         metadata: {
           emailId: reply.id,
           fromEmail: reply.from,

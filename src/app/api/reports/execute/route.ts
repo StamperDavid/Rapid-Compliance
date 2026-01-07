@@ -113,12 +113,12 @@ async function executeRevenueReport(orgId: string, config: any, parameters: any)
       {
         type: 'line',
         title: 'Revenue Over Time',
-        data: analytics.bySource || [],
+        data: analytics.bySource ?? [],
       },
       {
         type: 'bar',
         title: 'Revenue by Source',
-        data: analytics.bySource || [],
+        data: analytics.bySource ?? [],
       },
     ],
   };
@@ -144,7 +144,7 @@ async function executePipelineReport(orgId: string, config: any, parameters: any
       {
         type: 'funnel',
         title: 'Pipeline by Stage',
-        data: analytics.byStage || [],
+        data: analytics.byStage ?? [],
       },
     ],
   };

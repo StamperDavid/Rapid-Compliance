@@ -83,7 +83,7 @@ export async function listChannels(accessToken: string): Promise<any[]> {
     types: 'public_channel,private_channel',
   });
   
-  return result.channels || [];
+  return result.channels ?? [];
 }
 
 /**
@@ -105,7 +105,7 @@ export async function listUsers(accessToken: string): Promise<any[]> {
   const client = createSlackClient(accessToken);
   const result = await client.users.list({});
   
-  return result.members || [];
+  return result.members ?? [];
 }
 
 /**

@@ -127,7 +127,7 @@ function calculateActionBreakdown(executions: any[]): any[] {
   const actionMap = new Map<string, { count: number; success: number; totalTime: number; times: number[] }>();
   
   executions.forEach((execution: any) => {
-    const results = execution.actionResults || [];
+    const results = execution.actionResults ?? [];
     results.forEach((result: any) => {
       const actionType = result.actionType || 'unknown';
       const existing = actionMap.get(actionType) ?? { count: 0, success: 0, totalTime: 0, times: [] };

@@ -90,7 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const existingKeys = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
       'apiKeys'
-    ) || {};
+    ) ?? {};
 
     // Update with new key
     existingKeys[service] = key;

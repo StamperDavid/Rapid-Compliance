@@ -90,7 +90,7 @@ export async function handleWebhook(
           method,
           headers,
           body,
-          query: queryParams || {},
+          query: queryParams ?? {},
         };
         
         await executeWorkflow(workflow as Workflow, triggerData);

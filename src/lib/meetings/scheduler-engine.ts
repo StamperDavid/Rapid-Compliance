@@ -341,7 +341,7 @@ Looking forward to speaking with you!
       meetingId,
       {
         reminders: [
-          ...(meeting.reminders || []),
+          ...(meeting.reminders ?? []),
           { sentAt: new Date(), type: 'email', status: 'sent' },
         ],
       }

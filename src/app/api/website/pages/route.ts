@@ -128,8 +128,8 @@ export async function POST(request: NextRequest) {
       id: pageId,
       organizationId, // ← Force correct organizationId
       status: page.status || 'draft',
-      content: page.content || [],
-      seo: page.seo || {},
+      content: page.content ?? [],
+      seo: page.seo ?? {},
       version: 1,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),

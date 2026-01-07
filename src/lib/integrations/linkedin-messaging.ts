@@ -247,7 +247,7 @@ export async function getConversationThread(
     }
     
     const data = await response.json();
-    const messages = data.messages || [];
+    const messages = data.messages ?? [];
     
     logger.debug('LinkedIn: Conversation fetched successfully', {
       conversationId,

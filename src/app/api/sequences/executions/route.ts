@@ -109,7 +109,7 @@ async function getRecentExecutions(
     // Process native enrollments
     for (const doc of nativeEnrollmentsSnap.docs) {
       const data = doc.data();
-      const executedSteps = data.executedSteps || [];
+      const executedSteps = data.executedSteps ?? [];
       
       // Get sequence name
       let sequenceName = 'Unknown Sequence';
@@ -190,7 +190,7 @@ async function getRecentExecutions(
 
     for (const doc of legacyEnrollmentsSnap.docs) {
       const data = doc.data();
-      const stepActions = data.stepActions || [];
+      const stepActions = data.stepActions ?? [];
 
       // Get sequence name
       let sequenceName = 'Unknown Sequence';

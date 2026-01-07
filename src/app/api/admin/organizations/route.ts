@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       createdBy: authResult.user.uid,
-      settings: body.settings || {},
+      settings: body.settings ?? {},
     };
     
     await adminDal.safeSetDoc('ORGANIZATIONS', orgId, orgData, {
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: authResult.user.uid,
-      settings: body.settings || {},
+      settings: body.settings ?? {},
     });
     
   } catch (error: any) {

@@ -21,7 +21,7 @@ export class FieldRenameManager {
     userId: string,
     reason?: string
   ): SchemaField {
-    const renameHistory = field.renameHistory || [];
+    const renameHistory = field.renameHistory ?? [];
     
     const renameRecord: FieldRenameRecord = {
       timestamp: Timestamp.now(),
@@ -48,7 +48,7 @@ export class FieldRenameManager {
    * Get rename history for a field
    */
   static getRenameHistory(field: SchemaField): FieldRenameRecord[] {
-    return field.renameHistory || [];
+    return field.renameHistory ?? [];
   }
   
   /**

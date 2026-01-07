@@ -303,7 +303,7 @@ export class SchemaChangeUXHandler {
             recommendation: options.recommendation,
             showWizard: options.showWizard,
           },
-          actions: options.actions || [],
+          actions: options.actions ?? [],
           read: false,
           requiresAction: options.blocking || false,
           createdAt: new Date().toISOString(),

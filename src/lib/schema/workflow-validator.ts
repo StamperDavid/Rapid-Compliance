@@ -116,7 +116,7 @@ export async function validateWorkflow(
       
       if (entityAction.schemaId === schema.id) {
         // Validate field mappings
-        for (const mapping of entityAction.fieldMappings || []) {
+        for (const mapping of entityAction.fieldMappings ?? []) {
           const resolved = await FieldResolver.resolveField(schema, mapping.targetField);
           
           if (!resolved) {

@@ -230,7 +230,7 @@ async function executeAction(
         ...action,
         type: 'create_entity',
         config: {
-          ...((action as any).config || {}),
+          ...((action as any).config ?? {}),
           entityType: 'tasks',
         }
       } as any, triggerData, organizationId);

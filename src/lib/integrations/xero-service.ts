@@ -131,7 +131,7 @@ export async function listContacts(accessToken: string, tenantId: string): Promi
   });
 
   const data = await response.json();
-  return data.Contacts || [];
+  return data.Contacts ?? [];
 }
 
 export async function listInvoices(accessToken: string, tenantId: string): Promise<any[]> {
@@ -143,7 +143,7 @@ export async function listInvoices(accessToken: string, tenantId: string): Promi
   });
 
   const data = await response.json();
-  return data.Invoices || [];
+  return data.Invoices ?? [];
 }
 
 // Lightweight helpers for tests

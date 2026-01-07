@@ -288,7 +288,7 @@ export class WorkflowCoordinator {
       'custom': [],
     };
     
-    return mapping[signalType] || [];
+    return mapping[signalType] ?? [];
   }
   
   /**

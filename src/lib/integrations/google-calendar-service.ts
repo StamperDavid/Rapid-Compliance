@@ -123,7 +123,7 @@ export async function listCalendars(tokens: {
   const calendar = google.calendar({ version: 'v3', auth });
 
   const response = await calendar.calendarList.list();
-  return response.data.items || [];
+  return response.data.items ?? [];
 }
 
 /**

@@ -622,7 +622,7 @@ export async function generateBattlecard(
       competitorName: competitorProfile.companyName,
       competitorDomain: competitorProfile.domain,
       
-      featureComparison: battlecardData.featureComparison || [],
+      featureComparison: battlecardData.featureComparison ?? [],
       pricingComparison: battlecardData.pricingComparison || {
         ourPositioning: '',
         theirPositioning: '',
@@ -713,7 +713,7 @@ function buildBattlecardPrompt(
   competitor: CompetitorProfile,
   options: BattlecardOptions
 ): string {
-  const ourInfo = options.ourCompanyInfo || {};
+  const ourInfo = options.ourCompanyInfo ?? {};
   
   return `Generate a competitive battlecard for a sales scenario.
 

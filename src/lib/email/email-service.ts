@@ -453,7 +453,7 @@ export async function getEmailTracking(messageId: string, organizationId?: strin
     clickLinks: trackingData.clickLinks?.map((link: any) => ({
       ...link,
       clickedAt: new Date(link.clickedAt),
-    })) || [],
+    })) ?? [],
   } as EmailTracking;
 }
 

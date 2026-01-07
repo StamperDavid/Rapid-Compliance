@@ -129,7 +129,7 @@ export async function createComment(
  */
 function extractMentions(content: string): string[] {
   const mentionRegex = /@(\w+)/g;
-  const matches = content.match(mentionRegex) || [];
+  const matches = content.match(mentionRegex) ?? [];
   return matches.map(m => m.substring(1)); // Remove @
 }
 

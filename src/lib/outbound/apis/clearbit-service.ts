@@ -399,7 +399,7 @@ export function formatClearbitCompanyData(company: ClearbitCompany): {
     founded: company.foundedYear?.toString(),
     employees: company.metrics?.employees,
     revenue: company.metrics?.estimatedAnnualRevenue,
-    technologies: company.tech || [],
+    technologies: company.tech ?? [],
   };
 }
 

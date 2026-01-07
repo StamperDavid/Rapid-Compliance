@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ categories: data.categories || [] });
+    return NextResponse.json({ categories: data.categories ?? [] });
   } catch (error) {
     logger.error('Failed to fetch blog categories', error, {
       route: '/api/website/blog/categories',

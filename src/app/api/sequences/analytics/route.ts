@@ -376,7 +376,7 @@ function buildLegacySequencePerformance(
   sequenceId: string,
   data: any
 ): SequencePerformance {
-  const analytics = data.analytics || {};
+  const analytics = data.analytics ?? {};
   
   // Build step performance from legacy steps
   const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: any, index: number) => {

@@ -86,7 +86,7 @@ function calculateManualTax(
     if (rate.city && rate.city !== address.city) {return false;}
     if (rate.zipCode && rate.zipCode !== address.zip) {return false;}
     return true;
-  }) || [];
+  }) ?? [];
   
   if (applicableRates.length === 0) {
     return Promise.resolve({

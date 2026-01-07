@@ -593,7 +593,7 @@ export function getDefaultFieldMappings(
     },
   };
   
-  return mappings[integrationName.toLowerCase()] || {};
+  return mappings[integrationName.toLowerCase()] ?? {};
 }
 
 

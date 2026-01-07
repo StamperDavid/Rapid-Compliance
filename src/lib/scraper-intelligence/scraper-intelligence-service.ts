@@ -547,7 +547,7 @@ export async function querySignalsByPlatform(
     for (const doc of snapshot.docs) {
       const data = doc.data();
       const recordId = data.recordId;
-      const allSignals = (data.signals || []).map((signal: any) => ({
+      const allSignals = (data.signals ?? []).map((signal: any) => ({
         ...signal,
         extractedAt: toDate(signal.extractedAt),
       })) as ExtractedSignal[];

@@ -107,7 +107,7 @@ export async function addToCart(
   const existingItemIndex = cart.items.findIndex(
     item => item.productId === productId && 
             (item.variantId || null) === (variantId || null) &&
-            JSON.stringify(item.variantOptions || {}) === JSON.stringify(variantOptions || {})
+            JSON.stringify(item.variantOptions ?? {}) === JSON.stringify(variantOptions ?? {})
   );
   
   if (existingItemIndex >= 0) {
@@ -371,7 +371,7 @@ async function getProduct(workspaceId: string, productId: string, organizationId
     name: product[mappings.name],
     price: parseFloat(product[mappings.price] || 0),
     description: product[mappings.description],
-    images: product[mappings.images] || [],
+    images: product[mappings.images] ?? [],
     sku: product[mappings.sku],
     stockLevel: product[mappings.inventory],
   };

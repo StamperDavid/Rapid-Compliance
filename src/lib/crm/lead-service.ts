@@ -159,7 +159,7 @@ export async function createLead(
           
           logger.info('Lead auto-enriched on creation', {
             leadId,
-            dataPoints: Object.keys(enrichmentData || {}).length,
+            dataPoints: Object.keys(enrichmentData ?? {}).length,
           });
         }
       } catch (enrichError) {
@@ -370,7 +370,7 @@ export async function enrichLead(
     logger.info('Lead enriched', {
       organizationId,
       leadId,
-      dataPoints: Object.keys(enrichmentData || {}).length,
+      dataPoints: Object.keys(enrichmentData ?? {}).length,
     });
 
     return updatedLead;

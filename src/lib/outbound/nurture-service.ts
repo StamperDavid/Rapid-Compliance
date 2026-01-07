@@ -145,7 +145,7 @@ export async function createNurtureCampaign(
       id: campaignId,
       organizationId,
       status: data.status || 'draft',
-      steps: data.steps || [],
+      steps: data.steps ?? [],
       stats: {
         enrolled: 0,
         active: 0,

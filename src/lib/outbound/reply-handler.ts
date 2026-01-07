@@ -262,7 +262,7 @@ function parseClassificationResponse(
       intent: parsed.intent || 'other',
       sentiment: parsed.sentiment || 'neutral',
       sentimentScore: parsed.sentimentScore || 0,
-      entities: parsed.entities || {},
+      entities: parsed.entities ?? {},
       confidence: parsed.confidence || 50,
       suggestedAction: parsed.suggestedAction || 'escalate_to_human',
       requiresHumanReview: parsed.requiresHumanReview !== false, // Default to true for safety

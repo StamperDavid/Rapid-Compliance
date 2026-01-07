@@ -240,7 +240,7 @@ async function incrementalSync(
               metadataHeaders: ['From', 'To', 'Subject'],
             });
             
-            await updateMessageLabels(organizationId, messageId, fullMessage.data.labelIds || []);
+            await updateMessageLabels(organizationId, messageId, fullMessage.data.labelIds ?? []);
           } catch (err) {
             logger.error('[Gmail Sync] Error updating labels:', err, { file: 'gmail-sync-service.ts' });
             errors++;
@@ -317,7 +317,7 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
   return {
     id: message.id!,
     threadId: message.threadId!,
-    labelIds: message.labelIds || [],
+    labelIds: message.labelIds ?? [],
     snippet: message.snippet || '',
     internalDate: message.internalDate || Date.now().toString(),
     from: getHeader('From'),

@@ -154,7 +154,7 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
       
       // Count deals that passed through each stage
       const fromCount = allDeals.filter(d => {
-        const history = d.stageHistory || [];
+        const history = d.stageHistory ?? [];
         const currentStage = (d.stage || d.status || '').toLowerCase();
         return history.some((h: any) => h.stage?.toLowerCase() === fromStage) || 
                currentStage === fromStage ||
@@ -162,7 +162,7 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
       }).length;
 
       const toCount = allDeals.filter(d => {
-        const history = d.stageHistory || [];
+        const history = d.stageHistory ?? [];
         const currentStage = (d.stage || d.status || '').toLowerCase();
         return history.some((h: any) => h.stage?.toLowerCase() === toStage) || 
                currentStage === toStage ||

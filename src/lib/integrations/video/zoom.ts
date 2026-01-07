@@ -64,7 +64,7 @@ export async function executeZoomFunction(
       }
       
       const recordingsData = await recordingsResponse.json();
-      return recordingsData.meetings || [];
+      return recordingsData.meetings ?? [];
     }
       
     case 'cancelMeeting':

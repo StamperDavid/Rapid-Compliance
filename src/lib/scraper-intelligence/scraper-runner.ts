@@ -481,7 +481,7 @@ export class ProductionScraperRunner implements ScraperRunner {
       });
 
       return {
-        signals: cached.result.signals || [],
+        signals: cached.result.signals ?? [],
         leadScore: cached.result.leadScore || 0,
         tempScrapeId: cached.result.tempScrapeId || '',
         cacheAgeMs: ageMs,

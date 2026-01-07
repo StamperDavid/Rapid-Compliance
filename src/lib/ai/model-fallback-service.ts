@@ -183,7 +183,7 @@ export async function selectBestAvailableModel(
   }
   
   // Try fallback chain
-  const fallbackChain = FALLBACK_CHAINS[preferredModel] || [];
+  const fallbackChain = FALLBACK_CHAINS[preferredModel] ?? [];
   
   for (const fallbackModel of fallbackChain) {
     if (await isModelAvailable(fallbackModel, organizationId)) {

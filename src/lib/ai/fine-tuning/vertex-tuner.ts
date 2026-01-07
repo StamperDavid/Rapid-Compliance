@@ -76,7 +76,7 @@ export async function createVertexAIFineTuningJob(params: {
     provider: 'google',
     baseModel,
     datasetId: 'uploaded',
-    hyperparameters: hyperparameters || {},
+    hyperparameters: hyperparameters ?? {},
     status: 'running',
     progress: 0,
     providerJobId,

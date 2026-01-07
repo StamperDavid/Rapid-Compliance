@@ -77,7 +77,7 @@ export async function createOpenAIFineTuningJob(params: {
     provider: 'openai',
     baseModel,
     datasetId: 'uploaded',
-    hyperparameters: hyperparameters || {},
+    hyperparameters: hyperparameters ?? {},
     status: 'running',
     progress: 0,
     providerJobId: jobData.id,

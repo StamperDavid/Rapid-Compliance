@@ -114,7 +114,7 @@ function calculateTopProducts(orders: any[]): any[] {
   const productMap = new Map<string, { revenue: number; units: number; orders: number; name: string }>();
   
   orders.forEach((order: any) => {
-    const items = order.items || [];
+    const items = order.items ?? [];
     items.forEach((item: any) => {
       const productId = item.productId;
       const productName = item.productName || 'Unknown';

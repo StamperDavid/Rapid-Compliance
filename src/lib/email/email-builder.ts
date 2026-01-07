@@ -150,7 +150,7 @@ export function buildEmailHTML(template: EmailTemplate, variables: Record<string
  * Build individual block HTML
  */
 function buildBlockHTML(block: EmailBlock, globalStyling: EmailTemplate['styling']): string {
-  const style = block.styling || {};
+  const style = block.styling ?? {};
   const alignment = style.alignment || 'left';
   const padding = style.padding || '10px 0';
 

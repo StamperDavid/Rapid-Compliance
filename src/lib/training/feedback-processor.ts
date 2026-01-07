@@ -129,8 +129,8 @@ function parseAnalysisResponse(
     }));
     
     return {
-      strengths: parsed.strengths || [],
-      weaknesses: parsed.weaknesses || [],
+      strengths: parsed.strengths ?? [],
+      weaknesses: parsed.weaknesses ?? [],
       suggestions,
       overallAssessment: parsed.overallAssessment || '',
       confidence: parsed.confidence || 0.8,
