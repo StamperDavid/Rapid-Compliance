@@ -6,10 +6,6 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import type {
-  Node,
-  Edge,
-  Connection} from 'reactflow';
 import ReactFlow, {
   Controls,
   Background,
@@ -18,6 +14,9 @@ import ReactFlow, {
   addEdge,
   ReactFlowProvider,
   MiniMap,
+  type Node,
+  type Edge,
+  type Connection,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import type { Workflow, WorkflowAction } from '@/types/workflow';

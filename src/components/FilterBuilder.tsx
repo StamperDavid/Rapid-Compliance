@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { FilterCondition, FilterGroup, ViewFilter, FilterLogic } from '@/types/filters';
-import { OPERATORS_BY_TYPE } from '@/types/filters';
+import { OPERATORS_BY_TYPE, type FilterCondition, type FilterGroup, type ViewFilter, type FilterLogic } from '@/types/filters';
 
 interface FilterBuilderProps {
   fields: Array<{ key: string; label: string; type: string; options?: string[] }>;

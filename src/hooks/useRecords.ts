@@ -6,8 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { RecordService } from '@/lib/db/firestore-service';
-import type { QueryConstraint } from 'firebase/firestore';
-import { where, orderBy } from 'firebase/firestore'
+import { where, orderBy, type QueryConstraint } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 
 export interface UseRecordsOptions {

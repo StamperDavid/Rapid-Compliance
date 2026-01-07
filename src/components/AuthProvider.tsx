@@ -1,7 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import type { UserRole } from '@/types/permissions'
 import { logger } from '@/lib/logger/logger';

@@ -1,7 +1,6 @@
 'use client';
 
-import type { ReactNode} from 'react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {

@@ -4,8 +4,7 @@
  * Production implementation with all action types supported
  */
 
-import type { Workflow, WorkflowAction, WorkflowCondition } from '@/types/workflow';
-import { WorkflowTrigger } from '@/types/workflow';
+import { WorkflowTrigger, type Workflow, type WorkflowAction, type WorkflowCondition } from '@/types/workflow';
 import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 

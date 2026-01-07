@@ -8,8 +8,7 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
-import type { AdminRole, AdminUser, AdminPermissions } from '@/types/admin';
-import { ADMIN_ROLE_PERMISSIONS } from '@/types/admin'
+import { ADMIN_ROLE_PERMISSIONS, type AdminRole, type AdminUser, type AdminPermissions } from '@/types/admin'
 import { logger } from '@/lib/logger/logger';
 
 export function useAdminAuth() {

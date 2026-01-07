@@ -1,7 +1,6 @@
 'use client';
 
-import type { ReactNode} from 'react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';

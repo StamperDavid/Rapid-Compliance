@@ -3,8 +3,7 @@
  * Compress API responses to reduce bandwidth
  */
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 /**
  * Check if response should be compressed

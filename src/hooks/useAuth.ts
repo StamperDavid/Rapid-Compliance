@@ -7,11 +7,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { UserRole } from '@/types/permissions';
-import { hasPermission, type RolePermissions } from '@/types/permissions';
+import { hasPermission, type UserRole, type RolePermissions } from '@/types/permissions';
 import { onAuthStateChange, type AuthUser } from '@/lib/auth/auth-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 
 export interface AppUser {

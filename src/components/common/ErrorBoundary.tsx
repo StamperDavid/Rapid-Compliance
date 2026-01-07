@@ -14,8 +14,7 @@
 
 'use client';
 
-import type { ReactNode } from 'react';
-import React, { Component } from 'react';
+import React, { Component, type ReactNode } from 'react';
 import { logger } from '@/lib/logger/logger';
 
 interface ErrorBoundaryProps {
