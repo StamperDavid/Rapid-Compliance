@@ -54,14 +54,14 @@ export default function EditContactPage() {
           <div className="bg-gray-900 rounded-lg p-6 mb-4">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-2">First Name</label><input type="text" value={contact.firstName || ''} onChange={(e) => setContact({...contact, firstName: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-                <div><label className="block text-sm font-medium mb-2">Last Name</label><input type="text" value={contact.lastName || ''} onChange={(e) => setContact({...contact, lastName: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">First Name</label><input type="text" value={contact.firstName ?? ''} onChange={(e) => setContact({...contact, firstName: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Last Name</label><input type="text" value={contact.lastName ?? ''} onChange={(e) => setContact({...contact, lastName: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
               </div>
-              <div><label className="block text-sm font-medium mb-2">Email</label><input type="email" value={contact.email || ''} onChange={(e) => setContact({...contact, email: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-              <div><label className="block text-sm font-medium mb-2">Phone</label><input type="tel" value={contact.phone || contact.phoneNumber || ''} onChange={(e) => setContact({...contact, phone: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+              <div><label className="block text-sm font-medium mb-2">Email</label><input type="email" value={contact.email ?? ''} onChange={(e) => setContact({...contact, email: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+              <div><label className="block text-sm font-medium mb-2">Phone</label><input type="tel" value={(contact.phone !== '' && contact.phone != null) ? contact.phone : (contact.phoneNumber ?? '')} onChange={(e) => setContact({...contact, phone: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-2">Company</label><input type="text" value={contact.company || ''} onChange={(e) => setContact({...contact, company: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-                <div><label className="block text-sm font-medium mb-2">Title</label><input type="text" value={contact.title || ''} onChange={(e) => setContact({...contact, title: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Company</label><input type="text" value={contact.company ?? ''} onChange={(e) => setContact({...contact, company: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Title</label><input type="text" value={contact.title ?? ''} onChange={(e) => setContact({...contact, title: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
               </div>
             </div>
           </div>

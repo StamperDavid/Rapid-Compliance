@@ -33,7 +33,7 @@ export default function PipelineAnalyticsPage() {
     }
   };
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

@@ -94,8 +94,8 @@ export default function TemplateBrowserPage() {
             version: 1,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-            createdBy: user?.email || user?.displayName || 'anonymous',
-            lastEditedBy: user?.email || user?.displayName || 'anonymous',
+            createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
+            lastEditedBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
           },
         }),
       });

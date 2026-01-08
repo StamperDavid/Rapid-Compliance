@@ -60,7 +60,7 @@ export default function DealDetailPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold mb-2">{deal.name}</h1>
-            <p className="text-gray-400">{deal.company || deal.companyName}</p>
+            <p className="text-gray-400">{(deal.company !== '' && deal.company != null) ? deal.company : deal.companyName}</p>
           </div>
           <div className="text-right flex items-start gap-4">
             {healthScore && (
@@ -74,8 +74,8 @@ export default function DealDetailPage() {
               </div>
             )}
             <div>
-              <div className="text-3xl font-bold text-green-400">${(deal.value || 0).toLocaleString()}</div>
-              <div className="text-sm text-gray-400">{deal.probability || 0}% probability</div>
+              <div className="text-3xl font-bold text-green-400">${(deal.value ?? 0).toLocaleString()}</div>
+              <div className="text-sm text-gray-400">{deal.probability ?? 0}% probability</div>
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function DealDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-gray-400 mb-1">Stage</div>
-                <div className="capitalize font-medium">{deal.stage?.replace('_', ' ') || 'Unknown'}</div>
+                <div className="capitalize font-medium">{(deal.stage?.replace('_', ' ') !== '' && deal.stage?.replace('_', ' ') != null) ? deal.stage.replace('_', ' ') : 'Unknown'}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-400 mb-1">Expected Close</div>
@@ -136,11 +136,11 @@ export default function DealDetailPage() {
               </div>
               <div>
                 <div className="text-sm text-gray-400 mb-1">Source</div>
-                <div>{deal.source || '-'}</div>
+                <div>{(deal.source !== '' && deal.source != null) ? deal.source : '-'}</div>
               </div>
               <div>
                 <div className="text-sm text-gray-400 mb-1">Owner</div>
-                <div>{deal.owner || deal.ownerId || '-'}</div>
+                <div>{(deal.owner !== '' && deal.owner != null) ? deal.owner : ((deal.ownerId !== '' && deal.ownerId != null) ? deal.ownerId : '-')}</div>
               </div>
             </div>
           </div>
@@ -212,7 +212,7 @@ export default function DealDetailPage() {
               <button 
                 onClick={() => {
                   const subject = `Regarding: ${deal.name}`;
-                  window.location.href = `mailto:${deal.contactEmail || ''}?subject=${encodeURIComponent(subject)}`;
+                  window.location.href = `mailto:${deal.contactEmail ?? ''}?subject=${encodeURIComponent(subject)}`;
                 }}
                 className="w-full px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 text-left"
               >

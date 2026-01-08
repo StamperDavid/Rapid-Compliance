@@ -33,8 +33,8 @@ export default function SEOManagementPage() {
       const response = await fetch(`/api/website/settings?organizationId=${orgId}`);
       if (response.ok) {
         const data = await response.json();
-        setSettings(data.settings || {});
-        setRobotsTxt(data.settings?.robotsTxt || getDefaultRobotsTxt());
+        setSettings(data.settings ?? {});
+        setRobotsTxt((data.settings?.robotsTxt !== '' && data.settings?.robotsTxt != null) ? data.settings.robotsTxt : getDefaultRobotsTxt());
       } else {
         // Initialize defaults
         setSettings({
@@ -176,7 +176,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.seo?.title || ''}
+                value={settings.seo?.title ?? ''}
                 onChange={(e) => updateSEO('title', e.target.value)}
                 placeholder="Your Site Title"
                 style={{
@@ -203,7 +203,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 Site Description:
               </label>
               <textarea
-                value={settings.seo?.description || ''}
+                value={settings.seo?.description ?? ''}
                 onChange={(e) => updateSEO('description', e.target.value)}
                 placeholder="Describe your site..."
                 rows={3}
@@ -234,7 +234,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.seo?.keywords?.join(', ') || ''}
+                value={settings.seo?.keywords?.join(', ') ?? ''}
                 onChange={(e) => updateSEO('keywords', e.target.value.split(',').map(k => k.trim()))}
                 placeholder="keyword1, keyword2, keyword3"
                 style={{
@@ -259,7 +259,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.seo?.ogImage || ''}
+                value={settings.seo?.ogImage ?? ''}
                 onChange={(e) => updateSEO('ogImage', e.target.value)}
                 placeholder="https://yoursite.com/og-image.jpg"
                 style={{
@@ -287,7 +287,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.seo?.favicon || ''}
+                value={settings.seo?.favicon ?? ''}
                 onChange={(e) => updateSEO('favicon', e.target.value)}
                 placeholder="https://yoursite.com/favicon.ico"
                 style={{
@@ -365,7 +365,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.analytics?.googleAnalyticsId || ''}
+                value={settings.analytics?.googleAnalyticsId ?? ''}
                 onChange={(e) => updateAnalytics('googleAnalyticsId', e.target.value)}
                 placeholder="G-XXXXXXXXXX"
                 style={{
@@ -390,7 +390,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.analytics?.googleTagManagerId || ''}
+                value={settings.analytics?.googleTagManagerId ?? ''}
                 onChange={(e) => updateAnalytics('googleTagManagerId', e.target.value)}
                 placeholder="GTM-XXXXXX"
                 style={{
@@ -415,7 +415,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.analytics?.facebookPixelId || ''}
+                value={settings.analytics?.facebookPixelId ?? ''}
                 onChange={(e) => updateAnalytics('facebookPixelId', e.target.value)}
                 placeholder="XXXXXXXXXXXXXXX"
                 style={{
@@ -440,7 +440,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               </label>
               <input
                 type="text"
-                value={settings.analytics?.hotjarId || ''}
+                value={settings.analytics?.hotjarId ?? ''}
                 onChange={(e) => updateAnalytics('hotjarId', e.target.value)}
                 placeholder="XXXXXXX"
                 style={{

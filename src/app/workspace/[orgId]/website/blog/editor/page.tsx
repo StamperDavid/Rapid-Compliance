@@ -43,7 +43,7 @@ export default function BlogPostEditorPage() {
       const response = await fetch(`/api/website/blog/categories?organizationId=${orgId}`);
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        setCategories(data.categories ?? []);
       }
     } catch (error) {
       console.error('[Blog Editor] Load categories error:', error);
@@ -59,7 +59,7 @@ export default function BlogPostEditorPage() {
       
       const data = await response.json();
       setPost(data.post);
-      setTags(data.post.tags || []);
+      setTags(data.post.tags ?? []);
     } catch (error) {
       console.error('[Blog Editor] Load error:', error);
       alert('Failed to load post');
@@ -87,7 +87,7 @@ export default function BlogPostEditorPage() {
       views: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: user?.email || user?.displayName || 'anonymous',
+      createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
       lastEditedBy: 'current-user',
       author: 'current-user',
       authorName: 'Current User',
@@ -118,7 +118,7 @@ export default function BlogPostEditorPage() {
             ...post,
             tags,
             updatedAt: new Date().toISOString(),
-            lastEditedBy: user?.email || user?.displayName || 'anonymous',
+            lastEditedBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
           },
         }),
       });
@@ -369,7 +369,7 @@ export default function BlogPostEditorPage() {
               </label>
               <input
                 type="text"
-                value={post.featuredImage || ''}
+                value={post.featuredImage ?? ''}
                 onChange={(e) => updatePost({ featuredImage: e.target.value })}
                 placeholder="https://..."
                 style={{

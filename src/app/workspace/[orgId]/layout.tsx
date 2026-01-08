@@ -20,8 +20,8 @@ export default function WorkspaceLayout({
   const { theme } = useOrgTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
-  const brandName = theme?.branding?.companyName || 'AI CRM';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
+  const brandName = (theme?.branding?.companyName !== '' && theme?.branding?.companyName != null) ? theme.branding.companyName : 'AI CRM';
   const logoUrl = theme?.branding?.logoUrl;
 
   // Complete navigation

@@ -60,7 +60,7 @@ export default function WebsiteSettingsPage() {
       }
     } catch (error: any) {
       console.error('[Website Settings] Load error:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to load settings' });
+      setMessage({ type: 'error', text: (error.message !== '' && error.message != null) ? error.message : 'Failed to load settings' });
     } finally {
       setLoading(false);
     }
@@ -87,16 +87,16 @@ export default function WebsiteSettingsPage() {
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
     } catch (error: any) {
       console.error('[Website Settings] Save error:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to save settings' });
+      setMessage({ type: 'error', text: (error.message !== '' && error.message != null) ? error.message : 'Failed to save settings' });
     } finally {
       setSaving(false);
     }
   }
 
-  const primaryColor = theme?.colors?.primary?.main || '#3b82f6';
-  const bgPaper = theme?.colors?.background?.paper || '#1a1a1a';
-  const textPrimary = theme?.colors?.text?.primary || '#ffffff';
-  const textSecondary = theme?.colors?.text?.secondary || '#9ca3af';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#3b82f6';
+  const bgPaper = (theme?.colors?.background?.paper !== '' && theme?.colors?.background?.paper != null) ? theme.colors.background.paper : '#1a1a1a';
+  const textPrimary = (theme?.colors?.text?.primary !== '' && theme?.colors?.text?.primary != null) ? theme.colors.text.primary : '#ffffff';
+  const textSecondary = (theme?.colors?.text?.secondary !== '' && theme?.colors?.text?.secondary != null) ? theme.colors.text.secondary : '#9ca3af';
 
   if (loading) {
     return (
@@ -158,7 +158,7 @@ export default function WebsiteSettingsPage() {
               <span style={{ color: '#666' }}>.yourplatform.com</span>
             </div>
             <small style={{ color: '#666', marginTop: '0.25rem', display: 'block' }}>
-              Your site will be accessible at {settings.subdomain || 'your-subdomain'}.yourplatform.com
+              Your site will be accessible at {(settings.subdomain !== '' && settings.subdomain != null) ? settings.subdomain : 'your-subdomain'}.yourplatform.com
             </small>
           </div>
 

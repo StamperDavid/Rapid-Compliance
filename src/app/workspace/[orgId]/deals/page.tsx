@@ -96,8 +96,8 @@ export default function DealsPage() {
                     {stageDeals.map(deal => (
                       <div key={deal.id} onClick={() => router.push(`/workspace/${orgId}/deals/${deal.id}`)} className="bg-gray-800 rounded p-3 cursor-pointer hover:bg-gray-700 transition">
                         <div className="font-medium text-sm mb-1">{deal.name}</div>
-                        <div className="text-xs text-gray-400 mb-2">{deal.company || deal.companyName}</div>
-                        <div className="text-sm font-semibold text-green-400">${(deal.value || 0).toLocaleString()}</div>
+                        <div className="text-xs text-gray-400 mb-2">{(deal.company !== '' && deal.company != null) ? deal.company : deal.companyName}</div>
+                        <div className="text-sm font-semibold text-green-400">${(deal.value ?? 0).toLocaleString()}</div>
                       </div>
                     ))}
                   </div>
@@ -143,10 +143,10 @@ export default function DealsPage() {
                 deals.map(deal => (
                   <tr key={deal.id} className="border-t border-gray-800 hover:bg-gray-800/50">
                     <td className="p-4 font-medium">{deal.name}</td>
-                    <td className="p-4 text-gray-400">{deal.company || deal.companyName}</td>
-                    <td className="p-4 text-green-400 font-semibold">${(deal.value || 0).toLocaleString()}</td>
+                    <td className="p-4 text-gray-400">{(deal.company !== '' && deal.company != null) ? deal.company : deal.companyName}</td>
+                    <td className="p-4 text-green-400 font-semibold">${(deal.value ?? 0).toLocaleString()}</td>
                     <td className="p-4"><span className="px-2 py-1 rounded text-xs bg-blue-900 text-blue-300 capitalize">{deal.stage?.replace('_', ' ')}</span></td>
-                    <td className="p-4 text-gray-400">{deal.probability || 0}%</td>
+                    <td className="p-4 text-gray-400">{deal.probability ?? 0}%</td>
                     <td className="p-4">
                       <button onClick={() => router.push(`/workspace/${orgId}/deals/${deal.id}`)} className="text-blue-400 hover:text-blue-300">View</button>
                     </td>

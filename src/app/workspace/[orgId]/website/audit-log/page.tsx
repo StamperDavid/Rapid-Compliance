@@ -35,7 +35,7 @@ export default function AuditLogPage() {
   const [filter, setFilter] = useState<string>('all');
 
   // Theme colors
-  const primaryColor = theme?.colors?.primary?.main || '#3b82f6';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#3b82f6';
 
   useEffect(() => {
     loadAuditLog();
@@ -256,7 +256,7 @@ export default function AuditLogPage() {
                 {/* Event Details */}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
-                    {entry.pageTitle || entry.domain || 'Event'}
+                    {(entry.pageTitle !== '' && entry.pageTitle != null) ? entry.pageTitle : ((entry.domain !== '' && entry.domain != null) ? entry.domain : 'Event')}
                   </div>
                   
                   <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>

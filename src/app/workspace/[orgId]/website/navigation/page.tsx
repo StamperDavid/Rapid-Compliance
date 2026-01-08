@@ -88,7 +88,7 @@ export default function NavigationManagementPage() {
           navigation: {
             ...navigation,
             updatedAt: new Date().toISOString(),
-            updatedBy: user?.email || user?.displayName || 'anonymous',
+            updatedBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
           },
         }),
       });

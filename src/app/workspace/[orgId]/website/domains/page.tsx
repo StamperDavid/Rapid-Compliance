@@ -46,9 +46,9 @@ export default function CustomDomainsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Get theme colors
-  const primaryColor = theme?.colors?.primary?.main || '#3b82f6';
-  const bgColor = theme?.colors?.background?.main || '#000000';
-  const textColor = theme?.colors?.text?.primary || '#ffffff';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#3b82f6';
+  const bgColor = (theme?.colors?.background?.main !== '' && theme?.colors?.background?.main != null) ? theme.colors.background.main : '#000000';
+  const textColor = (theme?.colors?.text?.primary !== '' && theme?.colors?.text?.primary != null) ? theme.colors.text.primary : '#ffffff';
 
   useEffect(() => {
     loadDomains();
@@ -66,10 +66,10 @@ export default function CustomDomainsPage() {
       }
 
       const data = await response.json();
-      setDomains(data.domains || []);
+      setDomains(data.domains ?? []);
     } catch (err: any) {
       console.error('[Domains] Error loading:', err);
-      setError(err.message || 'Failed to load domains');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load domains');
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export default function CustomDomainsPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to add domain');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to add domain');
       }
 
       const data = await response.json();
@@ -116,7 +116,7 @@ export default function CustomDomainsPage() {
       setSuccess('Domain added successfully! Please configure DNS records.');
     } catch (err: any) {
       console.error('[Domains] Error adding:', err);
-      setError(err.message || 'Failed to add domain');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to add domain');
     } finally {
       setAdding(false);
     }
@@ -135,7 +135,7 @@ export default function CustomDomainsPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Verification failed');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Verification failed');
       }
 
       const data = await response.json();
@@ -148,7 +148,7 @@ export default function CustomDomainsPage() {
       }
     } catch (err: any) {
       console.error('[Domains] Error verifying:', err);
-      setError(err.message || 'Failed to verify domain');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to verify domain');
     }
   };
 
@@ -173,7 +173,7 @@ export default function CustomDomainsPage() {
       setSuccess('Domain removed successfully');
     } catch (err: any) {
       console.error('[Domains] Error removing:', err);
-      setError(err.message || 'Failed to remove domain');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to remove domain');
     }
   };
 

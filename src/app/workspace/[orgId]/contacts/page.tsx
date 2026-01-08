@@ -91,11 +91,11 @@ export default function ContactsPage() {
               <div key={contact.id} onClick={() => router.push(`/workspace/${orgId}/contacts/${contact.id}`)} className="bg-gray-900 rounded-lg p-6 hover:bg-gray-800/50 transition cursor-pointer">
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-xl font-bold">
-                    {(contact.name || contact.firstName || 'U').charAt(0).toUpperCase()}
+                    {((contact.name !== '' && contact.name != null) ? contact.name : ((contact.firstName !== '' && contact.firstName != null) ? contact.firstName : 'U')).charAt(0).toUpperCase()}
                   </div>
                   {contact.isVIP && <span className="px-2 py-1 bg-yellow-900 text-yellow-300 rounded text-xs font-medium">VIP</span>}
                 </div>
-                <h3 className="font-semibold text-lg mb-1">{contact.name || `${contact.firstName} ${contact.lastName}`}</h3>
+                <h3 className="font-semibold text-lg mb-1">{(contact.name !== '' && contact.name != null) ? contact.name : `${contact.firstName} ${contact.lastName}`}</h3>
                 {contact.title && <p className="text-sm text-gray-400 mb-2">{contact.title}</p>}
                 {contact.company && <p className="text-sm text-gray-400 mb-3">{contact.company}</p>}
                 <div className="space-y-1 text-sm">

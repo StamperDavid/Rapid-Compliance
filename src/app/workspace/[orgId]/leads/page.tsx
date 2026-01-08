@@ -104,26 +104,26 @@ export default function LeadsPage() {
             ) : (
               leads.map(lead => (
                 <tr key={lead.id} className="border-t border-gray-800 hover:bg-gray-800/50">
-                  <td className="p-4 font-medium">{lead.name || `${lead.firstName  } ${  lead.lastName}`}</td>
-                  <td className="p-4 text-gray-400">{lead.company || lead.companyName}</td>
+                  <td className="p-4 font-medium">{(lead.name !== '' && lead.name != null) ? lead.name : `${lead.firstName  } ${  lead.lastName}`}</td>
+                  <td className="p-4 text-gray-400">{(lead.company !== '' && lead.company != null) ? lead.company : lead.companyName}</td>
                   <td className="p-4 text-gray-400">{lead.email}</td>
-                  <td className="p-4 text-gray-400">{lead.phone || 'N/A'}</td>
+                  <td className="p-4 text-gray-400">{(lead.phone !== '' && lead.phone != null) ? lead.phone : 'N/A'}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                      (lead.score || 50) >= 75 ? 'bg-red-600 text-white' : 
-                      (lead.score || 50) >= 50 ? 'bg-orange-500 text-white' : 
+                      (lead.score ?? 50) >= 75 ? 'bg-red-600 text-white' : 
+                      (lead.score ?? 50) >= 50 ? 'bg-orange-500 text-white' : 
                       'bg-blue-500 text-white'
                     }`}>
-                      {(lead.score || 50) >= 75 ? '🔥 HOT' : (lead.score || 50) >= 50 ? '☀️ WARM' : '❄️ COLD'}
+                      {(lead.score ?? 50) >= 75 ? '🔥 HOT' : (lead.score ?? 50) >= 50 ? '☀️ WARM' : '❄️ COLD'}
                     </span>
                   </td>
                   <td className="p-4">
-                    <span className={`px-2 py-1 rounded text-xs ${(lead.score || 0) >= 80 ? 'bg-green-900 text-green-300' : (lead.score || 0) >= 60 ? 'bg-yellow-900 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>
-                      {lead.score || 50}
+                    <span className={`px-2 py-1 rounded text-xs ${(lead.score ?? 0) >= 80 ? 'bg-green-900 text-green-300' : (lead.score ?? 0) >= 60 ? 'bg-yellow-900 text-yellow-300' : 'bg-gray-700 text-gray-300'}`}>
+                      {lead.score ?? 50}
                     </span>
                   </td>
                   <td className="p-4">
-                    <span className="px-2 py-1 rounded text-xs bg-blue-900 text-blue-300 capitalize">{lead.status || 'new'}</span>
+                    <span className="px-2 py-1 rounded text-xs bg-blue-900 text-blue-300 capitalize">{(lead.status !== '' && lead.status != null) ? lead.status : 'new'}</span>
                   </td>
                   <td className="p-4">
                     <button onClick={() => router.push(`/workspace/${orgId}/leads/${lead.id}`)} className="text-blue-400 hover:text-blue-300">View</button>

@@ -374,7 +374,7 @@ export default function BlogManagementPage() {
                   </p>
 
                   <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#adb5bd', marginBottom: '1rem' }}>
-                    <span>By {post.authorName || 'Unknown'}</span>
+                    <span>By {(post.authorName !== '' && post.authorName != null) ? post.authorName : 'Unknown'}</span>
                     <span>•</span>
                     <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                     {post.categories.length > 0 && (

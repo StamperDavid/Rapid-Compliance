@@ -136,8 +136,8 @@ export default function PageEditorPage() {
       version: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: user?.email || user?.displayName || 'anonymous',
-      lastEditedBy: user?.email || user?.displayName || 'anonymous',
+      createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
+      lastEditedBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
     };
 
     setPage(newPage);
@@ -165,7 +165,7 @@ export default function PageEditorPage() {
           page: {
             ...page,
             updatedAt: new Date().toISOString(),
-            lastEditedBy: user?.email || user?.displayName || 'anonymous',
+            lastEditedBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
           },
         }),
       });
@@ -206,7 +206,7 @@ export default function PageEditorPage() {
             thumbnail: `https://via.placeholder.com/400x300/6c757d/ffffff?text=${  encodeURIComponent(templateName)}`,
             content: page.content,
             isPublic: false,
-            createdBy: user?.email || user?.displayName || 'anonymous',
+            createdBy: (user?.email !== '' && user?.email != null) ? user.email : ((user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'anonymous'),
           },
         }),
       });

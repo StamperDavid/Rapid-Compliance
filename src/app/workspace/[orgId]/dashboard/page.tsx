@@ -61,7 +61,7 @@ export default function WorkspaceDashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -93,7 +93,7 @@ export default function WorkspaceDashboardPage() {
 
         dealsSnapshot.forEach((doc) => {
           const data = doc.data();
-          const stage = data.stage || data.status || 'Unknown';
+          const stage = (data.stage !== '' && data.stage != null) ? data.stage : ((data.status !== '' && data.status != null) ? data.status : 'Unknown');
           const value = Number(data.value) || Number(data.amount) || 0;
 
           if (!stageMap[stage]) {
@@ -152,10 +152,10 @@ export default function WorkspaceDashboardPage() {
             const data = doc.data();
             return {
               id: doc.id,
-              title: data.title || data.name || 'Untitled Task',
-              priority: data.priority || 'Normal',
+              title: (data.title !== '' && data.title != null) ? data.title : ((data.name !== '' && data.name != null) ? data.name : 'Untitled Task'),
+              priority: (data.priority !== '' && data.priority != null) ? data.priority : 'Normal',
               dueDate: data.dueDate ? new Date(data.dueDate.seconds * 1000).toLocaleDateString() : 'No due date',
-              completed: data.completed || false,
+              completed: data.completed ?? false,
             };
           });
         } catch (e) {
@@ -184,7 +184,7 @@ export default function WorkspaceDashboardPage() {
               id: doc.id,
               type: 'deal',
               action: 'New deal created',
-              detail: `${data.name || 'Unnamed Deal'} - $${(data.value || 0).toLocaleString()}`,
+              detail: `${(data.name !== '' && data.name != null) ? data.name : 'Unnamed Deal'} - $${(data.value ?? 0).toLocaleString()}`,
               time: getTimeAgo(createdAt),
               icon: '💼',
             });
@@ -210,7 +210,7 @@ export default function WorkspaceDashboardPage() {
               id: doc.id,
               type: 'lead',
               action: 'New lead',
-              detail: `${data.name || data.firstName || 'Unknown'} ${data.lastName || ''} - ${data.company || 'No company'}`,
+              detail: `${(data.name !== '' && data.name != null) ? data.name : ((data.firstName !== '' && data.firstName != null) ? data.firstName : 'Unknown')} ${(data.lastName !== '' && data.lastName != null) ? data.lastName : ''} - ${(data.company !== '' && data.company != null) ? data.company : 'No company'}`,
               time: getTimeAgo(createdAt),
               icon: '🎯',
             });
