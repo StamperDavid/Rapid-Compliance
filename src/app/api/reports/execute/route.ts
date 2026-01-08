@@ -153,20 +153,39 @@ async function executePipelineReport(orgId: string, config: any, parameters: any
 /**
  * Leads Report
  */
+interface LeadData {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  status?: string;
+  source?: string;
+  createdAt: any;
+}
+
+interface DealData {
+  id: string;
+  name: string;
+  value: string | number;
+  stage?: string;
+  status?: string;
+}
+
 async function executeLeadsReport(orgId: string, config: any, parameters: any) {
   const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/leads/records`;
   const allLeads = await FirestoreService.getAll(leadsPath, []);
   
   // Group by status
   const statusMap = new Map<string, number>();
-  allLeads.forEach((lead: any) => {
+  allLeads.forEach((lead: LeadData) => {
     const status =(lead.status !== '' && lead.status != null) ? lead.status : 'new';
     statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
   });
   
   // Group by source
   const sourceMap = new Map<string, number>();
-  allLeads.forEach((lead: any) => {
+  allLeads.forEach((lead: LeadData) => {
     const source =(lead.source !== '' && lead.source != null) ? lead.source : 'direct';
     sourceMap.set(source, (sourceMap.get(source) ?? 0) + 1);
   });
@@ -176,7 +195,7 @@ async function executeLeadsReport(orgId: string, config: any, parameters: any) {
     totalLeads: allLeads.length,
     byStatus: Array.from(statusMap.entries()).map(([status, count]) => ({ status, count })),
     bySource: Array.from(sourceMap.entries()).map(([source, count]) => ({ source, count })),
-    recentLeads: allLeads.slice(0, 10).map((lead: any) => ({
+    recentLeads: allLeads.slice(0, 10).map((lead: LeadData) => ({
       id: lead.id,
       name:(lead.name !== '' && lead.name != null) ? lead.name : `${lead.firstName} ${lead.lastName}`,
       email: lead.email,
@@ -193,13 +212,13 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals/records`;
   const allDeals = await FirestoreService.getAll(dealsPath, []);
   
-  const totalValue = allDeals.reduce((sum: number, deal: any) => sum + (parseFloat(deal.value) || 0), 0);
+  const totalValue = allDeals.reduce((sum: number, deal: DealData) => sum + (parseFloat(deal.value.toString()) || 0), 0);
   
   // Group by stage
   const stageMap = new Map<string, { count: number; value: number }>();
-  allDeals.forEach((deal: any) => {
+  allDeals.forEach((deal: DealData) => {
     const stage =(deal.stage || deal.status !== '' && deal.stage || deal.status != null) ? deal.stage ?? deal.status: 'new';
-    const value = parseFloat(deal.value) || 0;
+    const value = parseFloat(deal.value.toString()) || 0;
     const existing = stageMap.get(stage) ?? { count: 0, value: 0 };
     stageMap.set(stage, {
       count: existing.count + 1,
@@ -218,9 +237,9 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
       value: data.value,
     })),
     topDeals: allDeals
-      .sort((a: any, b: any) => (parseFloat(b.value) || 0) - (parseFloat(a.value) || 0))
+      .sort((a: DealData, b: DealData) => (parseFloat(b.value.toString()) || 0) - (parseFloat(a.value.toString()) || 0))
       .slice(0, 10)
-      .map((deal: any) => ({
+      .map((deal: DealData) => ({
         id: deal.id,
         name: deal.name,
         value: deal.value,

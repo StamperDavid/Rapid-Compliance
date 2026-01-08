@@ -33,6 +33,37 @@ export interface EmailThread {
   messageCount: number;
 }
 
+interface OutlookEmailMessage {
+  id: string;
+  conversationId: string;
+  from?: {
+    emailAddress?: {
+      address?: string;
+      name?: string;
+    };
+  };
+  toRecipients?: Array<{
+    emailAddress?: {
+      address?: string;
+      name?: string;
+    };
+  }>;
+  ccRecipients?: Array<{
+    emailAddress?: {
+      address?: string;
+      name?: string;
+    };
+  }>;
+  subject?: string;
+  body?: {
+    content?: string;
+    contentType?: string;
+  };
+  receivedDateTime: string;
+  isRead: boolean;
+  hasAttachments: boolean;
+}
+
 /**
  * Fetch new emails from Gmail
  */
@@ -187,12 +218,20 @@ export async function fetchOutlookInbox(
     }
 
     const data = await response.json();
-    const messages: EmailMessage[] = data.value.map((msg: any) => ({
+    
+    interface OutlookRecipient {
+      emailAddress?: {
+        address?: string;
+        name?: string;
+      };
+    }
+    
+    const messages: EmailMessage[] = data.value.map((msg: OutlookEmailMessage) => ({
       id: msg.id,
       threadId: msg.conversationId,
       from: (msg.from?.emailAddress?.address !== '' && msg.from?.emailAddress?.address != null) ? msg.from.emailAddress.address : '',
-      to: msg.toRecipients?.map((r: any) => r.emailAddress?.address) ?? [],
-      cc: msg.ccRecipients?.map((r: any) => r.emailAddress?.address) ?? [],
+      to: msg.toRecipients?.map((r: OutlookRecipient) => r.emailAddress?.address) ?? [],
+      cc: msg.ccRecipients?.map((r: OutlookRecipient) => r.emailAddress?.address) ?? [],
       subject: (msg.subject !== '' && msg.subject != null) ? msg.subject : '',
       body: (msg.body?.content !== '' && msg.body?.content != null) ? msg.body.content : '',
       htmlBody: msg.body?.contentType === 'html' ? msg.body?.content : undefined,

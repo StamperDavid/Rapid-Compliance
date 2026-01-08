@@ -146,7 +146,26 @@ export async function fetchShopifyOrders(
 
     const data = await response.json();
 
-    const orders: ShopifyOrder[] = data.orders.map((order: any) => ({
+    interface ShopifyOrderResponse {
+      id: number;
+      order_number: number;
+      email?: string;
+      customer?: {
+        email?: string;
+        first_name?: string;
+        last_name?: string;
+      };
+      line_items: Array<{
+        product_id?: number;
+        title: string;
+        quantity: number;
+        price: string;
+      }>;
+      total_price: string;
+      created_at: string;
+    }
+
+    const orders: ShopifyOrder[] = data.orders.map((order: ShopifyOrderResponse) => ({
       id: order.id.toString(),
       orderNumber: order.order_number.toString(),
       customer: {
@@ -154,7 +173,7 @@ export async function fetchShopifyOrders(
         firstName: order.customer?.first_name,
         lastName: order.customer?.last_name,
       },
-      lineItems: order.line_items.map((item: any) => ({
+      lineItems: order.line_items.map((item) => ({
         productId: item.product_id?.toString(),
         title: item.title,
         quantity: item.quantity,

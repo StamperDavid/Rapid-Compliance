@@ -305,7 +305,21 @@ function buildNativeSequencePerformance(
   };
 
   // Aggregate step metrics
-  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: any) => {
+  interface SequenceStepData {
+    id: string;
+    stepIndex: number;
+    channel: string;
+    action: string;
+    metrics?: {
+      sent?: number;
+      delivered?: number;
+      opened?: number;
+      clicked?: number;
+      replied?: number;
+    };
+  }
+
+  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: SequenceStepData) => {
     const sent = step.metrics?.sent ?? 0;
     const delivered = step.metrics?.delivered ?? 0;
     const opened = step.metrics?.opened ?? 0;

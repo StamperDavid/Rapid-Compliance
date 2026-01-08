@@ -182,13 +182,19 @@ export class CoachingAnalyticsEngine {
       
       // Calculate average deal size
       const wonDeals = deals.filter((d: any) => d.status === 'won');
-      const totalValue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+      interface DealData {
+        value?: number;
+        createdAt?: { toDate?: () => Date } | Date | string;
+        closedAt?: { toDate?: () => Date } | Date | string;
+      }
+      
+      const totalValue = wonDeals.reduce((sum: number, d: DealData) => sum + (d.value ?? 0), 0);
       const averageDealSize = wonDeals.length > 0 ? totalValue / wonDeals.length : 0;
       
       // Calculate average deal cycle
       const cycleTimes = wonDeals
-        .filter((d: any) => d.createdAt && d.closedAt)
-        .map((d: any) => {
+        .filter((d: DealData) => d.createdAt && d.closedAt)
+        .map((d: DealData) => {
           const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
           const closed = d.closedAt.toDate ? d.closedAt.toDate() : new Date(d.closedAt);
           return (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);

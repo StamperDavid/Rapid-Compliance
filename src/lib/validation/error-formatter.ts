@@ -3,6 +3,8 @@
  * Purpose: Eliminate unsafe || patterns and provide consistent error handling
  */
 
+import type { ValidationErrorDetail } from '@/types/api-errors';
+
 interface ValidationError {
   path?: (string | number)[];
   message?: string;
@@ -33,8 +35,8 @@ export function formatValidationError(error: ValidationError): FormattedError {
  * @param validationResult - The validation result object containing errors
  * @returns Array of formatted errors
  */
-export function formatValidationErrors(validationResult: { success: false; errors: any }): FormattedError[] {
-  const errorDetails = validationResult.errors?.errors?.map((e: any) => {
+export function formatValidationErrors(validationResult: { success: false; errors: { errors?: ValidationErrorDetail[] } }): FormattedError[] {
+  const errorDetails = validationResult.errors?.errors?.map((e: ValidationErrorDetail) => {
     return formatValidationError(e);
   }) ?? [];
   

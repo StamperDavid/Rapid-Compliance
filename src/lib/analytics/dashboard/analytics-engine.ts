@@ -413,10 +413,15 @@ async function getEmailMetrics(
   const totalGenerated = emails.length;
   const totalSent = emails.filter((e: any) => e.sent).length;
   
+  interface EmailData {
+    generationTime?: number;
+    type?: string;
+  }
+  
   // Calculate average generation time
   const generationTimes = emails
-    .filter((e: any) => e.generationTime)
-    .map((e: any) => e.generationTime);
+    .filter((e: EmailData) => e.generationTime)
+    .map((e: EmailData) => e.generationTime as number);
   
   const averageGenerationTime = generationTimes.length > 0
     ? generationTimes.reduce((sum: number, t: number) => sum + t, 0) / generationTimes.length
@@ -424,7 +429,7 @@ async function getEmailMetrics(
   
   // Get most used type
   const typeCount = new Map<string, number>();
-  emails.forEach((e: any) => {
+  emails.forEach((e: EmailData) => {
     const type = e.type ?? 'unknown';
     typeCount.set(type, (typeCount.get(type) ?? 0) + 1);
   });
