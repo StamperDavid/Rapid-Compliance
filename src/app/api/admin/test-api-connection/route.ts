@@ -120,7 +120,8 @@ async function testOpenAIConnection(apiKey?: string): Promise<{ success: boolean
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
+      const errDataMsg = errorData.error?.message;
+      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage
@@ -166,7 +167,8 @@ async function testAnthropicConnection(apiKey?: string): Promise<{ success: bool
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
+      const errDataMsg = errorData.error?.message;
+      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage
@@ -213,7 +215,8 @@ async function testOpenRouterConnection(apiKey?: string): Promise<{ success: boo
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
+      const errDataMsg = errorData.error?.message;
+      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage
@@ -256,7 +259,8 @@ async function testGeminiConnection(apiKey?: string): Promise<{ success: boolean
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
+      const errDataMsg = errorData.error?.message;
+      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage

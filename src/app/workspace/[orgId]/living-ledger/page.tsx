@@ -40,9 +40,12 @@ export default function LivingLedgerPage() {
         // For demo purposes, using mock data
         // In production, this would fetch from Firestore
         const mockDeals: Deal[] = [
+        const userOrgId = user?.organizationId;
+        const defaultOrgId = (userOrgId !== '' && userOrgId != null) ? userOrgId : 'default-org';
+        const mockDealsData: Deal[] = [
           {
             id: 'deal-1',
-            organizationId: user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
+            organizationId: defaultOrgId,
             workspaceId: 'default',
             name: 'Q1 2024 Enterprise Contract - Acme Corp',
             companyName: 'Acme Corp',
@@ -54,7 +57,7 @@ export default function LivingLedgerPage() {
           },
           {
             id: 'deal-2',
-            organizationId: user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
+            organizationId: defaultOrgId,
             workspaceId: 'default',
             name: 'Startup Package - TechFlow',
             companyName: 'TechFlow Inc',
@@ -66,7 +69,7 @@ export default function LivingLedgerPage() {
           },
           {
             id: 'deal-3',
-            organizationId: user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
+            organizationId: defaultOrgId,
             workspaceId: 'default',
             name: 'Consulting Services - Global Industries',
             companyName: 'Global Industries',
@@ -78,11 +81,11 @@ export default function LivingLedgerPage() {
           },
         ];
 
-        setDeals(mockDeals);
+        setDeals(mockDealsData);
         
         // Auto-select first deal
-        if (mockDeals.length > 0) {
-          setSelectedDealId(mockDeals[0].id);
+        if (mockDealsData.length > 0) {
+          setSelectedDealId(mockDealsData[0].id);
         }
 
         setLoading(false);
@@ -158,7 +161,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
+          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : 'default-org'; })(),
           'x-workspace-id': 'default',
         },
         body: JSON.stringify({
@@ -184,7 +187,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
+          'x-organization-id': (() => { const v = user?.organizationId; return (v !== '' && v != null) ? v : 'default-org'; })(),
           'x-workspace-id': 'default',
         },
       });

@@ -1220,9 +1220,9 @@ async function synthesizePersonData(
 Email: ${email}
 Name: ${(personData.fullName !== '' && personData.fullName != null) ? personData.fullName : 'Unknown'}
 Title: ${(personData.title !== '' && personData.title != null) ? personData.title : 'Unknown'}
-Company: ${personData.currentRole?(.company !== '' && .company != null) ? .company : 'Unknown'}
-LinkedIn: ${personData.socialProfiles?(.linkedin !== '' && .linkedin != null) ? .linkedin : 'Not found'}
-GitHub: ${personData.socialProfiles?(.github !== '' && .github != null) ? .github : 'Not found'}
+Company: ${(() => { const v = personData.currentRole?.company; return (v !== '' && v != null) ? v : 'Unknown'; })()}
+LinkedIn: ${(() => { const v = personData.socialProfiles?.linkedin; return (v !== '' && v != null) ? v : 'Not found'; })()}
+GitHub: ${(() => { const v = personData.socialProfiles?.github; return (v !== '' && v != null) ? v : 'Not found'; })()}
 
 Discovery methods used: ${methods.join(', ')}
 

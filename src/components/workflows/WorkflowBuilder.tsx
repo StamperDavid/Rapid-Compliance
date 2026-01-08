@@ -53,7 +53,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
     const newAction: WorkflowAction = {
       id: `action_${Date.now()}`,
       type: selectedActionType as any,
-      name: actionTypes.find(a => a.value === selectedActionType)?(.label !== '' && .label != null) ? .label : 'Action',
+      name: (() => { const v = actionTypes.find(a => a.value === selectedActionType)?.label; return (v !== '' && v != null) ? v : 'Action'; })(),
     } as WorkflowAction;
 
     setActions([...actions, newAction]);
@@ -72,7 +72,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
       trigger: {
         id: `trigger_${Date.now()}`,
         type: triggerType as any,
-        name: triggerTypes.find(t => t.value === triggerType)?(.label !== '' && .label != null) ? .label : 'Trigger',
+        name: (() => { const v = triggerTypes.find(t => t.value === triggerType)?.label; return (v !== '' && v != null) ? v : 'Trigger'; })(),
       } as WorkflowTrigger,
       actions,
       settings: {
@@ -208,7 +208,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span style={{ fontSize: '1.25rem' }}>
-                        {actionTypes.find(a => a.value === action.type)?(.icon !== '' && .icon != null) ? .icon : '⚙️'}
+                        {(() => { const v = actionTypes.find(a => a.value === action.type)?.icon; return (v !== '' && v != null) ? v : '⚙️'; })()}
                       </span>
                       <div>
                         <div style={{ fontSize: '0.875rem', fontWeight: '500', color: textColor }}>

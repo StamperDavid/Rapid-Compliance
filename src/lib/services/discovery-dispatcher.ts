@@ -368,7 +368,7 @@ async function processTasks(
         results.push(createFailureResult(
           {
             code: 'DISPATCHER_ERROR',
-            message: result.reason?(.message !== '' && .message != null) ? .message : 'Unknown error',
+            message: (() => { const v = result.reason?.message; return (v !== '' && v != null) ? v : 'Unknown error'; })(),
             retryable: true,
           },
           { durationMs: 0 }

@@ -69,7 +69,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
           <div className="space-y-2">
             <Label>Primary Source</Label>
             <Select
-              value={template.research?.scrapingStrategy?(.primarySource !== '' && .primarySource != null) ? .primarySource : 'website'}
+              value={(() => { const v = template.research?.scrapingStrategy?.primarySource; return (v !== '' && v != null) ? v : 'website'; })()}
               onValueChange={val => handleScrapingStrategyChange('primarySource', val)}
             >
               <SelectTrigger disabled={disabled}>
@@ -86,7 +86,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
           <div className="space-y-2">
             <Label>Frequency</Label>
             <Select
-              value={template.research?.scrapingStrategy?(.frequency !== '' && .frequency != null) ? .frequency : 'per-lead'}
+              value={(() => { const v = template.research?.scrapingStrategy?.frequency; return (v !== '' && v != null) ? v : 'per-lead'; })()}
               onValueChange={val => handleScrapingStrategyChange('frequency', val)}
             >
               <SelectTrigger disabled={disabled}>

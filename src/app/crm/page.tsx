@@ -172,7 +172,8 @@ function CRMContent() {
   
   const getCompanyName = (companyId: string) => {
     const company = companies.find(c => c.id === companyId);
-    return company?(.name !== '' && .name != null) ? .name : '-';
+    const companyName = company?.name;
+    return (companyName !== '' && companyName != null) ? companyName : '-';
   };
 
   // CRUD Operations
@@ -354,7 +355,8 @@ function CRMContent() {
     reader.readAsText(importFile);
   };
 
-  const brandName = theme?.branding?.companyName || config?(.businessName !== '' && .businessName != null) ? .businessName : 'AI CRM';
+  const configBusinessName = config?.businessName;
+  const brandName = theme?.branding?.companyName || ((configBusinessName !== '' && configBusinessName != null) ? configBusinessName : 'AI CRM');
   const logoUrl = theme?.branding?.logoUrl;
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 

@@ -80,7 +80,7 @@ export class SchemaManager {
       fields: schema.fields || this.getDefaultFields(),
       
       // Set first field as primary
-      primaryFieldId: schema.fields?.[0]?(.id !== '' && .id != null) ? .id : 'field_name',
+      primaryFieldId: (() => { const v = schema.fields?.[0]?.id; return (v !== '' && v != null) ? v : 'field_name'; })(),
       
       relations: [],
       permissions: {

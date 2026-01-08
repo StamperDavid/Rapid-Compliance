@@ -52,9 +52,11 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  const brandName = theme?.branding?(.companyName !== '' && .companyName != null) ? .companyName : 'AI CRM';
+  const brandingCompanyName = theme?.branding?.companyName;
+  const brandName = (brandingCompanyName !== '' && brandingCompanyName != null) ? brandingCompanyName : 'AI CRM';
   const logoUrl = theme?.branding?.logoUrl;
-  const primaryColor = theme?.colors?.primary?(.main !== '' && .main != null) ? .main : '#6366f1';
+  const colorsPrimaryMain = theme?.colors?.primary?.main;
+  const primaryColor = (colorsPrimaryMain !== '' && colorsPrimaryMain != null) ? colorsPrimaryMain : '#6366f1';
 
   const handleSave = async () => {
     if (!user) {return;}

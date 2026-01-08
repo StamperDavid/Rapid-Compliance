@@ -318,7 +318,8 @@ function buildSystemPrompt(
   template: EmailTemplate,
   dealScore?: DealScore
 ): string {
-  const tier = dealScore?(.tier !== '' && .tier != null) ? .tier : 'warm';
+  const dealTier = dealScore?.tier;
+  const tier = (dealTier !== '' && dealTier != null) ? dealTier : 'warm';
   const score = dealScore?.score ?? 50;
   
   let systemPrompt = `You are an expert B2B sales email writer. Your goal is to write ${template.name} that:
@@ -528,7 +529,8 @@ function parseEmailResponse(response: string): {
 } {
   // Extract subject
   const subjectMatch = response.match(/SUBJECT:\s*(.+?)(?:\n|---)/i);
-  const subject = subjectMatch?.[1]?(.trim() !== '' && .trim() != null) ? .trim() : 'Your Email Subject';
+  const subjectTrimmed = subjectMatch?.[1]?.trim();
+  const subject = (subjectTrimmed !== '' && subjectTrimmed != null) ? subjectTrimmed : 'Your Email Subject';
   
   // Extract HTML body
   const bodyMatch = response.match(/BODY:\s*\n([\s\S]+?)(?:\n---|\nPLAIN:)/i);

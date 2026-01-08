@@ -527,7 +527,7 @@ export class WorkflowEngine {
       startedAt: Timestamp.now(),
       completedAt: Timestamp.now(),
       durationMs: 0,
-      error: lastError?(.message !== '' && .message != null) ? .message : 'All retry attempts failed',
+      error: (() => { const v = lastError?.message; return (v !== '' && v != null) ? v : 'All retry attempts failed'; })(),
       retryCount: retry.maxAttempts,
     };
   }

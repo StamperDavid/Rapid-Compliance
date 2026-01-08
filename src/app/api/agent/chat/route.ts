@@ -30,10 +30,13 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       // Type assertion: when success is false, we have the error structure
       const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
-        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
-})) ?? [];
+      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+        const joinedPath = e.path?.join('.');
+        return {
+          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
+          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+        };
+      }) ?? [];
       
       return NextResponse.json(
         {
@@ -66,7 +69,8 @@ export async function POST(request: NextRequest) {
     );
     
     // Single model configuration (ensemble removed for MVP)
-    const selectedModel = (agentConfig as any)?(.selectedModel !== '' && .selectedModel != null) ? .selectedModel : 'gpt-4-turbo';
+    const configSelectedModel = (agentConfig as any)?.selectedModel;
+    const selectedModel = (configSelectedModel !== '' && configSelectedModel != null) ? configSelectedModel : 'gpt-4-turbo';
     const modelConfig = (agentConfig as any)?.modelConfig ?? {
       temperature: 0.7,
       maxTokens: 2048,

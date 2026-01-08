@@ -91,7 +91,7 @@ export default function SubscriptionPage() {
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: primaryColor, textTransform: 'capitalize' }}>
-                    {subscription?(.plan !== '' && .plan != null) ? .plan : 'Professional'}
+                    {(() => { const v = subscription?.plan; return (v !== '' && v != null) ? v : 'Professional'; })()}
                   </span>
                   {subscription?.isTrialing && (
                     <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#10b981', color: '#000', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600' }}>
@@ -99,7 +99,7 @@ export default function SubscriptionPage() {
                     </span>
                   )}
                   <span style={{ padding: '0.25rem 0.75rem', backgroundColor: subscription?.status === 'active' ? '#10b981' : '#666', color: '#fff', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>
-                    {subscription?(.status !== '' && .status != null) ? .status : 'Active'}
+                    {(() => { const v = subscription?.status; return (v !== '' && v != null) ? v : 'Active'; })()}
                   </span>
                 </div>
               </div>

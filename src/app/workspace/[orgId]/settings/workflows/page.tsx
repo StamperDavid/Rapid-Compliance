@@ -164,7 +164,8 @@ export default function WorkflowsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
               {!loading && workflowsList.map(workflow => {
                 const isActive = workflow.status === 'active';
-                const triggerDisplay = workflow.trigger?(.type !== '' && .type != null) ? .type : 'N/A';
+                const triggerType = workflow.trigger?.type;
+                const triggerDisplay = (triggerType !== '' && triggerType != null) ? triggerType : 'N/A';
                 const runsToday = workflow.stats?.totalRuns ?? 0;
                 
                 return (

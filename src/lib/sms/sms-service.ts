@@ -236,7 +236,7 @@ async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMS
     } else {
       return {
         success: false,
-        error: `Vonage error: ${data.messages?.[0]?(.['error-text'] !== '' && .['error-text'] != null) ? .['error-text'] : 'Unknown error'}`,
+        error: `Vonage error: ${(() => { const v = data.messages?.[0]?.['error-text']; return (v !== '' && v != null) ? v : 'Unknown error'; })()}`,
         provider: 'vonage',
       };
     }

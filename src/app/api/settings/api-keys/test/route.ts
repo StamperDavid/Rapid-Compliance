@@ -128,9 +128,10 @@ async function testOpenAI(apiKey: string): Promise<NextResponse> {
       });
     } else {
       const error = await response.json();
+      const errorMessage = error.error?.message;
       return NextResponse.json({
         success: false,
-        error: error.error?(.message !== '' && .message != null) ? .message : 'Invalid API key',
+        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Invalid API key',
       });
     }
   } catch (error: any) {
@@ -273,9 +274,10 @@ async function testAnthropic(apiKey: string): Promise<NextResponse> {
       });
     } else {
       const error = await response.json();
+      const errorMessage = error.error?.message;
       return NextResponse.json({
         success: false,
-        error: error.error?(.message !== '' && .message != null) ? .message : 'Invalid API key',
+        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Invalid API key',
       }, { status: 400 });
     }
   } catch (error: any) {
@@ -305,9 +307,10 @@ async function testGemini(apiKey: string): Promise<NextResponse> {
       });
     } else {
       const error = await response.json();
+      const errorMessage = error.error?.message;
       return NextResponse.json({
         success: false,
-        error: error.error?(.message !== '' && .message != null) ? .message : 'Invalid API key',
+        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Invalid API key',
       }, { status: 400 });
     }
   } catch (error: any) {

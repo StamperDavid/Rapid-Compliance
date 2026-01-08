@@ -71,10 +71,12 @@ export async function extractPatterns(
   const fullConfig: PlaybookEngineConfig = { ...DEFAULT_PLAYBOOK_CONFIG, ...config };
   
   try {
+    const conversationIdsLength = request.conversationIds?.length;
+    const repIdsLength = request.repIds?.length;
     logger.info('Extracting patterns from conversations', {
       organizationId: request.organizationId,
-      conversationCount: request.conversationIds?(.length !== '' && .length != null) ? .length : 'all',
-      repCount: request.repIds?(.length !== '' && .length != null) ? .length : 'top performers',
+      conversationCount: (conversationIdsLength !== '' && conversationIdsLength != null) ? conversationIdsLength : 'all',
+      repCount: (repIdsLength !== '' && repIdsLength != null) ? repIdsLength : 'top performers',
     });
     
     // 1. Get conversation analyses to extract from

@@ -247,7 +247,8 @@ export class RedisService {
     try {
       if (this.isConnected && this.client) {
         const info = await this.client.info('stats');
-        const size = parseInt(info.match(/keys=(\d+)/)?(.[1] !== '' && .[1] != null) ? .[1] : '0');
+        const keysMatch = info.match(/keys=(\d+)/)?.[1];
+        const size = parseInt((keysMatch !== '' && keysMatch != null) ? keysMatch : '0');
         return {
           connected: true,
           size,

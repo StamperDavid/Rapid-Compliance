@@ -80,17 +80,21 @@ export default function TeamMembersPage() {
 
   // Convert Firestore users to TeamMember format
   useEffect(() => {
-    const members: TeamMember[] = (users || []).map((u: any, index: number) => ({
-      id: index + 1,
-      name: u.displayName || u.email?(.split('@')[0] !== '' && .split('@')[0] != null) ? .split('@')[0] : 'Unknown',
-      email: u.email ?? '',
-      role:(u.role !== '' && u.role != null) ? u.role : 'employee',
-      title: u.title ?? '',
-      department: u.department ?? '',
-      status:(u.status !== '' && u.status != null) ? u.status : 'active',
-      joinedDate: u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
-      customPermissions: u.customPermissions
-    }));
+    const members: TeamMember[] = (users || []).map((u: any, index: number) => {
+      const emailUsername = u.email?.split('@')[0];
+      const userName = u.displayName || ((emailUsername !== '' && emailUsername != null) ? emailUsername : 'Unknown');
+      return {
+        id: index + 1,
+        name: userName,
+        email: u.email ?? '',
+        role: (u.role !== '' && u.role != null) ? u.role : 'employee',
+        title: u.title ?? '',
+        department: u.department ?? '',
+        status: (u.status !== '' && u.status != null) ? u.status : 'active',
+        joinedDate: u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
+        customPermissions: u.customPermissions,
+      };
+    });
     
     setTeamMembers(members);
   }, [users]);

@@ -630,7 +630,8 @@ async function sendMeetingUpdate(
     const settingsDoc = await getDoc(doc(db, settingsPath, 'email'));
     const orgSettings = settingsDoc.exists() ? settingsDoc.data() : null;
     
-    const companyName = orgSettings?(.companyName !== '' && .companyName != null) ? .companyName : 'Our Team';
+    const settingsCompanyName = orgSettings?.companyName;
+    const companyName = (settingsCompanyName !== '' && settingsCompanyName != null) ? settingsCompanyName : 'Our Team';
     const replyTo = orgSettings?.replyToEmail ?? meeting.host.email;
     
     // Build email content based on update type

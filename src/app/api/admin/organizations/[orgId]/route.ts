@@ -47,7 +47,8 @@ export async function DELETE(
     }
     
     const orgData = orgDoc.data();
-    const orgName = orgData?(.name !== '' && .name != null) ? .name : 'Unknown';
+    const orgDataName = orgData?.name;
+    const orgName = (orgDataName !== '' && orgDataName != null) ? orgDataName : 'Unknown';
     
     // Delete the organization
     await adminDal.safeDeleteDoc('ORGANIZATIONS', orgId, {

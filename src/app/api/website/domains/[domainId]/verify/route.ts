@@ -63,7 +63,7 @@ export async function POST(
     // Verify DNS records
     const verification = await verifyDNSRecords(
       domainId,
-      domainData?(.verificationMethod !== '' && .verificationMethod != null) ? .verificationMethod : 'cname',
+      (() => { const v = domainData?.verificationMethod; return (v !== '' && v != null) ? v : 'cname'; })(),
       domainData?.dnsRecords ?? []
     );
 

@@ -30,8 +30,10 @@ export interface EmailHTMLOptions {
  * Generate professional HTML email
  */
 export function generateEmailHTML(options: EmailHTMLOptions): string {
-  const primaryColor = options.branding?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#2563eb';
-  const companyName = options.branding?(.companyName !== '' && .companyName != null) ? .companyName : 'AI Sales Platform';
+  const brandingPrimaryColor = options.branding?.primaryColor;
+  const brandingCompanyName = options.branding?.companyName;
+  const primaryColor = (brandingPrimaryColor !== '' && brandingPrimaryColor != null) ? brandingPrimaryColor : '#2563eb';
+  const companyName = (brandingCompanyName !== '' && brandingCompanyName != null) ? brandingCompanyName : 'AI Sales Platform';
   
   return `
 <!DOCTYPE html>

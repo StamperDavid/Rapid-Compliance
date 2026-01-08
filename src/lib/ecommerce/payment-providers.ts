@@ -99,16 +99,18 @@ export async function processAuthorizeNetPayment(
         processingFee: calculateAuthorizeNetFee(request.amount),
       };
     } else {
+      const errorText = txnResponse?.errors?.[0]?.errorText;
       return {
         success: false,
-        error: txnResponse?.errors?.[0]?(.errorText !== '' && .errorText != null) ? .errorText : 'Transaction failed',
+        error: (errorText !== '' && errorText != null) ? errorText : 'Transaction failed',
       };
     }
   } catch (error: any) {
     logger.error('Authorize.Net payment error:', error, { file: 'payment-providers.ts' });
+    const errorMessage = error.message;
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Authorize.Net payment processing failed',
+      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Authorize.Net payment processing failed',
     };
   }
 }

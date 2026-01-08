@@ -37,8 +37,10 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
     country: 'US',
   });
 
-  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
-  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
+  const themePrimaryColor = theme?.primaryColor;
+  const themeFontFamily = theme?.fontFamily;
+  const primaryColor = (themePrimaryColor !== '' && themePrimaryColor != null) ? themePrimaryColor : '#6366f1';
+  const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
 
   useEffect(() => {
     loadCart();

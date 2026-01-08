@@ -59,9 +59,10 @@ export async function addVercelDomain(domain: string): Promise<{
     if (!response.ok) {
       const error = await response.json();
       console.error('[Vercel Domains] Add domain error:', error);
+      const errorMessage = error.error?.message;
       return {
         success: false,
-        error: error.error?(.message !== '' && .message != null) ? .message : 'Failed to add domain to Vercel',
+        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to add domain to Vercel',
       };
     }
 
@@ -74,9 +75,10 @@ export async function addVercelDomain(domain: string): Promise<{
     };
   } catch (error: any) {
     console.error('[Vercel Domains] Add domain exception:', error);
+    const errorMessage = error.message;
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to add domain to Vercel',
+      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to add domain to Vercel',
     };
   }
 }
@@ -111,9 +113,10 @@ export async function verifyVercelDomain(domain: string): Promise<{
     if (!response.ok) {
       const error = await response.json();
       console.error('[Vercel Domains] Verify domain error:', error);
+      const errorMessage = error.error?.message;
       return {
         success: false,
-        error: error.error?(.message !== '' && .message != null) ? .message : 'Failed to verify domain',
+        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to verify domain',
       };
     }
 
@@ -126,9 +129,10 @@ export async function verifyVercelDomain(domain: string): Promise<{
     };
   } catch (error: any) {
     console.error('[Vercel Domains] Verify domain exception:', error);
+    const errorMessage = error.message;
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to verify domain',
+      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to verify domain',
     };
   }
 }
@@ -162,9 +166,10 @@ export async function getVercelDomain(domain: string): Promise<{
 
     if (!response.ok) {
       const error = await response.json();
+      const errorMessage = error.error?.message;
       return {
         success: false,
-        error: error.error?(.message !== '' && .message != null) ? .message : 'Failed to get domain',
+        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to get domain',
       };
     }
 
@@ -176,9 +181,10 @@ export async function getVercelDomain(domain: string): Promise<{
     };
   } catch (error: any) {
     console.error('[Vercel Domains] Get domain exception:', error);
+    const errorMessage = error.message;
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get domain',
+      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to get domain',
     };
   }
 }
@@ -212,9 +218,10 @@ export async function removeVercelDomain(domain: string): Promise<{
     if (!response.ok) {
       const error = await response.json();
       console.error('[Vercel Domains] Remove domain error:', error);
+      const errorMessage = error.error?.message;
       return {
         success: false,
-        error: error.error?(.message !== '' && .message != null) ? .message : 'Failed to remove domain',
+        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to remove domain',
       };
     }
 
@@ -225,9 +232,10 @@ export async function removeVercelDomain(domain: string): Promise<{
     };
   } catch (error: any) {
     console.error('[Vercel Domains] Remove domain exception:', error);
+    const errorMessage = error.message;
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to remove domain',
+      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to remove domain',
     };
   }
 }
@@ -326,10 +334,11 @@ export async function provisionSSL(domain: string): Promise<{
     };
   } catch (error: any) {
     console.error('[Vercel Domains] SSL provisioning error:', error);
+    const errorMessage = error.message;
     return {
       success: false,
       status: 'failed',
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to provision SSL',
+      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to provision SSL',
     };
   }
 }

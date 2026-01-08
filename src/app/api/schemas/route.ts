@@ -101,7 +101,8 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     }));
 
-    const primaryFieldId = fields[0]?(.id !== '' && .id != null) ? .id : 'field_name';
+    const firstFieldId = fields[0]?.id;
+    const primaryFieldId = (firstFieldId !== '' && firstFieldId != null) ? firstFieldId : 'field_name';
 
     const newSchema = {
       id: schemaId,

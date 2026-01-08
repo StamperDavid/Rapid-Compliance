@@ -344,10 +344,10 @@ export default function ConversationsPage() {
                             <div style={{ padding: '1.5rem', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div>
                                 <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                                  {liveConversations.find(c => c.id === selectedConversation)?(.customerName !== '' && .customerName != null) ? .customerName : 'Anonymous'}
+                                  {(() => { const v = liveConversations.find(c => c.id === selectedConversation)?.customerName; return (v !== '' && v != null) ? v : 'Anonymous'; })()}
                                 </h3>
                                 <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                                  {liveConversations.find(c => c.id === selectedConversation)?(.customerEmail !== '' && .customerEmail != null) ? .customerEmail : 'No email provided'}
+                                  {(() => { const v = liveConversations.find(c => c.id === selectedConversation)?.customerEmail; return (v !== '' && v != null) ? v : 'No email provided'; })()}
                                 </div>
                               </div>
                               <button onClick={() => setSelectedConversation(null)} style={{
@@ -475,7 +475,7 @@ export default function ConversationsPage() {
                                   fontWeight: '600',
                                   color: conv.status === 'completed' ? '#4ade80' : '#fbbf24'
                                 }}>
-                                  {conv.status?(.toUpperCase() !== '' && .toUpperCase() != null) ? .toUpperCase() : 'COMPLETED'}
+                                  {(() => { const v = conv.status?.toUpperCase(); return (v !== '' && v != null) ? v : 'COMPLETED'; })()}
                                 </div>
                               </div>
                               <div>
@@ -485,7 +485,7 @@ export default function ConversationsPage() {
                                   fontWeight: '600',
                                   color: conv.sentiment === 'positive' ? '#4ade80' : conv.sentiment === 'frustrated' ? '#ef4444' : '#fbbf24'
                                 }}>
-                                  {conv.sentiment?(.toUpperCase() !== '' && .toUpperCase() != null) ? .toUpperCase() : 'NEUTRAL'}
+                                  {(() => { const v = conv.sentiment?.toUpperCase(); return (v !== '' && v != null) ? v : 'NEUTRAL'; })()}
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>

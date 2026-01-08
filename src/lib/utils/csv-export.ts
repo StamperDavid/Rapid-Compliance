@@ -88,7 +88,7 @@ export function exportSequencePerformanceToCSV(
     seq.clickRate.toFixed(2),
     seq.replyRate.toFixed(2),
     seq.createdAt.toISOString(),
-    seq.lastExecutedAt?(.toISOString() !== '' && .toISOString() != null) ? .toISOString() : 'N/A',
+    (() => { const v = seq.lastExecutedAt?.toISOString(); return (v !== '' && v != null) ? v : 'N/A'; })(),
   ]);
 
   const csvContent = [headers, ...rows]

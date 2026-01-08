@@ -403,7 +403,8 @@ export default function EntityTablePage() {
   };
 
   const entityDisplayName = schema?.pluralName || entityName.charAt(0).toUpperCase() + entityName.slice(1);
-  const entityIcon = schema?(.icon !== '' && .icon != null) ? .icon : '📋';
+  const schemaIcon = schema?.icon;
+  const entityIcon = (schemaIcon !== '' && schemaIcon != null) ? schemaIcon : '📋';
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
@@ -453,7 +454,7 @@ export default function EntityTablePage() {
                 onClick={() => setIsAdding(true)}
                 style={{ padding: '0.625rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
-                + Add {schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}
+                + Add {(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}
               </button>
             </div>
           </div>
@@ -548,7 +549,7 @@ export default function EntityTablePage() {
                 {searchTerm ? (
                   <p>No {entityDisplayName.toLowerCase()} matching "{searchTerm}"</p>
                 ) : (
-                  <p>No {entityDisplayName.toLowerCase()} yet. Click "Add {schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}" to get started.</p>
+                  <p>No {entityDisplayName.toLowerCase()} yet. Click "Add {(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}" to get started.</p>
                 )}
               </div>
             )}
@@ -562,7 +563,7 @@ export default function EntityTablePage() {
               <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>{entityIcon}</span>
-                  {isAdding ? `Add ${schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}` : `Edit ${schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}`}
+                  {isAdding ? `Add ${(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}` : `Edit ${(() => { const v = schema?.singularName; return (v !== '' && v != null) ? v : 'Record'; })()}`}
                 </h2>
                 <button
                   onClick={closeModal}

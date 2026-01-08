@@ -81,7 +81,8 @@ export async function POST(request: NextRequest) {
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   try {
     const organizationId = session.metadata?.organizationId;
-    const workspaceId = session.metadata?(.workspaceId !== '' && .workspaceId != null) ? .workspaceId : 'default';
+    const metadataWorkspaceId = session.metadata?.workspaceId;
+    const workspaceId = (metadataWorkspaceId !== '' && metadataWorkspaceId != null) ? metadataWorkspaceId : 'default';
     
     if (!organizationId) {
       logger.error('[Stripe Webhook] Missing organizationId in checkout session metadata');

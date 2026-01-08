@@ -49,12 +49,14 @@ export function useAuth() {
             const userProfile = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
             
             // Use organizationId from user profile (set during account creation)
-            const organizationId = userProfile?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'demo';
+            const userProfileOrgId = userProfile?.organizationId;
+            const organizationId = (userProfileOrgId !== '' && userProfileOrgId != null) ? userProfileOrgId : 'demo';
             
+            const userProfileName = userProfile?.name;
             setUser({
               id: authUser.uid,
               email: authUser.email ?? '',
-              displayName: authUser.displayName || userProfile?.displayName || userProfile?(.name !== '' && .name != null) ? .name : 'User',
+              displayName: authUser.displayName || userProfile?.displayName || ((userProfileName !== '' && userProfileName != null) ? userProfileName : 'User'),
               role: (userProfile?.role as UserRole) || 'admin',
               organizationId: organizationId,
               workspaceId: userProfile?.currentWorkspaceId,

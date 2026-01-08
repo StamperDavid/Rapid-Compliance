@@ -228,7 +228,7 @@ async function notifyTaskAssignment(
       await sendEmail({
         to: user.email,
         subject: `New task assigned: ${task.title}`,
-        text: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${task.dueDate?(.toLocaleDateString() !== '' && .toLocaleDateString() != null) ? .toLocaleDateString() : 'No due date'}\n\n${task.description ?? ''}`,
+        text: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${(() => { const v = task.dueDate?.toLocaleDateString(); return (v !== '' && v != null) ? v : 'No due date'; })()}\n\n${task.description ?? ''}`,
         metadata: { organizationId },
       });
     }

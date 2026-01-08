@@ -162,12 +162,20 @@ function SectionRenderer({
   onAddWidget,
   onDeleteWidget,
 }: SectionRendererProps) {
+  const paddingTop = section.padding?.top;
+  const paddingRight = section.padding?.right;
+  const paddingBottom = section.padding?.bottom;
+  const paddingLeft = section.padding?.left;
+  const marginTop = section.margin?.top;
+  const marginRight = section.margin?.right;
+  const marginBottom = section.margin?.bottom;
+  const marginLeft = section.margin?.left;
   const sectionStyles: React.CSSProperties = {
     position: 'relative',
-    backgroundColor:(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
+    backgroundColor: (section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
     backgroundImage: section.backgroundImage ? `url(${section.backgroundImage})` : undefined,
-    padding: `${section.padding?(.top !== '' && .top != null) ? .top : '0'} ${section.padding?(.right !== '' && .right != null) ? .right : '0'} ${section.padding?(.bottom !== '' && .bottom != null) ? .bottom : '0'} ${section.padding?(.left !== '' && .left != null) ? .left : '0'}`,
-    margin: `${section.margin?(.top !== '' && .top != null) ? .top : '0'} ${section.margin?(.right !== '' && .right != null) ? .right : '0'} ${section.margin?(.bottom !== '' && .bottom != null) ? .bottom : '0'} ${section.margin?(.left !== '' && .left != null) ? .left : '0'}`,
+    padding: `${(paddingTop !== '' && paddingTop != null) ? paddingTop : '0'} ${(paddingRight !== '' && paddingRight != null) ? paddingRight : '0'} ${(paddingBottom !== '' && paddingBottom != null) ? paddingBottom : '0'} ${(paddingLeft !== '' && paddingLeft != null) ? paddingLeft : '0'}`,
+    margin: `${(marginTop !== '' && marginTop != null) ? marginTop : '0'} ${(marginRight !== '' && marginRight != null) ? marginRight : '0'} ${(marginBottom !== '' && marginBottom != null) ? marginBottom : '0'} ${(marginLeft !== '' && marginLeft != null) ? marginLeft : '0'}`,
     maxWidth: section.fullWidth ? '100%' : (section.maxWidth ? `${section.maxWidth}px` : '1200px'),
     marginLeft: section.fullWidth ? '0' : 'auto',
     marginRight: section.fullWidth ? '0' : 'auto',

@@ -57,7 +57,8 @@ export async function executeAIAgentAction(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentConfig`,
         'default'
       );
-      selectedModel = (agentConfig as any)?(.selectedModel !== '' && .selectedModel != null) ? .selectedModel : 'gpt-4-turbo';
+      const configSelectedModel = (agentConfig as any)?.selectedModel;
+      selectedModel = (configSelectedModel !== '' && configSelectedModel != null) ? configSelectedModel : 'gpt-4-turbo';
     } catch {
       selectedModel = 'gpt-4-turbo';
     }

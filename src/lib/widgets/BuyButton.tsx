@@ -34,10 +34,14 @@ export function BuyButton({
 }: BuyButtonProps) {
   const [loading, setLoading] = useState(false);
 
-  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
-  const borderRadius = theme?(.borderRadius !== '' && .borderRadius != null) ? .borderRadius : '0.375rem';
-  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
-  const size = theme?(.size !== '' && .size != null) ? .size : 'medium';
+  const themePrimaryColor = theme?.primaryColor;
+  const themeBorderRadius = theme?.borderRadius;
+  const themeFontFamily = theme?.fontFamily;
+  const themeSize = theme?.size;
+  const primaryColor = (themePrimaryColor !== '' && themePrimaryColor != null) ? themePrimaryColor : '#6366f1';
+  const borderRadius = (themeBorderRadius !== '' && themeBorderRadius != null) ? themeBorderRadius : '0.375rem';
+  const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
+  const size = (themeSize !== '' && themeSize != null) ? themeSize : 'medium';
 
   const sizes = {
     small: { padding: '0.5rem 1rem', fontSize: '0.875rem' },

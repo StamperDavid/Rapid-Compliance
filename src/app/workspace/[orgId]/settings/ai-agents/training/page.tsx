@@ -553,7 +553,8 @@ export default function AgentTrainingPage() {
     try {
       const { createGoldenMaster } = await import('@/lib/agent/golden-master-builder');
       
-      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, user?(.id !== '' && .id != null) ? .id : 'system', notes ?? undefined);
+      const userId = user?.id;
+      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, (userId !== '' && userId != null) ? userId : 'system', notes ?? undefined);
       
       alert(`✅ Golden Master ${newGoldenMaster.version} Created!\n\nYour trained AI agent has been saved as a production-ready version.\n\nNext steps:\n1. Review the Golden Master in the "Golden Master" tab\n2. Deploy it to production when ready\n3. Continue training your Base Model for future improvements`);
       

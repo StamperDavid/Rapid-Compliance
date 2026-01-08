@@ -263,8 +263,8 @@ export default function PreviewPage() {
                   key={section.id ?? idx}
                   style={{
                     marginBottom: '32px',
-                    padding: section.padding?(.top !== '' && .top != null) ? .top : '20px',
-                    backgroundColor:(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
+                    padding: (() => { const v = section.padding?.top; return (v !== '' && v != null) ? v : '20px'; })(),
+                    backgroundColor: (section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
                   }}
                 >
                   {section.columns?.map((column: any, colIdx: number) => (

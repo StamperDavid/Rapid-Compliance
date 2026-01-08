@@ -322,7 +322,7 @@ CONVERSATION METADATA:
 - Type: ${request.conversationType}
 - Title: ${(request.title !== '' && request.title != null) ? request.title : 'Untitled'}
 - Duration: ${Math.floor(request.duration / 60)} minutes
-- Sales Rep: ${repInfo?(.name !== '' && .name != null) ? .name : 'Unknown'}
+- Sales Rep: ${(repInfo?.name !== '' && repInfo?.name != null) ? repInfo.name : 'Unknown'}
 - Prospects: ${prospects.map(p => `${p.name} (${p.role}${p.title ? `, ${  p.title}` : ''})`).join(', ')}
 ${request.customContext ? `\nADDITIONAL CONTEXT:\n${request.customContext}\n` : ''}
 

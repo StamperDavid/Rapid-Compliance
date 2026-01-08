@@ -243,7 +243,7 @@ export default function RiskDashboardPage() {
             <div className="lg:col-span-1">
               <RiskOverviewCard
                 prediction={prediction!}
-                dealName={deal?(.name !== '' && .name != null) ? .name : 'Loading...'}
+                dealName={(() => { const v = deal?.name; return (v !== '' && v != null) ? v : 'Loading...'; })()}
                 dealValue={deal?.value ?? 0}
                 loading={loading}
               />

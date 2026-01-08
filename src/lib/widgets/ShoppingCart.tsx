@@ -32,9 +32,12 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
-  const borderRadius = theme?(.borderRadius !== '' && .borderRadius != null) ? .borderRadius : '0.5rem';
-  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
+  const themePrimaryColor = theme?.primaryColor;
+  const themeBorderRadius = theme?.borderRadius;
+  const themeFontFamily = theme?.fontFamily;
+  const primaryColor = (themePrimaryColor !== '' && themePrimaryColor != null) ? themePrimaryColor : '#6366f1';
+  const borderRadius = (themeBorderRadius !== '' && themeBorderRadius != null) ? themeBorderRadius : '0.5rem';
+  const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
 
   useEffect(() => {
     loadCart();

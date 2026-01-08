@@ -100,10 +100,13 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
-        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
-})) ?? [];
+      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+        const joinedPath = e.path?.join('.');
+        return {
+          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
+          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+        };
+      }) ?? [];
       
       return NextResponse.json(
         {
@@ -148,10 +151,13 @@ export async function PATCH(request: NextRequest) {
 
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
-        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
-})) ?? [];
+      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+        const joinedPath = e.path?.join('.');
+        return {
+          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
+          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+        };
+      }) ?? [];
       
       return NextResponse.json(
         {

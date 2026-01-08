@@ -967,11 +967,14 @@ function generatePersonaFromOnboarding(onboarding: any): AgentPersona {
     dynamicToneRegister: 'Start professional. Mirror user style. Adapt based on sentiment.',
     successfulStrategyMemory: 'Log conversation paths that result in qualified opportunities.',
     knowledgeObsolescenceTimer: 'Industry data: 6 months. Technical specs: Real-time.',
-    toolAuthorization: onboarding.integrations?.map((i: any) => ({
-      tool: i.name,
-      permissions: i.permissions?(.join('/') !== '' && .join('/') != null) ? .join('/') : 'Read Only',
-      canExecuteAutonomously: !i.requiresApproval
-})) ?? [],
+    toolAuthorization: onboarding.integrations?.map((i: any) => {
+      const joinedPermissions = i.permissions?.join('/');
+      return {
+        tool: i.name,
+        permissions: (joinedPermissions !== '' && joinedPermissions != null) ? joinedPermissions : 'Read Only',
+        canExecuteAutonomously: !i.requiresApproval,
+      };
+    }) ?? [],
     mandatoryOutputFormatting: 'Use bolded metrics. End with Recommended Next Step. Use bullet points for lists.',
     securityDataFilter: 'NEVER reveal: customer data, pricing discounts to other clients, proprietary details.',
     verbosityControl: {

@@ -24,17 +24,19 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
 
   switch (element.type) {
     case 'heading': {
-      const Tag = (element.settings?(.tag !== '' && .tag != null) ? .tag : 'h2') as keyof JSX.IntrinsicElements;
+      const settingsTag = element.settings?.tag;
+      const Tag = ((settingsTag !== '' && settingsTag != null) ? settingsTag : 'h2') as keyof JSX.IntrinsicElements;
       return <Tag style={styles}>{element.content}</Tag>;
     }
 
     case 'text':
       return <p style={styles}>{element.content}</p>;
 
-    case 'button':
+    case 'button': {
+      const settingsHref = element.settings?.href;
       return (
         <Link
-          href={element.settings?(.href !== '' && .href != null) ? .href : '#'}
+          href={(settingsHref !== '' && settingsHref != null) ? settingsHref : '#'}
           style={{
             display: 'inline-block',
             textDecoration: 'none',

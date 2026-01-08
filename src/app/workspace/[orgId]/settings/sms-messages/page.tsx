@@ -194,7 +194,11 @@ export default function SmsMessagesPage() {
                 {selectedSmsTemplate ? (
                   <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
-                      {predefinedTriggers.find(t => t.id === selectedSmsTemplate)?.name || smsTemplates.find(t => t.id === selectedSmsTemplate)?(.name !== '' && .name != null) ? .name : 'SMS Template'}
+                      {(() => {
+                        const predefinedName = predefinedTriggers.find(t => t.id === selectedSmsTemplate)?.name;
+                        const templateName = smsTemplates.find(t => t.id === selectedSmsTemplate)?.name;
+                        return predefinedName || ((templateName !== '' && templateName != null) ? templateName : 'SMS Template');
+                      })()}
                     </h2>
 
                     <div style={{ marginBottom: '1.5rem' }}>

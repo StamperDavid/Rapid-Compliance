@@ -446,7 +446,7 @@ export default function EmailSequencesPage() {
                             {enrollment.prospectId}
                           </td>
                           <td style={{ padding: '1rem', color: '#fff' }}>
-                            {sequence?(.name !== '' && .name != null) ? .name : 'Unknown'}
+                            {(() => { const v = sequence?.name; return (v !== '' && v != null) ? v : 'Unknown'; })()}
                           </td>
                           <td style={{ padding: '1rem' }}>
                             <span style={{
