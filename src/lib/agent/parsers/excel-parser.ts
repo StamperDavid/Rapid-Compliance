@@ -3,20 +3,47 @@
  * Extracts data from Excel files (product catalogs, pricing sheets, etc.)
  */
 
-import * as XLSX from 'xlsx'
+import * as XLSX from 'xlsx';
 import { logger } from '@/lib/logger/logger';
 
+// Represents a single cell value from Excel
+type ExcelCellValue = string | number | boolean | null;
+
+// Represents a row of data as a record with string keys
+type ExcelRowData = Record<string, ExcelCellValue>;
+
+// Represents raw sheet data as 2D array
+type ExcelSheetData = ExcelCellValue[][];
+
+export interface ExcelSheet {
+  name: string;
+  data: ExcelSheetData;
+  headers: string[];
+  rows: ExcelRowData[];
+}
+
 export interface ExcelParseResult {
-  sheets: Array<{
-    name: string;
-    data: any[][];
-    headers?: string[];
-    rows: any[];
-  }>;
+  sheets: ExcelSheet[];
   metadata: {
     sheetNames: string[];
     totalSheets: number;
   };
+}
+
+// Product extracted from Excel
+export interface ExcelProduct {
+  name: string;
+  description: string;
+  price?: number;
+  [key: string]: ExcelCellValue | undefined;
+}
+
+// Service extracted from Excel
+export interface ExcelService {
+  name: string;
+  description: string;
+  pricing?: string;
+  [key: string]: ExcelCellValue | undefined;
 }
 
 /**
@@ -36,16 +63,23 @@ export async function parseExcel(file: File | Buffer): Promise<ExcelParseResult>
     // Parse Excel file
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     
-    const sheets = workbook.SheetNames.map(sheetName => {
+    const sheets: ExcelSheet[] = workbook.SheetNames.map(sheetName => {
       const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      const rawData = XLSX.utils.sheet_to_json<ExcelCellValue[]>(worksheet, { header: 1, defval: '' });
+      
+      // Convert raw data to typed format
+      const data: ExcelSheetData = rawData.map(row => 
+        Array.isArray(row) ? row : []
+      );
       
       // First row as headers
-      const headers = data.length > 0 ? data[0].map((h: unknown) => (h !== '' && h != null) ? String(h) : '') : [];
+      const headers: string[] = data.length > 0 
+        ? data[0].map((h) => (h !== '' && h != null) ? String(h) : '') 
+        : [];
       
       // Convert to objects
-      const rows = data.slice(1).map((row: unknown[]) => {
-        const obj: Record<string, unknown> = {};
+      const rows: ExcelRowData[] = data.slice(1).map((row: ExcelCellValue[]) => {
+        const obj: ExcelRowData = {};
         headers.forEach((header, index) => {
           if (header) {
             obj[header] = row[index] ?? '';
@@ -69,9 +103,10 @@ export async function parseExcel(file: File | Buffer): Promise<ExcelParseResult>
         totalSheets: workbook.SheetNames.length,
       },
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error parsing Excel:', error, { file: 'excel-parser.ts' });
-    throw new Error(`Failed to parse Excel: ${error.message}`);
+    throw new Error(`Failed to parse Excel: ${errorMessage}`);
   }
 }
 
@@ -80,8 +115,8 @@ export async function parseExcel(file: File | Buffer): Promise<ExcelParseResult>
  */
 export function extractProductsFromExcel(
   excelResult: ExcelParseResult
-): Array<{ name: string; description: string; price?: number; [key: string]: any }> {
-  const products: Array<{ name: string; description: string; price?: number; [key: string]: any }> = [];
+): ExcelProduct[] {
+  const products: ExcelProduct[] = [];
   
   for (const sheet of excelResult.sheets) {
     // Look for common product column names
@@ -89,30 +124,34 @@ export function extractProductsFromExcel(
     const descColumns = ['description', 'desc', 'details', 'info'];
     const priceColumns = ['price', 'cost', 'amount', 'value'];
     
-    const nameCol = sheet.headers?.findIndex(h => 
+    const nameCol = sheet.headers.findIndex(h => 
       nameColumns.some(nc => h.toLowerCase().includes(nc))
     );
-    const descCol = sheet.headers?.findIndex(h => 
+    const descCol = sheet.headers.findIndex(h => 
       descColumns.some(dc => h.toLowerCase().includes(dc))
     );
-    const priceCol = sheet.headers?.findIndex(h => 
+    const priceCol = sheet.headers.findIndex(h => 
       priceColumns.some(pc => h.toLowerCase().includes(pc))
     );
     
     if (nameCol !== undefined && nameCol >= 0) {
       for (const row of sheet.rows) {
-        const name = row[sheet.headers![nameCol]];
+        const nameHeader = sheet.headers[nameCol];
+        const name = nameHeader ? row[nameHeader] : null;
+        
         if (name && String(name).trim()) {
-          const descValue = descCol !== undefined && descCol >= 0 ? row[sheet.headers![descCol]] : '';
+          const descHeader = descCol !== undefined && descCol >= 0 ? sheet.headers[descCol] : null;
+          const descValue = descHeader ? row[descHeader] : '';
           const descStr = (descValue !== '' && descValue != null) ? String(descValue) : '';
           
-          const product: any = {
+          const product: ExcelProduct = {
             name: String(name).trim(),
             description: descStr.trim(),
           };
           
           if (priceCol !== undefined && priceCol >= 0) {
-            const priceValue = row[sheet.headers![priceCol]];
+            const priceHeader = sheet.headers[priceCol];
+            const priceValue = priceHeader ? row[priceHeader] : null;
             const priceStr = ((priceValue !== '' && priceValue != null) ? String(priceValue) : '').replace(/[^0-9.]/g, '');
             if (priceStr) {
               product.price = parseFloat(priceStr);
@@ -120,7 +159,7 @@ export function extractProductsFromExcel(
           }
           
           // Add all other columns as metadata
-          sheet.headers?.forEach((header, index) => {
+          sheet.headers.forEach((header, index) => {
             if (index !== nameCol && index !== descCol && index !== priceCol && header) {
               product[header] = row[header];
             }
@@ -140,43 +179,47 @@ export function extractProductsFromExcel(
  */
 export function extractServicesFromExcel(
   excelResult: ExcelParseResult
-): Array<{ name: string; description: string; pricing?: string; [key: string]: any }> {
-  const services: Array<{ name: string; description: string; pricing?: string; [key: string]: any }> = [];
+): ExcelService[] {
+  const services: ExcelService[] = [];
   
   for (const sheet of excelResult.sheets) {
     const nameColumns = ['name', 'service', 'service name', 'title'];
     const descColumns = ['description', 'desc', 'details'];
     const pricingColumns = ['pricing', 'price', 'cost', 'rate'];
     
-    const nameCol = sheet.headers?.findIndex(h => 
+    const nameCol = sheet.headers.findIndex(h => 
       nameColumns.some(nc => h.toLowerCase().includes(nc))
     );
-    const descCol = sheet.headers?.findIndex(h => 
+    const descCol = sheet.headers.findIndex(h => 
       descColumns.some(dc => h.toLowerCase().includes(dc))
     );
-    const pricingCol = sheet.headers?.findIndex(h => 
+    const pricingCol = sheet.headers.findIndex(h => 
       pricingColumns.some(pc => h.toLowerCase().includes(pc))
     );
     
     if (nameCol !== undefined && nameCol >= 0) {
       for (const row of sheet.rows) {
-        const name = row[sheet.headers![nameCol]];
+        const nameHeader = sheet.headers[nameCol];
+        const name = nameHeader ? row[nameHeader] : null;
+        
         if (name && String(name).trim()) {
-          const descValue = descCol !== undefined && descCol >= 0 ? row[sheet.headers![descCol]] : '';
+          const descHeader = descCol !== undefined && descCol >= 0 ? sheet.headers[descCol] : null;
+          const descValue = descHeader ? row[descHeader] : '';
           const descStr = (descValue !== '' && descValue != null) ? String(descValue) : '';
           
-          const service: any = {
+          const service: ExcelService = {
             name: String(name).trim(),
             description: descStr.trim(),
           };
           
           if (pricingCol !== undefined && pricingCol >= 0) {
-            const pricingValue = row[sheet.headers![pricingCol]];
+            const pricingHeader = sheet.headers[pricingCol];
+            const pricingValue = pricingHeader ? row[pricingHeader] : null;
             service.pricing = ((pricingValue !== '' && pricingValue != null) ? String(pricingValue) : '').trim();
           }
           
           // Add all other columns
-          sheet.headers?.forEach((header, index) => {
+          sheet.headers.forEach((header, index) => {
             if (index !== nameCol && index !== descCol && index !== pricingCol && header) {
               service[header] = row[header];
             }
