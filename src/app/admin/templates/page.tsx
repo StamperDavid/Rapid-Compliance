@@ -57,7 +57,7 @@ export default function TemplatesPage() {
       if (data.success) {
         setTemplates(data.templates);
       } else {
-        throw new Error(data.error || 'Failed to load templates');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to load templates');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
@@ -83,7 +83,7 @@ export default function TemplatesPage() {
         setSelectedTemplate(data.template);
         setIsEditing(true);
       } else {
-        throw new Error(data.error || 'Failed to load template');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to load template');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load template');
@@ -117,7 +117,7 @@ export default function TemplatesPage() {
             `Validation errors:\n${  data.validationErrors.join('\n')}`
           );
         }
-        throw new Error(data.error || 'Failed to save template');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to save template');
       }
 
       // Reload templates
@@ -150,7 +150,7 @@ export default function TemplatesPage() {
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to delete template');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to delete template');
       }
 
       // Reload templates

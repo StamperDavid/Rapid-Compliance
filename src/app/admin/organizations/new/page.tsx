@@ -57,7 +57,7 @@ export default function NewOrganizationPage() {
         router.push('/admin/organizations');
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to create organization');
+        setError((errorData.error !== '' && errorData.error != null) ? errorData.error : 'Failed to create organization');
         setLoading(false);
       }
     } catch (err) {

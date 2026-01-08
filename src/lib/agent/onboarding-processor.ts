@@ -118,7 +118,7 @@ export async function processOnboarding(
     logger.error('[Onboarding Processor] Error:', error, { file: 'onboarding-processor.ts' });
     return {
       success: false,
-      error: error.message || 'Failed to process onboarding',
+      error: (error.message !== '' && error.message != null) ? error.message : 'Failed to process onboarding',
     };
   }
 }

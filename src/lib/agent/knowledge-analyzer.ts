@@ -218,10 +218,12 @@ async function scrapeWebsite(url: string): Promise<string> {
       .trim();
     
     // Extract meta description
-    const metaDescription = $('meta[name="description"]').attr('content') || '';
+    const metaDescContent = $('meta[name="description"]').attr('content');
+    const metaDescription = (metaDescContent !== '' && metaDescContent != null) ? metaDescContent : '';
     
     // Extract title
-    const title = $('title').text() || '';
+    const titleText = $('title').text();
+    const title = (titleText !== '' && titleText != null) ? titleText : '';
     
     return `${title}\n${metaDescription}\n${textContent}`.substring(0, 50000); // Limit to 50k chars
   } catch (error: any) {
@@ -422,13 +424,20 @@ async function scanCRMForProducts(
       []
     );
 
-    return products.map((p: any) => ({
-      name: p.name || p.fields?.name || 'Unknown Product',
-      description: p.description || p.fields?.description || '',
-      price: p.price || p.fields?.price || 0,
-      sku: p.sku || p.fields?.sku,
-      category: p.category || p.fields?.category,
-    }));
+    return products.map((p: any) => {
+      const nameField = (p.fields?.name !== '' && p.fields?.name != null) ? p.fields.name : 'Unknown Product';
+      const name = (p.name !== '' && p.name != null) ? p.name : nameField;
+      const descField = (p.fields?.description !== '' && p.fields?.description != null) ? p.fields.description : '';
+      const description = (p.description !== '' && p.description != null) ? p.description : descField;
+      
+      return {
+        name,
+        description,
+        price: p.price ?? p.fields?.price ?? 0,
+        sku: p.sku ?? p.fields?.sku,
+        category: p.category ?? p.fields?.category,
+      };
+    });
   } catch (error) {
     logger.error('Error querying CRM for products:', error, { file: 'knowledge-analyzer.ts' });
     return [];
@@ -457,12 +466,19 @@ async function scanCRMForServices(
       []
     );
 
-    return services.map((s: any) => ({
-      name: s.name || s.fields?.name || 'Unknown Service',
-      description: s.description || s.fields?.description || '',
-      pricing: s.pricing || s.fields?.pricing,
-      duration: s.duration || s.fields?.duration,
-    }));
+    return services.map((s: any) => {
+      const nameField = (s.fields?.name !== '' && s.fields?.name != null) ? s.fields.name : 'Unknown Service';
+      const name = (s.name !== '' && s.name != null) ? s.name : nameField;
+      const descField = (s.fields?.description !== '' && s.fields?.description != null) ? s.fields.description : '';
+      const description = (s.description !== '' && s.description != null) ? s.description : descField;
+      
+      return {
+        name,
+        description,
+        pricing: s.pricing ?? s.fields?.pricing,
+        duration: s.duration ?? s.fields?.duration,
+      };
+    });
   } catch (error) {
     logger.error('Error querying CRM for services:', error, { file: 'knowledge-analyzer.ts' });
     return [];
@@ -558,7 +574,7 @@ export async function buildKnowledgeBase(
     documents.push({
       id: 'policies',
       type: 'policy',
-      content: `Return Policy: ${analysisResult.policies.returnPolicy || 'N/A'}. Shipping Policy: ${analysisResult.policies.shippingPolicy || 'N/A'}. Warranty: ${analysisResult.policies.warrantyPolicy || 'N/A'}. Cancellation: ${analysisResult.policies.cancellationPolicy || 'N/A'}`,
+      content: `Return Policy: ${(analysisResult.policies.returnPolicy !== '' && analysisResult.policies.returnPolicy != null) ? analysisResult.policies.returnPolicy : 'N/A'}. Shipping Policy: ${(analysisResult.policies.shippingPolicy !== '' && analysisResult.policies.shippingPolicy != null) ? analysisResult.policies.shippingPolicy : 'N/A'}. Warranty: ${(analysisResult.policies.warrantyPolicy !== '' && analysisResult.policies.warrantyPolicy != null) ? analysisResult.policies.warrantyPolicy : 'N/A'}. Cancellation: ${(analysisResult.policies.cancellationPolicy !== '' && analysisResult.policies.cancellationPolicy != null) ? analysisResult.policies.cancellationPolicy : 'N/A'}`,
       metadata: analysisResult.policies
     });
   }

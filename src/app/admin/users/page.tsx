@@ -41,28 +41,34 @@ export default function UsersPage() {
 
         if (response.ok) {
           const data = await response.json();
-          const mappedUsers = (data.users || []).map((u: any) => ({
-            id: u.id,
-            email: u.email || '',
-            profile: {
-              firstName: u.firstName || u.displayName?.split(' ')[0] || '',
-              lastName: u.lastName || u.displayName?.split(' ').slice(1).join(' ') || '',
-              displayName: u.displayName || u.email?.split('@')[0] || 'Unknown',
-              timezone: u.timezone || 'UTC',
-            },
-            preferences: u.preferences || {
-              theme: 'dark',
-              language: 'en',
-              notifications: { email: true, push: true, slack: false },
-            },
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt,
-            lastLoginAt: u.lastLoginAt,
-            status: u.status || 'active',
-            emailVerified: u.emailVerified ?? true,
-            organizationId: u.organizationId || 'unknown',
-            organizationName: u.organizationName || u.organizationId || 'Unknown Org',
-          }));
+          const mappedUsers = (data.users ?? []).map((u: any) => {
+            const firstNameFallback = (u.displayName !== '' && u.displayName != null) ? u.displayName.split(' ')[0] : '';
+            const lastNameFallback = (u.displayName !== '' && u.displayName != null) ? u.displayName.split(' ').slice(1).join(' ') : '';
+            const emailUsernameFallback = (u.email !== '' && u.email != null) ? u.email.split('@')[0] : 'Unknown';
+            
+            return {
+              id: u.id,
+              email: (u.email !== '' && u.email != null) ? u.email : '',
+              profile: {
+                firstName: (u.firstName !== '' && u.firstName != null) ? u.firstName : firstNameFallback,
+                lastName: (u.lastName !== '' && u.lastName != null) ? u.lastName : lastNameFallback,
+                displayName: (u.displayName !== '' && u.displayName != null) ? u.displayName : emailUsernameFallback,
+                timezone: (u.timezone !== '' && u.timezone != null) ? u.timezone : 'UTC',
+              },
+              preferences: u.preferences ?? {
+                theme: 'dark',
+                language: 'en',
+                notifications: { email: true, push: true, slack: false },
+              },
+              createdAt: u.createdAt,
+              updatedAt: u.updatedAt,
+              lastLoginAt: u.lastLoginAt,
+              status: (u.status !== '' && u.status != null) ? u.status : 'active',
+              emailVerified: u.emailVerified ?? true,
+              organizationId: (u.organizationId !== '' && u.organizationId != null) ? u.organizationId : 'unknown',
+              organizationName: (u.organizationName !== '' && u.organizationName != null) ? u.organizationName : ((u.organizationId !== '' && u.organizationId != null) ? u.organizationId : 'Unknown Org'),
+            };
+          });
           setUsers(mappedUsers);
         } else {
           logger.error('Failed to fetch users', new Error('Fetch users failed'), { 
@@ -138,7 +144,7 @@ export default function UsersPage() {
         >
           <option value="all">All Organizations</option>
           {uniqueOrgs.map(orgId => {
-            const org = users.find(u => u.organizationId === orgId);
+            const org = users.find(u => u.organizationId === orgId) ?? undefined;
             return (
               <option key={orgId} value={orgId}>
                 {org?.organizationName || orgId}

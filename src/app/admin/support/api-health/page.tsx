@@ -85,41 +85,41 @@ export default function APIHealthPage() {
         
         orgHealthData.push({
           orgId,
-          orgName: orgData.name || 'Unnamed Organization',
+          orgName: (orgData.name !== '' && orgData.name != null) ? orgData.name : 'Unnamed Organization',
           aiKeys: {
             openai: {
               configured: !!apiKeys?.ai?.openaiApiKey,
-              lastError: apiKeys?.ai?.openaiLastError || undefined,
+              lastError: apiKeys?.ai?.openaiLastError ?? undefined,
               lastChecked: apiKeys?.ai?.openaiLastChecked ? new Date(apiKeys.ai.openaiLastChecked) : undefined
             },
             anthropic: {
               configured: !!apiKeys?.ai?.anthropicApiKey,
-              lastError: apiKeys?.ai?.anthropicLastError || undefined,
+              lastError: apiKeys?.ai?.anthropicLastError ?? undefined,
               lastChecked: apiKeys?.ai?.anthropicLastChecked ? new Date(apiKeys.ai.anthropicLastChecked) : undefined
             },
             openrouter: {
               configured: !!apiKeys?.ai?.openrouterApiKey,
-              lastError: apiKeys?.ai?.openrouterLastError || undefined,
+              lastError: apiKeys?.ai?.openrouterLastError ?? undefined,
               lastChecked: apiKeys?.ai?.openrouterLastChecked ? new Date(apiKeys.ai.openrouterLastChecked) : undefined
             },
             gemini: {
               configured: !!apiKeys?.ai?.geminiApiKey,
-              lastError: apiKeys?.ai?.geminiLastError || undefined,
+              lastError: apiKeys?.ai?.geminiLastError ?? undefined,
               lastChecked: apiKeys?.ai?.geminiLastChecked ? new Date(apiKeys.ai.geminiLastChecked) : undefined
             }
           },
           otherServices: {
             sendgrid: {
               configured: !!apiKeys?.email?.sendgrid?.apiKey,
-              lastError: apiKeys?.email?.sendgrid?.lastError || undefined
+              lastError: apiKeys?.email?.sendgrid?.lastError ?? undefined
             },
             twilio: {
               configured: !!apiKeys?.sms?.twilio?.accountSid,
-              lastError: apiKeys?.sms?.twilio?.lastError || undefined
+              lastError: apiKeys?.sms?.twilio?.lastError ?? undefined
             },
             stripe: {
               configured: !!apiKeys?.payments?.stripe?.secretKey,
-              lastError: apiKeys?.payments?.stripe?.lastError || undefined
+              lastError: apiKeys?.payments?.stripe?.lastError ?? undefined
             }
           }
         });
@@ -147,7 +147,7 @@ export default function APIHealthPage() {
       const result = await response.json();
       
       if (result.success) {
-        alert(`✅ ${service.toUpperCase()} connection successful!\n\nResponse: ${result.message || 'API key is valid'}`);
+        alert(`✅ ${service.toUpperCase()} connection successful!\n\nResponse: ${(result.message !== '' && result.message != null) ? result.message : 'API key is valid'}`);
         // Reload health data
         await loadOrganizationHealth();
       } else {

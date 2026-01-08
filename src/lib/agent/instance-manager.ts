@@ -104,9 +104,9 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    */
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
     // Handle both nested and flat structures for backwards compatibility
-    const businessContext: any = goldenMaster.businessContext || {
-      businessName: (goldenMaster as any).businessName || 'Your Business',
-      industry: (goldenMaster as any).industry || 'General',
+    const businessContext: any = goldenMaster.businessContext ?? {
+      businessName: ((goldenMaster as any).businessName !== '' && (goldenMaster as any).businessName != null) ? (goldenMaster as any).businessName : 'Your Business',
+      industry: ((goldenMaster as any).industry !== '' && (goldenMaster as any).industry != null) ? (goldenMaster as any).industry : 'General',
       problemSolved: (goldenMaster as any).problemSolved ?? '',
       uniqueValue: (goldenMaster as any).uniqueValue ?? '',
       topProducts: (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') ?? '',
@@ -126,26 +126,26 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       prohibitedTopics: (goldenMaster as any).prohibitedTopics ?? ''
     };
     
-    const agentPersona = goldenMaster.agentPersona || {
-      name: (goldenMaster as any).name || 'AI Assistant',
-      tone: (goldenMaster as any).tone || 'Professional and helpful',
-      greeting: (goldenMaster as any).greeting || 'Hello! How can I help you today?',
-      closingMessage: (goldenMaster as any).closingMessage || 'Thanks for chatting!',
+    const agentPersona = goldenMaster.agentPersona ?? {
+      name: ((goldenMaster as any).name !== '' && (goldenMaster as any).name != null) ? (goldenMaster as any).name : 'AI Assistant',
+      tone: ((goldenMaster as any).tone !== '' && (goldenMaster as any).tone != null) ? (goldenMaster as any).tone : 'Professional and helpful',
+      greeting: ((goldenMaster as any).greeting !== '' && (goldenMaster as any).greeting != null) ? (goldenMaster as any).greeting : 'Hello! How can I help you today?',
+      closingMessage: ((goldenMaster as any).closingMessage !== '' && (goldenMaster as any).closingMessage != null) ? (goldenMaster as any).closingMessage : 'Thanks for chatting!',
       objectives: (goldenMaster as any).objectives ?? [],
       escalationRules: (goldenMaster as any).escalationRules ?? []
     };
     
-    const behaviorConfig = goldenMaster.behaviorConfig || {
-      closingAggressiveness: (goldenMaster as any).closingAggressiveness || 5,
-      questionFrequency: (goldenMaster as any).questionFrequency || 'moderate',
-      responseLength: (goldenMaster as any).responseLength || 'medium',
-      proactiveLevel: (goldenMaster as any).proactiveLevel || 5
+    const behaviorConfig = goldenMaster.behaviorConfig ?? {
+      closingAggressiveness: (goldenMaster as any).closingAggressiveness ?? 5,
+      questionFrequency: ((goldenMaster as any).questionFrequency !== '' && (goldenMaster as any).questionFrequency != null) ? (goldenMaster as any).questionFrequency : 'moderate',
+      responseLength: ((goldenMaster as any).responseLength !== '' && (goldenMaster as any).responseLength != null) ? (goldenMaster as any).responseLength : 'medium',
+      proactiveLevel: (goldenMaster as any).proactiveLevel ?? 5
     };
     
     // Include training learnings in system prompt (from Golden Master)
     const trainingNotes = goldenMaster.trainedScenarios ?? [];
     const recentLearnings = trainingNotes.length > 0
-      ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${goldenMaster.trainingCompletedAt || 'Not yet'}.`
+      ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${(goldenMaster.trainingCompletedAt !== '' && goldenMaster.trainingCompletedAt != null) ? goldenMaster.trainingCompletedAt : 'Not yet'}.`
       : '';
     
     const updatedGuidelines = ''; // From training feedback if available
@@ -188,7 +188,7 @@ Time Objections: ${businessContext.timeObjections}
 Competitor Objections: ${businessContext.competitorObjections}
 
 # Your Personality
-Name: ${agentPersona.name || 'AI Assistant'}
+Name: ${(agentPersona.name !== '' && agentPersona.name != null) ? agentPersona.name : 'AI Assistant'}
 Tone: ${agentPersona.tone}
 Greeting: "${agentPersona.greeting}"
 Closing: "${agentPersona.closingMessage}"
@@ -213,17 +213,17 @@ Prohibited Topics: ${businessContext.prohibitedTopics}
 
 # CUSTOMER CONTEXT - This is a returning customer!
 
-Customer Name: ${customerMemory.name || 'Unknown'}
-Email: ${customerMemory.email || 'Not provided'}
+Customer Name: ${(customerMemory.name !== '' && customerMemory.name != null) ? customerMemory.name : 'Unknown'}
+Email: ${(customerMemory.email !== '' && customerMemory.email != null) ? customerMemory.email : 'Not provided'}
 First Seen: ${new Date(customerMemory.firstSeen).toLocaleDateString()}
 Total Interactions: ${customerMemory.totalInteractions}
 Lead Status: ${customerMemory.leadInfo.status}
 Lifetime Value: $${customerMemory.lifetimeValue.toFixed(2)}
 
 ## Customer Preferences
-Budget: ${customerMemory.preferences.budget || 'Unknown'}
-Interests: ${customerMemory.preferences.interests.join(', ') || 'None recorded'}
-Communication Preference: ${customerMemory.preferences.preferredTone || 'Not specified'}
+Budget: ${(customerMemory.preferences.budget !== '' && customerMemory.preferences.budget != null) ? customerMemory.preferences.budget : 'Unknown'}
+Interests: ${(customerMemory.preferences.interests.join(', ') !== '' && customerMemory.preferences.interests.join(', ') != null) ? customerMemory.preferences.interests.join(', ') : 'None recorded'}
+Communication Preference: ${(customerMemory.preferences.preferredTone !== '' && customerMemory.preferences.preferredTone != null) ? customerMemory.preferences.preferredTone : 'Not specified'}
 
 ## Purchase History
 ${customerMemory.purchaseHistory.length > 0 
@@ -442,7 +442,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Calculate final sentiment from messages
       const sentimentMessages = instance.currentContext.filter(m => m.metadata?.sentiment);
       if (sentimentMessages.length > 0) {
-        const avgSentiment = sentimentMessages.reduce((sum, m) => sum + (m.metadata!.sentiment || 0), 0) / sentimentMessages.length;
+        const avgSentiment = sentimentMessages.reduce((sum, m) => sum + (m.metadata!.sentiment ?? 0), 0) / sentimentMessages.length;
         session.sentimentScore = avgSentiment;
         session.sentiment = avgSentiment > 0.3 ? 'positive' : avgSentiment < -0.3 ? 'negative' : 'neutral';
       }

@@ -199,10 +199,10 @@ export default function AdminAPIKeysPageNew() {
     
     // Load existing data for this integration
     const existingData: Record<string, string> = {};
-    const integrationData = keys[integration.id] || {};
+    const integrationData = keys[integration.id] ?? {};
     
     integration.fields.forEach(field => {
-      existingData[field.key] = integrationData[field.key] || '';
+      existingData[field.key] = (integrationData[field.key] !== '' && integrationData[field.key] != null) ? integrationData[field.key] : '';
     });
     
     setModalData(existingData);
@@ -226,7 +226,7 @@ export default function AdminAPIKeysPageNew() {
         ...keys,
         [selectedIntegration.id]: modalData,
         updatedAt: new Date().toISOString(),
-        updatedBy: adminUser?.id || 'admin',
+        updatedBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : 'admin',
       };
 
       await FirestoreService.set('admin', 'platform-api-keys', updatedKeys);
@@ -240,7 +240,7 @@ export default function AdminAPIKeysPageNew() {
       }, 1500);
       
     } catch (error: any) {
-      setSaveMessage({ type: 'error', message: error.message || 'Failed to save configuration' });
+      setSaveMessage({ type: 'error', message: (error.message !== '' && error.message != null) ? error.message : 'Failed to save configuration' });
     } finally {
       setIsSaving(false);
     }

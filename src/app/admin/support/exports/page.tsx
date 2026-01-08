@@ -41,7 +41,7 @@ export default function DataExportsPage() {
         processedItems: 0,
         successCount: 0,
         errorCount: 0,
-        createdBy: adminUser?.id || '',
+        createdBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '',
         createdAt: new Date() as any,
       };
       setExports([newExport, ...exports]);
@@ -192,7 +192,7 @@ export default function DataExportsPage() {
               >
                 <div>
                   <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-                    {exp.resourceType} Export ({(exp as any).format || 'json'})
+                    {exp.resourceType} Export ({((exp as any).format !== '' && (exp as any).format != null) ? (exp as any).format : 'json'})
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#666' }}>
                     Created: {new Date(exp.createdAt as any).toLocaleString()}

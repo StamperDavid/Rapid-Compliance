@@ -18,10 +18,11 @@ export function buildPersonaFromOnboarding(
   onboardingData: OnboardingData
 ): AgentPersona {
   // Extract persona data from onboarding
-  const agentName = onboardingData.agentName || onboardingData.businessName || 'AI Assistant';
-  const tone = (onboardingData as any).tone || 'professional';
-  const greeting = (onboardingData as any).greeting || buildDefaultGreeting(onboardingData);
-  const closingMessage = (onboardingData as any).closingMessage || buildDefaultClosing(onboardingData);
+  const agentNameFromBusiness = (onboardingData.businessName !== '' && onboardingData.businessName != null) ? onboardingData.businessName : 'AI Assistant';
+  const agentName = (onboardingData.agentName !== '' && onboardingData.agentName != null) ? onboardingData.agentName : agentNameFromBusiness;
+  const tone = ((onboardingData as any).tone !== '' && (onboardingData as any).tone != null) ? (onboardingData as any).tone : 'professional';
+  const greeting = ((onboardingData as any).greeting !== '' && (onboardingData as any).greeting != null) ? (onboardingData as any).greeting : buildDefaultGreeting(onboardingData);
+  const closingMessage = ((onboardingData as any).closingMessage !== '' && (onboardingData as any).closingMessage != null) ? (onboardingData as any).closingMessage : buildDefaultClosing(onboardingData);
   
   // Build objectives from onboarding
   const objectives = buildObjectives(onboardingData);
@@ -43,8 +44,8 @@ export function buildPersonaFromOnboarding(
  * Build default greeting from onboarding data
  */
 function buildDefaultGreeting(onboardingData: OnboardingData): string {
-  const businessName = onboardingData.businessName || 'our company';
-  const tone = (onboardingData as any).tone || 'professional';
+  const businessName = (onboardingData.businessName !== '' && onboardingData.businessName != null) ? onboardingData.businessName : 'our company';
+  const tone = ((onboardingData as any).tone !== '' && (onboardingData as any).tone != null) ? (onboardingData as any).tone : 'professional';
   
   if (tone === 'friendly') {
     return `Hi! Welcome to ${businessName}! I'm here to help you find exactly what you need. What can I help you with today?`;
@@ -61,7 +62,7 @@ function buildDefaultGreeting(onboardingData: OnboardingData): string {
  * Build default closing message from onboarding data
  */
 function buildDefaultClosing(onboardingData: OnboardingData): string {
-  const tone = (onboardingData as any).tone || 'professional';
+  const tone = ((onboardingData as any).tone !== '' && (onboardingData as any).tone != null) ? (onboardingData as any).tone : 'professional';
   
   if (tone === 'friendly') {
     return `Thanks for chatting! Feel free to reach out anytime if you have more questions. Have a great day!`;
@@ -82,7 +83,7 @@ function buildObjectives(onboardingData: OnboardingData): string[] {
   const data = onboardingData as any;
   
   // Primary objective
-  const primaryObjective = data.primaryObjective || 'sales';
+  const primaryObjective = (data.primaryObjective !== '' && data.primaryObjective != null) ? data.primaryObjective : 'sales';
   if (primaryObjective === 'sales') {
     objectives.push('Help customers find the right products/services for their needs');
     objectives.push('Qualify leads and identify buying signals');
@@ -167,8 +168,8 @@ export function buildBusinessContextFromOnboarding(
 ): Record<string, any> {
   const data = onboardingData as any;
   return {
-    businessName: data.businessName || 'the company',
-    industry: data.industry || 'general',
+    businessName: (data.businessName !== '' && data.businessName != null) ? data.businessName : 'the company',
+    industry: (data.industry !== '' && data.industry != null) ? data.industry : 'general',
     website: data.website ?? '',
     companySize: data.companySize ?? '',
     
@@ -237,11 +238,11 @@ export function buildBehaviorConfigFromOnboarding(
 ): Record<string, any> {
   const data = onboardingData as any;
   return {
-    closingAggressiveness: data.closingAggressiveness || 5,
-    questionFrequency: data.questionFrequency || 3,
-    responseLength: data.responseLength || 'balanced',
-    proactiveLevel: data.proactiveLevel || 5,
-    maxMessagesBeforeEscalation: data.maxMessagesBeforeEscalation || 20,
+    closingAggressiveness: data.closingAggressiveness ?? 5,
+    questionFrequency: data.questionFrequency ?? 3,
+    responseLength: (data.responseLength !== '' && data.responseLength != null) ? data.responseLength : 'balanced',
+    proactiveLevel: data.proactiveLevel ?? 5,
+    maxMessagesBeforeEscalation: data.maxMessagesBeforeEscalation ?? 20,
     idleTimeoutMinutes: 30,
   };
 }

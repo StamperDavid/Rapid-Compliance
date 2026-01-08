@@ -44,7 +44,8 @@ export async function handleSchemaChangeForAgent(
       return;
     }
     
-    const schemaName = (schema as any).name?.toLowerCase() || '';
+    const schemaNameLower = (schema as any).name?.toLowerCase();
+    const schemaName = (schemaNameLower !== '' && schemaNameLower != null) ? schemaNameLower : '';
     const isRelevant = isAgentRelevantSchema(schemaName);
     
     if (!isRelevant) {
@@ -212,7 +213,7 @@ async function compileSystemPromptWithSchemas(
       
       return `
 ## ${schema.name}
-Description: ${schema.description || 'No description provided'}
+Description: ${(schema.description !== '' && schema.description != null) ? schema.description : 'No description provided'}
 
 Available fields:
 ${fields}
@@ -315,7 +316,8 @@ export async function getSchemaChangeImpactOnAgent(
       };
     }
     
-    const schemaName = (schema as any).name?.toLowerCase() || '';
+    const schemaNameLower = (schema as any).name?.toLowerCase();
+    const schemaName = (schemaNameLower !== '' && schemaNameLower != null) ? schemaNameLower : '';
     const isRelevant = isAgentRelevantSchema(schemaName);
     
     if (!isRelevant) {

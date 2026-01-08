@@ -27,7 +27,7 @@ export default function AdminDashboard() {
 
         // Check auth state and get token
         const currentUser = auth.currentUser;
-        logger.info('📊 Current auth user', { email: currentUser?.email || 'NOT LOGGED IN', file: 'page.tsx' });
+        logger.info('📊 Current auth user', { email: (currentUser?.email !== '' && currentUser?.email != null) ? currentUser.email : 'NOT LOGGED IN', file: 'page.tsx' });
         
         let orgs: any[] = [];
         let users: any[] = [];
@@ -48,7 +48,7 @@ export default function AdminDashboard() {
           
           if (orgsResponse.ok) {
             const data = await orgsResponse.json();
-            orgs = data.organizations || [];
+            orgs = data.organizations ?? [];
             logger.info('📊 Organizations fetched via API', { count: orgs.length, file: 'page.tsx' });
           } else {
             const errorText = await orgsResponse.text();
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
           
           if (usersResponse.ok) {
             const data = await usersResponse.json();
-            users = data.users || [];
+            users = data.users ?? [];
             logger.info('📊 Users fetched via API', { count: users.length, file: 'page.tsx' });
           } else {
             logger.error('📊 Users API error', new Error('Users API failed'), { status: usersResponse.status, file: 'page.tsx' });
@@ -275,32 +275,32 @@ export default function AdminDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
         <MetricCard
           label="Total Organizations"
-          value={metrics?.totalOrganizations.toLocaleString() || '0'}
-          change={`${metrics?.activeOrganizations || 0} active`}
+          value={(metrics?.totalOrganizations?.toLocaleString() !== '' && metrics?.totalOrganizations?.toLocaleString() != null) ? metrics.totalOrganizations.toLocaleString() : '0'}
+          change={`${metrics?.activeOrganizations ?? 0} active`}
           icon="🏢"
           color="#6366f1"
           tooltip="Total number of customer organizations on the platform. Includes active, trial, and suspended organizations."
         />
         <MetricCard
           label="Total Users"
-          value={metrics?.totalUsers.toLocaleString() || '0'}
-          change={`+${metrics?.newUsersThisPeriod || 0} this period`}
+          value={(metrics?.totalUsers?.toLocaleString() !== '' && metrics?.totalUsers?.toLocaleString() != null) ? metrics.totalUsers.toLocaleString() : '0'}
+          change={`+${metrics?.newUsersThisPeriod ?? 0} this period`}
           icon="👥"
           color="#10b981"
           tooltip="Total number of users across all organizations. Shows new users added in the current period."
         />
         <MetricCard
           label="Monthly Recurring Revenue"
-          value={`$${metrics?.mrr.toLocaleString() || '0'}`}
-          change={`ARR: $${metrics?.arr.toLocaleString() || '0'}`}
+          value={(metrics?.mrr?.toLocaleString() !== '' && metrics?.mrr?.toLocaleString() != null) ? `$${metrics.mrr.toLocaleString()}` : '$0'}
+          change={(metrics?.arr?.toLocaleString() !== '' && metrics?.arr?.toLocaleString() != null) ? `ARR: $${metrics.arr.toLocaleString()}` : 'ARR: $0'}
           icon="💵"
           color="#ec4899"
           tooltip="Monthly Recurring Revenue (MRR) from all active subscriptions. ARR = Annual Recurring Revenue (MRR × 12)."
         />
         <MetricCard
           label="System Uptime"
-          value={`${systemHealth?.performance.uptime.toFixed(2) || '0'}%`}
-          change={`${systemHealth?.performance.activeConnections || 0} active connections`}
+          value={(systemHealth?.performance.uptime?.toFixed(2) !== '' && systemHealth?.performance.uptime?.toFixed(2) != null) ? `${systemHealth.performance.uptime.toFixed(2)}%` : '0%'}
+          change={`${systemHealth?.performance.activeConnections ?? 0} active connections`}
           icon="⚡"
           color="#f59e0b"
           tooltip="Platform uptime percentage. Shows current number of active user connections to the system."
@@ -311,22 +311,22 @@ export default function AdminDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
         <QuickStat 
           label="Active Orgs" 
-          value={metrics?.activeOrganizations || 0}
+          value={metrics?.activeOrganizations ?? 0}
           tooltip="Organizations with active paid subscriptions (not trial or suspended)"
         />
         <QuickStat 
           label="Trial Orgs" 
-          value={metrics?.trialOrganizations || 0}
+          value={metrics?.trialOrganizations ?? 0}
           tooltip="Organizations currently in their free trial period (7-14 days)"
         />
         <QuickStat 
           label="Suspended" 
-          value={metrics?.suspendedOrganizations || 0}
+          value={metrics?.suspendedOrganizations ?? 0}
           tooltip="Organizations that have been suspended (usually due to payment issues or policy violations)"
         />
         <QuickStat 
           label="Churn Rate" 
-          value={`${metrics?.churnRate || 0}%`}
+          value={`${metrics?.churnRate ?? 0}%`}
           tooltip="Percentage of organizations that cancel their subscription per month. Lower is better."
         />
       </div>

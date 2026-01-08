@@ -396,7 +396,7 @@ function InfoRow({ label, value, valueColor }: { label: string; value: string; v
       <span style={{ fontSize: '0.875rem', color: '#666' }}>{label}</span>
       <span style={{ 
         fontSize: '0.875rem', 
-        color: valueColor || '#fff',
+        color: (valueColor !== '' && valueColor != null) ? valueColor : '#fff',
         fontWeight: '500' 
       }}>
         {value}

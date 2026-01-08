@@ -42,20 +42,27 @@ export default function UserDetailPage() {
           let orgName = 'Unknown';
           if (userData.organizationId) {
             const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, userData.organizationId) as any;
-            orgName = org?.name || 'Unknown';
+            orgName = (org?.name !== '' && org?.name != null) ? org.name : 'Unknown';
           }
+          
+          const profileDisplayName = (userData.profile?.displayName !== '' && userData.profile?.displayName != null) ? userData.profile.displayName : '';
+          const fallbackDisplayName = (userData.displayName !== '' && userData.displayName != null) ? userData.displayName : 'Unknown';
+          const createdAtIso = (userData.createdAt?.toDate?.()?.toISOString() !== '' && userData.createdAt?.toDate?.()?.toISOString() != null) ? userData.createdAt.toDate().toISOString() : '';
+          const createdAtFallback = (userData.createdAt !== '' && userData.createdAt != null) ? userData.createdAt : '';
+          const lastLoginIso = (userData.lastLoginAt?.toDate?.()?.toISOString() !== '' && userData.lastLoginAt?.toDate?.()?.toISOString() != null) ? userData.lastLoginAt.toDate().toISOString() : null;
+          const lastLoginFallback = userData.lastLoginAt ?? null;
           
           setUser({
             id: userId,
-            email: userData.email || '',
-            displayName: userData.profile?.displayName || userData.displayName || 'Unknown',
-            firstName: userData.profile?.firstName || '',
-            lastName: userData.profile?.lastName || '',
-            status: userData.status || 'active',
-            emailVerified: userData.emailVerified || false,
-            createdAt: userData.createdAt?.toDate?.()?.toISOString() || userData.createdAt || '',
-            lastLoginAt: userData.lastLoginAt?.toDate?.()?.toISOString() || userData.lastLoginAt || null,
-            organizationId: userData.organizationId || '',
+            email: (userData.email !== '' && userData.email != null) ? userData.email : '',
+            displayName: (profileDisplayName !== '' && profileDisplayName != null) ? profileDisplayName : fallbackDisplayName,
+            firstName: (userData.profile?.firstName !== '' && userData.profile?.firstName != null) ? userData.profile.firstName : '',
+            lastName: (userData.profile?.lastName !== '' && userData.profile?.lastName != null) ? userData.profile.lastName : '',
+            status: (userData.status !== '' && userData.status != null) ? userData.status : 'active',
+            emailVerified: userData.emailVerified ?? false,
+            createdAt: (createdAtIso !== '' && createdAtIso != null) ? createdAtIso : createdAtFallback,
+            lastLoginAt: (lastLoginIso !== '' && lastLoginIso != null) ? lastLoginIso : lastLoginFallback,
+            organizationId: (userData.organizationId !== '' && userData.organizationId != null) ? userData.organizationId : '',
             organizationName: orgName,
           });
         }

@@ -304,8 +304,8 @@ export default function SubscriptionsAdminPage() {
                   </label>
                   <input
                     type="number"
-                    value={editingPlan.monthlyPrice || ''}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, monthlyPrice: parseFloat(e.target.value) || null })}
+                    value={editingPlan.monthlyPrice ?? ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, monthlyPrice: parseFloat(e.target.value) ?? null })}
                     style={{
                       width: '100%',
                       padding: '0.625rem',
@@ -324,8 +324,8 @@ export default function SubscriptionsAdminPage() {
                   </label>
                   <input
                     type="number"
-                    value={editingPlan.yearlyPrice || ''}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, yearlyPrice: parseFloat(e.target.value) || null })}
+                    value={editingPlan.yearlyPrice ?? ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, yearlyPrice: parseFloat(e.target.value) ?? null })}
                     style={{
                       width: '100%',
                       padding: '0.625rem',

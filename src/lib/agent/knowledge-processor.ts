@@ -54,8 +54,10 @@ export async function processKnowledgeBase(
   
   if (allUrls.length > 0 || socialMediaUrls.length > 0) {
     // Use existing knowledge analyzer for URL processing
+    const urlFallback = (allUrls[0] !== '' && allUrls[0] != null) ? allUrls[0] : '';
+    const finalUrl = (websiteUrl !== '' && websiteUrl != null) ? websiteUrl : urlFallback;
     const analysisResult = await analyzeCompanyKnowledge(
-      websiteUrl || allUrls[0] || '',
+      finalUrl,
       organizationId,
       undefined,
       faqPageUrl,
@@ -92,9 +94,9 @@ export async function processKnowledgeBase(
           id: `prod_${Date.now()}_${index}`,
           name: p.name,
           description: p.description,
-          price: parseFloat(p.price?.replace(/[^0-9.]/g, '') || '0'),
+          price: parseFloat((p.price?.replace(/[^0-9.]/g, '') !== '' && p.price?.replace(/[^0-9.]/g, '') != null) ? p.price.replace(/[^0-9.]/g, '') : '0'),
           images: [],
-          category: p.category || 'General',
+          category: (p.category !== '' && p.category != null) ? p.category : 'General',
           inStock: true,
         })),
         categories: [],
@@ -197,10 +199,11 @@ async function processFile(
  */
 function getFileType(filename: string): 'pdf' | 'excel' | 'word' | 'image' | 'text' {
   const ext = filename.split('.').pop()?.toLowerCase();
-  if (ext === 'pdf') {return 'pdf';}
-  if (['xlsx', 'xls', 'csv'].includes(ext || '')) {return 'excel';}
-  if (['doc', 'docx'].includes(ext || '')) {return 'word';}
-  if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) {return 'image';}
+  const extSafe = (ext !== '' && ext != null) ? ext : '';
+  if (extSafe === 'pdf') {return 'pdf';}
+  if (['xlsx', 'xls', 'csv'].includes(extSafe)) {return 'excel';}
+  if (['doc', 'docx'].includes(extSafe)) {return 'word';}
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(extSafe)) {return 'image';}
   return 'text';
 }
 

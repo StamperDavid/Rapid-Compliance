@@ -61,9 +61,9 @@ export default function OrganizationsPage() {
       
       if (response.ok) {
         const data = await response.json();
-        orgs = data.organizations || [];
-        setHasMore(data.pagination?.hasMore || false);
-        setNextCursor(data.pagination?.nextCursor || null);
+        orgs = data.organizations ?? [];
+        setHasMore(data.pagination?.hasMore ?? false);
+        setNextCursor(data.pagination?.nextCursor ?? null);
         logger.info('🔍 Organizations loaded via API', { 
           count: orgs.length, 
           hasMore: data.pagination?.hasMore,
@@ -87,14 +87,14 @@ export default function OrganizationsPage() {
         plan: org.plan,
         planLimits: org.planLimits,
         billingEmail: org.billingEmail,
-        branding: org.branding || {},
+        branding: org.branding ?? {},
         settings: org.settings,
         createdAt: org.createdAt,
         updatedAt: org.updatedAt,
         createdBy: org.createdBy,
         status: org.status,
         trialEndsAt: org.trialEndsAt,
-        isTest: org.isTest || false,
+        isTest: org.isTest ?? false,
       }));
       
       if (append) {
@@ -174,7 +174,7 @@ export default function OrganizationsPage() {
         loadOrganizations();
       } else {
         const error = await response.json();
-        alert(`Failed to delete organization: ${error.error || 'Unknown error'}`);
+        alert(`Failed to delete organization: ${(error.error !== '' && error.error != null) ? error.error : 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Delete organization error:', error);

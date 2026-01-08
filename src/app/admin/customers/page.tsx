@@ -30,11 +30,12 @@ export default function CustomersAdminPage() {
   };
 
   const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = searchQuery === '' ||
+    const matchesSearch = searchQuery === '' ? true : (
       customer.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.primaryContact.email.toLowerCase().includes(searchQuery.toLowerCase());
+      customer.primaryContact.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
     
-    const matchesStatus = filterStatus === 'all' || customer.subscription.status === filterStatus;
+    const matchesStatus = filterStatus === 'all' ? true : customer.subscription.status === filterStatus;
     
     return matchesSearch && matchesStatus;
   });

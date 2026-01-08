@@ -62,7 +62,7 @@ export default function BulkOperationsPage() {
         processedItems: 0,
         successCount: 0,
         errorCount: 0,
-        createdBy: adminUser?.id || '',
+        createdBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '',
         createdAt: new Date() as any,
       };
       setOperations([newOp, ...operations]);
@@ -241,7 +241,7 @@ export default function BulkOperationsPage() {
                       {op.type.toUpperCase()} - {op.resourceType}
                     </div>
                     <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                      {op.organizationIds?.length || 0} organizations • Created: {new Date(op.createdAt as any).toLocaleString()}
+                      {op.organizationIds?.length ?? 0} organizations • Created: {new Date(op.createdAt as any).toLocaleString()}
                     </div>
                   </div>
                   <span style={{

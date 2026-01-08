@@ -41,14 +41,14 @@ export async function parseExcel(file: File | Buffer): Promise<ExcelParseResult>
       const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
       
       // First row as headers
-      const headers = data.length > 0 ? data[0].map((h: unknown) => String(h || '')) : [];
+      const headers = data.length > 0 ? data[0].map((h: unknown) => (h !== '' && h != null) ? String(h) : '') : [];
       
       // Convert to objects
       const rows = data.slice(1).map((row: unknown[]) => {
         const obj: Record<string, unknown> = {};
         headers.forEach((header, index) => {
           if (header) {
-            obj[header] = row[index] || '';
+            obj[header] = row[index] ?? '';
           }
         });
         return obj;
@@ -103,15 +103,17 @@ export function extractProductsFromExcel(
       for (const row of sheet.rows) {
         const name = row[sheet.headers![nameCol]];
         if (name && String(name).trim()) {
+          const descValue = descCol !== undefined && descCol >= 0 ? row[sheet.headers![descCol]] : '';
+          const descStr = (descValue !== '' && descValue != null) ? String(descValue) : '';
+          
           const product: any = {
             name: String(name).trim(),
-            description: descCol !== undefined && descCol >= 0 
-              ? String(row[sheet.headers![descCol]] || '').trim() 
-              : '',
+            description: descStr.trim(),
           };
           
           if (priceCol !== undefined && priceCol >= 0) {
-            const priceStr = String(row[sheet.headers![priceCol]] || '').replace(/[^0-9.]/g, '');
+            const priceValue = row[sheet.headers![priceCol]];
+            const priceStr = ((priceValue !== '' && priceValue != null) ? String(priceValue) : '').replace(/[^0-9.]/g, '');
             if (priceStr) {
               product.price = parseFloat(priceStr);
             }
@@ -160,15 +162,17 @@ export function extractServicesFromExcel(
       for (const row of sheet.rows) {
         const name = row[sheet.headers![nameCol]];
         if (name && String(name).trim()) {
+          const descValue = descCol !== undefined && descCol >= 0 ? row[sheet.headers![descCol]] : '';
+          const descStr = (descValue !== '' && descValue != null) ? String(descValue) : '';
+          
           const service: any = {
             name: String(name).trim(),
-            description: descCol !== undefined && descCol >= 0 
-              ? String(row[sheet.headers![descCol]] || '').trim() 
-              : '',
+            description: descStr.trim(),
           };
           
           if (pricingCol !== undefined && pricingCol >= 0) {
-            service.pricing = String(row[sheet.headers![pricingCol]] || '').trim();
+            const pricingValue = row[sheet.headers![pricingCol]];
+            service.pricing = ((pricingValue !== '' && pricingValue != null) ? String(pricingValue) : '').trim();
           }
           
           // Add all other columns

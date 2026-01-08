@@ -1106,7 +1106,7 @@ function StyleEditor({
   onChange: (styles: ResponsiveStyles) => void;
   breakpoint: 'desktop' | 'tablet' | 'mobile';
 }) {
-  const currentStyles = (styles[breakpoint] || styles.desktop) ?? {};
+  const currentStyles = (styles[breakpoint] ?? styles.desktop) ?? {};
   
   const updateStyle = (key: string, value: string) => {
     onChange({
@@ -1187,7 +1187,7 @@ function StyleEditor({
                   <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
                     <input
                       type="color"
-                      value={(currentStyles as any)[field.key] || '#ffffff'}
+                      value={((currentStyles as any)[field.key] !== '' && (currentStyles as any)[field.key] != null) ? (currentStyles as any)[field.key] : '#ffffff'}
                       onChange={(e) => updateStyle(field.key, e.target.value)}
                       style={{ width: '32px', height: '28px', border: '1px solid #333', borderRadius: '4px', cursor: 'pointer' }}
                     />
@@ -1274,7 +1274,7 @@ function WidgetRenderer({
   const renderContent = () => {
     switch (element.type) {
       case 'heading': {
-        const HeadingTag = (element.settings?.tag || 'h2') as keyof JSX.IntrinsicElements;
+        const HeadingTag = ((element.settings?.tag !== '' && element.settings?.tag != null) ? element.settings.tag : 'h2') as keyof JSX.IntrinsicElements;
         return (
           <div
             ref={contentRef}
@@ -1284,7 +1284,7 @@ function WidgetRenderer({
             onDoubleClick={() => setIsEditing(true)}
             style={{ outline: 'none' }}
           >
-            {element.content || 'Heading'}
+            {(element.content !== '' && element.content != null) ? element.content : 'Heading'}
           </div>
         );
       }
@@ -1299,49 +1299,49 @@ function WidgetRenderer({
             onDoubleClick={() => setIsEditing(true)}
             style={{ outline: 'none' }}
           >
-            {element.content || 'Text content'}
+            {(element.content !== '' && element.content != null) ? element.content : 'Text content'}
           </div>
         );
 
       case 'button':
         return (
-          <span style={{ cursor: 'pointer' }}>{element.content || 'Button'}</span>
+          <span style={{ cursor: 'pointer' }}>{(element.content !== '' && element.content != null) ? element.content : 'Button'}</span>
         );
 
       case 'image':
         return (
           <img 
-            src={element.settings?.src || 'https://placehold.co/800x400'} 
+            src={(element.settings?.src !== '' && element.settings?.src != null) ? element.settings.src : 'https://placehold.co/800x400'} 
             alt={element.settings?.alt ?? ''} 
             style={{ maxWidth: '100%', display: 'block' }}
           />
         );
 
       case 'icon':
-        return <span>{element.content || '⚡'}</span>;
+        return <span>{(element.content !== '' && element.content != null) ? element.content : '⚡'}</span>;
 
       case 'spacer':
-        return <div style={{ height: element.settings?.height || 40 }} />;
+        return <div style={{ height: element.settings?.height ?? 40 }} />;
 
       case 'divider':
-        return <hr style={{ border: 'none', borderBottom: styles.borderBottom || '1px solid rgba(255,255,255,0.1)', margin: 0 }} />;
+        return <hr style={{ border: 'none', borderBottom: (styles.borderBottom !== '' && styles.borderBottom != null) ? styles.borderBottom : '1px solid rgba(255,255,255,0.1)', margin: 0 }} />;
 
       case 'icon-box':
         return (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{element.content?.icon || '🚀'}</div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>{element.content?.title || 'Title'}</h3>
-            <p style={{ opacity: 0.7 }}>{element.content?.text || 'Description'}</p>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{(element.content?.icon !== '' && element.content?.icon != null) ? element.content.icon : '🚀'}</div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>{(element.content?.title !== '' && element.content?.title != null) ? element.content.title : 'Title'}</h3>
+            <p style={{ opacity: 0.7 }}>{(element.content?.text !== '' && element.content?.text != null) ? element.content.text : 'Description'}</p>
           </div>
         );
 
       case 'hero':
         return (
           <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>{element.content?.title || 'Hero Title'}</h1>
-            <p style={{ fontSize: '1.25rem', opacity: 0.8, marginBottom: '2rem' }}>{element.content?.subtitle || 'Subtitle'}</p>
+            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>{(element.content?.title !== '' && element.content?.title != null) ? element.content.title : 'Hero Title'}</h1>
+            <p style={{ fontSize: '1.25rem', opacity: 0.8, marginBottom: '2rem' }}>{(element.content?.subtitle !== '' && element.content?.subtitle != null) ? element.content.subtitle : 'Subtitle'}</p>
             <span style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: branding.colors.primary, color: '#fff', borderRadius: '8px', fontWeight: '600' }}>
-              {element.content?.buttonText || 'Get Started'}
+              {(element.content?.buttonText !== '' && element.content?.buttonText != null) ? element.content.buttonText : 'Get Started'}
             </span>
           </div>
         );
@@ -1376,10 +1376,10 @@ function WidgetRenderer({
       case 'cta':
         return (
           <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{element.content?.title || 'CTA Title'}</h2>
-            <p style={{ opacity: 0.8, marginBottom: '1.5rem' }}>{element.content?.subtitle || 'Subtitle'}</p>
+            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{(element.content?.title !== '' && element.content?.title != null) ? element.content.title : 'CTA Title'}</h2>
+            <p style={{ opacity: 0.8, marginBottom: '1.5rem' }}>{(element.content?.subtitle !== '' && element.content?.subtitle != null) ? element.content.subtitle : 'Subtitle'}</p>
             <span style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: '#fff', color: '#000', borderRadius: '8px', fontWeight: '600' }}>
-              {element.content?.buttonText || 'Get Started'}
+              {(element.content?.buttonText !== '' && element.content?.buttonText != null) ? element.content.buttonText : 'Get Started'}
             </span>
           </div>
         );
@@ -1407,8 +1407,8 @@ function WidgetRenderer({
       case 'newsletter':
         return (
           <div style={{ display: 'flex', gap: '10px', maxWidth: '400px' }}>
-            <input type="email" placeholder={element.content?.placeholder || 'Enter email'} style={{ flex: 1, padding: '12px', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#fff' }} />
-            <button style={{ padding: '12px 20px', backgroundColor: branding.colors.primary, color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>{element.content?.buttonText || 'Subscribe'}</button>
+            <input type="email" placeholder={(element.content?.placeholder !== '' && element.content?.placeholder != null) ? element.content.placeholder : 'Enter email'} style={{ flex: 1, padding: '12px', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#fff' }} />
+            <button style={{ padding: '12px 20px', backgroundColor: branding.colors.primary, color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>{(element.content?.buttonText !== '' && element.content?.buttonText != null) ? element.content.buttonText : 'Subscribe'}</button>
           </div>
         );
 
@@ -1439,7 +1439,7 @@ function WidgetRenderer({
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span>ℹ️</span>
-            <span>{element.content || 'Alert message'}</span>
+            <span>{(element.content !== '' && element.content != null) ? element.content : 'Alert message'}</span>
           </div>
         );
 

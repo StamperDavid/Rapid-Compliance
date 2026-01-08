@@ -127,7 +127,7 @@ export default function AdminSalesAgentTrainingPage() {
       
     } catch (error: any) {
       logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
-      throw new Error(error.message || 'Failed to get AI response');
+      throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to get AI response');
     }
   };
 
@@ -502,7 +502,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
       isActive: false,
       trainedScenarios: trainingHistory.map((h: any) => h.topic),
       baseModelId: baseModel.id,
-      notes: notes || undefined,
+      notes: notes ?? undefined,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
       // Spread the base model fields at top level for instance manager
@@ -569,7 +569,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
     }
   };
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
 
   if (loading) {
     return (

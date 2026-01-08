@@ -78,7 +78,7 @@ export default function SystemSettingsPage() {
   const handleSave = (configId: string) => {
     setConfigs(configs.map(c => 
       c.id === configId 
-        ? { ...c, value: editValue, updatedAt: new Date() as any, updatedBy: adminUser?.id || '' }
+        ? { ...c, value: editValue, updatedAt: new Date() as any, updatedBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '' }
         : c
     ));
     setEditingKey(null);
