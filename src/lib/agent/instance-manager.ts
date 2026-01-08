@@ -183,12 +183,12 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     const trainingNotes = goldenMaster.trainedScenarios ?? [];
     // Extract training completion string to avoid empty strings in prompt
     const trainingCompletedDisplay = (goldenMaster.trainingCompletedAt !== '' && goldenMaster.trainingCompletedAt != null) ? goldenMaster.trainingCompletedAt : 'Not yet';
-    const recentLearnings = trainingNotes.length > 0
+    const _recentLearnings = trainingNotes.length > 0
       ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${trainingCompletedDisplay}.`
       : '';
     
-    const updatedGuidelines = ''; // From training feedback if available
-    const behavioralChanges = ''; // From training feedback if available
+    const _updatedGuidelines = ''; // From training feedback if available
+    const _behavioralChanges = ''; // From training feedback if available
     
     // Extract agentPersona.name to avoid putting complex logic in template (Template Extraction Rule)
     const displayAgentName = (agentPersona.name !== '' && agentPersona.name != null) ? agentPersona.name : 'AI Assistant';
@@ -402,7 +402,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Load customer memory
       const memory = await this.getCustomerMemory(customerId, orgId);
       if (!memory) {
-        logger.error('[Instance Manager] No memory found for customer ${customerId}', new Error('[Instance Manager] No memory found for customer ${customerId}'), { file: 'instance-manager.ts' });
+        logger.error(`[Instance Manager] No memory found for customer ${customerId}`, new Error(`[Instance Manager] No memory found for customer ${customerId}`), { file: 'instance-manager.ts' });
         return;
       }
 
@@ -496,7 +496,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Calculate final sentiment from messages
       const sentimentMessages = instance.currentContext.filter(m => m.metadata?.sentiment);
       if (sentimentMessages.length > 0) {
-        const avgSentiment = sentimentMessages.reduce((sum, m) => sum + (m.metadata!.sentiment ?? 0), 0) / sentimentMessages.length;
+        const avgSentiment = sentimentMessages.reduce((sum, m) => sum + (m.metadata?.sentiment ?? 0), 0) / sentimentMessages.length;
         session.sentimentScore = avgSentiment;
         session.sentiment = avgSentiment > 0.3 ? 'positive' : avgSentiment < -0.3 ? 'negative' : 'neutral';
       }
@@ -663,7 +663,7 @@ ${this.summarizeRecentConversations(customerMemory)}
           }
           return null;
         }
-      } catch (adminError) {
+      } catch (_adminError) {
         logger.warn('[Instance Manager] Admin SDK failed for customer memory, using client SDK', { file: 'instance-manager.ts' });
       }
       
@@ -744,7 +744,7 @@ ${this.summarizeRecentConversations(customerMemory)}
             .set(memory, { merge: true });
           return;
         }
-      } catch (adminError) {
+      } catch (_adminError) {
         logger.warn('[Instance Manager] Admin SDK failed for saving memory, using client SDK', { file: 'instance-manager.ts' });
       }
       
@@ -781,26 +781,28 @@ ${this.summarizeRecentConversations(customerMemory)}
     }
   }
   
-  private async getActiveInstance(instanceId: string): Promise<AgentInstance | null> {
+  private getActiveInstance(_instanceId: string): Promise<AgentInstance | null> {
     // In production, check Redis first, then Firestore
     // For now, just check Firestore
     try {
       // Need orgId to query - this is a limitation of current design
       // In production, maintain a lookup table or use Redis with instanceId as key
-      return null;
+      return Promise.resolve(null);
     } catch (error) {
       logger.error('Error getting active instance:', error, { file: 'instance-manager.ts' });
-      return null;
+      return Promise.resolve(null);
     }
   }
   
-  private async removeActiveInstance(instanceId: string): Promise<void> {
+  private removeActiveInstance(instanceId: string): Promise<void> {
     try {
       // In production, remove from Redis and Firestore
       // For now, just log
       logger.info('[Instance Manager] Removing active instance', { instanceId, file: 'instance-manager.ts' });
+      return Promise.resolve();
     } catch (error) {
       logger.error('Error removing active instance:', error, { file: 'instance-manager.ts' });
+      return Promise.resolve();
     }
   }
   
@@ -821,13 +823,14 @@ ${this.summarizeRecentConversations(customerMemory)}
     }
   }
   
-  private async notifyHumanAgents(instance: AgentInstance, reason: string): Promise<void> {
+  private notifyHumanAgents(instance: AgentInstance, reason: string): Promise<void> {
     // TODO: Implement - send real-time notification to human agents
     logger.info('[Instance Manager] Notifying human agents for escalation', { 
       reason, 
       instanceId: instance.instanceId,
       file: 'instance-manager.ts' 
     });
+    return Promise.resolve();
   }
   
   // ===== ID Generators =====
