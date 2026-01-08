@@ -64,7 +64,7 @@ export default function IntegrationsPage() {
     
     const updated = {
       ...integrations,
-      [integrationId]: integration as ConnectedIntegration,
+      [integrationId]: integration,
     };
     setIntegrations(updated);
     

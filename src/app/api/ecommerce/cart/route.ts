@@ -6,8 +6,6 @@ import {
   addToCart,
   removeFromCart,
   updateCartItemQuantity,
-  applyDiscountCode,
-  removeDiscountCode,
 } from '@/lib/ecommerce/cart-service';
 
 export const dynamic = 'force-dynamic';
@@ -33,12 +31,6 @@ const updateCartSchema = z.object({
   organizationId: z.string().optional(),
   itemId: z.string(),
   quantity: z.number().min(0),
-});
-
-const discountSchema = z.object({
-  sessionId: z.string(),
-  workspaceId: z.string(),
-  code: z.string(),
 });
 
 /**

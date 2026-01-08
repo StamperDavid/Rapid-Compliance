@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       health.services.database = 'unavailable';
       health.status = 'degraded';
     }
-  } catch (error) {
+  } catch (_error) {
     health.services.database = 'unhealthy';
     health.status = 'unhealthy';
   }

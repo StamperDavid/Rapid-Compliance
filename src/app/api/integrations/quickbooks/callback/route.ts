@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.redirect(`/workspace/${orgId}/integrations?success=quickbooks`);
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.redirect('/integrations?error=oauth_failed');
   }
 }

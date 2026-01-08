@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     
     try {
       allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
-    } catch (e) {
+    } catch (_e) {
       logger.debug('No orders collection yet', { orgId });
     }
 
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     
     try {
       allCarts = await FirestoreService.getAll<CartRecord>(cartsPath, []);
-    } catch (e) {
+    } catch (_e) {
       logger.debug('No carts collection yet', { orgId });
     }
 

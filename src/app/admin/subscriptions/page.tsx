@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 import { useAuth } from '@/hooks/useAuth'
 import { logger } from '@/lib/logger/logger';
 
 export default function SubscriptionsAdminPage() {
-  const { user } = useAuth();
+  const { _user } = useAuth();
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState<any>(null);

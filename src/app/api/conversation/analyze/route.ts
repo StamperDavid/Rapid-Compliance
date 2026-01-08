@@ -18,7 +18,6 @@
 
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import { analyzeConversation, analyzeTranscript } from '@/lib/conversation/conversation-engine';
 import {
   validateAnalyzeConversationRequest,

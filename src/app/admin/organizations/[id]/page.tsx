@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
-import Tooltip from '@/components/Tooltip';
+
 import type { Organization, PlanLimits } from '@/types/organization'
 import { logger } from '@/lib/logger/logger';;
 
@@ -34,8 +34,8 @@ const DEFAULT_SETTINGS = {
 
 export default function OrganizationDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const { adminUser, hasPermission } = useAdminAuth();
+
+  const { _adminUser, hasPermission } = useAdminAuth();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'workspaces' | 'usage' | 'billing'>('overview');

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
 ## Current Pricing Tiers
 
-${tiers.map((tier: any, index: number) => `
+${tiers.map((tier: any, _index: number) => `
 ### ${tier.name} - $${tier.price}/month
 - **Record Capacity:** ${tier.recordMin}-${tier.recordMax} records
 - **Description:** ${tier.description}

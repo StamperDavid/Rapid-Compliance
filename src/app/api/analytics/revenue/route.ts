@@ -1,7 +1,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -117,7 +116,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       // Note: For analytics, we need all matching records to calculate totals
       // If org has 10,000+ deals, consider implementing background jobs for analytics
       allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, []);
-    } catch (e) {
+    } catch (_e) {
       logger.debug('No deals collection yet', { orgId });
     }
 
@@ -136,7 +135,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     
     try {
       allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
-    } catch (e) {
+    } catch (_e) {
       logger.debug('No orders collection yet', { orgId });
     }
 
@@ -252,7 +251,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       });
     });
     const byRep = Array.from(repMap.entries())
-      .map(([id, data]) => ({
+      .map(([_id, data]) => ({
         rep: data.name,
         revenue: data.revenue,
         deals: data.deals,

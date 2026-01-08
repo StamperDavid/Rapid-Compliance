@@ -1,11 +1,11 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { handleAPIError, errors, successResponse } from '@/lib/api/error-handler';
+import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 
 export async function POST(request: NextRequest) {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { customerId, orgId, message, stream } = validation.data;
+    const { customerId, orgId, message, _stream } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== orgId) {

@@ -1,8 +1,8 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { searchWorkspace } from '@/lib/search/search-service';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
-import { searchQuerySchema, validateInput, organizationIdSchema } from '@/lib/validation/schemas';
+import { requireOrganization } from '@/lib/auth/api-auth';
+import { searchQuerySchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';

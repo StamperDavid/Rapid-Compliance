@@ -1,10 +1,9 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/email-service';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { logger } from '@/lib/logger/logger';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
 import { errors } from '@/lib/middleware/error-handler';
 

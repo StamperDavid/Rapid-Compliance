@@ -1,6 +1,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { processKnowledgeBase } from '@/lib/agent/knowledge-processor';
 import { indexKnowledgeBase } from '@/lib/agent/vector-search';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';

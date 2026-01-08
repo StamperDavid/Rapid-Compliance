@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     
     try {
       allWorkflows = await FirestoreService.getAll(workflowsPath, []);
-    } catch (e) {
+    } catch (_e) {
       logger.debug('No workflows collection yet', { orgId });
     }
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     
     try {
       allExecutions = await FirestoreService.getAll(executionsPath, []);
-    } catch (e) {
+    } catch (_e) {
       logger.debug('No workflow executions collection yet', { orgId });
     }
 

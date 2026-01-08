@@ -21,7 +21,7 @@ interface OrgAPIHealth {
 }
 
 export default function APIHealthPage() {
-  const { adminUser, hasPermission } = useAdminAuth();
+  const { _adminUser, hasPermission } = useAdminAuth();
   const [orgs, setOrgs] = useState<OrgAPIHealth[]>([]);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState<string | null>(null);

@@ -12,7 +12,7 @@ import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
  * GET /api/schema-debouncer
  * Get debouncer status
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const debouncer = SchemaChangeDebouncer.getInstance();
     

@@ -7,7 +7,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { requireFeature } from '@/lib/subscription/middleware';
 import type {
   EmailReply,
   ProspectContext 

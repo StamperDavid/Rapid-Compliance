@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', errorDetails);
     }
 
-    const { organizationId, paymentIntentId, orderData } = validation.data;
+    const { organizationId, paymentIntentId } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== organizationId) {

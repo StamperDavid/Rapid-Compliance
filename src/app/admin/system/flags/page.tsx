@@ -5,10 +5,10 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { FeatureFlag } from '@/types/admin';
 
 export default function FeatureFlagsPage() {
-  const { adminUser, hasPermission } = useAdminAuth();
+  const { _adminUser, hasPermission } = useAdminAuth();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [_showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     setTimeout(() => {
@@ -44,8 +44,8 @@ export default function FeatureFlagsPage() {
     ));
   };
 
-  const bgPaper = '#1a1a1a';
-  const borderColor = '#333';
+
+
   const primaryColor = '#6366f1';
 
   return (

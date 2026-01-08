@@ -1,6 +1,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';

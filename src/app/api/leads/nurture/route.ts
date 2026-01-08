@@ -1,7 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { createNurtureSequence, enrollLeadInSequence, analyzeLeadLifecycle, getLeadAttribution } from '@/lib/analytics/lead-nurturing';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { leadNurtureSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';

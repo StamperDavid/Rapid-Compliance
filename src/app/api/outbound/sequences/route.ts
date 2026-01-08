@@ -7,7 +7,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { requireFeature } from '@/lib/subscription/middleware';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { OutboundSequence } from '@/types/outbound-sequence';
 import { logger } from '@/lib/logger/logger';
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
     const orgId = searchParams.get('orgId');
     const limitParam = searchParams.get('limit');
     const pageSize = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50');
-    const cursor = searchParams.get('cursor'); // For pagination
 
     if (!orgId) {
       return NextResponse.json(

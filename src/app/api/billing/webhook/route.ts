@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       // Try to get from admin settings
       const adminKeys = await apiKeyService.getServiceKey('platform', 'stripe');
       webhookSecret = adminKeys?.webhookSecret;
-    } catch (error) {
+    } catch (_error) {
       // Silently fail - will use env var or error
     }
   }

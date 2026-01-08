@@ -5,7 +5,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { SystemHealth } from '@/types/admin';
 
 export default function SystemHealthPage() {
-  const { adminUser } = useAdminAuth();
+  const { _adminUser } = useAdminAuth();
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -63,7 +63,7 @@ export default function SystemHealthPage() {
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
-  const primaryColor = '#6366f1';
+
 
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>
@@ -227,7 +227,7 @@ function MetricCard({ label, value, status }: { label: string; value: string; st
 }
 
 function ServiceCard({ service, status }: { service: string; status: any }) {
-  const bgPaper = '#1a1a1a';
+
   const borderColor = '#333';
 
   return (

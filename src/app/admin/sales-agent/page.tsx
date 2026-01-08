@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 export default function AdminSalesAgentPage() {
-  const { adminUser } = useAdminAuth();
+  const { _adminUser } = useAdminAuth();
   const [goldenMaster, setGoldenMaster] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeConversations, setActiveConversations] = useState<any[]>([]);
@@ -225,7 +225,7 @@ export default function AdminSalesAgentPage() {
   );
 }
 
-function StatCard({ label, value, sublabel, icon, color }: {
+function StatCard({ label, value, sublabel, icon, _color }: {
   label: string;
   value: string;
   sublabel: string;

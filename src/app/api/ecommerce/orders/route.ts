@@ -1,6 +1,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, orderBy } from 'firebase/firestore';
 import type { Order } from '@/types/ecommerce';
@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
     const customerEmail = searchParams.get('customerEmail');
     const status = searchParams.get('status');
     const pageSize = parseInt((searchParams.get('limit') !== '' && searchParams.get('limit') != null) ? searchParams.get('limit') : '50');
-    const cursor = searchParams.get('cursor');
 
     if (!workspaceId) {
       return errors.badRequest('workspaceId required');

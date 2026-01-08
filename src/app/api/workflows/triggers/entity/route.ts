@@ -1,7 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';

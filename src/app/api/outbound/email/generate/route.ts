@@ -7,7 +7,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { requireFeatureWithLimit, incrementFeatureUsage } from '@/lib/subscription/middleware';
+import { incrementFeatureUsage } from '@/lib/subscription/middleware';
 import type { ProspectData } from '@/lib/outbound/prospect-research';
 import { researchProspect } from '@/lib/outbound/prospect-research';
 import type { EmailTemplate, EmailTone } from '@/lib/outbound/email-writer';

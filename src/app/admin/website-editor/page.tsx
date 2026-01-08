@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link'
 import { logger } from '@/lib/logger/logger';
@@ -1274,7 +1274,7 @@ function WidgetRenderer({
   const renderContent = () => {
     switch (element.type) {
       case 'heading': {
-        const HeadingTag = ((element.settings?.tag !== '' && element.settings?.tag != null) ? element.settings.tag : 'h2') as keyof JSX.IntrinsicElements;
+
         return (
           <div
             ref={contentRef}
@@ -1506,7 +1506,7 @@ function WidgetRenderer({
 // ============================================================================
 
 export default function WebsiteEditorPage() {
-  const { adminUser } = useAdminAuth();
+  const { _adminUser } = useAdminAuth();
   
   // State
   const [config, setConfig] = useState<WebsiteConfig>(DEFAULT_CONFIG);
@@ -1514,14 +1514,14 @@ export default function WebsiteEditorPage() {
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [breakpoint, setBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [leftPanel, setLeftPanel] = useState<'widgets' | 'pages' | 'branding'>('widgets');
-  const [rightPanel, setRightPanel] = useState<'style' | 'settings'>('style');
-  const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
+  const [_rightPanel, _setRightPanel] = useState<'style' | 'settings'>('style');
+  const [_draggedWidget, setDraggedWidget] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [widgetFilter, setWidgetFilter] = useState<string>('');
   const [expandedCategory, setExpandedCategory] = useState<string>('basic');
-  const [history, setHistory] = useState<WebsiteConfig[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [_history, _setHistory] = useState<WebsiteConfig[]>([]);
+  const [_historyIndex, _setHistoryIndex] = useState(-1);
 
   const selectedPage = config.pages.find(p => p.id === selectedPageId);
   

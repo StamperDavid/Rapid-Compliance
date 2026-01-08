@@ -80,7 +80,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
   
   try {
     allLeads = await FirestoreService.getAll(leadsPath, []);
-  } catch (e) {
+  } catch (_e) {
     logger.debug('No leads collection yet', { orgId });
   }
 

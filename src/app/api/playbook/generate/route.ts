@@ -18,7 +18,6 @@
 
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 import { generatePlaybook } from '@/lib/playbook/playbook-engine';
 import { validateGeneratePlaybookRequest } from '@/lib/playbook/validation';
 import { logger } from '@/lib/logger/logger';

@@ -1,5 +1,5 @@
 import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+
 import { verifyAdminRequest, createErrorResponse, createSuccessResponse, isAuthError } from '@/lib/api/admin-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     let testResult;
-    let errorDetails;
+    let _errorDetails;
 
     switch (service) {
       case 'openai':

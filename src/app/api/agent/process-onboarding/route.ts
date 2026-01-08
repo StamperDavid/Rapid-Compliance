@@ -1,7 +1,7 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { processOnboarding } from '@/lib/agent/onboarding-processor';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { validateInput } from '@/lib/validation/schemas';
 import { z } from 'zod';
 import type { OnboardingData } from '@/types/agent-memory';

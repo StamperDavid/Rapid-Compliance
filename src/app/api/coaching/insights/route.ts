@@ -29,7 +29,6 @@ import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-fact
 import { CoachingAnalyticsEngine } from '@/lib/coaching/coaching-analytics-engine';
 import { CoachingGenerator } from '@/lib/coaching/coaching-generator';
 import { 
-  validateGenerateCoachingRequest,
   safeValidateGenerateCoachingRequest 
 } from '@/lib/coaching/validation';
 import { createCoachingInsightsGeneratedEvent } from '@/lib/coaching/events';
@@ -37,7 +36,6 @@ import type {
   GenerateCoachingRequest,
   GenerateCoachingResponse 
 } from '@/lib/coaching/types';
-import { ZodError } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 
@@ -324,7 +322,7 @@ export async function POST(request: NextRequest) {
  * 
  * Handle CORS preflight requests
  */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return NextResponse.json(
     {},
     {

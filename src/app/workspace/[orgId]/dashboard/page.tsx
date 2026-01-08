@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
@@ -158,7 +158,7 @@ export default function WorkspaceDashboardPage() {
               completed: data.completed ?? false,
             };
           });
-        } catch (e) {
+        } catch (_e) {
           // Tasks collection might not exist yet
           logger.info('No tasks found', { file: 'page.tsx' });
         }
@@ -189,7 +189,7 @@ export default function WorkspaceDashboardPage() {
               icon: '💼',
             });
           });
-        } catch (e) {
+        } catch (_e) {
           logger.info('Could not fetch recent deals', { file: 'page.tsx' });
         }
 
@@ -215,12 +215,12 @@ export default function WorkspaceDashboardPage() {
               icon: '🎯',
             });
           });
-        } catch (e) {
+        } catch (_e) {
           logger.info('Could not fetch recent leads', { file: 'page.tsx' });
         }
 
         // Sort by time (most recent first)
-        activityData.sort((a, b) => {
+        activityData.sort((_a, _b) => {
           // Simple sort - in production you'd use actual timestamps
           return 0;
         });

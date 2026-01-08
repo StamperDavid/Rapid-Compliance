@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger/logger';
 
 export default function NewOrganizationPage() {
   const router = useRouter();
-  const { adminUser, isSuperAdmin } = useAdminAuth();
+  const { _adminUser, isSuperAdmin } = useAdminAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

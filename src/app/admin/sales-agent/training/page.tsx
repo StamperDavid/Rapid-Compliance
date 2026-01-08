@@ -11,7 +11,7 @@ import { logger } from '@/lib/logger/logger';
  * Same design as client training centers, but wired to admin context
  */
 export default function AdminSalesAgentTrainingPage() {
-  const { adminUser } = useAdminAuth();
+  const { _adminUser } = useAdminAuth();
   
   // Platform admin uses a special org ID for its own data
   const orgId = 'platform-admin';
@@ -23,7 +23,7 @@ export default function AdminSalesAgentTrainingPage() {
   // Base Model & Golden Master states
   const [baseModel, setBaseModel] = useState<any>(null);
   const [goldenMasters, setGoldenMasters] = useState<any[]>([]);
-  const [activeGoldenMaster, setActiveGoldenMaster] = useState<any>(null);
+  const [_activeGoldenMaster, setActiveGoldenMaster] = useState<any>(null);
   
   // Training chat states
   const [trainingTopic, setTrainingTopic] = useState('');
@@ -55,7 +55,7 @@ export default function AdminSalesAgentTrainingPage() {
     discoveryQuestions: '',
     empathyAndRapport: ''
   });
-  const [sessionNotes, setSessionNotes] = useState('');
+  const [_sessionNotes, setSessionNotes] = useState('');
   
   // Training materials states
   const [uploadedMaterials, setUploadedMaterials] = useState<any[]>([]);
@@ -74,7 +74,7 @@ export default function AdminSalesAgentTrainingPage() {
     { key: 'discoveryQuestions', label: 'Discovery Questions', icon: '❓' },
     { key: 'empathyAndRapport', label: 'Empathy & Rapport', icon: '🤝' }
   ]);
-  const [showCriteriaEditor, setShowCriteriaEditor] = useState(false);
+  const [_showCriteriaEditor, _setShowCriteriaEditor] = useState(false);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

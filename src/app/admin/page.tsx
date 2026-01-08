@@ -8,7 +8,7 @@ import type { PlatformMetrics, SystemHealth } from '@/types/admin'
 import { logger } from '@/lib/logger/logger';
 
 export default function AdminDashboard() {
-  const { adminUser } = useAdminAuth();
+  const { _adminUser } = useAdminAuth();
   const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
@@ -232,7 +232,7 @@ export default function AdminDashboard() {
     );
   }
 
-  const primaryColor = '#6366f1';
+
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
 
@@ -460,7 +460,7 @@ export default function AdminDashboard() {
   );
 }
 
-function MetricCard({ label, value, change, icon, color, tooltip }: {
+function MetricCard({ label, value, change, icon, _color, tooltip }: {
   label: string;
   value: string;
   change: string;

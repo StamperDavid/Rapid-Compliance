@@ -53,14 +53,14 @@ export async function GET(request: NextRequest) {
 /**
  * Calculate pipeline analytics (extracted for caching)
  */
-async function calculatePipelineAnalytics(orgId: string, period: string) {
+async function calculatePipelineAnalytics(orgId: string, _period: string) {
   // Get all deals from Firestore
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
   let allDeals: any[] = [];
   
   try {
     allDeals = await FirestoreService.getAll(dealsPath, []);
-  } catch (e) {
+  } catch (_e) {
     logger.debug('No deals collection yet', { orgId });
   }
 

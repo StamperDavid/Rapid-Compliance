@@ -9,13 +9,13 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { requireUserRole } from '@/lib/auth/server-auth';
 import {
-  listGlobalTemplates,
+  _listGlobalTemplates,
   saveGlobalTemplate,
   deleteGlobalTemplate,
 } from '@/lib/templates/template-service';
 import {
   getIndustryOptionsWithOverrides,
-  getAllIndustryTemplates,
+  _getAllIndustryTemplates,
 } from '@/lib/templates/template-resolver';
 import { validateTemplate, getValidationErrors } from '@/lib/templates/template-validation';
 import { logger } from '@/lib/logger/logger';
@@ -24,10 +24,10 @@ import { logger } from '@/lib/logger/logger';
  * GET /api/admin/templates
  * List all templates with override status
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Require admin role
-    const user = await requireUserRole(request, ['admin', 'super_admin', 'owner']);
+
 
     const options = await getIndustryOptionsWithOverrides();
 

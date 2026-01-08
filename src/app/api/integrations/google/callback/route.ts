@@ -6,7 +6,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 

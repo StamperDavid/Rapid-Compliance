@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+
 import type { RevenueMetrics } from '@/types/subscription'
 import { logger } from '@/lib/logger/logger';
 

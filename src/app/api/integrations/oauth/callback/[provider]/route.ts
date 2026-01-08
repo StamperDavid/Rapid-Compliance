@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { provider: string } }
+  { params: _params }: { params: { provider: string } }
 ) {
   try {
     const { searchParams } = new URL(request.url);

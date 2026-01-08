@@ -4,7 +4,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });

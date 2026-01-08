@@ -12,7 +12,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { RiskOverviewCard } from '@/components/risk/RiskOverviewCard';
 import { RiskFactorsCard } from '@/components/risk/RiskFactorsCard';
 import { InterventionsCard } from '@/components/risk/InterventionsCard';

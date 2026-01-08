@@ -46,7 +46,7 @@ export default function ImpersonatePage() {
       };
       
       try {
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
         const sessionId = `impersonation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await FirestoreService.set(
           'admin/impersonationSessions',

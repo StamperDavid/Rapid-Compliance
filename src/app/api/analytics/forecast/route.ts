@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     
     try {
       allDeals = await FirestoreService.getAll(dealsPath, []);
-    } catch (e) {
+    } catch (_e) {
       logger.debug('No deals collection yet', { orgId });
     }
 

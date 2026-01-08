@@ -43,7 +43,7 @@ interface ToolAuthorization {
 }
 
 export default function AdminSalesAgentPersonaPage() {
-  const { adminUser } = useAdminAuth();
+  const { _adminUser } = useAdminAuth();
   const [activeSection, setActiveSection] = useState<'core' | 'cognitive' | 'knowledge' | 'learning' | 'execution'>('core');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

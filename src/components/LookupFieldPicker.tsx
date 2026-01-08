@@ -121,11 +121,11 @@ export default function LookupFieldPicker({
     const recEmail = record.email as string | null | undefined;
     const recId = record.id as string | null | undefined;
     
-    if (recName !== '' && recName != null) return recName;
-    if (recFirstName && recLastName) return `${recFirstName} ${recLastName}`;
-    if (recTitle !== '' && recTitle != null) return recTitle;
-    if (recCompanyName !== '' && recCompanyName != null) return recCompanyName;
-    if (recEmail !== '' && recEmail != null) return recEmail;
+    if (recName !== '' && recName != null) {return recName;}
+    if (recFirstName && recLastName) {return `${recFirstName} ${recLastName}`;}
+    if (recTitle !== '' && recTitle != null) {return recTitle;}
+    if (recCompanyName !== '' && recCompanyName != null) {return recCompanyName;}
+    if (recEmail !== '' && recEmail != null) {return recEmail;}
     return recId ?? '';
   };
 

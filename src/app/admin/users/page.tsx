@@ -7,7 +7,7 @@ import type { User } from '@/types/user'
 import { logger } from '@/lib/logger/logger';
 
 export default function UsersPage() {
-  const { adminUser, hasPermission } = useAdminAuth();
+  const { _adminUser, hasPermission } = useAdminAuth();
   const [users, setUsers] = useState<(User & { organizationId: string; organizationName: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -99,7 +99,7 @@ export default function UsersPage() {
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
-  const primaryColor = '#6366f1';
+
 
   return (
     <div style={{ padding: '2rem', color: '#fff' }}>

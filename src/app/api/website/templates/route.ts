@@ -7,7 +7,6 @@
 import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';

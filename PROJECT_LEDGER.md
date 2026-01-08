@@ -1,23 +1,23 @@
 # PROJECT STATUS LEDGER (SINGLE SOURCE OF TRUTH)
 
 **Date Initialized:** Wednesday Jan 7, 2026  
-**Last Updated:** Wednesday Jan 7, 2026
+**Last Updated:** Thursday Jan 8, 2026
 
 ---
 
 ## CURRENT BASELINE
 
 **ESLint Status:**
-- **Total Problems:** 16,890
-- **Errors:** Unknown (need to run with --quiet to separate)
-- **Warnings:** Unknown (need to run with --quiet to separate)
+- **Total Problems:** 16,691
+- **Errors:** 0
+- **Warnings:** 16,691
 
 **Command Used:**
 ```bash
-npx eslint src --format=compact
+npx eslint src --ext .ts,.tsx
 ```
 
-**Last Run:** Wednesday Jan 7, 2026
+**Last Run:** Thursday Jan 8, 2026
 
 ---
 
@@ -28,6 +28,20 @@ npx eslint src --format=compact
 ---
 
 ## PROGRESS LOG
+
+### 2026-01-08 - Batch #1: @typescript-eslint/no-unused-vars Mass Liquidation (IN PROGRESS)
+- **Starting Count:** 16,762 warnings (0 errors)
+- **Current Count:** 16,691 warnings (0 errors)
+- **Warnings Fixed:** 71
+- **Focused on three target rules:**
+  - @typescript-eslint/prefer-nullish-coalescing: 0 instances (already clean)
+  - prefer-template: 0 instances (already clean)
+  - @typescript-eslint/no-unused-vars: 696 instances → 625 remaining
+- **Fixes Applied:**
+  - Removed unused imports (requireAuth, requireFeature, etc.)
+  - Prefixed unused catch block errors with `_`
+  - Prefixed unused function parameters with `_`
+  - Removed unused variables where safe
 
 ### 2026-01-07 - Initial Baseline Established
 - Purged all historical documentation files (104+ .md files)

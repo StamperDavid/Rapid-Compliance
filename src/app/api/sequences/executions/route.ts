@@ -122,7 +122,7 @@ async function getRecentExecutions(
         if (seqDoc.exists) {
           sequenceName = seqDoc.data()?.name ?? sequenceName;
         }
-      } catch (err) {
+      } catch (_err) {
         logger.warn('[Executions] Could not fetch sequence name', { sequenceId: data.sequenceId });
       }
 
@@ -135,7 +135,7 @@ async function getRecentExecutions(
           const leadData = leadDoc.data();
           leadName = leadData?.name ?? leadData?.email;
         }
-      } catch (err) {
+      } catch (_err) {
         logger.warn('[Executions] Could not fetch lead name', { leadId: data.leadId });
       }
 
@@ -206,7 +206,7 @@ async function getRecentExecutions(
         if (seqDoc.exists) {
           sequenceName = seqDoc.data()?.name ?? sequenceName;
         }
-      } catch (err) {
+      } catch (_err) {
         logger.warn('[Executions] Could not fetch legacy sequence name', { sequenceId: data.sequenceId });
       }
 

@@ -29,7 +29,6 @@ import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-fact
 import { CoachingAnalyticsEngine } from '@/lib/coaching/coaching-analytics-engine';
 import { TeamCoachingEngine } from '@/lib/coaching/team-coaching-engine';
 import { 
-  validateGenerateTeamCoachingRequest,
   safeValidateGenerateTeamCoachingRequest 
 } from '@/lib/coaching/validation';
 import type { 
@@ -320,7 +319,7 @@ export async function POST(request: NextRequest) {
  * 
  * Handle CORS preflight requests
  */
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   return NextResponse.json(
     {},
     {

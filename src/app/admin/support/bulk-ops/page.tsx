@@ -177,7 +177,7 @@ export default function BulkOperationsPage() {
                 onChange={(e) => {
                   try {
                     setParameters(JSON.parse(e.target.value));
-                  } catch (err) {
+                  } catch (_err) {
                     // Invalid JSON, ignore
                   }
                 }}

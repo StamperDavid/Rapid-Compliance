@@ -5,8 +5,6 @@ import {
   getIntegration,
   updateIntegration,
   deleteIntegration,
-  testIntegration,
-  syncIntegration,
 } from '@/lib/integrations/integration-manager';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
