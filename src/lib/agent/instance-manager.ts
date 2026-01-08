@@ -179,16 +179,8 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       idleTimeoutMinutes: 30
     };
     
-    // Include training learnings in system prompt (from Golden Master)
-    const trainingNotes = goldenMaster.trainedScenarios ?? [];
-    // Extract training completion string to avoid empty strings in prompt
-    const trainingCompletedDisplay = (goldenMaster.trainingCompletedAt !== '' && goldenMaster.trainingCompletedAt != null) ? goldenMaster.trainingCompletedAt : 'Not yet';
-    const _recentLearnings = trainingNotes.length > 0
-      ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${trainingCompletedDisplay}.`
-      : '';
-    
-    const _updatedGuidelines = ''; // From training feedback if available
-    const _behavioralChanges = ''; // From training feedback if available
+    // Training learnings are available but not currently used in the prompt
+    // Future: Add training-based adaptations to system prompt (from goldenMaster.trainedScenarios)
     
     // Extract agentPersona.name to avoid putting complex logic in template (Template Extraction Rule)
     const displayAgentName = (agentPersona.name !== '' && agentPersona.name != null) ? agentPersona.name : 'AI Assistant';
@@ -317,7 +309,7 @@ ${this.summarizeRecentConversations(customerMemory)}
     
     return recentSessions.map(session => {
       const date = new Date(session.startTime).toLocaleDateString();
-      return `- ${date}: ${session.outcome} (${session.sentiment} sentiment)${session.outcomeDetails ? ` - ${  session.outcomeDetails}` : ''}`;
+      return `- ${date}: ${session.outcome} (${session.sentiment} sentiment)${session.outcomeDetails ? ` - ${session.outcomeDetails}` : ''}`;
     }).join('\n');
   }
   
@@ -440,7 +432,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Save updated memory
       await this.saveCustomerMemory(memory);
       
-      logger.info('Instance Manager Added messages to memory for customer customerId}', { file: 'instance-manager.ts' });
+      logger.info(`Instance Manager Added messages to memory for customer ${customerId}`, { file: 'instance-manager.ts' });
     } catch (error) {
       logger.error('[Instance Manager] Error adding message to memory:', error, { file: 'instance-manager.ts' });
       // Don't throw - we don't want to fail the API call if memory update fails
@@ -558,7 +550,7 @@ ${this.summarizeRecentConversations(customerMemory)}
    * Escalate to human agent
    */
   async escalateToHuman(instanceId: string, reason: string): Promise<void> {
-    logger.info('Instance Manager Escalating instance instanceId} to human. Reason: reason}', { file: 'instance-manager.ts' });
+    logger.info(`Instance Manager Escalating instance ${instanceId} to human. Reason: ${reason}`, { file: 'instance-manager.ts' });
     
     const instance = await this.getActiveInstance(instanceId);
     if (!instance) {throw new Error('Instance not found');}
@@ -598,7 +590,7 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async getActiveGoldenMaster(orgId: string): Promise<GoldenMaster | null> {
     try {
-      logger.info('Instance Manager Fetching Golden Masters for org: orgId}', { file: 'instance-manager.ts' });
+      logger.info(`Instance Manager Fetching Golden Masters for org: ${orgId}`, { file: 'instance-manager.ts' });
       
       // Prefer admin SDK to bypass security rules
       try {
@@ -836,19 +828,19 @@ ${this.summarizeRecentConversations(customerMemory)}
   // ===== ID Generators =====
   
   private generateInstanceId(): string {
-    return `inst_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `inst_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
   
   private generateSessionId(): string {
-    return `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `sess_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
   
   private generateMessageId(): string {
-    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
   
   private generateNoteId(): string {
-    return `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `note_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 }
 
