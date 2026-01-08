@@ -14,7 +14,8 @@ import { logger } from '@/lib/logger/logger';
 
 const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID;
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET;
-const XERO_REDIRECT_URI = process.env.XERO_REDIRECT_URI || 'http://localhost:3000/api/integrations/xero/callback';
+const xeroRedirectUriEnv = process.env.XERO_REDIRECT_URI;
+const XERO_REDIRECT_URI = (xeroRedirectUriEnv !== '' && xeroRedirectUriEnv != null) ? xeroRedirectUriEnv : 'http://localhost:3000/api/integrations/xero/callback';
 
 /**
  * Check if Xero is configured

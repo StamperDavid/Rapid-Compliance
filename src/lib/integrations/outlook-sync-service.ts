@@ -302,7 +302,7 @@ export async function sendOutlookEmail(
     const message = {
       subject: emailData.subject,
       body: {
-        contentType: emailData.bodyType || 'html',
+        contentType: (emailData.bodyType !== '' && emailData.bodyType != null) ? emailData.bodyType : 'html',
         content: emailData.body,
       },
       toRecipients: emailData.to.map(email => ({
@@ -314,7 +314,7 @@ export async function sendOutlookEmail(
       bccRecipients: emailData.bcc?.map(email => ({
         emailAddress: { address: email },
       })),
-      importance: emailData.importance || 'normal',
+      importance: (emailData.importance !== '' && emailData.importance != null) ? emailData.importance : 'normal',
     };
     
     const response = await client
@@ -323,8 +323,9 @@ export async function sendOutlookEmail(
         message,
         saveToSentItems: true,
       });
-    
-    return response.id || 'sent';
+
+    const responseId = response.id;
+    return (responseId !== '' && responseId != null) ? responseId : 'sent';
   } catch (error) {
     logger.error('[Outlook Sync] Error sending email:', error, { file: 'outlook-sync-service.ts' });
     throw error;

@@ -46,8 +46,10 @@ export async function GET(request: NextRequest) {
   }
   
   // Use current domain for redirect (works in dev, preview, and production)
-  const protocol = request.headers.get('x-forwarded-proto') || 'http';
-  const host = request.headers.get('host') || 'localhost:3000';
+  const protocolHeader = request.headers.get('x-forwarded-proto');
+  const protocol = (protocolHeader !== '' && protocolHeader != null) ? protocolHeader : 'http';
+  const hostHeader = request.headers.get('host');
+  const host = (hostHeader !== '' && hostHeader != null) ? hostHeader : 'localhost:3000';
   const redirectUri = `${protocol}://${host}/api/integrations/google/callback`;
   
   logger.debug('Google OAuth redirect URI', { route: '/api/integrations/google/auth', redirectUri });

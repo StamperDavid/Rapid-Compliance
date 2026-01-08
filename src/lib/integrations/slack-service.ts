@@ -7,7 +7,8 @@ import { WebClient } from '@slack/web-api';
 
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
-const SLACK_REDIRECT_URI = process.env.SLACK_REDIRECT_URI || 'http://localhost:3000/api/integrations/slack/callback';
+const slackRedirectUriEnv = process.env.SLACK_REDIRECT_URI;
+const SLACK_REDIRECT_URI = (slackRedirectUriEnv !== '' && slackRedirectUriEnv != null) ? slackRedirectUriEnv : 'http://localhost:3000/api/integrations/slack/callback';
 
 /**
  * Get Slack OAuth URL

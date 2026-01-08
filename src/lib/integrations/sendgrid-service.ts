@@ -43,7 +43,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
   }
 
   try {
-    const fromEmail = options.from || process.env.SENDGRID_FROM_EMAIL || 'noreply@example.com';
+    const fromEnv = process.env.SENDGRID_FROM_EMAIL;
+    const fromFallback = (fromEnv !== '' && fromEnv != null) ? fromEnv : 'noreply@example.com';
+    const fromEmail = (options.from !== '' && options.from != null) ? options.from : fromFallback;
     
     const payload: any = {
       personalizations: [
@@ -92,7 +94,8 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
       throw new Error(`SendGrid error: ${response.status} - ${errorText}`);
     }
 
-    const messageId = response.headers.get('x-message-id') || undefined;
+    const msgIdHeader = response.headers.get('x-message-id');
+    const messageId = (msgIdHeader !== '' && msgIdHeader != null) ? msgIdHeader : undefined;
 
     logger.info('SendGrid Email sent successfully to options.to}', { file: 'sendgrid-service.ts' });
     

@@ -103,13 +103,14 @@ async function sendViaRapidAPI(
     
     const data = await response.json();
     
+    const msgId = (data.messageId !== '' && data.messageId != null) ? data.messageId : data.id;
     logger.info('LinkedIn: Message sent successfully via RapidAPI', {
-      messageId: data.messageId || data.id,
+      messageId: msgId,
     });
-    
+
     return {
       success: true,
-      messageId: data.messageId || data.id,
+      messageId: msgId,
     };
   } catch (error) {
     logger.error('LinkedIn: RapidAPI error', error as Error);
@@ -186,7 +187,7 @@ export async function sendConnectionRequest(
       },
       body: JSON.stringify({
         profileUrl,
-        note: note || "I'd like to connect with you on LinkedIn.",
+        note: (note !== '' && note != null) ? note : "I'd like to connect with you on LinkedIn.",
       }),
     });
     
@@ -196,13 +197,14 @@ export async function sendConnectionRequest(
     
     const data = await response.json();
     
+    const invId = (data.invitationId !== '' && data.invitationId != null) ? data.invitationId : data.id;
     logger.info('LinkedIn: Connection request sent successfully', {
-      invitationId: data.invitationId || data.id,
+      invitationId: invId,
     });
-    
+
     return {
       success: true,
-      messageId: data.invitationId || data.id,
+      messageId: invId,
     };
   } catch (error) {
     logger.error('LinkedIn: Error sending connection request', error as Error);

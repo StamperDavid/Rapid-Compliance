@@ -14,8 +14,8 @@ export async function executePayPalFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
-  const organizationId = integration.organizationId || '';
-  
+  const organizationId = (integration.organizationId !== '' && integration.organizationId != null) ? integration.organizationId : '';
+
   if (!organizationId) {
     throw new Error('Organization ID not configured');
   }
@@ -30,7 +30,7 @@ export async function executePayPalFunction(
       const order = await createOrder(
         organizationId,
         parameters.amount,
-        parameters.currency || 'USD'
+        (parameters.currency !== '' && parameters.currency != null) ? parameters.currency : 'USD'
       );
       
       return {

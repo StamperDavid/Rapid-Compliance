@@ -14,9 +14,9 @@ export async function executeZoomFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
-  const organizationId = integration.organizationId || '';
-  const accessToken = integration.accessToken || '';
-  
+  const organizationId = (integration.organizationId !== '' && integration.organizationId != null) ? integration.organizationId : '';
+  const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
+
   if (!organizationId) {
     throw new Error('Organization ID not configured');
   }
@@ -50,8 +50,9 @@ export async function executeZoomFunction(
       
     case 'getRecordings': {
       // Get recordings using Zoom API
+      const fromDate = (parameters.from !== '' && parameters.from != null) ? parameters.from : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const recordingsResponse = await fetch(
-        `https://api.zoom.us/v2/users/me/recordings?from=${parameters.from || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`,
+        `https://api.zoom.us/v2/users/me/recordings?from=${fromDate}`,
         {
           headers: {
             'Authorization': `Bearer ${accessToken}`,

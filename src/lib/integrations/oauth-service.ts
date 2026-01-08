@@ -204,7 +204,7 @@ export async function refreshAccessToken(
     {
       ...integration,
       accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token || refreshToken, // Keep old refresh token if new one not provided
+      refreshToken: (tokens.refresh_token !== '' && tokens.refresh_token != null) ? tokens.refresh_token : refreshToken, // Keep old refresh token if new one not provided
       tokenExpiresAt: tokens.expires_in
         ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
         : undefined,
@@ -228,9 +228,10 @@ async function getOAuthConfig(
   if (!apiKeys) {
     throw new Error('Integration API keys not configured');
   }
-  
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com';
-  
+
+  const baseUrlEnv = process.env.NEXT_PUBLIC_APP_URL;
+  const baseUrl = (baseUrlEnv !== '' && baseUrlEnv != null) ? baseUrlEnv : 'https://app.example.com';
+
   switch (provider) {
     case 'google': {
       const google = (apiKeys).integrations?.googleWorkspace;
@@ -267,8 +268,8 @@ async function getOAuthConfig(
           'https://graph.microsoft.com/Calendars.ReadWrite',
           'https://graph.microsoft.com/User.Read',
         ],
-        authorizationUrl: `https://login.microsoftonline.com/${microsoft.tenantId || 'common'}/oauth2/v2.0/authorize`,
-        tokenUrl: `https://login.microsoftonline.com/${microsoft.tenantId || 'common'}/oauth2/v2.0/token`,
+        authorizationUrl: `https://login.microsoftonline.com/${(microsoft.tenantId !== '' && microsoft.tenantId != null) ? microsoft.tenantId : 'common'}/oauth2/v2.0/authorize`,
+        tokenUrl: `https://login.microsoftonline.com/${(microsoft.tenantId !== '' && microsoft.tenantId != null) ? microsoft.tenantId : 'common'}/oauth2/v2.0/token`,
       };
     }
     
@@ -388,8 +389,8 @@ async function saveIntegrationTokens(
         Authorization: `Bearer ${tokens.access_token}`,
       },
     }).then(r => r.json());
-    
-    integrationData.email = userInfo.mail || userInfo.userPrincipalName;
+
+    integrationData.email = (userInfo.mail !== '' && userInfo.mail != null) ? userInfo.mail : userInfo.userPrincipalName;
     integrationData.name = userInfo.displayName;
     integrationData.tenantId = userInfo.tenantId;
   } else if (provider === 'slack') {

@@ -112,7 +112,10 @@ export async function fetchGmailInbox(
  */
 function parseGmailMessage(data: any): EmailMessage {
   const headers = data.payload?.headers ?? [];
-  const getHeader = (name: string) => headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+  const getHeader = (name: string) => {
+    const headerValue = headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value;
+    return (headerValue !== '' && headerValue != null) ? headerValue : '';
+  };
 
   const from = getHeader('from');
   const to = getHeader('to').split(',').map((e: string) => e.trim());
@@ -143,7 +146,7 @@ function parseGmailMessage(data: any): EmailMessage {
     to,
     cc,
     subject,
-    body: body || htmlBody.replace(/<[^>]*>/g, ''), // Strip HTML tags if no plain text
+    body: (body !== '' && body != null) ? body : htmlBody.replace(/<[^>]*>/g, ''), // Strip HTML tags if no plain text
     htmlBody,
     receivedAt: new Date(parseInt(data.internalDate)),
     isRead: !data.labelIds?.includes('UNREAD'),
@@ -187,11 +190,11 @@ export async function fetchOutlookInbox(
     const messages: EmailMessage[] = data.value.map((msg: any) => ({
       id: msg.id,
       threadId: msg.conversationId,
-      from: msg.from?.emailAddress?.address || '',
+      from: (msg.from?.emailAddress?.address !== '' && msg.from?.emailAddress?.address != null) ? msg.from.emailAddress.address : '',
       to: msg.toRecipients?.map((r: any) => r.emailAddress?.address) ?? [],
       cc: msg.ccRecipients?.map((r: any) => r.emailAddress?.address) ?? [],
-      subject: msg.subject || '',
-      body: msg.body?.content || '',
+      subject: (msg.subject !== '' && msg.subject != null) ? msg.subject : '',
+      body: (msg.body?.content !== '' && msg.body?.content != null) ? msg.body.content : '',
       htmlBody: msg.body?.contentType === 'html' ? msg.body?.content : undefined,
       receivedAt: new Date(msg.receivedDateTime),
       isRead: msg.isRead,
@@ -243,9 +246,11 @@ export async function processEmailReply(
       // Trigger reply handler for AI processing
       // TODO: Implement full reply processing logic
       const { classifyReply } = await import('@/lib/outbound/reply-handler');
+      const replyTo = reply.to[0];
+      const replyToAddress = (replyTo !== '' && replyTo != null) ? replyTo : '';
       await classifyReply({
         from: reply.from,
-        to: reply.to[0] || '',
+        to: replyToAddress,
         subject: reply.subject,
         body: reply.body,
         threadId: reply.threadId,
@@ -287,13 +292,12 @@ async function findOriginalEmail(
     // Find match by thread ID or in-reply-to
     const match = activities.data.find(activity => {
       const metadata = activity.metadata;
-      return (
-        (inReplyTo && metadata?.emailId === inReplyTo) ||
-        (threadId && metadata?.threadId === threadId)
-      );
+      const matchByReplyTo = inReplyTo && metadata?.emailId === inReplyTo;
+      const matchByThread = threadId && metadata?.threadId === threadId;
+      return matchByReplyTo ? true : (matchByThread ? true : false);
     });
 
-    return match || null;
+    return match ?? null;
 
   } catch (error) {
     logger.error('Failed to find original email', error);
@@ -312,7 +316,7 @@ export async function syncInbox(
   try {
     // Get last sync time
     const lastSync = await getLastSyncTime(organizationId, provider);
-    const since = lastSync || new Date(Date.now() - 24 * 60 * 60 * 1000); // Default: last 24h
+    const since = lastSync ?? new Date(Date.now() - 24 * 60 * 60 * 1000); // Default: last 24h
 
     // Fetch new emails
     const messages = provider === 'gmail' 

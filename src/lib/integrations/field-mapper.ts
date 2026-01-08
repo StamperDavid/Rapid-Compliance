@@ -235,18 +235,24 @@ export class FieldMappingManager {
         switch (event.changeType) {
           case 'field_renamed':
           case 'field_key_changed': {
+            const oldKey = (event.oldFieldKey !== '' && event.oldFieldKey != null) ? event.oldFieldKey : 
+              ((event.oldFieldName !== '' && event.oldFieldName != null) ? event.oldFieldName : '');
+            const newKey = (event.newFieldKey !== '' && event.newFieldKey != null) ? event.newFieldKey :
+              ((event.newFieldName !== '' && event.newFieldName != null) ? event.newFieldName : '');
             updated = await this.handleFieldRenameInMapping(
               fieldMapping,
-              event.oldFieldKey || event.oldFieldName || '',
-              event.newFieldKey || event.newFieldName || ''
+              oldKey,
+              newKey
             );
             break;
           }
           
           case 'field_deleted': {
+            const deletedKey = (event.oldFieldKey !== '' && event.oldFieldKey != null) ? event.oldFieldKey :
+              ((event.oldFieldName !== '' && event.oldFieldName != null) ? event.oldFieldName : '');
             updated = await this.handleFieldDeletionInMapping(
               fieldMapping,
-              event.oldFieldKey || event.oldFieldName || ''
+              deletedKey
             );
             break;
           }

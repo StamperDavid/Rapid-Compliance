@@ -29,7 +29,8 @@ export async function GET(
     const provider = params.provider;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
-    const redirectUri = searchParams.get('redirectUri') || `${request.nextUrl.origin}/api/integrations/oauth/${provider}/callback`;
+    const redirectUriParam = searchParams.get('redirectUri');
+    const redirectUri = (redirectUriParam !== '' && redirectUriParam != null) ? redirectUriParam : `${request.nextUrl.origin}/api/integrations/oauth/${provider}/callback`;
 
     if (!organizationId) {
       return NextResponse.json(
@@ -81,15 +82,17 @@ export async function GET(
     return NextResponse.redirect(authUrl);
   } catch (error: any) {
     logger.error('OAuth initiation error', error, { route: '/api/integrations/oauth' });
+    const oauthErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to initiate OAuth';
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to initiate OAuth' },
+      { success: false, error: oauthErrorMsg },
       { status: 500 }
     );
   }
 }
 
 function generateGoogleAuthUrl(provider: string, redirectUri: string, organizationId: string): string {
-  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  const googleClientIdEnv = process.env.GOOGLE_CLIENT_ID;
+  const clientId = (googleClientIdEnv !== '' && googleClientIdEnv != null) ? googleClientIdEnv : '';
   const scopes = provider === 'google-calendar'
     ? 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
     : 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly';
@@ -108,8 +111,10 @@ function generateGoogleAuthUrl(provider: string, redirectUri: string, organizati
 }
 
 function generateMicrosoftAuthUrl(provider: string, redirectUri: string, organizationId: string): string {
-  const clientId = process.env.MICROSOFT_CLIENT_ID || '';
-  const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+  const msClientIdEnv = process.env.MICROSOFT_CLIENT_ID;
+  const clientId = (msClientIdEnv !== '' && msClientIdEnv != null) ? msClientIdEnv : '';
+  const msTenantIdEnv = process.env.MICROSOFT_TENANT_ID;
+  const tenantId = (msTenantIdEnv !== '' && msTenantIdEnv != null) ? msTenantIdEnv : 'common';
   const scopes = provider === 'outlook-calendar'
     ? 'https://graph.microsoft.com/Calendars.ReadWrite'
     : 'https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.Read';
@@ -127,7 +132,8 @@ function generateMicrosoftAuthUrl(provider: string, redirectUri: string, organiz
 }
 
 function generateSlackAuthUrl(redirectUri: string, organizationId: string): string {
-  const clientId = process.env.SLACK_CLIENT_ID || '';
+  const slackClientIdEnv = process.env.SLACK_CLIENT_ID;
+  const clientId = (slackClientIdEnv !== '' && slackClientIdEnv != null) ? slackClientIdEnv : '';
   const scopes = 'chat:write,channels:read,users:read';
   
   const params = new URLSearchParams({

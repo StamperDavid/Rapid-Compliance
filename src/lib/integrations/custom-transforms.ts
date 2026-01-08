@@ -29,7 +29,8 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
   extractFirstName: (value: any) => {
     const fullName = String(value).trim();
     const parts = fullName.split(/\s+/);
-    return parts[0] || value;
+    const firstName = parts[0];
+    return (firstName !== '' && firstName != null) ? firstName : value;
   },
 
   /**
@@ -48,7 +49,7 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
    */
   formatPhoneE164: (value: any, params?: Record<string, any>) => {
     const phone = String(value).replace(/\D/g, '');
-    const countryCode = params?.countryCode || '1';
+    const countryCode = (params?.countryCode !== '' && params?.countryCode != null) ? params.countryCode : '1';
     
     if (phone.length === 10) {
       return `+${countryCode}${phone}`;
@@ -64,7 +65,7 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
   extractNumbers: (value: any) => {
     const text = String(value);
     const numbers = text.replace(/\D/g, '');
-    return numbers || value;
+    return (numbers !== '' && numbers != null) ? numbers : value;
   },
 
   /**
@@ -74,7 +75,7 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
   extractLetters: (value: any) => {
     const text = String(value);
     const letters = text.replace(/[^a-zA-Z]/g, '');
-    return letters || value;
+    return (letters !== '' && letters != null) ? letters : value;
   },
 
   /**
@@ -102,8 +103,8 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
    */
   truncate: (value: any, params?: Record<string, any>) => {
     const text = String(value);
-    const maxLength = params?.maxLength || 100;
-    const suffix = params?.suffix || '...';
+    const maxLength = params?.maxLength ?? 100;
+    const suffix = (params?.suffix !== '' && params?.suffix != null) ? params.suffix : '...';
     
     if (text.length <= maxLength) {
       return text;
@@ -117,9 +118,9 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
    */
   pad: (value: any, params?: Record<string, any>) => {
     const text = String(value);
-    const length = params?.length || 10;
-    const char = params?.char || ' ';
-    const side = params?.side || 'left';
+    const length = params?.length ?? 10;
+    const char = (params?.char !== '' && params?.char != null) ? params.char : ' ';
+    const side = (params?.side !== '' && params?.side != null) ? params.side : 'left';
     
     if (side === 'left') {
       return text.padStart(length, char);
@@ -184,9 +185,9 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
     if (isNaN(amount)) {
       return value;
     }
-    
-    const rate = params?.rate || 1;
-    const symbol = params?.symbol || '$';
+
+    const rate = params?.rate ?? 1;
+    const symbol = (params?.symbol !== '' && params?.symbol != null) ? params.symbol : '$';
     const decimals = params?.decimals !== undefined ? params.decimals : 2;
     
     const converted = amount * rate;
@@ -215,8 +216,8 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
    */
   mask: (value: any, params?: Record<string, any>) => {
     const text = String(value);
-    const visibleChars = params?.visibleChars || 4;
-    const maskChar = params?.maskChar || '*';
+    const visibleChars = params?.visibleChars ?? 4;
+    const maskChar = (params?.maskChar !== '' && params?.maskChar != null) ? params.maskChar : '*';
     
     if (text.length <= visibleChars) {
       return text;
@@ -317,7 +318,8 @@ const CUSTOM_TRANSFORMS: Record<string, CustomTransformFunction> = {
    * Coalesce (return first non-null value)
    */
   coalesce: (value: any, params?: Record<string, any>) => {
-    const fallback = params?.fallback || '';
+    const fallbackParam = params?.fallback;
+    const fallback = (fallbackParam !== '' && fallbackParam != null) ? fallbackParam : '';
     return value !== null && value !== undefined && value !== '' ? value : fallback;
   },
 

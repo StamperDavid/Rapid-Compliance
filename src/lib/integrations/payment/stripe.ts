@@ -87,7 +87,7 @@ async function createCheckoutSession(
     line_items: [
       {
         price_data: {
-          currency: params.currency || 'usd',
+          currency: (params.currency !== '' && params.currency != null) ? params.currency : 'usd',
           unit_amount: params.amount,
           product_data: {
             name: params.description,

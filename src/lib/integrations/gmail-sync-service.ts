@@ -110,7 +110,10 @@ async function fullSync(
       return {
         organizationId,
         lastSyncAt: new Date().toISOString(),
-        historyId: listResponse.data.resultSizeEstimate?.toString() || '0',
+        historyId: (() => {
+          const histId = listResponse.data.resultSizeEstimate?.toString();
+          return (histId !== '' && histId != null) ? histId : '0';
+        })(),
         messagesSynced: 0,
         errors: 0,
       };
@@ -188,7 +191,7 @@ async function incrementalSync(
       return {
         organizationId,
         lastSyncAt: new Date().toISOString(),
-        historyId: historyResponse.data.historyId || startHistoryId,
+        historyId: (historyResponse.data.historyId !== '' && historyResponse.data.historyId != null) ? historyResponse.data.historyId : startHistoryId,
         messagesSynced: 0,
         errors: 0,
       };
@@ -230,7 +233,9 @@ async function incrementalSync(
       
       // Handle label changes (read/unread, starred, etc.)
       if (record.labelsAdded || record.labelsRemoved) {
-        const messageId = record.labelsAdded?.[0]?.message?.id || record.labelsRemoved?.[0]?.message?.id;
+        const addedMsgId = record.labelsAdded?.[0]?.message?.id;
+        const removedMsgId = record.labelsRemoved?.[0]?.message?.id;
+        const messageId = (addedMsgId !== '' && addedMsgId != null) ? addedMsgId : removedMsgId;
         if (messageId) {
           try {
             const fullMessage = await gmail.users.messages.get({
@@ -252,7 +257,7 @@ async function incrementalSync(
     const status: GmailSyncStatus = {
       organizationId,
       lastSyncAt: new Date().toISOString(),
-      historyId: historyResponse.data.historyId || startHistoryId,
+      historyId: (historyResponse.data.historyId !== '' && historyResponse.data.historyId != null) ? historyResponse.data.historyId : startHistoryId,
       messagesSynced,
       errors,
     };
@@ -274,7 +279,8 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
   
   const getHeader = (name: string): string => {
     const header = headers.find(h => h.name?.toLowerCase() === name.toLowerCase());
-    return header?.value || '';
+    const headerValue = header?.value;
+    return (headerValue !== '' && headerValue != null) ? headerValue : '';
   };
   
   const parseAddresses = (value: string): string[] => {
@@ -306,8 +312,8 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
       if (part.filename && part.body?.attachmentId) {
         attachments.push({
           filename: part.filename,
-          mimeType: part.mimeType || 'application/octet-stream',
-          size: part.body.size || 0,
+          mimeType: (part.mimeType !== '' && part.mimeType != null) ? part.mimeType : 'application/octet-stream',
+          size: part.body.size ?? 0,
           attachmentId: part.body.attachmentId,
         });
       }
@@ -318,8 +324,8 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
     id: message.id!,
     threadId: message.threadId!,
     labelIds: message.labelIds ?? [],
-    snippet: message.snippet || '',
-    internalDate: message.internalDate || Date.now().toString(),
+    snippet: (message.snippet !== '' && message.snippet != null) ? message.snippet : '',
+    internalDate: (message.internalDate !== '' && message.internalDate != null) ? message.internalDate : Date.now().toString(),
     from: getHeader('From'),
     to: parseAddresses(getHeader('To')),
     cc: parseAddresses(getHeader('Cc')),
@@ -328,8 +334,8 @@ function parseGmailMessage(message: gmail_v1.Schema$Message): GmailMessage {
     body,
     bodyHtml,
     attachments,
-    isRead: !(message.labelIds?.includes('UNREAD') || false),
-    isStarred: message.labelIds?.includes('STARRED') || false,
+    isRead: !(message.labelIds?.includes('UNREAD') ?? false),
+    isStarred: message.labelIds?.includes('STARRED') ?? false,
   };
 }
 
@@ -367,7 +373,7 @@ async function saveMessageToCRM(organizationId: string, message: GmailMessage): 
       date: new Date(parseInt(message.internalDate)),
       isRead: message.isRead,
       isStarred: message.isStarred,
-      hasAttachments: (message.attachments?.length || 0) > 0,
+      hasAttachments: (message.attachments?.length ?? 0) > 0,
       attachments: message.attachments,
       source: 'gmail',
       createdAt: new Date(),

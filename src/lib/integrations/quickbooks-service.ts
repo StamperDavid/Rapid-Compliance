@@ -15,7 +15,8 @@ import { logger } from '@/lib/logger/logger';
 
 const QB_CLIENT_ID = process.env.QUICKBOOKS_CLIENT_ID;
 const QB_CLIENT_SECRET = process.env.QUICKBOOKS_CLIENT_SECRET;
-const QB_REDIRECT_URI = process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:3000/api/integrations/quickbooks/callback';
+const qbRedirectUriEnv = process.env.QUICKBOOKS_REDIRECT_URI;
+const QB_REDIRECT_URI = (qbRedirectUriEnv !== '' && qbRedirectUriEnv != null) ? qbRedirectUriEnv : 'http://localhost:3000/api/integrations/quickbooks/callback';
 
 /**
  * Check if QuickBooks is configured

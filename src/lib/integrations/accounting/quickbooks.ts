@@ -14,7 +14,7 @@ export async function executeQuickBooksFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
-  const accessToken = integration.accessToken || '';
+  const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
   const realmId = (integration.config?.realmId ?? integration.settings?.realmId ?? '') as string;
   
   if (!accessToken) {

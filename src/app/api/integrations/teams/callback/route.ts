@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { clientId, clientSecret, redirectUri } = microsoft365Keys;
-    const baseRedirectUri = redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
+    const baseRedirectUri = (redirectUri !== '' && redirectUri != null) ? redirectUri : `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
 
     // Exchange code for access token
     const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
@@ -61,7 +61,8 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json();
-      throw new Error(`Token exchange failed: ${errorData.error_description || errorData.error}`);
+      const errorDesc = (errorData.error_description !== '' && errorData.error_description != null) ? errorData.error_description : errorData.error;
+      throw new Error(`Token exchange failed: ${errorDesc}`);
     }
 
     const tokens = await tokenResponse.json();
@@ -99,8 +100,9 @@ export async function GET(request: NextRequest) {
     );
   } catch (error: any) {
     logger.error('Teams callback error', error, { route: '/api/integrations/teams/callback' });
+    const errorOrgId = (error.organizationId !== '' && error.organizationId != null) ? error.organizationId : 'default';
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${error.organizationId || 'default'}/settings/integrations?error=teams_callback_failed`
+      `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${errorOrgId}/settings/integrations?error=teams_callback_failed`
     );
   }
 }

@@ -24,8 +24,10 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get('state');
 
   if (!code || !state) {
-    const protocol = request.headers.get('x-forwarded-proto') || 'http';
-    const host = request.headers.get('host') || 'localhost:3000';
+    const protocolHeader = request.headers.get('x-forwarded-proto');
+    const protocol = (protocolHeader !== '' && protocolHeader != null) ? protocolHeader : 'http';
+    const hostHeader = request.headers.get('host');
+    const host = (hostHeader !== '' && hostHeader != null) ? hostHeader : 'localhost:3000';
     return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?error=oauth_failed`);
   }
 
@@ -67,14 +69,18 @@ export async function GET(request: NextRequest) {
     logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', orgId });
 
     // Redirect to admin integrations page (use current domain)
-    const protocol = request.headers.get('x-forwarded-proto') || 'http';
-    const host = request.headers.get('host') || 'localhost:3000';
-    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?success=gmail`);
+    const successProtocolHeader = request.headers.get('x-forwarded-proto');
+    const successProtocol = (successProtocolHeader !== '' && successProtocolHeader != null) ? successProtocolHeader : 'http';
+    const successHostHeader = request.headers.get('host');
+    const successHost = (successHostHeader !== '' && successHostHeader != null) ? successHostHeader : 'localhost:3000';
+    return NextResponse.redirect(`${successProtocol}://${successHost}/admin/settings/integrations?success=gmail`);
   } catch (error: any) {
     logger.error('Google OAuth callback error', error, { route: '/api/integrations/google/callback' });
-    const protocol = request.headers.get('x-forwarded-proto') || 'http';
-    const host = request.headers.get('host') || 'localhost:3000';
-    return NextResponse.redirect(`${protocol}://${host}/admin/settings/integrations?error=oauth_failed`);
+    const errorProtocolHeader = request.headers.get('x-forwarded-proto');
+    const errorProtocol = (errorProtocolHeader !== '' && errorProtocolHeader != null) ? errorProtocolHeader : 'http';
+    const errorHostHeader = request.headers.get('host');
+    const errorHost = (errorHostHeader !== '' && errorHostHeader != null) ? errorHostHeader : 'localhost:3000';
+    return NextResponse.redirect(`${errorProtocol}://${errorHost}/admin/settings/integrations?error=oauth_failed`);
   }
 }
 

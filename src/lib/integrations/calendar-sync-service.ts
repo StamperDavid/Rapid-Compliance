@@ -135,9 +135,11 @@ async function fullSync(
           }
         }
       }
-      
-      pageToken = response.data.nextPageToken || undefined;
-      syncToken = response.data.nextSyncToken || undefined;
+
+      const nextPage = response.data.nextPageToken;
+      pageToken = (nextPage !== '' && nextPage != null) ? nextPage : undefined;
+      const nextSync = response.data.nextSyncToken;
+      syncToken = (nextSync !== '' && nextSync != null) ? nextSync : undefined;
     } while (pageToken);
     
     const status: CalendarSyncStatus = {
@@ -198,9 +200,11 @@ async function incrementalSync(
           }
         }
       }
-      
-      pageToken = response.data.nextPageToken || undefined;
-      syncToken = response.data.nextSyncToken || syncToken;
+
+      const nextPage2 = response.data.nextPageToken;
+      pageToken = (nextPage2 !== '' && nextPage2 != null) ? nextPage2 : undefined;
+      const nextSync2 = response.data.nextSyncToken;
+      syncToken = (nextSync2 !== '' && nextSync2 != null) ? nextSync2 : syncToken;
     } while (pageToken);
     
     const status: CalendarSyncStatus = {
@@ -232,7 +236,7 @@ function parseCalendarEvent(event: calendar_v3.Schema$Event, calendarId: string)
   return {
     id: event.id!,
     calendarId,
-    summary: event.summary || '(No title)',
+    summary: (event.summary !== '' && event.summary != null) ? event.summary : '(No title)',
     description: event.description ?? undefined,
     location: event.location ?? undefined,
     start: {

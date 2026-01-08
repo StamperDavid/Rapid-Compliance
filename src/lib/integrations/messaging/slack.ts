@@ -14,8 +14,8 @@ export async function executeSlackFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
-  const accessToken = integration.accessToken || '';
-  
+  const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
+
   if (!accessToken) {
     throw new Error('Slack access token not configured');
   }
@@ -46,7 +46,7 @@ export async function executeSlackFunction(
       return createChannel(
         accessToken,
         parameters.name,
-        parameters.isPrivate || false
+        parameters.isPrivate ?? false
       );
       
     case 'listChannels':

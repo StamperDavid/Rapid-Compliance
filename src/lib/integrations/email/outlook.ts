@@ -14,8 +14,8 @@ export async function executeOutlookFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
-  const accessToken = integration.accessToken || '';
-  
+  const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
+
   if (!accessToken) {
     throw new Error('Outlook access token not configured');
   }

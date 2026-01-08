@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
     // Build function call request
     const functionCallRequest: FunctionCallRequest = {
       organizationId: user.organizationId!,
-      conversationId: conversationId || '',
-      customerId: customerId || '',
+      conversationId: (conversationId !== '' && conversationId != null) ? conversationId : '',
+      customerId: (customerId !== '' && customerId != null) ? customerId : '',
       integrationId,
       functionName,
       parameters,
-      conversationContext: body.conversationContext || '',
-      userMessage: body.userMessage || '',
+      conversationContext: (body.conversationContext !== '' && body.conversationContext != null) ? body.conversationContext : '',
+      userMessage: (body.userMessage !== '' && body.userMessage != null) ? body.userMessage : '',
       timestamp: new Date().toISOString(),
     };
 
@@ -57,10 +57,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     logger.error('Error executing function call', error, { route: '/api/integrations/function-call' });
+    const funcErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to execute function';
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to execute function',
+        error: funcErrorMsg,
         humanReadableResult: 'Sorry, I encountered an error trying to do that.',
         executionTime: 0,
         timestamp: new Date().toISOString(),

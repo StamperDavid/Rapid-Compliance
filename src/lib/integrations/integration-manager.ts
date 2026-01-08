@@ -129,9 +129,10 @@ async function refreshIntegrationToken(
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + newTokenData.expiresIn);
 
+    const newRefreshToken = (newTokenData.refreshToken !== '' && newTokenData.refreshToken != null) ? newTokenData.refreshToken : refreshToken;
     await saveIntegrationCredentials(organizationId, integrationId, {
       accessToken: newTokenData.accessToken,
-      refreshToken: newTokenData.refreshToken || refreshToken,
+      refreshToken: newRefreshToken,
       expiresAt,
     });
 
@@ -313,9 +314,10 @@ export async function syncIntegration(
 
   } catch (error: any) {
     logger.error('Failed to sync integration', error, { organizationId, integrationId });
+    const syncErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Sync failed';
     return {
       success: false,
-      error: error.message || 'Sync failed',
+      error: syncErrorMsg,
     };
   }
 }
@@ -353,9 +355,10 @@ export async function testIntegration(
 
   } catch (error: any) {
     logger.error('Failed to test integration', error, { organizationId, integrationId });
+    const testErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Test failed';
     return {
       success: false,
-      error: error.message || 'Test failed',
+      error: testErrorMsg,
     };
   }
 }

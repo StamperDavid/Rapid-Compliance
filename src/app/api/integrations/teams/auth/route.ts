@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { clientId, redirectUri } = microsoft365Keys;
-    const baseRedirectUri = redirectUri || `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
+    const baseRedirectUri = (redirectUri !== '' && redirectUri != null) ? redirectUri : `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
     
     // Microsoft Teams uses Azure AD OAuth
     const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +

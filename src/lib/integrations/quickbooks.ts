@@ -114,7 +114,7 @@ export async function createQuickBooksInvoice(
       DetailType: 'SalesItemLineDetail',
       Amount: item.amount,
       SalesItemLineDetail: {
-        Qty: item.quantity || 1,
+        Qty: item.quantity ?? 1,
       },
       Description: item.description,
     }));

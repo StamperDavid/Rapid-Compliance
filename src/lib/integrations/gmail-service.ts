@@ -9,7 +9,8 @@ import { logger } from '@/lib/logger/logger';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/integrations/google/callback';
+const googleRedirectUriEnv = process.env.GOOGLE_REDIRECT_URI;
+const GOOGLE_REDIRECT_URI = (googleRedirectUriEnv !== '' && googleRedirectUriEnv != null) ? googleRedirectUriEnv : 'http://localhost:3000/api/integrations/google/callback';
 
 /**
  * Create OAuth2 client
@@ -67,7 +68,7 @@ export async function listEmails(
 
   const response = await gmail.users.messages.list({
     userId: 'me',
-    maxResults: options?.maxResults || 50,
+    maxResults: options?.maxResults ?? 50,
     q: options?.query,
     labelIds: options?.labelIds,
   });
@@ -211,7 +212,8 @@ export function parseEmailHeaders(message: any): {
   
   const getHeader = (name: string) => {
     const header = headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase());
-    return header?.value || '';
+    const headerValue = header?.value;
+    return (headerValue !== '' && headerValue != null) ? headerValue : '';
   };
 
   return {
@@ -321,7 +323,7 @@ export async function syncEmailsToCRM(
             from: headers.from,
             to: headers.to,
             subject: headers.subject,
-            body: body.html || body.text,
+            body: (body.html !== '' && body.html != null) ? body.html : body.text,
             date: headers.date,
             messageId: headers.messageId,
             inReplyTo: headers.inReplyTo,

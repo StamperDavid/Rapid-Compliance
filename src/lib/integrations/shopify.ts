@@ -66,9 +66,9 @@ export async function syncProductToShopify(
           price: product.price.toString(),
           compare_at_price: product.compareAtPrice?.toString(),
           sku: product.sku,
-          inventory_quantity: product.inventory || 0,
+          inventory_quantity: product.inventory ?? 0,
         }],
-        images: product.images?.map(url => ({ src: url })) || [],
+        images: product.images?.map(url => ({ src: url })) ?? [],
       },
     };
 
@@ -150,7 +150,7 @@ export async function fetchShopifyOrders(
       id: order.id.toString(),
       orderNumber: order.order_number.toString(),
       customer: {
-        email: order.customer?.email || order.email,
+        email: (order.customer?.email !== '' && order.customer?.email != null) ? order.customer.email : order.email,
         firstName: order.customer?.first_name,
         lastName: order.customer?.last_name,
       },
@@ -205,8 +205,8 @@ export async function syncShopifyOrdersToCRM(
           await createLead(
             organizationId,
             {
-              firstName: order.customer.firstName || 'Shopify',
-              lastName: order.customer.lastName || 'Customer',
+              firstName: (order.customer.firstName !== '' && order.customer.firstName != null) ? order.customer.firstName : 'Shopify',
+              lastName: (order.customer.lastName !== '' && order.customer.lastName != null) ? order.customer.lastName : 'Customer',
               email: order.customer.email,
               source: 'Shopify',
               status: 'converted',

@@ -7,7 +7,8 @@ import { Client } from '@microsoft/microsoft-graph-client';
 
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
 const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
-const MICROSOFT_REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/api/integrations/microsoft/callback';
+const microsoftRedirectUriEnv = process.env.MICROSOFT_REDIRECT_URI;
+const MICROSOFT_REDIRECT_URI = (microsoftRedirectUriEnv !== '' && microsoftRedirectUriEnv != null) ? microsoftRedirectUriEnv : 'http://localhost:3000/api/integrations/microsoft/callback';
 
 /**
  * Get Microsoft OAuth URL
@@ -90,8 +91,8 @@ export async function listEmails(accessToken: string, options?: {
   filter?: string;
 }): Promise<any[]> {
   const client = createGraphClient(accessToken);
-  
-  let request = client.api('/me/messages').top(options?.top || 50);
+
+  let request = client.api('/me/messages').top(options?.top ?? 50);
   
   if (options?.skip) {
     request = request.skip(options.skip);

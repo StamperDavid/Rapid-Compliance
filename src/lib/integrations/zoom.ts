@@ -55,8 +55,8 @@ export async function createZoomMeeting(
         type: 2, // Scheduled meeting
         start_time: options.startTime.toISOString(),
         duration: options.duration,
-        timezone: options.timezone || 'America/New_York',
-        agenda: options.agenda || '',
+        timezone: (options.timezone !== '' && options.timezone != null) ? options.timezone : 'America/New_York',
+        agenda: (options.agenda !== '' && options.agenda != null) ? options.agenda : '',
         settings: {
           host_video: true,
           participant_video: true,
@@ -70,7 +70,8 @@ export async function createZoomMeeting(
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(`Zoom API error: ${error.message || response.statusText}`);
+      const zoomErrorMsg = (error.message !== '' && error.message != null) ? error.message : response.statusText;
+      throw new Error(`Zoom API error: ${zoomErrorMsg}`);
     }
 
     const data = await response.json();

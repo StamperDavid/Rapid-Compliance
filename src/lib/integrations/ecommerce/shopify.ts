@@ -100,7 +100,7 @@ async function checkInventory(
   
   // Sum up inventory across all variants
   const totalInventory = product.variants.reduce(
-    (sum: number, variant: any) => sum + (variant.inventory_quantity || 0),
+    (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
     0
   );
   
@@ -178,13 +178,14 @@ async function getProduct(
   const product = data.product;
   
   const totalInventory = product.variants.reduce(
-    (sum: number, variant: any) => sum + (variant.inventory_quantity || 0),
+    (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
     0
   );
-  
+
+  const descriptionHtml = product.body_html?.replace(/<[^>]*>/g, '');
   return {
     title: product.title,
-    description: product.body_html?.replace(/<[^>]*>/g, '') || '',
+    description: (descriptionHtml !== '' && descriptionHtml != null) ? descriptionHtml : '',
     price: parseFloat(product.variants[0].price),
     images: product.images.map((img: any) => img.src),
     inStock: totalInventory > 0,

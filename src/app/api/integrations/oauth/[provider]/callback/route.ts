@@ -83,15 +83,18 @@ export async function GET(
     }
   } catch (error: any) {
     logger.error('OAuth callback error', error, { route: '/api/integrations/oauth/callback', provider: params.provider });
+    const outerErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Unknown error';
     return NextResponse.redirect(
-      `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(error.message || 'Unknown error')}`
+      `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(outerErrorMsg)}`
     );
   }
 }
 
 async function exchangeGoogleToken(code: string, redirectUri: string): Promise<any> {
-  const clientId = process.env.GOOGLE_CLIENT_ID || '';
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+  const clientIdEnv = process.env.GOOGLE_CLIENT_ID;
+  const clientId = (clientIdEnv !== '' && clientIdEnv != null) ? clientIdEnv : '';
+  const clientSecretEnv = process.env.GOOGLE_CLIENT_SECRET;
+  const clientSecret = (clientSecretEnv !== '' && clientSecretEnv != null) ? clientSecretEnv : '';
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -121,9 +124,12 @@ async function exchangeGoogleToken(code: string, redirectUri: string): Promise<a
 }
 
 async function exchangeMicrosoftToken(code: string, redirectUri: string): Promise<any> {
-  const clientId = process.env.MICROSOFT_CLIENT_ID || '';
-  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET || '';
-  const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+  const clientIdEnv = process.env.MICROSOFT_CLIENT_ID;
+  const clientId = (clientIdEnv !== '' && clientIdEnv != null) ? clientIdEnv : '';
+  const clientSecretEnv = process.env.MICROSOFT_CLIENT_SECRET;
+  const clientSecret = (clientSecretEnv !== '' && clientSecretEnv != null) ? clientSecretEnv : '';
+  const tenantIdEnv = process.env.MICROSOFT_TENANT_ID;
+  const tenantId = (tenantIdEnv !== '' && tenantIdEnv != null) ? tenantIdEnv : 'common';
 
   const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
@@ -154,8 +160,10 @@ async function exchangeMicrosoftToken(code: string, redirectUri: string): Promis
 }
 
 async function exchangeSlackToken(code: string, redirectUri: string): Promise<any> {
-  const clientId = process.env.SLACK_CLIENT_ID || '';
-  const clientSecret = process.env.SLACK_CLIENT_SECRET || '';
+  const clientIdEnv = process.env.SLACK_CLIENT_ID;
+  const clientId = (clientIdEnv !== '' && clientIdEnv != null) ? clientIdEnv : '';
+  const clientSecretEnv = process.env.SLACK_CLIENT_SECRET;
+  const clientSecret = (clientSecretEnv !== '' && clientSecretEnv != null) ? clientSecretEnv : '';
 
   const response = await fetch('https://slack.com/api/oauth.v2.access', {
     method: 'POST',

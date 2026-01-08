@@ -14,8 +14,8 @@ export async function executeSquareFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
-  const organizationId = integration.organizationId || '';
-  
+  const organizationId = (integration.organizationId !== '' && integration.organizationId != null) ? integration.organizationId : '';
+
   if (!organizationId) {
     throw new Error('Organization ID not configured');
   }
@@ -30,7 +30,9 @@ export async function executeSquareFunction(
   }
   
   // Check if production mode based on access token prefix or explicit mode setting
-  const isProduction = squareAccessToken.startsWith('sq0atp-') || squareConfig?.environment === 'production';
+  const hasProductionToken = squareAccessToken.startsWith('sq0atp-');
+  const hasProductionEnv = squareConfig?.environment === 'production';
+  const isProduction = hasProductionToken ? true : (hasProductionEnv ? true : false);
   const baseUrl = isProduction
     ? 'https://connect.squareup.com'
     : 'https://connect.squareupsandbox.com';
@@ -58,7 +60,7 @@ export async function executeSquareFunction(
           idempotency_key: `${Date.now()}-${Math.random()}`,
           amount_money: {
             amount: parameters.amount,
-            currency: parameters.currency || 'USD',
+            currency: (parameters.currency !== '' && parameters.currency != null) ? parameters.currency : 'USD',
           },
           autocomplete: true,
         }),
@@ -66,7 +68,9 @@ export async function executeSquareFunction(
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(`Square API error: ${error.errors?.[0]?.detail || response.statusText}`);
+        const errorDetail = error.errors?.[0]?.detail;
+        const errorMsg = (errorDetail !== '' && errorDetail != null) ? errorDetail : response.statusText;
+        throw new Error(`Square API error: ${errorMsg}`);
       }
       
       const data = await response.json();
@@ -101,7 +105,9 @@ export async function executeSquareFunction(
       
       if (!customerResponse.ok) {
         const error = await customerResponse.json();
-        throw new Error(`Square API error: ${error.errors?.[0]?.detail || customerResponse.statusText}`);
+        const customerErrorDetail = error.errors?.[0]?.detail;
+        const customerErrorMsg = (customerErrorDetail !== '' && customerErrorDetail != null) ? customerErrorDetail : customerResponse.statusText;
+        throw new Error(`Square API error: ${customerErrorMsg}`);
       }
       
       const customerData = await customerResponse.json();

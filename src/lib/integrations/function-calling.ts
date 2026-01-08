@@ -331,7 +331,8 @@ function formatResultForAI(functionName: string, result: any): string {
     return `Message sent to Slack channel successfully!`;
   }
   if (functionName === 'createChannel') {
-    return `Slack channel "${result.name || 'new channel'}" created successfully!`;
+    const channelName = (result.name !== '' && result.name != null) ? result.name : 'new channel';
+    return `Slack channel "${channelName}" created successfully!`;
   }
   if (functionName === 'listChannels') {
     return `Found ${Array.isArray(result) ? result.length : 0} Slack channels.`;
@@ -360,15 +361,18 @@ function formatResultForAI(functionName: string, result: any): string {
   
   // PayPal
   if (functionName === 'createPayment') {
-    return `Payment link created: ${result.approvalUrl || 'Payment initiated'}`;
+    const approvalUrl = (result.approvalUrl !== '' && result.approvalUrl != null) ? result.approvalUrl : 'Payment initiated';
+    return `Payment link created: ${approvalUrl}`;
   }
   if (functionName === 'getTransaction') {
-    return `Retrieved transaction details for order ${result.id || 'ID'}.`;
+    const transactionId = (result.id !== '' && result.id != null) ? result.id : 'ID';
+    return `Retrieved transaction details for order ${transactionId}.`;
   }
   
   // Square
   if (functionName === 'processPayment') {
-    return `Payment processed successfully! Receipt: ${result.receiptUrl || `Payment ID: ${  result.paymentId}`}`;
+    const receiptUrl = (result.receiptUrl !== '' && result.receiptUrl != null) ? result.receiptUrl : `Payment ID: ${result.paymentId}`;
+    return `Payment processed successfully! Receipt: ${receiptUrl}`;
   }
   if (functionName === 'createCustomer') {
     return `Customer created successfully in Square!`;

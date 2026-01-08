@@ -15,7 +15,7 @@ export async function executeGmailFunction(
   integration: ConnectedIntegration
 ): Promise<any> {
   const tokens = {
-    access_token: integration.accessToken || '',
+    access_token: (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '',
     refresh_token: integration.refreshToken,
   };
   
@@ -52,7 +52,7 @@ export async function executeGmailFunction(
       
       return listEmails(tokens, {
         query: parameters.query,
-        maxResults: parameters.maxResults || 10,
+        maxResults: parameters.maxResults ?? 10,
       });
       
     case 'getEmail':
