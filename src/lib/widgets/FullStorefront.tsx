@@ -71,8 +71,10 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(query) ||
-        p.description?.toLowerCase().includes(query)
+        [
+          p.name.toLowerCase().includes(query),
+          p.description?.toLowerCase().includes(query)
+        ].some(Boolean)
       );
     }
 

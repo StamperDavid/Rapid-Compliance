@@ -698,7 +698,7 @@ function formatChangeDescription(history: TrainingHistory): string {
     case 'created':
       return `Created new training pattern`;
     case 'updated':
-(return history.reason !== '' && return history.reason != null) ? return history.reason : 'Updated training pattern';
+      return (history.reason !== '' && history.reason != null) ? history.reason : 'Updated training pattern';
     case 'deleted':
       return 'Deleted training pattern';
     case 'activated':

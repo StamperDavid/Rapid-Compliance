@@ -56,8 +56,8 @@ export function useAuth() {
             setUser({
               id: authUser.uid,
               email: authUser.email ?? '',
-              displayName: authUser.displayName || userProfile?.displayName || ((userProfileName !== '' && userProfileName != null) ? userProfileName : 'User'),
-              role: (userProfile?.role as UserRole) || 'admin',
+              displayName: authUser.displayName ?? userProfile?.displayName ?? (userProfileName ?? 'User'),
+              role: (userProfile?.role as UserRole) ?? 'admin',
               organizationId: organizationId,
               workspaceId: userProfile?.currentWorkspaceId,
             });

@@ -113,10 +113,15 @@ export default function IntegrationsPage() {
 
   const providers = Object.values(INTEGRATION_PROVIDERS);
   const filteredProviders = providers.filter(provider => {
-    const matchesCategory = selectedCategory === 'all' || provider.category === selectedCategory;
-    const matchesSearch = searchQuery === '' ||
-      provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = [
+      selectedCategory === 'all',
+      provider.category === selectedCategory
+    ].some(Boolean);
+    const matchesSearch = [
+      searchQuery === '',
+      provider.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      provider.description.toLowerCase().includes(searchQuery.toLowerCase())
+    ].some(Boolean);
     return matchesCategory && matchesSearch;
   });
 

@@ -36,7 +36,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       const settingsHref = element.settings?.href;
       return (
         <Link
-          href={(settingsHref !== '' && settingsHref != null) ? settingsHref : '#'}
+          href={(settingsHref ?? '#')}
           style={{
             display: 'inline-block',
             textDecoration: 'none',
@@ -46,6 +46,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
           {element.content}
         </Link>
       );
+    }
 
     case 'image':
       return (

@@ -206,7 +206,7 @@ export async function scheduleMeeting(
       id: meetingId,
       organizationId,
       title: getMeetingTitle(request.meetingType, request.companyName),
-      description: request.topic || getMeetingDescription(request.meetingType),
+      description: request.topic ?? getMeetingDescription(request.meetingType),
       duration: request.duration,
       host: {
         name: host.name,
@@ -382,8 +382,8 @@ async function getHostDetails(userId: string): Promise<{ name: string; email: st
     if (userDoc.exists()) {
       const user = userDoc.data() as any;
       return {
-        name:(user.name || user.displayName !== '' && user.name || user.displayName != null) ? user.name || user.displayName : 'Sales Team',
-        email:(user.email !== '' && user.email != null) ? user.email : 'sales@company.com',
+        name:(user.name ?? user.displayName ?? 'Sales Team'),
+        email:(user.email ?? 'sales@company.com'),
       };
     }
     

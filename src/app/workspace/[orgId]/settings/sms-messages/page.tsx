@@ -193,13 +193,13 @@ export default function SmsMessagesPage() {
               <div style={{ flex: 1 }}>
                 {selectedSmsTemplate ? (
                   <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
-                      {(() => {
-                        const predefinedName = predefinedTriggers.find(t => t.id === selectedSmsTemplate)?.name;
-                        const templateName = smsTemplates.find(t => t.id === selectedSmsTemplate)?.name;
-                        return predefinedName || ((templateName !== '' && templateName != null) ? templateName : 'SMS Template');
-                      })()}
-                    </h2>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
+                    {(() => {
+                      const predefinedName = predefinedTriggers.find(t => t.id === selectedSmsTemplate)?.name;
+                      const templateName = smsTemplates.find(t => t.id === selectedSmsTemplate)?.name;
+                      return predefinedName ?? (templateName ?? 'SMS Template');
+                    })()}
+                  </h2>
 
                     <div style={{ marginBottom: '1.5rem' }}>
                       <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#ccc', marginBottom: '0.5rem' }}>

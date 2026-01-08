@@ -70,7 +70,7 @@ export async function executeAIAgentAction(
   ];
 
   // Enhance with RAG if enabled
-  let enhancedSystemPrompt = processedSystemPrompt || 
+  let enhancedSystemPrompt = processedSystemPrompt ?? 
     'You are a helpful AI assistant processing workflow data. Respond concisely and accurately.';
 
   if (useKnowledgeBase) {

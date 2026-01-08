@@ -70,17 +70,17 @@ export class SchemaManager {
       id: schemaId,
       workspaceId: this.workspaceId,
       name: schema.name!,
-      pluralName: schema.pluralName || schema.name!,
-      singularName: schema.singularName || schema.name!,
+      pluralName: schema.pluralName ?? schema.name!,
+      singularName: schema.singularName ?? schema.name!,
       description: schema.description,
-      icon:(schema.icon !== '' && schema.icon != null) ? schema.icon : '📋',
-      color:(schema.color !== '' && schema.color != null) ? schema.color : '#3B82F6',
+      icon:(schema.icon ?? '📋'),
+      color:(schema.color ?? '#3B82F6'),
       
       // Start with empty fields, user will add them
-      fields: schema.fields || this.getDefaultFields(),
+      fields: schema.fields ?? this.getDefaultFields(),
       
       // Set first field as primary
-      primaryFieldId: (() => { const v = schema.fields?.[0]?.id; return (v !== '' && v != null) ? v : 'field_name'; })(),
+      primaryFieldId: (() => { const v = schema.fields?.[0]?.id; return (v ?? 'field_name'); })(),
       
       relations: [],
       permissions: {

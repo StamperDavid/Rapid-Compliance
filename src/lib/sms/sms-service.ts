@@ -170,7 +170,7 @@ async function sendViaTwilio(options: SMSOptions, credentials: any): Promise<SMS
  */
 async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMSResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromNumber =(options.from || credentials.phoneNumber !== '' && options.from || credentials.phoneNumber != null) ? options.from || credentials.phoneNumber : 'Vonage';
+  const fromNumber =(options.from ?? credentials.phoneNumber ?? 'Vonage');
 
   // Vonage API endpoint
   const vonageUrl = 'https://rest.nexmo.com/sms/json';

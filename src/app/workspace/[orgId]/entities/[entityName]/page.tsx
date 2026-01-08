@@ -402,9 +402,9 @@ export default function EntityTablePage() {
     }
   };
 
-  const entityDisplayName = schema?.pluralName || entityName.charAt(0).toUpperCase() + entityName.slice(1);
+  const entityDisplayName = schema?.pluralName ?? entityName.charAt(0).toUpperCase() + entityName.slice(1);
   const schemaIcon = schema?.icon;
-  const entityIcon = (schemaIcon !== '' && schemaIcon != null) ? schemaIcon : '📋';
+  const entityIcon = (schemaIcon ?? '📋');
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>

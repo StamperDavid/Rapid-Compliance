@@ -557,7 +557,7 @@ async function synthesizeLeadObject(
     // Merge with raw data
     const company: DiscoveredCompany = {
       domain,
-      companyName: synthesized.companyName || extractDomainName(domain),
+      companyName: synthesized.companyName ?? extractDomainName(domain),
       description: synthesized.description,
       industry: synthesized.industry,
       size: synthesized.size,
@@ -843,7 +843,7 @@ async function saveToArchive(
       rawHtml: JSON.stringify(rawData),
       cleanedContent: JSON.stringify(company),
       metadata: {
-        title: company.companyName || extractDomainName(domain),
+        title: company.companyName ?? extractDomainName(domain),
         description: company.description,
         author: 'discovery-engine',
       },

@@ -72,7 +72,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get('sessionId') || request.headers.get('x-session-id');
+    const sessionId = searchParams.get('sessionId') ?? request.headers.get('x-session-id');
     const workspaceId = searchParams.get('workspaceId');
     const organizationId = searchParams.get('organizationId');
     const code = searchParams.get('code');

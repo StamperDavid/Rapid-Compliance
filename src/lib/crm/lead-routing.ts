@@ -360,7 +360,7 @@ async function getDefaultAssignment(organizationId: string): Promise<string> {
     // Fallback to org owner
     const org = await FirestoreService.get<any>('organizations', organizationId);
     const orgCreatedBy = org?.createdBy;
-    return org?.ownerId || ((orgCreatedBy !== '' && orgCreatedBy != null) ? orgCreatedBy : 'unknown');
+    return org?.ownerId ?? (orgCreatedBy ?? 'unknown');
 
   } catch (error) {
     logger.error('Failed to get default assignment', error);

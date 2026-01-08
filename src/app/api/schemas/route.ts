@@ -89,13 +89,13 @@ export async function POST(request: NextRequest) {
     }
 
     const now = FieldValue.serverTimestamp();
-    const schemaId = schema.id || buildSchemaId(schema.name);
+    const schemaId = schema.id ?? buildSchemaId(schema.name);
 
     const fields = (schema.fields ?? []).map((field: any) => ({
-      id: field.id || buildFieldId((field.key || field.label !== '' && field.key || field.label != null) ? field.key || field.label : 'field'),
-      key: field.key || slugify((field.label !== '' && field.label != null) ? field.label : 'field'),
-      label:(field.label || field.key !== '' && field.label || field.key != null) ? field.label || field.key : 'Field',
-      type:(field.type !== '' && field.type != null) ? field.type : 'text',
+      id: field.id ?? buildFieldId((field.key ?? field.label ?? 'field')),
+      key: field.key ?? slugify((field.label ?? 'field')),
+      label:(field.label ?? field.key ?? 'Field'),
+      type:(field.type ?? 'text'),
       required: !!field.required,
       createdAt: now,
       updatedAt: now,

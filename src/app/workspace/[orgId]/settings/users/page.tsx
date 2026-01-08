@@ -80,9 +80,9 @@ export default function TeamMembersPage() {
 
   // Convert Firestore users to TeamMember format
   useEffect(() => {
-    const members: TeamMember[] = (users || []).map((u: any, index: number) => {
+    const members: TeamMember[] = (users ?? []).map((u: any, index: number) => {
       const emailUsername = u.email?.split('@')[0];
-      const userName = u.displayName || ((emailUsername !== '' && emailUsername != null) ? emailUsername : 'Unknown');
+      const userName = u.displayName ?? (emailUsername ?? 'Unknown');
       return {
         id: index + 1,
         name: userName,

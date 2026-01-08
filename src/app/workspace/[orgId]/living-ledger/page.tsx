@@ -39,10 +39,9 @@ export default function LivingLedgerPage() {
       try {
         // For demo purposes, using mock data
         // In production, this would fetch from Firestore
-        const mockDeals: Deal[] = [
         const userOrgId = user?.organizationId;
-        const defaultOrgId = (userOrgId !== '' && userOrgId != null) ? userOrgId : 'default-org';
-        const mockDealsData: Deal[] = [
+        const defaultOrgId = (userOrgId ?? 'default-org');
+        const mockDeals: Deal[] = [
           {
             id: 'deal-1',
             organizationId: defaultOrgId,

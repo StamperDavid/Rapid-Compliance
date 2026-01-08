@@ -253,8 +253,8 @@ export async function generateSalesEmail(
       templateId: options.templateId,
       competitorDomain: options.competitorDomain,
       
-      tone: options.tone || determineToneFromScore(dealScore),
-      length:(options.length !== '' && options.length != null) ? options.length : 'medium',
+      tone: options.tone ?? determineToneFromScore(dealScore),
+      length:(options.length ?? 'medium'),
       includeCompetitive: options.includeCompetitive ?? false,
       includeSocialProof: options.includeSocialProof ?? false,
       
@@ -319,14 +319,14 @@ function buildSystemPrompt(
   dealScore?: DealScore
 ): string {
   const dealTier = dealScore?.tier;
-  const tier = (dealTier !== '' && dealTier != null) ? dealTier : 'warm';
+  const tier = (dealTier ?? 'warm');
   const score = dealScore?.score ?? 50;
   
   let systemPrompt = `You are an expert B2B sales email writer. Your goal is to write ${template.name} that:
 
 1. ${template.goal}
-2. Uses a ${options.tone || determineToneFromScore(dealScore)} tone
-3. Is ${(options.length !== '' && options.length != null) ? options.length : 'medium'} length (${getLengthGuidance((options.length !== '' && options.length != null) ? options.length : 'medium')})
+2. Uses a ${options.tone ?? determineToneFromScore(dealScore)} tone
+3. Is ${(options.length ?? 'medium')} length (${getLengthGuidance((options.length ?? 'medium'))})
 4. Follows email best practices (clear subject, strong opening, value proposition, clear CTA)
 
 DEAL CONTEXT:
@@ -538,7 +538,7 @@ function parseEmailResponse(response: string): {
   
   // Extract plain text
   const plainMatch = response.match(/PLAIN:\s*\n([\s\S]+?)(?:\n---|\nIMPROVEMENTS:|$)/i);
-  const bodyPlain = plainMatch?.[1]?.trim() || stripHTML(body);
+  const bodyPlain = plainMatch?.[1]?.trim() ?? stripHTML(body);
   
   return {
     subject,

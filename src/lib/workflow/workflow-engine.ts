@@ -549,8 +549,8 @@ export class WorkflowEngine {
     const config = action.config as any; // EmailActionConfig
     
     // Resolve recipient
-    const recipientEmail = config.recipientEmail || 
-      this.getFieldValue((config.recipientField !== '' && config.recipientField != null) ? config.recipientField : 'deal.contactEmail', context) as string;
+    const recipientEmail = config.recipientEmail ?? 
+      this.getFieldValue((config.recipientField ?? 'deal.contactEmail'), context) as string;
     
     if (!recipientEmail) {
       throw new Error('No recipient email found');
@@ -597,8 +597,8 @@ export class WorkflowEngine {
     const config = action.config as any; // TaskActionConfig
     
     // Resolve assignee
-    const assignToUserId = config.assignToUserId || 
-      this.getFieldValue((config.assignToField !== '' && config.assignToField != null) ? config.assignToField : 'deal.ownerId', context) as string;
+    const assignToUserId = config.assignToUserId ?? 
+      this.getFieldValue((config.assignToField ?? 'deal.ownerId'), context) as string;
     
     if (!assignToUserId) {
       throw new Error('No assignee found for task');
@@ -668,8 +668,8 @@ export class WorkflowEngine {
     const config = action.config as any; // NotificationActionConfig
     
     // Resolve recipient
-    const recipientId = config.recipientId || 
-      this.getFieldValue((config.recipientField !== '' && config.recipientField != null) ? config.recipientField : 'deal.ownerId', context) as string;
+    const recipientId = config.recipientId ?? 
+      this.getFieldValue((config.recipientField ?? 'deal.ownerId'), context) as string;
     
     if (!recipientId) {
       throw new Error('No recipient found for notification');
