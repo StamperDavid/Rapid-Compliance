@@ -142,7 +142,7 @@ async function semanticSearch(
     
     // Get all knowledge chunks
     // In production, use vector database (Pinecone, Weaviate, etc.)
-    const chunks = await FirestoreService.getAll<any>(
+    const chunks = await FirestoreService.getAll<ChunkData>(
       `${COLLECTIONS.ORGANIZATIONS}/*/knowledgeBase/${knowledgeBaseId}/chunks`
     );
     
@@ -178,7 +178,7 @@ async function semanticSearch(
 /**
  * Fallback keyword search
  */
-function keywordSearch(chunks: any[], topK: number): KnowledgeChunk[] {
+function keywordSearch(chunks: ChunkData[], topK: number): KnowledgeChunk[] {
   // Simple keyword-based scoring
   return chunks
     .map(chunk => {
@@ -243,10 +243,10 @@ async function rerankWithCohere(
       throw new Error('Cohere reranking failed');
     }
     
-    const data = await response.json();
+    const data = await response.json() as CohereRerankResponse;
     
     // Reorder chunks based on Cohere scores
-    return data.results.map((result: any) => ({
+    return data.results.map((result) => ({
       ...chunks[result.index],
       relevanceScore: result.relevance_score,
     }));
@@ -379,7 +379,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
  */
 export async function indexKnowledgeBase(
   knowledgeBaseId: string,
-  documents: Array<{ content: string; source: string; metadata?: any }>
+  documents: Array<{ content: string; source: string; metadata?: Record<string, unknown> }>
 ): Promise<{ chunksIndexed: number; time: number }> {
   const startTime = Date.now();
   

@@ -9,8 +9,47 @@ import type {
   BehaviorConfig 
 } from '@/types/agent-memory';
 
+/** Business context fields used in prompt generation */
+export interface BusinessContextFields {
+  businessName?: string;
+  industry?: string;
+  problemSolved?: string;
+  uniqueValue?: string;
+  targetCustomer?: string;
+  topProducts?: string;
+  primaryOffering?: string;
+  productComparison?: string;
+  seasonalOfferings?: string;
+  pricingStrategy?: string;
+  discountPolicy?: string;
+  volumeDiscounts?: string;
+  firstTimeBuyerIncentive?: string;
+  financingOptions?: string;
+  returnPolicy?: string;
+  warrantyTerms?: string;
+  cancellationPolicy?: string;
+  satisfactionGuarantee?: string;
+  geographicCoverage?: string;
+  deliveryTimeframes?: string;
+  typicalSalesFlow?: string;
+  qualificationCriteria?: string;
+  discoveryQuestions?: string;
+  closingStrategy?: string;
+  commonObjections?: string;
+  priceObjections?: string;
+  timeObjections?: string;
+  competitorObjections?: string;
+  supportScope?: string;
+  technicalSupport?: string;
+  orderTracking?: string;
+  complaintResolution?: string;
+  requiredDisclosures?: string;
+  prohibitedTopics?: string;
+  industryRegulations?: string;
+}
+
 export interface PromptComponents {
-  businessContext: Record<string, any>;
+  businessContext: BusinessContextFields;
   agentPersona: AgentPersona;
   behaviorConfig: BehaviorConfig;
   knowledgeBase: KnowledgeBase;

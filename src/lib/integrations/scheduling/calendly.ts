@@ -5,14 +5,29 @@
 
 import type { ConnectedIntegration } from '@/types/integrations';
 
+/** Calendly function parameters */
+export interface CalendlyFunctionParams {
+  date?: string;
+  eventType?: string;
+  datetime?: string;
+  name?: string;
+  email?: string;
+  notes?: string;
+}
+
+/** Calendly function result types */
+export type CalendlyFunctionResult = 
+  | Array<{ time: string; available: boolean }>
+  | { scheduledTime: string; confirmationUrl: string };
+
 /**
  * Execute a Calendly function
  */
 export async function executeCalendlyFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: CalendlyFunctionParams,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<CalendlyFunctionResult> {
   const accessToken = integration.accessToken;
   
   if (!accessToken) {
@@ -132,7 +147,12 @@ async function checkAvailability(
   
   const availabilityData = await availabilityResponse.json();
   
-  return availabilityData.collection.map((slot: any) => ({
+  interface CalendlyTimeSlot {
+    start_time: string;
+    status: string;
+  }
+  
+  return availabilityData.collection.map((slot: CalendlyTimeSlot) => ({
     time: new Date(slot.start_time).toLocaleString(),
     available: true,
   }));

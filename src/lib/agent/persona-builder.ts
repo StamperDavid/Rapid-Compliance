@@ -20,9 +20,10 @@ export function buildPersonaFromOnboarding(
   // Extract persona data from onboarding
   const agentNameFromBusiness = (onboardingData.businessName !== '' && onboardingData.businessName != null) ? onboardingData.businessName : 'AI Assistant';
   const agentName = (onboardingData.agentName !== '' && onboardingData.agentName != null) ? onboardingData.agentName : agentNameFromBusiness;
-  const tone = ((onboardingData as any).tone !== '' && (onboardingData as any).tone != null) ? (onboardingData as any).tone : 'professional';
-  const greeting = ((onboardingData as any).greeting !== '' && (onboardingData as any).greeting != null) ? (onboardingData as any).greeting : buildDefaultGreeting(onboardingData);
-  const closingMessage = ((onboardingData as any).closingMessage !== '' && (onboardingData as any).closingMessage != null) ? (onboardingData as any).closingMessage : buildDefaultClosing(onboardingData);
+  // communicationStyle serves as tone in OnboardingData
+  const tone = (onboardingData.communicationStyle !== '' && onboardingData.communicationStyle != null) ? onboardingData.communicationStyle : 'professional';
+  const greeting = (onboardingData.greetingMessage !== '' && onboardingData.greetingMessage != null) ? onboardingData.greetingMessage : buildDefaultGreeting(onboardingData);
+  const closingMessage = (onboardingData.closingMessage !== '' && onboardingData.closingMessage != null) ? onboardingData.closingMessage : buildDefaultClosing(onboardingData);
   
   // Build objectives from onboarding
   const objectives = buildObjectives(onboardingData);
@@ -45,7 +46,7 @@ export function buildPersonaFromOnboarding(
  */
 function buildDefaultGreeting(onboardingData: OnboardingData): string {
   const businessName = (onboardingData.businessName !== '' && onboardingData.businessName != null) ? onboardingData.businessName : 'our company';
-  const tone = ((onboardingData as any).tone !== '' && (onboardingData as any).tone != null) ? (onboardingData as any).tone : 'professional';
+  const tone = (onboardingData.communicationStyle !== '' && onboardingData.communicationStyle != null) ? onboardingData.communicationStyle : 'professional';
   
   if (tone === 'friendly') {
     return `Hi! Welcome to ${businessName}! I'm here to help you find exactly what you need. What can I help you with today?`;
@@ -62,7 +63,7 @@ function buildDefaultGreeting(onboardingData: OnboardingData): string {
  * Build default closing message from onboarding data
  */
 function buildDefaultClosing(onboardingData: OnboardingData): string {
-  const tone = ((onboardingData as any).tone !== '' && (onboardingData as any).tone != null) ? (onboardingData as any).tone : 'professional';
+  const tone = (onboardingData.communicationStyle !== '' && onboardingData.communicationStyle != null) ? onboardingData.communicationStyle : 'professional';
   
   if (tone === 'friendly') {
     return `Thanks for chatting! Feel free to reach out anytime if you have more questions. Have a great day!`;
@@ -75,12 +76,21 @@ function buildDefaultClosing(onboardingData: OnboardingData): string {
   }
 }
 
+/** Extended onboarding data with optional training fields */
+interface ExtendedOnboardingData extends OnboardingData {
+  primaryObjective?: string;
+  secondaryObjectives?: string[];
+  successMetrics?: string;
+  maxMessagesBeforeEscalation?: number;
+  escalationRules?: string | string[];
+}
+
 /**
  * Build objectives array from onboarding data
  */
 function buildObjectives(onboardingData: OnboardingData): string[] {
   const objectives: string[] = [];
-  const data = onboardingData as any;
+  const data = onboardingData as ExtendedOnboardingData;
   
   // Primary objective
   const primaryObjective = (data.primaryObjective !== '' && data.primaryObjective != null) ? data.primaryObjective : 'sales';
@@ -133,7 +143,7 @@ function buildObjectives(onboardingData: OnboardingData): string[] {
  */
 function buildEscalationRules(onboardingData: OnboardingData): string[] {
   const rules: string[] = [];
-  const data = onboardingData as any;
+  const data = onboardingData as ExtendedOnboardingData;
   
   // Add custom escalation rules if provided
   if (data.escalationRules) {
@@ -165,68 +175,38 @@ function buildEscalationRules(onboardingData: OnboardingData): string[] {
  */
 export function buildBusinessContextFromOnboarding(
   onboardingData: OnboardingData
-): Record<string, any> {
-  const data = onboardingData as any;
+): Record<string, unknown> {
   return {
-    businessName: (data.businessName !== '' && data.businessName != null) ? data.businessName : 'the company',
-    industry: (data.industry !== '' && data.industry != null) ? data.industry : 'general',
-    website: data.website ?? '',
-    companySize: data.companySize ?? '',
+    businessName: (onboardingData.businessName !== '' && onboardingData.businessName != null) ? onboardingData.businessName : 'the company',
+    industry: (onboardingData.industry !== '' && onboardingData.industry != null) ? onboardingData.industry : 'general',
+    website: onboardingData.website ?? '',
     
     // Business understanding
-    problemSolved: data.problemSolved ?? '',
-    uniqueValue: data.uniqueValue ?? '',
-    whyBuy: data.whyBuy ?? '',
-    whyNotBuy: data.whyNotBuy ?? '',
+    problemSolved: onboardingData.problemSolved ?? '',
+    uniqueValue: onboardingData.uniqueValue ?? '',
     
     // Products/Services
-    primaryOffering: data.primaryOffering ?? '',
-    topProducts: data.topProducts ?? '',
-    productComparison: data.productComparison ?? '',
-    seasonalOfferings: data.seasonalOfferings ?? '',
-    whoShouldNotBuy: data.whoShouldNotBuy ?? '',
+    topProducts: onboardingData.topProducts ?? '',
     
     // Pricing
-    pricingStrategy: data.pricingStrategy ?? '',
-    discountPolicy: data.discountPolicy ?? '',
-    volumeDiscounts: data.volumeDiscounts ?? '',
-    firstTimeBuyerIncentive: data.firstTimeBuyerIncentive ?? '',
-    financingOptions: data.financingOptions ?? '',
-    
-    // Operations
-    geographicCoverage: data.geographicCoverage ?? '',
-    deliveryTimeframes: data.deliveryTimeframes ?? '',
-    inventoryConstraints: data.inventoryConstraints ?? '',
-    capacityLimitations: data.capacityLimitations ?? '',
+    discountPolicy: onboardingData.discountPolicy ?? '',
     
     // Policies
-    returnPolicy: data.returnPolicy ?? '',
-    warrantyTerms: data.warrantyTerms ?? '',
-    cancellationPolicy: data.cancellationPolicy ?? '',
-    satisfactionGuarantee: data.satisfactionGuarantee ?? '',
+    returnPolicy: onboardingData.returnPolicy ?? '',
+    warrantyTerms: onboardingData.warrantyTerms ?? '',
+    satisfactionGuarantee: onboardingData.satisfactionGuarantee ?? '',
     
     // Sales process
-    typicalSalesFlow: data.typicalSalesFlow ?? '',
-    qualificationCriteria: data.qualificationCriteria ?? '',
-    discoveryQuestions: data.discoveryQuestions ?? '',
-    closingStrategy: data.closingStrategy ?? '',
+    typicalSalesFlow: onboardingData.typicalSalesFlow ?? '',
+    discoveryQuestions: onboardingData.discoveryQuestions ?? '',
     
     // Objection handling
-    commonObjections: data.commonObjections ?? '',
-    priceObjections: data.priceObjections ?? '',
-    timeObjections: data.timeObjections ?? '',
-    competitorObjections: data.competitorObjections ?? '',
-    
-    // Customer service
-    supportScope: data.supportScope ?? '',
-    technicalSupport: data.technicalSupport ?? '',
-    orderTracking: data.orderTracking ?? '',
-    complaintResolution: data.complaintResolution ?? '',
+    commonObjections: onboardingData.commonObjections ?? '',
+    priceObjections: onboardingData.priceObjections ?? '',
     
     // Target customer
-    targetCustomer: data.targetCustomer ?? '',
-    customerDemographics: data.customerDemographics ?? '',
-    priceRange: data.priceRange ?? '',
+    targetCustomer: onboardingData.targetCustomer ?? '',
+    priceRange: onboardingData.priceRange ?? '',
   };
 }
 
@@ -235,15 +215,14 @@ export function buildBusinessContextFromOnboarding(
  */
 export function buildBehaviorConfigFromOnboarding(
   onboardingData: OnboardingData
-): Record<string, any> {
-  const data = onboardingData as any;
+): Record<string, unknown> {
   return {
-    closingAggressiveness: data.closingAggressiveness ?? 5,
-    questionFrequency: data.questionFrequency ?? 3,
-    responseLength: (data.responseLength !== '' && data.responseLength != null) ? data.responseLength : 'balanced',
-    proactiveLevel: data.proactiveLevel ?? 5,
-    maxMessagesBeforeEscalation: data.maxMessagesBeforeEscalation ?? 20,
-    idleTimeoutMinutes: 30,
+    closingAggressiveness: onboardingData.closingStyle ?? 5,
+    questionFrequency: onboardingData.discoveryDepth ?? 3,
+    responseLength: (onboardingData.responseLength !== '' && onboardingData.responseLength != null) ? onboardingData.responseLength : 'balanced',
+    proactiveLevel: onboardingData.proactivityLevel ?? 5,
+    maxMessagesBeforeEscalation: 20,
+    idleTimeoutMinutes: onboardingData.idleTimeoutMinutes ?? 30,
   };
 }
 

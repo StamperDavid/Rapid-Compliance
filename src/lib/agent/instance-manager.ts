@@ -105,27 +105,30 @@ export class AgentInstanceManager implements InstanceLifecycleService {
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
     // Handle both nested and flat structures for backwards compatibility
     // Extract string values to avoid empty strings in prompt (Explicit Ternary for STRINGS)
-    const businessName = ((goldenMaster as any).businessName !== '' && (goldenMaster as any).businessName != null) ? (goldenMaster as any).businessName : 'Your Business';
-    const industry = ((goldenMaster as any).industry !== '' && (goldenMaster as any).industry != null) ? (goldenMaster as any).industry : 'General';
-    const problemSolved = ((goldenMaster as any).problemSolved !== '' && (goldenMaster as any).problemSolved != null) ? (goldenMaster as any).problemSolved : '';
-    const uniqueValue = ((goldenMaster as any).uniqueValue !== '' && (goldenMaster as any).uniqueValue != null) ? (goldenMaster as any).uniqueValue : '';
-    const topProducts = (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') ?? '';
-    const pricingStrategy = ((goldenMaster as any).pricingStrategy !== '' && (goldenMaster as any).pricingStrategy != null) ? (goldenMaster as any).pricingStrategy : '';
-    const discountPolicy = ((goldenMaster as any).discountPolicy !== '' && (goldenMaster as any).discountPolicy != null) ? (goldenMaster as any).discountPolicy : '';
-    const returnPolicy = ((goldenMaster as any).returnPolicy !== '' && (goldenMaster as any).returnPolicy != null) ? (goldenMaster as any).returnPolicy : '';
-    const warrantyTerms = ((goldenMaster as any).warrantyTerms !== '' && (goldenMaster as any).warrantyTerms != null) ? (goldenMaster as any).warrantyTerms : '';
-    const geographicCoverage = ((goldenMaster as any).geographicCoverage !== '' && (goldenMaster as any).geographicCoverage != null) ? (goldenMaster as any).geographicCoverage : '';
-    const deliveryTimeframes = ((goldenMaster as any).deliveryTimeframes !== '' && (goldenMaster as any).deliveryTimeframes != null) ? (goldenMaster as any).deliveryTimeframes : '';
-    const typicalSalesFlow = ((goldenMaster as any).typicalSalesFlow !== '' && (goldenMaster as any).typicalSalesFlow != null) ? (goldenMaster as any).typicalSalesFlow : '';
-    const discoveryQuestions = ((goldenMaster as any).discoveryQuestions !== '' && (goldenMaster as any).discoveryQuestions != null) ? (goldenMaster as any).discoveryQuestions : '';
-    const commonObjections = ((goldenMaster as any).commonObjections !== '' && (goldenMaster as any).commonObjections != null) ? (goldenMaster as any).commonObjections : '';
-    const priceObjections = ((goldenMaster as any).priceObjections !== '' && (goldenMaster as any).priceObjections != null) ? (goldenMaster as any).priceObjections : '';
-    const timeObjections = ((goldenMaster as any).timeObjections !== '' && (goldenMaster as any).timeObjections != null) ? (goldenMaster as any).timeObjections : '';
-    const competitorObjections = ((goldenMaster as any).competitorObjections !== '' && (goldenMaster as any).competitorObjections != null) ? (goldenMaster as any).competitorObjections : '';
-    const requiredDisclosures = ((goldenMaster as any).requiredDisclosures !== '' && (goldenMaster as any).requiredDisclosures != null) ? (goldenMaster as any).requiredDisclosures : '';
-    const prohibitedTopics = ((goldenMaster as any).prohibitedTopics !== '' && (goldenMaster as any).prohibitedTopics != null) ? (goldenMaster as any).prohibitedTopics : '';
+    const bc = goldenMaster.businessContext;
+    const businessName = (bc?.businessName !== '' && bc?.businessName != null) ? bc.businessName : 'Your Business';
+    const industry = (bc?.industry !== '' && bc?.industry != null) ? bc.industry : 'General';
+    const problemSolved = (bc?.problemSolved !== '' && bc?.problemSolved != null) ? bc.problemSolved : '';
+    const uniqueValue = (bc?.uniqueValue !== '' && bc?.uniqueValue != null) ? bc.uniqueValue : '';
+    // Products come from knowledge base product catalog
+    const catalogProducts = goldenMaster.knowledgeBase?.productCatalog?.products ?? [];
+    const topProducts = catalogProducts.map((p) => `${p.name}: $${p.price} - ${p.description}`).join('\n');
+    const pricingStrategy = (bc?.priceRange !== '' && bc?.priceRange != null) ? bc.priceRange : '';
+    const discountPolicy = (bc?.discountPolicy !== '' && bc?.discountPolicy != null) ? bc.discountPolicy : '';
+    const returnPolicy = (bc?.returnPolicy !== '' && bc?.returnPolicy != null) ? bc.returnPolicy : '';
+    const warrantyTerms = (bc?.warrantyTerms !== '' && bc?.warrantyTerms != null) ? bc.warrantyTerms : '';
+    const geographicCoverage = '';  // Not in OnboardingData, use empty string
+    const deliveryTimeframes = '';  // Not in OnboardingData, use empty string
+    const typicalSalesFlow = (bc?.typicalSalesFlow !== '' && bc?.typicalSalesFlow != null) ? bc.typicalSalesFlow : '';
+    const discoveryQuestions = (bc?.discoveryQuestions !== '' && bc?.discoveryQuestions != null) ? bc.discoveryQuestions : '';
+    const commonObjections = (bc?.commonObjections !== '' && bc?.commonObjections != null) ? bc.commonObjections : '';
+    const priceObjections = (bc?.priceObjections !== '' && bc?.priceObjections != null) ? bc.priceObjections : '';
+    const timeObjections = '';  // Not in OnboardingData - part of objectionHandling
+    const competitorObjections = '';  // Not in OnboardingData - part of objectionHandling
+    const requiredDisclosures = (bc?.requiredDisclosures !== '' && bc?.requiredDisclosures != null) ? bc.requiredDisclosures : '';
+    const prohibitedTopics = (bc?.prohibitedTopics !== '' && bc?.prohibitedTopics != null) ? bc.prohibitedTopics : '';
 
-    const businessContext: any = goldenMaster.businessContext ?? {
+    const businessContext: Record<string, unknown> = goldenMaster.businessContext ?? {
       businessName,
       industry,
       problemSolved,
@@ -148,29 +151,32 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     };
     
     // Extract agent persona strings (Explicit Ternary for STRINGS)
-    const personaName = ((goldenMaster as any).name !== '' && (goldenMaster as any).name != null) ? (goldenMaster as any).name : 'AI Assistant';
-    const personaTone = ((goldenMaster as any).tone !== '' && (goldenMaster as any).tone != null) ? (goldenMaster as any).tone : 'Professional and helpful';
-    const personaGreeting = ((goldenMaster as any).greeting !== '' && (goldenMaster as any).greeting != null) ? (goldenMaster as any).greeting : 'Hello! How can I help you today?';
-    const personaClosingMessage = ((goldenMaster as any).closingMessage !== '' && (goldenMaster as any).closingMessage != null) ? (goldenMaster as any).closingMessage : 'Thanks for chatting!';
+    const ap = goldenMaster.agentPersona;
+    const personaName = (ap?.name !== '' && ap?.name != null) ? ap.name : 'AI Assistant';
+    const personaTone = (ap?.tone !== '' && ap?.tone != null) ? ap.tone : 'Professional and helpful';
+    const personaGreeting = (ap?.greeting !== '' && ap?.greeting != null) ? ap.greeting : 'Hello! How can I help you today?';
+    const personaClosingMessage = (ap?.closingMessage !== '' && ap?.closingMessage != null) ? ap.closingMessage : 'Thanks for chatting!';
 
     const agentPersona = goldenMaster.agentPersona ?? {
       name: personaName,
       tone: personaTone,
       greeting: personaGreeting,
       closingMessage: personaClosingMessage,
-      objectives: (goldenMaster as any).objectives ?? [],
-      escalationRules: (goldenMaster as any).escalationRules ?? []
+      objectives: ap?.objectives ?? [],
+      escalationRules: ap?.escalationRules ?? []
     };
     
-    // Extract behavior config (STRING for questionFrequency/responseLength, NUMBERS for aggressiveness/level - use ?? for numbers)
-    const questionFrequency = ((goldenMaster as any).questionFrequency !== '' && (goldenMaster as any).questionFrequency != null) ? (goldenMaster as any).questionFrequency : 'moderate';
-    const responseLength = ((goldenMaster as any).responseLength !== '' && (goldenMaster as any).responseLength != null) ? (goldenMaster as any).responseLength : 'medium';
+    // Extract behavior config (STRING for responseLength, NUMBERS for aggressiveness/level - use ?? for numbers)
+    const bhv = goldenMaster.behaviorConfig;
+    const questionFrequency = bhv?.questionFrequency ?? 3;
+    const responseLength = (bhv?.responseLength !== '' && bhv?.responseLength != null) ? bhv.responseLength : 'balanced';
 
     const behaviorConfig = goldenMaster.behaviorConfig ?? {
-      closingAggressiveness: (goldenMaster as any).closingAggressiveness ?? 5,
+      closingAggressiveness: bhv?.closingAggressiveness ?? 5,
       questionFrequency,
       responseLength,
-      proactiveLevel: (goldenMaster as any).proactiveLevel ?? 5
+      proactiveLevel: bhv?.proactiveLevel ?? 5,
+      idleTimeoutMinutes: 30
     };
     
     // Include training learnings in system prompt (from Golden Master)
@@ -604,18 +610,18 @@ ${this.summarizeRecentConversations(customerMemory)}
             .collection(goldenMastersPath)
             .get();
           
-          const goldenMasters = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const goldenMasters = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GoldenMaster[];
           logger.info('Instance Manager Found Golden Masters (admin SDK)', { 
             count: goldenMasters.length, 
             file: 'instance-manager.ts' 
           });
           
-          const active = goldenMasters.find((gm: any) => gm.isActive === true);
+          const active = goldenMasters.find((gm) => gm.isActive === true);
           logger.info('Instance Manager Active Golden Master', { 
             activeId: active ? active.id : 'NONE',
             file: 'instance-manager.ts' 
           });
-          return active as GoldenMaster | null;
+          return active ?? null;
         }
       } catch (adminError) {
         logger.warn('[Instance Manager] Admin SDK failed, falling back to client SDK', { 
@@ -626,13 +632,13 @@ ${this.summarizeRecentConversations(customerMemory)}
       
       // Fallback to client SDK
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const goldenMasters = await FirestoreService.getAll(
+      const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.GOLDEN_MASTERS}`,
         []
       );
-      logger.info('Instance Manager Found goldenMasters.length} Golden Masters (client SDK)', { file: 'instance-manager.ts' });
-      const active = goldenMasters.find((gm: any) => gm.isActive === true);
-      return active as GoldenMaster | null;
+      logger.info(`Instance Manager Found ${goldenMasters.length} Golden Masters (client SDK)`, { file: 'instance-manager.ts' });
+      const active = goldenMasters.find((gm) => gm.isActive === true);
+      return active ?? null;
     } catch (error) {
       logger.error('[Instance Manager] Error fetching Golden Master:', error, { file: 'instance-manager.ts' });
       return null;

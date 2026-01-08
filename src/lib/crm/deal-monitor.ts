@@ -350,7 +350,7 @@ async function emitHealthScoreSignal(
         status: healthScore.status,
         warnings: healthScore.warnings,
         recommendations: healthScore.recommendations,
-        factors: healthScore.factors.map((f: any) => ({
+        factors: healthScore.factors.map((f: { name: string; score: number; impact: string }) => ({
           name: f.name,
           score: f.score,
           impact: f.impact,
@@ -408,7 +408,7 @@ async function emitRecommendationsSignal(
               suggestedTimeline: recommendations.actions[0].suggestedTimeline,
             }
           : null,
-        allActions: recommendations.actions.map((action: any) => ({
+        allActions: recommendations.actions.map((action: { id: string; type: string; priority: string; title: string; confidence: number }) => ({
           id: action.id,
           type: action.type,
           priority: action.priority,

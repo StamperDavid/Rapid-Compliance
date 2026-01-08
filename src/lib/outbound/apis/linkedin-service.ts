@@ -71,11 +71,20 @@ async function getJobsFromRapidAPI(
       return [];
     }
 
-    return data.data.slice(0, maxResults).map((job: any) => ({
+    interface RapidAPIJobResult {
+      id: string;
+      title: string;
+      url?: string;
+      postedAt?: string;
+      location?: string;
+      type?: string;
+    }
+    
+    return data.data.slice(0, maxResults).map((job: RapidAPIJobResult) => ({
       title: job.title,
       department: extractDepartment(job.title),
-      url:(job.url !== '' && job.url != null) ? job.url : `https://www.linkedin.com/jobs/view/${job.id}`,
-      postedDate:job.postedAt ?? new Date().toISOString(),
+      url: (job.url !== '' && job.url != null) ? job.url : `https://www.linkedin.com/jobs/view/${job.id}`,
+      postedDate: job.postedAt ?? new Date().toISOString(),
       location: job.location,
       jobType: job.type,
       seniority: extractSeniority(job.title),

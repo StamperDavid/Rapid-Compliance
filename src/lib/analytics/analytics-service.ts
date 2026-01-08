@@ -183,11 +183,73 @@ export async function getWinLossAnalysis(
   };
 }
 
+// Type definitions for analytics data
+
+/** Deal record from CRM */
+interface DealRecord {
+  id?: string;
+  value?: string | number;
+  stage?: string;
+  stageName?: string;
+  status?: string;
+  source?: string;
+  probability?: string | number;
+  closedDate?: { toDate?: () => Date } | Date | string;
+  createdAt?: { toDate?: () => Date } | Date | string;
+  updatedAt?: { toDate?: () => Date } | Date | string;
+  qualifiedDate?: { toDate?: () => Date } | Date | string;
+  assignedTo?: string;
+  assignedToName?: string;
+  ownerId?: string;
+  ownerName?: string;
+  lostReason?: string;
+  reason?: string;
+  lostToCompetitor?: string;
+  competitor?: string;
+  tags?: string[];
+  products?: DealProduct[];
+  stageHistory?: StageHistoryEntry[];
+}
+
+/** Product within a deal */
+interface DealProduct {
+  productId?: string;
+  id?: string;
+  name?: string;
+  quantity?: number;
+  price?: string | number;
+}
+
+/** Stage history entry */
+interface StageHistoryEntry {
+  stage: string;
+  enteredAt?: { toDate?: () => Date } | Date | string;
+  exitedAt?: { toDate?: () => Date } | Date | string;
+}
+
+/** Order record */
+interface OrderRecord {
+  id?: string;
+  total?: string | number;
+  status?: string;
+  source?: string;
+  createdAt?: { toDate?: () => Date } | Date | string;
+  items?: OrderItem[];
+}
+
+/** Order item */
+interface OrderItem {
+  productId: string;
+  productName?: string;
+  quantity?: number;
+  price?: string | number;
+}
+
 // Helper functions
 
-async function getDealsInPeriod(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<any[]> {
+async function getDealsInPeriod(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<DealRecord[]> {
   // Get deals from CRM
-  const deals = await FirestoreService.getAll(
+  const deals = await FirestoreService.getAll<DealRecord>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('closedDate', '>=', Timestamp.fromDate(startDate)),
@@ -198,8 +260,8 @@ async function getDealsInPeriod(workspaceId: string, organizationId: string, sta
   return deals;
 }
 
-async function getOrdersInPeriod(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<any[]> {
-  const orders = await FirestoreService.getAll(
+async function getOrdersInPeriod(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<OrderRecord[]> {
+  const orders = await FirestoreService.getAll<OrderRecord>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/orders`,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
@@ -211,23 +273,31 @@ async function getOrdersInPeriod(workspaceId: string, organizationId: string, st
   return orders;
 }
 
-function calculateTotalRevenue(deals: any[], orders: any[]): number {
+function calculateTotalRevenue(deals: DealRecord[], orders: OrderRecord[]): number {
   const dealRevenue = deals
     .filter(d => d.status === 'won' || d.stage === 'closed_won')
-    .reduce((sum, d) => sum + (parseFloat(d.value) ?? 0), 0);
+    .reduce((sum, d) => sum + (parseFloat(String(d.value)) || 0), 0);
   
-  const orderRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) ?? 0), 0);
+  const orderRevenue = orders.reduce((sum, o) => sum + (parseFloat(String(o.total)) || 0), 0);
   
   return dealRevenue + orderRevenue;
 }
 
-function calculateRevenueBySource(deals: any[], orders: any[]): any[] {
+/** Revenue by source item */
+interface RevenueBySourceItem {
+  source: string;
+  revenue: number;
+  deals: number;
+  percentage: number;
+}
+
+function calculateRevenueBySource(deals: DealRecord[], orders: OrderRecord[]): RevenueBySourceItem[] {
   const sourceMap = new Map<string, { revenue: number; deals: number }>();
   
   // From deals
   deals.forEach(deal => {
     const source = deal.source ?? 'unknown';
-    const value = parseFloat(deal.value) ?? 0;
+    const value = parseFloat(String(deal.value)) || 0;
     const existing = sourceMap.get(source) ?? { revenue: 0, deals: 0 };
     sourceMap.set(source, {
       revenue: existing.revenue + value,
@@ -238,7 +308,7 @@ function calculateRevenueBySource(deals: any[], orders: any[]): any[] {
   // From orders
   orders.forEach(order => {
     const source = order.source ?? 'ecommerce';
-    const total = parseFloat(order.total) ?? 0;
+    const total = parseFloat(String(order.total)) || 0;
     const existing = sourceMap.get(source) ?? { revenue: 0, deals: 0 };
     sourceMap.set(source, {
       revenue: existing.revenue + total,
@@ -256,17 +326,26 @@ function calculateRevenueBySource(deals: any[], orders: any[]): any[] {
   }));
 }
 
-async function calculateRevenueByProduct(workspaceId: string, deals: any[], orders: any[]): Promise<any[]> {
+/** Revenue by product item */
+interface RevenueByProductItem {
+  productId: string;
+  productName: string;
+  revenue: number;
+  units: number;
+  averagePrice: number;
+}
+
+async function calculateRevenueByProduct(workspaceId: string, deals: DealRecord[], orders: OrderRecord[]): Promise<RevenueByProductItem[]> {
   const productMap = new Map<string, { revenue: number; units: number; name: string }>();
   
   // From deals (line items)
   deals.forEach(deal => {
     if (deal.products && Array.isArray(deal.products)) {
-      deal.products.forEach((product: any) => {
-        const productId = product.productId ?? product.id;
+      deal.products.forEach((product) => {
+        const productId = product.productId ?? product.id ?? 'unknown';
         const productName = product.name ?? 'Unknown';
         const quantity = product.quantity ?? 1;
-        const price = parseFloat(product.price) ?? 0;
+        const price = parseFloat(String(product.price)) || 0;
         const revenue = quantity * price;
         
         const existing = productMap.get(productId) ?? { revenue: 0, units: 0, name: productName };
@@ -282,11 +361,11 @@ async function calculateRevenueByProduct(workspaceId: string, deals: any[], orde
   // From orders
   orders.forEach(order => {
     if (order.items && Array.isArray(order.items)) {
-      order.items.forEach((item: any) => {
+      order.items.forEach((item) => {
         const productId = item.productId;
         const productName = item.productName ?? 'Unknown';
         const quantity = item.quantity ?? 1;
-        const price = parseFloat(item.price) ?? 0;
+        const price = parseFloat(String(item.price)) || 0;
         const revenue = quantity * price;
         
         const existing = productMap.get(productId) ?? { revenue: 0, units: 0, name: productName };
@@ -308,13 +387,22 @@ async function calculateRevenueByProduct(workspaceId: string, deals: any[], orde
   }));
 }
 
-function calculateRevenueBySalesRep(deals: any[]): any[] {
+/** Revenue by sales rep item */
+interface RevenueBySalesRepItem {
+  repId: string;
+  repName: string;
+  revenue: number;
+  deals: number;
+  averageDealSize: number;
+}
+
+function calculateRevenueBySalesRep(deals: DealRecord[]): RevenueBySalesRepItem[] {
   const repMap = new Map<string, { revenue: number; deals: number; name: string }>();
   
   deals.forEach(deal => {
     const repId = deal.assignedTo ?? deal.ownerId ?? 'unassigned';
     const repName = deal.assignedToName ?? deal.ownerName ?? 'Unassigned';
-    const value = parseFloat(deal.value) ?? 0;
+    const value = parseFloat(String(deal.value)) || 0;
     
     const existing = repMap.get(repId) ?? { revenue: 0, deals: 0, name: repName };
     repMap.set(repId, {
@@ -333,13 +421,21 @@ function calculateRevenueBySalesRep(deals: any[]): any[] {
   }));
 }
 
+/** Revenue trend item */
+interface RevenueTrendItem {
+  date: Date;
+  revenue: number;
+  deals: number;
+  averageDealSize: number;
+}
+
 function calculateRevenueTrends(
-  deals: any[],
-  orders: any[],
+  deals: DealRecord[],
+  orders: OrderRecord[],
   period: string,
   startDate: Date,
   endDate: Date
-): any[] {
+): RevenueTrendItem[] {
   const trends: any[] = [];
   const interval = getIntervalForPeriod(period);
   
@@ -388,8 +484,8 @@ function getIntervalForPeriod(period: string): number {
   }
 }
 
-async function getOpenDeals(workspaceId: string, organizationId: string): Promise<any[]> {
-  const deals = await FirestoreService.getAll(
+async function getOpenDeals(workspaceId: string, organizationId: string): Promise<DealRecord[]> {
+  const deals = await FirestoreService.getAll<DealRecord>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('status', 'in', ['open', 'qualified', 'proposal', 'negotiation']),
@@ -399,7 +495,17 @@ async function getOpenDeals(workspaceId: string, organizationId: string): Promis
   return deals;
 }
 
-function calculatePipelineByStage(deals: any[]): any[] {
+/** Pipeline by stage item */
+interface PipelineByStageItem {
+  stageId: string;
+  stageName: string;
+  value: number;
+  deals: number;
+  averageDealSize: number;
+  averageDaysInStage: number;
+}
+
+function calculatePipelineByStage(deals: DealRecord[]): PipelineByStageItem[] {
   const stageMap = new Map<string, { value: number; deals: number; name: string; days: number[] }>();
   
   deals.forEach(deal => {
@@ -429,12 +535,15 @@ function calculatePipelineByStage(deals: any[]): any[] {
   }));
 }
 
-function calculateDaysInStage(deal: any, stage: string): number {
+function calculateDaysInStage(deal: DealRecord, stage: string): number {
   const stageHistory = deal.stageHistory ?? [];
-  const stageEntry = stageHistory.find((h: any) => h.stage === stage);
+  const stageEntry = stageHistory.find((h: StageHistoryEntry) => h.stage === stage);
   
   if (stageEntry?.enteredAt) {
-    const entered = stageEntry.enteredAt.toDate?.() ?? new Date(stageEntry.enteredAt);
+    const enteredAt = stageEntry.enteredAt;
+    const entered = (enteredAt && typeof enteredAt === 'object' && 'toDate' in enteredAt && enteredAt.toDate) 
+      ? enteredAt.toDate() 
+      : new Date(enteredAt as string);
     const now = new Date();
     return Math.floor((now.getTime() - entered.getTime()) / (1000 * 60 * 60 * 24));
   }
@@ -442,12 +551,19 @@ function calculateDaysInStage(deal: any, stage: string): number {
   return 0;
 }
 
-async function calculatePipelineVelocity(workspaceId: string, organizationId: string): Promise<any> {
+/** Pipeline velocity result */
+interface PipelineVelocityResult {
+  averageSalesCycle: number;
+  averageTimeToClose: number;
+  averageTimePerStage: Record<string, number>;
+}
+
+async function calculatePipelineVelocity(workspaceId: string, organizationId: string): Promise<PipelineVelocityResult> {
   // Get closed deals from last 90 days
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   
-  const closedDeals = await FirestoreService.getAll(
+  const closedDeals = await FirestoreService.getAll<DealRecord>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('status', 'in', ['won', 'lost']),
@@ -465,8 +581,14 @@ async function calculatePipelineVelocity(workspaceId: string, organizationId: st
   
   // Calculate average sales cycle
   const salesCycles = closedDeals.map(deal => {
-    const created = deal.createdAt?.toDate?.() ?? new Date(deal.createdAt);
-    const closed = deal.closedDate?.toDate?.() ?? new Date(deal.closedDate);
+    const createdAtVal = deal.createdAt;
+    const closedDateVal = deal.closedDate;
+    const created = (createdAtVal && typeof createdAtVal === 'object' && 'toDate' in createdAtVal && createdAtVal.toDate)
+      ? createdAtVal.toDate()
+      : new Date(createdAtVal as string);
+    const closed = (closedDateVal && typeof closedDateVal === 'object' && 'toDate' in closedDateVal && closedDateVal.toDate)
+      ? closedDateVal.toDate()
+      : new Date(closedDateVal as string);
     return Math.floor((closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
   });
   
@@ -476,8 +598,14 @@ async function calculatePipelineVelocity(workspaceId: string, organizationId: st
   const timeToClose = closedDeals
     .filter(deal => deal.qualifiedDate)
     .map(deal => {
-      const qualified = deal.qualifiedDate.toDate?.() ?? new Date(deal.qualifiedDate);
-      const closed = deal.closedDate?.toDate?.() ?? new Date(deal.closedDate);
+      const qualifiedVal = deal.qualifiedDate;
+      const closedVal = deal.closedDate;
+      const qualified = (qualifiedVal && typeof qualifiedVal === 'object' && 'toDate' in qualifiedVal && qualifiedVal.toDate)
+        ? qualifiedVal.toDate()
+        : new Date(qualifiedVal as string);
+      const closed = (closedVal && typeof closedVal === 'object' && 'toDate' in closedVal && closedVal.toDate)
+        ? closedVal.toDate()
+        : new Date(closedVal as string);
       return Math.floor((closed.getTime() - qualified.getTime()) / (1000 * 60 * 60 * 24));
     });
   
@@ -489,10 +617,16 @@ async function calculatePipelineVelocity(workspaceId: string, organizationId: st
   const stageTimes: Record<string, number[]> = {};
   closedDeals.forEach(deal => {
     const history = deal.stageHistory ?? [];
-    history.forEach((entry: any) => {
+    history.forEach((entry: StageHistoryEntry) => {
       if (entry.exitedAt && entry.enteredAt) {
-        const entered = entry.enteredAt.toDate?.() ?? new Date(entry.enteredAt);
-        const exited = entry.exitedAt.toDate?.() ?? new Date(entry.exitedAt);
+        const enteredVal = entry.enteredAt;
+        const exitedVal = entry.exitedAt;
+        const entered = (enteredVal && typeof enteredVal === 'object' && 'toDate' in enteredVal && enteredVal.toDate)
+          ? enteredVal.toDate()
+          : new Date(enteredVal as string);
+        const exited = (exitedVal && typeof exitedVal === 'object' && 'toDate' in exitedVal && exitedVal.toDate)
+          ? exitedVal.toDate()
+          : new Date(exitedVal as string);
         const days = Math.floor((exited.getTime() - entered.getTime()) / (1000 * 60 * 60 * 24));
         
         if (!stageTimes[entry.stage]) {
@@ -515,9 +649,17 @@ async function calculatePipelineVelocity(workspaceId: string, organizationId: st
   };
 }
 
-async function calculateConversionRates(workspaceId: string, organizationId: string): Promise<any[]> {
+/** Conversion rate item */
+interface ConversionRateItem {
+  fromStage: string;
+  toStage: string;
+  rate: number;
+  deals: number;
+}
+
+async function calculateConversionRates(workspaceId: string, organizationId: string): Promise<ConversionRateItem[]> {
   // Get all deals with stage history
-  const deals = await FirestoreService.getAll(
+  const deals = await FirestoreService.getAll<DealRecord>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
     []
   );
@@ -538,8 +680,8 @@ async function calculateConversionRates(workspaceId: string, organizationId: str
   });
   
   // Calculate rates
-  const rates: any[] = [];
-  transitions.forEach((transition, key) => {
+  const rates: ConversionRateItem[] = [];
+  transitions.forEach((transition) => {
     // Count deals in "from" stage
     const fromStageCount = deals.filter(d => d.stage === transition.from).length;
     const rate = fromStageCount > 0 ? (transition.count / fromStageCount) * 100 : 0;
@@ -555,12 +697,20 @@ async function calculateConversionRates(workspaceId: string, organizationId: str
   return rates;
 }
 
-async function calculatePipelineTrends(workspaceId: string, organizationId: string, period: string): Promise<any[]> {
+/** Pipeline trend item */
+interface PipelineTrendItem {
+  date: Date;
+  totalValue: number;
+  totalDeals: number;
+  byStage: Record<string, { value: number; count: number }>;
+}
+
+async function calculatePipelineTrends(workspaceId: string, organizationId: string, period: string): Promise<PipelineTrendItem[]> {
   // Get deals over time
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
-  const deals = await FirestoreService.getAll(
+  const deals = await FirestoreService.getAll<DealRecord>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
     [
       where('createdAt', '>=', Timestamp.fromDate(thirtyDaysAgo)),
@@ -568,13 +718,16 @@ async function calculatePipelineTrends(workspaceId: string, organizationId: stri
   );
   
   // Group by date and stage
-  const trends: any[] = [];
+  const trends: PipelineTrendItem[] = [];
   const dateMap = new Map<string, { value: number; deals: number; byStage: Map<string, { value: number; count: number }> }>();
   
   deals.forEach(deal => {
-    const date = new Date(deal.createdAt?.toDate?.() ?? deal.createdAt);
+    const createdAtVal = deal.createdAt;
+    const date = (createdAtVal && typeof createdAtVal === 'object' && 'toDate' in createdAtVal && createdAtVal.toDate)
+      ? createdAtVal.toDate()
+      : new Date(createdAtVal as string);
     const dateKey = date.toISOString().split('T')[0];
-    const value = parseFloat(deal.value) ?? 0;
+    const value = parseFloat(String(deal.value)) ?? 0;
     const stage = deal.stage ?? 'unknown';
     
     const existing = dateMap.get(dateKey) ?? { value: 0, deals: 0, byStage: new Map() };
@@ -610,15 +763,15 @@ async function calculatePipelineTrends(workspaceId: string, organizationId: stri
   return trends.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
-function calculateWeightedForecast(deals: any[]): number {
+function calculateWeightedForecast(deals: DealRecord[]): number {
   return deals.reduce((sum, deal) => {
-    const value = parseFloat(deal.value) ?? 0;
-    const probability = parseFloat(deal.probability) ?? 50; // Default 50%
+    const value = parseFloat(String(deal.value)) ?? 0;
+    const probability = parseFloat(String(deal.probability)) ?? 50; // Default 50%
     return sum + (value * probability / 100);
 }, 0);
 }
 
-function calculateForecastConfidence(deals: any[]): number {
+function calculateForecastConfidence(deals: DealRecord[]): number {
   if (deals.length === 0) {return 0;}
   
   // Confidence based on:
@@ -626,14 +779,22 @@ function calculateForecastConfidence(deals: any[]): number {
   // - Average probability
   // - Recency of updates
   
-  const avgProbability = deals.reduce((sum, d) => sum + (parseFloat(d.probability) ?? 50), 0) / deals.length;
+  const avgProbability = deals.reduce((sum, d) => sum + (parseFloat(String(d.probability)) ?? 50), 0) / deals.length;
   const dealCountFactor = Math.min(deals.length / 20, 1); // Max confidence at 20+ deals
   const recencyFactor = 1; // TODO: Factor in how recently deals were updated
   
   return Math.round((avgProbability * 0.6 + dealCountFactor * 100 * 0.4) * recencyFactor);
 }
 
-function generateForecastScenarios(deals: any[], baseForecast: number): any[] {
+/** Forecast scenario */
+interface ForecastScenario {
+  name: string;
+  revenue: number;
+  probability: number;
+  description: string;
+}
+
+function generateForecastScenarios(deals: DealRecord[], baseForecast: number): ForecastScenario[] {
   return [
     {
       name: 'best_case',
@@ -656,14 +817,23 @@ function generateForecastScenarios(deals: any[], baseForecast: number): any[] {
   ];
 }
 
-function calculateForecastByRep(deals: any[]): any[] {
+/** Forecast by rep item */
+interface ForecastByRepItem {
+  repId: string;
+  repName: string;
+  forecastedRevenue: number;
+  openDeals: number;
+  weightedValue: number;
+}
+
+function calculateForecastByRep(deals: DealRecord[]): ForecastByRepItem[] {
   const repMap = new Map<string, { forecast: number; deals: number; name: string; weighted: number }>();
   
   deals.forEach(deal => {
     const repId = deal.assignedTo ?? deal.ownerId ?? 'unassigned';
     const repName = deal.assignedToName ?? deal.ownerName ?? 'Unassigned';
-    const value = parseFloat(deal.value) ?? 0;
-    const probability = parseFloat(deal.probability) ?? 50;
+    const value = parseFloat(String(deal.value)) ?? 0;
+    const probability = parseFloat(String(deal.probability)) ?? 50;
     const weighted = value * probability / 100;
     
     const existing = repMap.get(repId) ?? { forecast: 0, deals: 0, name: repName, weighted: 0 };
@@ -684,17 +854,25 @@ function calculateForecastByRep(deals: any[]): any[] {
   }));
 }
 
-async function calculateForecastByProduct(workspaceId: string, deals: any[]): Promise<any[]> {
+/** Forecast by product item */
+interface ForecastByProductItem {
+  productId: string;
+  productName: string;
+  forecastedRevenue: number;
+  forecastedUnits: number;
+}
+
+async function calculateForecastByProduct(workspaceId: string, deals: DealRecord[]): Promise<ForecastByProductItem[]> {
   const productMap = new Map<string, { forecast: number; units: number; name: string }>();
   
   deals.forEach(deal => {
     if (deal.products && Array.isArray(deal.products)) {
-      deal.products.forEach((product: any) => {
-        const productId = product.productId ?? product.id;
+      deal.products.forEach((product: DealProduct) => {
+        const productId = product.productId ?? product.id ?? 'unknown';
         const productName = product.name ?? 'Unknown';
         const quantity = product.quantity ?? 1;
-        const price = parseFloat(product.price) ?? 0;
-        const probability = parseFloat(deal.probability) ?? 50;
+        const price = parseFloat(String(product.price)) ?? 0;
+        const probability = parseFloat(String(deal.probability)) ?? 50;
         const forecast = (quantity * price) * probability / 100;
         
         const existing = productMap.get(productId) ?? { forecast: 0, units: 0, name: productName };
@@ -715,11 +893,19 @@ async function calculateForecastByProduct(workspaceId: string, deals: any[]): Pr
   }));
 }
 
-function identifyForecastFactors(deals: any[]): any[] {
-  const factors: any[] = [];
+/** Forecast factor */
+interface ForecastFactor {
+  factor: string;
+  impact: 'positive' | 'negative';
+  description: string;
+  weight: number;
+}
+
+function identifyForecastFactors(deals: DealRecord[]): ForecastFactor[] {
+  const factors: ForecastFactor[] = [];
   
   // Check for large deals
-  const largeDeals = deals.filter(d => parseFloat(d.value) > 10000);
+  const largeDeals = deals.filter(d => parseFloat(String(d.value)) > 10000);
   if (largeDeals.length > 0) {
     factors.push({
       factor: 'Large deals in pipeline',
@@ -730,7 +916,7 @@ function identifyForecastFactors(deals: any[]): any[] {
   }
   
   // Check for high probability deals
-  const highProbDeals = deals.filter(d => parseFloat(d.probability) >= 75);
+  const highProbDeals = deals.filter(d => parseFloat(String(d.probability)) >= 75);
   if (highProbDeals.length > 0) {
     factors.push({
       factor: 'High probability deals',
@@ -742,7 +928,10 @@ function identifyForecastFactors(deals: any[]): any[] {
   
   // Check for stale deals
   const staleDeals = deals.filter(d => {
-    const lastUpdate = d.updatedAt?.toDate?.() ?? new Date(d.updatedAt);
+    const updatedAt = d.updatedAt;
+    const lastUpdate = (updatedAt && typeof updatedAt === 'object' && 'toDate' in updatedAt && updatedAt.toDate)
+      ? updatedAt.toDate()
+      : new Date(updatedAt as string);
     const daysSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
     return daysSinceUpdate > 30;
   });
@@ -759,12 +948,21 @@ function identifyForecastFactors(deals: any[]): any[] {
   return factors;
 }
 
-function analyzeLossReasons(lostDeals: any[]): any[] {
+/** Loss reason analysis item */
+interface LossReasonItem {
+  reason: string;
+  count: number;
+  percentage: number;
+  averageDealSize: number;
+  totalValue: number;
+}
+
+function analyzeLossReasons(lostDeals: DealRecord[]): LossReasonItem[] {
   const reasonMap = new Map<string, { count: number; totalValue: number }>();
   
   lostDeals.forEach(deal => {
     const reason = deal.lostReason ?? deal.reason ?? 'No reason provided';
-    const value = parseFloat(deal.value) ?? 0;
+    const value = parseFloat(String(deal.value)) ?? 0;
     
     const existing = reasonMap.get(reason) ?? { count: 0, totalValue: 0 };
     reasonMap.set(reason, {
@@ -786,11 +984,19 @@ function analyzeLossReasons(lostDeals: any[]): any[] {
     .sort((a, b) => b.count - a.count);
 }
 
-function analyzeWinFactors(wonDeals: any[]): any[] {
+/** Win factor analysis item */
+interface WinFactorItem {
+  factor: string;
+  frequency: number;
+  percentage: number;
+  averageDealSize: number;
+}
+
+function analyzeWinFactors(wonDeals: DealRecord[]): WinFactorItem[] {
   const factorMap = new Map<string, { count: number; totalValue: number }>();
   
   wonDeals.forEach(deal => {
-    const value = parseFloat(deal.value) ?? 0;
+    const value = parseFloat(String(deal.value)) ?? 0;
     
     // Extract factors from deal notes, tags, etc.
     const tags = deal.tags ?? [];
@@ -816,7 +1022,17 @@ function analyzeWinFactors(wonDeals: any[]): any[] {
     .slice(0, 10); // Top 10
 }
 
-function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
+/** Competitor analysis item */
+interface CompetitorAnalysisItem {
+  competitor: string;
+  wins: number;
+  losses: number;
+  winRate: number;
+  averageDealSize: number;
+  commonReasons: string[];
+}
+
+function analyzeCompetitors(wonDeals: DealRecord[], lostDeals: DealRecord[]): CompetitorAnalysisItem[] {
   const competitorMap = new Map<string, { wins: number; losses: number; totalValue: number; reasons: Map<string, number> }>();
   
   // From lost deals
@@ -826,13 +1042,13 @@ function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
       const existing = competitorMap.get(competitor) ?? { wins: 0, losses: 0, totalValue: 0, reasons: new Map() };
       
       // Extract loss reason
-      const reason = deal.lostReason ?? deal.lossReason ?? 'Unknown';
+      const reason = deal.lostReason ?? deal.reason ?? 'Unknown';
       existing.reasons.set(reason, (existing.reasons.get(reason) ?? 0) + 1);
       
       competitorMap.set(competitor, {
         ...existing,
         losses: existing.losses + 1,
-        totalValue: existing.totalValue + (parseFloat(deal.value) ?? 0),
+        totalValue: existing.totalValue + (parseFloat(String(deal.value)) ?? 0),
       });
     }
   });
@@ -868,14 +1084,24 @@ function analyzeCompetitors(wonDeals: any[], lostDeals: any[]): any[] {
   });
 }
 
-function analyzeWinLossByRep(wonDeals: any[], lostDeals: any[]): any[] {
+/** Win/loss by rep analysis item */
+interface WinLossByRepItem {
+  repId: string;
+  repName: string;
+  won: number;
+  lost: number;
+  winRate: number;
+  averageDealSize: number;
+}
+
+function analyzeWinLossByRep(wonDeals: DealRecord[], lostDeals: DealRecord[]): WinLossByRepItem[] {
   const repMap = new Map<string, { won: number; lost: number; totalValue: number; name: string }>();
   
   [...wonDeals, ...lostDeals].forEach(deal => {
     const repId = deal.assignedTo ?? deal.ownerId ?? 'unassigned';
     const repName = deal.assignedToName ?? deal.ownerName ?? 'Unassigned';
     const isWon = deal.status === 'won' || deal.stage === 'closed_won';
-    const value = parseFloat(deal.value) ?? 0;
+    const value = parseFloat(String(deal.value)) ?? 0;
     
     const existing = repMap.get(repId) ?? { won: 0, lost: 0, totalValue: 0, name: repName };
     repMap.set(repId, {
@@ -896,15 +1122,26 @@ function analyzeWinLossByRep(wonDeals: any[], lostDeals: any[]): any[] {
   }));
 }
 
-async function calculateWinLossTrends(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<any[]> {
+/** Win/loss trend item */
+interface WinLossTrendItem {
+  date: Date;
+  won: number;
+  lost: number;
+  winRate: number;
+}
+
+async function calculateWinLossTrends(workspaceId: string, organizationId: string, startDate: Date, endDate: Date): Promise<WinLossTrendItem[]> {
   const deals = await getDealsInPeriod(workspaceId, organizationId, startDate, endDate);
   
   // Group by week
-  const trends: any[] = [];
+  const trends: WinLossTrendItem[] = [];
   const weekMap = new Map<string, { won: number; lost: number }>();
   
   deals.forEach(deal => {
-    const closedDate = deal.closedDate?.toDate?.() ?? new Date(deal.closedDate);
+    const closedDateVal = deal.closedDate;
+    const closedDate = (closedDateVal && typeof closedDateVal === 'object' && 'toDate' in closedDateVal && closedDateVal.toDate)
+      ? closedDateVal.toDate()
+      : new Date(closedDateVal as string);
     const weekKey = getWeekKey(closedDate);
     const isWon = deal.status === 'won' || deal.stage === 'closed_won';
     

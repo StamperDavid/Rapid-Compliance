@@ -44,7 +44,11 @@ export async function handleSchemaChangeForAgent(
       return;
     }
     
-    const schemaNameLower = (schema as any).name?.toLowerCase();
+    interface SchemaNameData {
+      name?: string;
+    }
+    const schemaNameData = schema as SchemaNameData;
+    const schemaNameLower = schemaNameData.name?.toLowerCase();
     const schemaName = (schemaNameLower !== '' && schemaNameLower != null) ? schemaNameLower : '';
     const isRelevant = isAgentRelevantSchema(schemaName);
     
@@ -147,13 +151,18 @@ export async function recompileAgentKnowledge(
       return;
     }
     
-    const goldenMaster = goldenMasters[0] as any;
+    interface GoldenMasterData {
+      id: string;
+      systemPrompt: string;
+      version: number;
+    }
+    const goldenMaster = goldenMasters[0] as GoldenMasterData;
     
     // Get all schemas for this workspace
     const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
-    const schemas = await FirestoreService.getAll(schemasPath, [
+    const schemas = await FirestoreService.getAll<SchemaRecord>(schemasPath, [
       where('status', '==', 'active'),
-    ] as any);
+    ]);
     
     // Recompile system prompt with updated schema information
     const updatedSystemPrompt = await compileSystemPromptWithSchemas(
@@ -193,12 +202,29 @@ export async function recompileAgentKnowledge(
   }
 }
 
+/** Schema field structure */
+interface SchemaField {
+  key: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  hidden?: boolean;
+}
+
+/** Schema structure from Firestore */
+interface SchemaRecord {
+  name: string;
+  description?: string;
+  fields: SchemaField[];
+  status?: string;
+}
+
 /**
  * Compile system prompt with current schema information
  */
 async function compileSystemPromptWithSchemas(
   basePrompt: string,
-  schemas: any[],
+  schemas: SchemaRecord[],
   organizationId: string,
   workspaceId: string
 ): Promise<string> {
@@ -207,8 +233,8 @@ async function compileSystemPromptWithSchemas(
     .filter(schema => isAgentRelevantSchema(schema.name))
     .map(schema => {
       const fields = schema.fields
-        .filter((f: any) => !f.hidden)
-        .map((f: any) => `  - ${f.label} (${f.key}): ${f.type}${f.required ? ' [required]' : ''}`)
+        .filter((f) => !f.hidden)
+        .map((f) => `  - ${f.label} (${f.key}): ${f.type}${f.required ? ' [required]' : ''}`)
         .join('\n');
       
       return `
@@ -316,8 +342,12 @@ export async function getSchemaChangeImpactOnAgent(
       };
     }
     
-    const schemaNameLower = (schema as any).name?.toLowerCase();
-    const schemaName = (schemaNameLower !== '' && schemaNameLower != null) ? schemaNameLower : '';
+    interface SchemaDataForImpact {
+      name?: string;
+    }
+    const schemaDataForImpact = schema as SchemaDataForImpact;
+    const schemaNameLowerForImpact = schemaDataForImpact.name?.toLowerCase();
+    const schemaName = (schemaNameLowerForImpact !== '' && schemaNameLowerForImpact != null) ? schemaNameLowerForImpact : '';
     const isRelevant = isAgentRelevantSchema(schemaName);
     
     if (!isRelevant) {

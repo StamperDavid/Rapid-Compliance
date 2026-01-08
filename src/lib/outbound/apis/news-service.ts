@@ -73,7 +73,17 @@ async function getNewsFromNewsAPI(
       return [];
     }
 
-    return data.articles.map((article: any) => ({
+    interface NewsAPIArticle {
+      title: string;
+      url: string;
+      publishedAt: string;
+      source: { name: string };
+      description?: string;
+      urlToImage?: string;
+      author?: string;
+    }
+    
+    return data.articles.map((article: NewsAPIArticle) => ({
       title: article.title,
       url: article.url,
       publishedDate: article.publishedAt,

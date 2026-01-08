@@ -116,7 +116,9 @@ export async function sendWithFallback(
  */
 export function getRecommendedFallback(model: string): string {
   const chain = FALLBACK_CHAINS[model];
-  return chain?.[0] || 'gemini-2.0-flash-exp';
+  const firstFallback = chain?.[0];
+  // Model names are non-empty strings, use explicit ternary for string check
+  return (firstFallback !== '' && firstFallback != null) ? firstFallback : 'gemini-2.0-flash-exp';
 }
 
 /**

@@ -48,12 +48,14 @@ export interface KnowledgeAnalysisResult {
     name: string;
     description: string;
     price?: number;
-    [key: string]: any;
+    sku?: string;
+    category?: string;
   }>;
   crmServices: Array<{
     name: string;
     description: string;
-    [key: string]: any;
+    pricing?: string;
+    duration?: string;
   }>;
 }
 
@@ -402,6 +404,22 @@ Return ONLY a valid JSON object in this format:
   }
 }
 
+/** CRM Product record structure from Firestore */
+interface CRMProductRecord {
+  name?: string;
+  description?: string;
+  price?: number;
+  sku?: string;
+  category?: string;
+  fields?: {
+    name?: string;
+    description?: string;
+    price?: number;
+    sku?: string;
+    category?: string;
+  };
+}
+
 /**
  * Scan built-in CRM for products
  * Queries the CRM that's already part of the platform
@@ -421,12 +439,12 @@ async function scanCRMForProducts(
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     // Extract workspaceId to avoid empty path segment (Explicit Ternary for STRING identifiers)
     const resolvedWorkspaceId = (workspaceId !== '' && workspaceId != null) ? workspaceId : 'default';
-    const products = await FirestoreService.getAll(
+    const products = await FirestoreService.getAll<CRMProductRecord>(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${resolvedWorkspaceId}/${COLLECTIONS.RECORDS}/products`,
       []
     );
 
-    return products.map((p: any) => {
+    return products.map((p) => {
       const nameField = (p.fields?.name !== '' && p.fields?.name != null) ? p.fields.name : 'Unknown Product';
       const name = (p.name !== '' && p.name != null) ? p.name : nameField;
       const descField = (p.fields?.description !== '' && p.fields?.description != null) ? p.fields.description : '';
@@ -444,6 +462,20 @@ async function scanCRMForProducts(
     logger.error('Error querying CRM for products:', error, { file: 'knowledge-analyzer.ts' });
     return [];
   }
+}
+
+/** CRM Service record structure from Firestore */
+interface CRMServiceRecord {
+  name?: string;
+  description?: string;
+  pricing?: string;
+  duration?: string;
+  fields?: {
+    name?: string;
+    description?: string;
+    pricing?: string;
+    duration?: string;
+  };
 }
 
 /**
@@ -465,12 +497,12 @@ async function scanCRMForServices(
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     // Extract workspaceId to avoid empty path segment (Explicit Ternary for STRING identifiers)
     const resolvedWorkspaceId = (workspaceId !== '' && workspaceId != null) ? workspaceId : 'default';
-    const services = await FirestoreService.getAll(
+    const services = await FirestoreService.getAll<CRMServiceRecord>(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${resolvedWorkspaceId}/${COLLECTIONS.RECORDS}/services`,
       []
     );
 
-    return services.map((s: any) => {
+    return services.map((s) => {
       const nameField = (s.fields?.name !== '' && s.fields?.name != null) ? s.fields.name : 'Unknown Service';
       const name = (s.name !== '' && s.name != null) ? s.name : nameField;
       const descField = (s.fields?.description !== '' && s.fields?.description != null) ? s.fields.description : '';
@@ -504,7 +536,7 @@ export async function buildKnowledgeBase(
     id: string;
     type: string;
     content: string;
-    metadata: any;
+    metadata: Record<string, unknown>;
   }> = [];
   
   // Add company info

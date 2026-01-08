@@ -46,12 +46,29 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
+    // Order record from Firestore
+    interface OrderRecord {
+      createdAt?: { toDate?: () => Date } | Date | string;
+      status?: string;
+      total?: string | number;
+      amount?: string | number;
+      items?: Array<{ productName?: string; name?: string; price?: string | number; quantity?: number }>;
+      products?: Array<{ productName?: string; name?: string; price?: string | number; quantity?: number }>;
+    }
+    
+    // Cart record from Firestore
+    interface CartRecord {
+      createdAt?: { toDate?: () => Date } | Date | string;
+      status?: string;
+      convertedToOrder?: boolean;
+    }
+    
     // Get orders from Firestore
     const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/orders`;
-    let allOrders: any[] = [];
+    let allOrders: OrderRecord[] = [];
     
     try {
-      allOrders = await FirestoreService.getAll(ordersPath, []);
+      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
     } catch (e) {
       logger.debug('No orders collection yet', { orgId });
     }
@@ -74,10 +91,10 @@ export async function GET(request: NextRequest) {
 
     // Cart data (abandoned carts)
     const cartsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/carts`;
-    let allCarts: any[] = [];
+    let allCarts: CartRecord[] = [];
     
     try {
-      allCarts = await FirestoreService.getAll(cartsPath, []);
+      allCarts = await FirestoreService.getAll<CartRecord>(cartsPath, []);
     } catch (e) {
       logger.debug('No carts collection yet', { orgId });
     }
@@ -107,12 +124,21 @@ export async function GET(request: NextRequest) {
     const abandonmentRate = totalCarts > 0 ? (abandonedCarts.length / totalCarts) * 100 : 0;
 
     // Revenue by product
+    interface OrderItem {
+      productName?: string;
+      name?: string;
+      price?: string | number;
+      quantity?: number;
+    }
+    
     const productMap = new Map<string, { revenue: number; quantity: number; orders: number }>();
     completedOrders.forEach(order => {
-      const items =order.items ?? order.products ?? [];
-      items.forEach((item: any) => {
-        const name =(item.productName || item.name !== '' && item.productName || item.name != null) ? item.productName ?? item.name: 'Unknown Product';
-        const revenue = (parseFloat(item.price) || 0) * (item.quantity ?? 1);
+      const items: OrderItem[] = order.items ?? order.products ?? [];
+      items.forEach((item) => {
+        const productName = (item.productName !== '' && item.productName != null) ? item.productName : null;
+        const itemName = (item.name !== '' && item.name != null) ? item.name : 'Unknown Product';
+        const name = productName ?? itemName;
+        const revenue = (parseFloat(String(item.price)) || 0) * (item.quantity ?? 1);
         const existing = productMap.get(name) ?? { revenue: 0, quantity: 0, orders: 0 };
         productMap.set(name, {
           revenue: existing.revenue + revenue,

@@ -75,20 +75,48 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
+    // Deal record from Firestore
+    interface DealRecord {
+      status?: string;
+      stage?: string;
+      closedDate?: { toDate?: () => Date } | Date | string;
+      createdAt?: { toDate?: () => Date } | Date | string;
+      value?: string | number;
+      amount?: string | number;
+      type?: string;
+      isRecurring?: boolean;
+      mrr?: number;
+      source?: string;
+      lead_source?: string;
+      products?: Array<{ name?: string; productName?: string; price?: string | number; quantity?: number }>;
+      productName?: string;
+      product?: string;
+      assignedTo?: string;
+      ownerId?: string;
+      owner?: string;
+      assignedToName?: string;
+      ownerName?: string;
+    }
+    
+    // Order record from Firestore
+    interface OrderRecord {
+      status?: string;
+      createdAt?: { toDate?: () => Date } | Date | string;
+      total?: string | number;
+      amount?: string | number;
+      source?: string;
+      items?: Array<{ name?: string; productName?: string; price?: string | number; quantity?: number }>;
+    }
+    
     // Get deals from Firestore with date filtering for better performance
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
-    let allDeals: any[] = [];
+    let allDeals: DealRecord[] = [];
     
     try {
       // Fetch with reasonable constraints to prevent timeout
       // Note: For analytics, we need all matching records to calculate totals
       // If org has 10,000+ deals, consider implementing background jobs for analytics
-      const constraints: any[] = [
-        // Limit to won/closed deals to reduce data fetched
-        // Multiple status checks would require OR queries (not supported in single query)
-        // So we fetch all and filter - consider indexing if performance becomes an issue
-      ];
-      allDeals = await FirestoreService.getAll(dealsPath, constraints);
+      allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, []);
     } catch (e) {
       logger.debug('No deals collection yet', { orgId });
     }
@@ -104,10 +132,10 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
 
     // Get orders (e-commerce)
     const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/orders`;
-    let allOrders: any[] = [];
+    let allOrders: OrderRecord[] = [];
     
     try {
-      allOrders = await FirestoreService.getAll(ordersPath, []);
+      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
     } catch (e) {
       logger.debug('No orders collection yet', { orgId });
     }
@@ -176,10 +204,17 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       .sort((a, b) => b.revenue - a.revenue);
 
     // Revenue by product (from line items)
+    interface ProductItem {
+      name?: string;
+      productName?: string;
+      price?: string | number;
+      quantity?: number;
+    }
+    
     const productMap = new Map<string, number>();
     closedDeals.forEach(deal => {
       if (deal.products && Array.isArray(deal.products)) {
-        deal.products.forEach((p: any) => {
+        (deal.products as ProductItem[]).forEach((p) => {
           const name = (p.name !== '' && p.name != null) ? p.name : ((p.productName !== '' && p.productName != null) ? p.productName : 'Unknown Product');
           const value = (Number(p.price) || 0) * (p.quantity ?? 1);
           productMap.set(name, (productMap.get(name) ?? 0) + value);
@@ -192,7 +227,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     });
     completedOrders.forEach(order => {
       if (order.items && Array.isArray(order.items)) {
-        order.items.forEach((item: any) => {
+        (order.items as ProductItem[]).forEach((item) => {
           const name = (item.productName !== '' && item.productName != null) ? item.productName : ((item.name !== '' && item.name != null) ? item.name : 'Unknown Product');
           const value = (Number(item.price) || 0) * (item.quantity ?? 1);
           productMap.set(name, (productMap.get(name) ?? 0) + value);
