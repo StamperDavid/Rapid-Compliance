@@ -30,10 +30,9 @@ export default function CustomersAdminPage() {
   };
 
   const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = searchQuery === '' ? true : (
-      customer.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.primaryContact.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const companyMatches = customer.companyName.toLowerCase().includes(searchQuery.toLowerCase());
+    const emailMatches = customer.primaryContact.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = searchQuery === '' ? true : [companyMatches, emailMatches].some(Boolean);
     
     const matchesStatus = filterStatus === 'all' ? true : customer.subscription.status === filterStatus;
     

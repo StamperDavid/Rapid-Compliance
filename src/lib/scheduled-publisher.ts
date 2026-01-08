@@ -63,7 +63,7 @@ export async function processScheduledPages(): Promise<{
                 id: doc.id,
                 organizationId,
                 scheduledFor: data.scheduledFor,
-                title: data.title || 'Untitled',
+                title:(data.title !== '' && data.title != null) ? data.title : 'Untitled',
                 type: 'page',
               });
             }
@@ -89,7 +89,7 @@ export async function processScheduledPages(): Promise<{
                 id: doc.id,
                 organizationId,
                 scheduledFor: data.scheduledFor,
-                title: data.title || 'Untitled',
+                title:(data.title !== '' && data.title != null) ? data.title : 'Untitled',
                 type: 'blog-post',
               });
             }
@@ -151,7 +151,7 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
     const pageData = pageDoc.data();
 
     // Create version snapshot
-    const currentVersion = pageData?.version || 1;
+    const currentVersion = pageData?.version ?? 1;
     const versionRef = pageRef.collection('versions').doc(`v${currentVersion}`);
 
     await versionRef.set({

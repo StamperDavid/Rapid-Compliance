@@ -134,7 +134,7 @@ export const EmailActionConfigSchema = z.object({
   customInstructions: z.string().max(1000).optional(),
   autoSend: z.boolean().optional(),
 }).refine(
-  (data) => data.recipientField || data.recipientEmail,
+  (data) => data.recipientField ?? data.recipientEmail,
   {
     message: 'Either recipientField or recipientEmail must be provided',
   }
@@ -152,7 +152,7 @@ export const TaskActionConfigSchema = z.object({
   assignToUserId: z.string().optional(),
   taskType: z.string().optional(),
 }).refine(
-  (data) => data.assignToField || data.assignToUserId,
+  (data) => data.assignToField ?? data.assignToUserId,
   {
     message: 'Either assignToField or assignToUserId must be provided',
   }

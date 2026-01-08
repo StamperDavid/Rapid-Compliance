@@ -73,8 +73,8 @@ export async function extractPatterns(
   try {
     logger.info('Extracting patterns from conversations', {
       organizationId: request.organizationId,
-      conversationCount: request.conversationIds?.length || 'all',
-      repCount: request.repIds?.length || 'top performers',
+      conversationCount: request.conversationIds?(.length !== '' && .length != null) ? .length : 'all',
+      repCount: request.repIds?(.length !== '' && .length != null) ? .length : 'top performers',
     });
     
     // 1. Get conversation analyses to extract from
@@ -154,7 +154,7 @@ export async function extractPatterns(
     await coordinator.emitSignal({
       type: 'playbook.patterns_extracted' as any,
       orgId: request.organizationId,
-      workspaceId: request.workspaceId || 'default',
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       priority: 'Medium',
       confidence: summary.highConfidencePatterns > 0 ? 0.8 : 0.6,
       metadata: {
@@ -179,7 +179,7 @@ export async function extractPatterns(
     
     return {
       organizationId: request.organizationId,
-      workspaceId: request.workspaceId || 'default',
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       patterns,
       talkTracks,
       objectionResponses,
@@ -276,9 +276,9 @@ async function extractConversationPatterns(
   
   // Filter patterns by frequency and success rate
   return patterns.filter(p => 
-    p.frequency >= (request.minFrequency || config.minFrequency) &&
-    p.successRate >= (request.minSuccessRate || config.minSuccessRate) &&
-    p.confidence >= (request.minConfidence || config.minConfidence)
+    p.frequency >= (request.minFrequency ?? config.minFrequency) &&
+    p.successRate >= (request.minSuccessRate ?? config.minSuccessRate) &&
+    p.confidence >= (request.minConfidence ?? config.minConfidence)
   );
 }
 
@@ -671,9 +671,9 @@ export async function generatePlaybook(
     const playbook: Playbook = {
       id: generatePlaybookId(),
       organizationId: request.organizationId,
-      workspaceId: request.workspaceId || 'default',
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       name: request.name,
-      description: request.description || `Playbook for ${request.conversationType} conversations`,
+      description:(request.description !== '' && request.description != null) ? request.description : `Playbook for ${request.conversationType} conversations`,
       category: request.category,
       tags: [request.conversationType, request.category],
       conversationType: request.conversationType,
@@ -704,7 +704,7 @@ export async function generatePlaybook(
     await coordinator.emitSignal({
       type: 'playbook.generated' as any,
       orgId: request.organizationId,
-      workspaceId: request.workspaceId || 'default',
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       priority: 'Medium',
       confidence: playbook.confidence / 100,
       metadata: {
@@ -738,7 +738,7 @@ export async function generatePlaybook(
       metadata: {
         generatedAt: new Date(),
         processingTime,
-        aiModel: config.aiModel || DEFAULT_PLAYBOOK_CONFIG.aiModel,
+        aiModel:config.aiModel ?? DEFAULT_PLAYBOOK_CONFIG.aiModel,
         confidence: playbook.confidence,
       },
     };
@@ -753,7 +753,7 @@ export async function generatePlaybook(
       metadata: {
         generatedAt: new Date(),
         processingTime: Date.now() - startTime,
-        aiModel: config.aiModel || DEFAULT_PLAYBOOK_CONFIG.aiModel,
+        aiModel:config.aiModel ?? DEFAULT_PLAYBOOK_CONFIG.aiModel,
         confidence: 0,
       },
       error: error instanceof Error ? error.message : 'Unknown error',

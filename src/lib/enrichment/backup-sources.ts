@@ -181,7 +181,7 @@ export async function getGoogleKnowledgeGraph(companyName: string): Promise<Part
     
     return {
       name: entity.name,
-      description: entity.description || entity.detailedDescription?.articleBody,
+      description:entity.description ?? entity.detailedDescription?.articleBody,
       website: entity.url,
     };
   } catch (error) {

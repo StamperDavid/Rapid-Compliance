@@ -49,7 +49,7 @@ export function TalkTracksCard({ talkTracks, className = '' }: TalkTracksCardPro
       urgent: 'bg-orange-100 text-orange-800',
       educational: 'bg-indigo-100 text-indigo-800',
     };
-    return (colors as any)[tonality] || colors.professional;
+return (colors as any)[tonality] ?? colors.professional;
   };
   
   return (

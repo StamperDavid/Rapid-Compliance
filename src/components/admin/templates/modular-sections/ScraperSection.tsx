@@ -69,7 +69,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
           <div className="space-y-2">
             <Label>Primary Source</Label>
             <Select
-              value={template.research?.scrapingStrategy?.primarySource || 'website'}
+              value={template.research?.scrapingStrategy?(.primarySource !== '' && .primarySource != null) ? .primarySource : 'website'}
               onValueChange={val => handleScrapingStrategyChange('primarySource', val)}
             >
               <SelectTrigger disabled={disabled}>
@@ -86,7 +86,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
           <div className="space-y-2">
             <Label>Frequency</Label>
             <Select
-              value={template.research?.scrapingStrategy?.frequency || 'per-lead'}
+              value={template.research?.scrapingStrategy?(.frequency !== '' && .frequency != null) ? .frequency : 'per-lead'}
               onValueChange={val => handleScrapingStrategyChange('frequency', val)}
             >
               <SelectTrigger disabled={disabled}>
@@ -107,7 +107,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
             <Label>Timeout (ms)</Label>
             <Input
               type="number"
-              value={template.research?.scrapingStrategy?.timeoutMs || 30000}
+              value={template.research?.scrapingStrategy?.timeoutMs ?? 30000}
               onChange={e => handleScrapingStrategyChange('timeoutMs', parseInt(e.target.value))}
               disabled={disabled}
               min={1000}
@@ -119,7 +119,7 @@ export function ScraperSection({ template, onUpdate, disabled, onRemove, canRemo
             <Label>Cache TTL (seconds)</Label>
             <Input
               type="number"
-              value={template.research?.scrapingStrategy?.cacheTtlSeconds || 300}
+              value={template.research?.scrapingStrategy?.cacheTtlSeconds ?? 300}
               onChange={e => handleScrapingStrategyChange('cacheTtlSeconds', parseInt(e.target.value))}
               disabled={disabled}
               min={0}

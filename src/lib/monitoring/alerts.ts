@@ -48,7 +48,7 @@ export async function trackEvent(
   details: any = {},
   orgId?: string
 ): Promise<void> {
-  const key = `${type}:${orgId || 'platform'}`;
+  const key = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`;
   const config = DEFAULT_CONFIGS.find(c => c.type === type);
   
   if (!config?.enabled) {
@@ -94,8 +94,8 @@ async function triggerAlert(
   details: any,
   orgId?: string
 ): Promise<void> {
-  const alertId = `${type}:${orgId || 'platform'}:${Date.now()}`;
-  const counter = alertCounters.get(`${type}:${orgId || 'platform'}`);
+  const alertId = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}:${Date.now()}`;
+  const counter = alertCounters.get(`${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`);
   
   if (!counter) {return;}
 
@@ -112,7 +112,7 @@ async function triggerAlert(
   };
 
   // Store alert
-  activeAlerts.set(`${type}:${orgId || 'platform'}`, alert);
+  activeAlerts.set(`${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`, alert);
 
   // Log to console and Sentry
   logger.error(`🚨 ALERT: ${alert.message}`, new Error('Alert triggered'), {
@@ -129,7 +129,7 @@ async function triggerAlert(
     level: alert.severity === 'critical' ? 'error' : 'warning',
     tags: {
       alert_type: type,
-      organization_id: orgId || 'platform',
+      organization_id:(orgId !== '' && orgId != null) ? orgId : 'platform',
       severity: alert.severity,
     },
     extra: {

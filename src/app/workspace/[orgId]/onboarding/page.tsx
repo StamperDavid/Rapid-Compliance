@@ -20,7 +20,7 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
       </label>
       <input
         type="text"
-        value={formData[field] || ''}
+        value={formData[field] ?? ''}
         onChange={(e) => updateField(field, e.target.value)}
         placeholder={placeholder}
         style={{
@@ -44,7 +44,7 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
         {label} {required && '*'}
       </label>
       <textarea
-        value={formData[field] || ''}
+        value={formData[field] ?? ''}
         onChange={(e) => updateField(field, e.target.value)}
         placeholder={placeholder}
         rows={rows}
@@ -469,7 +469,7 @@ export default function OnboardingWizard() {
   };
 
   const getFieldConfidence = (fieldName: string): FieldConfidence | null => {
-    return prefillResult?.fieldConfidences?.[fieldName] || null;
+    return prefillResult?.fieldConfidences?.[fieldName] ?? null;
   };
 
   const completeOnboarding = async () => {
@@ -519,12 +519,12 @@ export default function OnboardingWizard() {
           router.push(`/workspace/${orgId}/settings/ai-agents/training`);
         }, 2000);
       } else {
-        throw new Error(result.error || 'Failed to process onboarding');
+        throw new Error((result.error !== '' && result.error != null) ? result.error : 'Failed to process onboarding');
       }
     } catch (error: any) {
       logger.error('Failed to complete onboarding:', error, { file: 'page.tsx' });
       setIsAnalyzing(false);
-      alert(`❌ Error: ${error.message || 'Failed to complete onboarding. Please try again.'}`);
+      alert(`❌ Error: ${(error.message !== '' && error.message != null) ? error.message : 'Failed to complete onboarding. Please try again.'}`);
     }
   };
 
@@ -2565,7 +2565,7 @@ export default function OnboardingWizard() {
                       multiple
                       accept=".pdf,.doc,.docx"
                       onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
+                        const files = Array.from(e.target.files ?? []);
                         updateField('uploadedSalesMaterials', [...formData.uploadedSalesMaterials, ...files]);
                       }}
                       style={{ display: 'none' }}

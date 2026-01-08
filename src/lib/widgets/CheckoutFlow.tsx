@@ -37,8 +37,8 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
     country: 'US',
   });
 
-  const primaryColor = theme?.primaryColor || '#6366f1';
-  const fontFamily = theme?.fontFamily || 'system-ui, sans-serif';
+  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
+  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
 
   useEffect(() => {
     loadCart();

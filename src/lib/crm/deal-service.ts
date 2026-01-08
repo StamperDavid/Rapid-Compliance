@@ -78,7 +78,7 @@ export async function getDeals(
     const result = await FirestoreService.getAllPaginated<Deal>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/deals/records`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 
@@ -140,7 +140,7 @@ export async function createDeal(
       id: dealId,
       organizationId,
       workspaceId,
-      currency: data.currency || 'USD',
+      currency:(data.currency !== '' && data.currency != null) ? data.currency : 'USD',
       stage: data.stage || 'prospecting',
       probability: data.probability || 10,
       createdAt: now,
@@ -388,7 +388,7 @@ async function emitDealSignal(params: {
         source: 'crm-deal-service',
         dealId: deal.id,
         dealName: deal.name,
-        company: deal.company || deal.companyName,
+        company:deal.company ?? deal.companyName,
         contactId: deal.contactId,
         value: deal.value,
         currency: deal.currency,

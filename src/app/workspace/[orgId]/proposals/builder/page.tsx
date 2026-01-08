@@ -27,13 +27,13 @@ export default function ProposalBuilderPage() {
       id: `section-${Date.now()}`,
       type,
       content: getDefaultContent(type),
-      order: (template.sections?.length || 0) + 1,
+      order: (template.sections?.length ?? 0) + 1,
       editable: true,
     };
 
     setTemplate({
       ...template,
-      sections: [...(template.sections || []), newSection],
+      sections: [...(template.sections ?? []), newSection],
     });
   };
 

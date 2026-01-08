@@ -120,7 +120,7 @@ export default function SmsMessagesPage() {
                         key={trigger.id}
                         onClick={() => {
                           setSelectedSmsTemplate(trigger.id);
-                          setSmsContent(smsTemplates.find(t => t.id === trigger.id)?.message || '');
+                          setSmsContent(smsTemplates.find(t => t.id === trigger.id)?.message ?? '');
                         }}
                         style={{
                           padding: '1rem',
@@ -194,7 +194,7 @@ export default function SmsMessagesPage() {
                 {selectedSmsTemplate ? (
                   <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '1.5rem' }}>
-                      {predefinedTriggers.find(t => t.id === selectedSmsTemplate)?.name || smsTemplates.find(t => t.id === selectedSmsTemplate)?.name || 'SMS Template'}
+                      {predefinedTriggers.find(t => t.id === selectedSmsTemplate)?.name || smsTemplates.find(t => t.id === selectedSmsTemplate)?(.name !== '' && .name != null) ? .name : 'SMS Template'}
                     </h2>
 
                     <div style={{ marginBottom: '1.5rem' }}>
@@ -298,10 +298,10 @@ export default function SmsMessagesPage() {
                                 setTestSMSResult({ success: true, message: `Test SMS sent! Message ID: ${result.messageId}` });
                                 setTestPhoneNumber('');
                               } else {
-                                setTestSMSResult({ success: false, message: result.error || 'Failed to send SMS' });
+                                setTestSMSResult({ success: false, message:(result.error !== '' && result.error != null) ? result.error : 'Failed to send SMS'});
                               }
                             } catch (error: any) {
-                              setTestSMSResult({ success: false, message: error.message || 'Failed to send SMS' });
+                              setTestSMSResult({ success: false, message:(error.message !== '' && error.message != null) ? error.message : 'Failed to send SMS'});
                             } finally {
                               setIsSendingTest(false);
                             }

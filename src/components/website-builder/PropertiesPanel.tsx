@@ -285,7 +285,7 @@ function SectionContentEditor({ section, onUpdate }: SectionContentEditorProps) 
         <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
           <input
             type="checkbox"
-            checked={section.fullWidth || false}
+            checked={section.fullWidth ?? false}
             onChange={(e) => onUpdate({ fullWidth: e.target.checked })}
             style={{ width: '16px', height: '16px' }}
           />
@@ -298,7 +298,7 @@ function SectionContentEditor({ section, onUpdate }: SectionContentEditorProps) 
           <label style={labelStyle}>Max Width (px)</label>
           <input
             type="number"
-            value={section.maxWidth || 1200}
+            value={section.maxWidth ?? 1200}
             onChange={(e) => onUpdate({ maxWidth: parseInt(e.target.value) })}
             style={inputStyle}
           />
@@ -460,7 +460,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Text Color</label>
           <input
             type="color"
-            value={style.color || '#000000'}
+            value={(style.color !== '' && style.color != null) ? style.color : '#000000'}
             onChange={(e) => updateStyle('color', e.target.value)}
             style={{ ...inputStyle, height: '40px' }}
           />
@@ -470,7 +470,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
           <label style={labelStyle}>Background Color</label>
           <input
             type="color"
-            value={style.backgroundColor || '#ffffff'}
+            value={(style.backgroundColor !== '' && style.backgroundColor != null) ? style.backgroundColor : '#ffffff'}
             onChange={(e) => updateStyle('backgroundColor', e.target.value)}
             style={{ ...inputStyle, height: '40px' }}
           />
@@ -510,7 +510,7 @@ function StyleEditor({ style, onUpdate }: StyleEditorProps) {
             min="0"
             max="1"
             step="0.1"
-            value={style.opacity || 1}
+            value={style.opacity ?? 1}
             onChange={(e) => updateStyle('opacity', parseFloat(e.target.value))}
             style={inputStyle}
           />
@@ -540,7 +540,7 @@ function SectionStyleEditor({ section, onUpdate }: SectionStyleEditorProps) {
         <label style={labelStyle}>Background Color</label>
         <input
           type="color"
-          value={section.backgroundColor || '#ffffff'}
+          value={(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : '#ffffff'}
           onChange={(e) => onUpdate({ backgroundColor: e.target.value })}
           style={{ ...inputStyle, height: '40px' }}
         />

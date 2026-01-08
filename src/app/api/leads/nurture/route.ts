@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
+        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
+})) ?? [];
       
       return errors.validation('Validation failed', errorDetails);
     }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         }
         const result = await enrollLeadInSequence(data.leadId, data.sequenceId, data.organizationId);
         if (!result.success) {
-          return errors.badRequest(result.error || 'Failed to enroll lead');
+          return errors.badRequest((result.error !== '' && result.error != null) ? result.error : 'Failed to enroll lead');
         }
         return NextResponse.json({ success: true });
       }

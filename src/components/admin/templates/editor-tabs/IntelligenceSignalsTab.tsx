@@ -158,13 +158,13 @@ export function IntelligenceSignalsTab({ template, onUpdate, disabled }: Intelli
     <Tabs value={activeSection} onValueChange={setActiveSection}>
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="signals">
-          High-Value Signals ({template.research?.highValueSignals?.length || 0})
+          High-Value Signals ({template.research?.highValueSignals?.length ?? 0})
         </TabsTrigger>
         <TabsTrigger value="fluff">
-          Fluff Patterns ({template.research?.fluffPatterns?.length || 0})
+          Fluff Patterns ({template.research?.fluffPatterns?.length ?? 0})
         </TabsTrigger>
         <TabsTrigger value="scoring">
-          Scoring Rules ({template.research?.scoringRules?.length || 0})
+          Scoring Rules ({template.research?.scoringRules?.length ?? 0})
         </TabsTrigger>
       </TabsList>
 

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to start deal monitor',
+        error:(error.message !== '' && error.message != null) ? error.message : 'Failed to start deal monitor',
       },
       { status: 500 }
     );

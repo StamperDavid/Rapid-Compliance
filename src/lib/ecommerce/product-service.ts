@@ -90,7 +90,7 @@ export async function getProducts(
     const result = await FirestoreService.getAllPaginated<Product>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/products/records`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 
@@ -163,10 +163,10 @@ export async function createProduct(
       id: productId,
       organizationId,
       workspaceId,
-      currency: data.currency || 'USD',
-      inStock: data.inStock !== undefined ? data.inStock : true,
-      trackInventory: data.trackInventory || false,
-      isDigital: data.isDigital || false,
+      currency:(data.currency !== '' && data.currency != null) ? data.currency : 'USD',
+      inStock: data.inStock ?? true,
+      trackInventory: data.trackInventory ?? false,
+      isDigital: data.isDigital ?? false,
       tags: data.tags ?? [],
       images: data.images ?? [],
       createdAt: now,
@@ -274,7 +274,7 @@ export async function updateInventory(
       return product;
     }
 
-    const currentQuantity = product.stockQuantity || 0;
+    const currentQuantity = product.stockQuantity ?? 0;
     const newQuantity = currentQuantity + quantityChange;
 
     const updated = await updateProduct(organizationId, productId, {
@@ -323,10 +323,10 @@ export async function searchProducts(
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = result.data.filter(product =>
-      product.name?.toLowerCase().includes(searchLower) ||
-      product.description?.toLowerCase().includes(searchLower) ||
-      product.sku?.toLowerCase().includes(searchLower) ||
-      product.category?.toLowerCase().includes(searchLower)
+      (product.name?.toLowerCase().includes(searchLower) ?? false) ||
+      (product.description?.toLowerCase().includes(searchLower) ?? false) ||
+      (product.sku?.toLowerCase().includes(searchLower) ?? false) ||
+      (product.category?.toLowerCase().includes(searchLower) ?? false)
     );
 
     logger.info('Products searched', {

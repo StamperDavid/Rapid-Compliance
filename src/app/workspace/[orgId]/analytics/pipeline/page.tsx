@@ -79,7 +79,7 @@ export default function PipelineAnalyticsPage() {
                 <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
                   <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Deals in Pipeline</div>
                   <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>
-                    {analytics?.dealsCount || 0}
+                    {analytics?.dealsCount ?? 0}
                   </div>
                 </div>
 

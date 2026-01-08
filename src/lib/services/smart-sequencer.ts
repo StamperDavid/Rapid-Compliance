@@ -514,7 +514,7 @@ export async function getRecommendedSequence(params: {
     // Get available sequences (using environment-aware collection path)
     const { COLLECTIONS } = await import('@/lib/firebase/collections');
     const sequences =
-      availableSequences ||
+      availableSequences ??
       (await db
         .collection(COLLECTIONS.SEQUENCES)
         .where('organizationId', '==', organizationId)
@@ -530,7 +530,7 @@ export async function getRecommendedSequence(params: {
     // For now, return the first active sequence
     // TODO: Implement sequence tagging and smart matching
     
-    return sequences?.[0] || null;
+    return sequences?.[0] ?? null;
   } catch (error) {
     logger.error('Failed to get recommended sequence', error, { leadId });
     return null;

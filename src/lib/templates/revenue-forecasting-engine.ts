@@ -278,11 +278,11 @@ function calculateRevenueByStage(
   const byStage = new Map<string, StageRevenue>();
   
   deals.forEach(deal => {
-    const stage = (deal as { stage?: string }).stage || 'unknown';
+    const stage =((deal as { stage?: string }).stage !== '' && (deal as { stage?: string }).stage != null) ? (deal as { stage?: string }).stage : 'unknown';
     const value = deal.value || 0;
     
     // Get stage probability from template
-    const stageProbability = template?.stages.find(s => s.id === stage)?.probability || 50;
+    const stageProbability = template?.stages.find(s => s.id === stage)?.probability ?? 50;
     const probability = stageProbability / 100;
     
     const existing = byStage.get(stage);
@@ -313,8 +313,8 @@ function calculateCommitRevenue(
   template: SalesIndustryTemplate | null
 ): number {
   return deals.reduce((sum, deal) => {
-    const stage = (deal as { stage?: string }).stage || 'unknown';
-    const probability = template?.stages.find(s => s.id === stage)?.probability || 50;
+    const stage =((deal as { stage?: string }).stage !== '' && (deal as { stage?: string }).stage != null) ? (deal as { stage?: string }).stage : 'unknown';
+    const probability = template?.stages.find(s => s.id === stage)?.probability ?? 50;
     
     // Only count high-probability deals
     if (probability >= 75) {

@@ -60,7 +60,7 @@ export function handleAPIError(error: unknown): NextResponse<ErrorResponse> {
       {
         success: false,
         error: {
-          message: firebaseError.message || 'Database operation failed',
+          message:(firebaseError.message !== '' && firebaseError.message != null) ? firebaseError.message : 'Database operation failed',
           code: firebaseError.code,
           statusCode,
         },
@@ -203,7 +203,7 @@ export async function validateAuth(request: Request): Promise<string> {
   // For now, get orgId from query params or headers
   // In production, this would validate JWT token
   const url = new URL(request.url);
-  const orgId = url.searchParams.get('orgId') || request.headers.get('x-organization-id');
+  const orgId =url.searchParams.get('orgId') ?? request.headers.get('x-organization-id');
 
   if (!orgId) {
     throw errors.unauthorized('Organization ID required');

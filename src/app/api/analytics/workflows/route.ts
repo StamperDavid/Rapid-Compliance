@@ -99,8 +99,8 @@ export async function GET(request: NextRequest) {
     const executionTimes = successfulExecutions
       .filter(exec => exec.startedAt && exec.completedAt)
       .map(exec => {
-        const start = exec.startedAt?.toDate?.() || new Date(exec.startedAt);
-        const end = exec.completedAt?.toDate?.() || new Date(exec.completedAt);
+        const start =exec.startedAt?.toDate?.() ?? new Date(exec.startedAt);
+        const end =exec.completedAt?.toDate?.() ?? new Date(exec.completedAt);
         return end.getTime() - start.getTime();
       });
     const avgExecutionTime = executionTimes.length > 0

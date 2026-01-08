@@ -136,8 +136,8 @@ export const useCart = (widgetId: string) => {
     addToCart,
     removeFromCart,
     openCheckout,
-    itemCount: cart?.items?.length || 0,
-    total: cart?.total || 0
+    itemCount: cart?.items?.length ?? 0,
+    total: cart?.total ?? 0
   };
 };
 
@@ -160,7 +160,7 @@ export const useCRMStore = (widgetId: string) => {
         }
         
         const data = await response.json();
-        setProducts(data.products || []);
+        setProducts(data.products ?? []);
       } catch (err) {
         setError(err);
       } finally {

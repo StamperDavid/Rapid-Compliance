@@ -51,7 +51,7 @@ export default function WorkflowsPage() {
       }
 
       const data = await response.json();
-      setWorkflowsList(data.workflows || []);
+      setWorkflowsList(data.workflows ?? []);
     } catch (error: any) {
       console.error('Error loading workflows:', error);
       setError(error.message);
@@ -164,21 +164,21 @@ export default function WorkflowsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
               {!loading && workflowsList.map(workflow => {
                 const isActive = workflow.status === 'active';
-                const triggerDisplay = workflow.trigger?.type || 'N/A';
-                const runsToday = workflow.stats?.totalRuns || 0;
+                const triggerDisplay = workflow.trigger?(.type !== '' && .type != null) ? .type : 'N/A';
+                const runsToday = workflow.stats?.totalRuns ?? 0;
                 
                 return (
                   <div key={workflow.id} style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                       <div style={{ flex: 1 }}>
                         <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>{workflow.name}</h3>
-                        <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>{workflow.description || 'No description'}</p>
+                        <p style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.75rem' }}>{(workflow.description !== '' && workflow.description != null) ? workflow.description : 'No description'}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
                           <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.375rem', color: '#ccc' }}>
                             Trigger: {triggerDisplay}
                           </span>
                           <span style={{ padding: '0.25rem 0.75rem', backgroundColor: isActive ? '#0f4c0f' : '#4c4c4c', color: isActive ? '#4ade80' : '#999', borderRadius: '9999px', fontWeight: '600' }}>
-                            {isActive ? 'Active' : workflow.status || 'Inactive'}
+                            {isActive ? 'Active' :(workflow.status !== '' && workflow.status != null) ? workflow.status : 'Inactive'}
                           </span>
                         </div>
                       </div>

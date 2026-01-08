@@ -174,7 +174,7 @@ async function getNewsApiKey(organizationId: string): Promise<string | null> {
 
     // Try organization API keys
     const keys = await apiKeyService.getKeys(organizationId);
-    return keys?.enrichment?.newsApiKey || null;
+    return keys?.enrichment?.newsApiKey ?? null;
   } catch (error) {
     logger.error('[News] Error getting API key:', error, { file: 'news-service.ts' });
     return null;

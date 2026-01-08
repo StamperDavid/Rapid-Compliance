@@ -58,7 +58,7 @@ export default function ConversationDashboardPage() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to load analysis');
+        throw new Error((errorData.message !== '' && errorData.message != null) ? errorData.message : 'Failed to load analysis');
       }
       
       const data = await response.json();

@@ -88,7 +88,7 @@ export function exportSequencePerformanceToCSV(
     seq.clickRate.toFixed(2),
     seq.replyRate.toFixed(2),
     seq.createdAt.toISOString(),
-    seq.lastExecutedAt?.toISOString() || 'N/A',
+    seq.lastExecutedAt?(.toISOString() !== '' && .toISOString() != null) ? .toISOString() : 'N/A',
   ]);
 
   const csvContent = [headers, ...rows]
@@ -97,7 +97,7 @@ export function exportSequencePerformanceToCSV(
 
   downloadCSV(
     csvContent,
-    filename || `sequence-performance-${formatDateForFilename(new Date())}.csv`
+(filename !== '' && filename != null) ? filename : `sequence-performance-${formatDateForFilename(new Date())}.csv`
   );
 }
 
@@ -139,7 +139,7 @@ export function exportSummaryToCSV(
 
   downloadCSV(
     csvContent,
-    filename || `analytics-summary-${formatDateForFilename(new Date())}.csv`
+(filename !== '' && filename != null) ? filename : `analytics-summary-${formatDateForFilename(new Date())}.csv`
   );
 }
 
@@ -209,7 +209,7 @@ export function exportChannelPerformanceToCSV(
 
   downloadCSV(
     csvContent,
-    filename || `channel-performance-${formatDateForFilename(new Date())}.csv`
+(filename !== '' && filename != null) ? filename : `channel-performance-${formatDateForFilename(new Date())}.csv`
   );
 }
 
@@ -275,7 +275,7 @@ export function exportStepPerformanceToCSV(
 
   downloadCSV(
     csvContent,
-    filename || `${sequenceName.toLowerCase().replace(/\s+/g, '-')}-steps-${formatDateForFilename(new Date())}.csv`
+(filename !== '' && filename != null) ? filename : `${sequenceName.toLowerCase().replace(/\s+/g, '-')}-steps-${formatDateForFilename(new Date())}.csv`
   );
 }
 

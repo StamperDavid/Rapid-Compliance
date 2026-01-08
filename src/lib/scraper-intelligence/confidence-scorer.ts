@@ -355,11 +355,11 @@ export function aggregateConfidences(
   }
 
   // Normalize weights
-  const totalWeight = sources.reduce((sum, s) => sum + (s.weight || 1), 0);
+  const totalWeight = sources.reduce((sum, s) => sum + (s.weight ?? 1), 0);
   const normalizedSources = sources.map((s) => ({
     source: s.source,
     confidence: s.confidence,
-    weight: (s.weight || 1) / totalWeight,
+    weight: (s.weight ?? 1) / totalWeight,
   }));
 
   // Calculate weighted average

@@ -74,7 +74,7 @@ export async function predictDealRisk(
     const deal = await getDeal(
       request.organizationId,
       request.dealId,
-      request.workspaceId || 'default'
+(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
     );
     
     if (!deal) {
@@ -85,13 +85,13 @@ export async function predictDealRisk(
     const [dealScore, dealHealth] = await Promise.all([
       calculateDealScore({
         organizationId: request.organizationId,
-        workspaceId: request.workspaceId || 'default',
+        workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
         dealId: request.dealId,
         deal,
       }),
       calculateDealHealth(
         request.organizationId,
-        request.workspaceId || 'default',
+(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
         request.dealId
       ),
     ]);
@@ -156,7 +156,7 @@ export async function predictDealRisk(
         deal,
         riskFactors,
         request.organizationId,
-        request.workspaceId || 'default'
+(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
       );
     }
     
@@ -166,7 +166,7 @@ export async function predictDealRisk(
     const prediction: DealRiskPrediction = {
       dealId: request.dealId,
       organizationId: request.organizationId,
-      workspaceId: request.workspaceId || 'default',
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       riskLevel,
       slippageProbability,
       lossProbability,
@@ -772,12 +772,12 @@ async function generateAIInterventions(
     logger.info('AI interventions generated', {
       dealId: deal.id,
       interventionsCount: interventions.length,
-      tokensUsed: response.usage?.totalTokens || 0,
+      tokensUsed: response.usage?.totalTokens ?? 0,
     });
     
     return {
       interventions,
-      tokensUsed: response.usage?.totalTokens || 0,
+      tokensUsed: response.usage?.totalTokens ?? 0,
     };
     
   } catch (error: any) {
@@ -866,18 +866,18 @@ function parseAIInterventions(
       .slice(0, maxInterventions)
       .map((item: any, index: number) => ({
         id: `intervention_${Date.now()}_${index}`,
-        type: item.type || 'risk_mitigation',
-        priority: item.priority || 'medium',
-        title: item.title || 'Intervention Required',
-        description: item.description || '',
-        expectedImpact: item.expectedImpact || 30,
-        estimatedEffort: item.estimatedEffort || 2,
-        roiScore: (item.expectedImpact || 30) / (item.estimatedEffort || 2),
-        actionSteps: item.actionSteps || ['Execute intervention'],
-        successMetrics: item.successMetrics || ['Risk reduced'],
-        suggestedOwner: item.suggestedOwner || 'Account Executive',
-        deadlineDays: item.deadlineDays || 7,
-        reasoning: item.reasoning || 'AI-recommended intervention',
+        type:(item.type !== '' && item.type != null) ? item.type : 'risk_mitigation',
+        priority:(item.priority !== '' && item.priority != null) ? item.priority : 'medium',
+        title:(item.title !== '' && item.title != null) ? item.title : 'Intervention Required',
+        description: item.description ?? '',
+        expectedImpact: item.expectedImpact ?? 30,
+        estimatedEffort: item.estimatedEffort ?? 2,
+        roiScore: (item.expectedImpact ?? 30) / (item.estimatedEffort ?? 2),
+        actionSteps:item.actionSteps ?? ['Execute intervention'],
+        successMetrics:item.successMetrics ?? ['Risk reduced'],
+        suggestedOwner:(item.suggestedOwner !== '' && item.suggestedOwner != null) ? item.suggestedOwner : 'Account Executive',
+        deadlineDays: item.deadlineDays ?? 7,
+        reasoning:(item.reasoning !== '' && item.reasoning != null) ? item.reasoning : 'AI-recommended intervention',
       }));
     
     // Sort by ROI score

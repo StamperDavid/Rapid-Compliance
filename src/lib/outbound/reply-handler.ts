@@ -259,14 +259,14 @@ function parseClassificationResponse(
     const parsed = JSON.parse(jsonMatch[0]);
 
     return {
-      intent: parsed.intent || 'other',
-      sentiment: parsed.sentiment || 'neutral',
-      sentimentScore: parsed.sentimentScore || 0,
+      intent:(parsed.intent !== '' && parsed.intent != null) ? parsed.intent : 'other',
+      sentiment:(parsed.sentiment !== '' && parsed.sentiment != null) ? parsed.sentiment : 'neutral',
+      sentimentScore: parsed.sentimentScore ?? 0,
       entities: parsed.entities ?? {},
-      confidence: parsed.confidence || 50,
-      suggestedAction: parsed.suggestedAction || 'escalate_to_human',
+      confidence: parsed.confidence ?? 50,
+      suggestedAction:(parsed.suggestedAction !== '' && parsed.suggestedAction != null) ? parsed.suggestedAction : 'escalate_to_human',
       requiresHumanReview: parsed.requiresHumanReview !== false, // Default to true for safety
-      reasoning: parsed.reasoning || 'AI classification',
+      reasoning:(parsed.reasoning !== '' && parsed.reasoning != null) ? parsed.reasoning : 'AI classification',
     };
   } catch (error) {
     logger.error('[Reply Handler] Failed to parse AI classification:', error, { file: 'reply-handler.ts' });
@@ -430,8 +430,8 @@ Entities: ${JSON.stringify(classification.entities, null, 2)}
 
 CONTEXT:
 Original outreach: "${context.originalOutreach.body.substring(0, 200)}..."
-Product/Service: ${context.product || 'Our platform'}
-Value Proposition: ${context.valueProposition || 'help them grow'}
+Product/Service: ${(context.product !== '' && context.product != null) ? context.product : 'Our platform'}
+Value Proposition: ${(context.valueProposition !== '' && context.valueProposition != null) ? context.valueProposition : 'help them grow'}
 
 INSTRUCTIONS:
 1. Address their ${classification.intent} professionally

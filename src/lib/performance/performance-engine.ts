@@ -92,7 +92,7 @@ export async function generatePerformanceAnalytics(
     // 2. Get all conversation analyses for the period
     const analyses = await getConversationAnalyses(
       request.organizationId,
-      request.workspaceId || 'default',
+(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       startDate,
       endDate
     );
@@ -115,7 +115,7 @@ export async function generatePerformanceAnalytics(
     
     // Filter by minimum conversations if specified
     const filteredMetrics = individualMetrics.filter(
-      m => m.totalConversations >= (request.minConversations || fullConfig.minConversationsForAnalysis)
+      m => m.totalConversations >= (request.minConversations ?? fullConfig.minConversationsForAnalysis)
     );
     
     if (filteredMetrics.length === 0) {
@@ -146,7 +146,7 @@ export async function generatePerformanceAnalytics(
     if (request.includeTrends !== false && fullConfig.includeTrendAnalysis) {
       trendAnalysis = await generateTrendAnalysis(
         request.organizationId,
-        request.workspaceId || 'default',
+(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
         rankedMetrics,
         startDate,
         endDate,
@@ -173,7 +173,7 @@ export async function generatePerformanceAnalytics(
     // 12. Build final analytics
     const analytics: TeamPerformanceAnalytics = {
       organizationId: request.organizationId,
-      workspaceId: request.workspaceId || 'default',
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       startDate,
       endDate,
       periodType,
@@ -294,7 +294,7 @@ async function calculateRepMetrics(
   const objectionCounts = new Map<ObjectionType, number>();
   for (const analysis of analyses) {
     for (const objection of analysis.objections) {
-      objectionCounts.set(objection.type, (objectionCounts.get(objection.type) || 0) + 1);
+      objectionCounts.set(objection.type, (objectionCounts.get(objection.type) ?? 0) + 1);
     }
   }
   const topObjectionTypes = Array.from(objectionCounts.entries())
@@ -335,7 +335,7 @@ async function calculateRepMetrics(
   const coachingCounts = new Map<CoachingCategory, number>();
   for (const analysis of analyses) {
     for (const insight of analysis.coachingInsights) {
-      coachingCounts.set(insight.category, (coachingCounts.get(insight.category) || 0) + 1);
+      coachingCounts.set(insight.category, (coachingCounts.get(insight.category) ?? 0) + 1);
     }
   }
   const topCoachingAreas = Array.from(coachingCounts.entries())
@@ -1283,7 +1283,7 @@ function determinePeriod(request: PerformanceAnalyticsRequest): {
 } {
   const endDate = request.endDate ? new Date(request.endDate) : new Date();
   let startDate: Date;
-  let periodType: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom' = request.periodType || 'month';
+  let periodType: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom' =(request.periodType !== '' && request.periodType != null) ? request.periodType : 'month';
   
   if (request.startDate) {
     startDate = new Date(request.startDate);
@@ -1487,7 +1487,7 @@ export async function generateLeaderboard(
   
   return {
     organizationId: request.organizationId,
-    workspaceId: request.workspaceId || 'default',
+    workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
     startDate,
     endDate,
     periodType,
@@ -1608,7 +1608,7 @@ export async function getMetricBreakdown(
   });
   
   // Extract metric values
-  const values = analytics.individualMetrics.map(m => (m.scores as any)[request.metric] || m.scores.overall);
+  const values = analytics.individualMetrics.map(m => (m.scores as any)[request.metric] ?? m.scores.overall);
   
   // Calculate statistics
   const teamAvg = average(values);
@@ -1637,7 +1637,7 @@ export async function getMetricBreakdown(
   const byTier: Record<string, number> = {};
   for (const tier of ['top_performer', 'high_performer', 'solid_performer', 'developing', 'needs_improvement']) {
     const tierMetrics = analytics.individualMetrics.filter(m => m.performanceTier === tier);
-    byTier[tier] = tierMetrics.length > 0 ? average(tierMetrics.map(m => (m.scores as any)[request.metric] || m.scores.overall)) : 0;
+    byTier[tier] = tierMetrics.length > 0 ? average(tierMetrics.map(m => (m.scores as any)[request.metric] ?? m.scores.overall)) : 0;
   }
   
   return {

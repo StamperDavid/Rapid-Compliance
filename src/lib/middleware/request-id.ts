@@ -14,7 +14,7 @@ import { randomUUID } from 'crypto';
  */
 export function getRequestId(request: NextRequest): string {
   // Check if request already has an ID (from upstream proxy/load balancer)
-  const existingId = request.headers.get('x-request-id') || 
+  const existingId = request.headers.get('x-request-id') ?? 
                      request.headers.get('x-correlation-id');
   
   if (existingId) {

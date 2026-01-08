@@ -117,8 +117,8 @@ function calculateTopProducts(orders: any[]): any[] {
     const items = order.items ?? [];
     items.forEach((item: any) => {
       const productId = item.productId;
-      const productName = item.productName || 'Unknown';
-      const quantity = item.quantity || 1;
+      const productName =(item.productName !== '' && item.productName != null) ? item.productName : 'Unknown';
+      const quantity = item.quantity ?? 1;
       const price = parseFloat(item.price) || 0;
       const revenue = quantity * price;
       
@@ -157,7 +157,7 @@ function calculateCustomerMetrics(orders: any[], startDate: Date): any {
       customerSet.add(email);
       
       // Check if this is their first order
-      const orderDate = order.createdAt?.toDate?.() || new Date(order.createdAt);
+      const orderDate =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
       if (orderDate >= startDate) {
         // Check if they had orders before this period
         // For simplicity, assume all orders in period are from new customers
@@ -206,7 +206,7 @@ function calculateRevenueByDay(orders: any[], startDate: Date, endDate: Date): a
   const dayMap = new Map<string, { revenue: number; orders: number }>();
   
   orders.forEach((order: any) => {
-    const createdAt = order.createdAt?.toDate?.() || new Date(order.createdAt);
+    const createdAt =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
     const dayKey = createdAt.toISOString().split('T')[0];
     const revenue = parseFloat(order.total) || 0;
     

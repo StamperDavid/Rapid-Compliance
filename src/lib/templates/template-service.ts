@@ -34,8 +34,8 @@ export async function getGlobalTemplate(
     const data = doc.data();
     return {
       ...data,
-      createdAt: data?.createdAt?.toDate?.() || new Date(),
-      updatedAt: data?.updatedAt?.toDate?.() || new Date(),
+      createdAt:data?.createdAt?.toDate?.() ?? new Date(),
+      updatedAt:data?.updatedAt?.toDate?.() ?? new Date(),
     } as GlobalTemplateDocument;
   } catch (error) {
     logger.error('Error getting global template', { templateId, error });
@@ -71,8 +71,8 @@ export async function listGlobalTemplates(): Promise<GlobalTemplateDocument[]> {
       const data = doc.data();
       return {
         ...data,
-        createdAt: data.createdAt?.toDate?.() || new Date(),
-        updatedAt: data.updatedAt?.toDate?.() || new Date(),
+        createdAt:data.createdAt?.toDate?.() ?? new Date(),
+        updatedAt:data.updatedAt?.toDate?.() ?? new Date(),
       } as GlobalTemplateDocument;
     });
   } catch (error) {
@@ -93,7 +93,7 @@ export async function saveGlobalTemplate(
     const existingDoc = await docRef.get();
 
     const now = new Date();
-    const version = existingDoc.exists ? (existingDoc.data()?.version || 0) + 1 : 1;
+    const version = existingDoc.exists ? (existingDoc.data()?.version ?? 0) + 1 : 1;
 
     const templateDoc: Omit<GlobalTemplateDocument, 'createdAt' | 'updatedAt'> & {
       createdAt: FirebaseFirestore.FieldValue | Date;
@@ -105,7 +105,7 @@ export async function saveGlobalTemplate(
         : now,
       updatedAt: FieldValue.serverTimestamp(),
       createdBy: existingDoc.exists
-        ? existingDoc.data()?.createdBy || userId
+        ? existingDoc.data()?.createdBy ?? userId
         : userId,
       updatedBy: userId,
       version,

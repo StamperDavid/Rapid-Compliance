@@ -49,12 +49,12 @@ export function useAuth() {
             const userProfile = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
             
             // Use organizationId from user profile (set during account creation)
-            const organizationId = userProfile?.organizationId || 'demo';
+            const organizationId = userProfile?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'demo';
             
             setUser({
               id: authUser.uid,
-              email: authUser.email || '',
-              displayName: authUser.displayName || userProfile?.displayName || userProfile?.name || 'User',
+              email: authUser.email ?? '',
+              displayName: authUser.displayName || userProfile?.displayName || userProfile?(.name !== '' && .name != null) ? .name : 'User',
               role: (userProfile?.role as UserRole) || 'admin',
               organizationId: organizationId,
               workspaceId: userProfile?.currentWorkspaceId,
@@ -64,8 +64,8 @@ export function useAuth() {
             // Fallback to basic user info with admin role
             setUser({
               id: authUser.uid,
-              email: authUser.email || '',
-              displayName: authUser.displayName || 'User',
+              email: authUser.email ?? '',
+              displayName:(authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
               role: 'admin', // Default to admin so settings are accessible
               organizationId: 'demo',
             });
@@ -109,7 +109,7 @@ export function usePermission(permission: keyof RolePermissions): boolean {
 
 export function useRole(): UserRole | null {
   const { user } = useAuth();
-  return user?.role || null;
+  return user?.role ?? null;
 }
 
 

@@ -87,7 +87,7 @@ export class RedisService {
    */
   async set(key: string, value: any, options?: CacheOptions): Promise<void> {
     const fullKey = this.buildKey(key, options?.prefix);
-    const ttl = options?.ttl || 3600; // Default 1 hour
+    const ttl = options?.ttl ?? 3600; // Default 1 hour
     
     try {
       if (this.isConnected && this.client) {
@@ -205,7 +205,7 @@ export class RedisService {
         return await this.client.incr(fullKey);
       } else {
         const cached = this.memoryCache.get(fullKey);
-        const current = cached?.value || 0;
+        const current = cached?.value ?? 0;
         const newValue = current + 1;
         await this.set(key, newValue, options);
         return newValue;
@@ -220,7 +220,7 @@ export class RedisService {
    * Build full cache key with prefix
    */
   private buildKey(key: string, prefix?: string): string {
-    const basePrefix = process.env.CACHE_PREFIX || 'ai-crm';
+    const basePrefix =(process.env.CACHE_PREFIX !== '' && process.env.CACHE_PREFIX != null) ? process.env.CACHE_PREFIX : 'ai-crm';
     return prefix ? `${basePrefix}:${prefix}:${key}` : `${basePrefix}:${key}`;
   }
   
@@ -247,7 +247,7 @@ export class RedisService {
     try {
       if (this.isConnected && this.client) {
         const info = await this.client.info('stats');
-        const size = parseInt(info.match(/keys=(\d+)/)?.[1] || '0');
+        const size = parseInt(info.match(/keys=(\d+)/)?(.[1] !== '' && .[1] != null) ? .[1] : '0');
         return {
           connected: true,
           size,

@@ -41,7 +41,7 @@ export function AccessibleWidget({ widget, children }: AccessibleWidgetProps) {
     switch (widget.type) {
       case 'heading':
         attrs['role'] = 'heading';
-        attrs['aria-level'] = String(widget.data.level || 1);
+        attrs['aria-level'] = String(widget.data.level ?? 1);
         break;
 
       case 'button':
@@ -55,7 +55,7 @@ export function AccessibleWidget({ widget, children }: AccessibleWidgetProps) {
 
       case 'link':
         if (widget.data.newTab) {
-          attrs['aria-label'] = `${widget.data.text || 'Link'} (opens in new tab)`;
+          attrs['aria-label'] = `${(widget.data.text !== '' && widget.data.text != null) ? widget.data.text : 'Link'} (opens in new tab)`;
         }
         break;
 

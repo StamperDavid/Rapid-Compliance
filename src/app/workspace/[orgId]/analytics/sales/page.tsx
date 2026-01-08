@@ -21,7 +21,7 @@ export default function SalesAnalyticsPage() {
       const data = await response.json();
       if (data.success) {
         setMetrics(data.data.metrics);
-        setInsights(data.data.insights || []);
+        setInsights(data.data.insights ?? []);
       }
     } catch (error) {
       console.error('Error loading analytics:', error);

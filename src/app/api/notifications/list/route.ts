@@ -155,8 +155,8 @@ export async function GET(request: NextRequest) {
         },
         metadata: {
           createdAt: n.metadata.createdAt,
-          read: n.metadata.read || false,
-          readAt: n.metadata.readAt || null,
+          read: n.metadata.read ?? false,
+          readAt: n.metadata.readAt ?? null,
         },
       })),
       pagination: {

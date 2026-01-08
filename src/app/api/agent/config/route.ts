@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
       'default',
       {
-        selectedModel: selectedModel || 'gpt-4-turbo',
-        modelConfig: modelConfig || {
+        selectedModel:(selectedModel !== '' && selectedModel != null) ? selectedModel : 'gpt-4-turbo',
+        modelConfig:modelConfig ?? {
           temperature: 0.7,
           maxTokens: 2048,
           topP: 0.9,

@@ -63,7 +63,7 @@ export async function POST(
     // Verify DNS records
     const verification = await verifyDNSRecords(
       domainId,
-      domainData?.verificationMethod || 'cname',
+      domainData?(.verificationMethod !== '' && .verificationMethod != null) ? .verificationMethod : 'cname',
       domainData?.dnsRecords ?? []
     );
 
@@ -104,10 +104,10 @@ export async function POST(
           
           if (sslResult.success) {
             await domainRef.update({
-              sslStatus: sslResult.status || 'pending',
+              sslStatus:(sslResult.status !== '' && sslResult.status != null) ? sslResult.status : 'pending',
               sslEnabled: sslResult.status === 'active',
               sslIssuedAt: sslResult.status === 'active' ? now : null,
-              sslExpiresAt: sslResult.expiresAt || null,
+              sslExpiresAt: sslResult.expiresAt ?? null,
             });
           }
         }
@@ -171,7 +171,7 @@ async function verifyDNSRecords(
       // Verify CNAME record
       try {
         const records = await dns.resolveCname(domain);
-        const expectedValue = process.env.VERCEL_URL || 'cname.vercel-dns.com';
+        const expectedValue =(process.env.VERCEL_URL !== '' && process.env.VERCEL_URL != null) ? process.env.VERCEL_URL : 'cname.vercel-dns.com';
         
         if (records.some(r => r.includes('vercel') || r === expectedValue)) {
           updatedRecords[0].status = 'verified';

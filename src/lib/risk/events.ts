@@ -575,7 +575,7 @@ export async function emitSlippagePredicted(
       dealValue: deal.value,
       originalCloseDate: new Date(deal.expectedCloseDate).toISOString(),
       predictedSlippageDate: prediction.predictedSlippageDate.toISOString(),
-      daysUntilSlippage: prediction.daysUntilSlippage || 0,
+      daysUntilSlippage: prediction.daysUntilSlippage ?? 0,
       slippageProbability: prediction.slippageProbability,
       primaryReasons,
     };

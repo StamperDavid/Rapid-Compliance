@@ -72,7 +72,7 @@ export async function POST(
     await personaDocRef.set({
       ...personaData,
       updatedAt: FieldValue.serverTimestamp(),
-      version: (personaData.version || 0) + 1
+      version: (personaData.version ?? 0) + 1
     }, { merge: true });
 
     return NextResponse.json({ success: true });

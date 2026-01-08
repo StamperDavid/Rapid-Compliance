@@ -130,7 +130,7 @@ export default function AgentTrainingPage() {
       
     } catch (error: any) {
       logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
-      throw new Error(error.message || 'Failed to get AI response');
+      throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to get AI response');
     }
   };
 
@@ -553,7 +553,7 @@ export default function AgentTrainingPage() {
     try {
       const { createGoldenMaster } = await import('@/lib/agent/golden-master-builder');
       
-      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, user?.id || 'system', notes || undefined);
+      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, user?(.id !== '' && .id != null) ? .id : 'system', notes ?? undefined);
       
       alert(`✅ Golden Master ${newGoldenMaster.version} Created!\n\nYour trained AI agent has been saved as a production-ready version.\n\nNext steps:\n1. Review the Golden Master in the "Golden Master" tab\n2. Deploy it to production when ready\n3. Continue training your Base Model for future improvements`);
       
@@ -912,7 +912,7 @@ export default function AgentTrainingPage() {
             <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.5rem' }}>
               <div style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Training Sessions</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>
-                {baseModel.trainingScenarios?.length || 0}
+                {baseModel.trainingScenarios?.length ?? 0}
               </div>
             </div>
             
@@ -1530,7 +1530,7 @@ export default function AgentTrainingPage() {
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Scenarios Trained</div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' }}>{gm.trainedScenarios?.length || 0}</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff' }}>{gm.trainedScenarios?.length ?? 0}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Base Model</div>

@@ -10,12 +10,12 @@ interface ReportBuilderProps {
 }
 
 export default function ReportBuilder({ report, onSave, onCancel }: ReportBuilderProps) {
-  const [name, setName] = useState(report?.name || '');
-  const [description, setDescription] = useState(report?.description || '');
-  const [dataSource, setDataSource] = useState(report?.dataSource || '');
+  const [name, setName] = useState(report?.name ?? '');
+  const [description, setDescription] = useState(report?.description ?? '');
+  const [dataSource, setDataSource] = useState(report?.dataSource ?? '');
   const [filters, setFilters] = useState<ReportFilter[]>(report?.filters ?? []);
   const [metrics, setMetrics] = useState<ReportMetric[]>(report?.metrics ?? []);
-  const [visualization, setVisualization] = useState<ReportVisualization>(report?.visualization || {
+  const [visualization, setVisualization] = useState<ReportVisualization>(report?.visualization ?? {
     type: 'table',
   });
 

@@ -24,7 +24,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
 
   switch (element.type) {
     case 'heading': {
-      const Tag = (element.settings?.tag || 'h2') as keyof JSX.IntrinsicElements;
+      const Tag = (element.settings?(.tag !== '' && .tag != null) ? .tag : 'h2') as keyof JSX.IntrinsicElements;
       return <Tag style={styles}>{element.content}</Tag>;
     }
 
@@ -34,7 +34,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
     case 'button':
       return (
         <Link
-          href={element.settings?.href || '#'}
+          href={element.settings?(.href !== '' && .href != null) ? .href : '#'}
           style={{
             display: 'inline-block',
             textDecoration: 'none',
@@ -49,7 +49,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       return (
         <img
           src={typeof element.content === 'string' ? element.content : '/placeholder.jpg'}
-          alt={element.settings?.alt || ''}
+          alt={element.settings?.alt ?? ''}
           style={{ maxWidth: '100%', ...styles }}
         />
       );
@@ -272,7 +272,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
             )}
             {element.content.buttonText && (
               <Link
-                href={element.content.buttonLink || '/signup'}
+                href={(element.content.buttonLink !== '' && element.content.buttonLink != null) ? element.content.buttonLink : '/signup'}
                 style={{
                   display: 'inline-block',
                   padding: '16px 32px',

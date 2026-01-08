@@ -82,13 +82,13 @@ export async function GET(request: NextRequest) {
       const data = doc.data();
       return {
         id: doc.id,
-        email: data.email || '',
-        name: data.name || data.displayName || 'Unknown',
-        role: data.role || 'member',
-        organizationId: data.organizationId || '',
-        createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
-        lastLoginAt: data.lastLoginAt?.toDate?.()?.toISOString() || null,
+        email: data.email ?? '',
+        name:(data.name || data.displayName !== '' && data.name || data.displayName != null) ? data.name ?? data.displayName: 'Unknown',
+        role:(data.role !== '' && data.role != null) ? data.role : 'member',
+        organizationId: data.organizationId ?? '',
+        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+        updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? null,
+        lastLoginAt: data.lastLoginAt?.toDate?.()?.toISOString() ?? null,
       };
     });
     

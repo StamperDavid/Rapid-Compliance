@@ -164,10 +164,10 @@ function SectionRenderer({
 }: SectionRendererProps) {
   const sectionStyles: React.CSSProperties = {
     position: 'relative',
-    backgroundColor: section.backgroundColor || 'transparent',
+    backgroundColor:(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
     backgroundImage: section.backgroundImage ? `url(${section.backgroundImage})` : undefined,
-    padding: `${section.padding?.top || '0'} ${section.padding?.right || '0'} ${section.padding?.bottom || '0'} ${section.padding?.left || '0'}`,
-    margin: `${section.margin?.top || '0'} ${section.margin?.right || '0'} ${section.margin?.bottom || '0'} ${section.margin?.left || '0'}`,
+    padding: `${section.padding?(.top !== '' && .top != null) ? .top : '0'} ${section.padding?(.right !== '' && .right != null) ? .right : '0'} ${section.padding?(.bottom !== '' && .bottom != null) ? .bottom : '0'} ${section.padding?(.left !== '' && .left != null) ? .left : '0'}`,
+    margin: `${section.margin?(.top !== '' && .top != null) ? .top : '0'} ${section.margin?(.right !== '' && .right != null) ? .right : '0'} ${section.margin?(.bottom !== '' && .bottom != null) ? .bottom : '0'} ${section.margin?(.left !== '' && .left != null) ? .left : '0'}`,
     maxWidth: section.fullWidth ? '100%' : (section.maxWidth ? `${section.maxWidth}px` : '1200px'),
     marginLeft: section.fullWidth ? '0' : 'auto',
     marginRight: section.fullWidth ? '0' : 'auto',
@@ -252,7 +252,7 @@ function SectionRenderer({
                     id: `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     type: widgetType as keyof typeof widgetDefinitions,
                     data: definition.defaultData || {},
-                    style: definition.defaultStyle || {},
+                    style:definition.defaultStyle ?? {},
                   };
                   onAddWidget(newWidget, colIndex);
                 }

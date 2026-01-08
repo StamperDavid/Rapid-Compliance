@@ -51,15 +51,15 @@ export async function adaptEcommerceMappings(
       case 'field_key_changed':
         updated = await handleFieldRename(
           mappings,
-          event.oldFieldKey || event.oldFieldName || '',
-          event.newFieldKey || event.newFieldName || ''
+event.oldFieldKey ?? event.oldFieldName ?? '',
+event.newFieldKey ?? event.newFieldName ?? ''
         );
         break;
       
       case 'field_deleted':
         updated = await handleFieldDeletion(
           mappings,
-          event.oldFieldKey || event.oldFieldName || '',
+event.oldFieldKey ?? event.oldFieldName ?? '',
           event.organizationId,
           event.workspaceId,
           event.schemaId

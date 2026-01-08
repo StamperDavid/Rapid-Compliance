@@ -75,7 +75,7 @@ export const dentalPracticesMutations: MutationRule[] = [
     name: 'Aggressive Appointment Booking',
     description: 'Direct booking emphasis for high-conversion practices',
     condition: (onboarding: OnboardingData) => {
-      return (onboarding.closingStyle || 0) > 7;
+      return (onboarding.closingStyle ?? 0) > 7;
     },
     mutations: [
       {

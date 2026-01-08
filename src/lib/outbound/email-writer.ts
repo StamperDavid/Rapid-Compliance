@@ -43,7 +43,7 @@ export async function generateColdEmail(
     : {
         firstName: request.prospect.name.split(' ')[0],
         company: request.prospect.company,
-        title: request.prospect.title || 'there',
+        title:(request.prospect.title !== '' && request.prospect.title != null) ? request.prospect.title : 'there',
       };
 
   // Build the email based on template
@@ -251,8 +251,8 @@ ${researchContext}
 EMAIL REQUIREMENTS:
 - Template: ${template} (${templateInstructions[template as keyof typeof templateInstructions]})
 - Tone: ${request.tone}
-- Value Proposition: ${request.valueProposition || 'help them grow their business'}
-- Call to Action: ${request.cta || 'book a 15-minute call'}
+- Value Proposition: ${(request.valueProposition !== '' && request.valueProposition != null) ? request.valueProposition : 'help them grow their business'}
+- Call to Action: ${(request.cta !== '' && request.cta != null) ? request.cta : 'book a 15-minute call'}
 - Length: 150-200 words maximum
 - Personalization: Use the prospect research insights naturally
 
@@ -286,7 +286,7 @@ async function generateSubjectVariants(
   }
   
   // Value-based subject
-  variants.push(`${tokens.company} + ${request.valueProposition || 'growth'}`);
+  variants.push(`${tokens.company} + ${(request.valueProposition !== '' && request.valueProposition != null) ? request.valueProposition : 'growth'}`);
   
   // Curiosity-based subject
   variants.push(`${tokens.firstName}, saw this about ${tokens.company}`);

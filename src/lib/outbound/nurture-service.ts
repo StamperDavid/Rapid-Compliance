@@ -85,7 +85,7 @@ export async function getNurtureCampaigns(
     const result = await FirestoreService.getAllPaginated<NurtureCampaign>(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/nurtureSequences`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 

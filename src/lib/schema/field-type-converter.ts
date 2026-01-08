@@ -51,7 +51,7 @@ export class FieldTypeConverter {
       'checkbox': ['text'],
     };
     
-    return safeConversions[oldType]?.includes(newType) || false;
+    return safeConversions[oldType]?.includes(newType) ?? false;
   }
   
   /**
@@ -188,7 +188,7 @@ export class FieldTypeConverter {
           result.failedRecords.push({
             recordId: recordData.id,
             oldValue,
-            error: conversion.message || 'Conversion failed',
+            error:(conversion.message !== '' && conversion.message != null) ? conversion.message : 'Conversion failed',
           });
         }
       }

@@ -201,7 +201,7 @@ export default function PageEditorPage() {
           organizationId: orgId,
           template: {
             name: templateName,
-            description: templateDescription || `Custom template based on ${page.title}`,
+            description:(templateDescription !== '' && templateDescription != null) ? templateDescription : `Custom template based on ${page.title}`,
             category: 'other',
             thumbnail: `https://via.placeholder.com/400x300/6c757d/ffffff?text=${  encodeURIComponent(templateName)}`,
             content: page.content,
@@ -237,7 +237,7 @@ export default function PageEditorPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to publish page');
+        throw new Error((error.error !== '' && error.error != null) ? error.error : 'Failed to publish page');
       }
 
       const result = await response.json();
@@ -301,7 +301,7 @@ export default function PageEditorPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to unpublish page');
+        throw new Error((error.error !== '' && error.error != null) ? error.error : 'Failed to unpublish page');
       }
 
       // Update local page state
@@ -331,7 +331,7 @@ export default function PageEditorPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to generate preview');
+        throw new Error((error.error !== '' && error.error != null) ? error.error : 'Failed to generate preview');
       }
 
       const result = await response.json();

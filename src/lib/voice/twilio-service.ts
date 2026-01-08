@@ -46,7 +46,7 @@ export async function initiateCall(
       to,
       url: twimlUrl,
       record: options?.record,
-      timeout: options?.timeout || 30,
+      timeout: options?.timeout ?? 30,
       statusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/status`,
     });
     
@@ -74,8 +74,8 @@ export function generateAgentTwiML(
     action?: string;
   }
 ): string {
-  const voice = options?.voice || 'Polly.Joanna'; // Amazon Polly voices
-  const language = options?.language || 'en-US';
+  const voice = options?(.voice !== '' && .voice != null) ? .voice : 'Polly.Joanna'; // Amazon Polly voices
+  const language = options?(.language !== '' && .language != null) ? .language : 'en-US';
   
   if (options?.gather) {
     // Gather user speech input
@@ -260,7 +260,7 @@ export class VoiceAgentHandler {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const agent = await FirestoreService.get(`${COLLECTIONS.ORGANIZATIONS}/*/agents`, agentId);
     
-    const greeting = (agent as any)?.greeting || 'Hello! How can I help you today?';
+    const greeting = (agent as any)?(.greeting !== '' && .greeting != null) ? .greeting : 'Hello! How can I help you today?';
     
     return generateAgentTwiML(greeting, {
       gather: true,

@@ -62,7 +62,7 @@ export default function WorkflowEditPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Description</label>
-              <textarea value={workflow.description || ''} onChange={(e) => setWorkflow({...workflow, description: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={3} />
+              <textarea value={workflow.description ?? ''} onChange={(e) => setWorkflow({...workflow, description: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={3} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>

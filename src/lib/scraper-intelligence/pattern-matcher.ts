@@ -20,7 +20,7 @@ import type { TrainingData } from '@/types/scraper-intelligence';
 // CONSTANTS
 // ============================================================================
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 const EMBEDDING_MODEL = 'text-embedding-3-small'; // 1536 dimensions, $0.02/1M tokens
 const SIMILARITY_THRESHOLD = 0.75; // Min similarity score (0-1)
 const BATCH_SIZE = 100; // Process up to 100 texts at once
@@ -223,7 +223,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       const embedding = data.data[0].embedding as number[];
       
       // Track cost
-      const tokensUsed = data.usage?.total_tokens || estimateTokens(text);
+      const tokensUsed =data.usage?.total_tokens ?? estimateTokens(text);
       costTracker.addTokens(tokensUsed);
 
       // Cache the result
@@ -368,7 +368,7 @@ export async function generateEmbeddingsBatch(
         uncachedEmbeddings.push(...batchEmbeddings);
 
         // Track cost
-        const tokensUsed = data.usage?.total_tokens || batch.reduce((sum, text) => sum + estimateTokens(text), 0);
+        const tokensUsed =data.usage?.total_tokens ?? batch.reduce((sum, text) => sum + estimateTokens(text), 0);
         costTracker.addTokens(tokensUsed);
 
         logger.debug('Generated batch embeddings', {

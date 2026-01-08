@@ -25,14 +25,14 @@ export interface ProductCardProps {
 }
 
 export function ProductCard({ product, onAddToCart, theme }: ProductCardProps) {
-  const primaryColor = theme?.primaryColor || '#6366f1';
-  const borderRadius = theme?.borderRadius || '0.5rem';
-  const fontFamily = theme?.fontFamily || 'system-ui, sans-serif';
+  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
+  const borderRadius = theme?(.borderRadius !== '' && .borderRadius != null) ? .borderRadius : '0.5rem';
+  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: product.currency || 'USD',
+      currency:(product.currency !== '' && product.currency != null) ? product.currency : 'USD',
     }).format(price / 100);
   };
 

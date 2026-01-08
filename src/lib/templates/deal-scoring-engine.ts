@@ -124,7 +124,7 @@ export async function calculateDealScore(
     });
     
     // 1. Get deal data (mock for now)
-    const deal = options.deal || await fetchDeal(options.organizationId, options.workspaceId, options.dealId);
+    const deal =options.deal ?? await fetchDeal(options.organizationId, options.workspaceId, options.dealId);
     
     // 2. Get industry template for custom weights
     let template: SalesIndustryTemplate | null = null;
@@ -132,7 +132,7 @@ export async function calculateDealScore(
       template = getTemplateById(options.templateId);
     }
     
-    const weights = template?.scoringWeights || {
+    const weights = template?.scoringWeights ?? {
       dealAge: 0.15,
       stageVelocity: 0.20,
       engagement: 0.25,
@@ -297,7 +297,7 @@ export async function calculateDealScore(
         priority: tier === 'at-risk' || tier === 'hot' ? 'High' : 'Medium',
         metadata: {
           dealId: deal.id,
-          dealName: (deal as { name?: string }).name || 'Unknown Deal',
+          dealName:((deal as { name?: string }).name !== '' && (deal as { name?: string }).name != null) ? (deal as { name?: string }).name : 'Unknown Deal',
           score: finalScore,
           closeProbability,
           tier,
@@ -406,13 +406,13 @@ function calculateStageVelocityFactor(deal: Deal, template: SalesIndustryTemplat
   benchmark: string;
 } {
   // Mock implementation - in real version, track stage history
-  const currentStage = (deal as { stage?: string }).stage || 'unknown';
-  const stageEnteredAt = new Date(deal.updatedAt || deal.createdAt);
+  const currentStage =((deal as { stage?: string }).stage !== '' && (deal as { stage?: string }).stage != null) ? (deal as { stage?: string }).stage : 'unknown';
+  const stageEnteredAt = new Date(deal.updatedAt ?? deal.createdAt);
   const now = new Date();
   const daysInStage = Math.floor((now.getTime() - stageEnteredAt.getTime()) / (1000 * 60 * 60 * 24));
   
   // Get expected duration from template
-  const expectedDuration = template?.stages.find(s => s.id === currentStage)?.averageDuration || 14;
+  const expectedDuration = template?.stages.find(s => s.id === currentStage)?.averageDuration ?? 14;
   
   let score = 50;
   let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
@@ -648,7 +648,7 @@ async function calculateHistoricalWinRateFactor(deal: Deal, orgId: string, works
   benchmark: string;
 }> {
   // Mock: use benchmark from template
-  const winRate = template?.benchmarks.avgWinRate || 30;
+  const winRate = template?.benchmarks.avgWinRate ?? 30;
   
   let score = 50;
   let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
@@ -687,7 +687,7 @@ function calculateCloseProbability(score: number, factors: ScoringFactor[], deal
   
   // Adjust based on current stage
   const currentStage = (deal as { stage?: string }).stage;
-  const stageProbability = template?.stages.find(s => s.id === currentStage)?.probability || 50;
+  const stageProbability = template?.stages.find(s => s.id === currentStage)?.probability ?? 50;
   
   // Weighted combination
   probability = Math.round((probability * 0.6) + (stageProbability * 0.4));
@@ -800,7 +800,7 @@ function generateRecommendations(deal: Deal, factors: ScoringFactor[], risks: Ri
 }
 
 function predictCloseDate(deal: Deal, factors: ScoringFactor[], template: SalesIndustryTemplate | null): Date | null {
-  const avgCycle = template?.benchmarks.avgSalesCycle || 30;
+  const avgCycle = template?.benchmarks.avgSalesCycle ?? 30;
   const velocityFactor = factors.find(f => f.id === 'stage_velocity');
   
   // Adjust based on velocity

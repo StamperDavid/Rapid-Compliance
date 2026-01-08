@@ -122,9 +122,9 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       success: true,
       user: {
         uid: userId,
-        email: userData.email || decodedToken.email || '',
+        email:userData.email ?? decodedToken.email ?? '',
         role: userData.role,
-        organizationId: userData.organizationId || 'platform'
+        organizationId:(userData.organizationId !== '' && userData.organizationId != null) ? userData.organizationId : 'platform'
       }
     };
     

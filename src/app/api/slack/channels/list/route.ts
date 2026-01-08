@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     const workspaceId = searchParams.get('workspaceId');
     const types = searchParams.get('types')?.split(',');
     const excludeArchived = searchParams.get('excludeArchived') !== 'false';
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
-    const cursor = searchParams.get('cursor') || undefined;
+    const limit = parseInt((searchParams.get('limit') !== '' && searchParams.get('limit') != null) ? searchParams.get('limit') : '100', 10);
+    const cursor = searchParams.get('cursor') ?? undefined;
     
     // Validate input
     const validation = listChannelsSchema.safeParse({
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to list channels',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to list channels',
       },
       { status: 500 }
     );

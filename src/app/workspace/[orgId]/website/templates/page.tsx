@@ -53,7 +53,7 @@ export default function TemplateBrowserPage() {
       const response = await fetch(`/api/website/templates?organizationId=${orgId}`);
       if (response.ok) {
         const data = await response.json();
-        setCustomTemplates(data.templates || []);
+        setCustomTemplates(data.templates ?? []);
       }
     } catch (error) {
       console.error('[Templates] Load error:', error);

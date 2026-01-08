@@ -66,7 +66,7 @@ export default function NurtureCampaignsPage() {
                     <div className="flex gap-4 text-sm text-gray-400">
                       <span>{campaign.steps?.length || 0} steps</span>
                       <span>•</span>
-                      <span>{campaign.enrolled || 0} leads enrolled</span>
+                      <span>{campaign.enrolled ?? 0} leads enrolled</span>
                     </div>
                   </div>
                   <div className="flex gap-2">

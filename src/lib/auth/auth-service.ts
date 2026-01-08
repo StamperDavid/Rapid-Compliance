@@ -69,7 +69,7 @@ export async function signUp(
     if (userCredential.user) {
       await dal.safeSetDoc('USERS', userCredential.user.uid, {
         email: userCredential.user.email,
-        displayName: displayName || userCredential.user.displayName,
+        displayName:displayName ?? userCredential.user.displayName,
         emailVerified: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -82,7 +82,7 @@ export async function signUp(
     return userCredential;
   } catch (error: any) {
     logger.error('Error signing up:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to sign up');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign up');
   }
 }
 
@@ -98,7 +98,7 @@ export async function signIn(email: string, password: string): Promise<UserCrede
     return await signInWithEmailAndPassword(auth, email, password);
   } catch (error: any) {
     logger.error('Error signing in:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to sign in');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign in');
   }
 }
 
@@ -117,7 +117,7 @@ export async function signInWithGoogle(): Promise<UserCredential> {
     return await signInWithPopup(auth, provider);
   } catch (error: any) {
     logger.error('Error signing in with Google:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to sign in with Google');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign in with Google');
   }
 }
 
@@ -136,7 +136,7 @@ export async function signInWithMicrosoft(): Promise<UserCredential> {
     return await signInWithPopup(auth, provider);
   } catch (error: any) {
     logger.error('Error signing in with Microsoft:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to sign in with Microsoft');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign in with Microsoft');
   }
 }
 
@@ -152,7 +152,7 @@ export async function signOutUser(): Promise<void> {
     await signOut(auth);
   } catch (error: any) {
     logger.error('Error signing out:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to sign out');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign out');
   }
 }
 
@@ -168,7 +168,7 @@ export async function resetPassword(email: string): Promise<void> {
     await sendPasswordResetEmail(auth, email);
   } catch (error: any) {
     logger.error('Error sending password reset:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to send password reset email');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to send password reset email');
   }
 }
 
@@ -188,7 +188,7 @@ export async function verifyEmail(): Promise<void> {
     await sendEmailVerification(user);
   } catch (error: any) {
     logger.error('Error sending email verification:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to send email verification');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to send email verification');
   }
 }
 
@@ -223,7 +223,7 @@ export function onAuthStateChange(
       callback({
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName || userProfile?.displayName || null,
+        displayName:user.displayName ?? userProfile?.displayName ?? null,
         photoURL: user.photoURL,
         emailVerified: user.emailVerified,
       });
@@ -262,7 +262,7 @@ export async function updateUserProfile(updates: {
     });
   } catch (error: any) {
     logger.error('Error updating profile:', error, { file: 'auth-service.ts' });
-    throw new Error(error.message || 'Failed to update profile');
+    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to update profile');
   }
 }
 

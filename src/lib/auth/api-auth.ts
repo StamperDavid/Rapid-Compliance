@@ -98,8 +98,8 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
     
     return {
       uid: decodedToken.uid,
-      email: decodedToken.email || null,
-      emailVerified: decodedToken.email_verified || false,
+      email: decodedToken.email ?? null,
+      emailVerified: decodedToken.email_verified ?? false,
       organizationId: userProfile?.organizationId,
       role: userProfile?.role,
     };
@@ -206,7 +206,7 @@ export async function requireOrganization(
 
   // For onboarding, allow users without organizationId if they're admin/owner
   // They're likely setting up their first organization
-  if (!user.organizationId && !['admin', 'owner', 'super_admin'].includes(user.role || '')) {
+  if (!user.organizationId && !['admin', 'owner', 'super_admin'].includes(user.role ?? '')) {
     return NextResponse.json(
       { success: false, error: 'User must belong to an organization' },
       { status: 403 }

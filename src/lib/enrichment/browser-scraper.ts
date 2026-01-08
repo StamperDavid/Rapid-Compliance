@@ -54,7 +54,7 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       const metadata = await page.evaluate(() => {
         const getMetaContent = (name: string) => {
           const meta = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
-          return meta?.getAttribute('content') || undefined;
+          return meta?.getAttribute('content') ?? undefined;
         };
         
         return {
@@ -69,8 +69,9 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       const title = await page.title();
       
       // Extract description
-      const description = metadata.ogDescription || 
-        await page.$eval('meta[name="description"]', el => el.getAttribute('content')).catch(() => '');
+      const description = (metadata.ogDescription !== '' && metadata.ogDescription != null) 
+        ? metadata.ogDescription 
+        : await page.$eval('meta[name="description"]', el => el.getAttribute('content')).catch(() => '');
       
       // Remove unwanted elements (same as cheerio scraper)
       await page.evaluate(() => {
@@ -88,8 +89,8 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       // Get cleaned text content
       const cleanedText = await page.evaluate(() => {
         // Try to find main content area
-        const main = document.querySelector('main') || 
-                     document.querySelector('article') || 
+        const main = document.querySelector('main') ?? 
+                     document.querySelector('article') ?? 
                      document.querySelector('body');
         
         if (!main) {return '';}
@@ -111,7 +112,7 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       return {
         url,
         title,
-        description: description || '',
+        description: description ?? '',
         cleanedText,
         rawHtml,
         metadata,
@@ -187,7 +188,7 @@ export async function scrapeWithRetry(
     }
   }
   
-  throw lastError || new Error('Scraping failed after retries');
+throw lastError ?? new Error('Scraping failed after retries');
 }
 
 /**
@@ -220,7 +221,7 @@ class RateLimiter {
   private minDelay = 1000; // 1 second between requests to same domain
   
   async throttle(domain: string): Promise<void> {
-    const lastTime = this.lastRequestTime.get(domain) || 0;
+    const lastTime = this.lastRequestTime.get(domain) ?? 0;
     const timeSinceLastRequest = Date.now() - lastTime;
     
     if (timeSinceLastRequest < this.minDelay) {

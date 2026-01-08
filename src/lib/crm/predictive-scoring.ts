@@ -58,7 +58,7 @@ export async function calculatePredictiveLeadScore(
 
     // Factor 3: Engagement (30% weight)
     const activityStats = await getActivityStats(organizationId, workspaceId, 'lead', lead.id);
-    const engagementScore = activityStats.engagementScore || 0;
+    const engagementScore = activityStats.engagementScore ?? 0;
     factors.push({
       name: 'Engagement',
       weight: 0.30,

@@ -168,7 +168,7 @@ function initializeSendGrid(): void {
  */
 function getFromAddress(): { email: string; name: string } {
   const fromEmail = process.env.FROM_EMAIL;
-  const fromName = process.env.FROM_NAME || 'AI Sales Platform';
+  const fromName =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'AI Sales Platform';
   
   if (!fromEmail) {
     throw new Error('FROM_EMAIL environment variable is required');

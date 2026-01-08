@@ -69,13 +69,13 @@ export default function ActivityTimeline({
         const insightsData = await insightsRes.json();
         
         if (insightsData.success) {
-          setInsights(insightsData.data.insights || []);
+          setInsights(insightsData.data.insights ?? []);
           setNextAction(insightsData.data.nextBestAction);
         }
       }
 
     } catch (err: any) {
-      setError(err.message || 'Failed to load activity timeline');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load activity timeline');
     } finally {
       setLoading(false);
     }
@@ -177,13 +177,13 @@ export default function ActivityTimeline({
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="text-sm text-gray-600">Engagement Score</div>
             <div className="text-2xl font-bold text-gray-900">
-              {stats.engagementScore || 0}/100
+              {stats.engagementScore ?? 0}/100
             </div>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="text-sm text-gray-600">Avg Per Day</div>
             <div className="text-2xl font-bold text-gray-900">
-              {stats.avgActivitiesPerDay?.toFixed(1) || 0}
+              {stats.avgActivitiesPerDay?.toFixed(1) ?? 0}
             </div>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">

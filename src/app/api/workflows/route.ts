@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     logger.error('Failed to get workflows', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to get workflows' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get workflows'},
       { status: 500 }
     );
   }
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     logger.error('Failed to create workflow', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create workflow' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to create workflow'},
       { status: 500 }
     );
   }

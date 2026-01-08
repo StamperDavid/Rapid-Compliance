@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     logger.error('A/B test creation error', error, { route: '/api/learning/ab-test' });
     return NextResponse.json(
-      { error: error.message || 'Failed to create A/B test' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to create A/B test'},
       { status: 500 }
     );
   }

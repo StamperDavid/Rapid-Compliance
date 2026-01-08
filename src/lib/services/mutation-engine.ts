@@ -148,11 +148,11 @@ export class MutationEngine {
   private calculateNewValue(current: any, operation: string, value: any): any {
     switch (operation) {
       case 'add':
-        return (current || 0) + value;
+        return (current ?? 0) + value;
       case 'subtract':
-        return (current || 0) - value;
+        return (current ?? 0) - value;
       case 'multiply':
-        return (current || 0) * value;
+        return (current ?? 0) * value;
       case 'set':
         return value;
       case 'append':
@@ -212,9 +212,7 @@ export class MutationEngine {
           current = array.find((item: any) => item.id === idValue);
         }
       } else {
-        if (!current[part]) {
-          current[part] = {};
-        }
+        current[part] ??= {};
         current = current[part];
       }
     }

@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       teamName: tokenResponse.team.name,
       teamDomain: tokenResponse.team.id, // Slack v2 doesn't always include domain
       botToken: tokenResponse.access_token,
-      botUserId: tokenResponse.bot_user_id || '',
+      botUserId: tokenResponse.bot_user_id ?? '',
       scopes: tokenResponse.scope.split(','),
       installedBy: {
         userId: oauthState.userId,
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Redirect to success page
-    const redirectUrl = oauthState.redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations`;
+    const redirectUrl =(oauthState.redirectUrl !== '' && oauthState.redirectUrl != null) ? oauthState.redirectUrl : `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations`;
     return NextResponse.redirect(`${redirectUrl}?success=slack_connected`);
     
   } catch (error) {

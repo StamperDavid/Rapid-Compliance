@@ -68,9 +68,9 @@ export default function FieldRenameHistory({
 
       const data = await response.json();
       setCurrentField(data.field);
-      setHistory(data.history || []);
-      setTimeline(data.timeline || []);
-      setAliases(data.aliases || []);
+      setHistory(data.history ?? []);
+      setTimeline(data.timeline ?? []);
+      setAliases(data.aliases ?? []);
       setError(null);
     } catch (err: any) {
       setError(err.message);
@@ -294,7 +294,7 @@ export default function FieldRenameHistory({
                     {formatTimestamp(record.timestamp)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600 italic">
-                    {record.reason || '—'}
+                    {(record.reason !== '' && record.reason != null) ? record.reason : '—'}
                   </td>
                 </tr>
               ))}

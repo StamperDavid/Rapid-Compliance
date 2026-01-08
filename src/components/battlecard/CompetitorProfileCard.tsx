@@ -47,9 +47,9 @@ export function CompetitorProfileCard({ profile, className = '' }: CompetitorPro
 
       {/* Key Info Grid */}
       <div className="grid grid-cols-2 gap-4">
-        <InfoItem label="Industry" value={profile.industry || 'Unknown'} />
-        <InfoItem label="Size" value={profile.size || 'Unknown'} />
-        <InfoItem label="Location" value={profile.location || 'Unknown'} />
+        <InfoItem label="Industry" value={(profile.industry !== '' && profile.industry != null) ? profile.industry : 'Unknown'} />
+        <InfoItem label="Size" value={(profile.size !== '' && profile.size != null) ? profile.size : 'Unknown'} />
+        <InfoItem label="Location" value={(profile.location !== '' && profile.location != null) ? profile.location : 'Unknown'} />
         <InfoItem label="Pricing Model" value={profile.pricing.model} />
       </div>
 

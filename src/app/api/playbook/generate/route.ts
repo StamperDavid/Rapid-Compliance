@@ -121,7 +121,7 @@ function getCacheKey(request: any): string {
     request.organizationId,
     request.category,
     request.conversationType,
-    (request.sourceConversationIds || []).slice(0, 5).join(','),
+    (request.sourceConversationIds ?? []).slice(0, 5).join(','),
   ];
   return `playbook_${parts.join('_')}`;
 }

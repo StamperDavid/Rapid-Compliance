@@ -365,7 +365,7 @@ function buildNativeSequencePerformance(
     clickRate: totalDelivered > 0 ? (totalClicked / totalDelivered) * 100 : 0,
     replyRate: totalDelivered > 0 ? (totalReplied / totalDelivered) * 100 : 0,
     stepPerformance,
-    createdAt: data.createdAt?.toDate() || new Date(),
+    createdAt:data.createdAt?.toDate() ?? new Date(),
     lastExecutedAt: data.lastExecutedAt?.toDate(),
   };
 }

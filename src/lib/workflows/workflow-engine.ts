@@ -48,7 +48,7 @@ export async function executeWorkflowImpl(
   try {
     // Check conditions before executing
     if (workflow.conditions && workflow.conditions.length > 0) {
-      const conditionsMet = await evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator || 'and');
+      const conditionsMet = await evaluateConditions(workflow.conditions, triggerData,(workflow.conditionOperator !== '' && workflow.conditionOperator != null) ? workflow.conditionOperator : 'and');
       if (!conditionsMet) {
         execution.status = 'completed';
         execution.completedAt = new Date();
@@ -86,8 +86,8 @@ export async function executeWorkflowImpl(
     execution.completedAt = new Date();
 
     // Store execution in Firestore
-    const orgId = triggerData?.organizationId || (workflow as any).organizationId;
-    const workspaceId = triggerData?.workspaceId || (workflow as any).workspaceId;
+    const orgId = triggerData?.organizationId ?? (workflow as any).organizationId;
+    const workspaceId = triggerData?.workspaceId ?? (workflow as any).workspaceId;
     
     if (orgId && workspaceId) {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -171,7 +171,7 @@ async function executeAction(
   triggerData: any,
   workflow: Workflow
 ): Promise<any> {
-  const organizationId = triggerData?.organizationId || workflow.workspaceId;
+  const organizationId = triggerData?.organizationId ?? workflow.workspaceId;
   
   if (!organizationId) {
     throw new Error('Organization ID required for workflow execution');

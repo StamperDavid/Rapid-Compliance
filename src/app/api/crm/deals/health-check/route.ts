@@ -17,12 +17,17 @@ export async function POST(request: NextRequest) {
   try {
     // Get orgId and workspaceId from headers or body
     const body = await request.json().catch(() => ({}));
-    const organizationId =
-      body.organizationId ||
-      request.headers.get('x-organization-id') ||
-      'default-org';
-    const workspaceId =
-      body.workspaceId || request.headers.get('x-workspace-id') || 'default';
+    const orgIdFromBody = body.organizationId;
+    const orgIdFromHeader = request.headers.get('x-organization-id');
+    const organizationId = (orgIdFromBody !== '' && orgIdFromBody != null) ? orgIdFromBody 
+      : (orgIdFromHeader !== '' && orgIdFromHeader != null) ? orgIdFromHeader 
+      : 'default-org';
+    
+    const wsIdFromBody = body.workspaceId;
+    const wsIdFromHeader = request.headers.get('x-workspace-id');
+    const workspaceId = (wsIdFromBody !== '' && wsIdFromBody != null) ? wsIdFromBody 
+      : (wsIdFromHeader !== '' && wsIdFromHeader != null) ? wsIdFromHeader 
+      : 'default';
 
     logger.info('Running deal health check', {
       organizationId,
@@ -42,7 +47,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to run health check',
+        error:(error.message !== '' && error.message != null) ? error.message : 'Failed to run health check',
       },
       { status: 500 }
     );

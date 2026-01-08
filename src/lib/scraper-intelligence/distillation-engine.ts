@@ -173,7 +173,7 @@ function calculateSignalConfidence(
   // Boost confidence if keyword appears multiple times
   const occurrences = (fullContent.toLowerCase().match(
     new RegExp(matchedText.toLowerCase(), 'g')
-  ) || []).length;
+) ?? []).length;
 
   if (occurrences > 3) {
     confidence += 10;
@@ -574,7 +574,7 @@ export function getDistillationStats(signals: ExtractedSignal[]): {
   // Count signal occurrences
   const signalCounts = new Map<string, number>();
   for (const signal of signals) {
-    signalCounts.set(signal.signalId, (signalCounts.get(signal.signalId) || 0) + 1);
+    signalCounts.set(signal.signalId, (signalCounts.get(signal.signalId) ?? 0) + 1);
   }
 
   // Get top 10 signals

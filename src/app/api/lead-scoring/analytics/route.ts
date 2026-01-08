@@ -84,8 +84,8 @@ export async function GET(req: NextRequest) {
           ...data,
           metadata: {
             ...data.metadata,
-            scoredAt: (data.metadata.scoredAt as any)?.toDate?.() || new Date(data.metadata.scoredAt as any),
-            expiresAt: (data.metadata.expiresAt as any)?.toDate?.() || new Date(data.metadata.expiresAt as any),
+            scoredAt:(data.metadata.scoredAt as any)?.toDate?.() ?? new Date(data.metadata.scoredAt as any),
+            expiresAt:(data.metadata.expiresAt as any)?.toDate?.() ?? new Date(data.metadata.expiresAt as any),
           },
         };
       })

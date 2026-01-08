@@ -143,7 +143,7 @@ export async function createLead(
     const now = new Date();
 
     let enrichmentData = null;
-    let enrichedScore = data.score || 50;
+    let enrichedScore = data.score ?? 50;
 
     // Auto-enrich if enabled and company provided
     if (options.autoEnrich !== false && data.company) {
@@ -293,7 +293,7 @@ export async function updateLead(
           organizationId,
           workspaceId,
           leadId,
-          currentLead.score || 0,
+          currentLead.score ?? 0,
           updates.score,
           lead
         );
@@ -362,7 +362,7 @@ export async function enrichLead(
 
     // Update lead with enrichment data
     const updatedLead = await updateLead(organizationId, leadId, {
-      enrichmentData: enrichmentData || undefined,
+      enrichmentData: enrichmentData ?? undefined,
       score: calculateEnrichedScore(lead, enrichmentData),
       updatedAt: new Date(),
     }, workspaceId);

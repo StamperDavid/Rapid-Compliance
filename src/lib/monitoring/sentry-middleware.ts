@@ -37,7 +37,7 @@ function getRequestMetadata(request: NextRequest) {
   return {
     url: request.url,
     method: request.method,
-    ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+    ip:request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip'),
     userAgent: request.headers.get('user-agent'),
     referer: request.headers.get('referer'),
   };
@@ -60,8 +60,8 @@ export function withSentryMonitoring<T = any>(
 ) {
   return async (request: NextRequest, context?: T): Promise<NextResponse> => {
     const startTime = Date.now();
-    const route = options.routeName || new URL(request.url).pathname;
-    const operation = options.operationName || `${request.method} ${route}`;
+    const route =options.routeName ?? new URL(request.url).pathname;
+    const operation =(options.operationName !== '' && options.operationName != null) ? options.operationName : `${request.method} ${route}`;
 
     try {
       // Extract and set user context

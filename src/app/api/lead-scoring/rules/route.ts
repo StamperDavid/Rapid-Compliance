@@ -70,8 +70,8 @@ export async function GET(req: NextRequest) {
       const data = doc.data();
       return {
         ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
+        createdAt:data.createdAt?.toDate() ?? new Date(),
+        updatedAt:data.updatedAt?.toDate() ?? new Date(),
       } as ScoringRules;
     });
 

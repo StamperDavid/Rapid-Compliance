@@ -91,7 +91,7 @@ export default function DuplicateWarning({
                     {match.record.name && ` - ${match.record.name}`}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {match.record.email || match.record.phone || match.record.company || 'No contact info'}
+                    {(match.record.email || match.record.phone || match.record.company !== '' && match.record.email || match.record.phone || match.record.company != null) ? match.record.email ?? match.record.phone ?? match.record.company: 'No contact info'}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function DuplicateWarning({
                     {match.record.name && ` - ${match.record.name}`}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {match.record.email || match.record.phone || match.record.company || 'No contact info'}
+                    {(match.record.email || match.record.phone || match.record.company !== '' && match.record.email || match.record.phone || match.record.company != null) ? match.record.email ?? match.record.phone ?? match.record.company: 'No contact info'}
                   </div>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(match.confidence)}`}>

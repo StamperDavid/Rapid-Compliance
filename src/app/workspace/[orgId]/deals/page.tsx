@@ -84,7 +84,7 @@ export default function DealsPage() {
           <div className="grid grid-cols-6 gap-4">
             {DEAL_STAGES.map(stage => {
               const stageDeals = getDealsByStage(stage);
-              const stageValue = stageDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+              const stageValue = stageDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
               
               return (
                 <div key={stage} className="bg-gray-900 rounded-lg p-4">

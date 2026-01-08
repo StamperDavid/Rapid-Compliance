@@ -62,12 +62,12 @@ export async function scrapeWebsite(url: string): Promise<ScrapedContent> {
       ogDescription: $('meta[property="og:description"]').attr('content'),
     };
     
-    const title = $('title').text() || metadata.ogTitle || '';
-    const description = $('meta[name="description"]').attr('content') || metadata.ogDescription || '';
+    const title = $('title').text() || metadata.ogTitle ?? '';
+    const description =$('meta[name="description"]').attr('content') ?? metadata.ogDescription ?? '';
     
     // LAYER 2: Extract main content
     // Try to find the main content area
-    const mainContent = $('main').html() || $('article').html() || $('body').html() || '';
+    const mainContent =$('main').html() ?? $('article').html() ?? $('body').html() ?? '';
     
     // Convert to clean text
     const $content = cheerio.load(mainContent);

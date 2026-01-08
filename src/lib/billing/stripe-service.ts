@@ -8,7 +8,7 @@ import type { SubscriptionTier} from '@/types/subscription';
 import { VOLUME_TIERS, TIER_PRICING, ALL_INCLUSIVE_FEATURES } from '@/types/subscription';
 
 // Use placeholder during build, validate at runtime
-const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
+const stripeKey =(process.env.STRIPE_SECRET_KEY !== '' && process.env.STRIPE_SECRET_KEY != null) ? process.env.STRIPE_SECRET_KEY : 'sk_test_placeholder';
 
 const stripe = new Stripe(stripeKey, {
   apiVersion: '2023-10-16',
@@ -198,7 +198,7 @@ export async function updateSubscriptionTier(
       ...subscription.metadata,
       tierId: newTierId,
       tier: tier.name,
-      recordCount: recordCount?.toString() || subscription.metadata?.recordCount,
+      recordCount: recordCount?.toString() ?? subscription.metadata?.recordCount,
       recordCapacityMin: tier.recordCapacity.min.toString(),
       recordCapacityMax: tier.recordCapacity.max.toString(),
       lastTierUpdate: new Date().toISOString(),
@@ -348,7 +348,7 @@ export async function recordUsage(
   
   // Get current usage
   const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-  const currentUsage = org?.usage?.[metric] || 0;
+  const currentUsage = org?.usage?.[metric] ?? 0;
   
   // Update usage
   await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, {

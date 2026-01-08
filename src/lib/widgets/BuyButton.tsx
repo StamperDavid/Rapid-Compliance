@@ -34,10 +34,10 @@ export function BuyButton({
 }: BuyButtonProps) {
   const [loading, setLoading] = useState(false);
 
-  const primaryColor = theme?.primaryColor || '#6366f1';
-  const borderRadius = theme?.borderRadius || '0.375rem';
-  const fontFamily = theme?.fontFamily || 'system-ui, sans-serif';
-  const size = theme?.size || 'medium';
+  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
+  const borderRadius = theme?(.borderRadius !== '' && .borderRadius != null) ? .borderRadius : '0.375rem';
+  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
+  const size = theme?(.size !== '' && .size != null) ? .size : 'medium';
 
   const sizes = {
     small: { padding: '0.5rem 1rem', fontSize: '0.875rem' },

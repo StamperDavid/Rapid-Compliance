@@ -42,8 +42,8 @@ export default function ABTestResultsPage() {
           <div key={idx} className="bg-gray-900 rounded-lg p-6">
             <h3 className="text-xl font-semibold mb-4">Variant {variant.name}</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-gray-400">Impressions</span><span className="font-semibold">{variant.impressions || 0}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">Conversions</span><span className="font-semibold text-green-400">{variant.conversions || 0}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Impressions</span><span className="font-semibold">{variant.impressions ?? 0}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Conversions</span><span className="font-semibold text-green-400">{variant.conversions ?? 0}</span></div>
               <div className="flex justify-between"><span className="text-gray-400">Conversion Rate</span><span className="font-semibold">{variant.impressions > 0 ? ((variant.conversions / variant.impressions) * 100).toFixed(2) : 0}%</span></div>
             </div>
           </div>

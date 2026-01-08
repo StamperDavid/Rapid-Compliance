@@ -161,7 +161,7 @@ export default function DealDetailPage() {
           {/* Notes */}
           <div className="bg-gray-900 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Notes</h2>
-            <div className="bg-gray-800 rounded p-4 text-gray-300">{deal.notes || 'No notes yet.'}</div>
+            <div className="bg-gray-800 rounded p-4 text-gray-300">{(deal.notes !== '' && deal.notes != null) ? deal.notes : 'No notes yet.'}</div>
           </div>
         </div>
 

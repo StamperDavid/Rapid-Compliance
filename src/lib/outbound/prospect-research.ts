@@ -150,7 +150,7 @@ async function getCompanyInfo(companyName: string, orgId: string): Promise<Compa
         website: data.website,
         domain: data.domain,
         industry: data.industry,
-        size: data.employeeRange || data.size,
+        size:data.employeeRange ?? data.size,
         description: data.description,
         location: data.headquarters?.city && data.headquarters?.state
           ? `${data.headquarters.city}, ${data.headquarters.state}`
@@ -270,7 +270,7 @@ async function getSocialPresence(companyName: string, orgId: string): Promise<So
     const linkedinUrl = await searchLinkedIn(companyName);
     
     return {
-      linkedin: linkedinUrl || dataPoints.socialLinks.find(link => link.includes('linkedin.com')),
+      linkedin:linkedinUrl ?? dataPoints.socialLinks.find(link => link.includes('linkedin.com')),
       twitter: dataPoints.socialLinks.find(link => link.includes('twitter.com') || link.includes('x.com')),
       facebook: dataPoints.socialLinks.find(link => link.includes('facebook.com')),
     };
@@ -374,7 +374,7 @@ export function generatePersonalizationTokens(
     lastName: prospect.name.split(' ').slice(1).join(' '),
     fullName: prospect.name,
     company: research.companyInfo.name,
-    title: prospect.title || 'there',
+    title:(prospect.title !== '' && prospect.title != null) ? prospect.title : 'there',
     industry: research.companyInfo.industry,
     companySize: research.companyInfo.size,
     recentNews: research.recentNews[0]?.title || '',

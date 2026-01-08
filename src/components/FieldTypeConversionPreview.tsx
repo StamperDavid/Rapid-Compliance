@@ -69,7 +69,7 @@ export default function FieldTypeConversionPreview({
 
       const data = await response.json();
       setIsSafe(data.isSafe);
-      setPreview(data.preview || []);
+      setPreview(data.preview ?? []);
       setTotalRecords(data.totalRecords);
       setEstimatedSuccess(data.estimatedSuccess);
       setEstimatedFailures(data.estimatedFailures);

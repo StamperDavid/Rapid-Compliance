@@ -24,7 +24,7 @@ export default function PreviewPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const token = params.token as string;
-  const breakpoint = searchParams.get('breakpoint') || 'desktop';
+  const breakpoint =(searchParams.get('breakpoint') !== '' && searchParams.get('breakpoint') != null) ? searchParams.get('breakpoint') : 'desktop';
 
   const [page, setPage] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,7 @@ export default function PreviewPage() {
       
       if (!tokenResponse.ok) {
         const errorData = await tokenResponse.json();
-        throw new Error(errorData.error || 'Invalid preview token');
+        throw new Error((errorData.error !== '' && errorData.error != null) ? errorData.error : 'Invalid preview token');
       }
 
       const tokenData = await tokenResponse.json();
@@ -57,14 +57,14 @@ export default function PreviewPage() {
 
       if (!pageResponse.ok) {
         const errorData = await pageResponse.json();
-        throw new Error(errorData.error || 'Failed to load preview');
+        throw new Error((errorData.error !== '' && errorData.error != null) ? errorData.error : 'Failed to load preview');
       }
 
       const pageData = await pageResponse.json();
       setPage(pageData.page);
     } catch (err: any) {
       console.error('[Preview] Error:', err);
-      setError(err.message || 'Failed to load preview');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load preview');
     } finally {
       setLoading(false);
     }
@@ -260,18 +260,18 @@ export default function PreviewPage() {
             {page.content && page.content.length > 0 ? (
               page.content.map((section: any, idx: number) => (
                 <div
-                  key={section.id || idx}
+                  key={section.id ?? idx}
                   style={{
                     marginBottom: '32px',
-                    padding: section.padding?.top || '20px',
-                    backgroundColor: section.backgroundColor || 'transparent',
+                    padding: section.padding?(.top !== '' && .top != null) ? .top : '20px',
+                    backgroundColor:(section.backgroundColor !== '' && section.backgroundColor != null) ? section.backgroundColor : 'transparent',
                   }}
                 >
                   {section.columns?.map((column: any, colIdx: number) => (
-                    <div key={column.id || colIdx}>
+                    <div key={column.id ?? colIdx}>
                       {column.widgets?.map((widget: any, widgetIdx: number) => (
                         <div
-                          key={widget.id || widgetIdx}
+                          key={widget.id ?? widgetIdx}
                           style={{
                             marginBottom: '16px',
                             ...widget.style,
@@ -307,14 +307,14 @@ function renderWidget(widget: any) {
             color: '#111827',
           }}
         >
-          {widget.data.text || 'Heading'}
+          {(widget.data.text !== '' && widget.data.text != null) ? widget.data.text : 'Heading'}
         </div>
       );
     
     case 'text':
       return (
         <p style={{ color: '#374151', lineHeight: '1.6' }}>
-          {widget.data.content || 'Text content'}
+          {(widget.data.content !== '' && widget.data.content != null) ? widget.data.content : 'Text content'}
         </p>
       );
     
@@ -323,7 +323,7 @@ function renderWidget(widget: any) {
         <button
           style={{
             padding: '12px 24px',
-            backgroundColor: widget.data.color || '#3b82f6',
+            backgroundColor:(widget.data.color !== '' && widget.data.color != null) ? widget.data.color : '#3b82f6',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -332,15 +332,15 @@ function renderWidget(widget: any) {
             cursor: 'pointer',
           }}
         >
-          {widget.data.text || 'Button'}
+          {(widget.data.text !== '' && widget.data.text != null) ? widget.data.text : 'Button'}
         </button>
       );
     
     case 'image':
       return (
         <img
-          src={widget.data.src || 'https://via.placeholder.com/800x400'}
-          alt={widget.data.alt || 'Image'}
+          src={(widget.data.src !== '' && widget.data.src != null) ? widget.data.src : 'https://via.placeholder.com/800x400'}
+          alt={(widget.data.alt !== '' && widget.data.alt != null) ? widget.data.alt : 'Image'}
           style={{
             width: '100%',
             height: 'auto',

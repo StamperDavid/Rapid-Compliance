@@ -116,7 +116,7 @@ export async function getActivities(
     const result = await FirestoreService.getAllPaginated<Activity>(
       `organizations/${organizationId}/workspaces/${workspaceId}/activities`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 
@@ -234,7 +234,7 @@ export async function getActivityStats(
     const activitiesByType: Partial<Record<ActivityType, number>> = {};
     
     activities.forEach(activity => {
-      activitiesByType[activity.type] = (activitiesByType[activity.type] || 0) + 1;
+      activitiesByType[activity.type] = (activitiesByType[activity.type] ?? 0) + 1;
     });
 
     // Find most common type

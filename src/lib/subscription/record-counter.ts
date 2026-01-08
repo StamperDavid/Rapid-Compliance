@@ -90,7 +90,7 @@ export class RecordCounter {
         'current'
       );
       
-      return subscription?.recordCount || 0;
+      return subscription?.recordCount ?? 0;
     } catch (error) {
       logger.error('[RecordCounter] Error getting cached count:', error);
       return 0;

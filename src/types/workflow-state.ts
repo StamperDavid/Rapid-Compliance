@@ -128,7 +128,7 @@ export function updateWorkflowState(
     error: updates.error,
     retryCount: updates.status === 'failed' ? current.retryCount + 1 : current.retryCount,
     nextProcessAt: current.nextProcessAt,
-    history: [...(current.history || []), historyEntry].slice(-10), // Keep last 10 entries
+    history: [...(current.history ?? []), historyEntry].slice(-10), // Keep last 10 entries
   };
 }
 

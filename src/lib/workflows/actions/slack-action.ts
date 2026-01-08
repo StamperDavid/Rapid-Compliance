@@ -54,7 +54,7 @@ export async function executeSlackAction(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
       'slack'
     );
-    slackToken = (integration as any)?.accessToken || (integration as any)?.token;
+    slackToken = (integration as any)?.accessToken ?? (integration as any)?.token;
   } catch {
     // No integration found
   }
@@ -113,7 +113,7 @@ export async function executeSlackAction(
   const result = await response.json();
 
   if (!result.ok) {
-    throw new Error(`Slack API error: ${result.error || 'Unknown error'}`);
+    throw new Error(`Slack API error: ${(result.error !== '' && result.error != null) ? result.error : 'Unknown error'}`);
   }
 
   return {

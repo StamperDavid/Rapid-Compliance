@@ -45,7 +45,7 @@ export default function BlogManagementPage() {
       if (!response.ok) {throw new Error('Failed to load posts');}
       
       const data = await response.json();
-      setPosts(data.posts || []);
+      setPosts(data.posts ?? []);
     } catch (error) {
       console.error('[Blog] Load error:', error);
       alert('Failed to load blog posts');
@@ -60,7 +60,7 @@ export default function BlogManagementPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        setCategories(data.categories ?? []);
       }
     } catch (error) {
       console.error('[Blog] Load categories error:', error);

@@ -120,14 +120,14 @@ export async function POST(request: NextRequest) {
     // }
 
     const performedBy = await getUserIdentifier();
-    const pageId = page.id || `page_${Date.now()}`;
+    const pageId =(page.id !== '' && page.id != null) ? page.id : `page_${Date.now()}`;
 
     // CRITICAL: Force organizationId to match the authenticated org
     const pageData = {
       ...page,
       id: pageId,
       organizationId, // ← Force correct organizationId
-      status: page.status || 'draft',
+      status:(page.status !== '' && page.status != null) ? page.status : 'draft',
       content: page.content ?? [],
       seo: page.seo ?? {},
       version: 1,

@@ -76,7 +76,7 @@ function RepRow({ rep }: { rep: SalesRep }) {
         <div className="flex items-center gap-2">
           <div className="font-medium text-gray-900">{rep.name}</div>
           <Badge variant={rep.isAvailable ? 'default' : 'destructive'} className="text-xs">
-            {rep.availabilityStatus || (rep.isAvailable ? 'Available' : 'Unavailable')}
+            {rep.availabilityStatus ?? (rep.isAvailable ? 'Available' : 'Unavailable')}
           </Badge>
           <Badge variant={getPerformanceBadgeVariant(rep.performanceTier)} className="text-xs">
             {formatPerformanceTier(rep.performanceTier)}

@@ -739,7 +739,7 @@ async function logTrainingHistory(
     newValue: params.newValue,
     reason: params.reason,
     changedAt: now,
-    version: params.newValue?.version || params.previousValue?.version || 1,
+    version:params.newValue?.version ?? params.previousValue?.version ?? 1,
   };
 
   const ref = db.collection(TRAINING_HISTORY_COLLECTION).doc(historyId);
@@ -878,7 +878,7 @@ export async function rollbackTrainingData(
         changeType: 'updated',
         previousValue: currentData,
         newValue: rolledBackData,
-        reason: reason || `Rollback to version ${targetVersion}`,
+        reason:(reason !== '' && reason != null) ? reason : `Rollback to version ${targetVersion}`,
       });
     });
 
@@ -1047,7 +1047,7 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
     ).length;
 
     const confidenceSum = trainingDocs.docs.reduce(
-      (sum, doc) => sum + (doc.data().confidence || 0),
+      (sum, doc) => sum + (doc.data().confidence ?? 0),
       0
     );
     const averageConfidence =

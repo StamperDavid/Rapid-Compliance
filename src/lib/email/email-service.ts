@@ -122,7 +122,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Failed to send email',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to send email',
       provider,
     };
   }
@@ -133,8 +133,8 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
  */
 async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromEmail = options.from || credentials.fromEmail || 'noreply@example.com';
-  const fromName = options.fromName || credentials.fromName || 'AI Sales Platform';
+  const fromEmail =(options.from || credentials.fromEmail !== '' && options.from || credentials.fromEmail != null) ? options.from ?? credentials.fromEmail: 'noreply@example.com';
+  const fromName =(options.fromName || credentials.fromName !== '' && options.fromName || credentials.fromName != null) ? options.fromName ?? credentials.fromName: 'AI Sales Platform';
 
   const payload: any = {
     personalizations: recipients.map(to => ({
@@ -174,7 +174,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
     payload.attachments = options.attachments.map(att => ({
       content: typeof att.content === 'string' ? att.content : att.content.toString('base64'),
       filename: att.filename,
-      type: att.contentType || 'application/octet-stream',
+      type:(att.contentType !== '' && att.contentType != null) ? att.contentType : 'application/octet-stream',
       disposition: 'attachment',
     }));
   }
@@ -197,7 +197,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
     };
   }
 
-  const messageId = response.headers.get('x-message-id') || `sg_${Date.now()}`;
+  const messageId =(response.headers.get('x-message-id') !== '' && response.headers.get('x-message-id') != null) ? response.headers.get('x-message-id') : `sg_${Date.now()}`;
   
   // Store tracking mapping if tracking is enabled
   const orgId = options.metadata?.organizationId;
@@ -230,7 +230,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
  */
 async function sendViaResend(options: EmailOptions, credentials: any): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromEmail = options.from || credentials.fromEmail || 'noreply@example.com';
+  const fromEmail =(options.from || credentials.fromEmail !== '' && options.from || credentials.fromEmail != null) ? options.from ?? credentials.fromEmail: 'noreply@example.com';
 
   const payload: any = {
     from: fromEmail,
@@ -281,7 +281,7 @@ async function sendViaResend(options: EmailOptions, credentials: any): Promise<E
     const error = await response.json();
     return {
       success: false,
-      error: `Resend error: ${error.message || JSON.stringify(error)}`,
+      error: `Resend error: ${error.message ?? JSON.stringify(error)}`,
       provider: 'resend',
     };
   }
@@ -338,7 +338,7 @@ async function sendViaSMTP(options: EmailOptions, credentials: any): Promise<Ema
     const error = await response.json();
     return {
       success: false,
-      error: error.error || 'SMTP send failed',
+      error:(error.error !== '' && error.error != null) ? error.error : 'SMTP send failed',
       provider: 'smtp',
     };
   }
@@ -364,7 +364,7 @@ function addTrackingPixel(
   if (!trackOpens) {return { html };}
   
   // Use messageId as trackingId if provided, otherwise generate one
-  const trackingId = messageId || `track_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const trackingId =(messageId !== '' && messageId != null) ? messageId : `track_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/email/track/${trackingId}`;
   
   // Store tracking mapping in Firestore if we have organizationId
@@ -482,7 +482,7 @@ export async function recordEmailOpen(
       emailId: messageId,
       opened: true,
       openedAt: new Date().toISOString(),
-      clicked: existing?.clicked || false,
+      clicked: existing?.clicked ?? false,
       clickLinks: existing?.clickLinks ?? [],
       ipAddress,
       userAgent,
@@ -521,10 +521,10 @@ export async function recordEmailClick(
     messageId,
     {
       emailId: messageId,
-      opened: existing?.opened || false,
+      opened: existing?.opened ?? false,
       openedAt: existing?.openedAt,
       clicked: true,
-      clickedAt: existing?.clickedAt || new Date().toISOString(),
+      clickedAt:existing?.clickedAt ?? new Date().toISOString(),
       clickLinks,
       ipAddress,
       userAgent,

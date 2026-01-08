@@ -204,7 +204,7 @@ async function getCrunchbaseApiKey(organizationId: string): Promise<string | nul
 
     // Try organization API keys
     const keys = await apiKeyService.getKeys(organizationId);
-    return keys?.enrichment?.crunchbaseApiKey || null;
+    return keys?.enrichment?.crunchbaseApiKey ?? null;
   } catch (error) {
     logger.error('[Crunchbase] Error getting API key:', error, { file: 'crunchbase-service.ts' });
     return null;

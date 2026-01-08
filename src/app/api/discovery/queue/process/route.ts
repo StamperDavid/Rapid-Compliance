@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     
     const config = {
-      batchSize: body.batchSize || 10,
-      concurrency: body.concurrency || 3,
-      maxRetries: body.maxRetries || 3,
-      delayMs: body.delayMs || 2000,
+      batchSize: body.batchSize ?? 10,
+      concurrency: body.concurrency ?? 3,
+      maxRetries: body.maxRetries ?? 3,
+      delayMs: body.delayMs ?? 2000,
       organizationId: body.organizationId,
     };
 

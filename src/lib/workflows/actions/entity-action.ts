@@ -58,15 +58,15 @@ export async function executeCreateEntityAction(
         break;
       case 'trigger':
         // Use field resolver to get value with flexible matching
-        value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
+        value = FieldResolver.getFieldValue(triggerData, mapping.sourceField ?? '');
         break;
       case 'variable': {
         // Get from workflow variables stored in triggerData._variables
-        const variables = (triggerData?._variables || triggerData?.variables) ?? {};
-        value = FieldResolver.getFieldValue(variables, mapping.sourceField || '');
+        const variables = (triggerData?._variables ?? triggerData?.variables) ?? {};
+        value = FieldResolver.getFieldValue(variables, mapping.sourceField ?? '');
         // Fallback to trigger data if not found in variables
         if (value === undefined) {
-          value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
+          value = FieldResolver.getFieldValue(triggerData, mapping.sourceField ?? '');
         }
         break;
       }
@@ -75,7 +75,7 @@ export async function executeCreateEntityAction(
         value = await generateWithAI({
           organizationId,
           field: resolvedTarget.fieldKey,
-          prompt: mapping.aiPrompt || `Generate a value for field "${resolvedTarget.fieldLabel}"`,
+          prompt:(mapping.aiPrompt !== '' && mapping.aiPrompt != null) ? mapping.aiPrompt : `Generate a value for field "${resolvedTarget.fieldLabel}"`,
           context: triggerData,
         });
         break;
@@ -92,7 +92,7 @@ export async function executeCreateEntityAction(
     entityData[resolvedTarget.fieldKey] = value;
   }
   
-  const entityName = (schema as any).name || action.schemaId;
+  const entityName =(schema as any).name ?? action.schemaId;
   const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
   
   const recordId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -133,7 +133,7 @@ export async function executeUpdateEntityAction(
   let recordIds: string[] = [];
   
   if (action.targetRecord === 'trigger') {
-    const triggerRecordId = triggerData?.recordId || triggerData?.id;
+    const triggerRecordId = triggerData?.recordId ?? triggerData?.id;
     if (!triggerRecordId) {
       throw new Error('No record ID in trigger data');
     }
@@ -180,7 +180,7 @@ export async function executeUpdateEntityAction(
         value = mapping.staticValue;
         break;
       case 'trigger':
-        value = FieldResolver.getFieldValue(triggerData, mapping.sourceField || '');
+        value = FieldResolver.getFieldValue(triggerData, mapping.sourceField ?? '');
         break;
       default:
         value = null;
@@ -238,7 +238,7 @@ export async function executeDeleteEntityAction(
   let recordIds: string[] = [];
   
   if (action.targetRecord === 'trigger') {
-    const triggerRecordId = triggerData?.recordId || triggerData?.id;
+    const triggerRecordId = triggerData?.recordId ?? triggerData?.id;
     if (!triggerRecordId) {
       throw new Error('No record ID in trigger data');
     }
@@ -289,7 +289,7 @@ export async function executeEntityAction(
   triggerData: any,
   organizationId: string
 ): Promise<any> {
-  const workspaceId = triggerData?.workspaceId || (action as any).workspaceId;
+  const workspaceId = triggerData?.workspaceId ?? (action as any).workspaceId;
   if (!workspaceId) {
     throw new Error('Workspace ID required for entity actions');
   }

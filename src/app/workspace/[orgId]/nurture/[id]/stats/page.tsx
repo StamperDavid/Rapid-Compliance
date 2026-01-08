@@ -38,10 +38,10 @@ export default function NurtureCampaignStatsPage() {
         <p className="text-gray-400">{campaign.description}</p>
       </div>
       <div className="grid grid-cols-4 gap-4">
-        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1">{campaign.enrolled || 0}</div><div className="text-sm text-gray-400">Enrolled</div></div>
-        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1 text-green-400">{campaign.completed || 0}</div><div className="text-sm text-gray-400">Completed</div></div>
-        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1 text-blue-400">{campaign.active || 0}</div><div className="text-sm text-gray-400">Active</div></div>
-        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1 text-yellow-400">{campaign.converted || 0}</div><div className="text-sm text-gray-400">Converted</div></div>
+        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1">{campaign.enrolled ?? 0}</div><div className="text-sm text-gray-400">Enrolled</div></div>
+        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1 text-green-400">{campaign.completed ?? 0}</div><div className="text-sm text-gray-400">Completed</div></div>
+        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1 text-blue-400">{campaign.active ?? 0}</div><div className="text-sm text-gray-400">Active</div></div>
+        <div className="bg-gray-900 rounded-lg p-6"><div className="text-2xl font-bold mb-1 text-yellow-400">{campaign.converted ?? 0}</div><div className="text-sm text-gray-400">Converted</div></div>
       </div>
     </div>
   );

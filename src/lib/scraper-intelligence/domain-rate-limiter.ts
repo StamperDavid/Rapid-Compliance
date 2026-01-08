@@ -119,7 +119,7 @@ export class DomainBasedRateLimiter implements DomainRateLimiter {
 
     // Check minimum delay since last request
     const timeSinceLastRequest = now - window.lastRequestAt;
-    const minDelayMs = this.config.minDelayMs || 0;
+    const minDelayMs = this.config.minDelayMs ?? 0;
     
     if (timeSinceLastRequest < minDelayMs) {
       const delayNeeded = minDelayMs - timeSinceLastRequest;

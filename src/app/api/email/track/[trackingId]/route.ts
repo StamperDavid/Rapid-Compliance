@@ -39,10 +39,14 @@ export async function GET(
       });
     }
 
-    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
+    const ipAddress = (() => {
+      const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0];
+      const realIp = request.headers.get('x-real-ip');
+      return (forwarded !== '' && forwarded != null) ? forwarded 
+        : (realIp !== '' && realIp != null) ? realIp 
+        : 'unknown';
+    })();
+    const userAgent =(request.headers.get('user-agent') !== '' && request.headers.get('user-agent') != null) ? request.headers.get('user-agent') : 'unknown';
 
     // Look up tracking mapping to get organizationId and messageId
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');

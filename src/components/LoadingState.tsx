@@ -37,7 +37,7 @@ export function LoadingButton({
   return (
     <button
       onClick={onClick}
-      disabled={disabled || loading}
+      disabled={disabled ?? loading}
       style={{
         opacity: loading || disabled ? 0.6 : 1,
         cursor: loading || disabled ? 'not-allowed' : 'pointer',

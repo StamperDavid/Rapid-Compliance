@@ -53,10 +53,10 @@ export default function AuditLogPage() {
       }
 
       const data = await response.json();
-      setEntries(data.entries || []);
+      setEntries(data.entries ?? []);
     } catch (err: any) {
       console.error('[Audit Log] Error:', err);
-      setError(err.message || 'Failed to load audit log');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load audit log');
     } finally {
       setLoading(false);
     }

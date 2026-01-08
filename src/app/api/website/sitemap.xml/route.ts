@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
 function generateSitemapXML(pages: Page[], baseUrl: string): string {
   const urls = pages.map((page) => {
-    const lastmod = page.publishedAt || page.updatedAt || new Date().toISOString();
+    const lastmod =page.publishedAt ?? page.updatedAt|| new Date().toISOString();
     const priority = page.slug === 'home' || page.slug === '' ? '1.0' : '0.8';
     
     return `  <url>

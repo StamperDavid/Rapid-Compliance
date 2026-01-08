@@ -92,8 +92,8 @@ const cache = new Map<string, CacheEntry>();
 function getCacheKey(request: PerformanceAnalyticsRequest): string {
   const parts = [
     request.organizationId,
-    request.workspaceId || 'default',
-    request.periodType || 'month',
+(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
+(request.periodType !== '' && request.periodType != null) ? request.periodType : 'month',
     request.startDate?.toString() ?? '',
     request.endDate?.toString() ?? '',
     request.repIds?.join(',') ?? '',

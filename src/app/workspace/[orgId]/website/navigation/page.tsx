@@ -58,14 +58,14 @@ export default function NavigationManagementPage() {
       const pagesResponse = await fetch(`/api/website/pages?organizationId=${orgId}`);
       if (pagesResponse.ok) {
         const pagesData = await pagesResponse.json();
-        setPages(pagesData.pages || []);
+        setPages(pagesData.pages ?? []);
       }
 
       // Load site settings to get homepage
       const settingsResponse = await fetch(`/api/website/settings?organizationId=${orgId}`);
       if (settingsResponse.ok) {
         const settingsData = await settingsResponse.json();
-        setHomepage(settingsData.settings?.homepage || '');
+        setHomepage(settingsData.settings?.homepage ?? '');
       }
     } catch (error) {
       console.error('[Navigation] Load error:', error);

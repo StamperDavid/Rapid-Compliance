@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     });
     
     // 4. Generate plain text version if not provided
-    const plainTextBody = validData.bodyPlain || stripHTML(htmlBody);
+    const plainTextBody =validData.bodyPlain ?? stripHTML(htmlBody);
     
     // 5. Send email
     logger.info('Sending sales email', {
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Failed to send email',
+          error:(result.error !== '' && result.error != null) ? result.error : 'Failed to send email',
           deliveryId: result.deliveryId,
         },
         { status: 500 }

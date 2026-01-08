@@ -169,7 +169,7 @@ export async function PUT(
       id: params.pageId,
       updatedAt: FieldValue.serverTimestamp(),
       lastEditedBy: performedBy,
-      version: (existingData.version || 1) + 1,
+      version: (existingData.version ?? 1) + 1,
     };
 
     await pageRef.set(updatedData, { merge: true });

@@ -37,7 +37,7 @@ export function collectWebVitals(callback: (metrics: PerformanceMetrics) => void
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1] as any;
-        metrics.lcp = lastEntry.renderTime || lastEntry.loadTime;
+        metrics.lcp =lastEntry.renderTime ?? lastEntry.loadTime;
         callback(metrics);
       });
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });

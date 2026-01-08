@@ -69,7 +69,7 @@ export class CoachingAnalyticsEngine {
       }
       
       const repData = repDoc.data();
-      const repName = repData?.name || 'Unknown';
+      const repName = repData?(.name !== '' && .name != null) ? .name : 'Unknown';
       const repEmail = repData?.email ?? '';
       
       // Fetch all metrics in parallel

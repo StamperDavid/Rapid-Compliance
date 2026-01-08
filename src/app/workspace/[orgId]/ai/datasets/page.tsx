@@ -62,7 +62,7 @@ export default function DatasetsPage() {
               <div key={dataset.id} className="bg-gray-900 rounded-lg p-6">
                 <h3 className="text-xl font-semibold mb-2">{dataset.name}</h3>
                 <div className="flex gap-4 text-sm text-gray-400">
-                  <span>{dataset.exampleCount || 0} examples</span><span>•</span><span>Created {dataset.createdAt ? new Date(dataset.createdAt.toDate()).toLocaleDateString() : 'N/A'}</span>
+                  <span>{dataset.exampleCount ?? 0} examples</span><span>•</span><span>Created {dataset.createdAt ? new Date(dataset.createdAt.toDate()).toLocaleDateString() : 'N/A'}</span>
                 </div>
               </div>
             ))}

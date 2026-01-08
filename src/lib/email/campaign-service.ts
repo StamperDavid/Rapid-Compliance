@@ -80,7 +80,7 @@ export async function getCampaigns(
     const result = await FirestoreService.getAllPaginated<EmailCampaign>(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailCampaigns`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 
@@ -262,7 +262,7 @@ export async function sendCampaign(
 
     // Get updated campaign to retrieve sent count
     const updatedCampaign = await getCampaign(organizationId, campaignId);
-    const sentCount = updatedCampaign?.stats?.sent || 0;
+    const sentCount = updatedCampaign?.stats?.sent ?? 0;
 
     logger.info('Campaign sent', {
       organizationId,

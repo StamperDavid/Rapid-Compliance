@@ -93,7 +93,7 @@ async function processEvent(event: SendGridWebhookEvent): Promise<void> {
 
     case 'bounce':
     case 'dropped': {
-      const bounceReason = event.reason || event.type || 'Unknown';
+      const bounceReason =(event.reason || event.type !== '' && event.reason || event.type != null) ? event.reason ?? event.type: 'Unknown';
       logger.warn('Email bounced', { 
         route: '/api/webhooks/email', 
         enrollmentId, 

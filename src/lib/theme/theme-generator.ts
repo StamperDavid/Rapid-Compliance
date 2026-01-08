@@ -73,11 +73,11 @@ export class ThemeGenerator {
 
     switch (gradient.type) {
       case 'linear':
-        return `linear-gradient(${gradient.angle || 180}deg, ${stops})`;
+        return `linear-gradient(${gradient.angle ?? 180}deg, ${stops})`;
       case 'radial':
-        return `radial-gradient(circle at ${gradient.position || 'center'}, ${stops})`;
+        return `radial-gradient(circle at ${(gradient.position !== '' && gradient.position != null) ? gradient.position : 'center'}, ${stops})`;
       case 'conic':
-        return `conic-gradient(from ${gradient.angle || 0}deg at ${gradient.position || 'center'}, ${stops})`;
+        return `conic-gradient(from ${gradient.angle ?? 0}deg at ${(gradient.position !== '' && gradient.position != null) ? gradient.position : 'center'}, ${stops})`;
       default:
         return stops;
     }

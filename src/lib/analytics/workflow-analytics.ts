@@ -80,8 +80,8 @@ export async function getWorkflowAnalytics(
   const executionTimes = executions
     .filter((e: any) => e.completedAt && e.startedAt)
     .map((e: any) => {
-      const started = e.startedAt.toDate?.() || new Date(e.startedAt);
-      const completed = e.completedAt.toDate?.() || new Date(e.completedAt);
+      const started =e.startedAt.toDate?.() ?? new Date(e.startedAt);
+      const completed =e.completedAt.toDate?.() ?? new Date(e.completedAt);
       return completed.getTime() - started.getTime();
     });
   
@@ -94,7 +94,7 @@ export async function getWorkflowAnalytics(
   
   // Calculate total actions
   const totalActionsExecuted = executions.reduce((sum, e: any) => {
-    return sum + (e.actionResults?.length || 0);
+    return sum + (e.actionResults?.length ?? 0);
   }, 0);
   
   const averageActionsPerExecution = totalExecutions > 0
@@ -106,7 +106,7 @@ export async function getWorkflowAnalytics(
   
   return {
     workflowId,
-    workflowName: (workflow as any).name || 'Unknown',
+    workflowName:((workflow as any).name !== '' && (workflow as any).name != null) ? (workflow as any).name : 'Unknown',
     period: `${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`,
     totalExecutions,
     successfulExecutions,
@@ -129,14 +129,14 @@ function calculateActionBreakdown(executions: any[]): any[] {
   executions.forEach((execution: any) => {
     const results = execution.actionResults ?? [];
     results.forEach((result: any) => {
-      const actionType = result.actionType || 'unknown';
+      const actionType =(result.actionType !== '' && result.actionType != null) ? result.actionType : 'unknown';
       const existing = actionMap.get(actionType) ?? { count: 0, success: 0, totalTime: 0, times: [] };
       
       actionMap.set(actionType, {
         count: existing.count + 1,
         success: existing.success + (result.status === 'success' ? 1 : 0),
-        totalTime: existing.totalTime + (result.duration || 0),
-        times: [...existing.times, result.duration || 0],
+        totalTime: existing.totalTime + (result.duration ?? 0),
+        times: [...existing.times, result.duration ?? 0],
       });
     });
   });
@@ -158,7 +158,7 @@ function calculateExecutionsByDay(executions: any[], startDate: Date, endDate: D
   const dayMap = new Map<string, { count: number; success: number; failed: number }>();
   
   executions.forEach((execution: any) => {
-    const started = execution.startedAt.toDate?.() || new Date(execution.startedAt);
+    const started =execution.startedAt.toDate?.() ?? new Date(execution.startedAt);
     const dayKey = started.toISOString().split('T')[0];
     
     const existing = dayMap.get(dayKey) ?? { count: 0, success: 0, failed: 0 };
@@ -211,7 +211,7 @@ export async function getAllWorkflowsAnalytics(
       
       return {
         workflowId: workflow.id,
-        workflowName: workflow.name || 'Unknown',
+        workflowName:(workflow.name !== '' && workflow.name != null) ? workflow.name : 'Unknown',
         executions: executions.length,
         successRate,
       };

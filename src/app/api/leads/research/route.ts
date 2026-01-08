@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
             website: result.data.website,
             domain: result.data.domain,
             industry: result.data.industry,
-            size: result.data.employeeRange || result.data.size,
+            size:result.data.employeeRange ?? result.data.size,
             description: result.data.description,
             confidence: result.data.confidence,
           });

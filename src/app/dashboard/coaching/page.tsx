@@ -78,14 +78,14 @@ export default function CoachingDashboardPage() {
       const json: GenerateCoachingResponse = await response.json();
 
       if (!json.success) {
-        throw new Error(json.error || 'Failed to generate coaching insights');
+        throw new Error((json.error !== '' && json.error != null) ? json.error : 'Failed to generate coaching insights');
       }
 
       setPerformance(json.performance);
       setInsights(json.insights);
     } catch (err: any) {
       console.error('Failed to fetch coaching insights:', err);
-      setError(err.message || 'Failed to load coaching insights');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load coaching insights');
     } finally {
       setLoading(false);
       setRefreshing(false);

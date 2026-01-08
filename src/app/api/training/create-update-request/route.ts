@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Filter by confidence
     const filteredSuggestions = filterByConfidence(
       allSuggestions,
-      minConfidence || 0.7
+      minConfidence ?? 0.7
     );
 
     if (filteredSuggestions.length === 0) {

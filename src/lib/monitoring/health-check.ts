@@ -285,7 +285,7 @@ export async function sendAlert(health: HealthCheckResult): Promise<void> {
             color: health.status === 'unhealthy' ? 'danger' : 'warning',
             fields: Object.entries(health.checks).map(([name, check]) => ({
               title: name,
-              value: `${check.status}: ${check.message || 'N/A'}`,
+              value: `${check.status}: ${(check.message !== '' && check.message != null) ? check.message : 'N/A'}`,
               short: true,
             })),
           }],

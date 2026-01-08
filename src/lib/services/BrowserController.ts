@@ -94,7 +94,7 @@ export class BrowserController {
     // Setup proxy rotation if provided
     if (options?.proxyList && options.proxyList.length > 0) {
       this.proxyList = options.proxyList;
-      this.rotateProxyOnError = options.rotateProxyOnError || false;
+      this.rotateProxyOnError = options.rotateProxyOnError ?? false;
       logger.info('Proxy rotation enabled', {
         proxyCount: this.proxyList.length,
         rotateOnError: this.rotateProxyOnError,
@@ -339,7 +339,7 @@ export class BrowserController {
             type: 'footer',
             selector,
             confidence: 0.9,
-            text: text?.substring(0, 200) || undefined,
+            text: text?.substring(0, 200) ?? undefined,
           });
           break;
         }
@@ -355,7 +355,7 @@ export class BrowserController {
             type: 'navigation',
             selector,
             confidence: 0.9,
-            text: text?.substring(0, 200) || undefined,
+            text: text?.substring(0, 200) ?? undefined,
           });
           break;
         }
@@ -365,7 +365,7 @@ export class BrowserController {
       const teamKeywords = ['team', 'about us', 'leadership', 'our team', 'meet the team'];
       const allLinks = await this.page.$$eval('a', (links) =>
         links.map((link) => ({
-          href: link.getAttribute('href') || '',
+          href: link.getAttribute('href') ?? '',
           text: link.textContent?.toLowerCase() || '',
         }))
       );
@@ -459,7 +459,7 @@ export class BrowserController {
         type: area.type,
         content: {
           html: html.substring(0, 10000), // Limit to prevent excessive data
-          text: text?.substring(0, 5000) || '',
+          text: text?.substring(0, 5000) ?? '',
         },
         metadata: {
           confidence: area.confidence,
@@ -489,7 +489,7 @@ export class BrowserController {
         if (footer) {
           footerLinks = await this.page.$$eval(`${selector} a`, (links) =>
             links.map((link) => ({
-              href: link.getAttribute('href') || '',
+              href: link.getAttribute('href') ?? '',
               text: link.textContent?.trim() || '',
             }))
           );
@@ -534,7 +534,7 @@ export class BrowserController {
         links
           .filter((link) => {
             const text = link.textContent?.toLowerCase() || '';
-            const href = link.getAttribute('href')?.toLowerCase() || '';
+            const href = link.getAttribute('href')?.toLowerCase() ?? '';
             return (
               text.includes('career') ||
               text.includes('job') ||
@@ -544,7 +544,7 @@ export class BrowserController {
             );
           })
           .map((link) => ({
-            href: link.getAttribute('href') || '',
+            href: link.getAttribute('href') ?? '',
             text: link.textContent?.trim() || '',
           }))
       );
@@ -563,9 +563,9 @@ export class BrowserController {
             const linkEl = el.querySelector('a');
 
             return {
-              title: titleEl?.textContent?.trim() || '',
+              title: titleEl?.textContent?.trim() ?? '',
               location: locationEl?.textContent?.trim(),
-              url: linkEl?.getAttribute('href') || undefined,
+              url: linkEl?.getAttribute('href') ?? undefined,
             };
           })
       );
@@ -603,11 +603,11 @@ export class BrowserController {
             const emailEl = el.querySelector('a[href^="mailto:"]');
 
             return {
-              name: nameEl?.textContent?.trim() || '',
+              name: nameEl?.textContent?.trim() ?? '',
               title: titleEl?.textContent?.trim(),
-              imageUrl: imgEl?.getAttribute('src') || undefined,
-              linkedinUrl: linkedinEl?.getAttribute('href') || undefined,
-              email: emailEl?.getAttribute('href')?.replace('mailto:', '') || undefined,
+              imageUrl: imgEl?.getAttribute('src') ?? undefined,
+              linkedinUrl: linkedinEl?.getAttribute('href') ?? undefined,
+              email: emailEl?.getAttribute('href')?.replace('mailto:', '') ?? undefined,
             };
           })
       );
@@ -633,7 +633,7 @@ export class BrowserController {
       // Extract from script tags
       const scripts = await this.page.$$eval('script', (scripts) =>
         scripts
-          .map((script) => script.getAttribute('src') || '')
+          .map((script) => script.getAttribute('src') ?? '')
           .filter((src) => src.length > 0)
       );
 
@@ -670,8 +670,8 @@ export class BrowserController {
       // Extract from meta tags
       const metaTags = await this.page.$$eval('meta', (metas) =>
         metas.map((meta) => ({
-          name: meta.getAttribute('name') || '',
-          content: meta.getAttribute('content') || '',
+          name: meta.getAttribute('name') ?? '',
+          content: meta.getAttribute('content') ?? '',
         }))
       );
 
@@ -741,7 +741,7 @@ export class BrowserController {
     }
 
     try {
-      return await this.page.textContent('body') || '';
+      return await this.page.textContent('body') ?? '';
     } catch (error) {
       throw new Error(`Failed to get text content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

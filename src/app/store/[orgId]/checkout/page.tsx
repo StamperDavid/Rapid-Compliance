@@ -101,7 +101,7 @@ export default function CheckoutPage() {
       router.push(`/store/${orgId}/checkout/success?orderId=${order.id}`);
     } catch (error: any) {
       logger.error('Checkout error:', error, { file: 'page.tsx' });
-      alert(error.message || 'Checkout failed. Please try again.');
+      alert((error.message !== '' && error.message != null) ? error.message : 'Checkout failed. Please try again.');
     } finally {
       setProcessing(false);
     }

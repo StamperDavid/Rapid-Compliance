@@ -58,22 +58,22 @@ export class FilterEngine {
 
     // Text operators
     if (operator === 'contains') {
-      return String(fieldValue || '').toLowerCase().includes(String(value || '').toLowerCase());
+      return String(fieldValue ?? '').toLowerCase().includes(String(value ?? '').toLowerCase());
     }
     if (operator === 'does_not_contain') {
-      return !String(fieldValue || '').toLowerCase().includes(String(value || '').toLowerCase());
+      return !String(fieldValue ?? '').toLowerCase().includes(String(value ?? '').toLowerCase());
     }
     if (operator === 'is') {
-      return String(fieldValue || '').toLowerCase() === String(value || '').toLowerCase();
+      return String(fieldValue ?? '').toLowerCase() === String(value ?? '').toLowerCase();
     }
     if (operator === 'is_not') {
-      return String(fieldValue || '').toLowerCase() !== String(value || '').toLowerCase();
+      return String(fieldValue ?? '').toLowerCase() !== String(value ?? '').toLowerCase();
     }
     if (operator === 'starts_with') {
-      return String(fieldValue || '').toLowerCase().startsWith(String(value || '').toLowerCase());
+      return String(fieldValue ?? '').toLowerCase().startsWith(String(value ?? '').toLowerCase());
     }
     if (operator === 'ends_with') {
-      return String(fieldValue || '').toLowerCase().endsWith(String(value || '').toLowerCase());
+      return String(fieldValue ?? '').toLowerCase().endsWith(String(value ?? '').toLowerCase());
     }
 
     // Number operators

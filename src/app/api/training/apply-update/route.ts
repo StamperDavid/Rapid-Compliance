@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           status: 'rejected',
           reviewedBy: user.uid,
           reviewedAt: new Date().toISOString(),
-          reviewNotes: reviewNotes || 'Rejected by user',
+          reviewNotes:(reviewNotes !== '' && reviewNotes != null) ? reviewNotes : 'Rejected by user',
         },
         false
       );
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         status: 'approved',
         reviewedBy: user.uid,
         reviewedAt: new Date().toISOString(),
-        reviewNotes: reviewNotes || 'Approved by user',
+        reviewNotes:(reviewNotes !== '' && reviewNotes != null) ? reviewNotes : 'Approved by user',
       },
       false
     );

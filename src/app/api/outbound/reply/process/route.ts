@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       try {
         await sendEmail({
           to: emailReply.from,
-          subject: `Re: ${emailReply.subject || 'Your inquiry'}`,
+          subject: `Re: ${(emailReply.subject !== '' && emailReply.subject != null) ? emailReply.subject : 'Your inquiry'}`,
           html: suggestedResponse.body,
           text: suggestedResponse.body,
           from: emailReply.to,

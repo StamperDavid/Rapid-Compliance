@@ -66,8 +66,8 @@ export class AdminFirestoreService {
         
         if (constraintData.type === 'where') {
           // Client SDK stores these as _field, _op, _value (underscore-prefixed)
-          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
-          const op = constraintData._op || constraintData.opStr;
+          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
+          const op =constraintData._op ?? constraintData.opStr;
           const value = constraintData._value !== undefined ? constraintData._value : constraintData.value;
           
           if (!fieldPath || !op) {
@@ -81,8 +81,8 @@ export class AdminFirestoreService {
           );
         } else if (constraintData.type === 'orderBy') {
           // Client SDK stores these as _field, _direction
-          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
-          const direction = constraintData._direction || constraintData.directionStr;
+          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
+          const direction =constraintData._direction ?? constraintData.directionStr;
           
           if (!fieldPath) {
             continue;
@@ -93,7 +93,7 @@ export class AdminFirestoreService {
             direction as FirebaseFirestore.OrderByDirection
           );
         } else if (constraintData.type === 'limit') {
-          const limitValue = constraintData._limit || constraintData.limit;
+          const limitValue =constraintData._limit ?? constraintData.limit;
           if (limitValue) {
             query = query.limit(limitValue);
           }
@@ -140,8 +140,8 @@ export class AdminFirestoreService {
         
         if (constraintData.type === 'where') {
           // Client SDK stores these as _field, _op, _value (underscore-prefixed)
-          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
-          const op = constraintData._op || constraintData.opStr;
+          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
+          const op =constraintData._op ?? constraintData.opStr;
           const value = constraintData._value !== undefined ? constraintData._value : constraintData.value;
           
           if (!fieldPath || !op) {
@@ -155,8 +155,8 @@ export class AdminFirestoreService {
           );
         } else if (constraintData.type === 'orderBy') {
           // Client SDK stores these as _field, _direction
-          const fieldPath = constraintData._field?.segments?.join('.') || constraintData.fieldPath;
-          const direction = constraintData._direction || constraintData.directionStr;
+          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
+          const direction =constraintData._direction ?? constraintData.directionStr;
           
           if (!fieldPath) {
             continue;

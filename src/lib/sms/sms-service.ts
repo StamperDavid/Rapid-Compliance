@@ -99,7 +99,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Failed to send SMS',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to send SMS',
       provider,
     };
   }
@@ -110,7 +110,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
  */
 async function sendViaTwilio(options: SMSOptions, credentials: any): Promise<SMSResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromNumber = options.from || credentials.phoneNumber;
+  const fromNumber =options.from ?? credentials.phoneNumber;
 
   if (!fromNumber) {
     return {
@@ -170,7 +170,7 @@ async function sendViaTwilio(options: SMSOptions, credentials: any): Promise<SMS
  */
 async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMSResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromNumber = options.from || credentials.phoneNumber || 'Vonage';
+  const fromNumber =(options.from || credentials.phoneNumber !== '' && options.from || credentials.phoneNumber != null) ? options.from || credentials.phoneNumber : 'Vonage';
 
   // Vonage API endpoint
   const vonageUrl = 'https://rest.nexmo.com/sms/json';
@@ -236,7 +236,7 @@ async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMS
     } else {
       return {
         success: false,
-        error: `Vonage error: ${data.messages?.[0]?.['error-text'] || 'Unknown error'}`,
+        error: `Vonage error: ${data.messages?.[0]?(.['error-text'] !== '' && .['error-text'] != null) ? .['error-text'] : 'Unknown error'}`,
         provider: 'vonage',
       };
     }
@@ -359,7 +359,7 @@ export async function getSMSDeliveryStatus(
 
   return {
     messageId,
-    status: smsData.status || 'sent',
+    status:(smsData.status !== '' && smsData.status != null) ? smsData.status : 'sent',
     sentAt: smsData.sentAt ? new Date(smsData.sentAt) : new Date(),
     deliveredAt: smsData.deliveredAt ? new Date(smsData.deliveredAt) : undefined,
     errorCode: smsData.errorCode,
@@ -447,7 +447,7 @@ export function validatePhoneNumber(phone: string): boolean {
  */
 export function renderSMSTemplate(template: string, variables: Record<string, any>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return variables[key]?.toString() || match;
+    return variables[key]?.toString() ?? match;
   });
 }
 

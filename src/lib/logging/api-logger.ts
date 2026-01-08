@@ -27,10 +27,14 @@ export async function logApiRequest(
     path,
     statusCode,
     duration,
-    userAgent: request.headers.get('user-agent') || undefined,
-    ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 
-        request.headers.get('x-real-ip') || 
-        'unknown',
+    userAgent: request.headers.get('user-agent') ?? undefined,
+    ip: (() => {
+      const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0];
+      const realIp = request.headers.get('x-real-ip');
+      return (forwarded !== '' && forwarded != null) ? forwarded 
+        : (realIp !== '' && realIp != null) ? realIp 
+        : 'unknown';
+    })(),
   };
 
   if (statusCode >= 500) {

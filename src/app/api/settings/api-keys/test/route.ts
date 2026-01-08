@@ -130,7 +130,7 @@ async function testOpenAI(apiKey: string): Promise<NextResponse> {
       const error = await response.json();
       return NextResponse.json({
         success: false,
-        error: error.error?.message || 'Invalid API key',
+        error: error.error?(.message !== '' && .message != null) ? .message : 'Invalid API key',
       });
     }
   } catch (error: any) {
@@ -275,7 +275,7 @@ async function testAnthropic(apiKey: string): Promise<NextResponse> {
       const error = await response.json();
       return NextResponse.json({
         success: false,
-        error: error.error?.message || 'Invalid API key',
+        error: error.error?(.message !== '' && .message != null) ? .message : 'Invalid API key',
       }, { status: 400 });
     }
   } catch (error: any) {
@@ -307,7 +307,7 @@ async function testGemini(apiKey: string): Promise<NextResponse> {
       const error = await response.json();
       return NextResponse.json({
         success: false,
-        error: error.error?.message || 'Invalid API key',
+        error: error.error?(.message !== '' && .message != null) ? .message : 'Invalid API key',
       }, { status: 400 });
     }
   } catch (error: any) {
@@ -580,7 +580,7 @@ async function testSlack(apiKey: string): Promise<NextResponse> {
     } else {
       return NextResponse.json({
         success: false,
-        error: data.error || 'Invalid Slack token',
+        error:(data.error !== '' && data.error != null) ? data.error : 'Invalid Slack token',
       }, { status: 400 });
     }
   } catch (error: any) {

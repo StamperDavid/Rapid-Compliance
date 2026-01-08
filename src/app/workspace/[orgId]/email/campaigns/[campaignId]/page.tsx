@@ -41,19 +41,19 @@ export default function CampaignStatsPage() {
 
       <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-2xl font-bold mb-1">{stats.sent || 0}</div>
+          <div className="text-2xl font-bold mb-1">{stats.sent ?? 0}</div>
           <div className="text-sm text-gray-400">Sent</div>
         </div>
         <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-2xl font-bold mb-1 text-blue-400">{stats.opened || 0}</div>
-          <div className="text-sm text-gray-400">Opened ({stats.openRate || 0}%)</div>
+          <div className="text-2xl font-bold mb-1 text-blue-400">{stats.opened ?? 0}</div>
+          <div className="text-sm text-gray-400">Opened ({stats.openRate ?? 0}%)</div>
         </div>
         <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-2xl font-bold mb-1 text-green-400">{stats.clicked || 0}</div>
-          <div className="text-sm text-gray-400">Clicked ({stats.clickRate || 0}%)</div>
+          <div className="text-2xl font-bold mb-1 text-green-400">{stats.clicked ?? 0}</div>
+          <div className="text-sm text-gray-400">Clicked ({stats.clickRate ?? 0}%)</div>
         </div>
         <div className="bg-gray-900 rounded-lg p-6">
-          <div className="text-2xl font-bold mb-1 text-red-400">{stats.bounced || 0}</div>
+          <div className="text-2xl font-bold mb-1 text-red-400">{stats.bounced ?? 0}</div>
           <div className="text-sm text-gray-400">Bounced</div>
         </div>
       </div>

@@ -74,13 +74,13 @@ export default function TeamCoachingDashboardPage() {
       const json: GenerateTeamCoachingResponse = await response.json();
 
       if (!json.success) {
-        throw new Error(json.error || 'Failed to generate team coaching insights');
+        throw new Error((json.error !== '' && json.error != null) ? json.error : 'Failed to generate team coaching insights');
       }
 
       setTeamInsights(json.teamInsights);
     } catch (err: any) {
       console.error('Failed to fetch team coaching insights:', err);
-      setError(err.message || 'Failed to load team coaching insights');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load team coaching insights');
     } finally {
       setLoading(false);
       setRefreshing(false);

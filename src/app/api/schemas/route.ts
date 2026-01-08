@@ -92,27 +92,27 @@ export async function POST(request: NextRequest) {
     const schemaId = schema.id || buildSchemaId(schema.name);
 
     const fields = (schema.fields ?? []).map((field: any) => ({
-      id: field.id || buildFieldId(field.key || field.label || 'field'),
-      key: field.key || slugify(field.label || 'field'),
-      label: field.label || field.key || 'Field',
-      type: field.type || 'text',
+      id: field.id || buildFieldId((field.key || field.label !== '' && field.key || field.label != null) ? field.key || field.label : 'field'),
+      key: field.key || slugify((field.label !== '' && field.label != null) ? field.label : 'field'),
+      label:(field.label || field.key !== '' && field.label || field.key != null) ? field.label || field.key : 'Field',
+      type:(field.type !== '' && field.type != null) ? field.type : 'text',
       required: !!field.required,
       createdAt: now,
       updatedAt: now,
     }));
 
-    const primaryFieldId = fields[0]?.id || 'field_name';
+    const primaryFieldId = fields[0]?(.id !== '' && .id != null) ? .id : 'field_name';
 
     const newSchema = {
       id: schemaId,
       organizationId,
       workspaceId,
       name: schema.name,
-      pluralName: schema.pluralName || `${schema.name}s`,
-      singularName: schema.singularName || schema.name,
-      description: schema.description || '',
-      icon: schema.icon || '📋',
-      color: schema.color || '#3B82F6',
+      pluralName:(schema.pluralName !== '' && schema.pluralName != null) ? schema.pluralName : `${schema.name}s`,
+      singularName:schema.singularName ?? schema.name,
+      description: schema.description ?? '',
+      icon:(schema.icon !== '' && schema.icon != null) ? schema.icon : '📋',
+      color:(schema.color !== '' && schema.color != null) ? schema.color : '#3B82F6',
       fields: fields.length
         ? fields
         : [
@@ -128,13 +128,13 @@ export async function POST(request: NextRequest) {
           ],
       primaryFieldId,
       relations: [],
-      permissions: schema.permissions || {
+      permissions:schema.permissions ?? {
         create: ['admin', 'editor'],
         read: ['admin', 'editor', 'viewer'],
         update: ['admin', 'editor'],
         delete: ['admin'],
       },
-      settings: schema.settings || {
+      settings:schema.settings ?? {
         allowAttachments: true,
         allowComments: true,
         allowActivityLog: true,
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       },
       createdAt: now,
       updatedAt: now,
-      createdBy: userId || 'system',
+      createdBy:(userId !== '' && userId != null) ? userId : 'system',
       status: 'active',
       version: 1,
     };

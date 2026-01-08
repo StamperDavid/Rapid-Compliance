@@ -68,13 +68,13 @@ class APIKeyService {
       
       // AI Services - OpenRouter can provide ALL of these
       case 'gemini':
-        return keys.ai?.geminiApiKey || keys.ai?.openrouterApiKey || null;
+return keys.ai?.geminiApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'openai':
-        return keys.ai?.openaiApiKey || keys.ai?.openrouterApiKey || null;
+return keys.ai?.openaiApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'anthropic':
-        return keys.ai?.anthropicApiKey || keys.ai?.openrouterApiKey || null;
+return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'openrouter':
-        return keys.ai?.openrouterApiKey || null;
+        return keys.ai?.openrouterApiKey ?? null;
       
       // Payment Services
       case 'stripe':
@@ -126,7 +126,7 @@ class APIKeyService {
    */
   async saveKeys(organizationId: string, keys: Partial<APIKeysConfig>): Promise<void> {
     // Save to Firestore
-    const existingKeys = await this.fetchKeysFromFirestore(organizationId) || this.getDefaultKeys(organizationId);
+    const existingKeys =await this.fetchKeysFromFirestore(organizationId) ?? this.getDefaultKeys(organizationId);
     
     const updatedKeys: APIKeysConfig = {
       ...existingKeys,
@@ -220,23 +220,23 @@ class APIKeyService {
           return {
             id: 'keys-platform',
             organizationId: 'platform',
-            firebase: platformKeys.firebase || {},
-            googleCloud: platformKeys.googleCloud || {},
+            firebase:platformKeys.firebase ?? {},
+            googleCloud:platformKeys.googleCloud ?? {},
             ai: platformKeys.openrouter || platformKeys.openai || platformKeys.anthropic || platformKeys.gemini ? {
               openrouterApiKey: platformKeys.openrouter?.apiKey,
               openaiApiKey: platformKeys.openai?.apiKey,
               anthropicApiKey: platformKeys.anthropic?.apiKey,
               geminiApiKey: platformKeys.gemini?.apiKey,
             } : {},
-            payments: platformKeys.stripe || {},
-            email: platformKeys.sendgrid || platformKeys.resend || {},
-            sms: platformKeys.twilio || {},
+            payments:platformKeys.stripe ?? {},
+            email:platformKeys.sendgrid ?? platformKeys.resend ?? {},
+            sms:platformKeys.twilio ?? {},
             storage: {},
             analytics: {},
             integrations: {},
             createdAt: platformKeys.createdAt ? new Date(platformKeys.createdAt) : new Date(),
             updatedAt: platformKeys.updatedAt ? new Date(platformKeys.updatedAt) : new Date(),
-            updatedBy: platformKeys.updatedBy || 'system',
+            updatedBy:(platformKeys.updatedBy !== '' && platformKeys.updatedBy != null) ? platformKeys.updatedBy : 'system',
             isEncrypted: false,
           } as APIKeysConfig;
         }

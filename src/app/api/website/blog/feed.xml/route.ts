@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
       if (data.customDomain === host && data.customDomainVerified) {
         organizationId = data.organizationId;
         baseUrl = `https://${host}`;
-        siteTitle = data.seo?.title || siteTitle;
-        siteDescription = data.seo?.description || siteDescription;
+        siteTitle = data.seo?.title ?? siteTitle;
+        siteDescription = data.seo?.description ?? siteDescription;
         break;
       }
     }
@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
         if (settingsData?.subdomain === subdomain) {
           organizationId = orgDoc.id;
           baseUrl = `https://${host}`;
-          siteTitle = settingsData.seo?.title || siteTitle;
-          siteDescription = settingsData.seo?.description || siteDescription;
+          siteTitle = settingsData.seo?.title ?? siteTitle;
+          siteDescription = settingsData.seo?.description ?? siteDescription;
           break;
         }
       }
@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
 
     // Sort by published date (newest first)
     posts.sort((a, b) => {
-      const aDate = new Date(a.publishedAt || a.createdAt).getTime();
-      const bDate = new Date(b.publishedAt || b.createdAt).getTime();
+      const aDate = new Date(a.publishedAt ?? a.createdAt).getTime();
+      const bDate = new Date(b.publishedAt ?? b.createdAt).getTime();
       return bDate - aDate;
     });
 
@@ -117,11 +117,11 @@ export async function GET(request: NextRequest) {
 
 function generateRSSXML(posts: BlogPost[], baseUrl: string, siteTitle: string, siteDescription: string): string {
   const items = posts.map((post) => {
-    const pubDate = new Date(post.publishedAt || post.createdAt).toUTCString();
+    const pubDate = new Date(post.publishedAt ?? post.createdAt).toUTCString();
     const link = `${baseUrl}/blog/${post.slug}`;
     const description = escapeXML(post.excerpt || '');
     const title = escapeXML(post.title);
-    const author = escapeXML(post.authorName || 'Unknown');
+    const author = escapeXML((post.authorName !== '' && post.authorName != null) ? post.authorName : 'Unknown');
     
     const categories = post.categories.map(cat => 
       `    <category>${escapeXML(cat)}</category>`

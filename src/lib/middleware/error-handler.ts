@@ -52,15 +52,15 @@ export function createErrorResponse(
     errorDetails = details;
   } else if (error instanceof Error) {
     errorMessage = error.message;
-    errorCode = code || ErrorCode.INTERNAL_SERVER_ERROR;
+    errorCode =code ?? ErrorCode.INTERNAL_SERVER_ERROR;
     errorDetails = process.env.NODE_ENV === 'development' ? {
       stack: error.stack,
       ...details,
     } : details;
   } else {
     errorMessage = error.message;
-    errorCode = error.code || code;
-    errorDetails = error.details || details;
+    errorCode =error.code ?? code;
+    errorDetails =error.details ?? details;
     statusCode = error.statusCode || statusCode;
   }
 
@@ -153,14 +153,14 @@ export const errors = {
     createErrorResponse(message, 429, ErrorCode.RATE_LIMIT_EXCEEDED),
 
   internal: (message: string = 'Internal server error', error?: Error) =>
-    createErrorResponse(error || message, 500, ErrorCode.INTERNAL_SERVER_ERROR),
+    createErrorResponse(error ?? message, 500, ErrorCode.INTERNAL_SERVER_ERROR),
 
   database: (message: string, error?: Error) =>
-    createErrorResponse(error || message, 500, ErrorCode.DATABASE_ERROR),
+    createErrorResponse(error ?? message, 500, ErrorCode.DATABASE_ERROR),
 
   externalService: (service: string, error?: Error) =>
     createErrorResponse(
-      error || `External service error: ${service}`,
+(error !== '' && error != null) ? error : `External service error: ${service}`,
       502,
       ErrorCode.EXTERNAL_SERVICE_ERROR
     ),

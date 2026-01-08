@@ -68,7 +68,7 @@ export async function searchWorkspace(
       });
 
       // Convert to search results
-      for (const record of matchingRecords.slice(0, options.limit || 10)) {
+      for (const record of matchingRecords.slice(0, options.limit ?? 10)) {
         const titleField = schema.fields?.find((f: any) => 
           f.key === 'name' || f.key === 'title' || f.key === 'first_name'
         );
@@ -77,9 +77,9 @@ export async function searchWorkspace(
         results.push({
           id: record.id,
           type: schema.id,
-          title: title || 'Untitled',
+          title:(title !== '' && title != null) ? title : 'Untitled',
           subtitle: schema.name,
-          description: record.notes || record.description,
+          description:record.notes ?? record.description,
           url: `/workspace/${orgId}/entities/${schema.id}/${record.id}`,
           metadata: record,
         });
@@ -89,7 +89,7 @@ export async function searchWorkspace(
     logger.error('Error searching workspace:', error, { file: 'search-service.ts' });
   }
 
-  return results.slice(0, options.limit || 50);
+  return results.slice(0, options.limit ?? 50);
 }
 
 /**

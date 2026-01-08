@@ -109,7 +109,7 @@ function getClientId(request: NextRequest): string {
 
   // Use IP address as identifier
   const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
+  const ip = forwarded ? forwarded.split(',')[0] :(request.headers.get('x-real-ip') !== '' && request.headers.get('x-real-ip') != null) ? request.headers.get('x-real-ip') : 'unknown';
   
   return ip;
 }
@@ -122,7 +122,7 @@ export async function checkRateLimit(
   endpoint?: string
 ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
   const clientId = getClientId(request);
-  const path = endpoint || new URL(request.url).pathname;
+  const path =endpoint ?? new URL(request.url).pathname;
   
   // Get rate limit config for this endpoint
   const config = endpointLimits[path] || defaultConfig;
@@ -204,7 +204,7 @@ export async function rateLimitMiddleware(
       {
         status: 429,
         headers: {
-          'X-RateLimit-Limit': endpointLimits[endpoint || new URL(request.url).pathname]?.maxRequests.toString() || '100',
+          'X-RateLimit-Limit': endpointLimits[endpoint ?? new URL(request.url).pathname]?.maxRequests.toString() || '100',
           'X-RateLimit-Remaining': result.remaining.toString(),
           'X-RateLimit-Reset': new Date(result.resetAt).toISOString(),
           'Retry-After': Math.ceil((result.resetAt - Date.now()) / 1000).toString(),

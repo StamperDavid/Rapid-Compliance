@@ -74,7 +74,7 @@ export async function POST(
     // Update schema using Admin DAL
     await schemaDoc.ref.update({
       ...updates,
-      version: (oldSchema?.version || 1) + 1,
+      version: (oldSchema?.version ?? 1) + 1,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: userId,
     });

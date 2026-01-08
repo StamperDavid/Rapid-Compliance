@@ -72,12 +72,10 @@ export async function GET(request: NextRequest) {
     let robotsTxt = settingsData?.robotsTxt;
 
     // Default robots.txt if not configured
-    if (!robotsTxt) {
-      robotsTxt = `User-agent: *
+    robotsTxt ??= `User-agent: *
 Allow: /
 
 Sitemap: https://${host}/sitemap.xml`;
-    }
 
     return new NextResponse(robotsTxt, {
       status: 200,

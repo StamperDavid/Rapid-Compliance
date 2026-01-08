@@ -33,7 +33,7 @@ export default function APIKeysPage() {
       const response = await fetch(`/api/settings/api-keys?orgId=${orgId}`);
       const data = await response.json();
       if (data.success) {
-        setKeys(data.keys || {});
+        setKeys(data.keys ?? {});
       }
     } catch (error) {
       logger.error('Failed to load API keys:', error, { file: 'page.tsx' });

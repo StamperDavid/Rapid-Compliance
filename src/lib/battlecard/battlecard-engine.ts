@@ -302,34 +302,34 @@ export async function discoverCompetitor(
       organizationId,
       
       domain: company.domain,
-      companyName: company.companyName || domain,
+      companyName:company.companyName ?? domain,
       description: company.description,
       industry: company.industry,
       size: company.size,
       location: company.location,
       
-      productOffering: competitiveIntel.productOffering || {
+      productOffering:competitiveIntel.productOffering ?? {
         category: 'Unknown',
         targetMarket: [],
         verticals: [],
         keyFeatures: [],
       },
       
-      pricing: competitiveIntel.pricing || {
+      pricing:competitiveIntel.pricing ?? {
         model: 'unknown',
         tiers: [],
         hasFreeTrial: false,
         competitivePosition: 'unknown',
       },
       
-      positioning: competitiveIntel.positioning || {
+      positioning:competitiveIntel.positioning ?? {
         valueProposition: [],
         differentiators: [],
         targetPersonas: [],
         useCases: [],
       },
       
-      analysis: competitiveIntel.analysis || {
+      analysis:competitiveIntel.analysis ?? {
         strengths: [],
         weaknesses: [],
       },
@@ -411,9 +411,9 @@ async function extractCompetitiveIntelligence(
     const prompt = `You are a competitive intelligence analyst. Analyze this competitor data and extract strategic insights.
 
 COMPETITOR: ${company.companyName} (${company.domain})
-INDUSTRY: ${company.industry || 'Unknown'}
-DESCRIPTION: ${company.description || 'Not available'}
-SIZE: ${company.size || 'Unknown'}
+INDUSTRY: ${(company.industry !== '' && company.industry != null) ? company.industry : 'Unknown'}
+DESCRIPTION: ${(company.description !== '' && company.description != null) ? company.description : 'Not available'}
+SIZE: ${(company.size !== '' && company.size != null) ? company.size : 'Unknown'}
 TECH STACK: ${company.techStack.map(t => t.name).join(', ') || 'Not detected'}
 PRESS MENTIONS: ${company.pressmentions.length} found
 HIRING: ${company.signals.isHiring ? `Yes (${company.signals.jobCount} openings)` : 'No'}
@@ -516,9 +516,9 @@ IMPORTANT:
         const intel = JSON.parse(jsonMatch[0]);
         logger.info('Competitive intelligence extracted', {
           domain: company.domain,
-          featuresFound: intel.productOffering?.keyFeatures?.length || 0,
-          strengthsFound: intel.analysis?.strengths?.length || 0,
-          weaknessesFound: intel.analysis?.weaknesses?.length || 0,
+          featuresFound: intel.productOffering?.keyFeatures?.length ?? 0,
+          strengthsFound: intel.analysis?.strengths?.length ?? 0,
+          weaknessesFound: intel.analysis?.weaknesses?.length ?? 0,
         });
         return intel;
       }
@@ -623,7 +623,7 @@ export async function generateBattlecard(
       competitorDomain: competitorProfile.domain,
       
       featureComparison: battlecardData.featureComparison ?? [],
-      pricingComparison: battlecardData.pricingComparison || {
+      pricingComparison:battlecardData.pricingComparison ?? {
         ourPositioning: '',
         theirPositioning: '',
         advantage: 'neutral',
@@ -631,19 +631,19 @@ export async function generateBattlecard(
         valueJustification: [],
       },
       
-      tactics: battlecardData.tactics || {
+      tactics:battlecardData.tactics ?? {
         idealSituations: [],
         challengingSituations: [],
         objectionHandling: [],
         competitiveTraps: [],
       },
       
-      discoveryQuestions: battlecardData.discoveryQuestions || {
+      discoveryQuestions:battlecardData.discoveryQuestions ?? {
         qualifyingQuestions: [],
         landmineQuestions: [],
       },
       
-      keyMessages: battlecardData.keyMessages || {
+      keyMessages:battlecardData.keyMessages ?? {
         elevator: '',
         executiveSummary: '',
         riskMitigation: [],

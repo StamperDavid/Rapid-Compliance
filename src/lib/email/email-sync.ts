@@ -213,7 +213,7 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
     if (config.provider === 'gmail') {
       // Gmail uses Google Cloud Pub/Sub for push notifications
       // Topic name format: projects/{project-id}/topics/gmail-push
-      const topicName = process.env.GOOGLE_PUBSUB_TOPIC || 
+      const topicName = process.env.GOOGLE_PUBSUB_TOPIC ?? 
                        `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/gmail-push`;
       
       await setupGmailPushNotifications(config.accessToken, topicName);
@@ -323,14 +323,14 @@ export async function getSyncStatus(organizationId: string, provider: 'gmail' | 
 
     if (!lastSyncResult) {
   return {
-        isActive: syncConfig?.isActive || false,
+        isActive: syncConfig?.isActive ?? false,
     syncedCount: 0,
     errorCount: 0,
   };
 }
 
     return {
-      isActive: syncConfig?.isActive || false,
+      isActive: syncConfig?.isActive ?? false,
       lastSyncAt: new Date(lastSyncResult.lastSyncAt),
       nextSyncAt: undefined, // Push-based sync, no scheduled next sync
       syncedCount: lastSyncResult.messagesSynced,

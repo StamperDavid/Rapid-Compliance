@@ -512,7 +512,7 @@ async function synthesizeLeadObject(
     
     logger.info('Synthesizing lead object with LLM', { 
       domain,
-      detectedIndustry: detectedIndustry || 'general',
+      detectedIndustry:(detectedIndustry !== '' && detectedIndustry != null) ? detectedIndustry : 'general',
     });
 
     // Build industry-specific prompt for LLM
@@ -573,13 +573,13 @@ async function synthesizeLeadObject(
       
       pressmentions: synthesized.pressmentions ?? [],
       
-      contactInfo: synthesized.contactInfo || {
+      contactInfo:synthesized.contactInfo ?? {
         socialMedia: {},
       },
       
       signals: {
-        isHiring: (rawData.careerData?.jobCount || 0) > 0,
-        jobCount: rawData.careerData?.jobCount || 0,
+        isHiring: (rawData.careerData?.jobCount ?? 0) > 0,
+        jobCount: rawData.careerData?.jobCount ?? 0,
         recentActivity: true,
         fundingStage: synthesized.signals?.fundingStage,
         growthIndicators: synthesized.signals?.growthIndicators ?? [],
@@ -614,8 +614,8 @@ async function synthesizeLeadObject(
       pressmentions: [],
       contactInfo: { socialMedia: {} },
       signals: {
-        isHiring: (rawData.careerData?.jobCount || 0) > 0,
-        jobCount: rawData.careerData?.jobCount || 0,
+        isHiring: (rawData.careerData?.jobCount ?? 0) > 0,
+        jobCount: rawData.careerData?.jobCount ?? 0,
         recentActivity: false,
         growthIndicators: [],
       },
@@ -716,7 +716,7 @@ ${rawData.highValueAreas.map((area, i) =>
 
 TEAM MEMBERS FOUND: ${rawData.teamMembers.length}
 TECH STACK FOUND: ${rawData.techStack.map(t => t.name).join(', ')}
-CAREER OPENINGS: ${rawData.careerData?.jobCount || 0}`;
+CAREER OPENINGS: ${rawData.careerData?.jobCount ?? 0}`;
 
   // Add industry-specific extraction instructions
   let industryInstructions = '';
@@ -1010,7 +1010,7 @@ export async function discoverPerson(
       rawHtml: JSON.stringify({ email, discoveredAt: new Date() }),
       cleanedContent: JSON.stringify(person),
       metadata: {
-        title: person.fullName || email,
+        title:person.fullName ?? email,
         description: person.title,
         author: 'person-discovery',
       },
@@ -1092,7 +1092,7 @@ async function discoverPersonData(
       if (matchedMember) {
         personData.title = matchedMember.title;
         personData.currentRole = {
-          title: matchedMember.title || '',
+          title: matchedMember.title ?? '',
           company: domain,
         };
         if (matchedMember.linkedinUrl) {
@@ -1119,7 +1119,7 @@ async function discoverPersonData(
         // Extract LinkedIn URLs from search results
         const linkedinLinks = await controller.getPage()?.$$eval('a', (links) =>
           links
-            .map((link) => link.getAttribute('href') || '')
+            .map((link) => link.getAttribute('href') ?? '')
             .filter((href) => href.includes('linkedin.com/in/'))
             .map((href) => {
               // Extract clean LinkedIn URL
@@ -1190,7 +1190,7 @@ async function discoverPersonData(
     // Return minimal data
     return {
       email,
-      fullName: personData.fullName || email,
+      fullName:personData.fullName ?? email,
       socialProfiles: personData.socialProfiles ?? {},
       metadata: {
         discoveredAt: new Date(),
@@ -1218,11 +1218,11 @@ async function synthesizePersonData(
     const prompt = `Enrich this person's profile based on available data:
 
 Email: ${email}
-Name: ${personData.fullName || 'Unknown'}
-Title: ${personData.title || 'Unknown'}
-Company: ${personData.currentRole?.company || 'Unknown'}
-LinkedIn: ${personData.socialProfiles?.linkedin || 'Not found'}
-GitHub: ${personData.socialProfiles?.github || 'Not found'}
+Name: ${(personData.fullName !== '' && personData.fullName != null) ? personData.fullName : 'Unknown'}
+Title: ${(personData.title !== '' && personData.title != null) ? personData.title : 'Unknown'}
+Company: ${personData.currentRole?(.company !== '' && .company != null) ? .company : 'Unknown'}
+LinkedIn: ${personData.socialProfiles?(.linkedin !== '' && .linkedin != null) ? .linkedin : 'Not found'}
+GitHub: ${personData.socialProfiles?(.github !== '' && .github != null) ? .github : 'Not found'}
 
 Discovery methods used: ${methods.join(', ')}
 

@@ -6,8 +6,8 @@
 import sgMail from '@sendgrid/mail';
 import { logger } from '@/lib/logger/logger';
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
-const FROM_NAME = process.env.FROM_NAME || 'AI Sales Platform';
+const FROM_EMAIL =(process.env.FROM_EMAIL !== '' && process.env.FROM_EMAIL != null) ? process.env.FROM_EMAIL : 'noreply@yourdomain.com';
+const FROM_NAME =(process.env.FROM_NAME !== '' && process.env.FROM_NAME != null) ? process.env.FROM_NAME : 'AI Sales Platform';
 
 export interface SendEmailOptions {
   to: string;
@@ -42,7 +42,7 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
   messageId?: string;
   error?: string;
 }> {
-  const SENDGRID_API_KEY = apiKey || process.env.SENDGRID_API_KEY;
+  const SENDGRID_API_KEY =apiKey ?? process.env.SENDGRID_API_KEY;
   
   if (!SENDGRID_API_KEY) {
     logger.error('[SendGrid] API key not configured', new Error('[SendGrid] API key not configured'), { file: 'sendgrid-service.ts' });
@@ -57,13 +57,13 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
   try {
     const msg: any = {
       to: options.to,
-      from: options.from || {
+      from:options.from ?? {
         email: FROM_EMAIL,
         name: FROM_NAME,
       },
       subject: options.subject,
       html: options.html,
-      text: options.text || stripHtml(options.html),
+      text:options.text ?? stripHtml(options.html),
       trackingSettings: {
         clickTracking: {
           enable: options.tracking?.trackClicks ?? true,
@@ -104,7 +104,7 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
 
     return {
       success: false,
-      error: error.message || 'Failed to send email',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to send email',
     };
   }
 }

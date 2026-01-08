@@ -163,7 +163,7 @@ export default function WorkflowBuilderPage() {
                   {action.type === 'delay' && (
                     <div className="mt-3">
                       <label className="block text-xs text-gray-400 mb-1">Duration (seconds)</label>
-                      <input type="number" value={action.duration || 3600} onChange={(e) => updateAction(index, {duration: parseInt(e.target.value)})} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm" />
+                      <input type="number" value={action.duration ?? 3600} onChange={(e) => updateAction(index, {duration: parseInt(e.target.value)})} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm" />
                     </div>
                   )}
                 </div>

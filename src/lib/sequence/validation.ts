@@ -546,7 +546,7 @@ export const sequenceAnalysisInputSchema = z.object({
   includeTimingAnalysis: z.boolean().optional(),
   includeABTests: z.boolean().optional(),
 }).refine(
-  (data) => data.sequenceId || data.sequenceIds,
+  (data) => data.sequenceId ?? data.sequenceIds,
   {
     message: "Either sequenceId or sequenceIds must be provided",
   }

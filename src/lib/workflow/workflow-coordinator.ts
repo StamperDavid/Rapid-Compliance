@@ -120,7 +120,7 @@ export class WorkflowCoordinator {
       // Find workflows that match this trigger type
       const workflows = await this.findMatchingWorkflows(
         signal.orgId,
-        signal.workspaceId || 'default',
+(signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
         triggerTypes
       );
       
@@ -335,7 +335,7 @@ export class WorkflowCoordinator {
     
     return {
       organizationId: signal.orgId,
-      workspaceId: signal.workspaceId || 'default',
+      workspaceId:(signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
       dealId: (metadata.dealId as string) || undefined,
       deal: (metadata.deal as Record<string, unknown>) || undefined,
       dealScore,
@@ -595,7 +595,7 @@ export class WorkflowCoordinator {
       
       // Update average execution time
       const totalTime = workflow.stats.averageExecutionTimeMs * workflow.stats.totalExecutions;
-      const newAverage = (totalTime + (result.durationMs || 0)) / (workflow.stats.totalExecutions + 1);
+      const newAverage = (totalTime + (result.durationMs ?? 0)) / (workflow.stats.totalExecutions + 1);
       statsRecord['averageExecutionTimeMs'] = Math.round(newAverage);
       
       // Update workflow in Firestore

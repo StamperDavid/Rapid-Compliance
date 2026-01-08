@@ -36,7 +36,7 @@ export async function getAPIKey(
       stripe_secret: process.env.STRIPE_SECRET_KEY,
     };
 
-    return envMap[service] || null;
+    return envMap[service] ?? null;
   } catch (error) {
     logger.error('[API Keys] Error loading key:', error, { file: 'api-keys.ts' });
     // Fallback to env
@@ -48,7 +48,7 @@ export async function getAPIKey(
       stripe_publishable: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
       stripe_secret: process.env.STRIPE_SECRET_KEY,
     };
-    return envMap[service] || null;
+    return envMap[service] ?? null;
   }
 }
 

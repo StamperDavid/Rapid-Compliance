@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     logger.error('Error getting cart', error, { route: '/api/ecommerce/cart' });
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to get cart' },
+      { success: false, error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get cart'},
       { status: 500 }
     );
   }
@@ -101,9 +101,9 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
+        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
+})) ?? [];
       
       return NextResponse.json(
         {
@@ -149,9 +149,9 @@ export async function PATCH(request: NextRequest) {
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
+        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
+})) ?? [];
       
       return NextResponse.json(
         {

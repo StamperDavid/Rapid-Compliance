@@ -31,9 +31,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
+        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
+})) ?? [];
       
       return NextResponse.json(
         {

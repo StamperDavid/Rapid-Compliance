@@ -55,7 +55,7 @@ export default function WorkflowRunsPage() {
                   </span>
                 </td>
                 <td className="p-4 text-gray-400">
-                  {execution.actionResults?.filter((a: any) => a.status === 'success').length || 0} / {execution.actionResults?.length || 0}
+                  {execution.actionResults?.filter((a: any) => a.status === 'success').length ?? 0} / {execution.actionResults?.length ?? 0}
                 </td>
                 <td className="p-4 text-gray-400">
                   {execution.completedAt ? `${Math.round((new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime()) / 1000)}s` : '-'}

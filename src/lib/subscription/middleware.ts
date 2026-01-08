@@ -74,7 +74,7 @@ export async function requireLimit(
           remaining: limit.remaining,
           requested: amount,
           upgrade: true,
-          upgradeMessage: getLimitUpgradeMessage(feature, subscription.plan || 'free'),
+          upgradeMessage: getLimitUpgradeMessage(feature,(subscription.plan !== '' && subscription.plan != null) ? subscription.plan : 'free'),
           currentPlan: subscription.plan,
         },
         { status: 429 } // Too Many Requests
@@ -260,7 +260,7 @@ export async function withFeatureGate<T>(
   } catch (error: any) {
     logger.error('[Feature Gate] Error in handler:', error, { file: 'middleware.ts' });
     return NextResponse.json(
-      { success: false, error: error.message || 'Operation failed' },
+      { success: false, error:(error.message !== '' && error.message != null) ? error.message : 'Operation failed'},
       { status: 500 }
     );
   }

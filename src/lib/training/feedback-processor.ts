@@ -125,15 +125,15 @@ function parseAnalysisResponse(
       implementation: s.implementation,
       priority: s.priority,
       estimatedImpact: s.estimatedImpact,
-      confidence: parsed.confidence || 0.8,
+      confidence: parsed.confidence ?? 0.8,
     }));
     
     return {
       strengths: parsed.strengths ?? [],
       weaknesses: parsed.weaknesses ?? [],
       suggestions,
-      overallAssessment: parsed.overallAssessment || '',
-      confidence: parsed.confidence || 0.8,
+      overallAssessment: parsed.overallAssessment ?? '',
+      confidence: parsed.confidence ?? 0.8,
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {

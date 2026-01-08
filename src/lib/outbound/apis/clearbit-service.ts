@@ -329,8 +329,8 @@ export async function enrichProspect(
 
     const data = await response.json();
     return {
-      person: data.person || null,
-      company: data.company || null,
+      person: data.person ?? null,
+      company: data.company ?? null,
     };
   } catch (error) {
     logger.error('[Clearbit] Error enriching prospect:', error, { file: 'clearbit-service.ts' });
@@ -350,7 +350,7 @@ async function getClearbitApiKey(organizationId: string): Promise<string | null>
 
     // Try organization API keys
     const keys = await apiKeyService.getKeys(organizationId);
-    return keys?.enrichment?.clearbitApiKey || null;
+    return keys?.enrichment?.clearbitApiKey ?? null;
   } catch (error) {
     logger.error('[Clearbit] Error getting API key:', error, { file: 'clearbit-service.ts' });
     return null;
@@ -390,7 +390,7 @@ export function formatClearbitCompanyData(company: ClearbitCompany): {
     website: company.url,
     domain: company.domain,
     industry: company.category?.industry || company.category?.sector || 'Unknown',
-    size: company.metrics?.employeesRange || 
+    size: company.metrics?.employeesRange ?? 
           (company.metrics?.employees ? `${company.metrics.employees} employees` : 'Unknown'),
     description: company.description || '',
     location: company.location || 

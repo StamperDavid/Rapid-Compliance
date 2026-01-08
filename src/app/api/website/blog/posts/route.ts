@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Create post document
     const postData: BlogPost = {
       ...post,
-      id: post.id || `post_${Date.now()}`,
+      id:(post.id !== '' && post.id != null) ? post.id : `post_${Date.now()}`,
       organizationId, // CRITICAL: Set org ownership
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

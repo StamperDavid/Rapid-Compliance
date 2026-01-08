@@ -304,7 +304,7 @@ export default function EmailSequencesPage() {
                       {seq.name}
                     </h3>
                     <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                      {seq.description || 'No description'}
+                      {(seq.description !== '' && seq.description != null) ? seq.description : 'No description'}
                     </p>
 
                     {/* Stats */}
@@ -446,7 +446,7 @@ export default function EmailSequencesPage() {
                             {enrollment.prospectId}
                           </td>
                           <td style={{ padding: '1rem', color: '#fff' }}>
-                            {sequence?.name || 'Unknown'}
+                            {sequence?(.name !== '' && .name != null) ? .name : 'Unknown'}
                           </td>
                           <td style={{ padding: '1rem' }}>
                             <span style={{
@@ -461,7 +461,7 @@ export default function EmailSequencesPage() {
                             </span>
                           </td>
                           <td style={{ padding: '1rem', color: '#fff' }}>
-                            {enrollment.currentStep + 1} / {sequence?.steps.length || 0}
+                            {enrollment.currentStep + 1} / {sequence?.steps.length ?? 0}
                           </td>
                           <td style={{ padding: '1rem', color: '#666', fontSize: '0.875rem' }}>
                             {enrollment.nextStepAt 

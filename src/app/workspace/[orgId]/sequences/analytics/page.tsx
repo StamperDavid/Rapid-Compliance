@@ -165,7 +165,7 @@ export default function SequenceAnalyticsPage() {
 
         const data = await response.json();
         setSummary(data.summary);
-        setSequences(data.sequences || []);
+        setSequences(data.sequences ?? []);
 
         // Load recent executions
         const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
@@ -176,7 +176,7 @@ export default function SequenceAnalyticsPage() {
 
         if (executionsResponse.ok) {
           const executionsData = await executionsResponse.json();
-          setRecentExecutions(executionsData.executions || []);
+          setRecentExecutions(executionsData.executions ?? []);
         }
       } catch (error) {
         logger.error('Error loading analytics:', error, { file: 'analytics/page.tsx' });
@@ -198,7 +198,7 @@ export default function SequenceAnalyticsPage() {
 
         if (executionsResponse.ok) {
           const executionsData = await executionsResponse.json();
-          setRecentExecutions(executionsData.executions || []);
+          setRecentExecutions(executionsData.executions ?? []);
         }
       } catch (error) {
         logger.error('Error refreshing executions:', error, { file: 'analytics/page.tsx' });
@@ -601,7 +601,7 @@ export default function SequenceAnalyticsPage() {
                           View Comparison
                         </button>
                       )}
-                      {(abTestSequences[0] || abTestSequences[1]) && (
+                      {(abTestSequences[0] ?? abTestSequences[1]) && (
                         <button
                           onClick={() => setABTestSequences([null, null])}
                           style={{
@@ -816,7 +816,7 @@ export default function SequenceAnalyticsPage() {
                         <ChannelBadge channel={execution.channel} small />
                         <div style={{ flex: 1 }}>
                           <div style={{ color: '#fff', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                            <strong>{execution.sequenceName}</strong> → {execution.leadName || execution.leadId}
+                            <strong>{execution.sequenceName}</strong> → {execution.leadName ?? execution.leadId}
                           </div>
                           <div style={{ color: '#666', fontSize: '0.75rem' }}>
                             Step {execution.stepIndex + 1}: {execution.action}
@@ -1071,10 +1071,10 @@ function ChannelPerformanceCard({ channel, icon, stats }: {
   icon: string;
   stats: any;
 }) {
-  const sent = stats.sent || 0;
-  const delivered = stats.delivered || 0;
-  const opened = stats.opened || 0;
-  const replied = stats.replied || 0;
+  const sent = stats.sent ?? 0;
+  const delivered = stats.delivered ?? 0;
+  const opened = stats.opened ?? 0;
+  const replied = stats.replied ?? 0;
 
   const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
   const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;

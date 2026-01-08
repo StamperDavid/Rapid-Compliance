@@ -79,7 +79,7 @@ export async function requireUserOrganization(
  */
 export async function getUserId(request: NextRequest): Promise<string | null> {
   const user = await getAuthToken(request);
-  return user?.uid || null;
+  return user?.uid ?? null;
 }
 
 /**
@@ -87,7 +87,7 @@ export async function getUserId(request: NextRequest): Promise<string | null> {
  */
 export async function getOrganizationId(request: NextRequest): Promise<string | null> {
   const user = await getAuthToken(request);
-  return user?.organizationId || null;
+  return user?.organizationId ?? null;
 }
 
 /**

@@ -68,7 +68,7 @@ export default function ABTestsPage() {
                     </div>
                     <p className="text-gray-400 mb-3">{test.description}</p>
                     <div className="flex gap-4 text-sm text-gray-400">
-                      <span>Variants: {test.variants?.length || 0}</span>
+                      <span>Variants: {test.variants?.length ?? 0}</span>
                       {test.winner && <><span>•</span><span className="text-green-400">Winner: {test.winner}</span></>}
                     </div>
                   </div>

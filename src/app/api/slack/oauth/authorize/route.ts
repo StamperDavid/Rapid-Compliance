@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       state,
       organizationId: orgId,
       userId,
-      redirectUrl: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations`,
+      redirectUrl:(redirectUrl !== '' && redirectUrl != null) ? redirectUrl : `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations`,
       createdAt: Timestamp.now(),
       expiresAt: Timestamp.fromMillis(Date.now() + 10 * 60 * 1000), // 10 minutes
     };

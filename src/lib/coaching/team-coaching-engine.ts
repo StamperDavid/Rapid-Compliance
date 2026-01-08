@@ -239,7 +239,7 @@ export class TeamCoachingEngine {
     // Calculate performance distribution
     const tierCounts = new Map<PerformanceTier, number>();
     for (const rep of repInsights) {
-      tierCounts.set(rep.tier, (tierCounts.get(rep.tier) || 0) + 1);
+      tierCounts.set(rep.tier, (tierCounts.get(rep.tier) ?? 0) + 1);
     }
     
     const performanceDistribution = [
@@ -250,8 +250,8 @@ export class TeamCoachingEngine {
       'at_risk'
     ].map((tier) => ({
       tier: tier as PerformanceTier,
-      count: tierCounts.get(tier as PerformanceTier) || 0,
-      percentage: ((tierCounts.get(tier as PerformanceTier) || 0) / totalReps) * 100
+      count: tierCounts.get(tier as PerformanceTier) ?? 0,
+      percentage: ((tierCounts.get(tier as PerformanceTier) ?? 0) / totalReps) * 100
     }));
     
     // Calculate team averages
@@ -284,7 +284,7 @@ export class TeamCoachingEngine {
     ];
     
     // Count at-risk reps
-    const atRiskCount = tierCounts.get('at_risk') || 0;
+    const atRiskCount = tierCounts.get('at_risk') ?? 0;
     
     // Calculate top performer benchmarks
     const topPerformers = repInsights.filter(r =>

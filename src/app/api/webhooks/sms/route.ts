@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
       status,
       lastStatusUpdate: new Date().toISOString(),
       deliveredAt: status === 'delivered' ? new Date().toISOString() : undefined,
-      errorCode: errorCode || undefined,
-      errorMessage: errorMessage || undefined,
+      errorCode: errorCode ?? undefined,
+      errorMessage: errorMessage ?? undefined,
     });
 
     // If failed, handle bounce logic for sequences
@@ -191,7 +191,7 @@ async function handleSMSFailure(
           const action = enrollment.stepActions?.find((a: any) => a.stepId === smsRecord.stepId);
           if (action) {
             action.status = 'failed';
-            action.error = errorMessage || `Error ${errorCode}`;
+            action.error =(errorMessage !== '' && errorMessage != null) ? errorMessage : `Error ${errorCode}`;
             action.updatedAt = new Date().toISOString();
             
             await FirestoreService.update(

@@ -86,7 +86,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
 
     // Filter by date
     const leadsInPeriod = allLeads.filter(lead => {
-      const leadDate = lead.createdAt?.toDate?.() || new Date(lead.createdAt);
+      const leadDate =lead.createdAt?.toDate?.() ?? new Date(lead.createdAt);
       return leadDate >= startDate && leadDate <= now;
     });
 
@@ -110,13 +110,13 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
       if (lead.lastActivity || lead.lastActivityAt) {score += 15;}
       
       // Qualified status: +20
-      if ((lead.status || '').toLowerCase().includes('qualified')) {score += 20;}
+      if ((lead.status ?? '').toLowerCase().includes('qualified')) {score += 20;}
       
       // Hot rating: +15
-      if ((lead.rating || '').toLowerCase() === 'hot') {score += 15;}
+      if ((lead.rating ?? '').toLowerCase() === 'hot') {score += 15;}
       
       // Warm rating: +10
-      if ((lead.rating || '').toLowerCase() === 'warm') {score += 10;}
+      if ((lead.rating ?? '').toLowerCase() === 'warm') {score += 10;}
       
       return { ...lead, score: Math.min(100, score) };
     });
@@ -140,29 +140,29 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
 
     // Top leads
     const topLeads = [...scoredLeads]
-      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       .slice(0, 10)
       .map(lead => ({
         id: lead.id,
-        name: lead.name || lead.first_name || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown',
+        name:((lead.name || lead.first_name !== '' && lead.name || lead.first_name != null) ? lead.name || lead.first_name : `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() !== '' && lead.name || lead.first_name || `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() != null) ? lead.name ?? (lead.first_name !== '' && lead.first_name != null) ? lead.first_name: `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim(): 'Unknown',
         email: lead.email,
-        company: lead.company || lead.companyName,
+        company:lead.company ?? lead.companyName,
         score: lead.score,
         status: lead.status,
       }));
 
     // Average score
     const avgScore = scoredLeads.length > 0
-      ? Math.round(scoredLeads.reduce((sum, l) => sum + (l.score || 0), 0) / scoredLeads.length)
+      ? Math.round(scoredLeads.reduce((sum, l) => sum + (l.score ?? 0), 0) / scoredLeads.length)
       : 0;
 
     // Score by source
     const sourceMap = new Map<string, { total: number; count: number }>();
     scoredLeads.forEach(lead => {
-      const source = lead.source || lead.lead_source || 'unknown';
+      const source =(lead.source || lead.lead_source !== '' && lead.source || lead.lead_source != null) ? lead.source ?? lead.lead_source: 'unknown';
       const existing = sourceMap.get(source) ?? { total: 0, count: 0 };
       sourceMap.set(source, {
-        total: existing.total + (lead.score || 0),
+        total: existing.total + (lead.score ?? 0),
         count: existing.count + 1,
       });
     });
@@ -176,18 +176,20 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
       .sort((a, b) => b.avgScore - a.avgScore);
 
     // Conversion metrics
-    const convertedLeads = scoredLeads.filter(l => 
-      (l.status || '').toLowerCase().includes('converted') || 
-      (l.status || '').toLowerCase().includes('won') ||
-      l.convertedAt
-    );
+    const convertedLeads = scoredLeads.filter(l => {
+      const statusLower = (l.status ?? '').toLowerCase();
+      const isConverted = statusLower.includes('converted');
+      const isWon = statusLower.includes('won');
+      const hasConvertedAt = l.convertedAt != null;
+      return [isConverted, isWon, hasConvertedAt].some(Boolean);
+    });
 
     const conversionRate = scoredLeads.length > 0
       ? (convertedLeads.length / scoredLeads.length) * 100
       : 0;
 
     const avgScoreConverted = convertedLeads.length > 0
-      ? Math.round(convertedLeads.reduce((sum, l) => sum + (l.score || 0), 0) / convertedLeads.length)
+      ? Math.round(convertedLeads.reduce((sum, l) => sum + (l.score ?? 0), 0) / convertedLeads.length)
       : 0;
 
     return {

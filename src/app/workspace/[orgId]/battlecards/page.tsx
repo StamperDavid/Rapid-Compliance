@@ -58,7 +58,7 @@ export default function BattlecardsPage({ params }: PageProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to discover competitor');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to discover competitor');
       }
 
       setCompetitorProfile(data.profile);
@@ -106,7 +106,7 @@ export default function BattlecardsPage({ params }: PageProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate battlecard');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to generate battlecard');
       }
 
       setBattlecard(data.battlecard);

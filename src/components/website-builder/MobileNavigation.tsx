@@ -43,7 +43,7 @@ export function MobileNavigation({ items, logo, brandName }: MobileNavigationPro
             {logo && (
               <img
                 src={logo}
-                alt={brandName || 'Logo'}
+                alt={(brandName !== '' && brandName != null) ? brandName : 'Logo'}
                 style={{ height: '32px', width: 'auto' }}
               />
             )}

@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to send message',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to send message',
       },
       { status: 500 }
     );

@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: 'Internal server error',
-        message: error.message || 'Failed to predict deal risk',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to predict deal risk',
       },
       { status: 500 }
     );
@@ -390,7 +390,7 @@ async function handleBatchRequest(
       {
         success: false,
         error: 'Internal server error',
-        message: error.message || 'Failed to predict batch risk',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to predict batch risk',
       },
       { status: 500 }
     );
@@ -408,7 +408,7 @@ export async function GET(request: NextRequest) {
     
     const dealId = searchParams.get('dealId');
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceId =(searchParams.get('workspaceId') !== '' && searchParams.get('workspaceId') != null) ? searchParams.get('workspaceId') : 'default';
     const includeInterventions = searchParams.get('includeInterventions') !== 'false';
     
     if (!dealId || !organizationId) {
@@ -441,7 +441,7 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: 'Internal server error',
-        message: error.message || 'Failed to get risk prediction',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to get risk prediction',
       },
       { status: 500 }
     );

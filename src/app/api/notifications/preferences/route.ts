@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
   try {
     // Get user ID and org ID (from session/auth)
     // TODO: Implement proper authentication
-    const userId = request.headers.get('x-user-id') || 'default_user';
-    const orgId = request.headers.get('x-org-id') || 'default_org';
+    const userId =(request.headers.get('x-user-id') !== '' && request.headers.get('x-user-id') != null) ? request.headers.get('x-user-id') : 'default_user';
+    const orgId =(request.headers.get('x-org-id') !== '' && request.headers.get('x-org-id') != null) ? request.headers.get('x-org-id') : 'default_org';
 
     // Check rate limit
     const rateLimit = checkRateLimit(`prefs:${userId}`, 30, 60000);
@@ -125,8 +125,8 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
 
     // Get user ID and org ID (from session/auth)
-    const userId = request.headers.get('x-user-id') || body.userId || 'default_user';
-    const orgId = request.headers.get('x-org-id') || body.orgId || 'default_org';
+    const userId =(request.headers.get('x-user-id') || body.userId !== '' && request.headers.get('x-user-id') || body.userId != null) ? request.headers.get('x-user-id') ?? body.userId: 'default_user';
+    const orgId =(request.headers.get('x-org-id') || body.orgId !== '' && request.headers.get('x-org-id') || body.orgId != null) ? request.headers.get('x-org-id') ?? body.orgId: 'default_org';
 
     // Add userId and orgId to body for validation
     body.userId = userId;
@@ -151,10 +151,8 @@ export async function PUT(request: NextRequest) {
       userId
     );
 
-    if (!existingPrefs) {
-      // Create default preferences
-      existingPrefs = getDefaultPreferences(userId, orgId);
-    }
+    // Create default preferences if not exists
+    existingPrefs ??= getDefaultPreferences(userId, orgId);
 
     // Merge with updates
     // Deep merge is necessary because validatedData uses deepPartial()

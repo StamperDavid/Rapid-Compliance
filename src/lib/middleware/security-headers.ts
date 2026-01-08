@@ -63,7 +63,7 @@ export function addCORSHeaders(
   origin?: string
 ): NextResponse {
   // Whitelist of allowed origins
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
     'http://localhost:3000',
     'https://yourdomain.com',
   ];

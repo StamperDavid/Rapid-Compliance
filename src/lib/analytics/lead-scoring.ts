@@ -233,7 +233,7 @@ export function calculateLeadScore(factors: LeadScoringFactors): LeadScore {
     : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days for cold leads
 
   // Estimate deal value (if not provided)
-  const estimatedDealValue = factors.dealValue || 
+  const estimatedDealValue = factors.dealValue ?? 
     (factors.companySize ? factors.companySize * 100 : 5000);
 
   return {

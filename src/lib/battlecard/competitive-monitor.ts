@@ -175,8 +175,8 @@ export class CompetitiveMonitor {
   addCompetitor(config: CompetitorMonitorConfig): void {
     this.monitoringConfigs.set(config.competitorId, {
       ...config,
-      lastChecked: config.lastChecked || undefined,
-      nextCheck: config.nextCheck || this.calculateNextCheck(config.checkFrequency),
+      lastChecked: config.lastChecked ?? undefined,
+      nextCheck:config.nextCheck ?? this.calculateNextCheck(config.checkFrequency),
     });
 
     logger.info('Competitor added to monitoring', {
@@ -512,8 +512,8 @@ export class CompetitiveMonitor {
         severity: 'medium',
         details: {
           field: 'tagline',
-          oldValue: oldProfile.positioning.tagline || 'None',
-          newValue: newProfile.positioning.tagline || 'None',
+          oldValue:(oldProfile.positioning.tagline !== '' && oldProfile.positioning.tagline != null) ? oldProfile.positioning.tagline : 'None',
+          newValue:(newProfile.positioning.tagline !== '' && newProfile.positioning.tagline != null) ? newProfile.positioning.tagline : 'None',
           impact: 'Competitor changed their messaging',
           recommendedAction: 'Analyze new positioning and adjust our messaging',
         },
@@ -569,8 +569,8 @@ export class CompetitiveMonitor {
         severity: 'critical',
         details: {
           field: 'funding_stage',
-          oldValue: oldProfile.socialProof.fundingStage || 'Unknown',
-          newValue: newProfile.socialProof.fundingStage || 'Unknown',
+          oldValue:(oldProfile.socialProof.fundingStage !== '' && oldProfile.socialProof.fundingStage != null) ? oldProfile.socialProof.fundingStage : 'Unknown',
+          newValue:(newProfile.socialProof.fundingStage !== '' && newProfile.socialProof.fundingStage != null) ? newProfile.socialProof.fundingStage : 'Unknown',
           impact: 'Competitor raised new funding',
           recommendedAction: 'Expect aggressive expansion and pricing pressure',
         },

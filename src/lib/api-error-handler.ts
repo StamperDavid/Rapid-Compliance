@@ -65,7 +65,7 @@ function handleFirebaseError(error: any): {
   code: string;
   statusCode: number;
 } {
-  const code = error.code || 'unknown';
+  const code =(error.code !== '' && error.code != null) ? error.code : 'unknown';
 
   // Map Firebase error codes to HTTP status codes and messages
   const errorMap: Record<string, { message: string; statusCode: number }> = {
@@ -108,7 +108,7 @@ function handleFirebaseError(error: any): {
   };
 
   const mappedError = errorMap[code] || {
-    message: error.message || 'An error occurred',
+    message:(error.message !== '' && error.message != null) ? error.message : 'An error occurred',
     statusCode: 500,
   };
 

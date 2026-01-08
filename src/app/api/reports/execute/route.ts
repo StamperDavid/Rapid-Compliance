@@ -93,7 +93,7 @@ async function executeReport(report: any, orgId: string, parameters: any = {}) {
  * Revenue Report
  */
 async function executeRevenueReport(orgId: string, config: any, parameters: any) {
-  const period = parameters.period || config.period || '30d';
+  const period =(parameters.period || config.period !== '' && parameters.period || config.period != null) ? parameters.period ?? config.period: '30d';
   
   // Call analytics service
   const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analytics/revenue?orgId=${orgId}&period=${period}`);
@@ -160,15 +160,15 @@ async function executeLeadsReport(orgId: string, config: any, parameters: any) {
   // Group by status
   const statusMap = new Map<string, number>();
   allLeads.forEach((lead: any) => {
-    const status = lead.status || 'new';
-    statusMap.set(status, (statusMap.get(status) || 0) + 1);
+    const status =(lead.status !== '' && lead.status != null) ? lead.status : 'new';
+    statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
   });
   
   // Group by source
   const sourceMap = new Map<string, number>();
   allLeads.forEach((lead: any) => {
-    const source = lead.source || 'direct';
-    sourceMap.set(source, (sourceMap.get(source) || 0) + 1);
+    const source =(lead.source !== '' && lead.source != null) ? lead.source : 'direct';
+    sourceMap.set(source, (sourceMap.get(source) ?? 0) + 1);
   });
   
   return {
@@ -178,7 +178,7 @@ async function executeLeadsReport(orgId: string, config: any, parameters: any) {
     bySource: Array.from(sourceMap.entries()).map(([source, count]) => ({ source, count })),
     recentLeads: allLeads.slice(0, 10).map((lead: any) => ({
       id: lead.id,
-      name: lead.name || `${lead.firstName} ${lead.lastName}`,
+      name:(lead.name !== '' && lead.name != null) ? lead.name : `${lead.firstName} ${lead.lastName}`,
       email: lead.email,
       status: lead.status,
       createdAt: lead.createdAt,
@@ -198,7 +198,7 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
   // Group by stage
   const stageMap = new Map<string, { count: number; value: number }>();
   allDeals.forEach((deal: any) => {
-    const stage = deal.stage || deal.status || 'new';
+    const stage =(deal.stage || deal.status !== '' && deal.stage || deal.status != null) ? deal.stage ?? deal.status: 'new';
     const value = parseFloat(deal.value) || 0;
     const existing = stageMap.get(stage) ?? { count: 0, value: 0 };
     stageMap.set(stage, {
@@ -224,7 +224,7 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
         id: deal.id,
         name: deal.name,
         value: deal.value,
-        stage: deal.stage || deal.status,
+        stage:deal.stage ?? deal.status,
       })),
   };
 }
@@ -241,7 +241,7 @@ async function executeContactsReport(orgId: string, config: any, parameters: any
     totalContacts: allContacts.length,
     recentContacts: allContacts.slice(0, 10).map((contact: any) => ({
       id: contact.id,
-      name: contact.name || `${contact.firstName} ${contact.lastName}`,
+      name:(contact.name !== '' && contact.name != null) ? contact.name : `${contact.firstName} ${contact.lastName}`,
       email: contact.email,
       company: contact.company,
       createdAt: contact.createdAt,

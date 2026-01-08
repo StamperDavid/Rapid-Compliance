@@ -176,7 +176,7 @@ async function processStripePayment(
     logger.error('Stripe payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
-      error: error.message || 'Payment processing failed',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Payment processing failed',
     };
   }
 }
@@ -226,7 +226,7 @@ async function processSquarePayment(
     
     // Create payment
     const response = await client.payments.create({
-      sourceId: request.paymentToken || '', // Square payment token from frontend
+      sourceId: request.paymentToken ?? '', // Square payment token from frontend
       idempotencyKey: `${request.workspaceId}-${Date.now()}`, // Unique key
       amountMoney: {
         amount: BigInt(Math.round(request.amount * 100)), // Convert to cents
@@ -244,7 +244,7 @@ async function processSquarePayment(
       
       return {
         success: true,
-        transactionId: payment.id || '',
+        transactionId: payment.id ?? '',
         provider: 'square',
         cardLast4: payment.cardDetails?.card?.last4,
         cardBrand: payment.cardDetails?.card?.cardBrand,
@@ -253,14 +253,14 @@ async function processSquarePayment(
     } else {
       return {
         success: false,
-        error: response.errors?.[0]?.detail || 'Square payment failed',
+        error: response.errors?.[0]?(.detail !== '' && .detail != null) ? .detail : 'Square payment failed',
       };
     }
   } catch (error: any) {
     logger.error('Square payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
-      error: error.message || 'Square payment processing failed',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Square payment processing failed',
     };
   }
 }
@@ -338,7 +338,7 @@ async function processPayPalPayment(
       body: JSON.stringify({
         intent: 'CAPTURE',
         purchase_units: [{
-          reference_id: request.metadata?.orderId || 'default',
+          reference_id: request.metadata?(.orderId !== '' && .orderId != null) ? .orderId : 'default',
           amount: {
             currency_code: request.currency.toUpperCase(),
             value: request.amount.toFixed(2),
@@ -359,7 +359,7 @@ async function processPayPalPayment(
       const error = await orderResponse.json();
       return {
         success: false,
-        error: error.message || 'PayPal order creation failed',
+        error:(error.message !== '' && error.message != null) ? error.message : 'PayPal order creation failed',
       };
     }
     
@@ -410,7 +410,7 @@ async function processPayPalPayment(
     logger.error('PayPal payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
-      error: error.message || 'PayPal payment processing failed',
+      error:(error.message !== '' && error.message != null) ? error.message : 'PayPal payment processing failed',
     };
   }
 }
@@ -513,7 +513,7 @@ async function refundStripePayment(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Refund failed',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Refund failed',
     };
   }
 }

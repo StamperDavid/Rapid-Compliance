@@ -89,10 +89,10 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
   // Build campaign object, excluding undefined values (Firestore doesn't allow undefined)
   const fullCampaign: EmailCampaign = {
     id: campaignId,
-    name: campaign.name || 'Untitled Campaign',
+    name:(campaign.name !== '' && campaign.name != null) ? campaign.name : 'Untitled Campaign',
     organizationId: campaign.organizationId!,
-    workspaceId: campaign.workspaceId || 'default',
-    type: campaign.type || 'broadcast',
+    workspaceId:(campaign.workspaceId !== '' && campaign.workspaceId != null) ? campaign.workspaceId : 'default',
+    type:(campaign.type !== '' && campaign.type != null) ? campaign.type : 'broadcast',
     subject: campaign.subject!,
     ...(campaign.subjectB !== undefined && { subjectB: campaign.subjectB }),
     htmlContent: campaign.htmlContent!,
@@ -101,7 +101,7 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
     fromEmail: campaign.fromEmail!,
     fromName: campaign.fromName!,
     ...(campaign.replyTo !== undefined && { replyTo: campaign.replyTo }),
-    recipientList: campaign.recipientList || [],
+    recipientList:campaign.recipientList ?? [],
     ...(campaign.segmentCriteria !== undefined && { segmentCriteria: campaign.segmentCriteria }),
     ...(campaign.scheduledFor !== undefined && { scheduledFor: campaign.scheduledFor }),
     sendImmediately: campaign.sendImmediately ?? false,
@@ -120,7 +120,7 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
     unsubscribedCount: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
-    createdBy: campaign.createdBy || 'system',
+    createdBy:(campaign.createdBy !== '' && campaign.createdBy != null) ? campaign.createdBy : 'system',
   } as EmailCampaign;
 
   // Store campaign in Firestore (remove undefined values)
@@ -227,8 +227,8 @@ export async function sendCampaign(campaignId: string, organizationId?: string):
 
       // Send B variant
       const bResults = await sendBulkEmails(bRecipients, {
-        subject: campaign.subjectB || campaign.subject,
-        html: campaign.htmlContentB || campaign.htmlContent,
+        subject:campaign.subjectB ?? campaign.subject,
+        html:campaign.htmlContentB ?? campaign.htmlContent,
         text: campaign.textContent,
         from: campaign.fromEmail,
         fromName: campaign.fromName,
@@ -254,7 +254,7 @@ export async function sendCampaign(campaignId: string, organizationId?: string):
           const winner = await determineABTestWinner(campaignId, 'A', 'B');
           const winnerContent = winner === 'A' 
             ? { subject: campaign.subject, html: campaign.htmlContent }
-            : { subject: campaign.subjectB || campaign.subject, html: campaign.htmlContentB || campaign.htmlContent };
+            : { subject:campaign.subjectB ?? campaign.subject, html:campaign.htmlContentB ?? campaign.htmlContent};
           
           await sendBulkEmails(remainingRecipients, {
             ...winnerContent,

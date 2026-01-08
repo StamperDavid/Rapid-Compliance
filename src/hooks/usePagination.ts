@@ -42,13 +42,13 @@ export function usePagination<T>({
       setLoading(true);
       setError(null);
 
-      const result = await fetchFn(lastDoc || undefined);
+      const result = await fetchFn(lastDoc ?? undefined);
 
       setData(prev => [...prev, ...result.data]);
       setLastDoc(result.lastDoc);
       setHasMore(result.hasMore);
     } catch (err: any) {
-      setError(err.message || 'Failed to load data');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load data');
       logger.error('Pagination error:', err, { file: 'usePagination.ts' });
     } finally {
       setLoading(false);
@@ -69,7 +69,7 @@ export function usePagination<T>({
       setLastDoc(result.lastDoc);
       setHasMore(result.hasMore);
     } catch (err: any) {
-      setError(err.message || 'Failed to refresh data');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to refresh data');
       logger.error('Refresh error:', err, { file: 'usePagination.ts' });
     } finally {
       setLoading(false);

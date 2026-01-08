@@ -221,7 +221,7 @@ function calculateStageDurationFactor(deal: Deal): DealHealthFactor {
  * Engagement level factor
  */
 function calculateEngagementFactor(activityStats: any): DealHealthFactor {
-  const engagementScore = activityStats.engagementScore || 0;
+  const engagementScore = activityStats.engagementScore ?? 0;
   
   let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
   let description = '';

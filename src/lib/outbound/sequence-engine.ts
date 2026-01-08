@@ -167,7 +167,7 @@ export class SequenceEngine {
       const action: StepAction = {
         stepId: step.id,
         stepOrder: step.order,
-        scheduledFor: enrollment.nextStepAt || new Date().toISOString(),
+        scheduledFor:enrollment.nextStepAt ?? new Date().toISOString(),
         status: 'sent',
         subject: step.subject,
         body: step.body,
@@ -239,7 +239,7 @@ export class SequenceEngine {
       const failedAction: StepAction = {
         stepId: step.id,
         stepOrder: step.order,
-        scheduledFor: enrollment.nextStepAt || new Date().toISOString(),
+        scheduledFor:enrollment.nextStepAt ?? new Date().toISOString(),
         status: 'failed',
         error: error.message,
         retryCount: 0,
@@ -293,7 +293,7 @@ export class SequenceEngine {
       await sendEmailViaGmail({
         to: prospect.email,
         from: fromEmail,
-        subject: step.subject || 'Follow-up',
+        subject:(step.subject !== '' && step.subject != null) ? step.subject : 'Follow-up',
         body: step.body,
         organizationId,
         metadata: {
@@ -660,7 +660,7 @@ export class SequenceEngine {
     const skippedAction: StepAction = {
       stepId: step.id,
       stepOrder: step.order,
-      scheduledFor: enrollment.nextStepAt || new Date().toISOString(),
+      scheduledFor:enrollment.nextStepAt ?? new Date().toISOString(),
       status: 'skipped',
       createdAt: new Date().toISOString(),
     };

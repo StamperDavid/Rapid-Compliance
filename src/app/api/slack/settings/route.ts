@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to get settings',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to get settings',
       },
       { status: 500 }
     );
@@ -159,7 +159,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to update settings',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to update settings',
       },
       { status: 500 }
     );

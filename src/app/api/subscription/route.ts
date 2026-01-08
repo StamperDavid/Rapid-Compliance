@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const subscription = await FeatureGate.updatePlan(
       orgId,
       plan,
-      billingCycle || 'monthly'
+(billingCycle !== '' && billingCycle != null) ? billingCycle : 'monthly'
     );
 
     return NextResponse.json({

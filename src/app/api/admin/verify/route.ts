@@ -78,10 +78,10 @@ export async function POST(request: NextRequest) {
     
     return createSuccessResponse({
       uid: userId,
-      email: userData.email || decodedToken.email,
-      name: userData.name || userData.displayName || 'Admin User',
+      email:userData.email ?? decodedToken.email,
+      name:(userData.name || userData.displayName !== '' && userData.name || userData.displayName != null) ? userData.name ?? userData.displayName: 'Admin User',
       role: userData.role,
-      organizationId: userData.organizationId || 'platform',
+      organizationId:(userData.organizationId !== '' && userData.organizationId != null) ? userData.organizationId : 'platform',
       verified: true
     });
     

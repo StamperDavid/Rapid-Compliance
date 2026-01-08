@@ -30,8 +30,8 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
     
     return {
       uid: decodedClaims.uid,
-      email: decodedClaims.email || null,
-      displayName: decodedClaims.name || decodedClaims.email || null,
+      email: decodedClaims.email ?? null,
+      displayName:decodedClaims.name ?? decodedClaims.email ?? null,
     };
   } catch (error) {
     console.error('[Server Auth] Error verifying user:', error);
@@ -46,7 +46,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
 export async function getUserIdentifier(): Promise<string> {
   const user = await getAuthenticatedUser();
   if (!user) {return 'system';}
-  return user.displayName || user.email || user.uid;
+return user.displayName ?? user.email ?? user.uid;
 }
 
 

@@ -25,7 +25,7 @@ export async function getOrCreateCart(
   if (existingCart) {
     // Check if cart is expired
     const expiresAt = existingCart.expiresAt as any;
-    if (expiresAt && new Date(expiresAt.toDate?.() || expiresAt) < new Date()) {
+    if (expiresAt && new Date(expiresAt.toDate?.() ?? expiresAt) < new Date()) {
       // Cart expired, create new one
       return createCart(sessionId, workspaceId, organizationId, userId);
     }
@@ -106,7 +106,7 @@ export async function addToCart(
   // Check if item already in cart
   const existingItemIndex = cart.items.findIndex(
     item => item.productId === productId && 
-            (item.variantId || null) === (variantId || null) &&
+            (item.variantId ?? null) === (variantId ?? null) &&
             JSON.stringify(item.variantOptions ?? {}) === JSON.stringify(variantOptions ?? {})
   );
   
@@ -299,9 +299,9 @@ async function saveCart(cart: Cart): Promise<void> {
     cart.id,
     {
       ...cart,
-      createdAt: (cart.createdAt as any).toDate?.()?.toISOString() || cart.createdAt,
-      updatedAt: (cart.updatedAt as any).toDate?.()?.toISOString() || cart.updatedAt,
-      expiresAt: (cart.expiresAt as any).toDate?.()?.toISOString() || cart.expiresAt,
+      createdAt: (cart.createdAt as any).toDate?.()?.toISOString() ?? cart.createdAt,
+      updatedAt: (cart.updatedAt as any).toDate?.()?.toISOString() ?? cart.updatedAt,
+      expiresAt: (cart.expiresAt as any).toDate?.()?.toISOString() ?? cart.expiresAt,
       items: cart.items.map(item => {
         const serializedItem: any = {
           id: item.id,
@@ -311,7 +311,7 @@ async function saveCart(cart: Cart): Promise<void> {
           price: item.price,
           quantity: item.quantity,
           subtotal: item.subtotal,
-          addedAt: (item.addedAt as any).toDate?.()?.toISOString() || item.addedAt,
+          addedAt: (item.addedAt as any).toDate?.()?.toISOString() ?? item.addedAt,
         };
         
         // Only include optional fields if they are defined

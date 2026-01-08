@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to list mappings',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to list mappings',
       },
       { status: 500 }
     );
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       channelName: data.channelName,
       minPriority: data.minPriority,
       enabled: data.enabled,
-      createdBy: body.userId || 'system',
+      createdBy:(body.userId !== '' && body.userId != null) ? body.userId : 'system',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to create mapping',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to create mapping',
       },
       { status: 500 }
     );
@@ -284,7 +284,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to update mapping',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to update mapping',
       },
       { status: 500 }
     );
@@ -360,7 +360,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || 'Failed to delete mapping',
+        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to delete mapping',
       },
       { status: 500 }
     );

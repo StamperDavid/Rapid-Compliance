@@ -344,10 +344,10 @@ export default function ConversationsPage() {
                             <div style={{ padding: '1.5rem', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div>
                                 <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                                  {liveConversations.find(c => c.id === selectedConversation)?.customerName || 'Anonymous'}
+                                  {liveConversations.find(c => c.id === selectedConversation)?(.customerName !== '' && .customerName != null) ? .customerName : 'Anonymous'}
                                 </h3>
                                 <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                                  {liveConversations.find(c => c.id === selectedConversation)?.customerEmail || 'No email provided'}
+                                  {liveConversations.find(c => c.id === selectedConversation)?(.customerEmail !== '' && .customerEmail != null) ? .customerEmail : 'No email provided'}
                                 </div>
                               </div>
                               <button onClick={() => setSelectedConversation(null)} style={{
@@ -458,7 +458,7 @@ export default function ConversationsPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '1.5rem', marginBottom: conv.trainingIssue ? '1rem' : 0 }}>
                               <div>
                                 <div style={{ color: '#fff', fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>
-                                  {conv.customerName || 'Anonymous'}
+                                  {(conv.customerName !== '' && conv.customerName != null) ? conv.customerName : 'Anonymous'}
                                 </div>
                                 <div style={{ color: '#666', fontSize: '0.75rem' }}>
                                   {conv.completedAt ? new Date(conv.completedAt).toLocaleString() : 'Unknown'}
@@ -475,7 +475,7 @@ export default function ConversationsPage() {
                                   fontWeight: '600',
                                   color: conv.status === 'completed' ? '#4ade80' : '#fbbf24'
                                 }}>
-                                  {conv.status?.toUpperCase() || 'COMPLETED'}
+                                  {conv.status?(.toUpperCase() !== '' && .toUpperCase() != null) ? .toUpperCase() : 'COMPLETED'}
                                 </div>
                               </div>
                               <div>
@@ -485,7 +485,7 @@ export default function ConversationsPage() {
                                   fontWeight: '600',
                                   color: conv.sentiment === 'positive' ? '#4ade80' : conv.sentiment === 'frustrated' ? '#ef4444' : '#fbbf24'
                                 }}>
-                                  {conv.sentiment?.toUpperCase() || 'NEUTRAL'}
+                                  {conv.sentiment?(.toUpperCase() !== '' && .toUpperCase() != null) ? .toUpperCase() : 'NEUTRAL'}
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>

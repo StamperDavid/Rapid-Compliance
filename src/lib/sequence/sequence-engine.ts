@@ -66,8 +66,8 @@ export class SequenceIntelligenceEngine {
     const validatedInput = sequenceAnalysisInputSchema.parse(input);
     
     // Set default time range if not provided
-    const endDate = validatedInput.endDate != null ? validatedInput.endDate : new Date();
-    const startDate = validatedInput.startDate != null ? validatedInput.startDate : new Date(endDate.getTime() - (DEFAULT_TIME_RANGE_DAYS * 24 * 60 * 60 * 1000));
+    const endDate = validatedInput.endDate ?? new Date();
+    const startDate = validatedInput.startDate ?? new Date(endDate.getTime() - (DEFAULT_TIME_RANGE_DAYS * 24 * 60 * 60 * 1000));
     
     // TODO: In production, fetch from database
     // For now, we'll use mock data structure
@@ -518,7 +518,7 @@ Return concise JSON:
   private async fetchSequences(input: SequenceAnalysisInput): Promise<EmailSequence[]> {
     // TODO: Implement database fetching
     // For now, return mock structure
-    const sequenceIds = input.sequenceIds != null ? input.sequenceIds : (input.sequenceId ? [input.sequenceId] : []);
+    const sequenceIds = input.sequenceIds ?? (input.sequenceId ? [input.sequenceId] : []);
     
     return sequenceIds.map((id, index) => ({
       id,

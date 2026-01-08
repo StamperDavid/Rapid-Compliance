@@ -36,7 +36,7 @@ export default function PagesManagementPage() {
       if (!response.ok) {throw new Error('Failed to load pages');}
       
       const data = await response.json();
-      setPages(data.pages || []);
+      setPages(data.pages ?? []);
     } catch (error) {
       console.error('[Pages] Load error:', error);
       alert('Failed to load pages');

@@ -58,7 +58,7 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
    - API Access
    - White-Label Options
 
-2. **No Feature Gating:** The $${tiers[0]?.price || 400} user gets the same AI Sales Engine as the $${tiers[tiers.length - 1]?.price || 1250} user.
+2. **No Feature Gating:** The $${tiers[0]?.price ?? 400} user gets the same AI Sales Engine as the $${tiers[tiers.length - 1]?.price ?? 1250} user.
 
 3. **BYOK (Bring Your Own Keys):** We don't markup AI tokens. Customers connect their own OpenRouter, OpenAI, or Anthropic API keys to pay raw market rates for compute.
 
@@ -68,8 +68,8 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
    - Sintra Social: $49-199/mo → Included
    - Zapier Automation: $29-599/mo → Included
    - **Total Competitor Cost:** $677-3,197/mo
-   - **Our Cost:** $${tiers[0]?.price || 400}-$${tiers[tiers.length - 1]?.price || 1250}/mo
-   - **Savings:** $${677 - (tiers[0]?.price || 400)}-$${3197 - (tiers[tiers.length - 1]?.price || 1250)}/mo
+   - **Our Cost:** $${tiers[0]?.price ?? 400}-$${tiers[tiers.length - 1]?.price ?? 1250}/mo
+   - **Savings:** $${677 - (tiers[0]?.price ?? 400)}-$${3197 - (tiers[tiers.length - 1]?.price ?? 1250)}/mo
 
 5. **Trial Terms:**
    - 14-day free trial
@@ -87,13 +87,13 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
 **Example responses:**
 
 - "How much does this cost?" 
-  → "We have success-linked pricing starting at $${tiers[0]?.price || 400}/month for 0-${tiers[0]?.recordMax || 100} records. The best part? You get access to ALL features regardless of tier - no gated features!"
+  → "We have success-linked pricing starting at $${tiers[0]?.price ?? 400}/month for 0-${tiers[0]?.recordMax ?? 100} records. The best part? You get access to ALL features regardless of tier - no gated features!"
 
 - "What's the difference between tiers?"
   → "The only difference is record capacity (how many contacts/leads you can store). Every tier has access to the full platform - AI agents, lead scraping, email sequences, everything."
 
 - "Why is this better than [competitor]?"
-  → "Instead of paying $677-3,197/month for separate tools (lead data, AI agents, social media, automation), you get everything in one platform for $${tiers[0]?.price || 400}-$${tiers[tiers.length - 1]?.price || 1250}/month. Plus, we use BYOK so you're not paying marked-up AI token costs."
+  → "Instead of paying $677-3,197/month for separate tools (lead data, AI agents, social media, automation), you get everything in one platform for $${tiers[0]?.price ?? 400}-$${tiers[tiers.length - 1]?.price ?? 1250}/month. Plus, we use BYOK so you're not paying marked-up AI token costs."
 
 **Last Updated:** ${new Date().toISOString()}
       `.trim(),

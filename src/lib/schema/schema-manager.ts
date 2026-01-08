@@ -73,14 +73,14 @@ export class SchemaManager {
       pluralName: schema.pluralName || schema.name!,
       singularName: schema.singularName || schema.name!,
       description: schema.description,
-      icon: schema.icon || '📋',
-      color: schema.color || '#3B82F6',
+      icon:(schema.icon !== '' && schema.icon != null) ? schema.icon : '📋',
+      color:(schema.color !== '' && schema.color != null) ? schema.color : '#3B82F6',
       
       // Start with empty fields, user will add them
       fields: schema.fields || this.getDefaultFields(),
       
       // Set first field as primary
-      primaryFieldId: schema.fields?.[0]?.id || 'field_name',
+      primaryFieldId: schema.fields?.[0]?(.id !== '' && .id != null) ? .id : 'field_name',
       
       relations: [],
       permissions: {
@@ -252,7 +252,7 @@ export class SchemaManager {
     try {
       const workspaceDoc = await getDoc(doc(this.db, 'workspaces', this.workspaceId));
       if (workspaceDoc.exists()) {
-        return (workspaceDoc.data() as any).organizationId || null;
+        return (workspaceDoc.data() as any).organizationId ?? null;
       }
       return null;
     } catch (error) {
@@ -358,8 +358,8 @@ export class SchemaManager {
       
       const updatedField = FieldRenameManager.addRenameRecord(
         currentField,
-        updates.key || currentField.key,
-        updates.label || currentField.label,
+updates.key ?? currentField.key,
+updates.label ?? currentField.label,
         userId
       );
       
@@ -477,7 +477,7 @@ export class SchemaManager {
         ...newRelation,
         fromSchemaId: toSchemaId,
         toSchemaId: fromSchemaId,
-        fromFieldId: relation.toFieldId || relation.fromFieldId,
+        fromFieldId:relation.toFieldId ?? relation.fromFieldId,
         toFieldId: relation.fromFieldId
       };
 

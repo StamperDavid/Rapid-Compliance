@@ -101,14 +101,14 @@ export async function processAuthorizeNetPayment(
     } else {
       return {
         success: false,
-        error: txnResponse?.errors?.[0]?.errorText || 'Transaction failed',
+        error: txnResponse?.errors?.[0]?(.errorText !== '' && .errorText != null) ? .errorText : 'Transaction failed',
       };
     }
   } catch (error: any) {
     logger.error('Authorize.Net payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
-      error: error.message || 'Authorize.Net payment processing failed',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Authorize.Net payment processing failed',
     };
   }
 }
@@ -219,14 +219,14 @@ export async function process2CheckoutPayment(
     } else {
       return {
         success: false,
-        error: result.message || '2Checkout payment failed',
+        error:(result.message !== '' && result.message != null) ? result.message : '2Checkout payment failed',
       };
     }
   } catch (error: any) {
     logger.error('2Checkout payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
-      error: error.message || '2Checkout payment processing failed',
+      error:(error.message !== '' && error.message != null) ? error.message : '2Checkout payment processing failed',
     };
   }
 }
@@ -322,7 +322,7 @@ export async function processMolliePayment(
     logger.error('Mollie payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
-      error: error.message || 'Mollie payment processing failed',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Mollie payment processing failed',
     };
   }
 }

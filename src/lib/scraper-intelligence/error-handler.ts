@@ -78,7 +78,7 @@ export class ScraperErrorHandler implements ErrorHandler {
     }
 
     // Check for retryable HTTP status codes
-    const statusCode = (error as any).statusCode || (error as any).status;
+    const statusCode =(error as any).statusCode ?? (error as any).status;
     if (statusCode && RETRYABLE_HTTP_CODES.includes(statusCode)) {
       logger.debug('Retryable HTTP status code', { statusCode });
       return true;
@@ -381,7 +381,7 @@ export async function withRetry<T>(
   }
 
   // All retries exhausted
-  throw lastError || new Error('Unknown error during retry');
+throw lastError ?? new Error('Unknown error during retry');
 }
 
 /**
@@ -397,7 +397,7 @@ export async function withTimeout<T>(
     new Promise<T>((_, reject) => {
       setTimeout(() => {
         reject(new ScrapeError(
-          errorMessage || `Operation timed out after ${timeoutMs}ms`,
+(errorMessage !== '' && errorMessage != null) ? errorMessage : `Operation timed out after ${timeoutMs}ms`,
           'timeout_error',
           408,
           true

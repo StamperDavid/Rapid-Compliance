@@ -363,15 +363,15 @@ function inferUniqueValue(company: DiscoveredCompany): string {
   
   return elements.length > 0 
     ? elements.join('. ') 
-    : company.description || 'Innovative solutions for modern businesses';
+    :(company.description !== '' && company.description != null) ? company.description : 'Innovative solutions for modern businesses';
 }
 
 /**
  * Infer target customer from company profile
  */
 function inferTargetCustomer(company: DiscoveredCompany): string {
-  const industry = company.industry?.toLowerCase() || '';
-  const size = company.size?.toLowerCase() || '';
+  const industry = company.industry?.toLowerCase() ?? '';
+  const size = company.size?.toLowerCase() ?? '';
   
   // Industry-based target customer inference
   if (industry.includes('saas') || industry.includes('b2b')) {

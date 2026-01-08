@@ -60,16 +60,16 @@ export default function EmailWriterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate email');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to generate email');
       }
 
       if (data.success) {
         setGeneratedEmail(data);
       } else {
-        setError(data.error || 'Failed to generate email');
+        setError((data.error !== '' && data.error != null) ? data.error : 'Failed to generate email');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setError((err.message !== '' && err.message != null) ? err.message : 'An error occurred');
     } finally {
       setGenerating(false);
     }

@@ -228,7 +228,7 @@ async function notifyTaskAssignment(
       await sendEmail({
         to: user.email,
         subject: `New task assigned: ${task.title}`,
-        text: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${task.dueDate?.toLocaleDateString() || 'No due date'}\n\n${task.description || ''}`,
+        text: `${task.assignedByName} assigned you a task:\n\nTitle: ${task.title}\nPriority: ${task.priority}\nDue: ${task.dueDate?(.toLocaleDateString() !== '' && .toLocaleDateString() != null) ? .toLocaleDateString() : 'No due date'}\n\n${task.description ?? ''}`,
         metadata: { organizationId },
       });
     }
@@ -283,7 +283,7 @@ export async function calculateLeaderboard(
 
       leaderboard.push({
         userId: member.userId,
-        userName: member.name || member.email,
+        userName:member.name ?? member.email,
         userEmail: member.email,
         metrics,
         rank: 0, // Will be set after sorting
@@ -337,7 +337,7 @@ async function calculateUserMetrics(
     const dealsResult = await getDeals(organizationId, workspaceId, { ownerId: userId }, { pageSize: 1000 });
     const dealsClosedWon = dealsResult.data.filter(d => {
       if (d.stage !== 'closed_won') {return false;}
-      const closedAt = d.actualCloseDate?.toDate ? d.actualCloseDate.toDate() : new Date(d.actualCloseDate || d.updatedAt);
+      const closedAt = d.actualCloseDate?.toDate ? d.actualCloseDate.toDate() : new Date(d.actualCloseDate ?? d.updatedAt);
       return closedAt >= startDate && closedAt <= endDate;
     });
 

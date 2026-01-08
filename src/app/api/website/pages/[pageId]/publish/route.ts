@@ -60,7 +60,7 @@ export async function POST(
     }
 
     const now = FieldValue.serverTimestamp();
-    const currentVersion = pageData.version || 1;
+    const currentVersion = pageData.version ?? 1;
     const performedBy = await getUserIdentifier();
 
     // Create version snapshot before publishing
@@ -119,7 +119,7 @@ export async function POST(
       pageId: params.pageId,
       pageTitle: pageData.title,
       version: currentVersion,
-      scheduledFor: scheduledFor || null,
+      scheduledFor: scheduledFor ?? null,
       performedBy,
       performedAt: now,
       organizationId: validOrgId,

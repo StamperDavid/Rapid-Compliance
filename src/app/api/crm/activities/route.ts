@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const filters = {
       entityType,
-      entityId: entityId || undefined,
+      entityId: entityId ?? undefined,
       types,
       direction,
       createdBy,

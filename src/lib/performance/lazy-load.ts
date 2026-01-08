@@ -21,8 +21,8 @@ export function createLazyLoader(options: LazyLoadOptions = {}): IntersectionObs
   }
 
   const config = {
-    rootMargin: options.rootMargin || '50px',
-    threshold: options.threshold || 0.01,
+    rootMargin:(options.rootMargin !== '' && options.rootMargin != null) ? options.rootMargin : '50px',
+    threshold: options.threshold ?? 0.01,
   };
 
   return new IntersectionObserver((entries, observer) => {

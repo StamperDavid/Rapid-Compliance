@@ -123,7 +123,7 @@ export class LeadRoutingEngine {
       recommendation,
       alternatives,
       metadata: {
-        rulesEvaluated: rules?.length || 0,
+        rulesEvaluated: rules?.length ?? 0,
         repsConsidered: availableReps.length,
         processingTimeMs,
         strategyUsed: config.defaultStrategy,
@@ -136,8 +136,8 @@ export class LeadRoutingEngine {
    */
   assessLeadQuality(lead: Lead): LeadQualityAssessment {
     // Component scores
-    const intentScore = lead.intentScore || lead.qualityScore;
-    const fitScore = lead.fitScore || lead.qualityScore;
+    const intentScore =lead.intentScore ?? lead.qualityScore;
+    const fitScore =lead.fitScore ?? lead.qualityScore;
     const engagementScore = this.calculateEngagementScore(lead);
     const potentialScore = this.calculatePotentialScore(lead);
     
@@ -344,7 +344,7 @@ export class LeadRoutingEngine {
         result = result || conditionResult;
       }
       
-      currentConnector = condition.connector || 'AND';
+      currentConnector =(condition.connector !== '' && condition.connector != null) ? condition.connector : 'AND';
     }
     
     return result;
@@ -524,10 +524,10 @@ export class LeadRoutingEngine {
       
       // Find specialization matches
       const specializationMatch: string[] = [];
-      if (rep.specializations.industries?.includes(lead.industry || '')) {
+      if (rep.specializations.industries?.includes(lead.industry ?? '')) {
         specializationMatch.push('Industry');
       }
-      if (rep.specializations.companySizes?.includes(lead.companySize || '' as CompanySize)) {
+      if (rep.specializations.companySizes?.includes((lead.companySize !== '' && lead.companySize != null) ? lead.companySize : '' as CompanySize)) {
         specializationMatch.push('Company Size');
       }
       

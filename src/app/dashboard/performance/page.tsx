@@ -49,7 +49,7 @@ export default function PerformanceDashboardPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to load analytics');
+        throw new Error((errorData.message !== '' && errorData.message != null) ? errorData.message : 'Failed to load analytics');
       }
 
       const data = await response.json();

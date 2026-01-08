@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, stats });
     } else {
       // List all campaigns with pagination
-      const limit = parseInt(searchParams.get('limit') || '50');
-      const cursor = searchParams.get('cursor') || undefined;
+      const limit = parseInt((searchParams.get('limit') !== '' && searchParams.get('limit') != null) ? searchParams.get('limit') : '50');
+      const cursor = searchParams.get('cursor') ?? undefined;
       const result = await listCampaigns(organizationId, limit, cursor);
       return NextResponse.json({ 
         success: true, 
@@ -86,9 +86,9 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
+        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
+})) ?? [];
       
       return errors.validation('Validation failed', errorDetails);
     }
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
       const result = await sendCampaign(campaignId);
       if (!result.success) {
-        return errors.badRequest(result.error || 'Failed to send campaign');
+        return errors.badRequest((result.error !== '' && result.error != null) ? result.error : 'Failed to send campaign');
       }
 
       return NextResponse.json({ success: true });

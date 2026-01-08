@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
       // Type assertion: when success is false, we have the error structure
       const validationError = validation as { success: false; errors: any };
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
+        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
+})) ?? [];
       
       return NextResponse.json(
         {
@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
     );
     
     // Single model configuration (ensemble removed for MVP)
-    const selectedModel = (agentConfig as any)?.selectedModel || 'gpt-4-turbo';
-    const modelConfig = (agentConfig as any)?.modelConfig || {
+    const selectedModel = (agentConfig as any)?(.selectedModel !== '' && .selectedModel != null) ? .selectedModel : 'gpt-4-turbo';
+    const modelConfig = (agentConfig as any)?.modelConfig ?? {
       temperature: 0.7,
       maxTokens: 2048,
       topP: 0.9,
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const messages = [
       ...instance.customerMemory.conversationHistory.map((msg: any) => ({
         role: msg.role as 'user' | 'assistant',
-        content: msg.content || msg.text,
+        content:msg.content ?? msg.text,
       })),
       {
         role: 'user' as const,

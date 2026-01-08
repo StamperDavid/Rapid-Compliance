@@ -57,7 +57,7 @@ export async function executeAIAgentAction(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentConfig`,
         'default'
       );
-      selectedModel = (agentConfig as any)?.selectedModel || 'gpt-4-turbo';
+      selectedModel = (agentConfig as any)?(.selectedModel !== '' && .selectedModel != null) ? .selectedModel : 'gpt-4-turbo';
     } catch {
       selectedModel = 'gpt-4-turbo';
     }
@@ -134,7 +134,7 @@ export async function executeAIAgentAction(
     model: selectedModel,
     prompt: processedPrompt,
     response: result,
-    tokensUsed: response.usage?.totalTokens || 0,
+    tokensUsed: response.usage?.totalTokens ?? 0,
   };
 }
 

@@ -76,7 +76,7 @@ export async function analyzeConversation(
     const conversation = await getConversation(
       request.organizationId,
       request.conversationId,
-      request.workspaceId || 'default'
+(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
     );
     
     if (!conversation) {
@@ -202,7 +202,7 @@ export async function analyzeTranscript(
     const analysis: ConversationAnalysis = {
       conversationId: `analysis_${Date.now()}`, // Will be updated if saving
       organizationId: request.organizationId,
-      workspaceId: request.workspaceId || 'default',
+      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       
       sentiment: aiAnalysis.sentiment,
       talkRatio,
@@ -320,9 +320,9 @@ function buildAnalysisPrompt(request: AnalyzeTranscriptRequest): string {
 
 CONVERSATION METADATA:
 - Type: ${request.conversationType}
-- Title: ${request.title || 'Untitled'}
+- Title: ${(request.title !== '' && request.title != null) ? request.title : 'Untitled'}
 - Duration: ${Math.floor(request.duration / 60)} minutes
-- Sales Rep: ${repInfo?.name || 'Unknown'}
+- Sales Rep: ${repInfo?(.name !== '' && .name != null) ? .name : 'Unknown'}
 - Prospects: ${prospects.map(p => `${p.name} (${p.role}${p.title ? `, ${  p.title}` : ''})`).join(', ')}
 ${request.customContext ? `\nADDITIONAL CONTEXT:\n${request.customContext}\n` : ''}
 
@@ -463,7 +463,7 @@ function parseAIAnalysis(aiResponse: string): any {
       keyMoments: parsed.keyMoments ?? [],
       summary: parsed.summary,
       highlights: parsed.highlights ?? [],
-      confidence: parsed.confidence || 75,
+      confidence: parsed.confidence ?? 75,
     };
     
   } catch (error: any) {
@@ -1210,7 +1210,7 @@ async function emitAnalysisSignal(
     
     await coordinator.emitSignal({
       type: 'conversation.analyzed' as any,
-      leadId: conversation.leadId || 'unknown',
+      leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
       orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
       confidence: analysis.confidence / 100,

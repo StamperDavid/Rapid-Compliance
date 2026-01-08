@@ -501,7 +501,7 @@ export class WorkflowEngine {
         
         // Wait before retry (with exponential backoff)
         if (attempt > 0) {
-          const backoff = retry.backoffMultiplier || 1;
+          const backoff = retry.backoffMultiplier ?? 1;
           const delay = retry.delayMs * Math.pow(backoff, attempt - 1);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
@@ -527,7 +527,7 @@ export class WorkflowEngine {
       startedAt: Timestamp.now(),
       completedAt: Timestamp.now(),
       durationMs: 0,
-      error: lastError?.message || 'All retry attempts failed',
+      error: lastError?(.message !== '' && .message != null) ? .message : 'All retry attempts failed',
       retryCount: retry.maxAttempts,
     };
   }
@@ -550,7 +550,7 @@ export class WorkflowEngine {
     
     // Resolve recipient
     const recipientEmail = config.recipientEmail || 
-      this.getFieldValue(config.recipientField || 'deal.contactEmail', context) as string;
+      this.getFieldValue((config.recipientField !== '' && config.recipientField != null) ? config.recipientField : 'deal.contactEmail', context) as string;
     
     if (!recipientEmail) {
       throw new Error('No recipient email found');
@@ -560,9 +560,9 @@ export class WorkflowEngine {
     const result = await generateSalesEmail({
       organizationId: context.organizationId,
       workspaceId: context.workspaceId,
-      userId: context.userId || 'workflow-engine',
+      userId:(context.userId !== '' && context.userId != null) ? context.userId : 'workflow-engine',
       emailType: config.emailType,
-      dealId: context.dealId || '',
+      dealId: context.dealId ?? '',
       dealScore: context.dealScore,
       recipientEmail,
       recipientName: this.getFieldValue('deal.contactName', context) as string,
@@ -576,14 +576,14 @@ export class WorkflowEngine {
     });
     
     if (!result.success) {
-      throw new Error(result.error || 'Email generation failed');
+      throw new Error((result.error !== '' && result.error != null) ? result.error : 'Email generation failed');
     }
     
     return {
       emailId: result.email?.id,
       subject: result.email?.subject,
       emailType: config.emailType,
-      autoSent: config.autoSend || false,
+      autoSent: config.autoSend ?? false,
     };
   }
   
@@ -598,7 +598,7 @@ export class WorkflowEngine {
     
     // Resolve assignee
     const assignToUserId = config.assignToUserId || 
-      this.getFieldValue(config.assignToField || 'deal.ownerId', context) as string;
+      this.getFieldValue((config.assignToField !== '' && config.assignToField != null) ? config.assignToField : 'deal.ownerId', context) as string;
     
     if (!assignToUserId) {
       throw new Error('No assignee found for task');
@@ -623,7 +623,7 @@ export class WorkflowEngine {
       title: config.title,
       assignedTo: assignToUserId,
       dueDate: dueDate?.toISOString(),
-      priority: config.priority || 'medium',
+      priority:(config.priority !== '' && config.priority != null) ? config.priority : 'medium',
     };
   }
   
@@ -646,14 +646,14 @@ export class WorkflowEngine {
       dealId: context.dealId,
       field: config.field,
       value: config.value,
-      operation: config.operation || 'set',
+      operation:(config.operation !== '' && config.operation != null) ? config.operation : 'set',
     });
     
     return {
       dealId: context.dealId,
       field: config.field,
       value: config.value,
-      operation: config.operation || 'set',
+      operation:(config.operation !== '' && config.operation != null) ? config.operation : 'set',
       updatedAt: new Date().toISOString(),
     };
   }
@@ -669,7 +669,7 @@ export class WorkflowEngine {
     
     // Resolve recipient
     const recipientId = config.recipientId || 
-      this.getFieldValue(config.recipientField || 'deal.ownerId', context) as string;
+      this.getFieldValue((config.recipientField !== '' && config.recipientField != null) ? config.recipientField : 'deal.ownerId', context) as string;
     
     if (!recipientId) {
       throw new Error('No recipient found for notification');
@@ -704,8 +704,8 @@ export class WorkflowEngine {
     const config = action.config as any; // WaitActionConfig
     
     if (config.type === 'delay') {
-      const delayMs = (config.delayHours || 0) * 60 * 60 * 1000 + 
-                     (config.delayDays || 0) * 24 * 60 * 60 * 1000;
+      const delayMs = (config.delayHours ?? 0) * 60 * 60 * 1000 + 
+                     (config.delayDays ?? 0) * 24 * 60 * 60 * 1000;
       
       // In production, this would schedule the next action
       // For now, we'll just log it

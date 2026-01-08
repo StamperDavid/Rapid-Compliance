@@ -172,7 +172,7 @@ function CRMContent() {
   
   const getCompanyName = (companyId: string) => {
     const company = companies.find(c => c.id === companyId);
-    return company?.name || '-';
+    return company?(.name !== '' && .name != null) ? .name : '-';
   };
 
   // CRUD Operations
@@ -227,7 +227,7 @@ function CRMContent() {
   const handleExport = () => {
     const data = getActiveData();
     const csv = [
-      Object.keys(data[0] || {}).join(','),
+      Object.keys(data[0] ?? {}).join(','),
       ...data.map((row: any) => Object.values(row).join(','))
     ].join('\n');
     
@@ -354,7 +354,7 @@ function CRMContent() {
     reader.readAsText(importFile);
   };
 
-  const brandName = theme?.branding?.companyName || config?.businessName || 'AI CRM';
+  const brandName = theme?.branding?.companyName || config?(.businessName !== '' && .businessName != null) ? .businessName : 'AI CRM';
   const logoUrl = theme?.branding?.logoUrl;
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
@@ -645,7 +645,7 @@ function CRMContent() {
                     {getSchema().fields.slice(0, 6).map((field: any) => (
                       <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#ffffff' }}>
                         {field.type === 'currency' ? (
-                          <span style={{ fontWeight: '600' }}>${Number(record[field.key] || 0).toLocaleString()}</span>
+                          <span style={{ fontWeight: '600' }}>${Number(record[field.key] ?? 0).toLocaleString()}</span>
                         ) : field.type === 'lookup' && field.key === 'company_id' ? (
                           <span style={{ color: primaryColor }}>{getCompanyName(record[field.key])}</span>
                         ) : field.type === 'checkbox' ? (
@@ -670,7 +670,7 @@ function CRMContent() {
                             {record[field.key]}
                           </span>
                         ) : (
-                          record[field.key] || '-'
+(record[field.key] !== '' && record[field.key] != null) ? record[field.key] : '-'
                         )}
                       </td>
                     ))}
@@ -710,7 +710,7 @@ function CRMContent() {
                   </label>
                   {field.type === 'select' ? (
                     <select
-                      value={formData[field.key] || ''}
+                      value={formData[field.key] ?? ''}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -722,13 +722,13 @@ function CRMContent() {
                   ) : field.type === 'checkbox' ? (
                     <input
                       type="checkbox"
-                      checked={formData[field.key] || false}
+                      checked={formData[field.key] ?? false}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
                       style={{ width: '1.25rem', height: '1.25rem' }}
                     />
                   ) : field.type === 'lookup' && field.key === 'company_id' ? (
                     <select
-                      value={formData[field.key] || ''}
+                      value={formData[field.key] ?? ''}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -740,7 +740,7 @@ function CRMContent() {
                   ) : (
                     <input
                       type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                      value={formData[field.key] || ''}
+                      value={formData[field.key] ?? ''}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
@@ -783,7 +783,7 @@ function CRMContent() {
                   </label>
                   {field.type === 'select' ? (
                     <select
-                      value={formData[field.key] || ''}
+                      value={formData[field.key] ?? ''}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -795,13 +795,13 @@ function CRMContent() {
                   ) : field.type === 'checkbox' ? (
                     <input
                       type="checkbox"
-                      checked={formData[field.key] || false}
+                      checked={formData[field.key] ?? false}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.checked })}
                       style={{ width: '1.25rem', height: '1.25rem' }}
                     />
                   ) : field.type === 'lookup' && field.key === 'company_id' ? (
                     <select
-                      value={formData[field.key] || ''}
+                      value={formData[field.key] ?? ''}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     >
@@ -813,7 +813,7 @@ function CRMContent() {
                   ) : (
                     <input
                       type={field.type === 'currency' || field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                      value={formData[field.key] || ''}
+                      value={formData[field.key] ?? ''}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
                       style={{ width: '100%', padding: '0.75rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                     />
@@ -880,7 +880,7 @@ function CRMContent() {
           }))}
           onApply={(filter) => setActiveFilter(filter)}
           onClose={() => setShowFilterBuilder(false)}
-          initialFilter={activeFilter || undefined}
+          initialFilter={activeFilter ?? undefined}
         />
       )}
 
@@ -1005,7 +1005,7 @@ function CRMContent() {
                     <table style={{ width: '100%', fontSize: '0.75rem' }}>
                       <thead style={{ backgroundColor: '#1a1a1a', position: 'sticky', top: 0 }}>
                         <tr>
-                          {Object.keys(importPreview[0] || {}).map(col => (
+                          {Object.keys(importPreview[0] ?? {}).map(col => (
                             <th key={col} style={{ padding: '0.75rem', textAlign: 'left', color: '#999', fontWeight: '600', textTransform: 'uppercase', borderBottom: '1px solid #333' }}>
                               {col}
                             </th>

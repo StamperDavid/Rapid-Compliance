@@ -181,7 +181,7 @@ function generateDNSRecords(domain: string, method: 'cname' | 'a-record'): Array
   value: string;
   status: string;
 }> {
-  const vercelDomain = process.env.VERCEL_URL || 'cname.vercel-dns.com';
+  const vercelDomain =(process.env.VERCEL_URL !== '' && process.env.VERCEL_URL != null) ? process.env.VERCEL_URL : 'cname.vercel-dns.com';
   const vercelIP = '76.76.21.21'; // Vercel's IP address
 
   if (method === 'cname') {

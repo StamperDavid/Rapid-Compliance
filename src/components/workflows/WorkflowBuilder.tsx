@@ -10,8 +10,8 @@ interface WorkflowBuilderProps {
 }
 
 export default function WorkflowBuilder({ workflow, onSave, onCancel }: WorkflowBuilderProps) {
-  const [name, setName] = useState(workflow?.name || '');
-  const [description, setDescription] = useState(workflow?.description || '');
+  const [name, setName] = useState(workflow?.name ?? '');
+  const [description, setDescription] = useState(workflow?.description ?? '');
   const [triggerType, setTriggerType] = useState<string>('entity.created');
   const [actions, setActions] = useState<WorkflowAction[]>(workflow?.actions ?? []);
   const [selectedActionType, setSelectedActionType] = useState<string>('');
@@ -53,7 +53,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
     const newAction: WorkflowAction = {
       id: `action_${Date.now()}`,
       type: selectedActionType as any,
-      name: actionTypes.find(a => a.value === selectedActionType)?.label || 'Action',
+      name: actionTypes.find(a => a.value === selectedActionType)?(.label !== '' && .label != null) ? .label : 'Action',
     } as WorkflowAction;
 
     setActions([...actions, newAction]);
@@ -72,7 +72,7 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
       trigger: {
         id: `trigger_${Date.now()}`,
         type: triggerType as any,
-        name: triggerTypes.find(t => t.value === triggerType)?.label || 'Trigger',
+        name: triggerTypes.find(t => t.value === triggerType)?(.label !== '' && .label != null) ? .label : 'Trigger',
       } as WorkflowTrigger,
       actions,
       settings: {
@@ -208,14 +208,14 @@ export default function WorkflowBuilder({ workflow, onSave, onCancel }: Workflow
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <span style={{ fontSize: '1.25rem' }}>
-                        {actionTypes.find(a => a.value === action.type)?.icon || '⚙️'}
+                        {actionTypes.find(a => a.value === action.type)?(.icon !== '' && .icon != null) ? .icon : '⚙️'}
                       </span>
                       <div>
                         <div style={{ fontSize: '0.875rem', fontWeight: '500', color: textColor }}>
                           {action.name}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                          {index + 1}. {actionTypes.find(a => a.value === action.type)?.label || action.type}
+                          {index + 1}. {actionTypes.find(a => a.value === action.type)?.label ?? action.type}
                         </div>
                       </div>
                     </div>

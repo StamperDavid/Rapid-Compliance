@@ -328,9 +328,9 @@ export class WorkflowService {
    */
   private getDefaultSettings(settings?: Partial<WorkflowSettings>): WorkflowSettings {
     return {
-      maxExecutionsPerDay: settings?.maxExecutionsPerDay || 100,
-      maxExecutionsPerDeal: settings?.maxExecutionsPerDeal || 10,
-      cooldownMinutes: settings?.cooldownMinutes || 60,
+      maxExecutionsPerDay: settings?.maxExecutionsPerDay ?? 100,
+      maxExecutionsPerDeal: settings?.maxExecutionsPerDeal ?? 10,
+      cooldownMinutes: settings?.cooldownMinutes ?? 60,
       executeOnWeekends: settings?.executeOnWeekends ?? true,
       executeOnHolidays: settings?.executeOnHolidays ?? true,
       applyToNewDealsOnly: settings?.applyToNewDealsOnly ?? false,
@@ -396,7 +396,7 @@ export async function createWorkflow(
   const input: CreateWorkflowInput = {
     ...workflowData,
     organizationId,
-    workspaceId: workspaceId || workflowData.workspaceId,
+    workspaceId:workspaceId ?? workflowData.workspaceId,
   };
   
   return service.createWorkflow(input, userId);

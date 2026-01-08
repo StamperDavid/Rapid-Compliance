@@ -55,10 +55,10 @@ export default function VersionHistory({
       }
 
       const data = await response.json();
-      setVersions(data.versions || []);
+      setVersions(data.versions ?? []);
     } catch (err: any) {
       console.error('[Version History] Error:', err);
-      setError(err.message || 'Failed to load versions');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load versions');
     } finally {
       setLoading(false);
     }

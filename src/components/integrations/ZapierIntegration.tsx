@@ -221,7 +221,7 @@ export default function ZapierIntegration({
                 </label>
                 <input
                   type="password"
-                  value={integration.settings.webhookSecurity?.secret || ''}
+                  value={integration.settings.webhookSecurity?.secret ?? ''}
                   onChange={(e) => onUpdate({ 
                     webhookSecurity: { 
                       ...integration.settings.webhookSecurity, 

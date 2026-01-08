@@ -23,7 +23,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Failed to fetch contacts:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch contacts' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to fetch contacts'},
       { status: 500 }
     );
   }

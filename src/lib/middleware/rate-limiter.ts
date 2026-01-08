@@ -219,7 +219,7 @@ async function getIdentifier(
       
     case 'org': {
       // Extract organization ID from request
-      const orgId = request.headers.get('x-organization-id') || 
+      const orgId = request.headers.get('x-organization-id') ?? 
                     request.nextUrl.searchParams.get('organizationId');
       if (orgId) {
         return `org:${orgId}`;

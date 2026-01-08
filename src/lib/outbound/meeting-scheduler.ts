@@ -175,7 +175,7 @@ export async function scheduleMeeting(
       request.duration,
       today,
       nextWeek,
-      request.timezone || 'America/New_York'
+(request.timezone !== '' && request.timezone != null) ? request.timezone : 'America/New_York'
     );
 
     if (availableSlots.length === 0) {
@@ -382,8 +382,8 @@ async function getHostDetails(userId: string): Promise<{ name: string; email: st
     if (userDoc.exists()) {
       const user = userDoc.data() as any;
       return {
-        name: user.name || user.displayName || 'Sales Team',
-        email: user.email || 'sales@company.com',
+        name:(user.name || user.displayName !== '' && user.name || user.displayName != null) ? user.name || user.displayName : 'Sales Team',
+        email:(user.email !== '' && user.email != null) ? user.email : 'sales@company.com',
       };
     }
     
@@ -393,8 +393,8 @@ async function getHostDetails(userId: string): Promise<{ name: string; email: st
       try {
         const authUser = await admin.auth().getUser(userId);
         return {
-          name: authUser.displayName || 'Sales Team',
-          email: authUser.email || 'sales@company.com',
+          name:(authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'Sales Team',
+          email:(authUser.email !== '' && authUser.email != null) ? authUser.email : 'sales@company.com',
         };
       } catch {
         // User not found in Auth
@@ -523,7 +523,7 @@ async function createCalendarEvent(meeting: ScheduledMeeting): Promise<{ id: str
 
     return {
       id: event.id,
-      link: event.hangoutLink || event.htmlLink,
+      link:event.hangoutLink ?? event.htmlLink,
     };
   } catch (error) {
     logger.error('[Meeting Scheduler] Error creating calendar event:', error, { file: 'meeting-scheduler.ts' });
@@ -630,8 +630,8 @@ async function sendMeetingUpdate(
     const settingsDoc = await getDoc(doc(db, settingsPath, 'email'));
     const orgSettings = settingsDoc.exists() ? settingsDoc.data() : null;
     
-    const companyName = orgSettings?.companyName || 'Our Team';
-    const replyTo = orgSettings?.replyToEmail || meeting.host.email;
+    const companyName = orgSettings?(.companyName !== '' && .companyName != null) ? .companyName : 'Our Team';
+    const replyTo = orgSettings?.replyToEmail ?? meeting.host.email;
     
     // Build email content based on update type
     let subject: string;

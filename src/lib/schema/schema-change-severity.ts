@@ -293,7 +293,7 @@ export class SchemaChangeUXHandler {
           workspaceId: event.workspaceId,
           title: `Schema Change: ${options.level.toUpperCase()}`,
           message: options.userMessage,
-          type: options.type || 'info',
+          type:(options.type !== '' && options.type != null) ? options.type : 'info',
           category: 'schema_change_severity',
           metadata: {
             eventId: event.id,
@@ -305,7 +305,7 @@ export class SchemaChangeUXHandler {
           },
           actions: options.actions ?? [],
           read: false,
-          requiresAction: options.blocking || false,
+          requiresAction: options.blocking ?? false,
           createdAt: new Date().toISOString(),
         },
         false
@@ -344,7 +344,7 @@ export class SchemaChangeUXHandler {
           severity: assessment.level,
           status: 'open',
           
-          title: `${event.changeType}: ${event.oldFieldName || event.newFieldName || 'Schema change'}`,
+          title: `${event.changeType}: ${(event.oldFieldName || event.newFieldName !== '' && event.oldFieldName || event.newFieldName != null) ? event.oldFieldName ?? event.newFieldName: 'Schema change'}`,
           description: assessment.userMessage,
           recommendation: assessment.recommendation,
           

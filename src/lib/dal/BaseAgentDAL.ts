@@ -86,7 +86,7 @@ export class BaseAgentDAL {
     this.envPrefix = this.calculateEnvPrefix();
     
     logger.info('🏗️ BaseAgentDAL initialized', {
-      environment: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV,
+      environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       prefix: this.envPrefix || '(none - production)',
       isolated: !!this.envPrefix,
       file: 'BaseAgentDAL.ts'
@@ -104,7 +104,7 @@ export class BaseAgentDAL {
    * This is the "ticking time bomb" fix mentioned in the architecture docs
    */
   private calculateEnvPrefix(): string {
-    const appEnv = process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV || 'development';
+    const appEnv =process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV|| 'development';
     
     // Only production has no prefix
     if (appEnv === 'production') {
@@ -251,7 +251,7 @@ export class BaseAgentDAL {
     logger.info('✍️ Writing to Firestore', {
       collection: path,
       docId,
-      env: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV,
+      env:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       userId: options?.userId,
       orgId: options?.organizationId,
       file: 'BaseAgentDAL.ts'
@@ -295,7 +295,7 @@ export class BaseAgentDAL {
     logger.info('📝 Updating Firestore', {
       collection: path,
       docId,
-      env: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV,
+      env:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       userId: options?.userId,
       file: 'BaseAgentDAL.ts'
     });
@@ -327,7 +327,7 @@ export class BaseAgentDAL {
     }
     
     // CRITICAL: Production delete protection
-    const appEnv = process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV;
+    const appEnv =process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV;
     if (appEnv === 'production' && !process.env.ALLOW_PROD_DELETES) {
       throw new Error(
         '🚨 Production deletes require ALLOW_PROD_DELETES=true environment variable. ' +
@@ -375,7 +375,7 @@ export class BaseAgentDAL {
     
     logger.info('➕ Adding to Firestore', {
       collection: path,
-      env: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV,
+      env:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       userId: options?.userId,
       file: 'BaseAgentDAL.ts'
     });
@@ -451,9 +451,9 @@ export class BaseAgentDAL {
       action,
       collection,
       docId,
-      userId: userId || 'system',
+      userId:(userId !== '' && userId != null) ? userId : 'system',
       timestamp: new Date().toISOString(),
-      environment: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV,
+      environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       dataPreview: action === 'DELETE' ? null : Object.keys(data).slice(0, 10).join(', ')
     };
     
@@ -495,7 +495,7 @@ export class BaseAgentDAL {
    * Check if currently in production mode
    */
   isProduction(): boolean {
-    const appEnv = process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV;
+    const appEnv =process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV;
     return appEnv === 'production';
   }
 }

@@ -60,9 +60,9 @@ export default function ContactsPage() {
   // Client-side filtering (search happens on loaded data)
   const filteredContacts = contacts.filter(c => 
     !searchQuery || 
-    c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.company?.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+    (c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+    (c.company?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
 
   return (

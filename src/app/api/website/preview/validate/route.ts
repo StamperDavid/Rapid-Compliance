@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         const tokenData = tokenDoc.data();
 
         // Check if token is expired
-        const expiresAt = new Date(tokenData?.expiresAt || '');
+        const expiresAt = new Date(tokenData?.expiresAt ?? '');
         if (expiresAt < new Date()) {
           return NextResponse.json(
             { error: 'Preview token has expired' },

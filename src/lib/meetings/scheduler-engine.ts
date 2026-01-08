@@ -312,7 +312,7 @@ Duration: ${meeting.duration} minutes
 
 ${meeting.zoomJoinUrl ? `Join via Zoom: ${meeting.zoomJoinUrl}` : ''}
 
-${meeting.notes || ''}
+${meeting.notes ?? ''}
 
 Looking forward to speaking with you!
       `.trim();
@@ -329,7 +329,7 @@ Looking forward to speaking with you!
         const { sendSMS } = await import('@/lib/sms/sms-service');
         await sendSMS({
           to: attendee.phone,
-          message: `Reminder: ${meeting.title} at ${meeting.startTime.toLocaleTimeString()}. ${meeting.zoomJoinUrl || ''}`,
+          message: `Reminder: ${meeting.title} at ${meeting.startTime.toLocaleTimeString()}. ${meeting.zoomJoinUrl ?? ''}`,
           organizationId,
         });
       }

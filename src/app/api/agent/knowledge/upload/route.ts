@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         documents: knowledgeBase.documents.length,
         urls: knowledgeBase.urls.length,
         faqs: knowledgeBase.faqs.length,
-        products: knowledgeBase.productCatalog?.products.length || 0,
+        products: knowledgeBase.productCatalog?.products.length ?? 0,
       },
     });
   } catch (error: any) {

@@ -45,13 +45,13 @@ export default function BillingSettingsPage() {
       
       if (org) {
         setSubscription({
-          plan: org.planId || org.plan || 'starter',
-          status: org.subscriptionStatus || 'trialing',
-          currentPeriodEnd: org.currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          trialEnd: org.trialEndsAt || org.trialEnd || null,
-          usage: org.usage || { records: 0, aiConversations: 0, emails: 0 },
+          plan:(org.planId || org.plan !== '' && org.planId || org.plan != null) ? org.planId ?? org.plan: 'starter',
+          status:(org.subscriptionStatus !== '' && org.subscriptionStatus != null) ? org.subscriptionStatus : 'trialing',
+          currentPeriodEnd:org.currentPeriodEnd ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          trialEnd:org.trialEndsAt ?? org.trialEnd ?? null,
+          usage:org.usage ?? { records: 0, aiConversations: 0, emails: 0 },
         });
-        setSelectedPlan(org.planId || org.plan || 'starter');
+        setSelectedPlan((org.planId || org.plan !== '' && org.planId || org.plan != null) ? org.planId ?? org.plan: 'starter');
       }
     } catch (error) {
       logger.error('Failed to load billing data:', error, { file: 'page.tsx' });
@@ -91,11 +91,11 @@ export default function BillingSettingsPage() {
         alert('Plan updated successfully!');
         loadBillingData();
       } else {
-        throw new Error(data.error || 'Failed to upgrade plan');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to upgrade plan');
       }
     } catch (error: any) {
       logger.error('Upgrade error:', error, { file: 'page.tsx' });
-      alert(error.message || 'Failed to upgrade plan. Please try again.');
+      alert((error.message !== '' && error.message != null) ? error.message : 'Failed to upgrade plan. Please try again.');
     } finally {
       setUpgrading(false);
     }
@@ -114,7 +114,7 @@ export default function BillingSettingsPage() {
       if (data.success && data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error(data.error || 'Failed to open billing portal');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to open billing portal');
       }
     } catch (error: any) {
       logger.error('Billing portal error:', error, { file: 'page.tsx' });
@@ -209,7 +209,7 @@ export default function BillingSettingsPage() {
     }
   ];
 
-  const currentPlan = tiers.find(p => p.id === subscription?.plan) || tiers[0];
+  const currentPlan =tiers.find(p => p.id === subscription?.plan) ?? tiers[0];
   const isTrialing = subscription?.status === 'trialing';
   const trialDaysLeft = subscription?.trialEnd
     ? Math.max(0, Math.ceil((new Date(subscription.trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -388,13 +388,13 @@ export default function BillingSettingsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#ccc', marginBottom: '0.5rem' }}>
                     <span>Contacts</span>
                     <span>
-                      {subscription?.usage?.records?.toLocaleString() || 0} / 
+                      {subscription?.usage?.records?.toLocaleString() ?? 0} / 
                       {currentPlan.limits.records === -1 ? ' Unlimited' : ` ${currentPlan.limits.records.toLocaleString()}`}
                     </span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{ 
-                      width: currentPlan.limits.records === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.records || 0) / currentPlan.limits.records) * 100)}%`, 
+                      width: currentPlan.limits.records === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.records ?? 0) / currentPlan.limits.records) * 100)}%`, 
                       height: '100%', 
                       backgroundColor: primaryColor 
                     }}></div>
@@ -405,13 +405,13 @@ export default function BillingSettingsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#ccc', marginBottom: '0.5rem' }}>
                     <span>AI Conversations</span>
                     <span>
-                      {subscription?.usage?.aiConversations?.toLocaleString() || 0} / 
+                      {subscription?.usage?.aiConversations?.toLocaleString() ?? 0} / 
                       {currentPlan.limits.aiConversations === -1 ? ' Unlimited' : ` ${currentPlan.limits.aiConversations.toLocaleString()}`}
                     </span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{ 
-                      width: currentPlan.limits.aiConversations === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.aiConversations || 0) / currentPlan.limits.aiConversations) * 100)}%`, 
+                      width: currentPlan.limits.aiConversations === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.aiConversations ?? 0) / currentPlan.limits.aiConversations) * 100)}%`, 
                       height: '100%', 
                       backgroundColor: '#4ade80' 
                     }}></div>
@@ -422,13 +422,13 @@ export default function BillingSettingsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#ccc', marginBottom: '0.5rem' }}>
                     <span>Emails Sent</span>
                     <span>
-                      {subscription?.usage?.emails?.toLocaleString() || 0} / 
+                      {subscription?.usage?.emails?.toLocaleString() ?? 0} / 
                       {currentPlan.limits.emails === -1 ? ' Unlimited' : ` ${currentPlan.limits.emails.toLocaleString()}`}
                     </span>
                   </div>
                   <div style={{ height: '8px', backgroundColor: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
                     <div style={{ 
-                      width: currentPlan.limits.emails === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.emails || 0) / currentPlan.limits.emails) * 100)}%`, 
+                      width: currentPlan.limits.emails === -1 ? '5%' : `${Math.min(100, ((subscription?.usage?.emails ?? 0) / currentPlan.limits.emails) * 100)}%`, 
                       height: '100%', 
                       backgroundColor: '#fbbf24' 
                     }}></div>

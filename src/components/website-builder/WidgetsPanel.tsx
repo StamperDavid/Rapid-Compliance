@@ -42,7 +42,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
       id: `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type,
       data: definition.defaultData || {},
-      style: definition.defaultStyle || {},
+      style:definition.defaultStyle ?? {},
     };
 
     onAddWidget(newWidget);

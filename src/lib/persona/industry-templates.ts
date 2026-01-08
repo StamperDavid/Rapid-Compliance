@@ -189,7 +189,7 @@ export function validateResearchIntelligence(
         errors.push(`${err.path.join('.')}: ${err.message}`);
       });
     } else {
-      errors.push(error.message || 'Unknown validation error');
+      errors.push((error.message !== '' && error.message != null) ? error.message : 'Unknown validation error');
     }
     return { valid: false, errors };
   }

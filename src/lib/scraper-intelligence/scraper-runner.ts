@@ -482,8 +482,8 @@ export class ProductionScraperRunner implements ScraperRunner {
 
       return {
         signals: cached.result.signals ?? [],
-        leadScore: cached.result.leadScore || 0,
-        tempScrapeId: cached.result.tempScrapeId || '',
+        leadScore: cached.result.leadScore ?? 0,
+        tempScrapeId: cached.result.tempScrapeId ?? '',
         cacheAgeMs: ageMs,
         storageReduction: cached.result.storageReduction,
       };
@@ -538,7 +538,7 @@ export class ProductionScraperRunner implements ScraperRunner {
       organizationId,
       workspaceId,
       industryId,
-      recordId: relatedRecordId || `temp_${Date.now()}`,
+      recordId:(relatedRecordId !== '' && relatedRecordId != null) ? relatedRecordId : `temp_${Date.now()}`,
       url,
       rawHtml,
       cleanedContent,
@@ -563,7 +563,7 @@ export class ProductionScraperRunner implements ScraperRunner {
     logError(error, { jobId, url });
 
     // Determine attempt number (from retry context if available)
-    const attemptNumber = (error as any).attemptNumber || 1;
+    const attemptNumber = (error as any).attemptNumber ?? 1;
 
     // Mark job as failed
     await this.queue.failJob(jobId, error, attemptNumber);
@@ -614,9 +614,7 @@ let globalRunner: ScraperRunner | null = null;
 export function getScraperRunner(
   config?: Partial<ScraperRunnerConfig>
 ): ScraperRunner {
-  if (!globalRunner) {
-    globalRunner = createScraperRunner(config);
-  }
+  globalRunner ??= createScraperRunner(config);
   return globalRunner;
 }
 

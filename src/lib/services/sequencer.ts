@@ -622,9 +622,9 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
       const enrollment: SequenceEnrollment = {
         ...enrollmentData,
         id: enrollmentId,
-        enrolledAt: enrollmentData.enrolledAt?.toDate?.() || enrollmentData.enrolledAt,
-        nextExecutionAt: enrollmentData.nextExecutionAt?.toDate?.() || enrollmentData.nextExecutionAt,
-        completedAt: enrollmentData.completedAt?.toDate?.() || enrollmentData.completedAt,
+        enrolledAt: enrollmentData.enrolledAt?.toDate?.() ?? enrollmentData.enrolledAt,
+        nextExecutionAt: enrollmentData.nextExecutionAt?.toDate?.() ?? enrollmentData.nextExecutionAt,
+        completedAt: enrollmentData.completedAt?.toDate?.() ?? enrollmentData.completedAt,
         status: 'stopped',
       } as SequenceEnrollment;
       

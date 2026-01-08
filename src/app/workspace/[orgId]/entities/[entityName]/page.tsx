@@ -58,7 +58,7 @@ export default function EntityTablePage() {
         if (!res.ok) {throw new Error(`Failed to load schemas (${res.status})`);}
         const data = await res.json();
         if (isMounted) {
-          setSchemaList(data.schemas || []);
+          setSchemaList(data.schemas ?? []);
         }
       } catch (err) {
         logger.error('Error loading schemas for entity page', err, { file: 'page.tsx' });
@@ -292,7 +292,7 @@ export default function EntityTablePage() {
         const options = getPicklistOptions(field);
         return (
           <select
-            value={value || ''}
+            value={value ?? ''}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={{ ...baseInputStyle, cursor: 'pointer' }}
           >
@@ -307,7 +307,7 @@ export default function EntityTablePage() {
       case 'longText':
         return (
           <textarea
-            value={value || ''}
+            value={value ?? ''}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={{ ...baseInputStyle, minHeight: '100px', resize: 'vertical' }}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -320,7 +320,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="number"
-            value={value || 0}
+            value={value ?? 0}
             onChange={(e) => setFormData({ ...formData, [field.key]: parseFloat(e.target.value) || 0 })}
             style={baseInputStyle}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -332,7 +332,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="date"
-            value={value || ''}
+            value={value ?? ''}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
           />
@@ -342,7 +342,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="email"
-            value={value || ''}
+            value={value ?? ''}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -353,7 +353,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="url"
-            value={value || ''}
+            value={value ?? ''}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder="https://..."
@@ -364,7 +364,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="tel"
-            value={value || ''}
+            value={value ?? ''}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder="+1 (555) 123-4567"
@@ -377,13 +377,13 @@ export default function EntityTablePage() {
           <LookupFieldPicker
             organizationId={orgId}
             workspaceId="default"
-            targetEntity={field.lookupEntity || 'contacts'}
+            targetEntity={(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'contacts'}
             value={value}
             onChange={(recordId: string | null, record: any | null) => {
               setFormData({ ...formData, [field.key]: recordId });
             }}
             label={field.label}
-            placeholder={`Search ${field.lookupEntity || 'records'}...`}
+            placeholder={`Search ${(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'records'}...`}
             style={baseInputStyle}
           />
         );
@@ -393,7 +393,7 @@ export default function EntityTablePage() {
         return (
           <input
             type="text"
-            value={value || ''}
+            value={value ?? ''}
             onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
             style={baseInputStyle}
             placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -403,7 +403,7 @@ export default function EntityTablePage() {
   };
 
   const entityDisplayName = schema?.pluralName || entityName.charAt(0).toUpperCase() + entityName.slice(1);
-  const entityIcon = schema?.icon || '📋';
+  const entityIcon = schema?(.icon !== '' && .icon != null) ? .icon : '📋';
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
@@ -453,7 +453,7 @@ export default function EntityTablePage() {
                 onClick={() => setIsAdding(true)}
                 style={{ padding: '0.625rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
               >
-                + Add {schema?.singularName || 'Record'}
+                + Add {schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}
               </button>
             </div>
           </div>
@@ -548,7 +548,7 @@ export default function EntityTablePage() {
                 {searchTerm ? (
                   <p>No {entityDisplayName.toLowerCase()} matching "{searchTerm}"</p>
                 ) : (
-                  <p>No {entityDisplayName.toLowerCase()} yet. Click "Add {schema?.singularName || 'Record'}" to get started.</p>
+                  <p>No {entityDisplayName.toLowerCase()} yet. Click "Add {schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}" to get started.</p>
                 )}
               </div>
             )}
@@ -562,7 +562,7 @@ export default function EntityTablePage() {
               <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>{entityIcon}</span>
-                  {isAdding ? `Add ${schema?.singularName || 'Record'}` : `Edit ${schema?.singularName || 'Record'}`}
+                  {isAdding ? `Add ${schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}` : `Edit ${schema?(.singularName !== '' && .singularName != null) ? .singularName : 'Record'}`}
                 </h2>
                 <button
                   onClick={closeModal}

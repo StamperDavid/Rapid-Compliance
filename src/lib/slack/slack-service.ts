@@ -518,7 +518,7 @@ export class SlackService {
   }> {
     try {
       const params: Record<string, unknown> = {
-        limit: options.limit || 100,
+        limit: options.limit ?? 100,
         exclude_archived: options.excludeArchived !== false,
       };
       
@@ -527,7 +527,7 @@ export class SlackService {
       }
       
       // Determine which API method to use based on types
-      const types = options.types || ['public_channel', 'private_channel'];
+      const types =options.types ?? ['public_channel', 'private_channel'];
       
       if (types.includes('im') || types.includes('mpim')) {
         params.types = types.join(',');
@@ -685,7 +685,7 @@ export class SlackService {
   }> {
     try {
       const params: Record<string, unknown> = {
-        limit: options.limit || 100,
+        limit: options.limit ?? 100,
       };
       
       if (options.cursor) {
@@ -749,7 +749,7 @@ export class SlackService {
         email: user.profile.email,
         displayName: user.profile.display_name,
         realName: user.profile.real_name,
-        isBot: user.is_bot || user.is_app_user,
+        isBot:user.is_bot ?? user.is_app_user,
       };
       
     } catch (error) {
@@ -975,7 +975,7 @@ export class SlackService {
     message: string,
     statusCode: number
   ): SlackAPIError {
-    const errorCode = response.error || 'unknown_error';
+    const errorCode =(response.error !== '' && response.error != null) ? response.error : 'unknown_error';
     
     // Determine if error is retryable
     const retryableErrors = [
@@ -1010,9 +1010,9 @@ export class SlackService {
  */
 export function createSlackService(): SlackService {
   const config: SlackServiceConfig = {
-    clientId: process.env.SLACK_CLIENT_ID || '',
-    clientSecret: process.env.SLACK_CLIENT_SECRET || '',
-    signingSecret: process.env.SLACK_SIGNING_SECRET || '',
+    clientId: process.env.SLACK_CLIENT_ID ?? '',
+    clientSecret: process.env.SLACK_CLIENT_SECRET ?? '',
+    signingSecret: process.env.SLACK_SIGNING_SECRET ?? '',
     scopes: [
       'channels:read',
       'channels:join',

@@ -32,9 +32,9 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const primaryColor = theme?.primaryColor || '#6366f1';
-  const borderRadius = theme?.borderRadius || '0.5rem';
-  const fontFamily = theme?.fontFamily || 'system-ui, sans-serif';
+  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
+  const borderRadius = theme?(.borderRadius !== '' && .borderRadius != null) ? .borderRadius : '0.5rem';
+  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
 
   useEffect(() => {
     loadCart();
@@ -45,7 +45,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
       const response = await fetch(`/api/ecommerce/cart?orgId=${organizationId}`);
       const data = await response.json();
       if (data.success) {
-        setCart(data.cart.items || []);
+        setCart(data.cart.items ?? []);
       }
     } catch (error) {
       logger.error('Error loading cart:', error, { file: 'ShoppingCart.tsx' });

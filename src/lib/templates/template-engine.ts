@@ -253,11 +253,11 @@ function applyCustomizations(
   
   return {
     ...template,
-    name: customizations.name || template.name,
-    description: customizations.description || template.description,
-    stages: customizations.stages || template.stages,
-    fields: customizations.fields || template.fields,
-    workflows: customizations.workflows || template.workflows,
+    name:customizations.name ?? template.name,
+    description:customizations.description ?? template.description,
+    stages:customizations.stages ?? template.stages,
+    fields:customizations.fields ?? template.fields,
+    workflows:customizations.workflows ?? template.workflows,
     scoringWeights: {
       dealAge: customizations.scoringWeights?.dealAge ?? template.scoringWeights.dealAge,
       stageVelocity: customizations.scoringWeights?.stageVelocity ?? template.scoringWeights.stageVelocity,
@@ -514,7 +514,7 @@ export function cloneTemplate(
     ...template,
     id: `${template.id}_custom_${Date.now()}`,
     name: newName,
-    description: newDescription || `Custom version of ${template.name}`,
+    description:(newDescription !== '' && newDescription != null) ? newDescription : `Custom version of ${template.name}`,
     createdAt: new Date(),
     updatedAt: new Date()
   };

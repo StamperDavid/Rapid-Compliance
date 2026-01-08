@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
     const call = await client.calls.create({
       to: to,
       from: fromNumber,
-      url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/voice/twiml`,
-      statusCallback: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/webhooks/voice`,
+      url: `${(process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000'}/api/voice/twiml`,
+      statusCallback: `${(process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000'}/api/webhooks/voice`,
       statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
     });
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       {
         id: callId,
         twilioCallSid: call.sid,
-        contactId: contactId || null,
+        contactId: contactId ?? null,
         phoneNumber: to,
         status: 'initiated',
         direction: 'outbound',

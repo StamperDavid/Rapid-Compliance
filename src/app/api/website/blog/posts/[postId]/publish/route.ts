@@ -115,7 +115,7 @@ export async function POST(
       type: scheduledFor ? 'blog_post_scheduled' : 'blog_post_published',
       postId: params.postId,
       postTitle: postData.title,
-      scheduledFor: scheduledFor || null,
+      scheduledFor: scheduledFor ?? null,
       performedBy,
       performedAt: now,
       organizationId,

@@ -31,14 +31,14 @@ export async function logAIChat(params: {
       type: 'ai_chat',
       direction: 'inbound',
       subject: `AI Conversation (${params.messageCount} messages)`,
-      summary: params.summary || `Customer had ${params.messageCount} message conversation with AI agent`,
+      summary:(params.summary !== '' && params.summary != null) ? params.summary : `Customer had ${params.messageCount} message conversation with AI agent`,
       relatedTo: [{
         entityType: params.relatedEntityType,
         entityId: params.relatedEntityId,
         entityName: params.relatedEntityName,
       }],
       createdBy: params.userId,
-      createdByName: params.userName || 'AI Agent',
+      createdByName:(params.userName !== '' && params.userName != null) ? params.userName : 'AI Agent',
       occurredAt: new Date() as any,
       metadata: {
         conversationId: params.conversationId,
@@ -51,7 +51,7 @@ export async function logAIChat(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -112,7 +112,7 @@ export async function logEmailSent(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -151,7 +151,7 @@ export async function logEmailOpened(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -202,7 +202,7 @@ export async function logCall(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -259,7 +259,7 @@ export async function logMeeting(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -312,7 +312,7 @@ export async function logStatusChange(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -340,7 +340,7 @@ export async function logWorkflow(params: {
       type: 'workflow_triggered',
       direction: 'internal',
       subject: `Workflow: ${params.workflowName}`,
-      summary: params.summary || `Workflow "${params.workflowName}" was executed`,
+      summary:(params.summary !== '' && params.summary != null) ? params.summary : `Workflow "${params.workflowName}" was executed`,
       relatedTo: [{
         entityType: params.relatedEntityType,
         entityId: params.relatedEntityId,
@@ -356,7 +356,7 @@ export async function logWorkflow(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -402,7 +402,7 @@ export async function logSequenceChange(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -430,7 +430,7 @@ export async function logNote(params: {
     const activityData: CreateActivityInput = {
       type: 'note_added',
       direction: 'internal',
-      subject: params.subject || 'Note added',
+      subject:(params.subject !== '' && params.subject != null) ? params.subject : 'Note added',
       body: params.body,
       summary: params.body.substring(0, 200),
       relatedTo: [{
@@ -445,7 +445,7 @@ export async function logNote(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 
@@ -483,7 +483,7 @@ export async function logEnrichment(params: {
 
     await createActivity(
       params.organizationId,
-      params.workspaceId || 'default',
+(params.workspaceId !== '' && params.workspaceId != null) ? params.workspaceId : 'default',
       activityData
     );
 

@@ -219,7 +219,7 @@ function RecommendationItem({
           )}
 
           {/* Actions */}
-          {(onAccept || onDismiss) && (
+          {(onAccept ?? onDismiss) && (
             <div className="flex items-center gap-2 pt-4 border-t border-gray-100">
               {onAccept && (
                 <button

@@ -216,7 +216,7 @@ export class InMemoryScrapeQueue implements JobQueue {
       jobId,
       url: job.config.url,
       durationMs,
-      signalCount: result.signals?.length || 0,
+      signalCount: result.signals?.length ?? 0,
     });
   }
 
@@ -240,7 +240,7 @@ export class InMemoryScrapeQueue implements JobQueue {
       durationMs,
       error: {
         message: error.message,
-        code: (error as any).code || 'UNKNOWN_ERROR',
+        code:((error as any).code !== '' && (error as any).code != null) ? (error as any).code : 'UNKNOWN_ERROR',
         attemptNumber,
         timestamp: new Date(),
       },
@@ -530,7 +530,7 @@ export function calculateJobPriority(config: ScrapeJobConfig): ScrapeJobPriority
     'website': 1,        // Standard
     'dns': -1,           // Can be delayed
   };
-  score += platformScores[config.platform] || 0;
+  score += platformScores[config.platform] ?? 0;
 
   // Factor 2: Organization priority (could be added later)
   // score += organizationPriorityScore;

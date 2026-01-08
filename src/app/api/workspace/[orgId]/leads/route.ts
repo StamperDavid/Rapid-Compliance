@@ -23,7 +23,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Failed to fetch leads:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch leads' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to fetch leads'},
       { status: 500 }
     );
   }
@@ -44,7 +44,7 @@ export async function POST(
   } catch (error: any) {
     console.error('Failed to create lead:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create lead' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to create lead'},
       { status: 500 }
     );
   }

@@ -116,7 +116,7 @@ export async function handleEmailBounce(
 ): Promise<void> {
   logger.info('Sequence Scheduler Handling bounce for enrollment', { 
     enrollmentId, 
-    reason: reason || 'unknown',
+    reason:(reason !== '' && reason != null) ? reason : 'unknown',
     file: 'sequence-scheduler.ts' 
   });
 
@@ -133,7 +133,7 @@ export async function handleEmailBounce(
   if (action) {
     action.status = 'bounced';
     action.bouncedAt = new Date().toISOString();
-    action.bounceReason = reason || 'unknown';
+    action.bounceReason =(reason !== '' && reason != null) ? reason : 'unknown';
     action.updatedAt = new Date().toISOString();
   }
 
@@ -222,7 +222,7 @@ export async function handleEmailOpen(
   if (action && !action.openedAt) {
     action.status = 'opened';
     action.openedAt = new Date().toISOString();
-    action.firstOpenedAt = action.firstOpenedAt || new Date().toISOString();
+    action.firstOpenedAt =action.firstOpenedAt ?? new Date().toISOString();
     action.updatedAt = new Date().toISOString();
 
     await FirestoreService.set(

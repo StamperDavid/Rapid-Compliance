@@ -13,7 +13,7 @@
  */
 
 // Check NEXT_PUBLIC_APP_ENV first, fallback to NODE_ENV
-const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV || 'development';
+const APP_ENV =process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV|| 'development';
 const IS_PRODUCTION = APP_ENV === 'production';
 const IS_TEST = APP_ENV === 'test' || process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const IS_DEV = APP_ENV === 'development';

@@ -31,7 +31,7 @@ export default function CategoriesManagementPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        setCategories(data.categories ?? []);
       }
     } catch (error) {
       console.error('[Categories] Load error:', error);

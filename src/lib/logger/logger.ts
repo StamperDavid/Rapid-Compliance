@@ -172,7 +172,7 @@ class Logger {
       
       console.log(
         `${color}[${level.toUpperCase()}]${reset} ${timestamp} - ${message}`,
-        context ? context : ''
+        context ?? ''
       );
     } else {
       // In production, output structured JSON logs

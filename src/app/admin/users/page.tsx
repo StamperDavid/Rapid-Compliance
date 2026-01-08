@@ -147,7 +147,7 @@ export default function UsersPage() {
             const org = users.find(u => u.organizationId === orgId) ?? undefined;
             return (
               <option key={orgId} value={orgId}>
-                {org?.organizationName || orgId}
+                {org?.organizationName ?? orgId}
               </option>
             );
           })}

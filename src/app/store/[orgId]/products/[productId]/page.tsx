@@ -64,7 +64,7 @@ export default function ProductDetailPage() {
       setAdding(true);
       
       // Get or create cart session
-      const sessionId = localStorage.getItem('cartSessionId') || `session-${Date.now()}`;
+      const sessionId =(localStorage.getItem('cartSessionId') !== '' && localStorage.getItem('cartSessionId') != null) ? localStorage.getItem('cartSessionId') : `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
       
       await addToCart(sessionId, 'default', orgId, productId, quantity);

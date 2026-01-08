@@ -214,7 +214,7 @@ export class ImportService {
       return {
         csvColumn: header,
         csvColumnIndex: index,
-        targetField: matchedField || fieldName,
+        targetField:matchedField ?? fieldName,
         fieldType: detection.type,
         isRequired: false,
         sampleValues: columnValues.slice(0, 5),
@@ -282,7 +282,7 @@ export class ImportService {
    * Transform value based on mapping
    */
   static transformValue(value: any, mapping: ColumnMapping): any {
-    if (!value || value === '') {return mapping.defaultValue || null;}
+    if (!value || value === '') {return mapping.defaultValue ?? null;}
 
     switch (mapping.transform) {
       case 'trim':

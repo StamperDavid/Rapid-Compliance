@@ -86,7 +86,7 @@ export default function LeadResearchPage() {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.message || `I found ${data.leads.length} companies matching your criteria:`,
+          content:(data.message !== '' && data.message != null) ? data.message : `I found ${data.leads.length} companies matching your criteria:`,
           timestamp: new Date(),
           leads: data.leads,
           cost: data.cost,

@@ -52,7 +52,7 @@ export default function EditNurtureCampaignPage() {
         <div className="bg-gray-900 rounded-lg p-6 mb-4">
           <div className="space-y-4">
             <div><label className="block text-sm font-medium mb-2">Name</label><input type="text" value={campaign.name} onChange={(e) => setCampaign({...campaign, name: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-            <div><label className="block text-sm font-medium mb-2">Description</label><textarea value={campaign.description || ''} onChange={(e) => setCampaign({...campaign, description: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={3} /></div>
+            <div><label className="block text-sm font-medium mb-2">Description</label><textarea value={campaign.description ?? ''} onChange={(e) => setCampaign({...campaign, description: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={3} /></div>
             <div><label className="block text-sm font-medium mb-2">Status</label><select value={campaign.status} onChange={(e) => setCampaign({...campaign, status: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"><option value="active">Active</option><option value="paused">Paused</option><option value="draft">Draft</option></select></div>
           </div>
         </div>

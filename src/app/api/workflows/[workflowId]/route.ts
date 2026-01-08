@@ -48,7 +48,7 @@ export async function GET(
   } catch (error: any) {
     logger.error('Failed to get workflow', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to get workflow' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get workflow'},
       { status: 500 }
     );
   }
@@ -100,7 +100,7 @@ export async function PUT(
   } catch (error: any) {
     logger.error('Failed to update workflow', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update workflow' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to update workflow'},
       { status: 500 }
     );
   }
@@ -152,7 +152,7 @@ export async function PATCH(
   } catch (error: any) {
     logger.error('Failed to update workflow status', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to update workflow status' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to update workflow status'},
       { status: 500 }
     );
   }
@@ -197,7 +197,7 @@ export async function DELETE(
   } catch (error: any) {
     logger.error('Failed to delete workflow', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to delete workflow' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to delete workflow'},
       { status: 500 }
     );
   }

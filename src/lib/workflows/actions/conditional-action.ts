@@ -98,13 +98,13 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
     case 'entity': {
       // Query entity from trigger data context
       // The entity data should be populated in triggerData.entity or triggerData.entities
-      const entityData = triggerData?.entity || triggerData?.record || triggerData;
+      const entityData =triggerData?.entity ?? triggerData?.record ?? triggerData;
       fieldValue = getNestedValue(entityData, condition.field);
       break;
     }
     case 'variable': {
       // Get from workflow variables stored in triggerData._variables
-      const variables = (triggerData?._variables || triggerData?.variables) ?? {};
+      const variables = (triggerData?._variables ?? triggerData?.variables) ?? {};
       fieldValue = getNestedValue(variables, condition.field);
       break;
     }
@@ -138,9 +138,9 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
     case 'not_equals':
       return fieldValue !== condition.value;
     case 'contains':
-      return String(fieldValue || '').toLowerCase().includes(String(condition.value || '').toLowerCase());
+      return String(fieldValue ?? '').toLowerCase().includes(String(condition.value ?? '').toLowerCase());
     case 'not_contains':
-      return !String(fieldValue || '').toLowerCase().includes(String(condition.value || '').toLowerCase());
+      return !String(fieldValue ?? '').toLowerCase().includes(String(condition.value ?? '').toLowerCase());
     case 'greater_than':
       if (fieldValue instanceof Date && condition.value) {
         return fieldValue.getTime() > new Date(condition.value as string).getTime();
@@ -160,9 +160,9 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
     case 'not_exists':
       return fieldValue === undefined || fieldValue === null || fieldValue === '';
     case 'starts_with':
-      return String(fieldValue || '').toLowerCase().startsWith(String(condition.value || '').toLowerCase());
+      return String(fieldValue ?? '').toLowerCase().startsWith(String(condition.value ?? '').toLowerCase());
     case 'ends_with':
-      return String(fieldValue || '').toLowerCase().endsWith(String(condition.value || '').toLowerCase());
+      return String(fieldValue ?? '').toLowerCase().endsWith(String(condition.value ?? '').toLowerCase());
     case 'in': {
       const inArray = Array.isArray(condition.value) ? condition.value : String(condition.value).split(',');
       return inArray.includes(fieldValue);

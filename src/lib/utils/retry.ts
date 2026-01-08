@@ -298,13 +298,12 @@ export const DatabaseRetryOptions: RetryOptions = {
   operationName: 'Database operation',
   shouldRetry: (error, attempt) => {
     // Retry on deadlocks and timeouts
-    return (
-      error.code === 'ECONNRESET' ||
-      error.code === 'ETIMEDOUT' ||
-      error.message?.includes('deadlock') ||
-      error.message?.includes('timeout') ||
-      (attempt < 5 && !error.status)
-    );
+    const isConnReset = error.code === 'ECONNRESET';
+    const isTimeout = error.code === 'ETIMEDOUT';
+    const hasDeadlock = error.message?.includes('deadlock') ?? false;
+    const hasTimeoutMsg = error.message?.includes('timeout') ?? false;
+    const shouldRetry = attempt < 5 && !error.status;
+    return [isConnReset, isTimeout, hasDeadlock, hasTimeoutMsg, shouldRetry].some(Boolean);
   }
 };
 

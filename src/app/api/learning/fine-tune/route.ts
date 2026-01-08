@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           stats,
           recentJobs: jobs.slice(0, 5),
-          config: config || {
+          config:config ?? {
             autoCollectTrainingData: true,
             autoTriggerFineTuning: false,
             autoDeployFineTunedModels: false,
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       }
       
       case 'examples': {
-        const status = searchParams.get('status') as any || undefined;
+        const status = searchParams.get('status') as any ?? undefined;
         const examples = await getTrainingExamples(organizationId, status);
         return NextResponse.json({ examples });
       }
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     logger.error('Fine-tune API error', error, { route: '/api/learning/fine-tune' });
     return NextResponse.json(
-      { error: error.message || 'Failed to get training data' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get training data'},
       { status: 500 }
     );
   }
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
           organizationId,
           conversationId: body.conversationId,
           messages: body.messages,
-          confidence: body.confidence || 0,
+          confidence: body.confidence ?? 0,
           userRating: body.userRating,
           didConvert: body.didConvert,
           userFeedback: body.userFeedback,
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        await approveTrainingExample(organizationId, exampleId, approvedBy || 'system');
+        await approveTrainingExample(organizationId, exampleId,(approvedBy !== '' && approvedBy != null) ? approvedBy : 'system');
         return NextResponse.json({
           success: true,
           message: `Example ${exampleId} approved`,
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        const baseModel = body.baseModel || 'gpt-3.5-turbo';
+        const baseModel =(body.baseModel !== '' && body.baseModel != null) ? body.baseModel : 'gpt-3.5-turbo';
         
         const job = await createOpenAIFineTuningJob({
           organizationId,

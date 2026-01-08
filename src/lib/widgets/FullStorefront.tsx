@@ -28,8 +28,8 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
   const [showCart, setShowCart] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const primaryColor = theme?.primaryColor || '#6366f1';
-  const fontFamily = theme?.fontFamily || 'system-ui, sans-serif';
+  const primaryColor = theme?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#6366f1';
+  const fontFamily = theme?(.fontFamily !== '' && .fontFamily != null) ? .fontFamily : 'system-ui, sans-serif';
 
   useEffect(() => {
     loadProducts();
@@ -44,7 +44,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
       const response = await fetch(`/api/ecommerce/products?orgId=${organizationId}`);
       const data = await response.json();
       if (data.success) {
-        setProducts(data.products || []);
+        setProducts(data.products ?? []);
         
         // Extract categories
         const cats = [...new Set(data.products.map((p: any) => p.category).filter(Boolean))] as string[];

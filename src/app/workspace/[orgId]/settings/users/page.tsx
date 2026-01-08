@@ -82,12 +82,12 @@ export default function TeamMembersPage() {
   useEffect(() => {
     const members: TeamMember[] = (users || []).map((u: any, index: number) => ({
       id: index + 1,
-      name: u.displayName || u.email?.split('@')[0] || 'Unknown',
-      email: u.email || '',
-      role: u.role || 'employee',
-      title: u.title || '',
-      department: u.department || '',
-      status: u.status || 'active',
+      name: u.displayName || u.email?(.split('@')[0] !== '' && .split('@')[0] != null) ? .split('@')[0] : 'Unknown',
+      email: u.email ?? '',
+      role:(u.role !== '' && u.role != null) ? u.role : 'employee',
+      title: u.title ?? '',
+      department: u.department ?? '',
+      status:(u.status !== '' && u.status != null) ? u.status : 'active',
       joinedDate: u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
       customPermissions: u.customPermissions
     }));
@@ -187,7 +187,7 @@ export default function TeamMembersPage() {
   const openEditModal = (member: TeamMember) => {
     setEditingMember({
       ...member,
-      customPermissions: member.customPermissions || {}
+      customPermissions:member.customPermissions ?? {}
     });
     setShowEditModal(true);
   };

@@ -71,11 +71,11 @@ export async function POST(request: NextRequest) {
 
     if (testResult.success) {
       return createSuccessResponse({
-        message: testResult.message || 'Connection successful',
+        message:(testResult.message !== '' && testResult.message != null) ? testResult.message : 'Connection successful',
         details: testResult.details
       });
     } else {
-      return createErrorResponse(testResult.error || 'Connection failed', 400);
+      return createErrorResponse((testResult.error !== '' && testResult.error != null) ? testResult.error : 'Connection failed', 400);
     }
 
   } catch (error: any) {
@@ -120,7 +120,7 @@ async function testOpenAIConnection(apiKey?: string): Promise<{ success: boolean
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage
@@ -166,7 +166,7 @@ async function testAnthropicConnection(apiKey?: string): Promise<{ success: bool
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage
@@ -213,7 +213,7 @@ async function testOpenRouterConnection(apiKey?: string): Promise<{ success: boo
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage
@@ -256,7 +256,7 @@ async function testGeminiConnection(apiKey?: string): Promise<{ success: boolean
       };
     } else {
       const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+      const errorMessage = errorData.error?(.message !== '' && .message != null) ? .message : `HTTP ${response.status}: ${response.statusText}`;
       return {
         success: false,
         error: errorMessage

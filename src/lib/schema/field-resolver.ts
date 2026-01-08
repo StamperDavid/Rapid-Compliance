@@ -116,7 +116,7 @@ export class FieldResolver {
     
     // Try fuzzy match as last resort
     if (query.name || query.key) {
-      const searchTerm = query.name || query.key || '';
+      const searchTerm =query.name ?? query.key ?? '';
       const fuzzyMatch = this.findByFuzzyMatch(schema, searchTerm);
       if (fuzzyMatch) {
         return {
@@ -232,14 +232,14 @@ export class FieldResolver {
    * Find field by exact key match
    */
   private static findByExactKey(schema: Schema, key: string): SchemaField | null {
-    return schema.fields.find(f => f.key === key) || null;
+    return schema.fields.find(f => f.key === key) ?? null;
   }
   
   /**
    * Find field by exact label match
    */
   private static findByExactLabel(schema: Schema, label: string): SchemaField | null {
-    return schema.fields.find(f => f.label === label) || null;
+    return schema.fields.find(f => f.label === label) ?? null;
   }
   
   /**
@@ -262,7 +262,7 @@ export class FieldResolver {
    */
   private static findByType(schema: Schema, type: FieldType): SchemaField | null {
     // Find first non-hidden field of this type
-    return schema.fields.find(f => f.type === type && !f.hidden) || null;
+    return schema.fields.find(f => f.type === type && !f.hidden) ?? null;
   }
   
   /**

@@ -109,7 +109,7 @@ async function searchWithSerper(query: string, apiKey: string): Promise<CompanyS
       name: extractCompanyName(result.title),
       website: result.link,
       domain: extractDomain(result.link),
-      snippet: result.snippet || '',
+      snippet: result.snippet ?? '',
       source: 'serper' as const,
     }));
   } catch (error: unknown) {
@@ -153,7 +153,7 @@ async function searchWithGoogleCustomSearch(
       name: extractCompanyName(result.title),
       website: result.link,
       domain: extractDomain(result.link),
-      snippet: result.snippet || '',
+      snippet: result.snippet ?? '',
       source: 'google-custom-search' as const,
     }));
   } catch (error: unknown) {
@@ -257,7 +257,7 @@ export async function searchCompanyNews(companyName: string, limit: number = 5):
     
     const data = await response.json() as NewsAPIResponse;
     
-    return (data.articles || []).map((article: NewsArticle) => ({
+    return (data.articles ?? []).map((article: NewsArticle) => ({
       title: article.title,
       url: article.url,
       publishedDate: article.publishedAt,

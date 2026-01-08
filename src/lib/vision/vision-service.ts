@@ -32,7 +32,7 @@ export async function analyzeImage(
   organizationId?: string
 ): Promise<VisionAnalysisResponse> {
   const startTime = Date.now();
-  const model = request.model || 'gpt-4-vision';
+  const model =(request.model !== '' && request.model != null) ? request.model : 'gpt-4-vision';
   
   if (model === 'gpt-4-vision') {
     return analyzeWithGPT4Vision(request, organizationId, startTime);
@@ -51,8 +51,8 @@ async function analyzeWithGPT4Vision(
 ): Promise<VisionAnalysisResponse> {
   try {
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const keys = await apiKeyService.getServiceKey(organizationId || 'demo', 'openai');
-    const apiKey = (keys)?.openaiApiKey || process.env.OPENAI_API_KEY;
+    const keys = await apiKeyService.getServiceKey((organizationId !== '' && organizationId != null) ? organizationId : 'demo', 'openai');
+    const apiKey = (keys)?.openaiApiKey ?? process.env.OPENAI_API_KEY;
     
     if (!apiKey) {
       throw new Error('OpenAI API key not configured');
@@ -80,7 +80,7 @@ async function analyzeWithGPT4Vision(
             ],
           },
         ],
-        max_tokens: request.maxTokens || 500,
+        max_tokens: request.maxTokens ?? 500,
       }),
     });
     
@@ -141,7 +141,7 @@ async function analyzeWithGeminiVision(
       imagePart = {
         inlineData: {
           data: base64,
-          mimeType: imageResponse.headers.get('content-type') || 'image/jpeg',
+          mimeType:(imageResponse.headers.get('content-type') !== '' && imageResponse.headers.get('content-type') != null) ? imageResponse.headers.get('content-type') : 'image/jpeg',
         },
       };
     } else if (request.imageBase64) {
@@ -190,8 +190,8 @@ export async function analyzeVideo(
   try {
     // Extract frames from video
     const frames = await extractVideoFrames(videoUrl, {
-      interval: options?.frameInterval || 5, // Every 5 seconds
-      maxFrames: options?.maxFrames || 10,
+      interval: options?.frameInterval ?? 5, // Every 5 seconds
+      maxFrames: options?.maxFrames ?? 10,
     });
     
     // Analyze each frame

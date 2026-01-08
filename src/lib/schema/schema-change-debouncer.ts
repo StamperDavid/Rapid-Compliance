@@ -135,8 +135,8 @@ export class SchemaChangeDebouncer {
           // For renames, track original name to final name
           coalescedMap.set(key, {
             ...event,
-            oldFieldKey: existing.oldFieldKey || event.oldFieldKey,
-            oldFieldName: existing.oldFieldName || event.oldFieldName,
+            oldFieldKey:existing.oldFieldKey ?? event.oldFieldKey,
+            oldFieldName:existing.oldFieldName ?? event.oldFieldName,
           });
         } else {
           // For other types, keep latest
@@ -161,7 +161,7 @@ export class SchemaChangeDebouncer {
    * Get coalesce key for deduplication
    */
   private getCoalesceKey(event: SchemaChangeEvent): string {
-    return `${event.changeType}:${event.fieldId || 'schema'}`;
+    return `${event.changeType}:${(event.fieldId !== '' && event.fieldId != null) ? event.fieldId : 'schema'}`;
   }
   
   /**
@@ -341,7 +341,7 @@ export class SchemaBatchUpdater {
       }
       
       // Save schema with version increment
-      updatedSchema.version = (updatedSchema.version || 1) + 1;
+      updatedSchema.version = (updatedSchema.version ?? 1) + 1;
       updatedSchema.updatedAt = new Date().toISOString();
       
       await FirestoreService.set(

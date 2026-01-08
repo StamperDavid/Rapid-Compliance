@@ -158,11 +158,11 @@ export class CoachingGenerator {
     try {
       const parsed = JSON.parse(response.text);
       return {
-        assessment: parsed.assessment || 'Performance analysis completed',
+        assessment:(parsed.assessment !== '' && parsed.assessment != null) ? parsed.assessment : 'Performance analysis completed',
         currentTier: performance.tier,
-        trend: parsed.trend || this.inferTrend(performance),
-        keyMetrics: parsed.keyMetrics || this.getKeyMetrics(performance),
-        focusAreas: parsed.focusAreas || this.getFocusAreas(performance)
+        trend:parsed.trend ?? this.inferTrend(performance),
+        keyMetrics:parsed.keyMetrics ?? this.getKeyMetrics(performance),
+        focusAreas:parsed.focusAreas ?? this.getFocusAreas(performance)
       };
     } catch (error) {
       logger.error('Error parsing performance summary', { error });
@@ -190,7 +190,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.strengths || this.identifyStrengthsFallback(performance);
+return parsed.strengths ?? this.identifyStrengthsFallback(performance);
     } catch (error) {
       logger.error('Error parsing strengths', { error });
       return this.identifyStrengthsFallback(performance);
@@ -216,7 +216,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.weaknesses || this.identifyWeaknessesFallback(performance);
+return parsed.weaknesses ?? this.identifyWeaknessesFallback(performance);
     } catch (error) {
       logger.error('Error parsing weaknesses', { error });
       return this.identifyWeaknessesFallback(performance);
@@ -242,7 +242,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.opportunities || this.identifyOpportunitiesFallback(performance);
+return parsed.opportunities ?? this.identifyOpportunitiesFallback(performance);
     } catch (error) {
       logger.error('Error parsing opportunities', { error });
       return this.identifyOpportunitiesFallback(performance);
@@ -268,7 +268,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.risks || this.assessRisksFallback(performance);
+return parsed.risks ?? this.assessRisksFallback(performance);
     } catch (error) {
       logger.error('Error parsing risks', { error });
       return this.assessRisksFallback(performance);
@@ -320,7 +320,7 @@ export class CoachingGenerator {
     
     try {
       const parsed = JSON.parse(response.text);
-      return parsed.recommendations || this.generateRecommendationsFallback(performance);
+return parsed.recommendations ?? this.generateRecommendationsFallback(performance);
     } catch (error) {
       logger.error('Error parsing recommendations', { error });
       return this.generateRecommendationsFallback(performance);

@@ -260,8 +260,8 @@ export function createLeadReassignedSignal(
     newRepId: assignment.repId,
     newRepName,
     assignmentId: assignment.id,
-    reassignmentReason: assignment.reassignmentReason || 'Not specified',
-    reassignmentCount: assignment.reassignmentCount || 1,
+    reassignmentReason:(assignment.reassignmentReason !== '' && assignment.reassignmentReason != null) ? assignment.reassignmentReason : 'Not specified',
+    reassignmentCount: assignment.reassignmentCount ?? 1,
     isAutomatic: assignment.assignmentMethod === 'reassignment',
   };
 
@@ -326,7 +326,7 @@ export function createAssignmentAcceptedSignal(
     repId: assignment.repId,
     repName,
     companyName: lead.companyName,
-    acceptedAt: assignment.acceptedAt || new Date(),
+    acceptedAt:assignment.acceptedAt ?? new Date(),
     timeToAcceptMinutes,
   };
 

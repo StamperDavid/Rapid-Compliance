@@ -242,8 +242,8 @@ async function getLoadBalancedUser(
   rule: RoutingRule
 ): Promise<string> {
   try {
-    const maxLeads = rule.metadata?.maxLeadsPerUser || 100;
-    const period = rule.metadata?.balancingPeriod || 'week';
+    const maxLeads = rule.metadata?.maxLeadsPerUser ?? 100;
+    const period = rule.metadata?(.balancingPeriod !== '' && .balancingPeriod != null) ? .balancingPeriod : 'week';
 
     // Get lead counts for each user in the period
     const userCounts = new Map<string, number>();
@@ -358,7 +358,7 @@ async function getDefaultAssignment(organizationId: string): Promise<string> {
 
     // Fallback to org owner
     const org = await FirestoreService.get<any>('organizations', organizationId);
-    return org?.ownerId || org?.createdBy || 'unknown';
+    return org?.ownerId || org?(.createdBy !== '' && .createdBy != null) ? .createdBy : 'unknown';
 
   } catch (error) {
     logger.error('Failed to get default assignment', error);

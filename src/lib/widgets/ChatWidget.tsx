@@ -56,7 +56,7 @@ export function ChatWidget({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [customerId, setCustomerId] = useState(initialCustomerId || '');
+  const [customerId, setCustomerId] = useState(initialCustomerId ?? '');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -147,7 +147,7 @@ export function ChatWidget({
       const assistantMessage: Message = {
         id: `msg_${Date.now()}_assistant`,
         role: 'assistant',
-        content: data.response || 'Sorry, I could not process your request.',
+        content:(data.response !== '' && data.response != null) ? data.response : 'Sorry, I could not process your request.',
         timestamp: new Date(),
       };
 

@@ -52,7 +52,7 @@ export async function getWorkflows(
     const result = await FirestoreService.getAllPaginated<Workflow>(
       `organizations/${organizationId}/workspaces/${workspaceId}/workflows`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 
@@ -291,7 +291,7 @@ export async function getWorkflowRuns(
     const result = await FirestoreService.getAllPaginated(
       `organizations/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 

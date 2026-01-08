@@ -89,7 +89,7 @@ export async function getContacts(
     const result = await FirestoreService.getAllPaginated<Contact>(
       `organizations/${organizationId}/workspaces/${workspaceId}/entities/contacts/records`,
       constraints,
-      options?.pageSize || 50,
+      options?.pageSize ?? 50,
       options?.lastDoc
     );
 
@@ -150,7 +150,7 @@ export async function createContact(
       id: contactId,
       organizationId,
       workspaceId,
-      isVIP: data.isVIP || false,
+      isVIP: data.isVIP ?? false,
       tags: data.tags ?? [],
       createdAt: now,
       updatedAt: now,
@@ -306,11 +306,11 @@ export async function searchContacts(
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = result.data.filter(contact =>
-      contact.firstName?.toLowerCase().includes(searchLower) ||
-      contact.lastName?.toLowerCase().includes(searchLower) ||
-      contact.name?.toLowerCase().includes(searchLower) ||
-      contact.email?.toLowerCase().includes(searchLower) ||
-      contact.company?.toLowerCase().includes(searchLower)
+      (contact.firstName?.toLowerCase().includes(searchLower) ?? false) ||
+      (contact.lastName?.toLowerCase().includes(searchLower) ?? false) ||
+      (contact.name?.toLowerCase().includes(searchLower) ?? false) ||
+      (contact.email?.toLowerCase().includes(searchLower) ?? false) ||
+      (contact.company?.toLowerCase().includes(searchLower) ?? false)
     );
 
     logger.info('Contacts searched', {

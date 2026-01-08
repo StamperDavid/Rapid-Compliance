@@ -31,13 +31,13 @@ export default function EmailBuilderPage() {
       id: `block-${Date.now()}`,
       type,
       content: getDefaultContent(type),
-      order: (template.blocks?.length || 0) + 1,
+      order: (template.blocks?.length ?? 0) + 1,
       styling: {},
     };
 
     setTemplate({
       ...template,
-      blocks: [...(template.blocks || []), newBlock],
+      blocks: [...(template.blocks ?? []), newBlock],
     });
   };
 
@@ -72,7 +72,7 @@ export default function EmailBuilderPage() {
   };
 
   const moveBlock = (blockId: string, direction: 'up' | 'down') => {
-    const blocks = [...(template.blocks || [])];
+    const blocks = [...(template.blocks ?? [])];
     const index = blocks.findIndex(b => b.id === blockId);
     if (index === -1) {return;}
 
@@ -216,7 +216,7 @@ export default function EmailBuilderPage() {
                       >
                         {/* Block Content */}
                         {block.type === 'header' && (
-                          <h1 className="text-2xl font-bold" style={{ color: block.styling?.textColor || template.styling?.primaryColor }}>
+                          <h1 className="text-2xl font-bold" style={{ color: block.styling?.textColor ?? template.styling?.primaryColor}}>
                             {block.content}
                           </h1>
                         )}
@@ -229,12 +229,12 @@ export default function EmailBuilderPage() {
                           <img src={block.content} alt="Email" className="w-full rounded" />
                         )}
                         {block.type === 'button' && (
-                          <div style={{ textAlign: block.styling?.alignment || 'center' }}>
+                          <div style={{ textAlign: block.styling?(.alignment !== '' && .alignment != null) ? .alignment : 'center'}}>
                             <button
                               className="px-6 py-3 rounded font-medium"
                               style={{
-                                backgroundColor: block.styling?.buttonColor || template.styling?.primaryColor,
-                                color: block.styling?.buttonTextColor || '#ffffff',
+                                backgroundColor: block.styling?.buttonColor ?? template.styling?.primaryColor,
+                                color: block.styling?(.buttonTextColor !== '' && .buttonTextColor != null) ? .buttonTextColor : '#ffffff',
                               }}
                             >
                               {block.content}
@@ -260,7 +260,7 @@ export default function EmailBuilderPage() {
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); moveBlock(block.id, 'down'); }}
-                              disabled={index === (template.blocks?.length || 0) - 1}
+                              disabled={index === (template.blocks?.length ?? 0) - 1}
                               className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 rounded disabled:opacity-30"
                             >
                               ↓
@@ -305,7 +305,7 @@ export default function EmailBuilderPage() {
                       />
                       <input
                         type="text"
-                        value={selectedBlock.styling?.buttonUrl || ''}
+                        value={selectedBlock.styling?.buttonUrl ?? ''}
                         onChange={(e) => updateBlock(selectedBlock.id, { 
                           styling: { ...selectedBlock.styling, buttonUrl: e.target.value }
                         })}
@@ -334,7 +334,7 @@ export default function EmailBuilderPage() {
                 <div>
                   <label className="text-sm text-gray-400">Alignment</label>
                   <select
-                    value={selectedBlock.styling?.alignment || 'left'}
+                    value={selectedBlock.styling?(.alignment !== '' && .alignment != null) ? .alignment : 'left'}
                     onChange={(e) => updateBlock(selectedBlock.id, {
                       styling: { ...selectedBlock.styling, alignment: e.target.value as any }
                     })}
@@ -352,7 +352,7 @@ export default function EmailBuilderPage() {
                       <label className="text-sm text-gray-400">Button Color</label>
                       <input
                         type="color"
-                        value={selectedBlock.styling?.buttonColor || template.styling?.primaryColor}
+                        value={selectedBlock.styling?.buttonColor ?? template.styling?.primaryColor}
                         onChange={(e) => updateBlock(selectedBlock.id, {
                           styling: { ...selectedBlock.styling, buttonColor: e.target.value }
                         })}
@@ -363,7 +363,7 @@ export default function EmailBuilderPage() {
                       <label className="text-sm text-gray-400">Text Color</label>
                       <input
                         type="color"
-                        value={selectedBlock.styling?.buttonTextColor || '#ffffff'}
+                        value={selectedBlock.styling?(.buttonTextColor !== '' && .buttonTextColor != null) ? .buttonTextColor : '#ffffff'}
                         onChange={(e) => updateBlock(selectedBlock.id, {
                           styling: { ...selectedBlock.styling, buttonTextColor: e.target.value }
                         })}
@@ -378,7 +378,7 @@ export default function EmailBuilderPage() {
                     <label className="text-sm text-gray-400">Text Color</label>
                     <input
                       type="color"
-                      value={selectedBlock.styling?.textColor || '#333333'}
+                      value={selectedBlock.styling?(.textColor !== '' && .textColor != null) ? .textColor : '#333333'}
                       onChange={(e) => updateBlock(selectedBlock.id, {
                         styling: { ...selectedBlock.styling, textColor: e.target.value }
                       })}

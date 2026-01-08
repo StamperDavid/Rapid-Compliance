@@ -188,9 +188,10 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
             ? d.status 
             : '';
         const currentStageLower = currentStage.toLowerCase();
-        return history.some((h: any) => h.stage?.toLowerCase() === fromStage) || 
-               currentStageLower === fromStage ||
-               funnelStages.indexOf(currentStageLower) > i;
+        const inHistory = history.some((h: any) => h.stage?.toLowerCase() === fromStage) ?? false;
+        const isCurrent = currentStageLower === fromStage;
+        const isPastStage = funnelStages.indexOf(currentStageLower) > i;
+        return [inHistory, isCurrent, isPastStage].some(Boolean);
       }).length;
 
       const toCount = allDeals.filter(d => {
@@ -201,9 +202,10 @@ async function calculatePipelineAnalytics(orgId: string, period: string) {
             ? d.status 
             : '';
         const currentStageLower = currentStage.toLowerCase();
-        return history.some((h: any) => h.stage?.toLowerCase() === toStage) || 
-               currentStageLower === toStage ||
-               funnelStages.indexOf(currentStageLower) > i + 1;
+        const inHistory = history.some((h: any) => h.stage?.toLowerCase() === toStage) ?? false;
+        const isCurrent = currentStageLower === toStage;
+        const isPastStage = funnelStages.indexOf(currentStageLower) > i + 1;
+        return [inHistory, isCurrent, isPastStage].some(Boolean);
       }).length;
 
       const rate = fromCount > 0 ? (toCount / fromCount) * 100 : 0;

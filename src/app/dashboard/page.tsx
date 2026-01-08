@@ -319,17 +319,17 @@ function DashboardContent() {
       } else {
         const newReport: CustomReport = {
           id: Date.now().toString(),
-          name: reportData.name || 'Untitled Report',
+          name:(reportData.name !== '' && reportData.name != null) ? reportData.name : 'Untitled Report',
           description: reportData.description,
           organizationId: orgId,
           createdBy: user.id,
           createdAt: new Date(),
           updatedAt: new Date(),
-          dataSource: reportData.dataSource || '',
-          filters: reportData.filters || [],
-          grouping: reportData.grouping || [],
-          metrics: reportData.metrics || [],
-          visualization: reportData.visualization || { type: 'table' },
+          dataSource: reportData.dataSource ?? '',
+          filters:reportData.filters ?? [],
+          grouping:reportData.grouping ?? [],
+          metrics:reportData.metrics ?? [],
+          visualization:reportData.visualization ?? { type: 'table' },
           sharedWith: [],
           isPublic: false,
         };
@@ -960,7 +960,7 @@ function DashboardContent() {
                           <td style={{ textAlign: 'right', padding: '0.75rem', color: textColor }}>{stage.deals}</td>
                           <td style={{ textAlign: 'right', padding: '0.75rem', color: textColor }}>${stage.averageDealSize.toLocaleString()}</td>
                           <td style={{ textAlign: 'right', padding: '0.75rem', color: textColor }}>
-                            {(velocity.averageTimePerStage as any)[stage.stage] || 'N/A'} days
+                            {((velocity.averageTimePerStage as any)[stage.stage] !== '' && (velocity.averageTimePerStage as any)[stage.stage] != null) ? (velocity.averageTimePerStage as any)[stage.stage] : 'N/A'} days
                           </td>
                         </tr>
                       ))}
@@ -1280,7 +1280,7 @@ function DashboardContent() {
               <div>
                 {showReportBuilder ? (
                   <ReportBuilder
-                    report={editingReport || undefined}
+                    report={editingReport ?? undefined}
                     onSave={handleSaveReport}
                     onCancel={() => {
                       setShowReportBuilder(false);
@@ -1453,9 +1453,9 @@ function DashboardContent() {
                                   });
                                   const data = await response.json();
                                   if (data.success) {
-                                    alert(`Report executed successfully!\n\n${JSON.stringify(data.results.summary || data.results, null, 2)}`);
+                                    alert(`Report executed successfully!\n\n${JSON.stringify(data.results.summary ?? data.results, null, 2)}`);
                                   } else {
-                                    alert(`Error: ${data.error || 'Failed to execute report'}`);
+                                    alert(`Error: ${(data.error !== '' && data.error != null) ? data.error : 'Failed to execute report'}`);
                                   }
                                 } catch (error: any) {
                                   alert(`Error: ${error.message}`);

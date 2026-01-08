@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Failed to generate email',
+          error:(result.error !== '' && result.error != null) ? result.error : 'Failed to generate email',
         },
         { status: 500 }
       );

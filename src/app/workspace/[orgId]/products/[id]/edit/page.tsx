@@ -53,14 +53,14 @@ export default function EditProductPage() {
         <form onSubmit={handleSubmit}>
           <div className="bg-gray-900 rounded-lg p-6 mb-4">
             <div className="space-y-4">
-              <div><label className="block text-sm font-medium mb-2">Product Name *</label><input type="text" value={product.name || ''} onChange={(e) => setProduct({...product, name: e.target.value})} required className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-              <div><label className="block text-sm font-medium mb-2">Description</label><textarea value={product.description || ''} onChange={(e) => setProduct({...product, description: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={4} /></div>
+              <div><label className="block text-sm font-medium mb-2">Product Name *</label><input type="text" value={product.name ?? ''} onChange={(e) => setProduct({...product, name: e.target.value})} required className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+              <div><label className="block text-sm font-medium mb-2">Description</label><textarea value={product.description ?? ''} onChange={(e) => setProduct({...product, description: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" rows={4} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-2">Price ($) *</label><input type="number" step="0.01" value={product.price || 0} onChange={(e) => setProduct({...product, price: parseFloat(e.target.value)})} required className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
-                <div><label className="block text-sm font-medium mb-2">SKU</label><input type="text" value={product.sku || ''} onChange={(e) => setProduct({...product, sku: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Price ($) *</label><input type="number" step="0.01" value={product.price ?? 0} onChange={(e) => setProduct({...product, price: parseFloat(e.target.value)})} required className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">SKU</label><input type="text" value={product.sku ?? ''} onChange={(e) => setProduct({...product, sku: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium mb-2">Category</label><input type="text" value={product.category || ''} onChange={(e) => setProduct({...product, category: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
+                <div><label className="block text-sm font-medium mb-2">Category</label><input type="text" value={product.category ?? ''} onChange={(e) => setProduct({...product, category: e.target.value})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg" /></div>
                 <div><label className="block text-sm font-medium mb-2">Stock Status</label><select value={product.inStock ? 'in_stock' : 'out_of_stock'} onChange={(e) => setProduct({...product, inStock: e.target.value === 'in_stock'})} className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg"><option value="in_stock">In Stock</option><option value="out_of_stock">Out of Stock</option></select></div>
               </div>
             </div>

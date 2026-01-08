@@ -15,9 +15,13 @@ export default function AdminBar() {
   const canAccessSettings = usePermission('canAccessSettings');
   
   // Get orgId from URL params, user object, or localStorage
-  const orgId = (params?.orgId as string) || user?.organizationId || 
-    (typeof window !== 'undefined' ? localStorage.getItem('currentOrgId') : null) || 
-    'default';
+  const orgIdFromParams = params?.orgId as string | undefined;
+  const orgIdFromUser = user?.organizationId;
+  const orgIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem('currentOrgId') : null;
+  const orgId = (orgIdFromParams !== '' && orgIdFromParams != null) ? orgIdFromParams 
+    : (orgIdFromUser !== '' && orgIdFromUser != null) ? orgIdFromUser 
+    : (orgIdFromStorage !== '' && orgIdFromStorage != null) ? orgIdFromStorage 
+    : 'default';
   
   useEffect(() => {
     const savedTheme = localStorage.getItem('appTheme');

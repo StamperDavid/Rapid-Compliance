@@ -271,7 +271,7 @@ export default function ThemeEditorPage() {
         window.location.reload();
       }, 1500);
     } catch (error: any) {
-      setSaveMessage({ type: 'error', message: error.message || 'Failed to save theme' });
+      setSaveMessage({ type: 'error', message:(error.message !== '' && error.message != null) ? error.message : 'Failed to save theme'});
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(null), 5000);

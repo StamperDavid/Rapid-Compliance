@@ -194,8 +194,8 @@ export function createSequenceAnalyzedEvent(
       totalSequences: analysis.summary.totalSequences,
       avgReplyRate: analysis.summary.avgReplyRate,
       avgMeetingRate: analysis.summary.avgMeetingRate,
-      patternsFound: analysis.patterns?.total || 0,
-      optimizationsCount: analysis.optimizations?.total || 0,
+      patternsFound: analysis.patterns?.total ?? 0,
+      optimizationsCount: analysis.optimizations?.total ?? 0,
     },
     metadata: {
       timestamp: new Date().toISOString(),
@@ -353,7 +353,7 @@ export function createABTestCompletedEvent(
   return {
     type: 'sequence.ab_test_completed',
     orgId,
-    confidence: (test.statisticalSignificance || 0) / 100,
+    confidence: (test.statisticalSignificance ?? 0) / 100,
     priority: test.lift > 20 ? 'High' as const : 'Medium' as const,
     payload: {
       testId: test.id,
@@ -361,7 +361,7 @@ export function createABTestCompletedEvent(
       winningVariant: test.winningVariant,
       lift: test.lift,
       metric: test.successMetric,
-      statisticalSignificance: test.statisticalSignificance || 0,
+      statisticalSignificance: test.statisticalSignificance ?? 0,
     },
     metadata: {
       timestamp: new Date().toISOString(),

@@ -49,7 +49,7 @@ export async function calculateShipping(
   
   // Check for free shipping
   if (shippingConfig.freeShipping?.enabled) {
-    const minAmount = shippingConfig.freeShipping.minOrderAmount || 0;
+    const minAmount = shippingConfig.freeShipping.minOrderAmount ?? 0;
     if (cart.subtotal >= minAmount) {
       return {
         cost: 0,
@@ -97,7 +97,7 @@ async function calculateMethodCost(
   switch (method.rateType) {
     case 'flat':
       return {
-        cost: method.flatRate || 0,
+        cost: method.flatRate ?? 0,
         methodId: method.id,
         methodName: method.name,
         estimatedDelivery: method.estimatedDays

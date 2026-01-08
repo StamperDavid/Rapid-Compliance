@@ -74,8 +74,8 @@ async function getJobsFromRapidAPI(
     return data.data.slice(0, maxResults).map((job: any) => ({
       title: job.title,
       department: extractDepartment(job.title),
-      url: job.url || `https://www.linkedin.com/jobs/view/${job.id}`,
-      postedDate: job.postedAt || new Date().toISOString(),
+      url:(job.url !== '' && job.url != null) ? job.url : `https://www.linkedin.com/jobs/view/${job.id}`,
+      postedDate:job.postedAt ?? new Date().toISOString(),
       location: job.location,
       jobType: job.type,
       seniority: extractSeniority(job.title),
@@ -240,7 +240,7 @@ async function getLinkedInApiKey(organizationId: string): Promise<string | null>
 
     // Try organization API keys
     const keys = await apiKeyService.getKeys(organizationId);
-    return keys?.enrichment?.rapidApiKey || null;
+    return keys?.enrichment?.rapidApiKey ?? null;
   } catch (error) {
     logger.error('[LinkedIn] Error getting API key:', error, { file: 'linkedin-service.ts' });
     return null;

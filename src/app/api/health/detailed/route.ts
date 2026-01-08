@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+      version:(process.env.NEXT_PUBLIC_APP_VERSION !== '' && process.env.NEXT_PUBLIC_APP_VERSION != null) ? process.env.NEXT_PUBLIC_APP_VERSION : '1.0.0',
       environment: process.env.NODE_ENV || 'development',
       services: {
         database: {
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         status: 'error',
-        error: error.message || 'Health check failed',
+        error:(error.message !== '' && error.message != null) ? error.message : 'Health check failed',
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

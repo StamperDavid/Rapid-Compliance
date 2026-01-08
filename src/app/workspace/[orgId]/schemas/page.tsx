@@ -91,7 +91,7 @@ export default function SchemaBuilderPage() {
         setSchemas(serverSchemas);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load schemas');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load schemas');
       setSchemas(standardSchemasArray);
     } finally {
       setLoading(false);
@@ -122,7 +122,7 @@ export default function SchemaBuilderPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Failed to create schema (${res.status})`);
+        throw new Error((body.error !== '' && body.error != null) ? body.error : `Failed to create schema (${res.status})`);
       }
 
       const data = await res.json();
@@ -138,7 +138,7 @@ export default function SchemaBuilderPage() {
         fields: [{ id: 'f_new_1', key: 'name', label: 'Name', type: 'text', required: true }]
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to create schema');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to create schema');
     } finally {
       setSaving(false);
     }
@@ -181,11 +181,11 @@ export default function SchemaBuilderPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Failed to delete schema (${res.status})`);
+        throw new Error((body.error !== '' && body.error != null) ? body.error : `Failed to delete schema (${res.status})`);
       }
       setSchemas(prev => prev.filter(s => s.id !== id));
     } catch (err: any) {
-      setError(err.message || 'Failed to delete schema');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to delete schema');
     } finally {
       setSaving(false);
     }
@@ -209,13 +209,13 @@ export default function SchemaBuilderPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Failed to update schema (${res.status})`);
+        throw new Error((body.error !== '' && body.error != null) ? body.error : `Failed to update schema (${res.status})`);
       }
 
       setSchemas(prev => prev.map(s => s.id === editingSchema.id ? editingSchema : s));
       setEditingSchema(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to update schema');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to update schema');
     } finally {
       setSaving(false);
     }

@@ -212,7 +212,7 @@ async function getBuiltWithApiKey(organizationId: string): Promise<string | null
 
     // Try organization API keys
     const keys = await apiKeyService.getKeys(organizationId);
-    return keys?.enrichment?.builtWithApiKey || null;
+    return keys?.enrichment?.builtWithApiKey ?? null;
   } catch (error) {
     logger.error('[BuiltWith] Error getting API key:', error, { file: 'builtwith-service.ts' });
     return null;

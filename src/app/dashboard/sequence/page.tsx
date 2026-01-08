@@ -50,7 +50,7 @@ export default function SequenceIntelligencePage() {
       
       if (!response.ok) {
         const errorData = await response.json() as SequenceAnalysisResponse;
-        throw new Error(errorData.error?.message || 'Failed to fetch analysis');
+        throw new Error(errorData.error?(.message !== '' && .message != null) ? .message : 'Failed to fetch analysis');
       }
       
       const data = await response.json() as SequenceAnalysisResponse;
@@ -59,7 +59,7 @@ export default function SequenceIntelligencePage() {
         setAnalysis(data.analysis);
         setCached(data.metadata.cached);
       } else {
-        throw new Error(data.error?.message || 'No analysis data returned');
+        throw new Error(data.error?(.message !== '' && .message != null) ? .message : 'No analysis data returned');
       }
     } catch (err) {
       console.error('Error fetching sequence analysis:', err);

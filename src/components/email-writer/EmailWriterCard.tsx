@@ -57,7 +57,7 @@ function EmailWriterCardInner({
 }: EmailWriterCardProps) {
   // State
   const [emailType, setEmailType] = useState<EmailType>('intro');
-  const [dealId, setDealId] = useState(initialDealId || '');
+  const [dealId, setDealId] = useState(initialDealId ?? '');
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientTitle, setRecipientTitle] = useState('');
@@ -135,18 +135,18 @@ function EmailWriterCardInner({
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate email');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to generate email');
       }
       
       if (!data.success || !data.email) {
-        throw new Error(data.error || 'No email generated');
+        throw new Error((data.error !== '' && data.error != null) ? data.error : 'No email generated');
       }
       
       setGenerationState({
         isGenerating: false,
         error: null,
         generatedEmail: data.email,
-        suggestedImprovements: data.suggestedImprovements || [],
+        suggestedImprovements:data.suggestedImprovements ?? [],
       });
       
       // Pre-fill editor
@@ -498,7 +498,7 @@ function EmailWriterCardInner({
             <div>
               <p className="text-gray-500">Deal Score</p>
               <p className="text-white font-medium">
-                {generationState.generatedEmail.dealScore || 'N/A'}
+                {(generationState.generatedEmail.dealScore !== '' && generationState.generatedEmail.dealScore != null) ? generationState.generatedEmail.dealScore : 'N/A'}
                 {generationState.generatedEmail.dealTier && (
                   <span className="ml-1 text-xs text-gray-400">
                     ({generationState.generatedEmail.dealTier})

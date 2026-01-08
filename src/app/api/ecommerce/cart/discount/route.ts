@@ -34,9 +34,9 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       const validationError = validation as { success: false; errors: any };
       const errorDetails = validationError.errors?.errors?.map((e: any) => ({
-        path: e.path?.join('.') || 'unknown',
-        message: e.message || 'Validation error',
-      })) || [];
+        path: e.path?(.join('.') !== '' && .join('.') != null) ? .join('.') : 'unknown',
+        message:(e.message !== '' && e.message != null) ? e.message : 'Validation error',
+})) ?? [];
       
       return errors.validation('Validation failed', errorDetails);
     }
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     logger.error('Error applying discount', error, { route: '/api/ecommerce/cart/discount' });
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to apply discount code' },
+      { success: false, error:(error.message !== '' && error.message != null) ? error.message : 'Failed to apply discount code'},
       { status: 500 }
     );
   }

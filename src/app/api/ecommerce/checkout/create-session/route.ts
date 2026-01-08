@@ -80,13 +80,13 @@ export async function POST(request: NextRequest) {
         cartId: authResult.user.uid, // Cart ID is the user ID
         customer: JSON.stringify({
           email: customerInfo.email,
-          firstName: customerInfo.firstName || '',
-          lastName: customerInfo.lastName || '',
-          phone: customerInfo.phone || '',
+          firstName: customerInfo.firstName ?? '',
+          lastName: customerInfo.lastName ?? '',
+          phone: customerInfo.phone ?? '',
         }),
         shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : JSON.stringify({}),
         billingAddress: billingAddress ? JSON.stringify(billingAddress) : JSON.stringify({}),
-        shippingMethodId: shippingMethodId || '',
+        shippingMethodId: shippingMethodId ?? '',
       },
     });
 

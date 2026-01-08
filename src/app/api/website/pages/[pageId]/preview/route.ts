@@ -62,7 +62,7 @@ export async function POST(
 
     // Generate preview token
     const previewToken = randomBytes(32).toString('hex');
-    const expiresInHours = expiresIn || 24;
+    const expiresInHours = expiresIn ?? 24;
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
@@ -83,7 +83,7 @@ export async function POST(
     });
 
     // Generate preview URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl =(process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000';
     const previewUrl = `${baseUrl}/preview/${previewToken}`;
 
     return NextResponse.json({

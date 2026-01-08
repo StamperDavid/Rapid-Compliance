@@ -120,7 +120,7 @@ async function getRecentExecutions(
         const seqRef = adminDal.getNestedDocRef('sequences/{sequenceId}', { sequenceId: data.sequenceId });
         const seqDoc = await seqRef.get();
         if (seqDoc.exists) {
-          sequenceName = seqDoc.data()?.name || sequenceName;
+          sequenceName = seqDoc.data()?.name ?? sequenceName;
         }
       } catch (err) {
         logger.warn('[Executions] Could not fetch sequence name', { sequenceId: data.sequenceId });
@@ -133,7 +133,7 @@ async function getRecentExecutions(
         const leadDoc = await leadRef.get();
         if (leadDoc.exists) {
           const leadData = leadDoc.data();
-          leadName = leadData?.name || leadData?.email;
+          leadName = leadData?.name ?? leadData?.email;
         }
       } catch (err) {
         logger.warn('[Executions] Could not fetch lead name', { leadId: data.leadId });
@@ -149,9 +149,9 @@ async function getRecentExecutions(
           leadName,
           stepIndex: step.stepIndex,
           channel: step.channel,
-          action: step.response || 'Executed',
+          action:(step.response !== '' && step.response != null) ? step.response : 'Executed',
           status: step.success ? 'success' : step.error ? 'failed' : 'pending',
-          executedAt: step.executedAt?.toDate() || new Date(),
+          executedAt:step.executedAt?.toDate() ?? new Date(),
           error: step.error,
           metadata: {
             enrollmentId: doc.id,
@@ -172,7 +172,7 @@ async function getRecentExecutions(
           channel: 'email', // Default, will be updated when executed
           action: 'Scheduled',
           status: 'pending',
-          executedAt: data.nextExecutionAt?.toDate() || new Date(),
+          executedAt:data.nextExecutionAt?.toDate() ?? new Date(),
           metadata: {
             enrollmentId: doc.id,
             scheduledFor: data.nextExecutionAt?.toDate().toISOString(),
@@ -204,7 +204,7 @@ async function getRecentExecutions(
         );
         const seqDoc = await seqRef.get();
         if (seqDoc.exists) {
-          sequenceName = seqDoc.data()?.name || sequenceName;
+          sequenceName = seqDoc.data()?.name ?? sequenceName;
         }
       } catch (err) {
         logger.warn('[Executions] Could not fetch legacy sequence name', { sequenceId: data.sequenceId });
@@ -220,7 +220,7 @@ async function getRecentExecutions(
           leadName: undefined, // Legacy system doesn't store lead names
           stepIndex: action.stepOrder,
           channel: 'email', // Legacy is email-only
-          action: action.subject || 'Email sent',
+          action:(action.subject !== '' && action.subject != null) ? action.subject : 'Email sent',
           status: mapLegacyStatus(action.status),
           executedAt: action.sentAt ? new Date(action.sentAt) : new Date(),
           error: action.error,

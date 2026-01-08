@@ -77,7 +77,7 @@ export default function IntegrationsPage() {
         status: 'active',
         usageCount: 0,
         connectedAt: new Date().toISOString(),
-        connectedBy: user?.id || '',
+        connectedBy: user?.id ?? '',
       };
 
       await FirestoreService.set(

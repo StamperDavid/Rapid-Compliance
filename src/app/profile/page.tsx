@@ -45,16 +45,16 @@ export default function ProfilePage() {
         ...prev,
         displayName: user.displayName || '',
         email: user.email || '',
-        phone: (user as any).phone || '',
-        title: (user as any).title || '',
-        department: (user as any).department || '',
+        phone: (user as any).phone ?? '',
+        title: (user as any).title ?? '',
+        department: (user as any).department ?? '',
       }));
     }
   }, [user]);
 
-  const brandName = theme?.branding?.companyName || 'AI CRM';
+  const brandName = theme?.branding?(.companyName !== '' && .companyName != null) ? .companyName : 'AI CRM';
   const logoUrl = theme?.branding?.logoUrl;
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?(.main !== '' && .main != null) ? .main : '#6366f1';
 
   const handleSave = async () => {
     if (!user) {return;}

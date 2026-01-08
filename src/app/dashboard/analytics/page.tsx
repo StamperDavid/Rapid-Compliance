@@ -76,7 +76,7 @@ export default function AnalyticsDashboardPage() {
       setData((json).data);
     } catch (err: any) {
       console.error('Failed to fetch analytics:', err);
-      setError(err.message || 'Failed to load analytics');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load analytics');
     } finally {
       setLoading(false);
       setRefreshing(false);

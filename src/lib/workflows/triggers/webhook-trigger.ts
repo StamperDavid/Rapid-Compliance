@@ -106,7 +106,7 @@ export async function handleWebhook(
  * Generate webhook URL for workflow
  */
 export function generateWebhookUrl(workflowId: string, baseUrl?: string): string {
-  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com';
+  const base =(baseUrl || process.env.NEXT_PUBLIC_APP_URL !== '' && baseUrl || process.env.NEXT_PUBLIC_APP_URL != null) ? baseUrl ?? process.env.NEXT_PUBLIC_APP_URL: 'https://app.example.com';
   return `${base}/api/workflows/webhooks/${workflowId}`;
 }
 

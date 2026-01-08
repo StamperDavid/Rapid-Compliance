@@ -124,10 +124,10 @@ export async function extractCompanyData(
     logger.info('[AI Extractor] Successfully extracted data', { file: 'ai-extractor.ts' });
     
     return {
-      name: extracted.name || companyName,
-      description: extracted.description || scrapedContent.description,
-      industry: extracted.industry || 'Unknown',
-      size: extracted.size || 'unknown',
+      name:extracted.name ?? companyName,
+      description:extracted.description ?? scrapedContent.description,
+      industry:(extracted.industry !== '' && extracted.industry != null) ? extracted.industry : 'Unknown',
+      size:(extracted.size !== '' && extracted.size != null) ? extracted.size : 'unknown',
       employeeCount: extracted.employeeCount,
       employeeRange: extracted.employeeRange,
       headquarters: extracted.headquarters.city ? extracted.headquarters : undefined,
@@ -242,7 +242,7 @@ function fallbackExtraction(
   }
   
   // Try to find founded year
-  const yearMatch = text.match(/founded\s*in\s*(\d{4})/i) || text.match(/since\s*(\d{4})/i);
+  const yearMatch =text.match(/founded\s*in\s*(\d{4})/i) ?? text.match(/since\s*(\d{4})/i);
   const foundedYear = yearMatch ? parseInt(yearMatch[1]) : undefined;
   
   return {

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get('orgId');
-    const period = searchParams.get('period') || '30d';
+    const period =(searchParams.get('period') !== '' && searchParams.get('period') != null) ? searchParams.get('period') : '30d';
 
     if (!orgId) {
       return errors.badRequest('orgId is required');
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by date
     const ordersInPeriod = allOrders.filter(order => {
-      const orderDate = order.createdAt?.toDate?.() || new Date(order.createdAt);
+      const orderDate =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
       return orderDate >= startDate && orderDate <= now;
     });
 
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     const abandonedCarts = allCarts.filter(cart => {
-      const cartDate = cart.createdAt?.toDate?.() || new Date(cart.createdAt);
+      const cartDate =cart.createdAt?.toDate?.() ?? new Date(cart.createdAt);
       const isRecent = cartDate >= startDate;
       const isAbandoned = cart.status === 'abandoned' || 
         (!cart.convertedToOrder && (now.getTime() - cartDate.getTime()) > 24 * 60 * 60 * 1000);
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
 
     // Conversion rate
     const totalCarts = allCarts.filter(cart => {
-      const cartDate = cart.createdAt?.toDate?.() || new Date(cart.createdAt);
+      const cartDate =cart.createdAt?.toDate?.() ?? new Date(cart.createdAt);
       return cartDate >= startDate;
     }).length;
     const conversionRate = totalCarts > 0 ? (completedOrders.length / totalCarts) * 100 : 0;
@@ -109,14 +109,14 @@ export async function GET(request: NextRequest) {
     // Revenue by product
     const productMap = new Map<string, { revenue: number; quantity: number; orders: number }>();
     completedOrders.forEach(order => {
-      const items = order.items || order.products || [];
+      const items =order.items ?? order.products ?? [];
       items.forEach((item: any) => {
-        const name = item.productName || item.name || 'Unknown Product';
-        const revenue = (parseFloat(item.price) || 0) * (item.quantity || 1);
+        const name =(item.productName || item.name !== '' && item.productName || item.name != null) ? item.productName ?? item.name: 'Unknown Product';
+        const revenue = (parseFloat(item.price) || 0) * (item.quantity ?? 1);
         const existing = productMap.get(name) ?? { revenue: 0, quantity: 0, orders: 0 };
         productMap.set(name, {
           revenue: existing.revenue + revenue,
-          quantity: existing.quantity + (item.quantity || 1),
+          quantity: existing.quantity + (item.quantity ?? 1),
           orders: existing.orders + 1,
         });
       });
@@ -135,8 +135,8 @@ export async function GET(request: NextRequest) {
     // Orders by status
     const statusMap = new Map<string, number>();
     ordersInPeriod.forEach(order => {
-      const status = order.status || 'unknown';
-      statusMap.set(status, (statusMap.get(status) || 0) + 1);
+      const status =(order.status !== '' && order.status != null) ? order.status : 'unknown';
+      statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
     });
     const byStatus = Array.from(statusMap.entries())
       .map(([status, count]) => ({ status, count }));
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
     
     const dailyMap = new Map<string, { orders: number; revenue: number }>();
     completedOrders.forEach(order => {
-      const orderDate = order.createdAt?.toDate?.() || new Date(order.createdAt);
+      const orderDate =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
       if (orderDate >= trendStartDate) {
         const dateKey = orderDate.toISOString().split('T')[0];
         const revenue = parseFloat(order.total) || parseFloat(order.amount) || 0;

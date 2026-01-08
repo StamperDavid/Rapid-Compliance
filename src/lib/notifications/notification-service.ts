@@ -98,7 +98,7 @@ export class NotificationService {
 
     // Determine channels (respect user preferences)
     const channels = this.determineChannels(
-      options?.channels || template.channels,
+      options?.channels ?? template.channels,
       preferences,
       template.category
     );
@@ -108,7 +108,7 @@ export class NotificationService {
     }
 
     // Determine priority
-    const priority = options?.priority || template.priority;
+    const priority = options?.priority ?? template.priority;
 
     // Check if priority meets minimum threshold
     if (categoryPref.minPriority) {
@@ -276,8 +276,8 @@ export class NotificationService {
     }
 
     // Determine channel
-    const channel = slackContent.channel || 
-                   preferences.channels.slack?.channelId ||
+    const channel = slackContent.channel ?? 
+                   preferences.channels.slack?.channelId ??
                    '#notifications'; // Default channel
 
     // Check if we should thread this message
@@ -408,7 +408,7 @@ export class NotificationService {
 
     // Render email content
     if (template.email) {
-      const emailAddress = preferences.channels.email?.address || variables.userEmail;
+      const emailAddress = preferences.channels.email?.address ?? variables.userEmail;
       
       content.email = {
         subject: this.interpolateVariables(template.email.subject, variables),
@@ -416,7 +416,7 @@ export class NotificationService {
         htmlBody: template.email.htmlBody
           ? this.interpolateVariables(template.email.htmlBody, variables)
           : undefined,
-        to: emailAddress || 'unknown@example.com',
+        to:(emailAddress !== '' && emailAddress != null) ? emailAddress : 'unknown@example.com',
       };
     }
 
@@ -510,7 +510,7 @@ export class NotificationService {
   ): NotificationChannel[] {
     // Get category-specific channel overrides
     const categoryPref = preferences.categories[category];
-    const preferredChannels = categoryPref.channels || templateChannels;
+    const preferredChannels =categoryPref.channels ?? templateChannels;
 
     // Filter to only enabled channels
     return preferredChannels.filter((channel) => {

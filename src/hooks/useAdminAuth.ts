@@ -43,8 +43,8 @@ export function useAdminAuth() {
             // Create admin user session
             const adminUserData: AdminUser = {
               id: firebaseUser.uid,
-              email: firebaseUser.email || userData.email,
-              displayName: userData.name || firebaseUser.displayName || 'Admin User',
+              email:firebaseUser.email ?? userData.email,
+              displayName:(userData.name || firebaseUser.displayName !== '' && userData.name || firebaseUser.displayName != null) ? userData.name ?? firebaseUser.displayName: 'Admin User',
               role: userData.role as AdminRole,
               permissions: ADMIN_ROLE_PERMISSIONS[userData.role as AdminRole] || ADMIN_ROLE_PERMISSIONS.admin,
               createdAt: new Date() as any,

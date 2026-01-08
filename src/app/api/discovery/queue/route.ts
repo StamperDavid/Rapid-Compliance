@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       body.target,
       body.organizationId,
       body.workspaceId,
-      body.priority || 0
+      body.priority ?? 0
     );
 
     logger.info('[API] Discovery task queued', {
@@ -91,7 +91,7 @@ export async function PUT(request: NextRequest) {
           task.target,
           task.organizationId,
           task.workspaceId,
-          task.priority || 0
+          task.priority ?? 0
         )
       )
     );

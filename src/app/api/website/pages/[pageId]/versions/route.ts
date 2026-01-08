@@ -173,12 +173,12 @@ export async function POST(
     await pageRef.update({
       content: versionData?.content ?? [],
       seo: versionData?.seo ?? {},
-      title: versionData?.title || '',
-      slug: versionData?.slug || '',
+      title: versionData?.title ?? '',
+      slug: versionData?.slug ?? '',
       status: 'draft', // Restored versions become drafts
       updatedAt: now,
       lastEditedBy: performedBy,
-      version: (pageData.version || 1) + 1,
+      version: (pageData.version ?? 1) + 1,
     });
 
     // Create audit log entry

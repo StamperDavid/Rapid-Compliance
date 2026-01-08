@@ -306,7 +306,7 @@ function scoreIndustry(company: DiscoveredCompany, rules: ScoringRules): Scoring
   const reasons: LeadScoreReason[] = [];
   let points = 0;
 
-  const industry = company.industry?.toLowerCase() || '';
+  const industry = company.industry?.toLowerCase() ?? '';
 
   // Check excluded first (auto-disqualify)
   if (rules.companyRules.industries.excluded.some((ex) => industry.includes(ex.toLowerCase()))) {
@@ -531,7 +531,7 @@ function scoreTitle(person: DiscoveredPerson, rules: ScoringRules): ScoringResul
   const reasons: LeadScoreReason[] = [];
   let points = 0;
 
-  const title = person.title?.toLowerCase() || '';
+  const title = person.title?.toLowerCase() ?? '';
 
   // Check excluded first
   if (rules.personRules.titles.excluded.some((ex) => title.includes(ex.toLowerCase()))) {
@@ -606,7 +606,7 @@ function detectSeniority(title: string): SeniorityLevel {
 function scoreSeniority(person: DiscoveredPerson, rules: ScoringRules): ScoringResult {
   const reasons: LeadScoreReason[] = [];
 
-  const title = person.title || '';
+  const title = person.title ?? '';
   const seniority = detectSeniority(title);
   const points = rules.personRules.seniority.points[seniority] || 0;
 
@@ -645,7 +645,7 @@ function detectDepartment(title: string): Department | null {
 function scoreDepartment(person: DiscoveredPerson, rules: ScoringRules): ScoringResult {
   const reasons: LeadScoreReason[] = [];
 
-  const title = person.title || '';
+  const title = person.title ?? '';
   const department = detectDepartment(title);
 
   if (department && rules.personRules.department.preferred.includes(department)) {
@@ -664,7 +664,7 @@ function scoreDepartment(person: DiscoveredPerson, rules: ScoringRules): Scoring
     category: 'person',
     factor: 'Non-target department',
     points: 0,
-    explanation: `Department ${department || 'unknown'} is not a priority`,
+    explanation: `Department ${(department !== '' && department != null) ? department : 'unknown'} is not a priority`,
     impact: 'low',
   });
 
@@ -1021,8 +1021,8 @@ async function getDiscoveryData(
   // Use provided data if available
   if (providedData) {
     return {
-      company: providedData.company || null,
-      person: providedData.person || null,
+      company: providedData.company ?? null,
+      person: providedData.person ?? null,
     };
   }
 
@@ -1038,7 +1038,7 @@ async function getDiscoveryData(
   // Discover company
   if (leadData.company || leadData.companyDomain) {
     try {
-      const domain = leadData.companyDomain || leadData.company;
+      const domain =leadData.companyDomain ?? leadData.company;
       const result = await discoverCompany(domain, organizationId);
       company = result.company;
     } catch (error) {
@@ -1131,8 +1131,8 @@ async function getScoringRules(
         const data = doc.data()!;
         return {
           ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
+          createdAt:data.createdAt?.toDate() ?? new Date(),
+          updatedAt:data.updatedAt?.toDate() ?? new Date(),
         } as ScoringRules;
       }
     }
@@ -1147,8 +1147,8 @@ async function getScoringRules(
       const data = snapshot.docs[0].data();
       return {
         ...data,
-        createdAt: data.createdAt?.toDate() || new Date(),
-        updatedAt: data.updatedAt?.toDate() || new Date(),
+        createdAt:data.createdAt?.toDate() ?? new Date(),
+        updatedAt:data.updatedAt?.toDate() ?? new Date(),
       } as ScoringRules;
     }
 

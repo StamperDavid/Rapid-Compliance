@@ -42,7 +42,7 @@ export default function LivingLedgerPage() {
         const mockDeals: Deal[] = [
           {
             id: 'deal-1',
-            organizationId: user?.organizationId || 'default-org',
+            organizationId: user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
             workspaceId: 'default',
             name: 'Q1 2024 Enterprise Contract - Acme Corp',
             companyName: 'Acme Corp',
@@ -54,7 +54,7 @@ export default function LivingLedgerPage() {
           },
           {
             id: 'deal-2',
-            organizationId: user?.organizationId || 'default-org',
+            organizationId: user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
             workspaceId: 'default',
             name: 'Startup Package - TechFlow',
             companyName: 'TechFlow Inc',
@@ -66,7 +66,7 @@ export default function LivingLedgerPage() {
           },
           {
             id: 'deal-3',
-            organizationId: user?.organizationId || 'default-org',
+            organizationId: user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
             workspaceId: 'default',
             name: 'Consulting Services - Global Industries',
             companyName: 'Global Industries',
@@ -158,7 +158,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': user?.organizationId || 'default-org',
+          'x-organization-id': user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
           'x-workspace-id': 'default',
         },
         body: JSON.stringify({
@@ -184,7 +184,7 @@ export default function LivingLedgerPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-organization-id': user?.organizationId || 'default-org',
+          'x-organization-id': user?(.organizationId !== '' && .organizationId != null) ? .organizationId : 'default-org',
           'x-workspace-id': 'default',
         },
       });

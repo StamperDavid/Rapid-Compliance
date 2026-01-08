@@ -9,11 +9,11 @@ import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
   apiVersion: '2023-10-16',
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   try {
     const organizationId = session.metadata?.organizationId;
-    const workspaceId = session.metadata?.workspaceId || 'default';
+    const workspaceId = session.metadata?(.workspaceId !== '' && .workspaceId != null) ? .workspaceId : 'default';
     
     if (!organizationId) {
       logger.error('[Stripe Webhook] Missing organizationId in checkout session metadata');
@@ -115,8 +115,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       organizationId,
       workspaceId,
       customer: customerData,
-      shippingAddress: shippingAddress || billingAddress,
-      billingAddress: billingAddress || shippingAddress,
+      shippingAddress:shippingAddress ?? billingAddress,
+      billingAddress:billingAddress ?? shippingAddress,
       shippingMethodId,
       paymentMethod: 'card',
       paymentToken: session.payment_intent as string,
@@ -353,7 +353,7 @@ async function sendTrialEndEmail(
       <h1>Your Trial is Ending Soon</h1>
     </div>
     <div class="content">
-      <p>Hi ${owner.name || 'there'},</p>
+      <p>Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},</p>
       
       <p>Your 14-day free trial ends on <strong>${data.trialEndDate}</strong>.</p>
       
@@ -393,7 +393,7 @@ async function sendTrialEndEmail(
     const textContent = `
 Your Trial is Ending Soon
 
-Hi ${owner.name || 'there'},
+Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},
 
 Your 14-day free trial ends on ${data.trialEndDate}.
 
@@ -424,7 +424,7 @@ AI Sales Platform | Volume-Based Pricing
       subject: `Your trial ends ${data.trialEndDate} - Tier assigned`,
       html: htmlContent,
       text: textContent,
-      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@salesvelocity.ai',
+      from:(process.env.SENDGRID_FROM_EMAIL !== '' && process.env.SENDGRID_FROM_EMAIL != null) ? process.env.SENDGRID_FROM_EMAIL : 'noreply@salesvelocity.ai',
       fromName: 'AI Sales Platform',
       metadata: {
         organizationId,
@@ -499,7 +499,7 @@ async function sendPaymentFailedEmail(
       <h1>⚠️ Payment Failed</h1>
     </div>
     <div class="content">
-      <p>Hi ${owner.name || 'there'},</p>
+      <p>Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},</p>
       
       <div class="alert-box">
         <h2>We couldn't process your payment</h2>
@@ -539,7 +539,7 @@ async function sendPaymentFailedEmail(
     const textContent = `
 ⚠️ PAYMENT FAILED
 
-Hi ${owner.name || 'there'},
+Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},
 
 We couldn't process your payment for your AI Sales Platform subscription.
 
@@ -571,7 +571,7 @@ AI Sales Platform
       subject: `⚠️ Payment Failed - Action Required ($${formattedAmount})`,
       html: htmlContent,
       text: textContent,
-      from: process.env.SENDGRID_FROM_EMAIL || 'billing@salesvelocity.ai',
+      from:(process.env.SENDGRID_FROM_EMAIL !== '' && process.env.SENDGRID_FROM_EMAIL != null) ? process.env.SENDGRID_FROM_EMAIL : 'billing@salesvelocity.ai',
       fromName: 'AI Sales Platform Billing',
       metadata: {
         organizationId,

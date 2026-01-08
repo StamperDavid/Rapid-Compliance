@@ -92,7 +92,7 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
         event.organizationId,
         event.workspaceId,
         event.schemaId,
-        event.oldFieldKey || event.oldFieldName || '',
+event.oldFieldKey ?? event.oldFieldName ?? '',
         event.oldFieldType as any,
         event.newFieldType as any
       );
@@ -109,7 +109,7 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
         event.organizationId,
         event.workspaceId,
         event.schemaId,
-        event.oldFieldKey || event.oldFieldName || '',
+event.oldFieldKey ?? event.oldFieldName ?? '',
         event.oldFieldType as any,
         event.newFieldType as any,
         10 // sample size
@@ -119,8 +119,8 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
         event.organizationId,
         event.workspaceId,
         event.schemaId,
-        event.oldFieldKey || event.oldFieldName || '',
-        event.newFieldName || event.oldFieldName || '',
+event.oldFieldKey ?? event.oldFieldName ?? '',
+event.newFieldName ?? event.oldFieldName ?? '',
         event.oldFieldType as any,
         event.newFieldType as any,
         preview

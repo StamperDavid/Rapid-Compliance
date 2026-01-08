@@ -59,13 +59,13 @@ export default function RiskDashboardPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch risk prediction');
+        throw new Error((errorData.message !== '' && errorData.message != null) ? errorData.message : 'Failed to fetch risk prediction');
       }
 
       const result = await response.json();
       
       if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch risk prediction');
+        throw new Error((result.error !== '' && result.error != null) ? result.error : 'Failed to fetch risk prediction');
       }
 
       setPrediction(result.data);
@@ -89,7 +89,7 @@ export default function RiskDashboardPage() {
       }
 
     } catch (err: any) {
-      setError(err.message || 'An error occurred while fetching risk prediction');
+      setError((err.message !== '' && err.message != null) ? err.message : 'An error occurred while fetching risk prediction');
       setPrediction(null);
       setDeal(null);
     } finally {
@@ -237,14 +237,14 @@ export default function RiskDashboardPage() {
         )}
 
         {/* Risk Prediction Results */}
-        {(prediction || loading) && (
+        {(prediction ?? loading) && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Overview */}
             <div className="lg:col-span-1">
               <RiskOverviewCard
                 prediction={prediction!}
-                dealName={deal?.name || 'Loading...'}
-                dealValue={deal?.value || 0}
+                dealName={deal?(.name !== '' && .name != null) ? .name : 'Loading...'}
+                dealValue={deal?.value ?? 0}
                 loading={loading}
               />
             </div>

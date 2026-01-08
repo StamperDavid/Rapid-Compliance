@@ -63,7 +63,7 @@ export default function WorkflowAnalyticsPage() {
                 <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
                   <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Total Executions</div>
                   <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>
-                    {analytics?.totalExecutions || 0}
+                    {analytics?.totalExecutions ?? 0}
                   </div>
                 </div>
 
@@ -84,7 +84,7 @@ export default function WorkflowAnalyticsPage() {
                 <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
                   <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Active Workflows</div>
                   <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff' }}>
-                    {analytics?.activeWorkflows || 0}
+                    {analytics?.activeWorkflows ?? 0}
                   </div>
                 </div>
               </div>

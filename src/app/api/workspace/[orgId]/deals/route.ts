@@ -23,7 +23,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Failed to fetch deals:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch deals' },
+      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to fetch deals'},
       { status: 500 }
     );
   }

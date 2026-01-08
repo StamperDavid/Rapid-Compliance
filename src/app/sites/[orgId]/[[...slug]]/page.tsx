@@ -64,7 +64,7 @@ export default function PublicSitePage() {
       setPage(data.pages[0]);
     } catch (err: any) {
       console.error('[Public Site] Error loading page:', err);
-      setError(err.message || 'Failed to load page');
+      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load page');
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ export default function PublicSitePage() {
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         }}>
           <h1 style={{ color: '#333', margin: '0 0 1rem' }}>404</h1>
-          <p style={{ color: '#666', margin: 0 }}>{error || 'Page not found'}</p>
+          <p style={{ color: '#666', margin: 0 }}>{(error !== '' && error != null) ? error : 'Page not found'}</p>
         </div>
       </div>
     );
@@ -131,8 +131,8 @@ export default function PublicSitePage() {
   return (
     <>
       <head>
-        <title>{page.seo?.metaTitle || page.title}</title>
-        <meta name="description" content={page.seo?.metaDescription || ''} />
+        <title>{page.seo?.metaTitle ?? page.title}</title>
+        <meta name="description" content={page.seo?.metaDescription ?? ''} />
         {page.seo?.metaKeywords && (
           <meta name="keywords" content={page.seo.metaKeywords.join(', ')} />
         )}

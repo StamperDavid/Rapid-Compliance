@@ -51,17 +51,17 @@ export function useWebsiteTheme() {
         if (configData?.branding) {
           const branding = configData.branding;
           setTheme({
-            logoUrl: branding.logoUrl || DEFAULT_THEME.logoUrl,
-            logoHeight: branding.logoHeight || DEFAULT_THEME.logoHeight,
-            companyName: branding.companyName || DEFAULT_THEME.companyName,
-            tagline: branding.tagline || DEFAULT_THEME.tagline,
-            primaryColor: branding.colors?.primary || DEFAULT_THEME.primaryColor,
-            secondaryColor: branding.colors?.secondary || DEFAULT_THEME.secondaryColor,
-            accentColor: branding.colors?.accent || DEFAULT_THEME.accentColor,
-            backgroundColor: branding.colors?.background || DEFAULT_THEME.backgroundColor,
-            textColor: branding.colors?.text || DEFAULT_THEME.textColor,
-            navBackground: branding.colors?.navBackground || DEFAULT_THEME.navBackground,
-            footerBackground: branding.colors?.footerBackground || DEFAULT_THEME.footerBackground,
+            logoUrl:branding.logoUrl ?? DEFAULT_THEME.logoUrl,
+            logoHeight:branding.logoHeight ?? DEFAULT_THEME.logoHeight,
+            companyName:branding.companyName ?? DEFAULT_THEME.companyName,
+            tagline:branding.tagline ?? DEFAULT_THEME.tagline,
+            primaryColor: branding.colors?.primary ?? DEFAULT_THEME.primaryColor,
+            secondaryColor: branding.colors?.secondary ?? DEFAULT_THEME.secondaryColor,
+            accentColor: branding.colors?.accent ?? DEFAULT_THEME.accentColor,
+            backgroundColor: branding.colors?.background ?? DEFAULT_THEME.backgroundColor,
+            textColor: branding.colors?.text ?? DEFAULT_THEME.textColor,
+            navBackground: branding.colors?.navBackground ?? DEFAULT_THEME.navBackground,
+            footerBackground: branding.colors?.footerBackground ?? DEFAULT_THEME.footerBackground,
             fontFamily: branding.fonts?.body ? `${branding.fonts.body}, sans-serif` : DEFAULT_THEME.fontFamily,
             headingFont: branding.fonts?.heading ? `${branding.fonts.heading}, sans-serif` : DEFAULT_THEME.headingFont,
           });

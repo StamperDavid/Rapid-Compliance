@@ -288,7 +288,7 @@ async function getProduct(workspaceId: string, organizationId: string, productId
   return {
     id: product.id,
     name: product[mappings.name],
-    price: parseFloat(product[mappings.price] || 0),
+    price: parseFloat(product[mappings.price] ?? 0),
     stockLevel: product[mappings.inventory],
   };
 }
@@ -342,7 +342,7 @@ async function createCustomerEntity(workspaceId: string, organizationId: string,
     return;
   }
   
-  const customerSchema = (ecommerceConfig as any).integration.customerSchema || 'contacts';
+  const customerSchema =((ecommerceConfig as any).integration.customerSchema !== '' && (ecommerceConfig as any).integration.customerSchema != null) ? (ecommerceConfig as any).integration.customerSchema : 'contacts';
   
   // Check if customer already exists
   const { where } = await import('firebase/firestore');
@@ -386,7 +386,7 @@ async function createOrderEntity(workspaceId: string, organizationId: string, or
     return;
   }
   
-  const orderSchema = (ecommerceConfig as any).integration.orderSchema || 'orders';
+  const orderSchema =((ecommerceConfig as any).integration.orderSchema !== '' && (ecommerceConfig as any).integration.orderSchema != null) ? (ecommerceConfig as any).integration.orderSchema : 'orders';
   
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/${orderSchema}/records`,
@@ -396,7 +396,7 @@ async function createOrderEntity(workspaceId: string, organizationId: string, or
       customerEmail: order.customerEmail,
       total: order.total,
       status: order.status,
-      createdAt: (order.createdAt as any).toDate?.()?.toISOString() || order.createdAt,
+      createdAt: (order.createdAt as any).toDate?.()?.toISOString() ?? order.createdAt,
     },
     false
   );

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         access_token: integration.credentials.access_token,
         refresh_token: integration.credentials.refresh_token,
       },
-      integration.lastHistoryId || historyId
+integration.lastHistoryId ?? historyId
     );
 
     // Process new messages
@@ -106,7 +106,7 @@ async function findIntegrationByEmail(email: string): Promise<any | null> {
     );
 
     // Find matching email
-    return integrations.find((int: any) => int.email === email) || null;
+    return integrations.find((int: any) => int.email === email) ?? null;
   } catch (error) {
     logger.error('Error finding integration', error, { route: '/api/webhooks/gmail' });
     return null;
@@ -131,7 +131,7 @@ async function processNewEmail(
     logger.info('Processing Gmail email', { route: '/api/webhooks/gmail', subject: headers.subject });
 
     // Check if this is a reply to our outbound email
-    const isReply = headers.inReplyTo || headers.references;
+    const isReply =headers.inReplyTo ?? headers.references;
     
     if (!isReply) {
       logger.debug('Not a reply, skipping AI processing', { route: '/api/webhooks/gmail' });

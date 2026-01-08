@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     if (unprocessedOnly) {
       events = await SchemaChangeEventPublisher.getUnprocessedEvents(
         organizationId,
-        schemaId || undefined
+        schemaId ?? undefined
       );
     } else {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');

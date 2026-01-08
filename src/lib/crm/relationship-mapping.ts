@@ -161,10 +161,10 @@ export async function getDealStakeholderMap(
       
       stakeholders.push({
         contactId,
-        contactName: rel.fromEntityName || 'Unknown',
-        role: rel.role || 'Stakeholder',
-        influence: rel.influence || 50,
-        engagement: activityStats.engagementScore || 0,
+        contactName:(rel.fromEntityName !== '' && rel.fromEntityName != null) ? rel.fromEntityName : 'Unknown',
+        role:(rel.role !== '' && rel.role != null) ? rel.role : 'Stakeholder',
+        influence: rel.influence ?? 50,
+        engagement: activityStats.engagementScore ?? 0,
         sentiment: determineSentiment(activityStats),
         isChampion: rel.role?.toLowerCase().includes('champion'),
         isDecisionMaker: rel.role?.toLowerCase().includes('decision maker'),
@@ -272,7 +272,7 @@ function analyzeBuyingCommittee(stakeholders: Stakeholder[]): BuyingCommitteeAna
  */
 function determineSentiment(activityStats: any): 'positive' | 'neutral' | 'negative' {
   // Simple heuristic based on engagement
-  const engagement = activityStats.engagementScore || 0;
+  const engagement = activityStats.engagementScore ?? 0;
   if (engagement > 70) {return 'positive';}
   if (engagement < 30) {return 'negative';}
   return 'neutral';

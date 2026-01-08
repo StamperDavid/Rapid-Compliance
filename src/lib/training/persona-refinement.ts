@@ -98,8 +98,9 @@ function analyzeAccuracyIssue(session: TrainingSession, issue: TrainingIssue): P
   // Extract what was inaccurate
   const inaccurateTopic = extractTopicFromIssue(issue.description);
   
-  const rule = issue.suggestedFix || 
-    `Always verify ${inaccurateTopic} from authoritative source before responding`;
+  const rule = (issue.suggestedFix !== '' && issue.suggestedFix != null) 
+    ? issue.suggestedFix 
+    : `Always verify ${inaccurateTopic} from authoritative source before responding`;
 
   return {
     category: 'accuracy',
@@ -115,7 +116,7 @@ function analyzeAccuracyIssue(session: TrainingSession, issue: TrainingIssue): P
 function analyzeBrandAlignmentIssue(session: TrainingSession, issue: TrainingIssue): PersonaRefinement {
   return {
     category: 'brand-alignment',
-    adjustment: `Brand alignment note: ${issue.description}. ${issue.suggestedFix || 'Adjust tone to match brand voice'}`,
+    adjustment: `Brand alignment note: ${issue.description}. ${(issue.suggestedFix !== '' && issue.suggestedFix != null) ? issue.suggestedFix : 'Adjust tone to match brand voice'}`,
     reasoning: `Brand misalignment: ${issue.description}`,
     confidence: 0.8
   };
@@ -185,9 +186,7 @@ export function applyRefinementsToPersona(
   }
 
   // Add to training insights history
-  if (!updatedPersona.trainingInsights) {
-    updatedPersona.trainingInsights = [];
-  }
+  updatedPersona.trainingInsights ??= [];
 
   for (const refinement of refinements) {
     updatedPersona.trainingInsights.push({
@@ -205,14 +204,12 @@ export function applyRefinementsToPersona(
 }
 
 function applyVerbosityRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.verbosityControl) {
-    persona.verbosityControl = {
-      maxResponseLength: 500,
-      preferBulletPoints: false,
-      avoidRepetition: false,
-      conversationalPacing: 'balanced'
-    };
-  }
+  persona.verbosityControl ??= {
+    maxResponseLength: 500,
+    preferBulletPoints: false,
+    avoidRepetition: false,
+    conversationalPacing: 'balanced'
+  };
 
   if (refinement.adjustment.includes('maxResponseLength')) {
     const match = refinement.adjustment.match(/(\d+) words/);
@@ -239,9 +236,7 @@ function applyVerbosityRefinement(persona: any, refinement: PersonaRefinement, c
 }
 
 function applyAccuracyRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.accuracyRules) {
-    persona.accuracyRules = [];
-  }
+  persona.accuracyRules ??= [];
 
   const ruleMatch = refinement.adjustment.match(/Add accuracy rule: "(.+)"/);
   if (ruleMatch) {
@@ -254,9 +249,7 @@ function applyAccuracyRefinement(persona: any, refinement: PersonaRefinement, ch
 }
 
 function applyBrandAlignmentRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.brandAlignmentNotes) {
-    persona.brandAlignmentNotes = '';
-  }
+  persona.brandAlignmentNotes ??= '';
 
   const note = refinement.adjustment;
   if (!persona.brandAlignmentNotes.includes(note)) {
@@ -266,9 +259,7 @@ function applyBrandAlignmentRefinement(persona: any, refinement: PersonaRefineme
 }
 
 function applyToneRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.dynamicToneRegister) {
-    persona.dynamicToneRegister = '';
-  }
+  persona.dynamicToneRegister ??= '';
 
   const toneAdjustment = refinement.adjustment;
   if (!persona.dynamicToneRegister.includes(toneAdjustment)) {

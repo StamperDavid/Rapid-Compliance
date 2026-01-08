@@ -304,7 +304,7 @@ export async function emitAnalyticsError(
     
     await coordinator.emitSignal({
       type: ANALYTICS_EVENTS.ERROR_OCCURRED as any,
-      orgId: organizationId || 'system',
+      orgId:(organizationId !== '' && organizationId != null) ? organizationId : 'system',
       confidence: 1.0,
       priority: 'Medium',
       metadata: payload as any,

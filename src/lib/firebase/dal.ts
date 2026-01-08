@@ -334,7 +334,7 @@ export class FirestoreDAL {
       action,
       collection,
       docId,
-      userId: userId || 'system',
+      userId:(userId !== '' && userId != null) ? userId : 'system',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
       // Only log data preview for sensitive operations

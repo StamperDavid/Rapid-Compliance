@@ -30,8 +30,8 @@ export interface EmailHTMLOptions {
  * Generate professional HTML email
  */
 export function generateEmailHTML(options: EmailHTMLOptions): string {
-  const primaryColor = options.branding?.primaryColor || '#2563eb';
-  const companyName = options.branding?.companyName || 'AI Sales Platform';
+  const primaryColor = options.branding?(.primaryColor !== '' && .primaryColor != null) ? .primaryColor : '#2563eb';
+  const companyName = options.branding?(.companyName !== '' && .companyName != null) ? .companyName : 'AI Sales Platform';
   
   return `
 <!DOCTYPE html>
@@ -44,7 +44,7 @@ export function generateEmailHTML(options: EmailHTMLOptions): string {
   <meta name="format-detection" content="telephone=no,address=no,email=no,date=no">
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
-  <title>${options.subject || `Email from ${  companyName}`}</title>
+  <title>${(options.subject !== '' && options.subject != null) ? options.subject : `Email from ${  companyName}`}</title>
   
   <!--[if mso]>
   <noscript>
@@ -218,7 +218,7 @@ export function generateEmailHTML(options: EmailHTMLOptions): string {
 </head>
 
 <body>
-  <div role="article" aria-roledescription="email" aria-label="${options.subject || 'Email'}" lang="en">
+  <div role="article" aria-roledescription="email" aria-label="${(options.subject !== '' && options.subject != null) ? options.subject : 'Email'}" lang="en">
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
       <tr>
         <td align="center" style="padding: 40px 0;">
@@ -318,7 +318,7 @@ export function generateCTAButtonHTML(options: {
   url: string;
   color?: string;
 }): string {
-  const bgColor = options.color || '#2563eb';
+  const bgColor =(options.color !== '' && options.color != null) ? options.color : '#2563eb';
   
   return `
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">

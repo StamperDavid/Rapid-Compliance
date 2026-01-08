@@ -172,7 +172,7 @@ export async function POST(
           failureCount++;
           failedRecords.push({
             id: doc.id,
-            error: conversion.message || 'Conversion failed'
+            error:(conversion.message !== '' && conversion.message != null) ? conversion.message : 'Conversion failed'
           });
         }
       }

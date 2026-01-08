@@ -946,15 +946,15 @@ function getCategoryColor(category: string): string {
 function generatePersonaFromOnboarding(onboarding: any): AgentPersona {
   return {
     agentName: `${onboarding.companyName}-AI` || 'Your AI Agent',
-    professionalTitle: `Senior ${onboarding.industry || 'Business'} Consultant`,
-    coreMission: onboarding.companyDescription || '',
-    targetKnowledgeDomain: onboarding.products?.map((p: any) => p.category).join(', ') || '',
-    userExpertiseLevel: onboarding.targetCustomer || '',
-    reasoningFramework: onboarding.salesMethodology || 'Consultative Selling',
-    responseComplexityIndex: onboarding.brandVoice?.complexity || 7,
+    professionalTitle: `Senior ${(onboarding.industry !== '' && onboarding.industry != null) ? onboarding.industry : 'Business'} Consultant`,
+    coreMission: onboarding.companyDescription ?? '',
+    targetKnowledgeDomain: onboarding.products?.map((p: any) => p.category).join(', ') ?? '',
+    userExpertiseLevel: onboarding.targetCustomer ?? '',
+    reasoningFramework:(onboarding.salesMethodology !== '' && onboarding.salesMethodology != null) ? onboarding.salesMethodology : 'Consultative Selling',
+    responseComplexityIndex: onboarding.brandVoice?.complexity ?? 7,
     uncertaintyHandlingProtocol: `Never speculate. If uncertain, state: "I want to ensure 100% accuracy—let me pull the exact information from our knowledge base."`,
     internalThoughtVerification: `Before responding: (1) Does this address a pain point? (2) Am I creating urgency? (3) Is my tone appropriate?`,
-    federatedRAGTags: onboarding.products?.map((p: any) => `DOMAIN: ${p.category.toUpperCase().replace(/ /g, '_')}`) || [],
+    federatedRAGTags: onboarding.products?.map((p: any) => `DOMAIN: ${p.category.toUpperCase().replace(/ /g, '_')}`) ?? [],
     knowledgeSourceHierarchy: [
       '1. Internal Product Documentation',
       '2. Customer Success Stories',
@@ -969,9 +969,9 @@ function generatePersonaFromOnboarding(onboarding: any): AgentPersona {
     knowledgeObsolescenceTimer: 'Industry data: 6 months. Technical specs: Real-time.',
     toolAuthorization: onboarding.integrations?.map((i: any) => ({
       tool: i.name,
-      permissions: i.permissions?.join('/') || 'Read Only',
+      permissions: i.permissions?(.join('/') !== '' && .join('/') != null) ? .join('/') : 'Read Only',
       canExecuteAutonomously: !i.requiresApproval
-    })) || [],
+})) ?? [],
     mandatoryOutputFormatting: 'Use bolded metrics. End with Recommended Next Step. Use bullet points for lists.',
     securityDataFilter: 'NEVER reveal: customer data, pricing discounts to other clients, proprietary details.',
     verbosityControl: {

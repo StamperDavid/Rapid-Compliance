@@ -164,7 +164,7 @@ export class SignalCoordinator {
     };
     
     logger.info('🧠 SignalCoordinator initialized', {
-      environment: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV,
+      environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       config: this.config,
       file: 'SignalCoordinator.ts'
     });
@@ -690,7 +690,7 @@ export class SignalCoordinator {
         metadata: signal.metadata,
         createdAt: signal.createdAt,
         ttl: signal.ttl,
-        environment: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV,
+        environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
       };
       
       await addDoc(logsCollection, logEntry);

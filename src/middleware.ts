@@ -17,7 +17,7 @@ const customDomainCache = new Map<string, string>();
 async function getOrgBySubdomain(subdomain: string): Promise<string | null> {
   // Check cache first
   if (subdomainCache.has(subdomain)) {
-    return subdomainCache.get(subdomain) || null;
+    return subdomainCache.get(subdomain) ?? null;
   }
 
   try {
@@ -58,7 +58,7 @@ async function getOrgBySubdomain(subdomain: string): Promise<string | null> {
 async function getOrgByCustomDomain(domain: string): Promise<string | null> {
   // Check cache first
   if (customDomainCache.has(domain)) {
-    return customDomainCache.get(domain) || null;
+    return customDomainCache.get(domain) ?? null;
   }
 
   try {
@@ -109,7 +109,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Get the base domain from environment
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000';
+  const baseDomain =(process.env.NEXT_PUBLIC_BASE_DOMAIN !== '' && process.env.NEXT_PUBLIC_BASE_DOMAIN != null) ? process.env.NEXT_PUBLIC_BASE_DOMAIN : 'localhost:3000';
   const isLocalhost = hostname.includes('localhost');
   const isVercelDeployment = hostname.includes('.vercel.app');
   const isPlatformDomain = hostname.includes('salesvelocity.ai');

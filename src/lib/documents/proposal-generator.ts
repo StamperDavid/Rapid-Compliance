@@ -98,7 +98,7 @@ export async function generateProposal(
     // Calculate totals
     const subtotal = data.lineItems.reduce((sum, item) => {
       const itemTotal = item.quantity * item.unitPrice;
-      const discount = item.discount || 0;
+      const discount = item.discount ?? 0;
       return sum + (itemTotal - discount);
     }, 0);
 
@@ -185,7 +185,7 @@ function buildProposalHTML(
 <head>
   <style>
     body {
-      font-family: ${template.styling.fontFamily || 'Arial, sans-serif'};
+      font-family: ${(template.styling.fontFamily !== '' && template.styling.fontFamily != null) ? template.styling.fontFamily : 'Arial, sans-serif'};
       max-width: 800px;
       margin: 0 auto;
       padding: 40px;
@@ -194,7 +194,7 @@ function buildProposalHTML(
     .header {
       text-align: center;
       margin-bottom: 40px;
-      border-bottom: 3px solid ${template.styling.primaryColor || '#0066cc'};
+      border-bottom: 3px solid ${(template.styling.primaryColor !== '' && template.styling.primaryColor != null) ? template.styling.primaryColor : '#0066cc'};
       padding-bottom: 20px;
     }
     .text-section {
@@ -212,7 +212,7 @@ function buildProposalHTML(
       text-align: left;
     }
     th {
-      background-color: ${template.styling.primaryColor || '#0066cc'};
+      background-color: ${(template.styling.primaryColor !== '' && template.styling.primaryColor != null) ? template.styling.primaryColor : '#0066cc'};
       color: white;
       font-weight: bold;
     }
@@ -240,7 +240,7 @@ function buildProposalHTML(
 function buildPricingTable(lineItems: ProposalData['lineItems'], totalAmount: number): string {
   const rows = lineItems.map(item => {
     const itemTotal = item.quantity * item.unitPrice;
-    const discount = item.discount || 0;
+    const discount = item.discount ?? 0;
     const finalPrice = itemTotal - discount;
 
     return `
@@ -364,7 +364,7 @@ export async function sendProposal(
     
     const subject = `Proposal: ${proposal.title}`;
     const body = `
-${message || 'Please review the attached proposal.'}
+${(message !== '' && message != null) ? message : 'Please review the attached proposal.'}
 
 View proposal: [PROPOSAL_LINK]
 

@@ -190,35 +190,35 @@ export default function BusinessSetupPage() {
                 
                 <FormField
                   label="Business Name"
-                  value={onboardingData?.businessBasics?.businessName || ''}
+                  value={onboardingData?.businessBasics?.businessName ?? ''}
                   onChange={(value) => updateField('businessBasics', 'businessName', value)}
                   placeholder="e.g., Acme Corporation"
                 />
 
                 <FormField
                   label="Industry"
-                  value={onboardingData?.businessBasics?.industry || ''}
+                  value={onboardingData?.businessBasics?.industry ?? ''}
                   onChange={(value) => updateField('businessBasics', 'industry', value)}
                   placeholder="e.g., B2B SaaS, E-commerce, Professional Services"
                 />
 
                 <FormField
                   label="Website"
-                  value={onboardingData?.businessBasics?.website || ''}
+                  value={onboardingData?.businessBasics?.website ?? ''}
                   onChange={(value) => updateField('businessBasics', 'website', value)}
                   placeholder="https://www.example.com"
                 />
 
                 <FormField
                   label="FAQ Page URL"
-                  value={onboardingData?.businessBasics?.faqPageUrl || ''}
+                  value={onboardingData?.businessBasics?.faqPageUrl ?? ''}
                   onChange={(value) => updateField('businessBasics', 'faqPageUrl', value)}
                   placeholder="https://www.example.com/faq"
                 />
 
                 <FormField
                   label="Company Size"
-                  value={onboardingData?.businessBasics?.companySize || ''}
+                  value={onboardingData?.businessBasics?.companySize ?? ''}
                   onChange={(value) => updateField('businessBasics', 'companySize', value)}
                   placeholder="e.g., 10-50 employees"
                 />
@@ -234,7 +234,7 @@ export default function BusinessSetupPage() {
                 
                 <FormField
                   label="What problem does your business solve?"
-                  value={onboardingData?.businessUnderstanding?.problemSolved || ''}
+                  value={onboardingData?.businessUnderstanding?.problemSolved ?? ''}
                   onChange={(value) => updateField('businessUnderstanding', 'problemSolved', value)}
                   placeholder="Describe the main problem your business solves..."
                   multiline
@@ -242,7 +242,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="What makes you unique?"
-                  value={onboardingData?.businessUnderstanding?.uniqueValue || ''}
+                  value={onboardingData?.businessUnderstanding?.uniqueValue ?? ''}
                   onChange={(value) => updateField('businessUnderstanding', 'uniqueValue', value)}
                   placeholder="What sets you apart from competitors..."
                   multiline
@@ -250,7 +250,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="Why should customers buy from you?"
-                  value={onboardingData?.businessUnderstanding?.whyBuy || ''}
+                  value={onboardingData?.businessUnderstanding?.whyBuy ?? ''}
                   onChange={(value) => updateField('businessUnderstanding', 'whyBuy', value)}
                   placeholder="Key reasons customers choose you..."
                   multiline
@@ -258,7 +258,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="Why might someone NOT buy from you?"
-                  value={onboardingData?.businessUnderstanding?.whyNotBuy || ''}
+                  value={onboardingData?.businessUnderstanding?.whyNotBuy ?? ''}
                   onChange={(value) => updateField('businessUnderstanding', 'whyNotBuy', value)}
                   placeholder="Common reasons for not choosing you..."
                   multiline
@@ -275,21 +275,21 @@ export default function BusinessSetupPage() {
                 
                 <FormField
                   label="Primary Offering"
-                  value={onboardingData?.productsServices?.primaryOffering || ''}
+                  value={onboardingData?.productsServices?.primaryOffering ?? ''}
                   onChange={(value) => updateField('productsServices', 'primaryOffering', value)}
                   placeholder="What is your main product or service?"
                 />
 
                 <FormField
                   label="Price Range"
-                  value={onboardingData?.productsServices?.priceRange || ''}
+                  value={onboardingData?.productsServices?.priceRange ?? ''}
                   onChange={(value) => updateField('productsServices', 'priceRange', value)}
                   placeholder="e.g., $50 - $500, $10/month - $100/month"
                 />
 
                 <FormField
                   label="Target Customer"
-                  value={onboardingData?.productsServices?.targetCustomer || ''}
+                  value={onboardingData?.productsServices?.targetCustomer ?? ''}
                   onChange={(value) => updateField('productsServices', 'targetCustomer', value)}
                   placeholder="Who is your ideal customer?"
                   multiline
@@ -297,7 +297,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="Customer Demographics"
-                  value={onboardingData?.productsServices?.customerDemographics || ''}
+                  value={onboardingData?.productsServices?.customerDemographics ?? ''}
                   onChange={(value) => updateField('productsServices', 'customerDemographics', value)}
                   placeholder="Age, location, income, industry, etc."
                   multiline
@@ -305,7 +305,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="Top Products/Services"
-                  value={onboardingData?.productDetails?.topProducts || ''}
+                  value={onboardingData?.productDetails?.topProducts ?? ''}
                   onChange={(value) => updateField('productDetails', 'topProducts', value)}
                   placeholder="List your top 3-5 products or services with brief descriptions..."
                   multiline
@@ -323,7 +323,7 @@ export default function BusinessSetupPage() {
                 
                 <FormField
                   label="Pricing Strategy"
-                  value={onboardingData?.pricingSales?.pricingStrategy || ''}
+                  value={onboardingData?.pricingSales?.pricingStrategy ?? ''}
                   onChange={(value) => updateField('pricingSales', 'pricingStrategy', value)}
                   placeholder="How do you price your products/services?"
                   multiline
@@ -331,7 +331,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="Discount Policy"
-                  value={onboardingData?.pricingSales?.discountPolicy || ''}
+                  value={onboardingData?.pricingSales?.discountPolicy ?? ''}
                   onChange={(value) => updateField('pricingSales', 'discountPolicy', value)}
                   placeholder="What discounts do you offer?"
                   multiline
@@ -339,7 +339,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="First-Time Buyer Incentive"
-                  value={onboardingData?.pricingSales?.firstTimeBuyerIncentive || ''}
+                  value={onboardingData?.pricingSales?.firstTimeBuyerIncentive ?? ''}
                   onChange={(value) => updateField('pricingSales', 'firstTimeBuyerIncentive', value)}
                   placeholder="Special offers for first-time customers"
                 />
@@ -355,14 +355,14 @@ export default function BusinessSetupPage() {
                 
                 <FormField
                   label="Primary Objective"
-                  value={onboardingData?.agentGoals?.primaryObjective || ''}
+                  value={onboardingData?.agentGoals?.primaryObjective ?? ''}
                   onChange={(value) => updateField('agentGoals', 'primaryObjective', value)}
                   placeholder="What is the main goal for your AI agent? (e.g., sales, lead generation, support)"
                 />
 
                 <FormField
                   label="Success Metrics"
-                  value={onboardingData?.agentGoals?.successMetrics || ''}
+                  value={onboardingData?.agentGoals?.successMetrics ?? ''}
                   onChange={(value) => updateField('agentGoals', 'successMetrics', value)}
                   placeholder="How do you measure success?"
                   multiline
@@ -370,7 +370,7 @@ export default function BusinessSetupPage() {
 
                 <FormField
                   label="Escalation Rules"
-                  value={onboardingData?.agentGoals?.escalationRules || ''}
+                  value={onboardingData?.agentGoals?.escalationRules ?? ''}
                   onChange={(value) => updateField('agentGoals', 'escalationRules', value)}
                   placeholder="When should the agent escalate to a human?"
                   multiline
@@ -387,28 +387,28 @@ export default function BusinessSetupPage() {
                 
                 <FormField
                   label="Tone & Style"
-                  value={onboardingData?.agentPersonality?.tone || ''}
+                  value={onboardingData?.agentPersonality?.tone ?? ''}
                   onChange={(value) => updateField('agentPersonality', 'tone', value)}
                   placeholder="e.g., Professional, Friendly, Casual, Enthusiastic"
                 />
 
                 <FormField
                   label="Formality Level"
-                  value={onboardingData?.agentPersonality?.formalityLevel || ''}
+                  value={onboardingData?.agentPersonality?.formalityLevel ?? ''}
                   onChange={(value) => updateField('agentPersonality', 'formalityLevel', value)}
                   placeholder="e.g., High (formal language), Low (casual), Moderate"
                 />
 
                 <FormField
                   label="Use of Humor"
-                  value={onboardingData?.agentPersonality?.useOfHumor || ''}
+                  value={onboardingData?.agentPersonality?.useOfHumor ?? ''}
                   onChange={(value) => updateField('agentPersonality', 'useOfHumor', value)}
                   placeholder="e.g., High, Low, None, Moderate"
                 />
 
                 <FormField
                   label="Empathy Level"
-                  value={onboardingData?.agentPersonality?.empathyLevel || ''}
+                  value={onboardingData?.agentPersonality?.empathyLevel ?? ''}
                   onChange={(value) => updateField('agentPersonality', 'empathyLevel', value)}
                   placeholder="e.g., High (very empathetic), Low (focus on facts), Moderate"
                 />

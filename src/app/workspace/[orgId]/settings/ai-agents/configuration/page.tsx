@@ -998,7 +998,7 @@ export default function AgentConfigurationPage() {
                 Tone & Voice
               </label>
               <select
-                value={persona.tone || 'professional'}
+                value={(persona.tone !== '' && persona.tone != null) ? persona.tone : 'professional'}
                 onChange={(e) => updateField('agentPersona', 'tone', e.target.value)}
                 style={{
                   width: '100%',
@@ -1076,13 +1076,13 @@ export default function AgentConfigurationPage() {
             
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
-                Closing Aggressiveness: {behavior.closingAggressiveness || 5}/10
+                Closing Aggressiveness: {behavior.closingAggressiveness ?? 5}/10
               </label>
               <input
                 type="range"
                 min="1"
                 max="10"
-                value={behavior.closingAggressiveness || 5}
+                value={behavior.closingAggressiveness ?? 5}
                 onChange={(e) => updateField('behaviorConfig', 'closingAggressiveness', parseInt(e.target.value))}
                 style={{
                   width: '100%',
@@ -1095,13 +1095,13 @@ export default function AgentConfigurationPage() {
 
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
-                Discovery Question Frequency: {behavior.questionFrequency || 3}
+                Discovery Question Frequency: {behavior.questionFrequency ?? 3}
               </label>
               <input
                 type="range"
                 min="1"
                 max="7"
-                value={behavior.questionFrequency || 3}
+                value={behavior.questionFrequency ?? 3}
                 onChange={(e) => updateField('behaviorConfig', 'questionFrequency', parseInt(e.target.value))}
                 style={{
                   width: '100%',
@@ -1117,7 +1117,7 @@ export default function AgentConfigurationPage() {
                 Response Length
               </label>
               <select
-                value={behavior.responseLength || 'balanced'}
+                value={(behavior.responseLength !== '' && behavior.responseLength != null) ? behavior.responseLength : 'balanced'}
                 onChange={(e) => updateField('behaviorConfig', 'responseLength', e.target.value)}
                 style={{
                   width: '100%',
@@ -1137,13 +1137,13 @@ export default function AgentConfigurationPage() {
 
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: '#999', fontSize: '0.875rem', fontWeight: '600' }}>
-                Proactive Level: {behavior.proactiveLevel || 5}/10
+                Proactive Level: {behavior.proactiveLevel ?? 5}/10
               </label>
               <input
                 type="range"
                 min="1"
                 max="10"
-                value={behavior.proactiveLevel || 5}
+                value={behavior.proactiveLevel ?? 5}
                 onChange={(e) => updateField('behaviorConfig', 'proactiveLevel', parseInt(e.target.value))}
                 style={{
                   width: '100%',

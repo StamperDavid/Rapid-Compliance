@@ -116,8 +116,8 @@ export async function GET(request: NextRequest) {
         await emitAnalyticsError(
           'Validation error',
           'VALIDATION_ERROR',
-          organizationId || undefined,
-          workspaceId || undefined,
+          organizationId ?? undefined,
+          workspaceId ?? undefined,
           { errors: error.errors }
         );
         
@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
     
     // Emit error event
     await emitAnalyticsError(
-      error.message || 'Internal server error',
+(error.message !== '' && error.message != null) ? error.message : 'Internal server error',
       'INTERNAL_ERROR',
       undefined,
       undefined,
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
     // Build error response
     const errorResponse: AnalyticsErrorResponse = {
       success: false,
-      error: error.message || 'Internal server error',
+      error:(error.message !== '' && error.message != null) ? error.message : 'Internal server error',
       code: 'INTERNAL_ERROR',
       details: process.env.NODE_ENV === 'development' ? {
         stack: error.stack,

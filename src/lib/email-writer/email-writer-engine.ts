@@ -186,7 +186,7 @@ export async function generateSalesEmail(
         
         // Then generate the battlecard using the profile
         battlecard = await generateBattlecard(competitorProfile, {
-          ourProduct: options.companyName || 'Our Product',
+          ourProduct:(options.companyName !== '' && options.companyName != null) ? options.companyName : 'Our Product',
         });
       } catch (error) {
         logger.warn('Failed to generate battlecard, continuing without competitive positioning', {
@@ -254,14 +254,14 @@ export async function generateSalesEmail(
       competitorDomain: options.competitorDomain,
       
       tone: options.tone || determineToneFromScore(dealScore),
-      length: options.length || 'medium',
-      includeCompetitive: options.includeCompetitive || false,
-      includeSocialProof: options.includeSocialProof || false,
+      length:(options.length !== '' && options.length != null) ? options.length : 'medium',
+      includeCompetitive: options.includeCompetitive ?? false,
+      includeSocialProof: options.includeSocialProof ?? false,
       
       model: 'gpt-4o',
-      promptTokens: llmResponse.usage?.promptTokens || 0,
-      completionTokens: llmResponse.usage?.completionTokens || 0,
-      totalTokens: llmResponse.usage?.totalTokens || 0,
+      promptTokens: llmResponse.usage?.promptTokens ?? 0,
+      completionTokens: llmResponse.usage?.completionTokens ?? 0,
+      totalTokens: llmResponse.usage?.totalTokens ?? 0,
       
       version: 1,
       
@@ -318,14 +318,14 @@ function buildSystemPrompt(
   template: EmailTemplate,
   dealScore?: DealScore
 ): string {
-  const tier = dealScore?.tier || 'warm';
-  const score = dealScore?.score || 50;
+  const tier = dealScore?(.tier !== '' && .tier != null) ? .tier : 'warm';
+  const score = dealScore?.score ?? 50;
   
   let systemPrompt = `You are an expert B2B sales email writer. Your goal is to write ${template.name} that:
 
 1. ${template.goal}
 2. Uses a ${options.tone || determineToneFromScore(dealScore)} tone
-3. Is ${options.length || 'medium'} length (${getLengthGuidance(options.length || 'medium')})
+3. Is ${(options.length !== '' && options.length != null) ? options.length : 'medium'} length (${getLengthGuidance((options.length !== '' && options.length != null) ? options.length : 'medium')})
 4. Follows email best practices (clear subject, strong opening, value proposition, clear CTA)
 
 DEAL CONTEXT:
@@ -371,9 +371,9 @@ function buildEmailPrompt(params: {
   let prompt = `Write a ${template.name} with the following context:
 
 RECIPIENT:
-- Name: ${options.recipientName || '[Name]'}
-- Title: ${options.recipientTitle || '[Title]'}
-- Company: ${options.companyName || '[Company]'}
+- Name: ${(options.recipientName !== '' && options.recipientName != null) ? options.recipientName : '[Name]'}
+- Title: ${(options.recipientTitle !== '' && options.recipientTitle != null) ? options.recipientTitle : '[Title]'}
+- Company: ${(options.companyName !== '' && options.companyName != null) ? options.companyName : '[Company]'}
 ${options.recipientEmail ? `- Email: ${options.recipientEmail}` : ''}
 
 EMAIL STRUCTURE:
@@ -528,11 +528,11 @@ function parseEmailResponse(response: string): {
 } {
   // Extract subject
   const subjectMatch = response.match(/SUBJECT:\s*(.+?)(?:\n|---)/i);
-  const subject = subjectMatch?.[1]?.trim() || 'Your Email Subject';
+  const subject = subjectMatch?.[1]?(.trim() !== '' && .trim() != null) ? .trim() : 'Your Email Subject';
   
   // Extract HTML body
   const bodyMatch = response.match(/BODY:\s*\n([\s\S]+?)(?:\n---|\nPLAIN:)/i);
-  const body = bodyMatch?.[1]?.trim() || response;
+  const body = bodyMatch?.[1]?.trim() ?? response;
   
   // Extract plain text
   const plainMatch = response.match(/PLAIN:\s*\n([\s\S]+?)(?:\n---|\nIMPROVEMENTS:|$)/i);
