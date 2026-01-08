@@ -419,8 +419,10 @@ async function scanCRMForProducts(
   // Query Firestore for products
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    // Extract workspaceId to avoid empty path segment (Explicit Ternary for STRING identifiers)
+    const resolvedWorkspaceId = (workspaceId !== '' && workspaceId != null) ? workspaceId : 'default';
     const products = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId || 'default'}/${COLLECTIONS.RECORDS}/products`,
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${resolvedWorkspaceId}/${COLLECTIONS.RECORDS}/products`,
       []
     );
 
@@ -461,8 +463,10 @@ async function scanCRMForServices(
   // Query Firestore for services
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    // Extract workspaceId to avoid empty path segment (Explicit Ternary for STRING identifiers)
+    const resolvedWorkspaceId = (workspaceId !== '' && workspaceId != null) ? workspaceId : 'default';
     const services = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId || 'default'}/${COLLECTIONS.RECORDS}/services`,
+      `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${resolvedWorkspaceId}/${COLLECTIONS.RECORDS}/services`,
       []
     );
 

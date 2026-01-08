@@ -23,7 +23,9 @@ export class OpenAIProvider implements ModelProvider {
   
   constructor(organizationId: string = 'demo') {
     this.organizationId = organizationId;
-    this.apiKey = process.env.OPENAI_API_KEY || ''; // Fallback to env
+    // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
+    const envApiKey = process.env.OPENAI_API_KEY;
+    this.apiKey = (envApiKey !== '' && envApiKey != null) ? envApiKey : ''; // Fallback to env
     if (!this.apiKey) {
       logger.warn('[OpenAI] API key not configured in env, will attempt to load from database', { file: 'openai-provider.ts' });
     }
@@ -37,7 +39,9 @@ export class OpenAIProvider implements ModelProvider {
     
     try {
       const keys = await apiKeyService.getKeys(this.organizationId);
-      this.apiKey = keys?.ai?.openaiApiKey || '';
+      // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
+      const dbApiKey = keys?.ai?.openaiApiKey;
+      this.apiKey = (dbApiKey !== '' && dbApiKey != null) ? dbApiKey : '';
       
       if (!this.apiKey) {
         throw new Error('OpenAI API key not configured');
@@ -98,7 +102,8 @@ export class OpenAIProvider implements ModelProvider {
         id: data.id,
         model: request.model,
         provider: 'openai',
-        content: choice.message.content || '',
+        // AI response content - empty string is valid response (use ?? for content)
+        content: choice.message.content ?? '',
         finishReason: this.mapFinishReason(choice.finish_reason),
         functionCall: choice.message.function_call ? {
           name: choice.message.function_call.name,
@@ -160,7 +165,8 @@ export class OpenAIProvider implements ModelProvider {
         
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        // Extract remaining buffer - empty string is valid (use ??)
+        buffer = lines.pop() ?? '';
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {

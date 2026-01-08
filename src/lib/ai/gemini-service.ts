@@ -24,7 +24,10 @@ async function getApiKey(): Promise<string> {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
 
-    const apiKey = adminKeys?.gemini?.apiKey || adminKeys?.google?.apiKey;
+    // Extract API key - prefer Gemini, fallback to Google key (Explicit Ternary for STRING)
+    const geminiKey = adminKeys?.gemini?.apiKey;
+    const googleKey = adminKeys?.google?.apiKey;
+    const apiKey = (geminiKey !== '' && geminiKey != null) ? geminiKey : googleKey;
     
     if (!apiKey) {
       throw new Error('Gemini API key not configured in admin settings. Please add it at /admin/system/api-keys');
@@ -98,14 +101,17 @@ export async function sendChatMessage(
     return {
       text,
       usage: {
-        promptTokens: (result as any).usageMetadata?.promptTokenCount || 0,
-        completionTokens: (result as any).usageMetadata?.candidatesTokenCount || 0,
-        totalTokens: (result as any).usageMetadata?.totalTokenCount || 0,
+        // Token counts are NUMBERS - 0 is valid (use ?? for numbers)
+        promptTokens: (result as any).usageMetadata?.promptTokenCount ?? 0,
+        completionTokens: (result as any).usageMetadata?.candidatesTokenCount ?? 0,
+        totalTokens: (result as any).usageMetadata?.totalTokenCount ?? 0,
       },
     };
   } catch (error: any) {
     logger.error('Error calling Gemini API:', error, { file: 'gemini-service.ts' });
-    throw new Error(error.message || 'Failed to get response from AI');
+    // Extract error message to avoid empty error message (Explicit Ternary for STRING)
+    const errorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to get response from AI';
+    throw new Error(errorMsg);
   }
 }
 
@@ -132,14 +138,17 @@ export async function generateText(
     return {
       text,
       usage: {
-        promptTokens: usageMetadata?.promptTokenCount || 0,
-        completionTokens: usageMetadata?.candidatesTokenCount || 0,
-        totalTokens: usageMetadata?.totalTokenCount || 0,
+        // Token counts are NUMBERS - 0 is valid (use ?? for numbers)
+        promptTokens: usageMetadata?.promptTokenCount ?? 0,
+        completionTokens: usageMetadata?.candidatesTokenCount ?? 0,
+        totalTokens: usageMetadata?.totalTokenCount ?? 0,
       },
     };
   } catch (error: any) {
     logger.error('Error generating text with Gemini:', error, { file: 'gemini-service.ts' });
-    throw new Error(error.message || 'Failed to generate text');
+    // Extract error message (Explicit Ternary for STRING)
+    const errorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to generate text';
+    throw new Error(errorMsg);
   }
 }
 
@@ -174,7 +183,9 @@ export async function* streamChatMessage(
     }
   } catch (error: any) {
     logger.error('Error streaming from Gemini:', error, { file: 'gemini-service.ts' });
-    throw new Error(error.message || 'Failed to stream response');
+    // Extract error message (Explicit Ternary for STRING)
+    const errorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to stream response';
+    throw new Error(errorMsg);
   }
 }
 

@@ -65,10 +65,11 @@ export async function retrieveKnowledge(
   const queryEmbedding = await generateEmbedding(request.query);
   
   // Step 2: Semantic search for top candidates
+  // topK is a NUMBER - 0 would be valid but unlikely, use ?? for numbers
   const candidates = await semanticSearch(
     request.knowledgeBaseId,
     queryEmbedding,
-    request.topK || 20 // Get more candidates for reranking
+    request.topK ?? 20 // Get more candidates for reranking
   );
   
   // Step 3: Rerank if enabled
@@ -79,9 +80,10 @@ export async function retrieveKnowledge(
   }
   
   // Step 4: Optimize context window
+  // contextWindow is a NUMBER - use ?? for numbers
   const optimizedChunks = optimizeContextWindow(
     relevantChunks,
-    request.contextWindow || 4000
+    request.contextWindow ?? 4000
   );
   
   // Step 5: Build enhanced prompt
@@ -150,14 +152,18 @@ async function semanticSearch(
     }
     
     // Calculate cosine similarity for each chunk
-    const scoredChunks = chunks.map(chunk => ({
-      id: chunk.id,
-      content: chunk.content,
-      source: chunk.source || 'unknown',
-      relevanceScore: cosineSimilarity(queryEmbedding, chunk.embedding ?? []),
-      embedding: chunk.embedding,
-      metadata: chunk.metadata,
-    }));
+    const scoredChunks = chunks.map(chunk => {
+      // Extract source - empty strings are invalid source identifiers (Explicit Ternary for STRING)
+      const chunkSource = (chunk.source !== '' && chunk.source != null) ? chunk.source : 'unknown';
+      return {
+        id: chunk.id,
+        content: chunk.content,
+        source: chunkSource,
+        relevanceScore: cosineSimilarity(queryEmbedding, chunk.embedding ?? []),
+        embedding: chunk.embedding,
+        metadata: chunk.metadata,
+      };
+    });
     
     // Sort by relevance and take top K
     return scoredChunks
@@ -175,13 +181,17 @@ async function semanticSearch(
 function keywordSearch(chunks: any[], topK: number): KnowledgeChunk[] {
   // Simple keyword-based scoring
   return chunks
-    .map(chunk => ({
-      id: chunk.id,
-      content: chunk.content,
-      source: chunk.source || 'unknown',
-      relevanceScore: 0.5, // Default score for keyword matches
-      metadata: chunk.metadata,
-    }))
+    .map(chunk => {
+      // Extract source - empty strings are invalid (Explicit Ternary for STRING)
+      const chunkSource = (chunk.source !== '' && chunk.source != null) ? chunk.source : 'unknown';
+      return {
+        id: chunk.id,
+        content: chunk.content,
+        source: chunkSource,
+        relevanceScore: 0.5, // Default score for keyword matches
+        metadata: chunk.metadata,
+      };
+    })
     .slice(0, topK);
 }
 
@@ -276,11 +286,11 @@ Scores:`;
     // Parse scores
     const scores = JSON.parse(response.text.replace(/```json\n?|\n?```/g, ''));
     
-    // Apply new scores and resort
+    // Apply new scores and resort - scores are NUMBERS (use ?? for numbers)
     return chunks
       .map((chunk, i) => ({
         ...chunk,
-        relevanceScore: (scores[i] || 0) / 100,
+        relevanceScore: (scores[i] ?? 0) / 100,
       }))
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
   } catch (error: any) {

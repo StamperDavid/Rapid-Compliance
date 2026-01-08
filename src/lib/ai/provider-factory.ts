@@ -120,12 +120,15 @@ export class AIProviderFactory {
             topP: config?.topP ?? 0.9,
           });
           
+          // Extract response content - empty string is valid AI response (use ?? for content)
+          const responseText = response.content ?? '';
           return {
-            text: response.content || '',
+            text: responseText,
             usage: {
-              promptTokens: response.usage?.promptTokens || 0,
-              completionTokens: response.usage?.completionTokens || 0,
-              totalTokens: response.usage?.totalTokens || 0,
+              // Token counts are NUMBERS - 0 is valid (use ?? for numbers)
+              promptTokens: response.usage?.promptTokens ?? 0,
+              completionTokens: response.usage?.completionTokens ?? 0,
+              totalTokens: response.usage?.totalTokens ?? 0,
             },
           };
         } catch (error: any) {

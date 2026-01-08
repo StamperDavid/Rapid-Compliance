@@ -137,8 +137,10 @@ export async function getModelForConversation(
   
   if (!org?.activeABTest) {
     // No active test, use default model
+    // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
+    const preferredModel = (org?.preferredModel !== '' && org?.preferredModel != null) ? org.preferredModel : 'gpt-4';
     return {
-      model: org?.preferredModel || 'gpt-4',
+      model: preferredModel,
       isTestGroup: false,
     };
   }
@@ -150,8 +152,10 @@ export async function getModelForConversation(
   ) as ABTest;
   
   if (test?.status !== 'running') {
+    // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
+    const preferredModel = (org?.preferredModel !== '' && org?.preferredModel != null) ? org.preferredModel : 'gpt-4';
     return {
-      model: org?.preferredModel || 'gpt-4',
+      model: preferredModel,
       isTestGroup: false,
     };
   }

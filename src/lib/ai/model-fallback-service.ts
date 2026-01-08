@@ -93,7 +93,8 @@ export async function sendWithFallback(
       };
       
     } catch (error: any) {
-      const errorMessage = error.message || 'Unknown error';
+      // Extract error message - empty string is valid (Explicit Ternary for STRING)
+      const errorMessage = (error.message !== '' && error.message != null) ? error.message : 'Unknown error';
       failureReasons.push(`${currentModel}: ${errorMessage}`);
       
       logger.warn('[Fallback] Model ${currentModel} failed: ${errorMessage}', { file: 'model-fallback-service.ts' });
@@ -242,8 +243,9 @@ class CircuitBreaker {
    * Check if circuit is open (too many failures)
    */
   isOpen(model: string): boolean {
-    const failures = this.failures.get(model) || 0;
-    const lastFail = this.lastFailTime.get(model) || 0;
+    // Failure counts are NUMBERS - 0 is valid (use ?? for numbers)
+    const failures = this.failures.get(model) ?? 0;
+    const lastFail = this.lastFailTime.get(model) ?? 0;
     const timeSinceLastFail = Date.now() - lastFail;
     
     // Reset if timeout passed
@@ -259,7 +261,8 @@ class CircuitBreaker {
    * Record a failure
    */
   recordFailure(model: string): void {
-    const failures = (this.failures.get(model) || 0) + 1;
+    // Failure count is a NUMBER - 0 is valid (use ?? for numbers)
+    const failures = (this.failures.get(model) ?? 0) + 1;
     this.failures.set(model, failures);
     this.lastFailTime.set(model, Date.now());
     

@@ -23,7 +23,9 @@ export class AnthropicProvider implements ModelProvider {
   
   constructor(organizationId: string = 'demo') {
     this.organizationId = organizationId;
-    this.apiKey = process.env.ANTHROPIC_API_KEY || ''; // Fallback to env
+    // Extract API key - empty string means key not configured (Explicit Ternary for STRING)
+    const envApiKey = process.env.ANTHROPIC_API_KEY;
+    this.apiKey = (envApiKey !== '' && envApiKey != null) ? envApiKey : ''; // Fallback to env
     if (!this.apiKey) {
       logger.warn('[Anthropic] API key not configured in env, will attempt to load from database', { file: 'anthropic-provider.ts' });
     }
@@ -37,7 +39,9 @@ export class AnthropicProvider implements ModelProvider {
     
     try {
       const keys = await apiKeyService.getKeys(this.organizationId);
-      this.apiKey = keys?.ai?.anthropicApiKey || '';
+      // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
+      const dbApiKey = keys?.ai?.anthropicApiKey;
+      this.apiKey = (dbApiKey !== '' && dbApiKey != null) ? dbApiKey : '';
       
       if (!this.apiKey) {
         throw new Error('Anthropic API key not configured');
@@ -73,7 +77,8 @@ export class AnthropicProvider implements ModelProvider {
           model: request.model,
           messages: this.convertMessages(messages),
           system: systemMessage?.content,
-          max_tokens: request.maxTokens || 4096,
+          // max_tokens is a NUMBER - 0 is invalid but possible (use ?? for numbers)
+          max_tokens: request.maxTokens ?? 4096,
           temperature: request.temperature ?? 0.7,
           top_p: request.topP,
           stop_sequences: request.stop,
@@ -153,7 +158,8 @@ export class AnthropicProvider implements ModelProvider {
           model: request.model,
           messages: this.convertMessages(messages),
           system: systemMessage?.content,
-          max_tokens: request.maxTokens || 4096,
+          // max_tokens is a NUMBER - use ?? for numbers
+          max_tokens: request.maxTokens ?? 4096,
           temperature: request.temperature ?? 0.7,
           stream: true,
         }),
@@ -178,7 +184,8 @@ export class AnthropicProvider implements ModelProvider {
         
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        // Extract remaining buffer - empty string is valid (use ?? since we want '' not null/undefined)
+        buffer = lines.pop() ?? '';
         
         for (const line of lines) {
           if (line.startsWith('data: ')) {

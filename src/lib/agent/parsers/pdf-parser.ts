@@ -8,10 +8,8 @@ import { logger } from '@/lib/logger/logger';
 // Dynamic import for pdf-parse (works in both Node.js and browser)
 let pdfParse: any;
 async function getPdfParse() {
-  if (!pdfParse) {
-    // pdf-parse is a CommonJS module, import it directly as the function
-    pdfParse = (await import('pdf-parse')) as unknown as (dataBuffer: Buffer) => Promise<{ text: string; numpages: number; info: Record<string, unknown> }>;
-  }
+  // Use nullish coalescing assignment for lazy initialization
+  pdfParse ??= (await import('pdf-parse')) as unknown as (dataBuffer: Buffer) => Promise<{ text: string; numpages: number; info: Record<string, unknown> }>;
   return pdfParse;
 }
 

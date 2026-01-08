@@ -147,7 +147,9 @@ async function triggerFineTuning(
     organizationId
   ) as any;
   
-  const preferredModel = orgConfig?.preferredModel || 'gpt-4';
+  // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
+  const rawPreferredModel = orgConfig?.preferredModel;
+  const preferredModel = (rawPreferredModel !== '' && rawPreferredModel != null) ? rawPreferredModel : 'gpt-4';
   
   // Create fine-tuning job
   let job;
@@ -240,8 +242,9 @@ async function getMonthlyTrainingSpend(organizationId: string): Promise<number> 
     return jobDate >= thisMonth;
   });
   
+  // Costs are NUMBERS - 0 is valid (use ?? for numbers)
   return monthlyJobs.reduce((sum: number, job: any) => 
-    sum + (job.actualCost || job.estimatedCost || 0), 
+    sum + (job.actualCost ?? job.estimatedCost ?? 0), 
     0
   );
 }
@@ -292,7 +295,9 @@ export async function evaluateAndDeployModel(
     organizationId
   ) as any;
   
-  const currentModel = orgConfig?.preferredModel || 'gpt-4';
+  // Extract current model - empty string is invalid model name (Explicit Ternary for STRING)
+  const rawCurrentModel = orgConfig?.preferredModel;
+  const currentModel = (rawCurrentModel !== '' && rawCurrentModel != null) ? rawCurrentModel : 'gpt-4';
   
   // Start A/B test
   const test = await createABTest({

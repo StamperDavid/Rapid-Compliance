@@ -24,9 +24,13 @@ export class OpenRouterProvider {
       this.organizationId = configOrOrgId;
       this.baseURL = 'https://openrouter.ai/api/v1';
     } else {
-      this.apiKey = configOrOrgId.apiKey || null;
-      this.baseURL = configOrOrgId.baseURL || 'https://openrouter.ai/api/v1';
-      this.organizationId = configOrOrgId.organizationId || null;
+      // Extract config values - empty strings are invalid (Explicit Ternary for STRINGS)
+      const apiKeyVal = configOrOrgId.apiKey;
+      const baseURLVal = configOrOrgId.baseURL;
+      const orgIdVal = configOrOrgId.organizationId;
+      this.apiKey = (apiKeyVal !== '' && apiKeyVal != null) ? apiKeyVal : null;
+      this.baseURL = (baseURLVal !== '' && baseURLVal != null) ? baseURLVal : 'https://openrouter.ai/api/v1';
+      this.organizationId = (orgIdVal !== '' && orgIdVal != null) ? orgIdVal : null;
     }
   }
 
@@ -51,7 +55,8 @@ export class OpenRouterProvider {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          // Extract app URL - empty string is invalid referer (Explicit Ternary for STRING)
+          'HTTP-Referer': (process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000',
           'X-Title': 'AI Sales Platform',
         },
         body: JSON.stringify({
@@ -70,12 +75,15 @@ export class OpenRouterProvider {
 
       const data = await response.json();
 
+      // Extract content - empty string is valid AI response (use ?? for content)
+      const responseContent = data.choices[0]?.message?.content ?? '';
       return {
-        content: data.choices[0]?.message?.content || '',
+        content: responseContent,
         usage: {
-          promptTokens: data.usage?.prompt_tokens || 0,
-          completionTokens: data.usage?.completion_tokens || 0,
-          totalTokens: data.usage?.total_tokens || 0,
+          // Token counts are NUMBERS - 0 is valid (use ?? for numbers)
+          promptTokens: data.usage?.prompt_tokens ?? 0,
+          completionTokens: data.usage?.completion_tokens ?? 0,
+          totalTokens: data.usage?.total_tokens ?? 0,
         },
         model: data.model,
         provider: 'openrouter',

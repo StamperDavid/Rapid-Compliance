@@ -85,7 +85,9 @@ export async function enhanceChatWithRAG(
 }> {
   // Get the last user message as the query
   const lastUserMessage = messages.filter(m => m.role === 'user').pop();
-  const query = lastUserMessage?.parts?.[0]?.text || '';
+  // Extract query text - empty strings are invalid queries (Explicit Ternary for STRING)
+  const queryText = lastUserMessage?.parts?.[0]?.text;
+  const query = (queryText !== '' && queryText != null) ? queryText : '';
   
   if (!query) {
     return {

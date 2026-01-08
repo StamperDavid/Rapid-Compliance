@@ -20,7 +20,9 @@ export class GeminiProvider implements ModelProvider {
   private apiKey: string;
   
   constructor() {
-    this.apiKey = process.env.GOOGLE_API_KEY || '';
+    // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
+    const envApiKey = process.env.GOOGLE_API_KEY;
+    this.apiKey = (envApiKey !== '' && envApiKey != null) ? envApiKey : '';
     if (!this.apiKey) {
       logger.warn('[Gemini] API key not configured', { file: 'gemini-provider.ts' });
     }

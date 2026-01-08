@@ -139,33 +139,24 @@ function updateStructuredData(
 ): void {
   switch (entity.type) {
     case 'person':
-      if (!entities.customer.name) {
-        entities.customer.name = entity.value;
-      }
+      // Use nullish coalescing assignment for cleaner initialization
+      entities.customer.name ??= entity.value;
       break;
     
     case 'company':
-      if (!entities.customer.company) {
-        entities.customer.company = entity.value;
-      }
+      entities.customer.company ??= entity.value;
       break;
     
     case 'email':
-      if (!entities.customer.email) {
-        entities.customer.email = entity.value;
-      }
+      entities.customer.email ??= entity.value;
       break;
     
     case 'phone':
-      if (!entities.customer.phone) {
-        entities.customer.phone = entity.value;
-      }
+      entities.customer.phone ??= entity.value;
       break;
     
     case 'location':
-      if (!entities.customer.location) {
-        entities.customer.location = entity.value;
-      }
+      entities.customer.location ??= entity.value;
       break;
     
     case 'product':

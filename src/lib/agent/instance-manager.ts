@@ -104,52 +104,90 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    */
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
     // Handle both nested and flat structures for backwards compatibility
+    // Extract string values to avoid empty strings in prompt (Explicit Ternary for STRINGS)
+    const businessName = ((goldenMaster as any).businessName !== '' && (goldenMaster as any).businessName != null) ? (goldenMaster as any).businessName : 'Your Business';
+    const industry = ((goldenMaster as any).industry !== '' && (goldenMaster as any).industry != null) ? (goldenMaster as any).industry : 'General';
+    const problemSolved = ((goldenMaster as any).problemSolved !== '' && (goldenMaster as any).problemSolved != null) ? (goldenMaster as any).problemSolved : '';
+    const uniqueValue = ((goldenMaster as any).uniqueValue !== '' && (goldenMaster as any).uniqueValue != null) ? (goldenMaster as any).uniqueValue : '';
+    const topProducts = (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') ?? '';
+    const pricingStrategy = ((goldenMaster as any).pricingStrategy !== '' && (goldenMaster as any).pricingStrategy != null) ? (goldenMaster as any).pricingStrategy : '';
+    const discountPolicy = ((goldenMaster as any).discountPolicy !== '' && (goldenMaster as any).discountPolicy != null) ? (goldenMaster as any).discountPolicy : '';
+    const returnPolicy = ((goldenMaster as any).returnPolicy !== '' && (goldenMaster as any).returnPolicy != null) ? (goldenMaster as any).returnPolicy : '';
+    const warrantyTerms = ((goldenMaster as any).warrantyTerms !== '' && (goldenMaster as any).warrantyTerms != null) ? (goldenMaster as any).warrantyTerms : '';
+    const geographicCoverage = ((goldenMaster as any).geographicCoverage !== '' && (goldenMaster as any).geographicCoverage != null) ? (goldenMaster as any).geographicCoverage : '';
+    const deliveryTimeframes = ((goldenMaster as any).deliveryTimeframes !== '' && (goldenMaster as any).deliveryTimeframes != null) ? (goldenMaster as any).deliveryTimeframes : '';
+    const typicalSalesFlow = ((goldenMaster as any).typicalSalesFlow !== '' && (goldenMaster as any).typicalSalesFlow != null) ? (goldenMaster as any).typicalSalesFlow : '';
+    const discoveryQuestions = ((goldenMaster as any).discoveryQuestions !== '' && (goldenMaster as any).discoveryQuestions != null) ? (goldenMaster as any).discoveryQuestions : '';
+    const commonObjections = ((goldenMaster as any).commonObjections !== '' && (goldenMaster as any).commonObjections != null) ? (goldenMaster as any).commonObjections : '';
+    const priceObjections = ((goldenMaster as any).priceObjections !== '' && (goldenMaster as any).priceObjections != null) ? (goldenMaster as any).priceObjections : '';
+    const timeObjections = ((goldenMaster as any).timeObjections !== '' && (goldenMaster as any).timeObjections != null) ? (goldenMaster as any).timeObjections : '';
+    const competitorObjections = ((goldenMaster as any).competitorObjections !== '' && (goldenMaster as any).competitorObjections != null) ? (goldenMaster as any).competitorObjections : '';
+    const requiredDisclosures = ((goldenMaster as any).requiredDisclosures !== '' && (goldenMaster as any).requiredDisclosures != null) ? (goldenMaster as any).requiredDisclosures : '';
+    const prohibitedTopics = ((goldenMaster as any).prohibitedTopics !== '' && (goldenMaster as any).prohibitedTopics != null) ? (goldenMaster as any).prohibitedTopics : '';
+
     const businessContext: any = goldenMaster.businessContext ?? {
-      businessName: ((goldenMaster as any).businessName !== '' && (goldenMaster as any).businessName != null) ? (goldenMaster as any).businessName : 'Your Business',
-      industry: ((goldenMaster as any).industry !== '' && (goldenMaster as any).industry != null) ? (goldenMaster as any).industry : 'General',
-      problemSolved: (goldenMaster as any).problemSolved ?? '',
-      uniqueValue: (goldenMaster as any).uniqueValue ?? '',
-      topProducts: (goldenMaster as any).products?.map((p: any) => `${p.name}: ${p.price} - ${p.description}`).join('\n') ?? '',
-      pricingStrategy: (goldenMaster as any).pricingStrategy ?? '',
-      discountPolicy: (goldenMaster as any).discountPolicy ?? '',
-      returnPolicy: (goldenMaster as any).returnPolicy ?? '',
-      warrantyTerms: (goldenMaster as any).warrantyTerms ?? '',
-      geographicCoverage: (goldenMaster as any).geographicCoverage ?? '',
-      deliveryTimeframes: (goldenMaster as any).deliveryTimeframes ?? '',
-      typicalSalesFlow: (goldenMaster as any).typicalSalesFlow ?? '',
-      discoveryQuestions: (goldenMaster as any).discoveryQuestions ?? '',
-      commonObjections: (goldenMaster as any).commonObjections ?? '',
-      priceObjections: (goldenMaster as any).priceObjections ?? '',
-      timeObjections: (goldenMaster as any).timeObjections ?? '',
-      competitorObjections: (goldenMaster as any).competitorObjections ?? '',
-      requiredDisclosures: (goldenMaster as any).requiredDisclosures ?? '',
-      prohibitedTopics: (goldenMaster as any).prohibitedTopics ?? ''
+      businessName,
+      industry,
+      problemSolved,
+      uniqueValue,
+      topProducts,
+      pricingStrategy,
+      discountPolicy,
+      returnPolicy,
+      warrantyTerms,
+      geographicCoverage,
+      deliveryTimeframes,
+      typicalSalesFlow,
+      discoveryQuestions,
+      commonObjections,
+      priceObjections,
+      timeObjections,
+      competitorObjections,
+      requiredDisclosures,
+      prohibitedTopics
     };
     
+    // Extract agent persona strings (Explicit Ternary for STRINGS)
+    const personaName = ((goldenMaster as any).name !== '' && (goldenMaster as any).name != null) ? (goldenMaster as any).name : 'AI Assistant';
+    const personaTone = ((goldenMaster as any).tone !== '' && (goldenMaster as any).tone != null) ? (goldenMaster as any).tone : 'Professional and helpful';
+    const personaGreeting = ((goldenMaster as any).greeting !== '' && (goldenMaster as any).greeting != null) ? (goldenMaster as any).greeting : 'Hello! How can I help you today?';
+    const personaClosingMessage = ((goldenMaster as any).closingMessage !== '' && (goldenMaster as any).closingMessage != null) ? (goldenMaster as any).closingMessage : 'Thanks for chatting!';
+
     const agentPersona = goldenMaster.agentPersona ?? {
-      name: ((goldenMaster as any).name !== '' && (goldenMaster as any).name != null) ? (goldenMaster as any).name : 'AI Assistant',
-      tone: ((goldenMaster as any).tone !== '' && (goldenMaster as any).tone != null) ? (goldenMaster as any).tone : 'Professional and helpful',
-      greeting: ((goldenMaster as any).greeting !== '' && (goldenMaster as any).greeting != null) ? (goldenMaster as any).greeting : 'Hello! How can I help you today?',
-      closingMessage: ((goldenMaster as any).closingMessage !== '' && (goldenMaster as any).closingMessage != null) ? (goldenMaster as any).closingMessage : 'Thanks for chatting!',
+      name: personaName,
+      tone: personaTone,
+      greeting: personaGreeting,
+      closingMessage: personaClosingMessage,
       objectives: (goldenMaster as any).objectives ?? [],
       escalationRules: (goldenMaster as any).escalationRules ?? []
     };
     
+    // Extract behavior config (STRING for questionFrequency/responseLength, NUMBERS for aggressiveness/level - use ?? for numbers)
+    const questionFrequency = ((goldenMaster as any).questionFrequency !== '' && (goldenMaster as any).questionFrequency != null) ? (goldenMaster as any).questionFrequency : 'moderate';
+    const responseLength = ((goldenMaster as any).responseLength !== '' && (goldenMaster as any).responseLength != null) ? (goldenMaster as any).responseLength : 'medium';
+
     const behaviorConfig = goldenMaster.behaviorConfig ?? {
       closingAggressiveness: (goldenMaster as any).closingAggressiveness ?? 5,
-      questionFrequency: ((goldenMaster as any).questionFrequency !== '' && (goldenMaster as any).questionFrequency != null) ? (goldenMaster as any).questionFrequency : 'moderate',
-      responseLength: ((goldenMaster as any).responseLength !== '' && (goldenMaster as any).responseLength != null) ? (goldenMaster as any).responseLength : 'medium',
+      questionFrequency,
+      responseLength,
       proactiveLevel: (goldenMaster as any).proactiveLevel ?? 5
     };
     
     // Include training learnings in system prompt (from Golden Master)
     const trainingNotes = goldenMaster.trainedScenarios ?? [];
+    // Extract training completion string to avoid empty strings in prompt
+    const trainingCompletedDisplay = (goldenMaster.trainingCompletedAt !== '' && goldenMaster.trainingCompletedAt != null) ? goldenMaster.trainingCompletedAt : 'Not yet';
     const recentLearnings = trainingNotes.length > 0
-      ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${(goldenMaster.trainingCompletedAt !== '' && goldenMaster.trainingCompletedAt != null) ? goldenMaster.trainingCompletedAt : 'Not yet'}.`
+      ? `Trained on ${trainingNotes.length} scenarios. Training completed: ${trainingCompletedDisplay}.`
       : '';
     
     const updatedGuidelines = ''; // From training feedback if available
     const behavioralChanges = ''; // From training feedback if available
+    
+    // Extract agentPersona.name to avoid putting complex logic in template (Template Extraction Rule)
+    const displayAgentName = (agentPersona.name !== '' && agentPersona.name != null) ? agentPersona.name : 'AI Assistant';
+    // Extract requiredDisclosures to avoid putting coalescing in template
+    const disclosuresText = (businessContext.requiredDisclosures !== '' && businessContext.requiredDisclosures != null) ? businessContext.requiredDisclosures : '';
     
     let prompt = `You are an AI sales and customer service agent for ${businessContext.businessName}.
 
@@ -188,7 +226,7 @@ Time Objections: ${businessContext.timeObjections}
 Competitor Objections: ${businessContext.competitorObjections}
 
 # Your Personality
-Name: ${(agentPersona.name !== '' && agentPersona.name != null) ? agentPersona.name : 'AI Assistant'}
+Name: ${displayAgentName}
 Tone: ${agentPersona.tone}
 Greeting: "${agentPersona.greeting}"
 Closing: "${agentPersona.closingMessage}"
@@ -203,27 +241,34 @@ Closing: "${agentPersona.closingMessage}"
 ${agentPersona.escalationRules.join('\n')}
 
 # Compliance & Legal
-${businessContext.requiredDisclosures ?? ''}
+${disclosuresText}
 Prohibited Topics: ${businessContext.prohibitedTopics}
 `;
 
     // Add customer-specific context if returning customer
     if (customerMemory.totalInteractions > 0) {
+      // Extract customer strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
+      const customerName = (customerMemory.name !== '' && customerMemory.name != null) ? customerMemory.name : 'Unknown';
+      const customerEmail = (customerMemory.email !== '' && customerMemory.email != null) ? customerMemory.email : 'Not provided';
+      const customerBudget = (customerMemory.preferences.budget !== '' && customerMemory.preferences.budget != null) ? customerMemory.preferences.budget : 'Unknown';
+      const customerInterests = (customerMemory.preferences.interests.join(', ') !== '' && customerMemory.preferences.interests.join(', ') != null) ? customerMemory.preferences.interests.join(', ') : 'None recorded';
+      const customerPreferredTone = (customerMemory.preferences.preferredTone !== '' && customerMemory.preferences.preferredTone != null) ? customerMemory.preferences.preferredTone : 'Not specified';
+      
       prompt += `
 
 # CUSTOMER CONTEXT - This is a returning customer!
 
-Customer Name: ${(customerMemory.name !== '' && customerMemory.name != null) ? customerMemory.name : 'Unknown'}
-Email: ${(customerMemory.email !== '' && customerMemory.email != null) ? customerMemory.email : 'Not provided'}
+Customer Name: ${customerName}
+Email: ${customerEmail}
 First Seen: ${new Date(customerMemory.firstSeen).toLocaleDateString()}
 Total Interactions: ${customerMemory.totalInteractions}
 Lead Status: ${customerMemory.leadInfo.status}
 Lifetime Value: $${customerMemory.lifetimeValue.toFixed(2)}
 
 ## Customer Preferences
-Budget: ${(customerMemory.preferences.budget !== '' && customerMemory.preferences.budget != null) ? customerMemory.preferences.budget : 'Unknown'}
-Interests: ${(customerMemory.preferences.interests.join(', ') !== '' && customerMemory.preferences.interests.join(', ') != null) ? customerMemory.preferences.interests.join(', ') : 'None recorded'}
-Communication Preference: ${(customerMemory.preferences.preferredTone !== '' && customerMemory.preferences.preferredTone != null) ? customerMemory.preferences.preferredTone : 'Not specified'}
+Budget: ${customerBudget}
+Interests: ${customerInterests}
+Communication Preference: ${customerPreferredTone}
 
 ## Purchase History
 ${customerMemory.purchaseHistory.length > 0 
@@ -357,10 +402,13 @@ ${this.summarizeRecentConversations(customerMemory)}
 
       // Add messages to conversation history
       const timestamp = new Date().toISOString();
+      // Extract sessionId to avoid empty strings (Explicit Ternary for STRING identifiers)
+      const lastSessionId = memory.sessions[memory.sessions.length - 1]?.sessionId;
+      const sessionId = (lastSessionId !== '' && lastSessionId != null) ? lastSessionId : 'default';
       
       memory.conversationHistory.push({
         messageId: this.generateMessageId(),
-        sessionId: memory.sessions[memory.sessions.length - 1]?.sessionId || 'default',
+        sessionId,
         timestamp,
         role: 'customer',
         content: userMessage,
@@ -368,7 +416,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       
       memory.conversationHistory.push({
         messageId: this.generateMessageId(),
-        sessionId: memory.sessions[memory.sessions.length - 1]?.sessionId || 'default',
+        sessionId,
         timestamp,
         role: 'agent',
         content: assistantMessage,

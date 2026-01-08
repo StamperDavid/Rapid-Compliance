@@ -24,16 +24,23 @@ export async function compileSystemPrompt(
 ): Promise<string> {
   const { businessContext, agentPersona, behaviorConfig, knowledgeBase } = components;
   
-  let prompt = `You are an AI sales and customer service agent for ${businessContext.businessName || 'the company'}.
+  // Extract business context strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
+  const businessName = (businessContext.businessName !== '' && businessContext.businessName != null) ? businessContext.businessName : 'the company';
+  const industry = (businessContext.industry !== '' && businessContext.industry != null) ? businessContext.industry : 'General';
+  const problemSolved = (businessContext.problemSolved !== '' && businessContext.problemSolved != null) ? businessContext.problemSolved : 'We provide products and services';
+  const uniqueValue = (businessContext.uniqueValue !== '' && businessContext.uniqueValue != null) ? businessContext.uniqueValue : 'Our commitment to quality';
+  const targetCustomer = (businessContext.targetCustomer !== '' && businessContext.targetCustomer != null) ? businessContext.targetCustomer : 'Anyone who needs our services';
+  
+  let prompt = `You are an AI sales and customer service agent for ${businessName}.
 
 # Your Role & Objectives
 ${agentPersona.objectives.map(obj => `- ${obj}`).join('\n')}
 
 # Business Context
-Industry: ${businessContext.industry || 'General'}
-What we do: ${businessContext.problemSolved || 'We provide products and services'}
-What makes us unique: ${businessContext.uniqueValue || 'Our commitment to quality'}
-Target Customer: ${businessContext.targetCustomer || 'Anyone who needs our services'}
+Industry: ${industry}
+What we do: ${problemSolved}
+What makes us unique: ${uniqueValue}
+Target Customer: ${targetCustomer}
 
 # Products/Services
 ${businessContext.topProducts ? `Top Products:\n${businessContext.topProducts}` : ''}
@@ -42,7 +49,7 @@ ${businessContext.productComparison ? `Product Comparison:\n${businessContext.pr
 ${businessContext.seasonalOfferings ? `Seasonal Offerings:\n${businessContext.seasonalOfferings}` : ''}
 
 # Pricing Strategy
-${businessContext.pricingStrategy || 'Standard pricing applies'}
+${(businessContext.pricingStrategy !== '' && businessContext.pricingStrategy != null) ? businessContext.pricingStrategy : 'Standard pricing applies'}
 ${businessContext.discountPolicy ? `Discount Policy: ${businessContext.discountPolicy}` : ''}
 ${businessContext.volumeDiscounts ? `Volume Discounts: ${businessContext.volumeDiscounts}` : ''}
 ${businessContext.firstTimeBuyerIncentive ? `First-Time Buyer Incentive: ${businessContext.firstTimeBuyerIncentive}` : ''}
@@ -75,7 +82,7 @@ ${businessContext.orderTracking ? `Order Tracking: ${businessContext.orderTracki
 ${businessContext.complaintResolution ? `Complaint Resolution: ${businessContext.complaintResolution}` : ''}
 
 # Your Personality
-Name: ${agentPersona.name || 'AI Assistant'}
+Name: ${(agentPersona.name !== '' && agentPersona.name != null) ? agentPersona.name : 'AI Assistant'}
 Tone: ${agentPersona.tone}
 Greeting: "${agentPersona.greeting}"
 Closing: "${agentPersona.closingMessage}"
@@ -119,7 +126,9 @@ ${businessContext.industryRegulations ? `Industry Regulations: ${businessContext
     prompt += `\n# Knowledge from Website\n`;
     knowledgeBase.urls.forEach(url => {
       if (url.extractedContent) {
-        prompt += `${url.title || url.url}:\n${url.extractedContent.substring(0, 1000)}...\n\n`;
+        // Extract title to avoid empty string in prompt (Explicit Ternary for STRING)
+        const displayTitle = (url.title !== '' && url.title != null) ? url.title : url.url;
+        prompt += `${displayTitle}:\n${url.extractedContent.substring(0, 1000)}...\n\n`;
       }
     });
   }

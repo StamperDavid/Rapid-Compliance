@@ -53,9 +53,10 @@ export async function createOpenAIFineTuningJob(params: {
       training_file: fileId,
       model: baseModel,
       hyperparameters: {
-        n_epochs: hyperparameters?.epochs || 'auto',
-        batch_size: hyperparameters?.batchSize || 'auto',
-        learning_rate_multiplier: hyperparameters?.learningRateMultiplier || 'auto',
+        // These can be numbers or 'auto' - 0 is invalid for training (Explicit Ternary for mixed types)
+        n_epochs: (hyperparameters?.epochs !== '' && hyperparameters?.epochs != null && hyperparameters?.epochs !== 0) ? hyperparameters.epochs : 'auto',
+        batch_size: (hyperparameters?.batchSize !== '' && hyperparameters?.batchSize != null && hyperparameters?.batchSize !== 0) ? hyperparameters.batchSize : 'auto',
+        learning_rate_multiplier: (hyperparameters?.learningRateMultiplier !== '' && hyperparameters?.learningRateMultiplier != null && hyperparameters?.learningRateMultiplier !== 0) ? hyperparameters.learningRateMultiplier : 'auto',
       },
     }),
   });

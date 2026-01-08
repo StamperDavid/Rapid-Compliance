@@ -43,7 +43,9 @@ export async function createVertexAIFineTuningJob(params: {
   
   // Create tuning job via Vertex AI API
   const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
-  const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+  // Extract location - empty string is invalid region (Explicit Ternary for STRING)
+  const envLocation = process.env.GOOGLE_CLOUD_LOCATION;
+  const location = (envLocation !== '' && envLocation != null) ? envLocation : 'us-central1';
   
   if (!projectId) {
     throw new Error('Google Cloud project ID not configured');
@@ -56,9 +58,10 @@ export async function createVertexAIFineTuningJob(params: {
     validationDatasetUri: null, // Could split data
     tunedModelDisplayName: `${organizationId}_${baseModel}_${Date.now()}`,
     hyperparameters: {
-      epoch_count: hyperparameters?.epochs || 4,
-      batch_size: hyperparameters?.batchSize || 4,
-      learning_rate: hyperparameters?.learningRate || 0.001,
+      // NUMBERS - 0 would break training but is technically valid value (use ?? for numbers)
+      epoch_count: hyperparameters?.epochs ?? 4,
+      batch_size: hyperparameters?.batchSize ?? 4,
+      learning_rate: hyperparameters?.learningRate ?? 0.001,
     },
   };
   
@@ -109,7 +112,9 @@ async function uploadToCloudStorage(
 ): Promise<string> {
   // In production, use @google-cloud/storage
   // For now, return a simulated URI
-  const bucketName = process.env.GOOGLE_CLOUD_STORAGE_BUCKET || 'ai-training-data';
+  // Extract bucket name - empty string is invalid bucket (Explicit Ternary for STRING)
+  const envBucket = process.env.GOOGLE_CLOUD_STORAGE_BUCKET;
+  const bucketName = (envBucket !== '' && envBucket != null) ? envBucket : 'ai-training-data';
   const path = `${organizationId}/fine-tuning/${Date.now()}/${filename}`;
   
   // Simulated upload

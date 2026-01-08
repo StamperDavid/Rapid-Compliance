@@ -91,8 +91,9 @@ async function calculateKnowledgeCoverage(
   }
   
   // Check relevance scores (assuming they're provided)
+  // Score is a NUMBER - 0 is a valid score (use ?? for numbers)
   const avgRelevance = retrievedContext.reduce((sum, ctx) => {
-    return sum + (ctx.score || 0.5);
+    return sum + (ctx.score ?? 0.5);
   }, 0) / retrievedContext.length;
   
   // Convert to 0-100 scale
@@ -149,8 +150,12 @@ async function calculateSemanticConsistency(
   }
   
   // Check if response contains factual claims from context
+  // Extract content text - empty strings are invalid (Explicit Ternary for STRINGS)
   const contextText = retrievedContext
-    .map(ctx => ctx.content || ctx.text || '')
+    .map(ctx => {
+      const content = (ctx.content !== '' && ctx.content != null) ? ctx.content : ctx.text;
+      return (content !== '' && content != null) ? content : '';
+    })
     .join(' ');
   
   // Simple keyword overlap (in production, use embeddings)

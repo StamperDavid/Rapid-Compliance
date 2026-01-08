@@ -33,9 +33,14 @@ export function formatForVertexAI(examples: TrainingExample[]): string {
     const userMsg = example.messages.find(m => m.role === 'user');
     const assistantMsg = example.messages.find(m => m.role === 'assistant');
     
+    // Extract message content - empty strings waste training tokens (Explicit Ternary for STRINGS)
+    const systemContent = (systemMsg?.content !== '' && systemMsg?.content != null) ? systemMsg.content : '';
+    const userContent = (userMsg?.content !== '' && userMsg?.content != null) ? userMsg.content : '';
+    const assistantContent = (assistantMsg?.content !== '' && assistantMsg?.content != null) ? assistantMsg.content : '';
+    
     return JSON.stringify({
-      input_text: `${systemMsg?.content || ''}\n\nUser: ${userMsg?.content || ''}`,
-      output_text: assistantMsg?.content || '',
+      input_text: `${systemContent}\n\nUser: ${userContent}`,
+      output_text: assistantContent,
     });
   });
   
@@ -60,9 +65,12 @@ export function validateTrainingData(examples: TrainingExample[]): {
     warnings.push(`Low example count: ${examples.length}. Recommended: 50+ for best results`);
   }
   
-  // Check for diversity
+  // Check for diversity - extract user message content (Explicit Ternary for STRINGS)
   const uniqueUserMessages = new Set(
-    examples.map(e => e.messages.find(m => m.role === 'user')?.content || '')
+    examples.map(e => {
+      const userContent = e.messages.find(m => m.role === 'user')?.content;
+      return (userContent !== '' && userContent != null) ? userContent : '';
+    })
   );
   
   if (uniqueUserMessages.size < examples.length * 0.8) {
@@ -154,26 +162,31 @@ export function calculateDatasetStats(examples: TrainingExample[]): {
       : 0;
   
   const ratedExamples = examples.filter(e => e.userRating);
+  // userRating is a NUMBER - 0 is valid (use ?? for numbers)
   const avgRating =
     ratedExamples.length > 0
-      ? ratedExamples.reduce((sum, e) => sum + (e.userRating || 0), 0) / ratedExamples.length
+      ? ratedExamples.reduce((sum, e) => sum + (e.userRating ?? 0), 0) / ratedExamples.length
       : 0;
   
   const convertedExamples = examples.filter(e => e.didConvert);
   const conversionRate =
     examples.length > 0 ? (convertedExamples.length / examples.length) * 100 : 0;
   
-  const userMessages = examples.map(
-    e => e.messages.find(m => m.role === 'user')?.content || ''
-  );
+  // Extract user message content (Explicit Ternary for STRINGS)
+  const userMessages = examples.map(e => {
+    const userContent = e.messages.find(m => m.role === 'user')?.content;
+    return (userContent !== '' && userContent != null) ? userContent : '';
+  });
   const avgUserMessageLength =
     userMessages.length > 0
       ? userMessages.reduce((sum, msg) => sum + msg.length, 0) / userMessages.length
       : 0;
   
-  const assistantMessages = examples.map(
-    e => e.messages.find(m => m.role === 'assistant')?.content || ''
-  );
+  // Extract assistant message content (Explicit Ternary for STRINGS)
+  const assistantMessages = examples.map(e => {
+    const assistantContent = e.messages.find(m => m.role === 'assistant')?.content;
+    return (assistantContent !== '' && assistantContent != null) ? assistantContent : '';
+  });
   const avgAssistantMessageLength =
     assistantMessages.length > 0
       ? assistantMessages.reduce((sum, msg) => sum + msg.length, 0) / assistantMessages.length

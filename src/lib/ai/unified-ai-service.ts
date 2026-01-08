@@ -110,7 +110,8 @@ export async function recordABTestResult(params: {
     organizationId: params.organizationId,
     testId: params.testId,
     isTestGroup: params.isTestGroup,
-    converted: params.converted || false,
+    // converted is a BOOLEAN - false is valid (use ?? for booleans)
+    converted: params.converted ?? false,
     rating: params.rating,
     confidence: params.confidence,
     tokensUsed: params.tokensUsed,
@@ -371,6 +372,7 @@ export function getModelInfo(model: string): {
     },
   };
   
-  return modelInfo[model] || modelInfo['gemini-2.0-flash-exp'];
+  // Model info lookup - use ?? for object/undefined
+  return modelInfo[model] ?? modelInfo['gemini-2.0-flash-exp'];
 }
 

@@ -269,9 +269,10 @@ export async function getTrainingDataStats(
       : 0;
   
   const ratedExamples = examples.filter(e => e.userRating);
+  // userRating is a NUMBER - 0 is valid (use ?? for numbers)
   const avgRating =
     ratedExamples.length > 0
-      ? ratedExamples.reduce((sum, e) => sum + (e.userRating || 0), 0) / ratedExamples.length
+      ? ratedExamples.reduce((sum, e) => sum + (e.userRating ?? 0), 0) / ratedExamples.length
       : 0;
   
   const convertedExamples = examples.filter(e => e.didConvert);

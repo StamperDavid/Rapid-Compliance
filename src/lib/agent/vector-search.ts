@@ -77,11 +77,16 @@ export async function searchKnowledgeBase(
       
       const score = cosineSimilarity(queryEmbedding.embedding.values, embedding);
       
+      // Extract string fields - empty strings are invalid (Explicit Ternary for STRINGS)
+      const docText = (embeddingDoc.text !== '' && embeddingDoc.text != null) ? embeddingDoc.text : '';
+      const docSource = (embeddingDoc.source !== '' && embeddingDoc.source != null) ? embeddingDoc.source : 'document';
+      const docSourceId = (embeddingDoc.sourceId !== '' && embeddingDoc.sourceId != null) ? embeddingDoc.sourceId : '';
+      
       results.push({
-        text: embeddingDoc.text || '',
+        text: docText,
         score,
-        source: embeddingDoc.source || 'document',
-        sourceId: embeddingDoc.sourceId || '',
+        source: docSource,
+        sourceId: docSourceId,
         metadata: embeddingDoc.metadata ?? {},
       });
     }
