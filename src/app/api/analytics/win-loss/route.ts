@@ -7,6 +7,27 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+// Local interfaces for Firestore records
+interface DealRecord {
+  id?: string;
+  status?: string;
+  stage?: string;
+  value?: string | number;
+  amount?: string | number;
+  closedDate?: { toDate?: () => Date } | Date | string;
+  closedAt?: { toDate?: () => Date } | Date | string;
+  updatedAt?: { toDate?: () => Date } | Date | string;
+  lostReason?: string;
+  reason?: string;
+  lossReason?: string;
+  assignedTo?: string;
+  ownerId?: string;
+  assignedToName?: string;
+  ownerName?: string;
+  competitor?: string;
+  lostToCompetitor?: string;
+}
+
 /**
  * GET /api/analytics/win-loss - Get win/loss analysis
  *
@@ -60,9 +81,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(analytics);
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error getting win/loss analytics', error, { route: '/api/analytics/win-loss' });
-    return errors.database('Failed to get win/loss analytics', error);
+    return errors.database('Failed to get win/loss analytics', error instanceof Error ? error : new Error(message));
   }
 }
 
@@ -93,7 +115,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
 
   // Get deals from Firestore
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
-  let allDeals: any[] = [];
+  let allDeals: DealRecord[] = [];
   
   try {
     allDeals = await FirestoreService.getAll(dealsPath, []);

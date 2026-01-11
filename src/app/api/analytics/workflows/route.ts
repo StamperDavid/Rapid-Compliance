@@ -5,6 +5,28 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+// Local interfaces for Firestore records
+interface WorkflowRecord {
+  id?: string;
+  name?: string;
+  status?: string;
+  enabled?: boolean;
+}
+
+interface WorkflowExecutionRecord {
+  id?: string;
+  workflowId?: string;
+  workflowName?: string;
+  status?: string;
+  startedAt?: { toDate?: () => Date } | Date | string;
+  createdAt?: { toDate?: () => Date } | Date | string;
+  completedAt?: { toDate?: () => Date } | Date | string;
+  triggerType?: string;
+  trigger?: string;
+  error?: string;
+  errorMessage?: string;
+}
+
 /**
  * GET /api/analytics/workflows - Get workflow analytics
  * 
@@ -50,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // Get workflows from Firestore
     const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workflows`;
-    let allWorkflows: any[] = [];
+    let allWorkflows: WorkflowRecord[] = [];
     
     try {
       allWorkflows = await FirestoreService.getAll(workflowsPath, []);
@@ -60,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     // Get workflow executions
     const executionsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workflowExecutions`;
-    let allExecutions: any[] = [];
+    let allExecutions: WorkflowExecutionRecord[] = [];
     
     try {
       allExecutions = await FirestoreService.getAll(executionsPath, []);
@@ -208,8 +230,9 @@ export async function GET(request: NextRequest) {
         dailyTrends,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error getting workflow analytics', error, { route: '/api/analytics/workflows' });
-    return errors.database('Failed to get workflow analytics', error);
+    return errors.database('Failed to get workflow analytics', error instanceof Error ? error : new Error(message));
   }
 }

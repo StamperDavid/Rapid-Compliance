@@ -7,6 +7,29 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+// Local interfaces for Firestore records
+interface LeadRecord {
+  id?: string;
+  name?: string;
+  first_name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  phoneNumber?: string;
+  company?: string;
+  companyName?: string;
+  status?: string;
+  score?: number;
+  source?: string;
+  lead_source?: string;
+  rating?: string;
+  lastActivity?: { toDate?: () => Date } | Date | string;
+  lastActivityAt?: { toDate?: () => Date } | Date | string;
+  createdAt?: { toDate?: () => Date } | Date | string;
+  convertedAt?: { toDate?: () => Date } | Date | string;
+}
+
 /**
  * GET /api/analytics/lead-scoring - Get lead scoring analytics
  *
@@ -59,9 +82,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(analytics);
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error getting lead scoring analytics', error, { route: '/api/analytics/lead-scoring' });
-    return errors.database('Failed to get lead scoring analytics', error);
+    return errors.database('Failed to get lead scoring analytics', error instanceof Error ? error : new Error(message));
   }
 }
 
@@ -92,7 +116,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
 
   // Get leads from Firestore
   const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/leads`;
-  let allLeads: any[] = [];
+  let allLeads: LeadRecord[] = [];
   
   try {
     allLeads = await FirestoreService.getAll(leadsPath, []);
@@ -160,7 +184,10 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
       .slice(0, 10)
       .map(lead => ({
         id: lead.id,
-        name:((lead.name || lead.first_name !== '' && lead.name || lead.first_name != null) ? lead.name || lead.first_name : `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() !== '' && lead.name || lead.first_name || `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() != null) ? lead.name ?? (lead.first_name !== '' && lead.first_name != null) ? lead.first_name: `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim(): 'Unknown',
+        name: lead.name ??
+              lead.first_name ??
+              `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() ||
+              'Unknown',
         email: lead.email,
         company:lead.company ?? lead.companyName,
         score: lead.score,

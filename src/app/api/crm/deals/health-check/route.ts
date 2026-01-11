@@ -41,13 +41,14 @@ export async function POST(request: NextRequest) {
       success: true,
       data: summary,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to run health check', error);
 
+    const errorMessage = error instanceof Error ? error.message : 'Failed to run health check';
     return NextResponse.json(
       {
         success: false,
-        error:(error.message !== '' && error.message != null) ? error.message : 'Failed to run health check',
+        error: errorMessage,
       },
       { status: 500 }
     );

@@ -1,10 +1,66 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getAuthToken } from '@/lib/auth/server-auth';
+
+/**
+ * Safely converts polymorphic date values (Firestore Timestamp, Date, string, number) to Date.
+ * Falls back to current date if conversion fails.
+ */
+function toDate(value: unknown): Date {
+  if (!value) {
+    return new Date();
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date();
+}
+
+/**
+ * Safe parseFloat that handles NaN correctly.
+ * parseFloat(undefined) returns NaN, and NaN ?? fallback returns NaN (not the fallback).
+ * This function properly returns the fallback when the input cannot be parsed.
+ */
+function safeParseFloat(value: unknown, fallback: number): number {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+  const parsed = typeof value === 'number' ? value : parseFloat(String(value));
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+// Local interfaces for Firestore deal records (more flexible than strict CRM types)
+interface DealRecord {
+  id?: string;
+  status?: string;
+  stage?: string;
+  value?: string | number;
+  amount?: string | number;
+  probability?: string | number;
+  expectedCloseDate?: { toDate?: () => Date } | Date | string;
+  closeDate?: { toDate?: () => Date } | Date | string;
+  assignedTo?: string;
+  ownerId?: string;
+  assignedToName?: string;
+  ownerName?: string;
+  updatedAt?: { toDate?: () => Date } | Date | string;
+}
+
+interface RiskFactor {
+  factor: string;
+  impact: 'positive' | 'negative';
+  description: string;
+}
 
 /**
  * GET /api/analytics/forecast - Get sales forecast
@@ -45,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     // Get open deals from Firestore
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
-    let allDeals: any[] = [];
+    let allDeals: DealRecord[] = [];
     
     try {
       allDeals = await FirestoreService.getAll(dealsPath, []);
@@ -67,23 +123,23 @@ export async function GET(request: NextRequest) {
 
     // Calculate weighted forecast (value × probability)
     const weightedForecast = openDeals.reduce((sum, deal) => {
-      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
-      const probability = parseFloat(deal.probability) ?? 50; // Default 50%
+      const value = safeParseFloat(deal.value, 0) || safeParseFloat(deal.amount, 0);
+      const probability = safeParseFloat(deal.probability, 50); // Default 50%
       return sum + (value * probability / 100);
     }, 0);
 
     // Best case (all deals at 100%)
-    const bestCase = openDeals.reduce((sum, deal) => 
-      sum + (parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0), 0);
+    const bestCase = openDeals.reduce((sum, deal) =>
+      sum + (safeParseFloat(deal.value, 0) || safeParseFloat(deal.amount, 0)), 0);
 
     // Worst case (only high probability deals)
     const worstCase = openDeals
-      .filter(deal => (parseFloat(deal.probability) ?? 50) >= 75)
-      .reduce((sum, deal) => sum + (parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0), 0);
+      .filter(deal => safeParseFloat(deal.probability, 50) >= 75)
+      .reduce((sum, deal) => sum + (safeParseFloat(deal.value, 0) || safeParseFloat(deal.amount, 0)), 0);
 
     // Confidence based on deal quality
     const avgProbability = openDeals.length > 0
-      ? openDeals.reduce((sum, d) => sum + (parseFloat(d.probability) ?? 50), 0) / openDeals.length
+      ? openDeals.reduce((sum, d) => sum + safeParseFloat(d.probability, 50), 0) / openDeals.length
       : 0;
     const confidence = Math.round(Math.min(100, avgProbability * 1.2));
 
@@ -103,16 +159,17 @@ export async function GET(request: NextRequest) {
     }
 
     const dealsClosingInPeriod = openDeals.filter(deal => {
-      const closeDate = deal.expectedCloseDate?.toDate?.() 
-                        ?? deal.closeDate?.toDate?.() 
-                        ?? (deal.expectedCloseDate ? new Date(deal.expectedCloseDate) : null) 
-                        ?? (deal.closeDate ? new Date(deal.closeDate) : null);
-      return closeDate && closeDate >= now && closeDate <= periodEnd;
+      const closeDateValue = deal.expectedCloseDate ?? deal.closeDate;
+      if (!closeDateValue) {
+        return false;
+      }
+      const closeDate = toDate(closeDateValue);
+      return closeDate >= now && closeDate <= periodEnd;
     });
 
     const forecastInPeriod = dealsClosingInPeriod.reduce((sum, deal) => {
-      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
-      const probability = parseFloat(deal.probability) ?? 50;
+      const value = safeParseFloat(deal.value, 0) || safeParseFloat(deal.amount, 0);
+      const probability = safeParseFloat(deal.probability, 50);
       return sum + (value * probability / 100);
     }, 0);
 
@@ -124,13 +181,13 @@ export async function GET(request: NextRequest) {
         : (deal.ownerId !== '' && deal.ownerId != null) 
           ? deal.ownerId 
           : 'unassigned';
-      const repName = (deal.assignedToName !== '' && deal.assignedToName != null) 
-        ? deal.assignedToName 
-        : (deal.ownerName !== '' && deal.ownerName != null) 
-          ? deal.ownerName 
+      const repName = (deal.assignedToName !== '' && deal.assignedToName != null)
+        ? deal.assignedToName
+        : (deal.ownerName !== '' && deal.ownerName != null)
+          ? deal.ownerName
           : 'Unassigned';
-      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
-      const probability = parseFloat(deal.probability) ?? 50;
+      const value = safeParseFloat(deal.value, 0) || safeParseFloat(deal.amount, 0);
+      const probability = safeParseFloat(deal.probability, 50);
       const weighted = value * probability / 100;
       
       const existing = repMap.get(repId) ?? { forecast: 0, deals: 0, name: repName };
@@ -151,10 +208,10 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.forecastedRevenue - a.forecastedRevenue);
 
     // Risk factors
-    const factors: any[] = [];
+    const factors: RiskFactor[] = [];
     
     // Check for large deals
-    const largeDeals = openDeals.filter(d => (parseFloat(d.value) ?? 0) > 10000);
+    const largeDeals = openDeals.filter(d => safeParseFloat(d.value, 0) > 10000);
     if (largeDeals.length > 0) {
       factors.push({
         factor: 'Large deals in pipeline',
@@ -165,7 +222,7 @@ export async function GET(request: NextRequest) {
 
     // Check for stale deals
     const staleDeals = openDeals.filter(d => {
-      const updated = d.updatedAt?.toDate?.() ?? new Date(d.updatedAt);
+      const updated = toDate(d.updatedAt);
       return (now.getTime() - updated.getTime()) > 30 * 24 * 60 * 60 * 1000;
     });
     if (staleDeals.length > 0) {
@@ -177,7 +234,7 @@ export async function GET(request: NextRequest) {
     }
 
     // High probability deals
-    const highProbDeals = openDeals.filter(d => (parseFloat(d.probability) ?? 50) >= 75);
+    const highProbDeals = openDeals.filter(d => safeParseFloat(d.probability, 50) >= 75);
     if (highProbDeals.length > 0) {
       factors.push({
         factor: 'High probability deals',
@@ -204,8 +261,9 @@ export async function GET(request: NextRequest) {
         factors,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error getting sales forecast', error, { route: '/api/analytics/forecast' });
-    return errors.database('Failed to get sales forecast', error);
+    return errors.database('Failed to get sales forecast', error instanceof Error ? error : new Error(message));
   }
 }

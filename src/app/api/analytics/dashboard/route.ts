@@ -191,29 +191,32 @@ export async function GET(request: NextRequest) {
       },
     });
     
-  } catch (error: any) {
+  } catch (error) {
     // Log error
     console.error('Analytics dashboard error:', error);
-    
+
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
     // Emit error event
     await emitAnalyticsError(
-(error.message !== '' && error.message != null) ? error.message : 'Internal server error',
+      errorMessage,
       'INTERNAL_ERROR',
       undefined,
       undefined,
-      process.env.NODE_ENV === 'development' ? { stack: error.stack } : undefined
+      process.env.NODE_ENV === 'development' ? { stack: errorStack } : undefined
     );
-    
+
     // Build error response
     const errorResponse: AnalyticsErrorResponse = {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Internal server error',
+      error: errorMessage,
       code: 'INTERNAL_ERROR',
       details: process.env.NODE_ENV === 'development' ? {
-        stack: error.stack,
+        stack: errorStack,
       } : undefined,
     };
-    
+
     return NextResponse.json(errorResponse, { status: 500 });
   }
 }

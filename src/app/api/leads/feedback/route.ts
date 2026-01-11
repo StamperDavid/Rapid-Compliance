@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     logger.info('Lead feedback saved', { route: '/api/leads/feedback', leadDomain, isGoodLead });
     
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Lead feedback error', error, { route: '/api/leads/feedback' });
     return errors.database('Failed to save feedback', error);
   }

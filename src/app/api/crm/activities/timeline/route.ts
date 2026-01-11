@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { getEntityTimeline } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import type { RelatedEntityType } from '@/types/activity';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,7 +20,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const organizationId = token.organizationId;
     const workspaceId =(searchParams.get('workspaceId') !== '' && searchParams.get('workspaceId') != null) ? searchParams.get('workspaceId') : 'default';
-    const entityType = searchParams.get('entityType') as any;
+
+    const entityTypeParam = searchParams.get('entityType');
+    const entityType: RelatedEntityType | undefined =
+      entityTypeParam && ['lead', 'contact', 'company', 'deal', 'opportunity'].includes(entityTypeParam)
+        ? entityTypeParam as RelatedEntityType
+        : undefined;
     const entityId = searchParams.get('entityId');
 
     if (!organizationId || !entityType || !entityId) {
@@ -41,10 +47,11 @@ export async function GET(request: NextRequest) {
       data: timeline,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Timeline GET failed', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

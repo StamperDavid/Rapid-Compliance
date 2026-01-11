@@ -1,13 +1,46 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 /**
+ * Safely converts polymorphic date values (Firestore Timestamp, Date, string, number) to Date.
+ * Falls back to current date if conversion fails.
+ */
+function toDate(value: unknown): Date {
+  if (!value) {
+    return new Date();
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date();
+}
+
+/**
+ * Safe parseFloat that handles NaN correctly.
+ * parseFloat(undefined) returns NaN, and NaN ?? fallback returns NaN (not the fallback).
+ * This function properly returns the fallback when the input cannot be parsed.
+ */
+function safeParseFloat(value: unknown, fallback: number): number {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+  const parsed = typeof value === 'number' ? value : parseFloat(String(value));
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+/**
  * GET /api/analytics/ecommerce - Get e-commerce analytics
- * 
+ *
  * Query params:
  * - orgId: organization ID (required)
  * - period: '7d' | '30d' | '90d' | 'all' (optional, default: '30d')
@@ -75,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by date
     const ordersInPeriod = allOrders.filter(order => {
-      const orderDate =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
+      const orderDate = toDate(order.createdAt);
       return orderDate >= startDate && orderDate <= now;
     });
 
@@ -100,22 +133,22 @@ export async function GET(request: NextRequest) {
     }
 
     const abandonedCarts = allCarts.filter(cart => {
-      const cartDate =cart.createdAt?.toDate?.() ?? new Date(cart.createdAt);
+      const cartDate = toDate(cart.createdAt);
       const isRecent = cartDate >= startDate;
-      const isAbandoned = cart.status === 'abandoned' || 
+      const isAbandoned = cart.status === 'abandoned' ||
         (!cart.convertedToOrder && (now.getTime() - cartDate.getTime()) > 24 * 60 * 60 * 1000);
       return isRecent && isAbandoned;
     });
 
     // Calculate metrics
     const totalOrders = ordersInPeriod.length;
-    const totalRevenue = completedOrders.reduce((sum, order) => 
-      sum + (parseFloat(order.total) || parseFloat(order.amount) || 0), 0);
+    const totalRevenue = completedOrders.reduce((sum, order) =>
+      sum + (safeParseFloat(order.total, 0) || safeParseFloat(order.amount, 0)), 0);
     const avgOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
 
     // Conversion rate
     const totalCarts = allCarts.filter(cart => {
-      const cartDate =cart.createdAt?.toDate?.() ?? new Date(cart.createdAt);
+      const cartDate = toDate(cart.createdAt);
       return cartDate >= startDate;
     }).length;
     const conversionRate = totalCarts > 0 ? (completedOrders.length / totalCarts) * 100 : 0;
@@ -138,7 +171,7 @@ export async function GET(request: NextRequest) {
         const productName = (item.productName !== '' && item.productName != null) ? item.productName : null;
         const itemName = (item.name !== '' && item.name != null) ? item.name : 'Unknown Product';
         const name = productName ?? itemName;
-        const revenue = (parseFloat(String(item.price)) || 0) * (item.quantity ?? 1);
+        const revenue = safeParseFloat(item.price, 0) * (item.quantity ?? 1);
         const existing = productMap.get(name) ?? { revenue: 0, quantity: 0, orders: 0 };
         productMap.set(name, {
           revenue: existing.revenue + revenue,
@@ -168,16 +201,16 @@ export async function GET(request: NextRequest) {
       .map(([status, count]) => ({ status, count }));
 
     // Daily trends (last 30 days max)
-    const trendStartDate = period === 'all' 
+    const trendStartDate = period === 'all'
       ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       : startDate;
-    
+
     const dailyMap = new Map<string, { orders: number; revenue: number }>();
     completedOrders.forEach(order => {
-      const orderDate =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
+      const orderDate = toDate(order.createdAt);
       if (orderDate >= trendStartDate) {
         const dateKey = orderDate.toISOString().split('T')[0];
-        const revenue = parseFloat(order.total) || parseFloat(order.amount) || 0;
+        const revenue = safeParseFloat(order.total, 0) || safeParseFloat(order.amount, 0);
         const existing = dailyMap.get(dateKey) ?? { orders: 0, revenue: 0 };
         dailyMap.set(dateKey, {
           orders: existing.orders + 1,
@@ -206,8 +239,9 @@ export async function GET(request: NextRequest) {
         dailyTrends,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error getting ecommerce analytics', error, { route: '/api/analytics/ecommerce' });
-    return errors.database('Failed to get ecommerce analytics', error);
+    return errors.database('Failed to get ecommerce analytics', error instanceof Error ? error : new Error(message));
   }
 }

@@ -10,6 +10,16 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+interface ResearchLead {
+  name: string;
+  website?: string;
+  domain?: string;
+  industry?: string;
+  size?: string;
+  description?: string;
+  confidence?: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/leads/research');
@@ -31,7 +41,7 @@ export async function POST(request: NextRequest) {
     
     // For now, we'll do a simple implementation
     // In the future, this can use AI to understand complex queries
-    const leads: any[] = [];
+    const leads: ResearchLead[] = [];
     let totalCost = 0;
     
     // If they provided a company name or domain, enrich it
@@ -79,7 +89,7 @@ export async function POST(request: NextRequest) {
       cost: totalCost,
       savings: (leads.length * 0.75) - totalCost,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Lead research error', error, { route: '/api/leads/research' });
     return errors.externalService('Lead research service', error);
   }

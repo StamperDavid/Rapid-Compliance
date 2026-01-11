@@ -42,15 +42,16 @@ export async function GET(
       success: true,
       data: recommendations,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to generate recommendations', error, {
       dealId: params.dealId,
     });
 
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate recommendations';
     return NextResponse.json(
       {
         success: false,
-        error:(error.message !== '' && error.message != null) ? error.message : 'Failed to generate recommendations',
+        error: errorMessage,
       },
       { status: 500 }
     );

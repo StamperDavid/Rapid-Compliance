@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { getActivities, createActivity } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import type { RelatedEntityType, ActivityType, ActivityDirection } from '@/types/activity';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,13 +27,36 @@ export async function GET(request: NextRequest) {
 
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
-    
-    // Parse filters
-    const entityType = searchParams.get('entityType') as any;
+
+    // Parse filters with proper type guards
+    const entityTypeParam = searchParams.get('entityType');
+    const entityType: RelatedEntityType | undefined =
+      entityTypeParam && ['lead', 'contact', 'company', 'deal', 'opportunity'].includes(entityTypeParam)
+        ? entityTypeParam as RelatedEntityType
+        : undefined;
+
     const entityId = searchParams.get('entityId');
+
     const typesParam = searchParams.get('types');
-    const types = typesParam ? typesParam.split(',') as any[] : undefined;
-    const direction = searchParams.get('direction') as any;
+    const validActivityTypes: ActivityType[] = [
+      'email_sent', 'email_received', 'email_opened', 'email_clicked',
+      'call_made', 'call_received', 'meeting_scheduled', 'meeting_completed',
+      'meeting_no_show', 'ai_chat', 'note_added', 'task_created', 'task_completed',
+      'form_submitted', 'website_visit', 'document_viewed', 'deal_stage_changed',
+      'lead_status_changed', 'field_updated', 'enrichment_completed',
+      'sequence_enrolled', 'sequence_unenrolled', 'workflow_triggered',
+      'sms_sent', 'sms_received'
+    ];
+    const types: ActivityType[] | undefined = typesParam
+      ? typesParam.split(',').filter((t): t is ActivityType => validActivityTypes.includes(t as ActivityType))
+      : undefined;
+
+    const directionParam = searchParams.get('direction');
+    const direction: ActivityDirection | undefined =
+      directionParam && ['inbound', 'outbound', 'internal'].includes(directionParam)
+        ? directionParam as ActivityDirection
+        : undefined;
+
     const createdByParam = searchParams.get('createdBy');
     const createdBy = (createdByParam !== '' && createdByParam != null) ? createdByParam : undefined;
     const pageSizeParam = searchParams.get('pageSize');
@@ -60,10 +84,11 @@ export async function GET(request: NextRequest) {
       count: result.data.length,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Activities GET failed', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
@@ -98,10 +123,11 @@ export async function POST(request: NextRequest) {
       data: activity,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Activity POST failed', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

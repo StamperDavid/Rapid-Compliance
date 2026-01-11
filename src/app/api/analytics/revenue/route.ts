@@ -43,9 +43,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(analytics);
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Revenue analytics error', error, { route: '/api/analytics/revenue' });
-    return errors.internal('Failed to generate revenue analytics', error);
+    return errors.internal('Failed to generate revenue analytics', error instanceof Error ? error : new Error(message));
   }
 }
 

@@ -7,6 +7,19 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 
+interface ZodIssue {
+  path: (string | number)[];
+  message: string;
+  code: string;
+}
+
+interface ValidationFailure {
+  success: false;
+  errors: {
+    errors: ZodIssue[];
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
@@ -27,15 +40,15 @@ export async function POST(request: NextRequest) {
     const validation = validateInput(leadNurtureSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      const validationError = validation as ValidationFailure;
+      const errorDetails = validationError.errors?.errors?.map((e: ZodIssue) => {
         const joinedPath = e.path?.join('.');
         return {
           path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
           message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
         };
       }) ?? [];
-      
+
       return errors.validation('Validation failed', errorDetails);
     }
 
@@ -96,7 +109,7 @@ export async function POST(request: NextRequest) {
       default:
         return errors.badRequest('Invalid action');
     }
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Lead nurture error', error, { route: '/api/leads/nurture' });
     return errors.database('Failed to process nurture request', error);
   }

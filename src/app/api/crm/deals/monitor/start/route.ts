@@ -52,13 +52,14 @@ export async function POST(request: NextRequest) {
         config,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to start deal monitor', error);
 
+    const errorMessage = error instanceof Error ? error.message : 'Failed to start deal monitor';
     return NextResponse.json(
       {
         success: false,
-        error:(error.message !== '' && error.message != null) ? error.message : 'Failed to start deal monitor',
+        error: errorMessage,
       },
       { status: 500 }
     );

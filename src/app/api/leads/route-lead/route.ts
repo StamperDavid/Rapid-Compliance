@@ -55,10 +55,11 @@ export async function POST(request: NextRequest) {
       data: routingResult,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Lead routing API failed', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

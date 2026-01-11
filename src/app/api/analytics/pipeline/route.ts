@@ -8,6 +8,36 @@ import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
 /**
+ * Safe parseFloat that handles NaN correctly.
+ * parseFloat(undefined) returns NaN, and NaN ?? fallback returns NaN (not the fallback).
+ * This function properly returns the fallback when the input cannot be parsed.
+ */
+function safeParseFloat(value: unknown, fallback: number): number {
+  if (value === undefined || value === null) return fallback;
+  const parsed = typeof value === 'number' ? value : parseFloat(String(value));
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+// Local interfaces for Firestore records
+interface StageHistoryEntry {
+  stage?: string;
+  timestamp?: { toDate?: () => Date } | Date | string;
+}
+
+interface DealRecord {
+  id?: string;
+  status?: string;
+  stage?: string;
+  value?: string | number;
+  amount?: string | number;
+  createdAt?: { toDate?: () => Date } | Date | string;
+  updatedAt?: { toDate?: () => Date } | Date | string;
+  closedDate?: { toDate?: () => Date } | Date | string;
+  closedAt?: { toDate?: () => Date } | Date | string;
+  stageHistory?: StageHistoryEntry[];
+}
+
+/**
  * GET /api/analytics/pipeline - Get pipeline analytics
  *
  * Authentication: Required - Valid session token must be provided
@@ -59,9 +89,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(analytics);
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error getting pipeline analytics', error, { route: '/api/analytics/pipeline' });
-    return errors.database('Failed to get pipeline analytics', error);
+    return errors.database('Failed to get pipeline analytics', error instanceof Error ? error : new Error(message));
   }
 }
 
@@ -71,7 +102,7 @@ export async function GET(request: NextRequest) {
 async function calculatePipelineAnalytics(orgId: string, _period: string) {
   // Get all deals from Firestore
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals`;
-  let allDeals: any[] = [];
+  let allDeals: DealRecord[] = [];
   
   try {
     allDeals = await FirestoreService.getAll(dealsPath, []);
@@ -98,7 +129,7 @@ async function calculatePipelineAnalytics(orgId: string, _period: string) {
 
     // Calculate pipeline totals
     const totalValue = openDeals.reduce((sum, deal) => {
-      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
+      const value = safeParseFloat(deal.value, 0) || safeParseFloat(deal.amount, 0);
       return sum + value;
     }, 0);
     const dealsCount = openDeals.length;
@@ -147,10 +178,10 @@ async function calculatePipelineAnalytics(orgId: string, _period: string) {
       const stage = (deal.stage !== '' && deal.stage != null) 
         ? deal.stage 
         : (deal.status !== '' && deal.status != null) 
-          ? deal.status 
+          ? deal.status
           : 'new';
       const stageLower = stage.toLowerCase();
-      const value = parseFloat(deal.value) ?? parseFloat(deal.amount) ?? 0;
+      const value = safeParseFloat(deal.value, 0) || safeParseFloat(deal.amount, 0);
       const existing = stageMap.get(stageLower) ?? { value: 0, count: 0 };
       stageMap.set(stageLower, {
         value: existing.value + value,
@@ -203,7 +234,7 @@ async function calculatePipelineAnalytics(orgId: string, _period: string) {
             ? d.status 
             : '';
         const currentStageLower = currentStage.toLowerCase();
-        const inHistory = history.some((h: any) => h.stage?.toLowerCase() === fromStage) ?? false;
+        const inHistory = history.some((h: StageHistoryEntry) => h.stage?.toLowerCase() === fromStage) ?? false;
         const isCurrent = currentStageLower === fromStage;
         const isPastStage = funnelStages.indexOf(currentStageLower) > i;
         return [inHistory, isCurrent, isPastStage].some(Boolean);
@@ -217,7 +248,7 @@ async function calculatePipelineAnalytics(orgId: string, _period: string) {
             ? d.status 
             : '';
         const currentStageLower = currentStage.toLowerCase();
-        const inHistory = history.some((h: any) => h.stage?.toLowerCase() === toStage) ?? false;
+        const inHistory = history.some((h: StageHistoryEntry) => h.stage?.toLowerCase() === toStage) ?? false;
         const isCurrent = currentStageLower === toStage;
         const isPastStage = funnelStages.indexOf(currentStageLower) > i + 1;
         return [inHistory, isCurrent, isPastStage].some(Boolean);
