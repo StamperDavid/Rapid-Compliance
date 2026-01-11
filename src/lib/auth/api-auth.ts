@@ -118,20 +118,6 @@ export async function requireAuth(
 ): Promise<{ user: AuthenticatedUser } | NextResponse> {
   const user = await verifyAuthToken(request);
 
-  // In development, allow bypass if Firebase Admin is not configured
-  if (!user && process.env.NODE_ENV === 'development') {
-    logger.warn('⚠️ Development mode: Allowing unauthenticated request', { file: 'api-auth.ts' });
-    return {
-      user: {
-        uid: 'dev-user',
-        email: 'dev@example.com',
-        emailVerified: true,
-        organizationId: 'dev-org',
-        role: 'admin',
-      },
-    };
-  }
-
   if (!user) {
     return NextResponse.json(
       { success: false, error: 'Authentication required' },

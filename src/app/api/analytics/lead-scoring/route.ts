@@ -5,27 +5,43 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
+import { getAuthToken } from '@/lib/auth/server-auth';
 
 /**
  * GET /api/analytics/lead-scoring - Get lead scoring analytics
- * 
+ *
+ * Authentication: Required - Valid session token must be provided
+ *
+ * The organizationId is automatically extracted from the authenticated user's token.
+ * Do not pass orgId as a query parameter.
+ *
  * Query params:
- * - orgId: organization ID (required)
  * - period: '7d' | '30d' | '90d' | 'all' (optional, default: '30d')
+ *
+ * Response codes:
+ * - 200: Success - Returns lead scoring analytics data
+ * - 401: Unauthorized - No valid authentication token provided
+ * - 400: Bad Request - No organizationId found in user token
  */
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/lead-scoring');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
-    const periodParam = searchParams.get('period');
-    const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';
+    const token = await getAuthToken(request);
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const orgId = token.organizationId;
 
     if (!orgId) {
-      return errors.badRequest('orgId is required');
+      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const periodParam = searchParams.get('period');
+    const period = (periodParam !== '' && periodParam != null) ? periodParam : '30d';
 
     // Use caching for analytics queries (TTL: 10 minutes)
     const analytics = await withCache(
