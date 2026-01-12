@@ -6,6 +6,26 @@ import PublicLayout from '@/components/PublicLayout';
 import PasscodeGate from '@/components/PasscodeGate';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
 import { logger } from '@/lib/logger/logger';
+import {
+  Zap,
+  Lightbulb,
+  BarChart3,
+  Mic,
+  Smartphone,
+  Search,
+  PenTool,
+  Video,
+  Palette,
+  Key,
+  Frown,
+  PartyPopper,
+  Meh,
+  Sparkles,
+  GraduationCap,
+  Target,
+  Rocket,
+  Bot,
+} from 'lucide-react';
 
 interface ChatResponse {
   response?: string;
@@ -19,6 +39,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -116,7 +137,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
         style={{ backgroundColor: primaryColor }}
       >
         <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-          <span className="text-2xl">🤖</span>
+          <Bot className="w-6 h-6 text-white" />
         </div>
         <div>
           <h3 className="text-white font-semibold text-lg">SalesVelocity AI Agent</h3>
@@ -222,23 +243,23 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 rounded-full mb-8">
-              <span className="text-2xl">🚀</span>
-              <span className="text-sm font-semibold text-indigo-300">Complete Sales Platform - Not Just a Chatbot</span>
+              <Zap className="w-5 h-5 text-indigo-400" />
+              <span className="text-sm font-semibold text-indigo-300">AI-Native Workforce Platform</span>
             </div>
-            
+
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
-              Replace Your Entire
+              Your AI-Native
               <br />
               <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                Sales Stack
+                Sales Workforce
               </span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-gray-300 mb-6 max-w-3xl mx-auto">
-              AI sales agents + CRM + automation + lead generation + email sequences + social media AI.
+              CRM + Voice AI Closers + Social Media AI + SEO + Content Factory. Humans and AI working together.
             </p>
             <p className="text-lg text-gray-400 mb-12 max-w-3xl mx-auto">
-              Stop paying for 6 different tools. Get everything in one place with transparent, usage-based pricing.
+              One platform. Raw market rates. No wrapper markup. Your AI workforce scales infinitely.
             </p>
 
             {/* Key Differentiators */}
@@ -249,7 +270,7 @@ export default function LandingPage() {
                 <div className="text-xs text-gray-500">All features included</div>
               </div>
               <div className="px-6 py-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                <div className="text-sm text-green-300">💡 BYOK</div>
+                <div className="text-sm text-green-300 flex items-center gap-1"><Lightbulb className="w-4 h-4" /> BYOK</div>
                 <div className="text-xl font-bold text-white">Zero AI Markup</div>
                 <div className="text-xs text-green-400">Pay raw market rates</div>
               </div>
@@ -314,18 +335,20 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {[
-              { icon: '🤖', title: 'Custom AI Sales Agent', desc: 'Fully trainable on your business' },
-              { icon: '📧', title: 'Unlimited Email Sequences', desc: 'No sending limits' },
-              { icon: '📱', title: 'Multi-Channel Outreach', desc: 'Email, LinkedIn, SMS automation' },
-              { icon: '📊', title: 'Full CRM Suite', desc: 'Custom schemas & objects' },
-              { icon: '⚡', title: 'Workflow Automation', desc: 'Build any workflow' },
-              { icon: '🛒', title: 'Built-in E-Commerce Engine', desc: 'Cart, checkout, payments' },
-              { icon: '🔍', title: 'Lead Scraper & Enrichment', desc: 'Find and enrich prospects' },
-              { icon: '🎨', title: 'White-Label Branding', desc: 'Your domain, your brand' },
-              { icon: '🔑', title: 'API Access', desc: 'Full API documentation' },
+              { icon: BarChart3, title: 'Full CRM Suite', desc: 'Custom schemas, pipelines, automation' },
+              { icon: Mic, title: 'Voice AI Closers', desc: 'AI prospectors + human power dialer' },
+              { icon: Smartphone, title: 'Social Media AI', desc: 'Direct LinkedIn & X integrations' },
+              { icon: Search, title: 'SEO & Lead Research', desc: 'Scraping, enrichment, keyword intel' },
+              { icon: PenTool, title: 'Content Factory', desc: 'AI blogs, posts, and social content' },
+              { icon: Video, title: 'Video Generation', desc: 'Coming soon: Sora & HeyGen integration' },
+              { icon: Zap, title: 'Workflow Automation', desc: 'Visual builder, n8n-grade logic' },
+              { icon: Palette, title: 'White-Label Branding', desc: 'Your domain, your brand' },
+              { icon: Key, title: 'Raw Market Rates', desc: 'BYOK: Zero AI markup, direct APIs' },
             ].map((feature, index) => (
               <div key={index} className="p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-center hover:border-indigo-500/50 transition">
-                <div className="text-4xl mb-3">{feature.icon}</div>
+                <div className="flex justify-center mb-3">
+                  <feature.icon className="w-10 h-10 text-indigo-400" />
+                </div>
                 <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
                 <p className="text-sm text-gray-400">{feature.desc}</p>
               </div>
@@ -334,15 +357,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stop Juggling Tools */}
+      {/* The AI-Native Advantage */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Stop Juggling 6 Different Tools
+              The AI-Native Advantage
             </h2>
             <p className="text-xl text-gray-300">
-              Replace your &quot;Frankenstein stack&quot; with one unified platform
+              Your workforce that never sleeps. Raw APIs. Zero markup. Infinite scale.
             </p>
           </div>
 
@@ -350,7 +373,9 @@ export default function LandingPage() {
             {/* Before */}
             <div className="bg-slate-800/50 border-2 border-slate-600/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-4xl">😫</span>
+                <div className="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
+                  <Frown className="w-7 h-7 text-slate-400" />
+                </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The Old Way</h3>
                   <p className="text-gray-400 text-sm">Fragmented & Expensive</p>
@@ -390,7 +415,9 @@ export default function LandingPage() {
             {/* After */}
             <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-4xl">🎉</span>
+                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                  <PartyPopper className="w-7 h-7 text-indigo-400" />
+                </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The New Way</h3>
                   <p className="text-indigo-300 text-sm">All-In-One & Affordable</p>
@@ -451,8 +478,8 @@ export default function LandingPage() {
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-4">
               Most AI platforms mark up tokens by 300-500%. We don&apos;t. You connect your own API key and pay the AI provider directly at cost.
             </p>
-            <p className="text-lg text-indigo-300 max-w-2xl mx-auto">
-              💡 <span className="font-semibold">We recommend OpenRouter</span> - one key gives you access to GPT-4, Claude, Gemini, and 200+ models
+            <p className="text-lg text-indigo-300 max-w-2xl mx-auto flex items-center justify-center gap-2">
+              <Lightbulb className="w-5 h-5 inline" /> <span className="font-semibold">We recommend OpenRouter</span> - one key gives you access to GPT-4, Claude, Gemini, and 200+ models
             </p>
           </div>
 
@@ -460,7 +487,9 @@ export default function LandingPage() {
             {/* Competitor */}
             <div className="bg-slate-800/50 border-2 border-slate-600/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-4xl">😰</span>
+                <div className="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
+                  <Meh className="w-7 h-7 text-slate-400" />
+                </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">Typical AI Platform</h3>
                   <p className="text-gray-400 text-sm">Hidden Token Markup</p>
@@ -490,7 +519,9 @@ export default function LandingPage() {
             {/* Our Platform */}
             <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-4xl">✨</span>
+                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                  <Sparkles className="w-7 h-7 text-indigo-400" />
+                </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">Our Platform (BYOK)</h3>
                   <p className="text-indigo-300 text-sm">100% Transparent</p>
@@ -546,11 +577,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Step 1 */}
             <div className="relative">
-              <div 
-                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg"
+              <div
+                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
                 style={{ backgroundColor: theme.primaryColor }}
               >
-                🎓
+                <GraduationCap className="w-7 h-7 text-white" />
               </div>
               <div className="pt-20 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:border-white/20 transition">
                 <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: theme.primaryColor }}>
@@ -572,11 +603,11 @@ export default function LandingPage() {
 
             {/* Step 2 */}
             <div className="relative">
-              <div 
-                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg"
+              <div
+                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
                 style={{ backgroundColor: theme.primaryColor }}
               >
-                🎯
+                <Target className="w-7 h-7 text-white" />
               </div>
               <div className="pt-20 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:border-white/20 transition">
                 <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: theme.primaryColor }}>
@@ -598,11 +629,11 @@ export default function LandingPage() {
 
             {/* Step 3 */}
             <div className="relative">
-              <div 
-                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-lg"
+              <div
+                className="absolute top-0 left-0 w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
                 style={{ backgroundColor: theme.primaryColor }}
               >
-                🚀
+                <Rocket className="w-7 h-7 text-white" />
               </div>
               <div className="pt-20 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl hover:border-white/20 transition">
                 <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: theme.primaryColor }}>
@@ -625,135 +656,135 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* One Platform, Six Tools Replaced */}
+      {/* AI-Native Workforce Capabilities */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              One Platform. Six Tools Replaced.
+              Your Complete AI-Native Workforce
             </h2>
             <p className="text-xl text-gray-300">
-              Everything you need for modern sales, all in one place
+              Humans + AI. One platform. Raw market rates.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Replace Apollo/ZoomInfo */}
+            {/* CRM Suite */}
             <div className="p-8 bg-gradient-to-br from-indigo-900/20 to-indigo-800/10 border border-indigo-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-indigo-400 mb-2">Replaces Apollo/ZoomInfo</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Lead Intelligence</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Lead Scraper & Enrichment</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Prospect Database</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Company & Contact Data</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Replace Air AI/11x */}
-            <div className="p-8 bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-purple-400 mb-2">Replaces Air AI/11x</div>
-              <h3 className="text-2xl font-bold text-white mb-4">AI Sales Agents</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Unlimited AI Agents</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Custom Training</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Customer Memory</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Replace HubSpot */}
-            <div className="p-8 bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-purple-400 mb-2">Replaces HubSpot/Pipedrive</div>
+              <div className="text-sm font-semibold text-indigo-400 mb-2">Foundation</div>
               <h3 className="text-2xl font-bold text-white mb-4">Full CRM Suite</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Custom Schemas & Objects</span>
+                  <span>Custom Schemas & Pipelines</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Pipeline Management</span>
+                  <span>Contact & Deal Management</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Activity Tracking</span>
+                  <span>Activity & Communication Logs</span>
                 </li>
               </ul>
             </div>
 
-            {/* Social & Multi-Channel */}
+            {/* Voice AI */}
+            <div className="p-8 bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-purple-400 mb-2">AI + Human</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Voice AI Closers</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>AI Prospector (Qualify & Transfer)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>AI Closer (Objections & Payments)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>Human Power Dialer (Multi-Line)</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Social Media AI */}
+            <div className="p-8 bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-purple-400 mb-2">Direct APIs</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Social Media AI</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>LinkedIn Direct Integration</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>X (Twitter) Direct Integration</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span>AI Content Generation</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* SEO & Lead Intel */}
             <div className="p-8 bg-gradient-to-br from-indigo-800/20 to-slate-800/10 border border-indigo-400/30 rounded-2xl">
-              <div className="text-sm font-semibold text-indigo-300 mb-2">Outreach Automation</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Multi-Channel Engagement</h3>
+              <div className="text-sm font-semibold text-indigo-300 mb-2">Research</div>
+              <h3 className="text-2xl font-bold text-white mb-4">SEO & Lead Intel</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Email Sequences</span>
+                  <span>Keyword Research & Tracking</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>LinkedIn Messaging</span>
+                  <span>Competitor Analysis</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>SMS Campaigns</span>
+                  <span>Lead Scraping & Enrichment</span>
                 </li>
               </ul>
             </div>
 
-            {/* Replace Zapier */}
+            {/* Content Factory */}
             <div className="p-8 bg-gradient-to-br from-purple-800/20 to-indigo-900/10 border border-purple-400/30 rounded-2xl">
-              <div className="text-sm font-semibold text-purple-300 mb-2">Replaces Zapier/Make</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Automation Engine</h3>
+              <div className="text-sm font-semibold text-purple-300 mb-2">AI-Generated</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Content Factory</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Workflow Builder</span>
+                  <span>AI Blog Posts & Articles</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Email Sequences (Unlimited)</span>
+                  <span>Social Media Content</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Native Integrations</span>
+                  <span>Email & Ad Copy</span>
                 </li>
               </ul>
             </div>
 
-            {/* E-Commerce */}
-            <div className="p-8 bg-gradient-to-br from-slate-800/30 to-indigo-900/10 border border-slate-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-slate-300 mb-2">Commerce Platform</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Built-in E-Commerce Engine</h3>
+            {/* Coming Soon: Video */}
+            <div className="p-8 bg-gradient-to-br from-slate-800/30 to-indigo-900/10 border border-amber-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-amber-400 mb-2">Coming Soon</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Video Generation</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Product Catalog</span>
+                  <span className="text-amber-400">⏳</span>
+                  <span>AI Avatar Videos (HeyGen)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Cart & Checkout</span>
+                  <span className="text-amber-400">⏳</span>
+                  <span>Text-to-Video (Sora)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span>Order & Payment Processing</span>
+                  <span className="text-amber-400">⏳</span>
+                  <span>Automated Video Ads</span>
                 </li>
               </ul>
             </div>

@@ -1,0 +1,117 @@
+/**
+ * Voice Service Module
+ * Multi-provider VoIP abstraction layer
+ *
+ * Usage:
+ * ```typescript
+ * import { VoiceProviderFactory } from '@/lib/voice';
+ *
+ * // Get the best available provider for an organization
+ * const provider = await VoiceProviderFactory.getProvider(orgId);
+ *
+ * // Initiate a call
+ * const call = await provider.initiateCall('+15551234567', 'agent-123');
+ *
+ * // Send SMS
+ * const sms = await provider.sendSMS('+15551234567', 'Hello!');
+ *
+ * // Get cost comparison
+ * const costs = await VoiceProviderFactory.getCostComparison(orgId);
+ * ```
+ */
+
+// Types
+export * from './types';
+
+// Factory
+export { VoiceProviderFactory } from './voice-factory';
+
+// Providers (for direct instantiation if needed)
+export { TwilioProvider } from './providers/twilio-provider';
+export { TelnyxProvider } from './providers/telnyx-provider';
+
+// Voice Agent Handler (Prospector & Closer modes)
+export { voiceAgentHandler } from './voice-agent-handler';
+export type { VoiceAgentMode, VoiceAgentConfig, AgentResponse } from './voice-agent-handler';
+
+// Call Transfer Service
+export { callTransferService } from './call-transfer-service';
+
+// CRM Voice Activity
+export { crmVoiceActivity } from './crm-voice-activity';
+
+// Legacy compatibility - re-export key functions from old service
+// This allows gradual migration from the old API
+import { VoiceProviderFactory } from './voice-factory';
+import type { VoiceCall, SMSMessage, InitiateCallOptions } from './types';
+
+/**
+ * @deprecated Use VoiceProviderFactory.getProvider() instead
+ * Legacy function for backwards compatibility
+ */
+export async function initiateCall(
+  organizationId: string,
+  to: string,
+  agentId: string,
+  options?: {
+    record?: boolean;
+    timeout?: number;
+  }
+): Promise<VoiceCall> {
+  const provider = await VoiceProviderFactory.getProvider(organizationId);
+  return provider.initiateCall(to, agentId, options);
+}
+
+/**
+ * @deprecated Use VoiceProviderFactory.getProvider() instead
+ * Legacy function for backwards compatibility
+ */
+export async function sendSMS(
+  organizationId: string,
+  to: string,
+  message: string
+): Promise<SMSMessage> {
+  const provider = await VoiceProviderFactory.getProvider(organizationId);
+  return provider.sendSMS(to, message);
+}
+
+/**
+ * @deprecated Use provider.generateResponse() instead
+ * Legacy function for backwards compatibility
+ */
+export function generateAgentTwiML(
+  message: string,
+  options?: {
+    voice?: 'man' | 'woman' | 'alice' | 'Polly.Joanna' | 'Polly.Matthew';
+    language?: string;
+    gather?: boolean;
+    action?: string;
+  }
+): string {
+  const voice = options?.voice ?? 'Polly.Joanna';
+  const language = options?.language ?? 'en-US';
+
+  if (options?.gather) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech" action="${options.action ?? ''}" language="${language}" timeout="3" speechTimeout="auto">
+    <Say voice="${voice}" language="${language}">${escapeXML(message)}</Say>
+  </Gather>
+  <Say voice="${voice}">I didn't hear anything. Goodbye.</Say>
+</Response>`;
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${voice}" language="${language}">${escapeXML(message)}</Say>
+</Response>`;
+}
+
+function escapeXML(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}

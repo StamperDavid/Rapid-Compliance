@@ -6,6 +6,15 @@ import PublicLayout from '@/components/PublicLayout';
 import PageRenderer from '@/components/PageRenderer';
 import { usePageContent } from '@/hooks/usePageContent';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
+import {
+  Handshake,
+  Lightbulb,
+  Zap,
+  BarChart3,
+  Unlock,
+  Frown,
+  PartyPopper,
+} from 'lucide-react';
 
 // Fallback content if editor data not available
 function FallbackContent() {
@@ -40,7 +49,7 @@ function FallbackContent() {
       <section className="pt-44 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 px-4 py-2 rounded-full text-sm font-semibold mb-6">
-            <span>🤝</span>
+            <Handshake className="w-4 h-4" />
             <span>Usage-Based Pricing</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
@@ -57,7 +66,9 @@ function FallbackContent() {
           <div className="max-w-3xl mx-auto mb-12">
             <div className="bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/40 rounded-2xl p-8">
               <div className="flex items-center gap-4 mb-4">
-                <div className="text-5xl">💡</div>
+                <div className="w-14 h-14 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                  <Lightbulb className="w-8 h-8 text-indigo-400" />
+                </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white mb-1">Bring Your Own Keys (BYOK)</h3>
                   <p className="text-indigo-300 font-semibold">Zero AI Token Markup. 100% Transparent.</p>
@@ -68,8 +79,8 @@ function FallbackContent() {
                 We don&apos;t touch your AI costs—that&apos;s your direct relationship with the provider. No hidden fees. No markup. Just honest pricing.
               </p>
               <div className="bg-purple-500/20 border border-purple-500/40 rounded-lg p-4 mb-4">
-                <p className="text-purple-200 text-sm">
-                  💡 <span className="font-bold">We recommend OpenRouter</span> - One key gives you access to GPT-4, Claude, Gemini, Llama, and 200+ models. Simpler than managing multiple provider keys.
+                <p className="text-purple-200 text-sm flex items-start gap-2">
+                  <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span><span className="font-bold">We recommend OpenRouter</span> - One key gives you access to GPT-4, Claude, Gemini, Llama, and 200+ models. Simpler than managing multiple provider keys.</span>
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -92,17 +103,23 @@ function FallbackContent() {
           {/* Key Benefits */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <div className="text-3xl mb-3">⚡</div>
+              <div className="mb-3">
+                <Zap className="w-8 h-8 text-indigo-400" />
+              </div>
               <div className="font-semibold text-white mb-2">All Features Unlocked</div>
               <div className="text-sm text-gray-400">From day one, every feature is available to you</div>
             </div>
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <div className="text-3xl mb-3">📊</div>
+              <div className="mb-3">
+                <BarChart3 className="w-8 h-8 text-indigo-400" />
+              </div>
               <div className="font-semibold text-white mb-2">Usage-Based Pricing</div>
               <div className="text-sm text-gray-400">Only pay for CRM records stored—everything else unlimited</div>
             </div>
             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-              <div className="text-3xl mb-3">🔓</div>
+              <div className="mb-3">
+                <Unlock className="w-8 h-8 text-indigo-400" />
+              </div>
               <div className="font-semibold text-white mb-2">Auto-Scales with You</div>
               <div className="text-sm text-gray-400">As your CRM grows, your tier adjusts automatically</div>
             </div>
@@ -138,7 +155,7 @@ function FallbackContent() {
             </div>
             <div className="bg-indigo-500/10 border-t border-indigo-500/30 px-6 py-4">
               <div className="flex items-center gap-2 text-sm text-indigo-300">
-                <span>💡</span>
+                <Lightbulb className="w-4 h-4" />
                 <span>All tiers include 100% of features. No limits. No restrictions.</span>
               </div>
             </div>
@@ -185,15 +202,15 @@ function FallbackContent() {
               You pay TWO costs: our platform fee + your own AI usage. We show you exactly what you&apos;ll spend vs. competitors who hide AI markups.
             </p>
             <div className="inline-block bg-indigo-500/20 border border-indigo-500/40 rounded-lg px-6 py-3">
-              <p className="text-indigo-300 font-semibold">💡 How Billing Works</p>
+              <p className="text-indigo-300 font-semibold flex items-center justify-center gap-2"><Lightbulb className="w-4 h-4" /> How Billing Works</p>
               <p className="text-indigo-200/80 text-sm mt-1">You get ONE monthly bill from us ($400-1,250). For AI, you prepay credits with OpenRouter (or your chosen provider) which deduct as you use them.</p>
             </div>
           </div>
 
           {/* Real-World Example */}
           <div className="mb-12 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-4 text-center">
-              📊 Real Example: 200 CRM Records, 1,000 AI Conversations/Month
+            <h3 className="text-2xl font-bold text-white mb-4 text-center flex items-center justify-center gap-3">
+              <BarChart3 className="w-7 h-7 text-indigo-400" /> Real Example: 200 CRM Records, 1,000 AI Conversations/Month
             </h3>
             <p className="text-gray-300 text-center mb-8">Here&apos;s what you&apos;d actually pay each month:</p>
             
@@ -299,15 +316,15 @@ function FallbackContent() {
         </div>
       </section>
 
-      {/* Frankenstein Stack Killer - Comparison Section */}
+      {/* AI-Native Workforce Value */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-gray-900/50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-white mb-4">
-              Stop Juggling Multiple Subscriptions
+              One Workforce. Raw Market Rates.
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Replace your &quot;Frankenstein stack&quot; of disconnected tools with one unified platform
+              Your AI-Native workforce runs on direct APIs with zero wrapper markup.
             </p>
           </div>
 
@@ -315,7 +332,9 @@ function FallbackContent() {
             {/* Before: The Expensive Stack */}
             <div className="bg-slate-800/50 border border-slate-600/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-4xl">😫</span>
+                <div className="w-12 h-12 rounded-full bg-slate-700/50 flex items-center justify-center">
+                  <Frown className="w-7 h-7 text-slate-400" />
+                </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The Old Way</h3>
                   <p className="text-gray-400 text-sm">Fragmented & Expensive</p>
@@ -351,7 +370,9 @@ function FallbackContent() {
             {/* After: Our Platform */}
             <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-2xl p-8">
               <div className="flex items-center gap-3 mb-6">
-                <span className="text-4xl">🎉</span>
+                <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center">
+                  <PartyPopper className="w-7 h-7 text-indigo-400" />
+                </div>
                 <div>
                   <h3 className="text-2xl font-bold text-white">The New Way</h3>
                   <p className="text-indigo-300 text-sm">All-In-One & Affordable</p>
