@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Report execution error', error, { route: '/api/reports/execute' });
-    return errors.internal('Failed to execute report', error);
+    return errors.internal('Failed to execute report', error instanceof Error ? error : undefined);
   }
 }
 
@@ -178,14 +178,14 @@ async function executeLeadsReport(orgId: string, config: any, parameters: any) {
   
   // Group by status
   const statusMap = new Map<string, number>();
-  allLeads.forEach((lead: LeadData) => {
+  allLeads.forEach((lead) => {
     const status =(lead.status !== '' && lead.status != null) ? lead.status : 'new';
     statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
   });
-  
+
   // Group by source
   const sourceMap = new Map<string, number>();
-  allLeads.forEach((lead: LeadData) => {
+  allLeads.forEach((lead) => {
     const source =(lead.source !== '' && lead.source != null) ? lead.source : 'direct';
     sourceMap.set(source, (sourceMap.get(source) ?? 0) + 1);
   });
@@ -195,7 +195,7 @@ async function executeLeadsReport(orgId: string, config: any, parameters: any) {
     totalLeads: allLeads.length,
     byStatus: Array.from(statusMap.entries()).map(([status, count]) => ({ status, count })),
     bySource: Array.from(sourceMap.entries()).map(([source, count]) => ({ source, count })),
-    recentLeads: allLeads.slice(0, 10).map((lead: LeadData) => ({
+    recentLeads: allLeads.slice(0, 10).map((lead) => ({
       id: lead.id,
       name:(lead.name !== '' && lead.name != null) ? lead.name : `${lead.firstName} ${lead.lastName}`,
       email: lead.email,
@@ -212,11 +212,11 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals/records`;
   const allDeals = await FirestoreService.getAll(dealsPath, []);
   
-  const totalValue = allDeals.reduce((sum: number, deal: DealData) => sum + (parseFloat(deal.value.toString()) || 0), 0);
+  const totalValue = allDeals.reduce((sum: number, deal) => sum + (parseFloat(deal.value.toString()) || 0), 0);
   
   // Group by stage
   const stageMap = new Map<string, { count: number; value: number }>();
-  allDeals.forEach((deal: DealData) => {
+  allDeals.forEach((deal) => {
     const stage =(deal.stage || deal.status !== '' && deal.stage || deal.status != null) ? deal.stage ?? deal.status: 'new';
     const value = parseFloat(deal.value.toString()) || 0;
     const existing = stageMap.get(stage) ?? { count: 0, value: 0 };
@@ -237,9 +237,9 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
       value: data.value,
     })),
     topDeals: allDeals
-      .sort((a: DealData, b: DealData) => (parseFloat(b.value.toString()) || 0) - (parseFloat(a.value.toString()) || 0))
+      .sort((a, b) => (parseFloat(b.value.toString()) || 0) - (parseFloat(a.value.toString()) || 0))
       .slice(0, 10)
-      .map((deal: DealData) => ({
+      .map((deal) => ({
         id: deal.id,
         name: deal.name,
         value: deal.value,

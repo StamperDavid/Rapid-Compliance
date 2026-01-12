@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Reply processing error', error, { route: '/api/outbound/reply/process' });
-    return errors.internal('Failed to process reply', error);
+    return errors.internal('Failed to process reply', error instanceof Error ? error : undefined);
   }
 }
 

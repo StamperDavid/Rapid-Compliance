@@ -179,7 +179,7 @@ export async function createLead(
       id: leadId,
       organizationId,
       workspaceId,
-      status: (data.status !== '' && data.status != null) ? data.status : 'new',
+      status: data.status ?? 'new',
       score: enrichedScore,
       ...(cleanEnrichmentData && { enrichmentData: cleanEnrichmentData }),
       createdAt: now,

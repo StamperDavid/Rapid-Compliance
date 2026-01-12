@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authUrl);
   } catch (error: any) {
     logger.error('Google OAuth error', error, { route: '/api/integrations/google/auth' });
-    return errors.externalService('Google OAuth', error);
+    return errors.externalService('Google OAuth', error instanceof Error ? error : undefined);
   }
 }
 

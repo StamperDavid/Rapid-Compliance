@@ -64,6 +64,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, enrichment });
   } catch (error) {
     logger.error('Lead enrichment error', error, { route: '/api/leads/enrich' });
-    return errors.externalService('Enrichment service', error);
+    return errors.externalService('Enrichment service', error instanceof Error ? error : undefined);
   }
 }

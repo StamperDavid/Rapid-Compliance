@@ -64,6 +64,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Search error', error, { route: '/api/search' });
-    return errors.database('Failed to search workspace', error);
+    return errors.database('Failed to search workspace', error instanceof Error ? error : undefined);
   }
 }

@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
     // For now, using default config
     const config: RoutingConfiguration = {
       orgId: 'org_demo',
-      defaultStrategy:(strategy !== '' && strategy != null) ? strategy : 'performance_weighted',
+      defaultStrategy: strategy ?? 'performance_weighted',
       strategyWeights: {
         performance: 0.35,
         capacity: 0.20,

@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Meeting scheduler error', error, { route: '/api/outbound/meetings/schedule' });
-    return errors.externalService('Calendar service', error);
+    return errors.externalService('Calendar service', error instanceof Error ? error : undefined);
   }
 }
 

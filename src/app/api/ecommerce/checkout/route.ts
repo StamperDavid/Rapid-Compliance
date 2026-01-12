@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Checkout processing error', error, { route: '/api/ecommerce/checkout' });
-    return errors.externalService('Checkout service', error);
+    return errors.externalService('Checkout service', error instanceof Error ? error : undefined);
   }
 }
 

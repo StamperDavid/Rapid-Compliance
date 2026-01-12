@@ -408,7 +408,7 @@ export async function GET(request: NextRequest) {
     
     const dealId = searchParams.get('dealId');
     const organizationId = searchParams.get('organizationId');
-    const workspaceId =(searchParams.get('workspaceId') !== '' && searchParams.get('workspaceId') != null) ? searchParams.get('workspaceId') : 'default';
+    const workspaceId = searchParams.get('workspaceId') || 'default';
     const includeInterventions = searchParams.get('includeInterventions') !== 'false';
     
     if (!dealId || !organizationId) {

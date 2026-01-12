@@ -44,7 +44,7 @@ export async function GET(
     });
   } catch (error: any) {
     logger.error('Error fetching integration', error, { route: '/api/integrations' });
-    return errors.database('Failed to fetch integration', error);
+    return errors.database('Failed to fetch integration', error instanceof Error ? error : undefined);
   }
 }
 
@@ -76,7 +76,7 @@ export async function PATCH(
     });
   } catch (error: any) {
     logger.error('Error updating integration', error, { route: '/api/integrations' });
-    return errors.database('Failed to update integration', error);
+    return errors.database('Failed to update integration', error instanceof Error ? error : undefined);
   }
 }
 
@@ -107,7 +107,7 @@ export async function DELETE(
     });
   } catch (error: any) {
     logger.error('Error deleting integration', error, { route: '/api/integrations' });
-    return errors.database('Failed to delete integration', error);
+    return errors.database('Failed to delete integration', error instanceof Error ? error : undefined);
   }
 }
 

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('A/B test GET error', error, { route: '/api/learning/ab-test' });
-    return errors.database('Failed to get A/B test', error);
+    return errors.database('Failed to get A/B test', error instanceof Error ? error : undefined);
   }
 }
 
@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest) {
     );
   } catch (error: any) {
     logger.error('A/B test PUT error', error, { route: '/api/learning/ab-test' });
-    return errors.database('Failed to update A/B test', error);
+    return errors.database('Failed to update A/B test', error instanceof Error ? error : undefined);
   }
 }
 

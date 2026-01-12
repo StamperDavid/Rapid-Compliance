@@ -160,7 +160,7 @@ export const errors = {
 
   externalService: (service: string, error?: Error) =>
     createErrorResponse(
-(error !== '' && error != null) ? error : `External service error: ${service}`,
+      error ?? `External service error: ${service}`,
       502,
       ErrorCode.EXTERNAL_SERVICE_ERROR
     ),

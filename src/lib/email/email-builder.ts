@@ -151,7 +151,7 @@ export function buildEmailHTML(template: EmailTemplate, variables: Record<string
  */
 function buildBlockHTML(block: EmailBlock, globalStyling: EmailTemplate['styling']): string {
   const style = block.styling ?? {};
-  const alignment = (style.alignment !== '' && style.alignment != null) ? style.alignment : 'left';
+  const alignment = style.alignment ?? 'left';
   const padding = (style.padding !== '' && style.padding != null) ? style.padding : '10px 0';
 
   switch (block.type) {
@@ -342,7 +342,7 @@ export async function calculateABTestResults(
       testId
     );
 
-    const metric = (test?.winnerMetric !== '' && test?.winnerMetric != null) ? test.winnerMetric : 'open_rate';
+    const metric = test?.winnerMetric ?? 'open_rate';
     const aValue = (variantAResults as any)[metric.replace('_rate', 'Rate')];
     const bValue = (variantBResults as any)[metric.replace('_rate', 'Rate')];
 

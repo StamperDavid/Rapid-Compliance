@@ -498,7 +498,7 @@ function EmailWriterCardInner({
             <div>
               <p className="text-gray-500">Deal Score</p>
               <p className="text-white font-medium">
-                {(generationState.generatedEmail.dealScore !== '' && generationState.generatedEmail.dealScore != null) ? generationState.generatedEmail.dealScore : 'N/A'}
+                {generationState.generatedEmail.dealScore ?? 'N/A'}
                 {generationState.generatedEmail.dealTier && (
                   <span className="ml-1 text-xs text-gray-400">
                     ({generationState.generatedEmail.dealTier})

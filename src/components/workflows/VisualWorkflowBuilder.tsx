@@ -40,9 +40,9 @@ const initialNodes: Node[] = [
 const initialEdges: Edge[] = [];
 
 function VisualWorkflowBuilderInner({ workflow, onSave, onCancel }: VisualWorkflowBuilderProps) {
-  const [name, setName] = useState((workflow?.name !== '' && workflow?.name != null) ? workflow.name : '');
-  const [description, setDescription] = useState((workflow?.description !== '' && workflow?.description != null) ? workflow.description : '');
-  const [trigger, setTrigger] = useState<string>((workflow?.trigger?.type !== '' && workflow?.trigger?.type != null) ? workflow.trigger.type : 'manual');
+  const [name, setName] = useState(workflow?.name || '');
+  const [description, setDescription] = useState(workflow?.description || '');
+  const [trigger, setTrigger] = useState<string>(workflow?.trigger?.type ?? 'manual');
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);

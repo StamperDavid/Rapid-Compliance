@@ -197,17 +197,17 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
     };
   }
 
-  const messageId =(response.headers.get('x-message-id') !== '' && response.headers.get('x-message-id') != null) ? response.headers.get('x-message-id') : `sg_${Date.now()}`;
-  
+  const messageIdValue = response.headers.get('x-message-id') ?? `sg_${Date.now()}`;
+
   // Store tracking mapping if tracking is enabled
   const orgId = options.metadata?.organizationId;
   if (orgId && options.tracking?.trackOpens) {
     import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
       FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/emailTrackingMappings`,
-        messageId,
+        messageIdValue,
         {
-          messageId,
+          messageId: messageIdValue,
           organizationId: orgId,
           createdAt: new Date().toISOString(),
         },
@@ -220,7 +220,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
 
   return {
     success: true,
-    messageId,
+    messageId: messageIdValue,
     provider: 'sendgrid',
   };
 }

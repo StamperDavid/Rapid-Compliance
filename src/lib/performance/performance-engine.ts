@@ -1283,7 +1283,7 @@ function determinePeriod(request: PerformanceAnalyticsRequest): {
 } {
   const endDate = request.endDate ? new Date(request.endDate) : new Date();
   let startDate: Date;
-  let periodType: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom' =(request.periodType !== '' && request.periodType != null) ? request.periodType : 'month';
+  let periodType: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom' = request.periodType ?? 'month';
   
   if (request.startDate) {
     startDate = new Date(request.startDate);

@@ -244,7 +244,7 @@ async function getLoadBalancedUser(
   try {
     const maxLeads = rule.metadata?.maxLeadsPerUser ?? 100;
     const metadataBalancingPeriod = rule.metadata?.balancingPeriod;
-    const period = (metadataBalancingPeriod !== '' && metadataBalancingPeriod != null) ? metadataBalancingPeriod : 'week';
+    const period = metadataBalancingPeriod ?? 'week';
 
     // Get lead counts for each user in the period
     const userCounts = new Map<string, number>();

@@ -8,7 +8,7 @@ import type { PlatformMetrics, SystemHealth } from '@/types/admin'
 import { logger } from '@/lib/logger/logger';
 
 export default function AdminDashboard() {
-  const { _adminUser } = useAdminAuth();
+  useAdminAuth();
   const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
@@ -278,7 +278,6 @@ export default function AdminDashboard() {
           value={(metrics?.totalOrganizations?.toLocaleString() !== '' && metrics?.totalOrganizations?.toLocaleString() != null) ? metrics.totalOrganizations.toLocaleString() : '0'}
           change={`${metrics?.activeOrganizations ?? 0} active`}
           icon="🏢"
-          color="#6366f1"
           tooltip="Total number of customer organizations on the platform. Includes active, trial, and suspended organizations."
         />
         <MetricCard
@@ -286,7 +285,6 @@ export default function AdminDashboard() {
           value={(metrics?.totalUsers?.toLocaleString() !== '' && metrics?.totalUsers?.toLocaleString() != null) ? metrics.totalUsers.toLocaleString() : '0'}
           change={`+${metrics?.newUsersThisPeriod ?? 0} this period`}
           icon="👥"
-          color="#10b981"
           tooltip="Total number of users across all organizations. Shows new users added in the current period."
         />
         <MetricCard
@@ -294,7 +292,6 @@ export default function AdminDashboard() {
           value={(metrics?.mrr?.toLocaleString() !== '' && metrics?.mrr?.toLocaleString() != null) ? `$${metrics.mrr.toLocaleString()}` : '$0'}
           change={(metrics?.arr?.toLocaleString() !== '' && metrics?.arr?.toLocaleString() != null) ? `ARR: $${metrics.arr.toLocaleString()}` : 'ARR: $0'}
           icon="💵"
-          color="#ec4899"
           tooltip="Monthly Recurring Revenue (MRR) from all active subscriptions. ARR = Annual Recurring Revenue (MRR × 12)."
         />
         <MetricCard
@@ -302,7 +299,6 @@ export default function AdminDashboard() {
           value={(systemHealth?.performance.uptime?.toFixed(2) !== '' && systemHealth?.performance.uptime?.toFixed(2) != null) ? `${systemHealth.performance.uptime.toFixed(2)}%` : '0%'}
           change={`${systemHealth?.performance.activeConnections ?? 0} active connections`}
           icon="⚡"
-          color="#f59e0b"
           tooltip="Platform uptime percentage. Shows current number of active user connections to the system."
         />
       </div>
@@ -460,12 +456,11 @@ export default function AdminDashboard() {
   );
 }
 
-function MetricCard({ label, value, change, icon, _color, tooltip }: {
+function MetricCard({ label, value, change, icon, tooltip }: {
   label: string;
   value: string;
   change: string;
   icon: string;
-  color: string;
   tooltip?: string;
 }) {
   const bgPaper = '#1a1a1a';

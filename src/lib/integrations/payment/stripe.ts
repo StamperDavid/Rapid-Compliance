@@ -13,8 +13,8 @@ export async function executeStripeFunction(
   parameters: Record<string, any>,
   integration: ConnectedIntegration
 ): Promise<any> {
-  const apiKey = integration.apiKey;
-  
+  const apiKey = integration.config.apiKey as string | undefined;
+
   if (!apiKey) {
     throw new Error('Stripe API key not configured');
   }

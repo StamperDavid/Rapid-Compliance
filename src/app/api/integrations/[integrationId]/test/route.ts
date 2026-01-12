@@ -36,7 +36,7 @@ export async function POST(
     });
   } catch (error: any) {
     logger.error('Error testing integration', error, { route: '/api/integrations/test' });
-    return errors.externalService('Integration', error);
+    return errors.externalService('Integration', error instanceof Error ? error : undefined);
   }
 }
 

@@ -54,7 +54,7 @@ export async function GET(
     });
   } catch (error: any) {
     logger.error('Error fetching order', error, { route: '/api/ecommerce/orders' });
-    return errors.database('Failed to fetch order', error);
+    return errors.database('Failed to fetch order', error instanceof Error ? error : undefined);
   }
 }
 

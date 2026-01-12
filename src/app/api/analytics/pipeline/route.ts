@@ -18,6 +18,23 @@ function safeParseFloat(value: unknown, fallback: number): number {
   return isNaN(parsed) ? fallback : parsed;
 }
 
+/**
+ * Convert various date representations to a Date object.
+ * Handles Firestore Timestamp objects, Date instances, strings, and numbers.
+ */
+function toDate(value: unknown): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date();
+}
+
 // Local interfaces for Firestore records
 interface StageHistoryEntry {
   stage?: string;
@@ -206,10 +223,8 @@ async function calculatePipelineAnalytics(orgId: string, _period: string) {
 
     // Calculate velocity (average days to close)
     const salesCycles = wonDeals.map(deal => {
-      const createdAt = deal.createdAt?.toDate?.() ?? new Date(deal.createdAt);
-      const closedAt = deal.closedDate?.toDate?.() 
-        ?? deal.closedAt?.toDate?.() 
-        ?? new Date(deal.closedDate ?? deal.closedAt ?? deal.updatedAt);
+      const createdAt = toDate(deal.createdAt);
+      const closedAt = toDate(deal.closedDate) || toDate(deal.closedAt) || toDate(deal.updatedAt);
       const days = Math.ceil((closedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
       return Math.max(1, days); // At least 1 day
     });

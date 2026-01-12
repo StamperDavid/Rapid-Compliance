@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Checkout session creation error', error, { route: '/api/ecommerce/checkout/create-session' });
-    return errors.externalService('Stripe', error);
+    return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }
 }
 

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error generating auth URL', error, { route: '/api/integrations/oauth/authorize' });
-    return errors.externalService('OAuth service', error);
+    return errors.externalService('OAuth service', error instanceof Error ? error : undefined);
   }
 }
 

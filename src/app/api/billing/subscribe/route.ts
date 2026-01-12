@@ -106,6 +106,6 @@ export async function POST(request: NextRequest) {
     logger.error('Error creating subscription', error, {
       route: '/api/billing/subscribe',
     });
-    return errors.externalService('Stripe', error);
+    return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }
 }

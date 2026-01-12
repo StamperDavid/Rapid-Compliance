@@ -10,7 +10,24 @@ import type {
   PipelineReport,
   SalesForecast,
   WinLossAnalysis,
+  RevenueTrend,
+  RevenueBySourceItem,
+  RevenueByProductItem,
+  RevenueBySalesRepItem,
+  PipelineStage,
+  PipelineTrend,
+  ForecastScenario,
+  WinLossReason,
 } from '@/types/analytics';
+
+/**
+ * Helper function to safely parse float values with fallback
+ */
+function safeParseFloat(value: unknown, fallback: number): number {
+  if (value === undefined || value === null) return fallback;
+  const parsed = typeof value === 'number' ? value : parseFloat(String(value));
+  return isNaN(parsed) ? fallback : parsed;
+}
 
 /**
  * Get revenue report
@@ -63,29 +80,33 @@ export async function getPipelineReport(
   const openDeals = await getOpenDeals(workspaceId, organizationId);
   
   // Calculate pipeline metrics
-  const totalValue = openDeals.reduce((sum, deal) => sum + (deal.value ?? 0), 0);
+  const totalValue = openDeals.reduce((sum, deal) => sum + (typeof deal.value === 'number' ? deal.value : parseFloat(String(deal.value)) || 0), 0);
   const totalDeals = openDeals.length;
   const averageDealSize = totalDeals > 0 ? totalValue / totalDeals : 0;
   
   // Group by stage
   const byStage = calculatePipelineByStage(openDeals);
-  
+
   // Calculate velocity
-  const velocity = await calculatePipelineVelocity(workspaceId, organizationId);
-  
+  const velocityResult = await calculatePipelineVelocity(workspaceId, organizationId);
+
   // Calculate conversion rates
-  const conversionRates = await calculateConversionRates(workspaceId, organizationId);
-  
+  const conversionRatesArray = await calculateConversionRates(workspaceId, organizationId);
+  const conversionRates: Record<string, number> = {};
+  conversionRatesArray.forEach(rate => {
+    conversionRates[`${rate.fromStage}->${rate.toStage}`] = rate.rate;
+  });
+
   // Calculate trends
   const trends = await calculatePipelineTrends(workspaceId, organizationId, period);
-  
+
   return {
     period,
     totalValue,
     totalDeals,
     averageDealSize,
     byStage,
-    velocity,
+    velocity: velocityResult.averageSalesCycle,
     conversionRates,
     trends,
   };
@@ -108,14 +129,24 @@ export async function getSalesForecast(
   
   // Generate scenarios
   const scenarios = generateForecastScenarios(openDeals, forecastedRevenue);
-  
+
   // Breakdown by rep and product
-  const byRep = calculateForecastByRep(openDeals);
-  const byProduct = await calculateForecastByProduct(workspaceId, openDeals);
-  
+  const byRepArray = calculateForecastByRep(openDeals);
+  const byRep: Record<string, number> = {};
+  byRepArray.forEach(item => {
+    byRep[item.repId] = item.forecastedRevenue;
+  });
+
+  const byProductArray = await calculateForecastByProduct(workspaceId, openDeals);
+  const byProduct: Record<string, number> = {};
+  byProductArray.forEach(item => {
+    byProduct[item.productId] = item.forecastedRevenue;
+  });
+
   // Identify factors
-  const factors = identifyForecastFactors(openDeals);
-  
+  const factorsArray = identifyForecastFactors(openDeals);
+  const factors = factorsArray.map(f => f.factor);
+
   return {
     period,
     forecastDate: new Date(),
@@ -148,26 +179,48 @@ export async function getWinLossAnalysis(
   
   // Calculate averages
   const averageDealSize = {
-    won: won.length > 0 ? won.reduce((sum, d) => sum + (d.value ?? 0), 0) / won.length : 0,
-    lost: lost.length > 0 ? lost.reduce((sum, d) => sum + (d.value ?? 0), 0) / lost.length : 0,
-    total: totalDeals > 0 ? deals.reduce((sum, d) => sum + (d.value ?? 0), 0) / totalDeals : 0,
+    won: won.length > 0 ? won.reduce((sum, d) => sum + (typeof d.value === 'number' ? d.value : parseFloat(String(d.value)) || 0), 0) / won.length : 0,
+    lost: lost.length > 0 ? lost.reduce((sum, d) => sum + (typeof d.value === 'number' ? d.value : parseFloat(String(d.value)) || 0), 0) / lost.length : 0,
+    total: totalDeals > 0 ? deals.reduce((sum, d) => sum + (typeof d.value === 'number' ? d.value : parseFloat(String(d.value)) || 0), 0) / totalDeals : 0,
   };
   
   // Analyze loss reasons
-  const lossReasons = analyzeLossReasons(lost);
-  
+  const lossReasonsArray = analyzeLossReasons(lost);
+  const lossReasons: WinLossReason[] = lossReasonsArray.map(item => ({
+    reason: item.reason,
+    count: item.count,
+    percentage: item.percentage,
+  }));
+
   // Analyze win factors
-  const winFactors = analyzeWinFactors(won);
-  
+  const winFactorsArray = analyzeWinFactors(won);
+  const winFactors: WinLossReason[] = winFactorsArray.map(item => ({
+    reason: item.factor,
+    count: item.frequency,
+    percentage: item.percentage,
+  }));
+
   // Competitor analysis
-  const byCompetitor = analyzeCompetitors(won, lost);
-  
+  const byCompetitorArray = analyzeCompetitors(won, lost);
+  const byCompetitor: Record<string, { won: number; lost: number }> = {};
+  byCompetitorArray.forEach(item => {
+    byCompetitor[item.competitor] = { won: item.wins, lost: item.losses };
+  });
+
   // By sales rep
-  const bySalesRep = analyzeWinLossByRep(won, lost);
-  
+  const bySalesRepArray = analyzeWinLossByRep(won, lost);
+  const bySalesRep: Record<string, { won: number; lost: number; winRate: number }> = {};
+  bySalesRepArray.forEach(item => {
+    bySalesRep[item.repId] = { won: item.won, lost: item.lost, winRate: item.winRate };
+  });
+
   // Trends
-  const trends = await calculateWinLossTrends(workspaceId, organizationId, startDate, endDate);
-  
+  const trendsArray = await calculateWinLossTrends(workspaceId, organizationId, startDate, endDate);
+  const trends = trendsArray.map(item => ({
+    date: item.date.toISOString().split('T')[0],
+    winRate: item.winRate,
+  }));
+
   return {
     period,
     totalDeals,
@@ -283,14 +336,6 @@ function calculateTotalRevenue(deals: DealRecord[], orders: OrderRecord[]): numb
   return dealRevenue + orderRevenue;
 }
 
-/** Revenue by source item */
-interface RevenueBySourceItem {
-  source: string;
-  revenue: number;
-  deals: number;
-  percentage: number;
-}
-
 function calculateRevenueBySource(deals: DealRecord[], orders: OrderRecord[]): RevenueBySourceItem[] {
   const sourceMap = new Map<string, { revenue: number; deals: number }>();
   
@@ -324,15 +369,6 @@ function calculateRevenueBySource(deals: DealRecord[], orders: OrderRecord[]): R
     deals: data.deals,
     percentage: totalRevenue > 0 ? (data.revenue / totalRevenue) * 100 : 0,
   }));
-}
-
-/** Revenue by product item */
-interface RevenueByProductItem {
-  productId: string;
-  productName: string;
-  revenue: number;
-  units: number;
-  averagePrice: number;
 }
 
 async function calculateRevenueByProduct(workspaceId: string, deals: DealRecord[], orders: OrderRecord[]): Promise<RevenueByProductItem[]> {
@@ -387,15 +423,6 @@ async function calculateRevenueByProduct(workspaceId: string, deals: DealRecord[
   }));
 }
 
-/** Revenue by sales rep item */
-interface RevenueBySalesRepItem {
-  repId: string;
-  repName: string;
-  revenue: number;
-  deals: number;
-  averageDealSize: number;
-}
-
 function calculateRevenueBySalesRep(deals: DealRecord[]): RevenueBySalesRepItem[] {
   const repMap = new Map<string, { revenue: number; deals: number; name: string }>();
   
@@ -421,8 +448,8 @@ function calculateRevenueBySalesRep(deals: DealRecord[]): RevenueBySalesRepItem[
   }));
 }
 
-/** Revenue trend item */
-interface RevenueTrendItem {
+/** Revenue trend item - internal type with Date object */
+interface RevenueTrendItemInternal {
   date: Date;
   revenue: number;
   deals: number;
@@ -435,41 +462,45 @@ function calculateRevenueTrends(
   period: string,
   startDate: Date,
   endDate: Date
-): RevenueTrendItem[] {
-  const trends: any[] = [];
+): RevenueTrend[] {
+  const trends: RevenueTrend[] = [];
   const interval = getIntervalForPeriod(period);
-  
+
   const currentDate = new Date(startDate);
-  
+
   while (currentDate <= endDate) {
     const periodStart = new Date(currentDate);
     const periodEnd = new Date(currentDate);
     periodEnd.setDate(periodEnd.getDate() + interval - 1);
-    
+
     const periodDeals = deals.filter(d => {
-      const closedDate = d.closedDate?.toDate?.() ?? new Date(d.closedDate);
+      const closedDateVal = d.closedDate;
+      const closedDate = closedDateVal && typeof closedDateVal === 'object' && 'toDate' in closedDateVal && typeof closedDateVal.toDate === 'function'
+        ? closedDateVal.toDate()
+        : closedDateVal instanceof Date ? closedDateVal : new Date(String(closedDateVal));
       return closedDate >= periodStart && closedDate <= periodEnd;
     });
-    
+
     const periodOrders = orders.filter(o => {
-      const createdAt = o.createdAt?.toDate?.() ?? new Date(o.createdAt);
+      const createdAtVal = o.createdAt;
+      const createdAt = createdAtVal && typeof createdAtVal === 'object' && 'toDate' in createdAtVal && typeof createdAtVal.toDate === 'function'
+        ? createdAtVal.toDate()
+        : createdAtVal instanceof Date ? createdAtVal : new Date(String(createdAtVal));
       return createdAt >= periodStart && createdAt <= periodEnd;
     });
-    
+
     const revenue = calculateTotalRevenue(periodDeals, periodOrders);
     const totalDeals = periodDeals.length + periodOrders.length;
-    const averageDealSize = totalDeals > 0 ? revenue / totalDeals : 0;
-    
+
     trends.push({
-      date: new Date(periodStart),
+      date: periodStart.toISOString().split('T')[0],
       revenue,
-      deals: totalDeals,
-      averageDealSize,
+      count: totalDeals,
     });
-    
+
     currentDate.setDate(currentDate.getDate() + interval);
   }
-  
+
   return trends;
 }
 
@@ -495,25 +526,15 @@ async function getOpenDeals(workspaceId: string, organizationId: string): Promis
   return deals;
 }
 
-/** Pipeline by stage item */
-interface PipelineByStageItem {
-  stageId: string;
-  stageName: string;
-  value: number;
-  deals: number;
-  averageDealSize: number;
-  averageDaysInStage: number;
-}
-
-function calculatePipelineByStage(deals: DealRecord[]): PipelineByStageItem[] {
+function calculatePipelineByStage(deals: DealRecord[]): PipelineStage[] {
   const stageMap = new Map<string, { value: number; deals: number; name: string; days: number[] }>();
   
   deals.forEach(deal => {
     const stage = deal.stage ?? 'unknown';
     const stageName = deal.stageName ?? stage;
-    const value = parseFloat(deal.value) ?? 0;
+    const value = typeof deal.value === 'number' ? deal.value : parseFloat(String(deal.value)) || 0;
     const daysInStage = calculateDaysInStage(deal, stage);
-    
+
     const existing = stageMap.get(stage) ?? { value: 0, deals: 0, name: stageName, days: [] };
     stageMap.set(stage, {
       value: existing.value + value,
@@ -522,16 +543,11 @@ function calculatePipelineByStage(deals: DealRecord[]): PipelineByStageItem[] {
       days: [...existing.days, daysInStage],
     });
   });
-  
-  return Array.from(stageMap.entries()).map(([stageId, data]) => ({
-    stageId,
-    stageName: data.name,
+
+  return Array.from(stageMap.entries()).map(([stage, data]) => ({
+    stage,
     value: data.value,
-    deals: data.deals,
-    averageDealSize: data.deals > 0 ? data.value / data.deals : 0,
-    averageDaysInStage: data.days.length > 0
-      ? data.days.reduce((sum, d) => sum + d, 0) / data.days.length
-      : 0,
+    count: data.deals,
   }));
 }
 
@@ -697,15 +713,7 @@ async function calculateConversionRates(workspaceId: string, organizationId: str
   return rates;
 }
 
-/** Pipeline trend item */
-interface PipelineTrendItem {
-  date: Date;
-  totalValue: number;
-  totalDeals: number;
-  byStage: Record<string, { value: number; count: number }>;
-}
-
-async function calculatePipelineTrends(workspaceId: string, organizationId: string, period: string): Promise<PipelineTrendItem[]> {
+async function calculatePipelineTrends(workspaceId: string, organizationId: string, period: string): Promise<PipelineTrend[]> {
   // Get deals over time
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -718,55 +726,40 @@ async function calculatePipelineTrends(workspaceId: string, organizationId: stri
   );
   
   // Group by date and stage
-  const trends: PipelineTrendItem[] = [];
-  const dateMap = new Map<string, { value: number; deals: number; byStage: Map<string, { value: number; count: number }> }>();
-  
+  const trends: PipelineTrend[] = [];
+  const dateMap = new Map<string, { value: number; deals: number }>();
+
   deals.forEach(deal => {
     const createdAtVal = deal.createdAt;
-    const date = (createdAtVal && typeof createdAtVal === 'object' && 'toDate' in createdAtVal && createdAtVal.toDate)
+    const date = createdAtVal && typeof createdAtVal === 'object' && 'toDate' in createdAtVal && typeof createdAtVal.toDate === 'function'
       ? createdAtVal.toDate()
-      : new Date(createdAtVal as string);
+      : createdAtVal instanceof Date ? createdAtVal : new Date(String(createdAtVal));
     const dateKey = date.toISOString().split('T')[0];
-    const value = parseFloat(String(deal.value)) ?? 0;
-    const stage = deal.stage ?? 'unknown';
-    
-    const existing = dateMap.get(dateKey) ?? { value: 0, deals: 0, byStage: new Map() };
-    const stageData = existing.byStage.get(stage) ?? { value: 0, count: 0 };
-    
-    existing.byStage.set(stage, {
-      value: stageData.value + value,
-      count: stageData.count + 1,
-    });
-    
+    const value = typeof deal.value === 'number' ? deal.value : parseFloat(String(deal.value)) || 0;
+
+    const existing = dateMap.get(dateKey) ?? { value: 0, deals: 0 };
+
     dateMap.set(dateKey, {
       value: existing.value + value,
       deals: existing.deals + 1,
-      byStage: existing.byStage,
     });
   });
-  
+
   dateMap.forEach((data, dateKey) => {
-    // Convert byStage Map to object
-    const byStage: Record<string, { value: number; count: number }> = {};
-    data.byStage.forEach((stageData, stage) => {
-      byStage[stage] = stageData;
-    });
-    
     trends.push({
-      date: new Date(dateKey),
-      totalValue: data.value,
-      totalDeals: data.deals,
-      byStage,
+      date: dateKey,
+      value: data.value,
+      count: data.deals,
     });
   });
-  
-  return trends.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  return trends.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 function calculateWeightedForecast(deals: DealRecord[]): number {
   return deals.reduce((sum, deal) => {
-    const value = parseFloat(String(deal.value)) ?? 0;
-    const probability = parseFloat(String(deal.probability)) ?? 50; // Default 50%
+    const value = safeParseFloat(deal.value, 0);
+    const probability = safeParseFloat(deal.probability, 50); // Default 50%
     return sum + (value * probability / 100);
 }, 0);
 }
@@ -779,40 +772,29 @@ function calculateForecastConfidence(deals: DealRecord[]): number {
   // - Average probability
   // - Recency of updates
   
-  const avgProbability = deals.reduce((sum, d) => sum + (parseFloat(String(d.probability)) ?? 50), 0) / deals.length;
+  const avgProbability = deals.reduce((sum, d) => sum + safeParseFloat(d.probability, 50), 0) / deals.length;
   const dealCountFactor = Math.min(deals.length / 20, 1); // Max confidence at 20+ deals
   const recencyFactor = 1; // TODO: Factor in how recently deals were updated
   
   return Math.round((avgProbability * 0.6 + dealCountFactor * 100 * 0.4) * recencyFactor);
 }
 
-/** Forecast scenario */
-interface ForecastScenario {
-  name: string;
-  revenue: number;
-  probability: number;
-  description: string;
-}
-
 function generateForecastScenarios(deals: DealRecord[], baseForecast: number): ForecastScenario[] {
   return [
     {
       name: 'best_case',
-      revenue: baseForecast * 1.2,
+      value: baseForecast * 1.2,
       probability: 20,
-      description: 'All deals close at high probability',
     },
     {
       name: 'likely',
-      revenue: baseForecast,
+      value: baseForecast,
       probability: 60,
-      description: 'Deals close at current probability',
     },
     {
       name: 'worst_case',
-      revenue: baseForecast * 0.7,
+      value: baseForecast * 0.7,
       probability: 20,
-      description: 'Some deals slip or reduce probability',
     },
   ];
 }
@@ -832,8 +814,8 @@ function calculateForecastByRep(deals: DealRecord[]): ForecastByRepItem[] {
   deals.forEach(deal => {
     const repId = deal.assignedTo ?? deal.ownerId ?? 'unassigned';
     const repName = deal.assignedToName ?? deal.ownerName ?? 'Unassigned';
-    const value = parseFloat(String(deal.value)) ?? 0;
-    const probability = parseFloat(String(deal.probability)) ?? 50;
+    const value = safeParseFloat(deal.value, 0);
+    const probability = safeParseFloat(deal.probability, 50);
     const weighted = value * probability / 100;
     
     const existing = repMap.get(repId) ?? { forecast: 0, deals: 0, name: repName, weighted: 0 };
@@ -871,8 +853,8 @@ async function calculateForecastByProduct(workspaceId: string, deals: DealRecord
         const productId = product.productId ?? product.id ?? 'unknown';
         const productName = product.name ?? 'Unknown';
         const quantity = product.quantity ?? 1;
-        const price = parseFloat(String(product.price)) ?? 0;
-        const probability = parseFloat(String(deal.probability)) ?? 50;
+        const price = safeParseFloat(product.price, 0);
+        const probability = safeParseFloat(deal.probability, 50);
         const forecast = (quantity * price) * probability / 100;
         
         const existing = productMap.get(productId) ?? { forecast: 0, units: 0, name: productName };
@@ -962,7 +944,7 @@ function analyzeLossReasons(lostDeals: DealRecord[]): LossReasonItem[] {
   
   lostDeals.forEach(deal => {
     const reason = deal.lostReason ?? deal.reason ?? 'No reason provided';
-    const value = parseFloat(String(deal.value)) ?? 0;
+    const value = safeParseFloat(deal.value, 0);
     
     const existing = reasonMap.get(reason) ?? { count: 0, totalValue: 0 };
     reasonMap.set(reason, {
@@ -996,8 +978,8 @@ function analyzeWinFactors(wonDeals: DealRecord[]): WinFactorItem[] {
   const factorMap = new Map<string, { count: number; totalValue: number }>();
   
   wonDeals.forEach(deal => {
-    const value = parseFloat(String(deal.value)) ?? 0;
-    
+    const value = safeParseFloat(deal.value, 0);
+
     // Extract factors from deal notes, tags, etc.
     const tags = deal.tags ?? [];
     tags.forEach((tag: string) => {
@@ -1048,7 +1030,7 @@ function analyzeCompetitors(wonDeals: DealRecord[], lostDeals: DealRecord[]): Co
       competitorMap.set(competitor, {
         ...existing,
         losses: existing.losses + 1,
-        totalValue: existing.totalValue + (parseFloat(String(deal.value)) ?? 0),
+        totalValue: existing.totalValue + safeParseFloat(deal.value, 0),
       });
     }
   });
@@ -1101,7 +1083,7 @@ function analyzeWinLossByRep(wonDeals: DealRecord[], lostDeals: DealRecord[]): W
     const repId = deal.assignedTo ?? deal.ownerId ?? 'unassigned';
     const repName = deal.assignedToName ?? deal.ownerName ?? 'Unassigned';
     const isWon = deal.status === 'won' || deal.stage === 'closed_won';
-    const value = parseFloat(String(deal.value)) ?? 0;
+    const value = safeParseFloat(deal.value, 0);
     
     const existing = repMap.get(repId) ?? { won: 0, lost: 0, totalValue: 0, name: repName };
     repMap.set(repId, {

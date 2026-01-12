@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Voice call error', error, { route: '/api/voice/call' });
-    return errors.internal('Failed to initiate call', error);
+    return errors.internal('Failed to initiate call', error instanceof Error ? error : undefined);
   }
 }
 

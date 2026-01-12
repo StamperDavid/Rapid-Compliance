@@ -7,6 +7,22 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 
 /**
+ * Helper function to convert various date formats to Date object
+ */
+function toDate(value: unknown): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date();
+}
+
+/**
  * GET /api/analytics/revenue - Get revenue analytics
  * 
  * Query params:
@@ -125,8 +141,8 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
     const closedDeals = allDeals.filter(deal => {
       const isWon = deal.status === 'won' || deal.status === 'closed_won' || deal.stage === 'closed_won';
       if (!isWon) {return false;}
-      
-      const closedDate = deal.closedDate?.toDate?.() ?? (deal.closedDate ? new Date(deal.closedDate) : (deal.createdAt?.toDate?.() ?? new Date(deal.createdAt)));
+
+      const closedDate = toDate(deal.closedDate) || toDate(deal.createdAt);
       return closedDate >= startDate && closedDate <= now;
     });
 
@@ -142,7 +158,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
 
     const completedOrders = allOrders.filter(order => {
       if (order.status !== 'completed' && order.status !== 'paid') {return false;}
-      const orderDate = order.createdAt?.toDate?.() ?? new Date(order.createdAt);
+      const orderDate = toDate(order.createdAt);
       return orderDate >= startDate && orderDate <= now;
     });
 
@@ -163,13 +179,13 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
       const prevDeals = allDeals.filter(deal => {
         const isWon = deal.status === 'won' || deal.status === 'closed_won' || deal.stage === 'closed_won';
         if (!isWon) {return false;}
-        const closedDate = deal.closedDate?.toDate?.() ?? (deal.closedDate ? new Date(deal.closedDate) : (deal.createdAt?.toDate?.() ?? new Date(deal.createdAt)));
+        const closedDate = toDate(deal.closedDate) || toDate(deal.createdAt);
         return closedDate >= prevStart && closedDate < prevEnd;
       });
 
       const prevOrders = allOrders.filter(order => {
         if (order.status !== 'completed' && order.status !== 'paid') {return false;}
-        const orderDate = order.createdAt?.toDate?.() ?? new Date(order.createdAt);
+        const orderDate = toDate(order.createdAt);
         return orderDate >= prevStart && orderDate < prevEnd;
       });
 
@@ -220,7 +236,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
           productMap.set(name, (productMap.get(name) ?? 0) + value);
         });
       } else if (deal.productName || deal.product) {
-        const name = (deal.productName !== '' && deal.productName != null) ? deal.productName : deal.product;
+        const name = deal.productName || deal.product || 'Unknown Product';
         const value = Number(deal.value) || Number(deal.amount) || 0;
         productMap.set(name, (productMap.get(name) ?? 0) + value);
       }

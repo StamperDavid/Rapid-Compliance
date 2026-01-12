@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error('Lead research error', error, { route: '/api/leads/research' });
-    return errors.externalService('Lead research service', error);
+    return errors.externalService('Lead research service', error instanceof Error ? error : undefined);
   }
 }
 

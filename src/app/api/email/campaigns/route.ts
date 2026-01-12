@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, stats });
     } else {
       // List all campaigns with pagination
-      const limit = parseInt((searchParams.get('limit') !== '' && searchParams.get('limit') != null) ? searchParams.get('limit') : '50');
+      const limit = parseInt(searchParams.get('limit') || '50');
       const cursor = searchParams.get('cursor') ?? undefined;
       const result = await listCampaigns(organizationId, limit, cursor);
       return NextResponse.json({ 
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
   } catch (error: any) {
     logger.error('Campaign fetch error', error, { route: '/api/email/campaigns' });
-    return errors.database('Failed to fetch campaigns', error);
+    return errors.database('Failed to fetch campaigns', error instanceof Error ? error : undefined);
   }
 }
 
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     return errors.badRequest('Invalid action. Use: create or send');
   } catch (error: any) {
     logger.error('Campaign processing error', error, { route: '/api/email/campaigns' });
-    return errors.database('Failed to process campaign', error);
+    return errors.database('Failed to process campaign', error instanceof Error ? error : undefined);
   }
 }
 

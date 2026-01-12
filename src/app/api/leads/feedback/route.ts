@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('Lead feedback error', error, { route: '/api/leads/feedback' });
-    return errors.database('Failed to save feedback', error);
+    return errors.database('Failed to save feedback', error instanceof Error ? error : undefined);
   }
 }
 

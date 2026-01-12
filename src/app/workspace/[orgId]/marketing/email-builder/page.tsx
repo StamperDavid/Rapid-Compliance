@@ -229,12 +229,12 @@ export default function EmailBuilderPage() {
                           <img src={block.content} alt="Email" className="w-full rounded" />
                         )}
                         {block.type === 'button' && (
-                          <div style={{ textAlign: (() => { const v = block.styling?.alignment; return (v !== '' && v != null) ? v : 'center'; })() }}>
+                          <div style={{ textAlign: block.styling?.alignment ?? 'center' }}>
                             <button
                               className="px-6 py-3 rounded font-medium"
                               style={{
                                 backgroundColor: block.styling?.buttonColor ?? template.styling?.primaryColor,
-                                color: (() => { const v = block.styling?.buttonTextColor; return (v !== '' && v != null) ? v : '#ffffff'; })(),
+                                color: block.styling?.buttonTextColor ?? '#ffffff',
                               }}
                             >
                               {block.content}
@@ -334,7 +334,7 @@ export default function EmailBuilderPage() {
                 <div>
                   <label className="text-sm text-gray-400">Alignment</label>
                   <select
-                    value={(() => { const v = selectedBlock.styling?.alignment; return (v !== '' && v != null) ? v : 'left'; })()}
+                    value={selectedBlock.styling?.alignment ?? 'left'}
                     onChange={(e) => updateBlock(selectedBlock.id, {
                       styling: { ...selectedBlock.styling, alignment: e.target.value as any }
                     })}
@@ -363,7 +363,7 @@ export default function EmailBuilderPage() {
                       <label className="text-sm text-gray-400">Text Color</label>
                       <input
                         type="color"
-                        value={(() => { const v = selectedBlock.styling?.buttonTextColor; return (v !== '' && v != null) ? v : '#ffffff'; })()}
+                        value={selectedBlock.styling?.buttonTextColor ?? '#ffffff'}
                         onChange={(e) => updateBlock(selectedBlock.id, {
                           styling: { ...selectedBlock.styling, buttonTextColor: e.target.value }
                         })}
@@ -378,7 +378,7 @@ export default function EmailBuilderPage() {
                     <label className="text-sm text-gray-400">Text Color</label>
                     <input
                       type="color"
-                      value={(() => { const v = selectedBlock.styling?.textColor; return (v !== '' && v != null) ? v : '#333333'; })()}
+                      value={selectedBlock.styling?.textColor ?? '#333333'}
                       onChange={(e) => updateBlock(selectedBlock.id, {
                         styling: { ...selectedBlock.styling, textColor: e.target.value }
                       })}

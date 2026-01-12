@@ -7,6 +7,22 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+/**
+ * Helper to convert Firestore timestamps, Date objects, strings, or numbers to Date
+ */
+function toDate(value: unknown): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date();
+}
+
 // Local interfaces for Firestore records
 interface DealRecord {
   id?: string;
@@ -132,8 +148,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
       const isClosed = wonStatuses.some(s => status.includes(s)) || lostStatuses.some(s => status.includes(s));
       if (!isClosed) {return false;}
 
-      const closedDate = deal.closedDate?.toDate?.() ?? deal.closedAt?.toDate?.() ?? 
-                        (deal.closedDate ? new Date(deal.closedDate) : new Date(deal.updatedAt));
+      const closedDate = toDate(deal.closedDate) || toDate(deal.closedAt) || toDate(deal.updatedAt);
       return closedDate >= startDate && closedDate <= now;
     });
 
@@ -239,7 +254,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
     // Weekly trends
     const weeklyMap = new Map<string, { won: number; lost: number }>();
     closedDealsInPeriod.forEach(deal => {
-      const closedDate = deal.closedDate?.toDate?.() ?? deal.closedAt?.toDate?.() ?? new Date((deal.closedDate !== '' && deal.closedDate != null) ? deal.closedDate : deal.updatedAt);
+      const closedDate = toDate(deal.closedDate) || toDate(deal.closedAt) || toDate(deal.updatedAt);
       const weekStart = new Date(closedDate);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
       const weekKey = weekStart.toISOString().split('T')[0];

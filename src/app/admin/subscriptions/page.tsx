@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { logger } from '@/lib/logger/logger';
 
 export default function SubscriptionsAdminPage() {
-  const { _user } = useAuth();
+  useAuth();
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState<any>(null);

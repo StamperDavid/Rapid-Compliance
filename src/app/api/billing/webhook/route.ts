@@ -74,6 +74,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, received: true });
   } catch (error: any) {
     logger.error('Error handling webhook', error, { route: '/api/billing/webhook' });
-    return errors.internal('Webhook handler failed', error);
+    return errors.internal('Webhook handler failed', error instanceof Error ? error : undefined);
   }
 }

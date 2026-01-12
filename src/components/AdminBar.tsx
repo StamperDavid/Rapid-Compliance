@@ -141,8 +141,8 @@ export default function AdminBar() {
               {user?.displayName && user.displayName !== '' ? user.displayName.charAt(0) : 'A'}
             </div>
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontWeight: '600' }}>{(user?.displayName !== '' && user?.displayName != null) ? user.displayName : 'User'}</div>
-              <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'capitalize' }}>{(user?.role !== '' && user?.role != null) ? user.role : 'member'}</div>
+              <div style={{ fontWeight: '600' }}>{user?.displayName || 'User'}</div>
+              <div style={{ fontSize: '0.75rem', color: '#999', textTransform: 'capitalize' }}>{user?.role ?? 'member'}</div>
             </div>
             <span style={{ color: '#666' }}>▼</span>
           </button>
@@ -155,7 +155,7 @@ export default function AdminBar() {
               />
               <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '0.5rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', minWidth: '200px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 20 }}>
                 <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #222' }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{(user?.email !== '' && user?.email != null) ? user.email : 'No email'}</div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#fff' }}>{user?.email || 'No email'}</div>
                   <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>Organization: Demo</div>
                 </div>
 

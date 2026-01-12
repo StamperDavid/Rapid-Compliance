@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     }
   } catch (error: any) {
     logger.error('API key test error', error, { route: '/api/settings/api-keys/test' });
-    return errors.externalService('API service', error);
+    return errors.externalService('API service', error instanceof Error ? error : undefined);
   }
 }
 

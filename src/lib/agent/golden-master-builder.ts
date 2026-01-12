@@ -142,7 +142,7 @@ export async function buildGoldenMaster(
   const businessContext = buildBusinessContextFromOnboarding(onboardingData);
   
   // Build behavior config from onboarding
-  const behaviorConfig = buildBehaviorConfigFromOnboarding(onboardingData) as BehaviorConfig;
+  const behaviorConfig = buildBehaviorConfigFromOnboarding(onboardingData) as unknown as BehaviorConfig;
   
   // Compile system prompt
   const systemPrompt = await compileSystemPrompt({

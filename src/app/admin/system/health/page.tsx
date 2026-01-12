@@ -5,7 +5,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { SystemHealth } from '@/types/admin';
 
 export default function SystemHealthPage() {
-  const { _adminUser } = useAdminAuth();
+  useAdminAuth();
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);

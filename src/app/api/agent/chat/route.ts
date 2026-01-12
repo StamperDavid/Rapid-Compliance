@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { customerId, orgId, message, _stream } = validation.data;
+    const { customerId, orgId, message } = validation.data;
 
     // Verify user has access to this organization
     if (user.organizationId !== orgId) {

@@ -76,8 +76,8 @@ export function generateAgentTwiML(
 ): string {
   const optionsVoice = options?.voice;
   const optionsLanguage = options?.language;
-  const voice = (optionsVoice !== '' && optionsVoice != null) ? optionsVoice : 'Polly.Joanna'; // Amazon Polly voices
-  const language = (optionsLanguage !== '' && optionsLanguage != null) ? optionsLanguage : 'en-US';
+  const voice = optionsVoice ?? 'Polly.Joanna'; // Amazon Polly voices
+  const language = optionsLanguage ?? 'en-US';
   
   if (options?.gather) {
     // Gather user speech input

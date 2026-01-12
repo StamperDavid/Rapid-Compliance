@@ -104,7 +104,7 @@ export async function POST(
           
           if (sslResult.success) {
             await domainRef.update({
-              sslStatus:(sslResult.status !== '' && sslResult.status != null) ? sslResult.status : 'pending',
+              sslStatus: sslResult.status ?? 'pending',
               sslEnabled: sslResult.status === 'active',
               sslIssuedAt: sslResult.status === 'active' ? now : null,
               sslExpiresAt: sslResult.expiresAt ?? null,

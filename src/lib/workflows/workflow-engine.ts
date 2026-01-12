@@ -48,7 +48,7 @@ export async function executeWorkflowImpl(
   try {
     // Check conditions before executing
     if (workflow.conditions && workflow.conditions.length > 0) {
-      const conditionsMet = await evaluateConditions(workflow.conditions, triggerData,(workflow.conditionOperator !== '' && workflow.conditionOperator != null) ? workflow.conditionOperator : 'and');
+      const conditionsMet = await evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator ?? 'and');
       if (!conditionsMet) {
         execution.status = 'completed';
         execution.completedAt = new Date();

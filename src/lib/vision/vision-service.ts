@@ -32,8 +32,8 @@ export async function analyzeImage(
   organizationId?: string
 ): Promise<VisionAnalysisResponse> {
   const startTime = Date.now();
-  const model =(request.model !== '' && request.model != null) ? request.model : 'gpt-4-vision';
-  
+  const model = request.model ?? 'gpt-4-vision';
+
   if (model === 'gpt-4-vision') {
     return analyzeWithGPT4Vision(request, organizationId, startTime);
   } else {
@@ -137,11 +137,11 @@ async function analyzeWithGeminiVision(
       const imageResponse = await fetch(request.imageUrl);
       const arrayBuffer = await imageResponse.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString('base64');
-      
+
       imagePart = {
         inlineData: {
           data: base64,
-          mimeType:(imageResponse.headers.get('content-type') !== '' && imageResponse.headers.get('content-type') != null) ? imageResponse.headers.get('content-type') : 'image/jpeg',
+          mimeType: imageResponse.headers.get('content-type') ?? 'image/jpeg',
         },
       };
     } else if (request.imageBase64) {

@@ -74,7 +74,7 @@ export async function requireLimit(
           remaining: limit.remaining,
           requested: amount,
           upgrade: true,
-          upgradeMessage: getLimitUpgradeMessage(feature,(subscription.plan !== '' && subscription.plan != null) ? subscription.plan : 'free'),
+          upgradeMessage: getLimitUpgradeMessage(feature, subscription.plan ?? 'free'),
           currentPlan: subscription.plan,
         },
         { status: 429 } // Too Many Requests

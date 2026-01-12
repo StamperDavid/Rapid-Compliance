@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const workspaceId = searchParams.get('workspaceId');
     const types = searchParams.get('types')?.split(',');
     const excludeArchived = searchParams.get('excludeArchived') !== 'false';
-    const limit = parseInt((searchParams.get('limit') !== '' && searchParams.get('limit') != null) ? searchParams.get('limit') : '100', 10);
+    const limit = parseInt(searchParams.get('limit') || '100', 10);
     const cursor = searchParams.get('cursor') ?? undefined;
     
     // Validate input

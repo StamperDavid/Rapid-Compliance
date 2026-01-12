@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error adding addon', error, { route: '/api/subscription/addon' });
-    return errors.database('Failed to add addon', error);
+    return errors.database('Failed to add addon', error instanceof Error ? error : undefined);
   }
 }
 
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error listing addons', error, { route: '/api/subscription/addon' });
-    return errors.database('Failed to list addons', error);
+    return errors.database('Failed to list addons', error instanceof Error ? error : undefined);
   }
 }
 

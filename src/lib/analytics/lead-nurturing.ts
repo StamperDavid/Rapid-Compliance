@@ -166,10 +166,10 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
     name:(sequence.name !== '' && sequence.name != null) ? sequence.name : 'Untitled Sequence',
     organizationId: sequence.organizationId!,
     workspaceId: sequence.workspaceId,
-    trigger:(sequence.trigger !== '' && sequence.trigger != null) ? sequence.trigger : 'new_lead',
+    trigger: sequence.trigger ?? 'new_lead',
     triggerConditions: sequence.triggerConditions,
     emails: sequence.emails ?? [],
-    sendFrequency:(sequence.sendFrequency !== '' && sequence.sendFrequency != null) ? sequence.sendFrequency : 'weekly',
+    sendFrequency: sequence.sendFrequency ?? 'weekly',
     customSchedule: sequence.customSchedule,
     maxEmails: sequence.maxEmails,
     stopOnResponse: sequence.stopOnResponse ?? true,
@@ -452,7 +452,8 @@ export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<
     logger.error('Failed to save lead segment to Firestore:', error, { file: 'lead-nurturing.ts' });
     // Fallback to localStorage if Firestore fails (development only)
     if (typeof window !== 'undefined') {
-      const segments = JSON.parse((localStorage.getItem('leadSegments') !== '' && localStorage.getItem('leadSegments') != null) ? localStorage.getItem('leadSegments') : '[]');
+      const segmentsJson = localStorage.getItem('leadSegments') ?? '[]';
+      const segments = JSON.parse(segmentsJson);
       segments.push(fullSegment);
       localStorage.setItem('leadSegments', JSON.stringify(segments));
     }

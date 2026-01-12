@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Fatal error processing sequences (cron)', error, { route: '/api/cron/process-sequences' });
-    return errors.internal('Failed to process sequences', error);
+    return errors.internal('Failed to process sequences', error instanceof Error ? error : undefined);
   }
 }
 

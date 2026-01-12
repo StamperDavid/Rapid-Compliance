@@ -664,7 +664,7 @@ function scoreDepartment(person: DiscoveredPerson, rules: ScoringRules): Scoring
     category: 'person',
     factor: 'Non-target department',
     points: 0,
-    explanation: `Department ${(department !== '' && department != null) ? department : 'unknown'} is not a priority`,
+    explanation: `Department ${department ?? 'unknown'} is not a priority`,
     impact: 'low',
   });
 

@@ -83,7 +83,7 @@ integration.lastHistoryId ?? historyId
     return NextResponse.json({ success: true });
   } catch (error: any) {
     logger.error('Gmail webhook error', error, { route: '/api/webhooks/gmail' });
-    return errors.internal('Internal error', error);
+    return errors.internal('Internal error', error instanceof Error ? error : undefined);
   }
 }
 

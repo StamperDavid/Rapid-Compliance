@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Email generation error', error, { route: '/api/outbound/email/generate' });
-    return errors.externalService('AI email generation', error);
+    return errors.externalService('AI email generation', error instanceof Error ? error : undefined);
   }
 }
 

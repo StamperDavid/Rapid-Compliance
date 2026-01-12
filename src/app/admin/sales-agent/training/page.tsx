@@ -11,8 +11,8 @@ import { logger } from '@/lib/logger/logger';
  * Same design as client training centers, but wired to admin context
  */
 export default function AdminSalesAgentTrainingPage() {
-  const { _adminUser } = useAdminAuth();
-  
+  useAdminAuth();
+
   // Platform admin uses a special org ID for its own data
   const orgId = 'platform-admin';
   

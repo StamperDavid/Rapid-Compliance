@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     logger.error('Error creating platform-admin org', error, { route: '/api/setup/create-platform-org' });
-    return errors.database('Failed to create platform organization', error);
+    return errors.database('Failed to create platform organization', error instanceof Error ? error : undefined);
   }
 }
 

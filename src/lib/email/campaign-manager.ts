@@ -92,7 +92,7 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
     name:(campaign.name !== '' && campaign.name != null) ? campaign.name : 'Untitled Campaign',
     organizationId: campaign.organizationId!,
     workspaceId:(campaign.workspaceId !== '' && campaign.workspaceId != null) ? campaign.workspaceId : 'default',
-    type:(campaign.type !== '' && campaign.type != null) ? campaign.type : 'broadcast',
+    type: campaign.type ?? 'broadcast',
     subject: campaign.subject!,
     ...(campaign.subjectB !== undefined && { subjectB: campaign.subjectB }),
     htmlContent: campaign.htmlContent!,

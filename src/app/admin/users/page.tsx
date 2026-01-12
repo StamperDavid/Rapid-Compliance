@@ -7,7 +7,7 @@ import type { User } from '@/types/user'
 import { logger } from '@/lib/logger/logger';
 
 export default function UsersPage() {
-  const { _adminUser, hasPermission } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
   const [users, setUsers] = useState<(User & { organizationId: string; organizationName: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

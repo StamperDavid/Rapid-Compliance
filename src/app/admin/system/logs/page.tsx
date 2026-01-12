@@ -5,7 +5,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { AdminAuditLog } from '@/types/admin';
 
 export default function AuditLogsPage() {
-  const { _adminUser } = useAdminAuth();
+  useAdminAuth();
   const [logs, setLogs] = useState<AdminAuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterAction, setFilterAction] = useState<string>('all');

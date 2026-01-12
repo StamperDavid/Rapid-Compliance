@@ -195,8 +195,14 @@ export class CoachingAnalyticsEngine {
       const cycleTimes = wonDeals
         .filter((d: DealData) => d.createdAt && d.closedAt)
         .map((d: DealData) => {
-          const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
-          const closed = d.closedAt.toDate ? d.closedAt.toDate() : new Date(d.closedAt);
+          const createdAt = d.createdAt!;
+          const closedAt = d.closedAt!;
+          const created = typeof createdAt === 'object' && createdAt !== null && 'toDate' in createdAt && typeof createdAt.toDate === 'function'
+            ? createdAt.toDate()
+            : (createdAt instanceof Date ? createdAt : new Date(createdAt as string));
+          const closed = typeof closedAt === 'object' && closedAt !== null && 'toDate' in closedAt && typeof closedAt.toDate === 'function'
+            ? closedAt.toDate()
+            : (closedAt instanceof Date ? closedAt : new Date(closedAt as string));
           return (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
         });
       const averageCycleDays = cycleTimes.length > 0

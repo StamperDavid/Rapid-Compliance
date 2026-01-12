@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Checkout completion error', error, { route: '/api/checkout/complete' });
-    return errors.externalService('Stripe', error);
+    return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }
 }
 

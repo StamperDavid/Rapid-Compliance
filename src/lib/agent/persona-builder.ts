@@ -82,7 +82,6 @@ interface ExtendedOnboardingData extends OnboardingData {
   secondaryObjectives?: string[];
   successMetrics?: string;
   maxMessagesBeforeEscalation?: number;
-  escalationRules?: string | string[];
 }
 
 /**
@@ -219,7 +218,7 @@ export function buildBehaviorConfigFromOnboarding(
   return {
     closingAggressiveness: onboardingData.closingStyle ?? 5,
     questionFrequency: onboardingData.discoveryDepth ?? 3,
-    responseLength: (onboardingData.responseLength !== '' && onboardingData.responseLength != null) ? onboardingData.responseLength : 'balanced',
+    responseLength: onboardingData.responseLength ?? 'balanced',
     proactiveLevel: onboardingData.proactivityLevel ?? 5,
     maxMessagesBeforeEscalation: 20,
     idleTimeoutMinutes: onboardingData.idleTimeoutMinutes ?? 30,

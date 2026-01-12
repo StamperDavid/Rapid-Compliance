@@ -37,7 +37,7 @@ export async function POST(
     });
   } catch (error: any) {
     logger.error('Error syncing integration', error, { route: '/api/integrations/sync' });
-    return errors.externalService('Integration', error);
+    return errors.externalService('Integration', error instanceof Error ? error : undefined);
   }
 }
 

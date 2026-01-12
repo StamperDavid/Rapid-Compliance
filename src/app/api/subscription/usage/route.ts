@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error checking usage', error, { route: '/api/subscription/usage' });
-    return errors.database('Failed to check usage', error);
+    return errors.database('Failed to check usage', error instanceof Error ? error : undefined);
   }
 }
 

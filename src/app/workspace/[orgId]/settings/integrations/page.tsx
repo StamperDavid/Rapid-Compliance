@@ -61,10 +61,10 @@ export default function IntegrationsPage() {
 
   const handleConnect = async (integrationId: string, integration: Partial<ConnectedIntegration>) => {
     if (!user?.organizationId) {return;}
-    
-    const updated = {
+
+    const updated: Record<string, ConnectedIntegration | null> = {
       ...integrations,
-      [integrationId]: integration,
+      [integrationId]: integration as ConnectedIntegration,
     };
     setIntegrations(updated);
     
@@ -368,7 +368,7 @@ export default function IntegrationsPage() {
                       <Component
                         key={id}
                         integration={integrations[id] as any}
-                        onConnect={(integration) => handleConnect(id, integration)}
+                        onConnect={(integration) => handleConnect(id, integration as Partial<ConnectedIntegration>)}
                         onDisconnect={() => handleDisconnect(id)}
                         onUpdate={(updates) => {
                           if (id === 'quickbooks' || id === 'xero') {

@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error loading agent config', error, { route: '/api/agent/config' });
-    return errors.database('Failed to load configuration', error);
+    return errors.database('Failed to load configuration', error instanceof Error ? error : undefined);
   }
 }
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error saving agent config', error, { route: '/api/agent/config' });
-    return errors.database('Failed to save configuration', error);
+    return errors.database('Failed to save configuration', error instanceof Error ? error : undefined);
   }
 }
 

@@ -105,9 +105,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } else if (error?.message?.includes('Invalid email')) {
       response = errors.badRequest('Invalid email address');
     } else if (error?.code === 'ECONNREFUSED') {
-      response = errors.internal('Email service unavailable', error);
+      response = errors.internal('Email service unavailable', error instanceof Error ? error : undefined);
     } else {
-      response = errors.internal('Failed to send email', error);
+      response = errors.internal('Failed to send email', error instanceof Error ? error : undefined);
     }
     
     await logApiRequest(request, response, startTime);

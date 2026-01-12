@@ -17,7 +17,7 @@ interface TierConfig {
 }
 
 export default function PricingTiersAdmin() {
-  const { _user } = useAuth();
+  useAuth();
   const [tiers, setTiers] = useState<TierConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

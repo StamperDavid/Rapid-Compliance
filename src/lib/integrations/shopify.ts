@@ -163,6 +163,7 @@ export async function fetchShopifyOrders(
       }>;
       total_price: string;
       created_at: string;
+      financial_status?: string;
     }
 
     const orders: ShopifyOrder[] = data.orders.map((order: ShopifyOrderResponse) => ({

@@ -5,6 +5,22 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+/**
+ * Helper function to safely convert various date formats to Date object
+ */
+function toDate(value: unknown): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date();
+}
+
 // Local interfaces for Firestore records
 interface WorkflowRecord {
   id?: string;
@@ -92,9 +108,7 @@ export async function GET(request: NextRequest) {
 
     // Filter executions by date
     const executionsInPeriod = allExecutions.filter(exec => {
-      const execDate = exec.startedAt?.toDate?.() 
-        ?? exec.createdAt?.toDate?.() 
-        ?? new Date(exec.startedAt ?? exec.createdAt);
+      const execDate = toDate(exec.startedAt) || toDate(exec.createdAt);
       return execDate >= startDate && execDate <= now;
     });
 
@@ -121,8 +135,8 @@ export async function GET(request: NextRequest) {
     const executionTimes = successfulExecutions
       .filter(exec => exec.startedAt && exec.completedAt)
       .map(exec => {
-        const start =exec.startedAt?.toDate?.() ?? new Date(exec.startedAt);
-        const end =exec.completedAt?.toDate?.() ?? new Date(exec.completedAt);
+        const start = toDate(exec.startedAt);
+        const end = toDate(exec.completedAt);
         return end.getTime() - start.getTime();
       });
     const avgExecutionTime = executionTimes.length > 0
@@ -132,7 +146,7 @@ export async function GET(request: NextRequest) {
     // By workflow
     const workflowMap = new Map<string, { name: string; executions: number; success: number; failed: number }>();
     executionsInPeriod.forEach(exec => {
-      const workflowId = exec.workflowId;
+      const workflowId = exec.workflowId || 'unknown';
       const workflow = allWorkflows.find(w => w.id === workflowId);
       const name = (workflow?.name !== '' && workflow?.name != null) 
         ? workflow.name 
@@ -194,13 +208,11 @@ export async function GET(request: NextRequest) {
     // Daily trends
     const dailyMap = new Map<string, { executions: number; success: number; failed: number }>();
     executionsInPeriod.forEach(exec => {
-      const execDate = exec.startedAt?.toDate?.() 
-        ?? exec.createdAt?.toDate?.() 
-        ?? new Date(exec.startedAt ?? exec.createdAt);
+      const execDate = toDate(exec.startedAt) || toDate(exec.createdAt);
       const dateKey = execDate.toISOString().split('T')[0];
       const isSuccess = exec.status === 'completed' || exec.status === 'success';
       const isFailed = exec.status === 'failed' || exec.status === 'error';
-      
+
       const existing = dailyMap.get(dateKey) ?? { executions: 0, success: 0, failed: 0 };
       dailyMap.set(dateKey, {
         executions: existing.executions + 1,

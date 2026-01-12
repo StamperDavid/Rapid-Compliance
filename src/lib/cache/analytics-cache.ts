@@ -79,7 +79,7 @@ class AnalyticsCache {
     customTTL?: number
   ): void {
     const cacheKey = this.getCacheKey(namespace, key, params);
-    const ttl =customTTL ?? this.ttlConfig[key as keyof typeof this.ttlConfig]|| this.defaultTTL;
+    const ttl = customTTL ?? (this.ttlConfig[key as keyof typeof this.ttlConfig] || this.defaultTTL);
 
     this.cache.set(cacheKey, {
       data,

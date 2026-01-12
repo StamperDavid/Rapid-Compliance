@@ -302,7 +302,7 @@ export async function sendOutlookEmail(
     const message = {
       subject: emailData.subject,
       body: {
-        contentType: (emailData.bodyType !== '' && emailData.bodyType != null) ? emailData.bodyType : 'html',
+        contentType: emailData.bodyType ?? 'html',
         content: emailData.body,
       },
       toRecipients: emailData.to.map(email => ({
@@ -314,7 +314,7 @@ export async function sendOutlookEmail(
       bccRecipients: emailData.bcc?.map(email => ({
         emailAddress: { address: email },
       })),
-      importance: (emailData.importance !== '' && emailData.importance != null) ? emailData.importance : 'normal',
+      importance: emailData.importance ?? 'normal',
     };
     
     const response = await client

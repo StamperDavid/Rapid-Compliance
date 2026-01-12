@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: any) {
     logger.error('Fine-tune POST error', error, { route: '/api/learning/fine-tune' });
-    return errors.database('Failed to process request', error);
+    return errors.database('Failed to process request', error instanceof Error ? error : undefined);
   }
 }
 
@@ -250,7 +250,7 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Fine-tune PUT error', error, { route: '/api/learning/fine-tune' });
-    return errors.database('Failed to update config', error);
+    return errors.database('Failed to update config', error instanceof Error ? error : undefined);
   }
 }
 

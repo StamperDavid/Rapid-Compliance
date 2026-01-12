@@ -343,8 +343,8 @@ export class LeadRoutingEngine {
       } else {
         result = result || conditionResult;
       }
-      
-      currentConnector =(condition.connector !== '' && condition.connector != null) ? condition.connector : 'AND';
+
+      currentConnector = condition.connector ?? 'AND';
     }
     
     return result;
@@ -527,7 +527,7 @@ export class LeadRoutingEngine {
       if (rep.specializations.industries?.includes(lead.industry ?? '')) {
         specializationMatch.push('Industry');
       }
-      if (rep.specializations.companySizes?.includes((lead.companySize !== '' && lead.companySize != null) ? lead.companySize : '' as CompanySize)) {
+      if (lead.companySize && rep.specializations.companySizes?.includes(lead.companySize)) {
         specializationMatch.push('Company Size');
       }
       

@@ -41,7 +41,7 @@ export function BuyButton({
   const primaryColor = (themePrimaryColor !== '' && themePrimaryColor != null) ? themePrimaryColor : '#6366f1';
   const borderRadius = (themeBorderRadius !== '' && themeBorderRadius != null) ? themeBorderRadius : '0.375rem';
   const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
-  const size = (themeSize !== '' && themeSize != null) ? themeSize : 'medium';
+  const size = themeSize ?? 'medium';
 
   const sizes = {
     small: { padding: '0.5rem 1rem', fontSize: '0.875rem' },

@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error creating update request', error, { route: '/api/training/create-update-request' });
-    return errors.database('Failed to create update request', error);
+    return errors.database('Failed to create update request', error instanceof Error ? error : undefined);
   }
 }
 

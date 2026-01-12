@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: any) {
     logger.error('SMS send error', error, { route: '/api/sms/send' });
-    return errors.externalService('SMS provider', error);
+    return errors.externalService('SMS provider', error instanceof Error ? error : undefined);
   }
 }
 

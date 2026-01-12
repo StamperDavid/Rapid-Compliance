@@ -128,7 +128,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     const requiredDisclosures = (bc?.requiredDisclosures !== '' && bc?.requiredDisclosures != null) ? bc.requiredDisclosures : '';
     const prohibitedTopics = (bc?.prohibitedTopics !== '' && bc?.prohibitedTopics != null) ? bc.prohibitedTopics : '';
 
-    const businessContext: Record<string, unknown> = goldenMaster.businessContext ?? {
+    const businessContext: Record<string, unknown> = (goldenMaster.businessContext as unknown as Record<string, unknown>) ?? {
       businessName,
       industry,
       problemSolved,
@@ -169,7 +169,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     // Extract behavior config (STRING for responseLength, NUMBERS for aggressiveness/level - use ?? for numbers)
     const bhv = goldenMaster.behaviorConfig;
     const questionFrequency = bhv?.questionFrequency ?? 3;
-    const responseLength = (bhv?.responseLength !== '' && bhv?.responseLength != null) ? bhv.responseLength : 'balanced';
+    const responseLength = bhv?.responseLength ?? 'balanced';
 
     const behaviorConfig = goldenMaster.behaviorConfig ?? {
       closingAggressiveness: bhv?.closingAggressiveness ?? 5,
@@ -246,11 +246,11 @@ Prohibited Topics: ${businessContext.prohibitedTopics}
     // Add customer-specific context if returning customer
     if (customerMemory.totalInteractions > 0) {
       // Extract customer strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
-      const customerName = (customerMemory.name !== '' && customerMemory.name != null) ? customerMemory.name : 'Unknown';
-      const customerEmail = (customerMemory.email !== '' && customerMemory.email != null) ? customerMemory.email : 'Not provided';
-      const customerBudget = (customerMemory.preferences.budget !== '' && customerMemory.preferences.budget != null) ? customerMemory.preferences.budget : 'Unknown';
-      const customerInterests = (customerMemory.preferences.interests.join(', ') !== '' && customerMemory.preferences.interests.join(', ') != null) ? customerMemory.preferences.interests.join(', ') : 'None recorded';
-      const customerPreferredTone = (customerMemory.preferences.preferredTone !== '' && customerMemory.preferences.preferredTone != null) ? customerMemory.preferences.preferredTone : 'Not specified';
+      const customerName = customerMemory.name || 'Unknown';
+      const customerEmail = customerMemory.email || 'Not provided';
+      const customerBudget = customerMemory.preferences.budget ?? 'Unknown';
+      const customerInterests = customerMemory.preferences.interests.join(', ') || 'None recorded';
+      const customerPreferredTone = customerMemory.preferences.preferredTone ?? 'Not specified';
       
       prompt += `
 

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Email webhook processing error', error, { route: '/api/webhooks/email' });
-    return errors.internal('Failed to process webhook', error);
+    return errors.internal('Failed to process webhook', error instanceof Error ? error : undefined);
   }
 }
 

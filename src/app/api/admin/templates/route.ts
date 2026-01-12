@@ -9,13 +9,11 @@ import type { NextRequest} from 'next/server';
 import { NextResponse } from 'next/server';
 import { requireUserRole } from '@/lib/auth/server-auth';
 import {
-  _listGlobalTemplates,
   saveGlobalTemplate,
   deleteGlobalTemplate,
 } from '@/lib/templates/template-service';
 import {
   getIndustryOptionsWithOverrides,
-  _getAllIndustryTemplates,
 } from '@/lib/templates/template-resolver';
 import { validateTemplate, getValidationErrors } from '@/lib/templates/template-validation';
 import { logger } from '@/lib/logger/logger';

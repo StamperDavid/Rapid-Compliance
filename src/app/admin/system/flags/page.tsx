@@ -5,7 +5,7 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { FeatureFlag } from '@/types/admin';
 
 export default function FeatureFlagsPage() {
-  const { _adminUser, hasPermission } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [_showCreateModal, setShowCreateModal] = useState(false);

@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS = {
 export default function OrganizationDetailPage() {
   const params = useParams();
 
-  const { _adminUser, hasPermission } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'workspaces' | 'usage' | 'billing'>('overview');

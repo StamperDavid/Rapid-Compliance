@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 export default function AdminSalesAgentPage() {
-  const { _adminUser } = useAdminAuth();
+  useAdminAuth();
   const [goldenMaster, setGoldenMaster] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeConversations, setActiveConversations] = useState<any[]>([]);
@@ -71,28 +71,24 @@ export default function AdminSalesAgentPage() {
           value={`v${goldenMaster.version}`}
           sublabel={`Training Score: ${goldenMaster.trainingScore}/100`}
           icon="🎯"
-          color={primaryColor}
         />
         <StatCard
           label="Active Conversations"
           value={activeConversations.length.toString()}
           sublabel="Live prospect chats"
           icon="💬"
-          color="#10b981"
         />
         <StatCard
           label="Total Demos Given"
           value={goldenMaster.totalConversations.toString()}
           sublabel={`${goldenMaster.successRate}% conversion`}
           icon="📊"
-          color="#ec4899"
         />
         <StatCard
           label="Status"
           value={goldenMaster.status === 'active' ? 'Live' : 'Training'}
           sublabel={goldenMaster.status === 'active' ? 'Ready to sell' : 'Needs training'}
           icon="⚡"
-          color="#f59e0b"
         />
       </div>
 
@@ -225,12 +221,11 @@ export default function AdminSalesAgentPage() {
   );
 }
 
-function StatCard({ label, value, sublabel, icon, _color }: {
+function StatCard({ label, value, sublabel, icon }: {
   label: string;
   value: string;
   sublabel: string;
   icon: string;
-  color: string;
 }) {
   return (
     <div style={{

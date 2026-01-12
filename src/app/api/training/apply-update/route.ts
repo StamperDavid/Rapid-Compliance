@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error applying update', error, { route: '/api/training/apply-update' });
-    return errors.database('Failed to apply update', error);
+    return errors.database('Failed to apply update', error instanceof Error ? error : undefined);
   }
 }
 

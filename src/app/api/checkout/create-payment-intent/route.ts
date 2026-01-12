@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       route: '/api/checkout/create-payment-intent',
       organizationId: (await request.json()).organizationId,
     });
-    return errors.externalService('Stripe', error);
+    return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }
 }
 

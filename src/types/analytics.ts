@@ -114,3 +114,151 @@ export interface PerformanceGrouping {
   count: number;
   percentage?: number;
 }
+
+/**
+ * Report Builder Types
+ */
+
+export interface ReportFilter {
+  field: string;
+  operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'between';
+  value: string | number | boolean | [number, number];
+}
+
+export interface ReportMetric {
+  field: string;
+  aggregation: 'count' | 'sum' | 'avg' | 'min' | 'max';
+  label: string;
+}
+
+export interface ReportVisualization {
+  type: 'table' | 'bar' | 'line' | 'pie' | 'area';
+  options?: Record<string, unknown>;
+}
+
+export interface CustomReport {
+  id: string;
+  name: string;
+  description?: string;
+  organizationId: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  dataSource: string;
+  filters: ReportFilter[];
+  grouping: string[];
+  metrics: ReportMetric[];
+  visualization: ReportVisualization;
+  sharedWith: string[];
+  isPublic: boolean;
+}
+
+/**
+ * Analytics Service Report Types
+ */
+
+export interface RevenueTrend {
+  date: string;
+  revenue: number;
+  count: number;
+}
+
+export interface RevenueBySourceItem {
+  source: string;
+  revenue: number;
+  deals: number;
+  percentage: number;
+}
+
+export interface RevenueByProductItem {
+  productId: string;
+  productName: string;
+  revenue: number;
+  units: number;
+  averagePrice: number;
+}
+
+export interface RevenueBySalesRepItem {
+  repId: string;
+  repName: string;
+  revenue: number;
+  deals: number;
+  averageDealSize: number;
+}
+
+export interface RevenueReport {
+  period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  startDate: Date;
+  endDate: Date;
+  totalRevenue: number;
+  totalDeals: number;
+  averageDealSize: number;
+  revenueBySource: RevenueBySourceItem[];
+  revenueByProduct: RevenueByProductItem[];
+  revenueBySalesRep: RevenueBySalesRepItem[];
+  trends: RevenueTrend[];
+}
+
+export interface PipelineStage {
+  stage: string;
+  count: number;
+  value: number;
+}
+
+export interface PipelineTrend {
+  date: string;
+  value: number;
+  count: number;
+}
+
+export interface PipelineReport {
+  period: string;
+  totalValue: number;
+  totalDeals: number;
+  averageDealSize: number;
+  byStage: PipelineStage[];
+  velocity: number;
+  conversionRates: Record<string, number>;
+  trends: PipelineTrend[];
+}
+
+export interface ForecastScenario {
+  name: string;
+  value: number;
+  probability: number;
+}
+
+export interface SalesForecast {
+  period: 'month' | 'quarter' | 'year';
+  forecastDate: Date;
+  forecastedRevenue: number;
+  confidence: number;
+  scenarios: ForecastScenario[];
+  byRep: Record<string, number>;
+  byProduct: Record<string, number>;
+  factors: string[];
+}
+
+export interface WinLossReason {
+  reason: string;
+  count: number;
+  percentage: number;
+}
+
+export interface WinLossAnalysis {
+  period: string;
+  totalDeals: number;
+  won: number;
+  lost: number;
+  winRate: number;
+  averageDealSize: {
+    won: number;
+    lost: number;
+    total: number;
+  };
+  lossReasons: WinLossReason[];
+  winFactors: WinLossReason[];
+  byCompetitor: Record<string, { won: number; lost: number }>;
+  bySalesRep: Record<string, { won: number; lost: number; winRate: number }>;
+  trends: { date: string; winRate: number }[];
+}

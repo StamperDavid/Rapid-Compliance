@@ -62,6 +62,7 @@ interface OutlookEmailMessage {
   receivedDateTime: string;
   isRead: boolean;
   hasAttachments: boolean;
+  inReplyTo?: string;
 }
 
 /**

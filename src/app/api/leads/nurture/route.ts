@@ -111,6 +111,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     logger.error('Lead nurture error', error, { route: '/api/leads/nurture' });
-    return errors.database('Failed to process nurture request', error);
+    return errors.database('Failed to process nurture request', error instanceof Error ? error : undefined);
   }
 }

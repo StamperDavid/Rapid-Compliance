@@ -92,7 +92,7 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error removing discount', error, { route: '/api/ecommerce/cart/discount' });
-    return errors.database('Failed to remove discount', error);
+    return errors.database('Failed to remove discount', error instanceof Error ? error : undefined);
   }
 }
 

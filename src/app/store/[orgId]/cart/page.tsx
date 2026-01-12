@@ -47,7 +47,7 @@ export default function ShoppingCartPage() {
   const loadCart = async () => {
     try {
       setLoading(true);
-      const sessionId =(localStorage.getItem('cartSessionId') !== '' && localStorage.getItem('cartSessionId') != null) ? localStorage.getItem('cartSessionId') : `session-${Date.now()}`;
+      const sessionId = localStorage.getItem('cartSessionId') || `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
       
       const cartData = await getOrCreateCart(sessionId, 'default', orgId);

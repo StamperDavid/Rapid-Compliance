@@ -487,15 +487,13 @@ export class SequenceEngine {
     const task = {
       id: taskId,
       organizationId,
-      title: (step.taskTitle !== '' && step.taskTitle != null) 
-        ? step.taskTitle 
+      title: (step.taskTitle !== '' && step.taskTitle != null)
+        ? step.taskTitle
         : `Follow up with ${prospect.name}`,
       description: step.content ?? `Automated task from sequence: ${enrollment.sequenceId}`,
       type: 'follow-up',
       status: 'pending',
-      priority: (step.taskPriority !== '' && step.taskPriority != null) 
-        ? step.taskPriority 
-        : 'medium',
+      priority: step.taskPriority ?? 'medium',
       dueDate,
       relatedTo: {
         type: 'prospect',

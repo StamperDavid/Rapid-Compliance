@@ -80,11 +80,11 @@ export default function LivingLedgerPage() {
           },
         ];
 
-        setDeals(mockDealsData);
-        
+        setDeals(mockDeals);
+
         // Auto-select first deal
-        if (mockDealsData.length > 0) {
-          setSelectedDealId(mockDealsData[0].id);
+        if (mockDeals.length > 0) {
+          setSelectedDealId(mockDeals[0].id);
         }
 
         setLoading(false);

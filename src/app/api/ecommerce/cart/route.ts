@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error adding to cart', error, { route: '/api/ecommerce/cart' });
-    return errors.database('Failed to add to cart', error);
+    return errors.database('Failed to add to cart', error instanceof Error ? error : undefined);
   }
 }
 
@@ -177,7 +177,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error updating cart', error, { route: '/api/ecommerce/cart' });
-    return errors.database('Failed to update cart', error);
+    return errors.database('Failed to update cart', error instanceof Error ? error : undefined);
   }
 }
 
@@ -214,7 +214,7 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error removing from cart', error, { route: '/api/ecommerce/cart' });
-    return errors.database('Failed to remove from cart', error);
+    return errors.database('Failed to remove from cart', error instanceof Error ? error : undefined);
   }
 }
 

@@ -21,9 +21,8 @@ export async function GET(
 
     // Get orgId and workspaceId from headers or session
     // For now, using default values (TODO: Add proper auth)
-    const organizationId =
-(request.headers.get('x-organization-id') !== '' && request.headers.get('x-organization-id') != null) ? request.headers.get('x-organization-id') : 'default-org';
-    const workspaceId =(request.headers.get('x-workspace-id') !== '' && request.headers.get('x-workspace-id') != null) ? request.headers.get('x-workspace-id') : 'default';
+    const organizationId = request.headers.get('x-organization-id') || 'default-org';
+    const workspaceId = request.headers.get('x-workspace-id') || 'default';
 
     logger.info('Generating deal recommendations', {
       dealId,

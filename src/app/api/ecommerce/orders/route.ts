@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const workspaceId = searchParams.get('workspaceId');
     const customerEmail = searchParams.get('customerEmail');
     const status = searchParams.get('status');
-    const pageSize = parseInt((searchParams.get('limit') !== '' && searchParams.get('limit') != null) ? searchParams.get('limit') : '50');
+    const pageSize = parseInt(searchParams.get('limit') || '50');
 
     if (!workspaceId) {
       return errors.badRequest('workspaceId required');
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     logger.error('Error listing orders', error, {
       route: '/api/ecommerce/orders',
     });
-    return errors.database('Failed to list orders', error);
+    return errors.database('Failed to list orders', error instanceof Error ? error : undefined);
   }
 }
 

@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error toggling feature', error, { route: '/api/subscription/toggle' });
-    return errors.database('Failed to toggle feature', error);
+    return errors.database('Failed to toggle feature', error instanceof Error ? error : undefined);
   }
 }
 

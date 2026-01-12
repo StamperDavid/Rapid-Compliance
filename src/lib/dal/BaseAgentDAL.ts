@@ -104,7 +104,7 @@ export class BaseAgentDAL {
    * This is the "ticking time bomb" fix mentioned in the architecture docs
    */
   private calculateEnvPrefix(): string {
-    const appEnv =process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV|| 'development';
+    const appEnv = (process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV) || 'development';
     
     // Only production has no prefix
     if (appEnv === 'production') {

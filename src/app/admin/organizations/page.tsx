@@ -8,7 +8,7 @@ import type { Organization } from '@/types/organization'
 import { logger } from '@/lib/logger/logger';
 
 export default function OrganizationsPage() {
-  const { _adminUser, hasPermission, _isSuperAdmin } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<'NOT_LOGGED_IN' | 'NOT_SUPER_ADMIN' | null>(null);

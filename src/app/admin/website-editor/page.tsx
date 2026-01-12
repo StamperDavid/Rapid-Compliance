@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link'
 import { logger } from '@/lib/logger/logger';
 
@@ -1506,8 +1505,6 @@ function WidgetRenderer({
 // ============================================================================
 
 export default function WebsiteEditorPage() {
-  const { _adminUser } = useAdminAuth();
-  
   // State
   const [config, setConfig] = useState<WebsiteConfig>(DEFAULT_CONFIG);
   const [selectedPageId, setSelectedPageId] = useState<string>('home');

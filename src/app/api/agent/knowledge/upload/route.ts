@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Knowledge upload error', error, { route: '/api/agent/knowledge/upload' });
-    return errors.internal('Failed to upload knowledge', error);
+    return errors.internal('Failed to upload knowledge', error instanceof Error ? error : undefined);
   }
 }
 

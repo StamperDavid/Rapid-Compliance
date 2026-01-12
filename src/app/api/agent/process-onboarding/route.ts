@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: any) {
     logger.error('Onboarding processing error', error, { route: '/api/agent/process-onboarding' });
-    return errors.internal('Failed to process onboarding', error);
+    return errors.internal('Failed to process onboarding', error instanceof Error ? error : undefined);
   }
 }
 

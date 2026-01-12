@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Teams auth error', error, { route: '/api/integrations/teams/auth' });
-    return errors.internal('Failed to initiate Teams auth', error);
+    return errors.internal('Failed to initiate Teams auth', error instanceof Error ? error : undefined);
   }
 }
 

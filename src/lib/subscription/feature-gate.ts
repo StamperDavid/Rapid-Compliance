@@ -483,9 +483,9 @@ export class FeatureGate {
   ): Promise<void> {
     try {
       const subscription = await this.getSubscription(orgId);
-      
+
       // Check if plan allows this feature
-      const plan = ((subscription.plan !== '' && subscription.plan != null) ? subscription.plan : 'free') as SubscriptionPlan;
+      const plan = (subscription.plan ?? 'free') as SubscriptionPlan;
       const planLimits = PLAN_LIMITS[plan];
       const featureConfig = planLimits[feature];
       

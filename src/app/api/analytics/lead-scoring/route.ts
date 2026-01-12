@@ -7,6 +7,23 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+/**
+ * Convert unknown date value to Date object
+ * Handles Firestore Timestamp, Date, string, and number types
+ */
+function toDate(value: unknown): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+  return new Date();
+}
+
 // Local interfaces for Firestore records
 interface LeadRecord {
   id?: string;
@@ -126,7 +143,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
 
     // Filter by date
     const leadsInPeriod = allLeads.filter(lead => {
-      const leadDate =lead.createdAt?.toDate?.() ?? new Date(lead.createdAt);
+      const leadDate = toDate(lead.createdAt);
       return leadDate >= startDate && leadDate <= now;
     });
 
@@ -170,7 +187,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
     ];
 
     const distribution = scoreRanges.map(({ range, min, max }) => {
-      const leads = scoredLeads.filter(l => l.score >= min && l.score <= max);
+      const leads = scoredLeads.filter(l => (l.score ?? 0) >= min && (l.score ?? 0) <= max);
       return {
         range,
         count: leads.length,
@@ -184,9 +201,9 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
       .slice(0, 10)
       .map(lead => ({
         id: lead.id,
-        name: lead.name ??
+        name: (lead.name ??
               lead.first_name ??
-              `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim() ||
+              `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim()) ||
               'Unknown',
         email: lead.email,
         company:lead.company ?? lead.companyName,
@@ -202,7 +219,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
     // Score by source
     const sourceMap = new Map<string, { total: number; count: number }>();
     scoredLeads.forEach(lead => {
-      const source =(lead.source || lead.lead_source !== '' && lead.source || lead.lead_source != null) ? lead.source ?? lead.lead_source: 'unknown';
+      const source = lead.source || lead.lead_source || 'unknown';
       const existing = sourceMap.get(source) ?? { total: 0, count: 0 };
       sourceMap.set(source, {
         total: existing.total + (lead.score ?? 0),

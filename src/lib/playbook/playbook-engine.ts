@@ -75,8 +75,8 @@ export async function extractPatterns(
     const repIdsLength = request.repIds?.length;
     logger.info('Extracting patterns from conversations', {
       organizationId: request.organizationId,
-      conversationCount: (conversationIdsLength !== '' && conversationIdsLength != null) ? conversationIdsLength : 'all',
-      repCount: (repIdsLength !== '' && repIdsLength != null) ? repIdsLength : 'top performers',
+      conversationCount: conversationIdsLength ?? 'all',
+      repCount: repIdsLength ?? 'top performers',
     });
     
     // 1. Get conversation analyses to extract from

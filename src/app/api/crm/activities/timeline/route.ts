@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const organizationId = token.organizationId;
-    const workspaceId =(searchParams.get('workspaceId') !== '' && searchParams.get('workspaceId') != null) ? searchParams.get('workspaceId') : 'default';
+    const workspaceId = searchParams.get('workspaceId') || 'default';
 
     const entityTypeParam = searchParams.get('entityType');
     const entityType: RelatedEntityType | undefined =

@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('Error analyzing session', error, { route: '/api/training/analyze-session' });
-    return errors.database('Failed to analyze session', error);
+    return errors.database('Failed to analyze session', error instanceof Error ? error : undefined);
   }
 }
 
