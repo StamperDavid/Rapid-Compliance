@@ -85,3 +85,7 @@ error-cluster-report.json
 # AI Tooling Temp Files
 tmpclaude*
 .tmpclaude*
+
+# Local dev configs
+.claude/
+.playwright-mcp/
