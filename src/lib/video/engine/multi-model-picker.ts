@@ -194,6 +194,7 @@ const SHOT_TYPE_PROVIDER_RANKING: Record<ShotType, VideoGenerationProvider[]> = 
   'high-angle': ['veo', 'runway', 'stable-video'],
   'dutch-angle': ['runway', 'veo', 'kling'],
   'insert': ['runway', 'pika', 'stable-video', 'kling'],
+  'tracking': ['veo', 'runway', 'kling', 'sora'],
 };
 
 // ============================================================================

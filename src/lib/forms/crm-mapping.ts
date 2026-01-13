@@ -28,6 +28,14 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+
+// Helper to ensure db is available
+function getDb() {
+  if (!db) {
+    throw new Error('Firebase is not initialized');
+  }
+  return db;
+}
 import { logger } from '@/lib/logger/logger';
 import type {
   FormSubmission,
@@ -335,7 +343,7 @@ export async function findExistingRecord(
   if (!matchingValue) return null;
 
   const collectionPath = getCRMCollectionPath(orgId, workspaceId, entityType);
-  const collectionRef = collection(db, collectionPath);
+  const collectionRef = collection(getDb(), collectionPath);
 
   const q = query(
     collectionRef,
@@ -361,7 +369,7 @@ export async function createCRMRecord(
   sourceSubmissionId?: string
 ): Promise<CRMRecord> {
   const collectionPath = getCRMCollectionPath(orgId, workspaceId, entityType);
-  const recordRef = doc(collection(db, collectionPath));
+  const recordRef = doc(collection(getDb(), collectionPath));
   const recordId = recordRef.id;
 
   const record: CRMRecord = {
@@ -401,7 +409,7 @@ export async function updateCRMRecord(
   data: Record<string, unknown>
 ): Promise<void> {
   const collectionPath = getCRMCollectionPath(orgId, workspaceId, entityType);
-  const recordRef = doc(db, collectionPath, recordId);
+  const recordRef = doc(getDb(), collectionPath, recordId);
 
   await updateDoc(recordRef, {
     data: {

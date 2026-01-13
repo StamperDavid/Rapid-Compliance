@@ -68,6 +68,7 @@ const CAMERA_MOTION_PAIRINGS: Record<ShotType, CameraMotion[]> = {
   'high-angle': ['static', 'tilt-down', 'crane-down'],
   'dutch-angle': ['static', 'tracking', 'handheld'],
   'insert': ['static', 'dolly-in', 'rack-focus', 'push-in'],
+  'tracking': ['tracking', 'steadicam', 'handheld', 'dolly-in'],
 };
 
 /**

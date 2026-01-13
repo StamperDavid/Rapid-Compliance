@@ -23,7 +23,8 @@ export type ShotType =
   | 'low-angle'           // Power, dominance
   | 'high-angle'          // Vulnerability, overview
   | 'dutch-angle'         // Tension, unease
-  | 'insert'              // Product detail, hands, objects;
+  | 'insert'              // Product detail, hands, objects
+  | 'tracking';           // Following movement
 
 export type CameraMotion =
   | 'static'              // No movement
@@ -46,7 +47,8 @@ export type CameraMotion =
   | 'handheld'            // Documentary-style shake
   | 'steadicam'           // Smooth tracking
   | 'whip-pan'            // Fast transition pan
-  | 'rack-focus';         // Focus shift
+  | 'rack-focus'          // Focus shift
+  | 'aerial';             // Drone/aerial movement
 
 export type TransitionType =
   | 'cut'                 // Hard cut

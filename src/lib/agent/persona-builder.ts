@@ -38,6 +38,8 @@ export function buildPersonaFromOnboarding(
     closingMessage,
     objectives,
     escalationRules,
+    // SECURITY: Default to false - agents cannot negotiate unless explicitly granted
+    can_negotiate: false,
   };
 }
 

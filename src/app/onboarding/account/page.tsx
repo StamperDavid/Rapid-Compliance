@@ -94,6 +94,10 @@ export default function AccountCreationPage() {
     setIsLoading(true);
 
     try {
+      if (!auth || !db) {
+        throw new Error('Firebase is not initialized');
+      }
+
       // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
         auth,

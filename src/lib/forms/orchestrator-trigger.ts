@@ -93,9 +93,9 @@ export interface WebhookPayload {
 async function emitSignal(
   signal: Omit<OrchestratorSignal, 'id'>
 ): Promise<string> {
-  // Import signal coordinator dynamically to avoid circular deps
-  const { SignalCoordinator } = await import('@/lib/orchestration/signal-coordinator');
-  const coordinator = SignalCoordinator.getInstance();
+  // Import signal coordinator factory dynamically to avoid circular deps
+  const { getClientSignalCoordinator } = await import('@/lib/orchestration/coordinator-factory-client');
+  const coordinator = getClientSignalCoordinator();
 
   const result = await coordinator.emitSignal({
     type: signal.type as Parameters<typeof coordinator.emitSignal>[0]['type'],

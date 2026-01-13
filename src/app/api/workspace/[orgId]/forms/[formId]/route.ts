@@ -12,6 +12,14 @@ import {
 import { db } from '@/lib/firebase/config';
 import type { FormFieldConfig } from '@/lib/forms/types';
 
+// Helper to ensure db is available
+function getDb() {
+  if (!db) {
+    throw new Error('Firebase is not initialized');
+  }
+  return db;
+}
+
 /**
  * GET /api/workspace/[orgId]/forms/[formId]
  * Get a single form with its fields
@@ -33,8 +41,9 @@ export async function GET(
     }
 
     // Get fields
+    const firestore = getDb();
     const fieldsPath = `organizations/${params.orgId}/workspaces/${workspaceId}/forms/${params.formId}/fields`;
-    const fieldsRef = collection(db, fieldsPath);
+    const fieldsRef = collection(firestore, fieldsPath);
     const fieldsQuery = query(fieldsRef, orderBy('order', 'asc'));
     const fieldsSnapshot = await getDocs(fieldsQuery);
     const fields = fieldsSnapshot.docs.map((doc) => doc.data() as FormFieldConfig);
@@ -67,11 +76,12 @@ export async function PUT(
 
     // Update fields if provided
     if (fields && Array.isArray(fields)) {
+      const firestore = getDb();
       const fieldsPath = `organizations/${params.orgId}/workspaces/${workspaceId}/forms/${params.formId}/fields`;
-      const batch = writeBatch(db);
+      const batch = writeBatch(firestore);
 
       // Delete existing fields
-      const existingFieldsRef = collection(db, fieldsPath);
+      const existingFieldsRef = collection(firestore, fieldsPath);
       const existingSnapshot = await getDocs(existingFieldsRef);
       existingSnapshot.docs.forEach((docSnapshot) => {
         batch.delete(docSnapshot.ref);
@@ -79,7 +89,7 @@ export async function PUT(
 
       // Add new fields
       fields.forEach((field: FormFieldConfig) => {
-        const fieldRef = doc(db, fieldsPath, field.id);
+        const fieldRef = doc(firestore, fieldsPath, field.id);
         batch.set(fieldRef, {
           ...field,
           formId: params.formId,

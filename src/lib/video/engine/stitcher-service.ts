@@ -155,6 +155,7 @@ export class StitcherService {
       storyboardId: storyboard.id,
       organizationId: storyboard.organizationId,
       clips: generatedClips,
+      sfxTracks: [],
       lutApplied: false,
       colorCorrectionApplied: false,
       brandOverlayApplied: false,

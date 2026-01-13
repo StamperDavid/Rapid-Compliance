@@ -285,6 +285,17 @@ export class WorkflowCoordinator {
       'system.error': [],
       'system.quota.warning': [],
       'system.quota.exceeded': [],
+      // Workforce orchestration signals
+      'workforce.deployed': [],
+      'workforce.updated': [],
+      'agent.activated': [],
+      'agent.hibernated': [],
+      'agent.disabled': [],
+      'platform.connected': [],
+      'platform.disconnected': [],
+      'content.generated': [],
+      'content.scheduled': [],
+      'content.published': [],
       'custom': [],
     };
     

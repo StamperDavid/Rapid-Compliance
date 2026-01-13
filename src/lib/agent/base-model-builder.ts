@@ -80,7 +80,10 @@ export async function buildBaseModel(params: {
     personalityTraits: onboardingData.personalityTraits ?? [],
     objectives: [],
     escalationRules: onboardingData.escalationRules ?? [],
-    
+
+    // SECURITY: Default to false - agents cannot negotiate unless explicitly granted
+    can_negotiate: false,
+
     // NEW: Include template-derived fields
     ...(mutatedTemplate && {
       cognitiveFramework: mutatedTemplate.cognitiveLogic.framework,

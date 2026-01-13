@@ -163,9 +163,35 @@ export async function getUserInfo(accessToken: string, userId: string): Promise<
  */
 export async function setChannelTopic(accessToken: string, channel: string, topic: string): Promise<any> {
   const client = createSlackClient(accessToken);
-  
+
   return client.conversations.setTopic({
     channel,
     topic,
   });
+}
+
+/**
+ * Send Slack message using stored org credentials
+ * Convenience wrapper for form triggers and workflows
+ *
+ * TODO: Implement org credential lookup from integrations collection
+ */
+export async function sendSlackMessage(params: {
+  orgId: string;
+  channelId: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  // TODO: Look up Slack access token from org's integrations
+  // For now, this is a stub that logs the message
+  console.log('[Slack] sendSlackMessage called:', {
+    orgId: params.orgId,
+    channelId: params.channelId,
+    messageLength: params.message.length,
+    hasMetadata: !!params.metadata,
+  });
+
+  // When implemented, this would:
+  // 1. Look up the org's Slack integration credentials from Firestore
+  // 2. Call sendMessage(accessToken, { channel: params.channelId, text: params.message })
 }
