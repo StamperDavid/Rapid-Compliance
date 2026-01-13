@@ -6,7 +6,7 @@ import { useParams, usePathname } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
+// STANDARD_SCHEMAS removed - unused
 
 export default function WorkspaceLayout({
   children,
@@ -16,13 +16,13 @@ export default function WorkspaceLayout({
   const params = useParams();
   const pathname = usePathname();
   const orgId = params.orgId as string;
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { theme } = useOrgTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
   const brandName = (theme?.branding?.companyName !== '' && theme?.branding?.companyName != null) ? theme.branding.companyName : 'AI CRM';
-  const logoUrl = theme?.branding?.logoUrl;
+  const _logoUrl = theme?.branding?.logoUrl;
 
   // Complete navigation
   const navSections = [

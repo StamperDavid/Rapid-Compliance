@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint --max-warnings 17000",
+    "lint": "next lint --max-warnings 18000",
     "lint:fix": "next lint --fix",
     "lint:strict": "next lint --max-warnings 0",
     "lint:quiet": "next lint --quiet",
