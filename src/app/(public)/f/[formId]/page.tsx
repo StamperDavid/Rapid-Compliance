@@ -356,7 +356,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
           </label>
           <input
             type={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : field.type === 'number' || field.type === 'currency' ? 'number' : 'text'}
-            value={value || ''}
+            value={typeof value === 'string' || typeof value === 'number' ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             style={inputStyle}
@@ -374,7 +374,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
             {isRequired && <span style={styles.required}>*</span>}
           </label>
           <textarea
-            value={value || ''}
+            value={typeof value === 'string' || typeof value === 'number' ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             style={{ ...inputStyle, ...styles.textarea }}
@@ -395,7 +395,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
           </label>
           <input
             type={field.type === 'datetime' ? 'datetime-local' : field.type}
-            value={value || ''}
+            value={typeof value === 'string' || typeof value === 'number' ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             style={inputStyle}
           />
@@ -412,7 +412,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
             {isRequired && <span style={styles.required}>*</span>}
           </label>
           <select
-            value={value || ''}
+            value={typeof value === 'string' || typeof value === 'number' ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             style={{ ...inputStyle, ...styles.select }}
           >
@@ -577,7 +577,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
                   backgroundColor: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
-                  color: star <= (value || 0) ? '#fbbf24' : '#333',
+                  color: star <= (typeof value === 'number' ? value : 0) ? '#fbbf24' : '#333',
                   transition: 'color 0.2s',
                 }}
               >
@@ -633,7 +633,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
           </label>
           <input
             type="text"
-            value={value || ''}
+            value={typeof value === 'string' || typeof value === 'number' ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={field.placeholder}
             style={inputStyle}
