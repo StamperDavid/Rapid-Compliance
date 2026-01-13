@@ -468,10 +468,19 @@ export interface AgentPersona {
   greeting: string;
   closingMessage: string;
   personalityTraits?: string[]; // ['empathetic', 'analytical', 'enthusiastic']
-  
+
   // ===== CORE OBJECTIVES =====
   objectives: string[]; // Primary sales goals
-  
+
+  // ===== DISCOUNT & NEGOTIATION PERMISSIONS =====
+  /**
+   * SECURITY: Controls whether this agent can access negotiation tools.
+   * If false, get_authorized_discounts returns empty list (even if coupons exist).
+   * Default: false for all new client agents.
+   * Only platform admins or is_internal_admin orgs can set this to true.
+   */
+  can_negotiate: boolean;
+
   // ===== ESCALATION =====
   escalationRules: string[];
   escalationTriggers?: {

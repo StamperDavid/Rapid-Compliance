@@ -89,6 +89,14 @@ export const COLLECTIONS = {
   // TEMPLATE MANAGEMENT COLLECTIONS
   // ========================================
   GLOBAL_TEMPLATES: `${PREFIX}globalTemplates`,
+
+  // ========================================
+  // PRICING & COUPON ENGINE COLLECTIONS
+  // ========================================
+  PLATFORM_PRICING: `${PREFIX}platform_pricing`,
+  PLATFORM_COUPONS: `${PREFIX}platform_coupons`,
+  COUPON_REDEMPTIONS: `${PREFIX}coupon_redemptions`,
+  AI_DISCOUNT_REQUESTS: `${PREFIX}ai_discount_requests`,
 } as const;
 
 /**
@@ -134,6 +142,15 @@ export const getSchemaSubCollection = (
   subCollection: string
 ): string => {
   return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${PREFIX}schemas/${schemaId}/${PREFIX}${subCollection}`;
+};
+
+/**
+ * Helper for merchant coupons sub-collection
+ * Usage: getMerchantCouponsCollection('org123')
+ * Returns: 'organizations/org123/merchant_coupons'
+ */
+export const getMerchantCouponsCollection = (orgId: string): string => {
+  return `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${PREFIX}merchant_coupons`;
 };
 
 /**

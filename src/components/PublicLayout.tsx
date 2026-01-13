@@ -143,7 +143,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 Login
               </Link>
               <Link
-                href="/signup"
+                href="/onboarding/industry"
                 className="px-4 py-2 rounded-lg font-semibold transition hover:opacity-90"
                 style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#ffffff' }}
               >
@@ -190,7 +190,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   Login
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/onboarding/industry"
                   className="px-4 py-2 rounded-lg font-semibold transition text-center"
                   style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#ffffff' }}
                   onClick={() => setIsMobileMenuOpen(false)}

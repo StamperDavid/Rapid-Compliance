@@ -176,7 +176,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                   <span style={{ color: 'rgba(255,255,255,0.7)' }}>{plan.period}</span>
                 </div>
                 <Link
-                  href="/signup"
+                  href="/onboarding/industry"
                   style={{
                     display: 'block',
                     width: '100%',

@@ -432,17 +432,17 @@ function FallbackContent() {
             Sign up once. No plan selection needed. Your pricing automatically adjusts as you grow.
           </p>
           <p className="text-lg text-gray-400 mb-8">
-            14-day free trial • Credit card required • Cancel anytime
+            14-day free trial • No credit card required • Cancel anytime
           </p>
           <Link
-            href="/signup"
+            href="/onboarding/industry"
             className="inline-block px-12 py-4 rounded-lg text-xl font-semibold transition hover:scale-105"
             style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
           >
             Start Your Free Trial →
           </Link>
           <p className="text-sm text-gray-500 mt-6">
-            Pricing starts at $400/month for 0-100 records. All features included from day one.
+            Start with 1,000 free records. Upgrade when you need more capacity.
           </p>
         </div>
       </section>

@@ -233,7 +233,7 @@ export default function FAQPage() {
               Contact Us
             </Link>
             <Link
-              href="/signup"
+              href="/onboarding/industry"
               className="px-8 py-4 rounded-lg font-semibold transition"
               style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
             >
