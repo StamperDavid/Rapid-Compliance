@@ -24,6 +24,7 @@ import {
   buildPersonaSystemPrompt,
   generateStatusOpener,
 } from '@/lib/ai/persona-mapper';
+import { runProvisioner } from '@/lib/db/provisioner';
 
 // Jasper - The Admin AI Assistant Name
 const ADMIN_ASSISTANT_NAME = 'Jasper';
@@ -91,6 +92,24 @@ export function AdminOrchestrator() {
   useEffect(() => {
     setContext('admin');
   }, [setContext]);
+
+  // Run database provisioner for super admins
+  // This ensures all core system data (personas, config, pricing) exists
+  useEffect(() => {
+    if (adminUser?.role === 'super_admin') {
+      runProvisioner()
+        .then((report) => {
+          if (report.summary.created > 0) {
+            console.log(
+              `[Provisioner] Database provisioned: ${report.summary.created} items created, ${report.summary.skipped} skipped`
+            );
+          }
+        })
+        .catch((error) => {
+          console.error('[Provisioner] Error during provisioning:', error);
+        });
+    }
+  }, [adminUser?.role]);
 
   // Debounced stats fetch function
   const fetchStatsInternal = useCallback(async () => {
