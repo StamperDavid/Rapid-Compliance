@@ -36,6 +36,7 @@ interface FormBuilderProps {
 }
 
 type ViewMode = 'edit' | 'preview';
+type ShareTab = 'link' | 'embed' | 'qr';
 
 // ============================================================================
 // STYLES
@@ -148,6 +149,163 @@ const styles = {
     color: '#fff',
     borderBottom: '2px solid #6366f1',
   },
+  // Share Modal Styles
+  modalOverlay: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: '1rem',
+    border: '1px solid #333',
+    width: '100%',
+    maxWidth: '520px',
+    maxHeight: '90vh',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1rem 1.5rem',
+    borderBottom: '1px solid #333',
+  },
+  modalTitle: {
+    fontSize: '1.125rem',
+    fontWeight: '600',
+    color: '#fff',
+    margin: 0,
+  },
+  modalClose: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: '#666',
+    fontSize: '1.5rem',
+    cursor: 'pointer',
+    padding: '0.25rem',
+    lineHeight: 1,
+  },
+  modalBody: {
+    padding: '1.5rem',
+  },
+  shareTabList: {
+    display: 'flex',
+    gap: '0.5rem',
+    marginBottom: '1.5rem',
+  },
+  shareTab: {
+    flex: 1,
+    padding: '0.75rem',
+    backgroundColor: '#111',
+    border: '1px solid #333',
+    borderRadius: '0.5rem',
+    color: '#999',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  shareTabActive: {
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+    color: '#fff',
+  },
+  inputGroup: {
+    marginBottom: '1rem',
+  },
+  inputLabel: {
+    display: 'block',
+    fontSize: '0.75rem',
+    color: '#999',
+    marginBottom: '0.5rem',
+  },
+  inputWrapper: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  shareInput: {
+    flex: 1,
+    padding: '0.75rem 1rem',
+    backgroundColor: '#111',
+    border: '1px solid #333',
+    borderRadius: '0.5rem',
+    color: '#fff',
+    fontSize: '0.875rem',
+    fontFamily: 'monospace',
+  },
+  copyButton: {
+    padding: '0.75rem 1rem',
+    backgroundColor: '#333',
+    border: 'none',
+    borderRadius: '0.5rem',
+    color: '#fff',
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    whiteSpace: 'nowrap' as const,
+  },
+  copySuccess: {
+    backgroundColor: '#22c55e',
+  },
+  embedCode: {
+    width: '100%',
+    padding: '1rem',
+    backgroundColor: '#111',
+    border: '1px solid #333',
+    borderRadius: '0.5rem',
+    color: '#fff',
+    fontSize: '0.75rem',
+    fontFamily: 'monospace',
+    resize: 'vertical' as const,
+    minHeight: '100px',
+  },
+  qrContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: '1rem',
+    padding: '1rem',
+  },
+  qrCode: {
+    backgroundColor: '#fff',
+    padding: '1rem',
+    borderRadius: '0.5rem',
+  },
+  downloadButton: {
+    padding: '0.75rem 1.5rem',
+    backgroundColor: '#6366f1',
+    border: 'none',
+    borderRadius: '0.5rem',
+    color: '#fff',
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+  },
+  notPublishedWarning: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    padding: '1rem',
+    backgroundColor: '#7f1d1d30',
+    border: '1px solid #b91c1c',
+    borderRadius: '0.5rem',
+    marginBottom: '1rem',
+  },
+  warningIcon: {
+    fontSize: '1.25rem',
+  },
+  warningText: {
+    fontSize: '0.875rem',
+    color: '#fca5a5',
+  },
 };
 
 // ============================================================================
@@ -244,6 +402,7 @@ export function FormBuilder({
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [activeTab, setActiveTab] = useState<'fields' | 'settings'>('fields');
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Get fields for current page
   const pageFields = useMemo(() => {
@@ -457,8 +616,22 @@ export function FormBuilder({
           >
             🚀 Publish
           </button>
+          <button
+            onClick={() => setShowShareModal(true)}
+            style={{ ...styles.button, ...styles.buttonSecondary }}
+          >
+            🔗 Share
+          </button>
         </div>
       </header>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <ShareModal
+          form={form}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
 
       {/* Body */}
       <div style={styles.body}>
@@ -800,6 +973,205 @@ function ToggleSetting({ label, checked, onChange }: ToggleSettingProps) {
         />
       </div>
     </label>
+  );
+}
+
+// ============================================================================
+// SHARE MODAL SUB-COMPONENT
+// ============================================================================
+
+interface ShareModalProps {
+  form: FormDefinition;
+  onClose: () => void;
+}
+
+function ShareModal({ form, onClose }: ShareModalProps) {
+  const [activeTab, setActiveTab] = useState<ShareTab>('link');
+  const [copied, setCopied] = useState(false);
+
+  const isPublished = form.status === 'published';
+  const formUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/f/${form.id}`
+    : `/f/${form.id}`;
+
+  const embedCode = `<iframe
+  src="${formUrl}?embed=true"
+  width="100%"
+  height="600"
+  frameborder="0"
+  style="border: none; border-radius: 8px;"
+  title="${form.name}"
+></iframe>`;
+
+  const handleCopy = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  }, []);
+
+  // Generate simple QR code as SVG (basic implementation)
+  const qrSize = 200;
+  const generateQRPlaceholder = () => {
+    // This is a placeholder - in production, use a QR library like qrcode
+    return (
+      <svg width={qrSize} height={qrSize} viewBox={`0 0 ${qrSize} ${qrSize}`}>
+        <rect fill="#fff" width={qrSize} height={qrSize} />
+        <rect fill="#000" x="20" y="20" width="40" height="40" />
+        <rect fill="#fff" x="30" y="30" width="20" height="20" />
+        <rect fill="#000" x="140" y="20" width="40" height="40" />
+        <rect fill="#fff" x="150" y="30" width="20" height="20" />
+        <rect fill="#000" x="20" y="140" width="40" height="40" />
+        <rect fill="#fff" x="30" y="150" width="20" height="20" />
+        <rect fill="#000" x="80" y="80" width="40" height="40" />
+        <text
+          x={qrSize / 2}
+          y={qrSize - 10}
+          textAnchor="middle"
+          fontSize="10"
+          fill="#666"
+        >
+          QR Code Preview
+        </text>
+      </svg>
+    );
+  };
+
+  return (
+    <div style={styles.modalOverlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div style={styles.modalHeader}>
+          <h2 style={styles.modalTitle}>Share Form</h2>
+          <button style={styles.modalClose} onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={styles.modalBody}>
+          {/* Warning if not published */}
+          {!isPublished && (
+            <div style={styles.notPublishedWarning}>
+              <span style={styles.warningIcon}>⚠️</span>
+              <span style={styles.warningText}>
+                This form is not published. Publish it first to make it accessible.
+              </span>
+            </div>
+          )}
+
+          {/* Tab List */}
+          <div style={styles.shareTabList}>
+            <button
+              style={{
+                ...styles.shareTab,
+                ...(activeTab === 'link' ? styles.shareTabActive : {}),
+              }}
+              onClick={() => setActiveTab('link')}
+            >
+              Direct Link
+            </button>
+            <button
+              style={{
+                ...styles.shareTab,
+                ...(activeTab === 'embed' ? styles.shareTabActive : {}),
+              }}
+              onClick={() => setActiveTab('embed')}
+            >
+              Embed
+            </button>
+            <button
+              style={{
+                ...styles.shareTab,
+                ...(activeTab === 'qr' ? styles.shareTabActive : {}),
+              }}
+              onClick={() => setActiveTab('qr')}
+            >
+              QR Code
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'link' && (
+            <div>
+              <div style={styles.inputGroup}>
+                <label style={styles.inputLabel}>Form URL</label>
+                <div style={styles.inputWrapper}>
+                  <input
+                    type="text"
+                    value={formUrl}
+                    readOnly
+                    style={styles.shareInput}
+                  />
+                  <button
+                    style={{
+                      ...styles.copyButton,
+                      ...(copied ? styles.copySuccess : {}),
+                    }}
+                    onClick={() => handleCopy(formUrl)}
+                  >
+                    {copied ? '✓ Copied!' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
+                Share this link with anyone to let them fill out your form.
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'embed' && (
+            <div>
+              <div style={styles.inputGroup}>
+                <label style={styles.inputLabel}>Embed Code</label>
+                <textarea
+                  value={embedCode}
+                  readOnly
+                  style={styles.embedCode}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: '0.75rem', color: '#666', margin: 0 }}>
+                  Paste this code into your website HTML.
+                </p>
+                <button
+                  style={{
+                    ...styles.copyButton,
+                    ...(copied ? styles.copySuccess : {}),
+                  }}
+                  onClick={() => handleCopy(embedCode)}
+                >
+                  {copied ? '✓ Copied!' : 'Copy Code'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'qr' && (
+            <div style={styles.qrContainer}>
+              <div style={styles.qrCode}>
+                {generateQRPlaceholder()}
+              </div>
+              <p style={{ fontSize: '0.75rem', color: '#666', margin: 0, textAlign: 'center' }}>
+                Scan this QR code to open the form on a mobile device.
+              </p>
+              <button
+                style={styles.downloadButton}
+                onClick={() => {
+                  // In production, generate and download actual QR code
+                  alert('QR code download coming soon!');
+                }}
+              >
+                Download QR Code
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
