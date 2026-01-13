@@ -251,7 +251,7 @@ export const TTS_PROVIDER_INFO: Record<TTSEngineType, TTSProviderInfo> = {
   native: {
     type: 'native',
     name: 'Native Voice',
-    description: 'Our high-quality hosted voice synthesis powered by Fish Audio. Best balance of quality and cost.',
+    description: 'Our proprietary high-quality hosted voice synthesis. Best balance of quality and cost.',
     quality: 'premium',
     latency: 'low',
     pricing: {

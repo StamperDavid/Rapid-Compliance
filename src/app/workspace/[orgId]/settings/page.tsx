@@ -33,6 +33,7 @@ export default function SettingsPage() {
       title: 'E-Commerce',
       items: [
         { icon: '🛒', label: 'Online Storefront', description: 'Enable store, choose products/services/both, customize theme, generate embed codes', href: `/workspace/${orgId}/settings/storefront`, permission: canManageOrganization },
+        { icon: '🏷️', label: 'Promotions & Coupons', description: 'Create discount codes, manage AI-authorized offers, and track coupon performance', href: `/workspace/${orgId}/settings/promotions`, permission: canManageOrganization },
       ]
     },
     {

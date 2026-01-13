@@ -15,7 +15,8 @@ Sentry.init({
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
   
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: process.env.NODE_ENV === 'development',
+  // Only enable debug in development AND when not in a production build
+  debug: false,
   
   // Replay can be used to record user sessions
   replaysSessionSampleRate: 0.1,
