@@ -42,6 +42,13 @@ export default function WorkspaceLayout({
       ]
     },
     {
+      title: 'Lead Gen',
+      items: [
+        { href: `/workspace/${orgId}/forms`, icon: '📋', label: 'Forms' },
+        { href: `/workspace/${orgId}/leads/research`, icon: '🔬', label: 'Lead Research' },
+      ]
+    },
+    {
       title: 'Outbound',
       items: [
         { href: `/workspace/${orgId}/outbound/sequences`, icon: '📧', label: 'Sequences' },

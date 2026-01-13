@@ -103,3 +103,59 @@ export type {
   QuotaPerformance,
   ForecastTrend
 } from './revenue-forecasting-engine';
+
+// ============================================================================
+// SPECIALIZED INDUSTRY WORKFORCE SYSTEM
+// ============================================================================
+
+// Workforce Templates
+export {
+  SOCIAL_MEDIA_INFLUENCER_TEMPLATE,
+  WORKFORCE_TEMPLATES,
+  getWorkforceTemplate,
+  getAllWorkforceTemplates,
+  isPlatformActive,
+  getHibernatedAgents,
+  calculateWorkforceHealth
+} from './workforce-templates';
+
+export type {
+  WorkforceTemplate,
+  WorkforcePlatform,
+  AgentRole,
+  AgentDeploymentState,
+  AgentManual,
+  PlatformPhysics,
+  AgentToolConfig,
+  VisualStyleSeed,
+  VideoStyleSeed,
+  WebStyleSeed,
+  BrandDNASeed,
+  OrganizationWorkforce,
+  OrganizationAgentState,
+  PlatformConnectionStatus,
+  OrchestrationRules,
+  RepurposingChain,
+  PostingWindow,
+  ContentConstraint,
+  OutputFormat,
+  AgentKPI,
+  AgentToolCategory
+} from './workforce-templates';
+
+// Workforce Orchestrator
+export {
+  WorkforceOrchestrator,
+  getWorkforceOrchestrator,
+  resetWorkforceOrchestrator,
+  getVisualStyleSeeds,
+  seedVideoGenerator,
+  seedWebsiteBuilder
+} from './workforce-orchestrator';
+
+export type {
+  WorkforceDeploymentOptions,
+  AgentActivationResult,
+  WorkforceStateChangeEvent,
+  PlatformConnectionEvent
+} from './workforce-orchestrator';

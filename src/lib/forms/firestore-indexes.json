@@ -1,0 +1,180 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "forms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ],
+      "comment": "List published forms sorted by last update"
+    },
+    {
+      "collectionGroup": "forms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ],
+      "comment": "List forms by status and creation date"
+    },
+    {
+      "collectionGroup": "forms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ],
+      "comment": "List user's forms sorted by creation date"
+    },
+    {
+      "collectionGroup": "forms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ],
+      "comment": "List forms by category alphabetically"
+    },
+    {
+      "collectionGroup": "fields",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pageIndex", "order": "ASCENDING" },
+        { "fieldPath": "order", "order": "ASCENDING" }
+      ],
+      "comment": "Get form fields ordered by page and position"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ],
+      "comment": "List submissions by status sorted by date"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "formVersion", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ],
+      "comment": "Analyze submissions by form version"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "indexedEmail", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ],
+      "comment": "Find submissions by email address"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "linkedLeadId", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ],
+      "comment": "Find submissions linked to a CRM lead"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "linkedContactId", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ],
+      "comment": "Find submissions linked to a CRM contact"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPartial", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ],
+      "comment": "Filter partial vs complete submissions"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resumeToken", "order": "ASCENDING" }
+      ],
+      "comment": "Lookup partial submission by resume token"
+    },
+    {
+      "collectionGroup": "submissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "confirmationNumber", "order": "ASCENDING" }
+      ],
+      "comment": "Lookup submission by confirmation number"
+    },
+    {
+      "collectionGroup": "views",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sessionId", "order": "ASCENDING" },
+        { "fieldPath": "viewedAt", "order": "DESCENDING" }
+      ],
+      "comment": "Track views by session"
+    },
+    {
+      "collectionGroup": "views",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "viewedAt", "order": "DESCENDING" }
+      ],
+      "comment": "List recent views for cleanup"
+    },
+    {
+      "collectionGroup": "analytics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ],
+      "comment": "Query analytics by date range"
+    },
+    {
+      "collectionGroup": "fieldAnalytics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ],
+      "comment": "Query field analytics by date range"
+    },
+    {
+      "collectionGroup": "formTemplates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
+      ],
+      "comment": "List templates by category"
+    },
+    {
+      "collectionGroup": "formTemplates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isPublic", "order": "ASCENDING" },
+        { "fieldPath": "usageCount", "order": "DESCENDING" }
+      ],
+      "comment": "List popular public templates"
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "submissions",
+      "fieldPath": "responses",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" }
+      ],
+      "comment": "Disable array indexing for responses (too large)"
+    }
+  ]
+}
