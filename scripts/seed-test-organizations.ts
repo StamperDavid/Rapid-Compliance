@@ -37,6 +37,8 @@ try {
 interface SeedResult {
   orgId: string;
   orgName: string;
+  workforceName: string;
+  voiceEngine: string;
   email: string;
   password: string;
   success: boolean;
@@ -130,12 +132,62 @@ async function createTestOrganization(testOrg: CompleteTestOrganization, index: 
     });
     console.log(`   ✅ Onboarding data saved`);
     
-    // Step 6: Build Agent Persona
+    // Step 6: Build Workforce Identity (new system)
+    console.log('🎭 Building workforce identity...');
+    const workforceIdentityRef = doc(db, 'organizations', testOrg.id, 'settings', 'workforceIdentity');
+    await setDoc(workforceIdentityRef, {
+      ...testOrg.workforceIdentity,
+      organizationId: testOrg.id,
+      updatedAt: Timestamp.now(),
+      updatedBy: userId,
+      status: 'active',
+    });
+    console.log(`   ✅ Workforce identity created: ${testOrg.workforceIdentity.workforceName}`);
+
+    // Step 6b: Build Brand DNA
+    console.log('🧬 Building brand DNA...');
+    const brandDNA = {
+      companyDescription: testOrg.onboardingData.problemSolved,
+      uniqueValue: testOrg.onboardingData.uniqueValue,
+      targetAudience: testOrg.onboardingData.targetCustomer,
+      toneOfVoice: testOrg.onboardingData.tone.includes('professional') ? 'professional'
+        : testOrg.onboardingData.tone.includes('friendly') ? 'friendly'
+        : testOrg.onboardingData.tone.includes('formal') ? 'formal'
+        : testOrg.onboardingData.tone.includes('direct') ? 'direct' : 'warm',
+      communicationStyle: testOrg.onboardingData.tone,
+      industry: testOrg.onboardingData.industry,
+      competitors: testOrg.onboardingData.competitorUrls || [],
+      keyPhrases: [
+        testOrg.onboardingData.uniqueValue.split(' ').slice(0, 5).join(' '),
+        testOrg.onboardingData.primaryOffering,
+      ],
+      avoidPhrases: [],
+      primaryColor: testOrg.workforceIdentity.primaryColor,
+      updatedAt: Timestamp.now(),
+      updatedBy: userId,
+    };
+
+    // Update org with Brand DNA
+    const orgDocRef = doc(db, 'organizations', testOrg.id);
+    await setDoc(orgDocRef, { brandDNA }, { merge: true });
+    console.log(`   ✅ Brand DNA configured`);
+
+    // Step 6c: Build Agent Persona (enhanced with workforce identity)
     console.log('🤖 Building AI agent persona...');
     const personaRef = doc(db, 'organizations', testOrg.id, 'agentPersona', 'current');
     await setDoc(personaRef, {
-      name: testOrg.onboardingData.agentName || `${testOrg.name} AI`,
+      name: testOrg.workforceIdentity.workforceName,
+      tagline: testOrg.workforceIdentity.tagline,
+      personalityArchetype: testOrg.workforceIdentity.personalityArchetype,
       tone: testOrg.onboardingData.tone,
+      toneOfVoice: brandDNA.toneOfVoice,
+      responseStyle: testOrg.workforceIdentity.responseStyle,
+      proactivityLevel: testOrg.workforceIdentity.proactivityLevel,
+      empathyLevel: testOrg.workforceIdentity.empathyLevel,
+      avatarStyle: testOrg.workforceIdentity.avatarStyle,
+      primaryColor: testOrg.workforceIdentity.primaryColor,
+      voiceEngine: testOrg.workforceIdentity.voiceEngine,
+      voiceId: testOrg.workforceIdentity.voiceId,
       greeting: testOrg.onboardingData.greeting,
       closingMessage: testOrg.onboardingData.closingMessage,
       objectives: [
@@ -146,9 +198,22 @@ async function createTestOrganization(testOrg: CompleteTestOrganization, index: 
       organizationId: testOrg.id,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
+      updatedBy: userId,
     });
-    console.log(`   ✅ Persona created`);
-    
+    console.log(`   ✅ Persona created: ${testOrg.workforceIdentity.workforceName}`);
+
+    // Step 6d: Mark identity refinement complete
+    console.log('✓ Marking identity refinement complete...');
+    const progressRef = doc(db, 'organizations', testOrg.id, 'settings', 'onboardingProgress');
+    await setDoc(progressRef, {
+      identityRefinementCompleted: true,
+      identityCompletedAt: Timestamp.now(),
+      onboardingCompleted: true,
+      onboardingCompletedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    }, { merge: true });
+    console.log(`   ✅ Identity refinement marked complete`);
+
     // Step 7: Build Knowledge Base
     console.log('📚 Building knowledge base...');
     const knowledgeRef = doc(db, 'organizations', testOrg.id, 'knowledgeBase', 'current');
@@ -363,12 +428,16 @@ async function createTestOrganization(testOrg: CompleteTestOrganization, index: 
     console.log(`   🔑 Password: ${password}`);
     console.log(`   🏢 Org ID: ${testOrg.id}`);
     console.log(`   👤 User ID: ${userId}`);
+    console.log(`   🎭 Workforce: ${testOrg.workforceIdentity.workforceName}`);
+    console.log(`   🔊 Voice Engine: ${testOrg.workforceIdentity.voiceEngine}`);
     console.log(`   📦 Products: ${testOrg.products.length}`);
     console.log(`   🤖 AI Agent: DEPLOYED (${goldenMasterId})`);
     
     return {
       orgId: testOrg.id,
       orgName: testOrg.name,
+      workforceName: testOrg.workforceIdentity.workforceName,
+      voiceEngine: testOrg.workforceIdentity.voiceEngine,
       email,
       password,
       success: true,
@@ -379,6 +448,8 @@ async function createTestOrganization(testOrg: CompleteTestOrganization, index: 
     return {
       orgId: testOrg.id,
       orgName: testOrg.name,
+      workforceName: testOrg.workforceIdentity?.workforceName || 'Unknown',
+      voiceEngine: testOrg.workforceIdentity?.voiceEngine || 'Unknown',
       email,
       password,
       success: false,
@@ -452,7 +523,9 @@ async function seedAllTestOrganizations() {
   console.log('Each includes:');
   console.log('  ✅ Auth user & organization');
   console.log('  ✅ Complete 16-step onboarding data');
-  console.log('  ✅ AI agent persona & knowledge base');
+  console.log('  ✅ Workforce Identity (name, personality, voice)');
+  console.log('  ✅ Brand DNA configuration');
+  console.log('  ✅ AI agent persona with voice engine');
   console.log('  ✅ Base Model + Deployed Golden Master');
   console.log('  ✅ Product/service catalogs');
   console.log('  ✅ Default workspace\n');
@@ -487,6 +560,7 @@ async function seedAllTestOrganizations() {
       console.log(`   📧 Email: ${r.email}`);
       console.log(`   🔑 Password: ${r.password}`);
       console.log(`   🏢 Org ID: ${r.orgId}`);
+      console.log(`   🎭 Workforce: ${r.workforceName} (${r.voiceEngine})`);
       console.log('');
     });
   }
@@ -500,10 +574,11 @@ async function seedAllTestOrganizations() {
   
   console.log('\n🎯 WHAT YOU CAN TEST NOW:');
   console.log('   ✅ Login with any test account');
-  console.log('   ✅ AI agent is FULLY CONFIGURED and knows the business');
+  console.log('   ✅ AI Workforce is FULLY CONFIGURED with identity & voice');
   console.log('   ✅ Products are loaded in the catalog');
-  console.log('   ✅ Agent personality matches industry');
-  console.log('   ✅ Test across multiple industries');
+  console.log('   ✅ Workforce personality matches industry');
+  console.log('   ✅ Voice engine configured (native, elevenlabs, unreal)');
+  console.log('   ✅ Test across 5 different industries');
   console.log('   ✅ No onboarding needed - everything is ready!');
   
   console.log('\n🧪 NEXT STEPS:');

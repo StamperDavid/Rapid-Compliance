@@ -4,8 +4,8 @@
  */
 
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { COLLECTIONS } from '@/lib/firebase-collections';
+import { db } from '@/lib/firebase/config';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import {
   TTSEngineType,
   TTSEngineConfig,
@@ -139,6 +139,10 @@ export class VoiceEngineFactory {
     }
 
     try {
+      if (!db) {
+        console.warn('Firestore not initialized, using default TTS config');
+        return DEFAULT_TTS_CONFIGS.native as TTSEngineConfig;
+      }
       const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, organizationId, 'settings', 'ttsEngine');
       const docSnap = await getDoc(docRef);
 
@@ -177,6 +181,9 @@ export class VoiceEngineFactory {
       updatedBy: userId,
     };
 
+    if (!db) {
+      throw new Error('Firestore not initialized');
+    }
     const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, organizationId, 'settings', 'ttsEngine');
     await setDoc(docRef, updatedConfig, { merge: true });
 
