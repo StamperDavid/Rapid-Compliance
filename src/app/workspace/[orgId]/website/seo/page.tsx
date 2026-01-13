@@ -8,7 +8,20 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { motion } from 'framer-motion';
+import {
+  Search,
+  BarChart3,
+  FileText,
+  Globe,
+  Image,
+  Link2,
+  Bot,
+  Save,
+  Loader2,
+  CheckCircle,
+  Info
+} from 'lucide-react';
 import type { SiteConfig } from '@/types/website';
 
 export default function SEOManagementPage() {
@@ -19,6 +32,7 @@ export default function SEOManagementPage() {
   const [robotsTxt, setRobotsTxt] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -28,14 +42,12 @@ export default function SEOManagementPage() {
     try {
       setLoading(true);
 
-      // Load site settings
       const response = await fetch(`/api/website/settings?organizationId=${orgId}`);
       if (response.ok) {
         const data = await response.json();
         setSettings(data.settings ?? {});
         setRobotsTxt((data.settings?.robotsTxt !== '' && data.settings?.robotsTxt != null) ? data.settings.robotsTxt : getDefaultRobotsTxt());
       } else {
-        // Initialize defaults
         setSettings({
           seo: {
             title: '',
@@ -65,7 +77,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
   }
 
   async function saveSettings() {
-    if (!settings) {return;}
+    if (!settings) return;
 
     try {
       setSaving(true);
@@ -82,19 +94,19 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         }),
       });
 
-      if (!response.ok) {throw new Error('Failed to save settings');}
+      if (!response.ok) throw new Error('Failed to save settings');
 
-      alert('SEO settings saved successfully!');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('[SEO] Save error:', error);
-      alert('Failed to save SEO settings');
     } finally {
       setSaving(false);
     }
   }
 
   function updateSEO(field: string, value: any) {
-    if (!settings) {return;}
+    if (!settings) return;
 
     setSettings({
       ...settings,
@@ -106,7 +118,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
   }
 
   function updateAnalytics(field: string, value: any) {
-    if (!settings) {return;}
+    if (!settings) return;
 
     setSettings({
       ...settings,
@@ -119,421 +131,335 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <div>Loading SEO settings...</div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-400">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading SEO settings...</span>
+        </div>
       </div>
     );
   }
 
   if (!settings) {
     return (
-      <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <div>Failed to load SEO settings</div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-gray-400">Failed to load SEO settings</div>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
+    <div className="min-h-screen bg-black p-8">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: '#111' }}>
-            SEO & Analytics
-          </h1>
-          <p style={{ margin: 0, color: '#666' }}>
-            Manage site-wide SEO settings and analytics integrations
-          </p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+              <Search className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white">SEO & Analytics</h1>
+              <p className="text-gray-400">Manage site-wide SEO settings and analytics integrations</p>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Site-wide SEO */}
-        <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          padding: '2rem',
-          marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}>
-          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: '#212529' }}>
-            Site-wide SEO
-          </h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Globe className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-xl font-semibold text-white">Site-wide SEO</h2>
+          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="space-y-5">
+            {/* Site Title */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Site Title:
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Site Title
               </label>
               <input
                 type="text"
                 value={settings.seo?.title ?? ''}
                 onChange={(e) => updateSEO('title', e.target.value)}
                 placeholder="Your Site Title"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
               />
-              <small style={{ display: 'block', marginTop: '0.25rem', color: '#6c757d' }}>
+              <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+                <Info className="w-3 h-3" />
                 Recommended: 50-60 characters
-              </small>
+              </p>
             </div>
 
+            {/* Site Description */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Site Description:
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Site Description
               </label>
               <textarea
                 value={settings.seo?.description ?? ''}
                 onChange={(e) => updateSEO('description', e.target.value)}
                 placeholder="Describe your site..."
                 rows={3}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                  fontFamily: 'inherit',
-                  resize: 'vertical',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all resize-none"
               />
-              <small style={{ display: 'block', marginTop: '0.25rem', color: '#6c757d' }}>
+              <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+                <Info className="w-3 h-3" />
                 Recommended: 150-160 characters
-              </small>
+              </p>
             </div>
 
+            {/* Keywords */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Keywords (comma-separated):
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Keywords (comma-separated)
               </label>
               <input
                 type="text"
                 value={settings.seo?.keywords?.join(', ') ?? ''}
                 onChange={(e) => updateSEO('keywords', e.target.value.split(',').map(k => k.trim()))}
                 placeholder="keyword1, keyword2, keyword3"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
               />
             </div>
 
+            {/* OG Image */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Default OG Image URL:
+              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                <Image className="w-4 h-4 text-gray-400" />
+                Default OG Image URL
               </label>
               <input
                 type="text"
                 value={settings.seo?.ogImage ?? ''}
                 onChange={(e) => updateSEO('ogImage', e.target.value)}
                 placeholder="https://yoursite.com/og-image.jpg"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
               />
-              <small style={{ display: 'block', marginTop: '0.25rem', color: '#6c757d' }}>
+              <p className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+                <Info className="w-3 h-3" />
                 Recommended: 1200x630px for social sharing
-              </small>
+              </p>
             </div>
 
+            {/* Favicon */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Favicon URL:
+              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-gray-400" />
+                Favicon URL
               </label>
               <input
                 type="text"
                 value={settings.seo?.favicon ?? ''}
                 onChange={(e) => updateSEO('favicon', e.target.value)}
                 placeholder="https://yoursite.com/favicon.ico"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '2rem' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-                cursor: 'pointer',
-              }}>
-                <input
-                  type="checkbox"
-                  checked={settings.seo?.robotsIndex !== false}
-                  onChange={(e) => updateSEO('robotsIndex', e.target.checked)}
-                  style={{ width: '16px', height: '16px' }}
-                />
-                Allow Search Engines to Index
+            {/* Robot Checkboxes */}
+            <div className="flex flex-wrap gap-6 pt-2">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={settings.seo?.robotsIndex !== false}
+                    onChange={(e) => updateSEO('robotsIndex', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
+                    {settings.seo?.robotsIndex !== false && (
+                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                  Allow Search Engines to Index
+                </span>
               </label>
 
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-                cursor: 'pointer',
-              }}>
-                <input
-                  type="checkbox"
-                  checked={settings.seo?.robotsFollow !== false}
-                  onChange={(e) => updateSEO('robotsFollow', e.target.checked)}
-                  style={{ width: '16px', height: '16px' }}
-                />
-                Allow Search Engines to Follow Links
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={settings.seo?.robotsFollow !== false}
+                    onChange={(e) => updateSEO('robotsFollow', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
+                    {settings.seo?.robotsFollow !== false && (
+                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                  Allow Search Engines to Follow Links
+                </span>
               </label>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Analytics Integration */}
-        <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          padding: '2rem',
-          marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}>
-          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: '#212529' }}>
-            Analytics & Tracking
-          </h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <BarChart3 className="w-5 h-5 text-purple-400" />
+            <h2 className="text-xl font-semibold text-white">Analytics & Tracking</h2>
+          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Google Analytics */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Google Analytics ID (GA4):
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Google Analytics ID (GA4)
               </label>
               <input
                 type="text"
                 value={settings.analytics?.googleAnalyticsId ?? ''}
                 onChange={(e) => updateAnalytics('googleAnalyticsId', e.target.value)}
                 placeholder="G-XXXXXXXXXX"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
               />
             </div>
 
+            {/* GTM */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Google Tag Manager ID:
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Google Tag Manager ID
               </label>
               <input
                 type="text"
                 value={settings.analytics?.googleTagManagerId ?? ''}
                 onChange={(e) => updateAnalytics('googleTagManagerId', e.target.value)}
                 placeholder="GTM-XXXXXX"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
               />
             </div>
 
+            {/* Facebook Pixel */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Facebook Pixel ID:
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Facebook Pixel ID
               </label>
               <input
                 type="text"
                 value={settings.analytics?.facebookPixelId ?? ''}
                 onChange={(e) => updateAnalytics('facebookPixelId', e.target.value)}
                 placeholder="XXXXXXXXXXXXXXX"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
               />
             </div>
 
+            {/* Hotjar */}
             <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: '#495057',
-              }}>
-                Hotjar Site ID:
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Hotjar Site ID
               </label>
               <input
                 type="text"
                 value={settings.analytics?.hotjarId ?? ''}
                 onChange={(e) => updateAnalytics('hotjarId', e.target.value)}
                 placeholder="XXXXXXX"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  fontSize: '1rem',
-                }}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all font-mono text-sm"
               />
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Robots.txt */}
-        <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          padding: '2rem',
-          marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}>
-          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1.5rem', color: '#212529' }}>
-            Robots.txt
-          </h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <Bot className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-xl font-semibold text-white">Robots.txt</h2>
+          </div>
 
           <div>
             <textarea
               value={robotsTxt}
               onChange={(e) => setRobotsTxt(e.target.value)}
-              rows={10}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #ced4da',
-                borderRadius: '4px',
-                fontSize: '0.875rem',
-                fontFamily: 'monospace',
-                resize: 'vertical',
-              }}
+              rows={8}
+              className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-emerald-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all font-mono text-sm resize-none"
             />
-            <small style={{ display: 'block', marginTop: '0.5rem', color: '#6c757d' }}>
+            <p className="mt-2 text-xs text-gray-500">
               This will be served at /robots.txt
-            </small>
+            </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Sitemap Info */}
-        <div style={{
-          background: 'white',
-          borderRadius: '8px',
-          padding: '2rem',
-          marginBottom: '2rem',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        }}>
-          <h2 style={{ fontSize: '1.5rem', margin: '0 0 1rem', color: '#212529' }}>
-            Sitemap
-          </h2>
-          <p style={{ margin: '0 0 1rem', color: '#495057' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <FileText className="w-5 h-5 text-blue-400" />
+            <h2 className="text-xl font-semibold text-white">Sitemap</h2>
+          </div>
+
+          <p className="text-gray-400 mb-4">
             Your sitemap is automatically generated and includes all published pages.
           </p>
-          <div style={{
-            padding: '1rem',
-            background: '#f8f9fa',
-            borderRadius: '4px',
-            fontSize: '0.875rem',
-            fontFamily: 'monospace',
-            color: '#495057',
-          }}>
-            {settings.subdomain 
+
+          <div className="px-4 py-3 bg-black/40 border border-white/10 rounded-xl font-mono text-sm text-blue-300">
+            {settings.subdomain
               ? `https://${settings.subdomain}.yourplatform.com/sitemap.xml`
               : settings.customDomain
               ? `https://${settings.customDomain}/sitemap.xml`
               : 'Configure your domain to see sitemap URL'}
           </div>
-        </div>
+        </motion.div>
 
         {/* Save Button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="flex justify-end"
+        >
           <button
             onClick={saveSettings}
             disabled={saving}
-            style={{
-              padding: '0.75rem 2rem',
-              background: saving ? '#95a5a6' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              fontSize: '1rem',
-              fontWeight: '600',
-            }}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25"
           >
-            {saving ? 'Saving...' : 'Save SEO Settings'}
+            {saving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Saving...
+              </>
+            ) : saved ? (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                Saved!
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                Save SEO Settings
+              </>
+            )}
           </button>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
 }
-
