@@ -1,13 +1,17 @@
 /**
  * System Prompt Compiler
  * Compiles the final system prompt from all components
+ *
+ * Security: Includes tenant isolation headers to enforce data boundaries.
+ * All prompts are wrapped with organization context to prevent cross-tenant access.
  */
 
-import type { 
-  AgentPersona, 
+import type {
+  AgentPersona,
   KnowledgeBase,
-  BehaviorConfig 
+  BehaviorConfig
 } from '@/types/agent-memory';
+import { buildClientAgentContext } from '@/lib/ai/tenant-context-wrapper';
 
 /** Business context fields used in prompt generation */
 export interface BusinessContextFields {
@@ -48,29 +52,54 @@ export interface BusinessContextFields {
   industryRegulations?: string;
 }
 
+/** Tenant isolation context for multi-tenant security */
+export interface TenantIsolationContext {
+  /** Organization ID */
+  orgId: string;
+  /** Organization name */
+  orgName: string;
+  /** Industry type */
+  industry?: string;
+}
+
 export interface PromptComponents {
   businessContext: BusinessContextFields;
   agentPersona: AgentPersona;
   behaviorConfig: BehaviorConfig;
   knowledgeBase: KnowledgeBase;
+  /** Optional tenant isolation context (required for production) */
+  tenantContext?: TenantIsolationContext;
 }
 
 /**
  * Compile system prompt from all components
+ *
+ * SECURITY: Prepends tenant isolation header to enforce data boundaries.
  */
 export async function compileSystemPrompt(
   components: PromptComponents
 ): Promise<string> {
-  const { businessContext, agentPersona, behaviorConfig, knowledgeBase } = components;
-  
+  const { businessContext, agentPersona, behaviorConfig, knowledgeBase, tenantContext } = components;
+
   // Extract business context strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
   const businessName = (businessContext.businessName !== '' && businessContext.businessName != null) ? businessContext.businessName : 'the company';
   const industry = (businessContext.industry !== '' && businessContext.industry != null) ? businessContext.industry : 'General';
   const problemSolved = (businessContext.problemSolved !== '' && businessContext.problemSolved != null) ? businessContext.problemSolved : 'We provide products and services';
   const uniqueValue = (businessContext.uniqueValue !== '' && businessContext.uniqueValue != null) ? businessContext.uniqueValue : 'Our commitment to quality';
   const targetCustomer = (businessContext.targetCustomer !== '' && businessContext.targetCustomer != null) ? businessContext.targetCustomer : 'Anyone who needs our services';
-  
-  let prompt = `You are an AI sales and customer service agent for ${businessName}.
+
+  // Build tenant isolation header (CRITICAL FOR SECURITY)
+  let tenantIsolationHeader = '';
+  if (tenantContext) {
+    tenantIsolationHeader = buildClientAgentContext(
+      tenantContext.orgId,
+      tenantContext.orgName,
+      tenantContext.industry ?? industry,
+      agentPersona.name ?? 'AI Assistant'
+    );
+  }
+
+  let prompt = `${tenantIsolationHeader}You are an AI sales and customer service agent for ${businessName}.
 
 # Your Role & Objectives
 ${agentPersona.objectives.map(obj => `- ${obj}`).join('\n')}

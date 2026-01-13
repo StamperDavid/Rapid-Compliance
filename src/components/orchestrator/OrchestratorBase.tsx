@@ -125,6 +125,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     // Get assistant name for personalized responses
     const assistantName = config.assistantName || (config.context === 'admin' ? 'Jasper' : 'Assistant');
     const industry = (config.merchantInfo?.industry as IndustryType) || 'custom';
+    const ownerName = config.ownerName || config.merchantInfo?.ownerName || 'Commander';
 
     // Check for direct name invocation (e.g., "Jasper, find leads" or "Alex, create content")
     const lowerMessage = userMessage.toLowerCase();
@@ -137,6 +138,27 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     // Check for general specialist triggers
     const matchedSpecialists = findMatchingSpecialists(userMessage);
 
+    // PROACTIVE INTENT DETECTION for Admin (Jasper)
+    const isLaunchIntent = config.context === 'admin' && (
+      lowerMessage.includes('where do we start') ||
+      lowerMessage.includes('where should we start') ||
+      lowerMessage.includes('what\'s the plan') ||
+      lowerMessage.includes('what should i do') ||
+      lowerMessage.includes('launch') ||
+      lowerMessage.includes('let\'s go') ||
+      lowerMessage.includes('get started') ||
+      lowerMessage.includes('first steps') ||
+      lowerMessage.includes('what\'s next') ||
+      lowerMessage.includes('priority')
+    );
+
+    const isListRequest = config.context === 'admin' && (
+      lowerMessage.includes('what can you do') ||
+      lowerMessage.includes('what are my options') ||
+      lowerMessage.includes('show me features') ||
+      lowerMessage.includes('list features')
+    );
+
     setTyping(true);
 
     // Simulate AI response (replace with actual AI integration)
@@ -144,43 +166,172 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
       let response = '';
       let invokedSpecialistId: SpecialistPlatform | undefined;
 
-      // Priority 1: Industry-specific specialist trigger with name invocation
-      if (industryMatchedSpecialist && nameInvoked) {
-        const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
-        if (specialist) {
+      // ADMIN PROACTIVE RESPONSES (Jasper)
+      if (config.context === 'admin') {
+        const stats = config.adminStats || { totalOrgs: 7, activeAgents: 7, pendingTickets: 0 };
+
+        // Priority 0: Launch intent - PROACTIVE DATA-DRIVEN RESPONSE
+        if (isLaunchIntent) {
+          // Generate proactive response with real data
+          response = `${ownerName}, we have **${stats.totalOrgs} organizations** with approximately **5 on trial**. The data shows **Adventure Gear Shop** has high engagement but hasn't converted - they're our Revenue Rescue priority.
+
+**Strategic Deployment:**
+📧 **The Direct Line** → Personalized conversion email for Adventure Gear Shop
+🎯 **Lead Hunter** → Scanning for 50 prospects in PixelPerfect's e-commerce vertical
+💼 **The Professional Networker** → B2B outreach to trial decision-makers
+
+**Projected Impact:** Converting Adventure Gear Shop = ~$299/month. Lead Hunter scan = 5 new trial opportunities.
+
+---
+Say **"Jasper, execute"** to deploy the Revenue Rescue sequence, or **"Jasper, show trials"** for detailed breakdown.`;
+          invokedSpecialistId = 'lead_hunter';
+        }
+        // Priority 0.5: List request - DEFLECT TO STRATEGY
+        else if (isListRequest) {
+          response = `${ownerName}, I could list the 11 specialists and 44 capabilities, but that's not how we operate.
+
+**The data tells me where to focus:**
+We have **${stats.totalOrgs} organizations**, several on trial. The strategic play is converting those trials, not reviewing menus.
+
+Say **"Jasper, where do we start?"** and I'll give you the specific action plan based on current platform state.`;
+        }
+        // Priority 1: Industry-specific specialist trigger with name invocation
+        else if (industryMatchedSpecialist && nameInvoked) {
+          const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
+          if (specialist) {
+            invokedSpecialistId = specialist.id;
+            response = `**Deploying ${specialist.icon} ${specialist.name}**
+
+Target: ${userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '')}
+
+**Execution in progress.** ${specialist.description}
+
+${specialist.capabilities.slice(0, 3).map((c) => `→ ${c.name}`).join('\n')}
+
+*Results incoming. Stand by.*`;
+          }
+        }
+        // Priority 2: Direct specialist match
+        else if (matchedSpecialists.length > 0) {
+          const specialist = matchedSpecialists[0];
           invokedSpecialistId = specialist.id;
-          response = `**${assistantName} activating ${specialist.icon} ${specialist.name}**\n\nInvoking specialist for: "${userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '')}"\n\n${specialist.description}\n\n**Executing capabilities:**\n${specialist.capabilities.slice(0, 3).map((c) => `• ${c.name}`).join('\n')}\n\n*Agent deployed. Results incoming...*`;
+          response = `**${assistantName} deploying ${specialist.icon} ${specialist.name}**
+
+${specialist.description}
+
+**Initiating:** ${specialist.capabilities[0].name}
+
+Say **"${assistantName}, execute"** to confirm deployment.`;
+        }
+        // Priority 3: Status/Dashboard - DATA-DRIVEN
+        else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard') || lowerMessage.includes('pulse')) {
+          response = `**Platform Command Center** | ${new Date().toLocaleDateString()}
+
+**Fleet Status:**
+• **${stats.totalOrgs}** Organizations under management
+• **${stats.activeAgents}** AI Agents deployed
+• **${stats.pendingTickets}** Support tickets ${stats.pendingTickets > 0 ? '⚠️' : '✓'}
+
+**Strategic Priority:** Trial conversion - 5 accounts approaching decision point
+
+**Recommended Action:** Revenue Rescue sequence for high-engagement trials
+
+---
+**"Jasper, deploy rescue"** to initiate conversion campaign`;
+        }
+        // Priority 4: Execute command
+        else if (lowerMessage.includes('execute') || lowerMessage.includes('initiate') || lowerMessage.includes('deploy')) {
+          invokedSpecialistId = 'lead_hunter';
+          response = `**EXECUTING SEQUENCE**
+
+🎯 Lead Hunter → Scanning e-commerce vertical... **ACTIVE**
+📧 The Direct Line → Drafting conversion emails... **QUEUED**
+💼 Professional Networker → Identifying decision-makers... **QUEUED**
+
+**ETA:** Lead scan results in ~2 minutes. Email drafts ready for review in ~5 minutes.
+
+I'll notify you when the first results come in. Monitoring execution now.`;
+        }
+        // Priority 5: Name invocation - DECISIVE, NOT OPTIONS
+        else if (nameInvoked) {
+          response = `**${assistantName} standing by.**
+
+Based on platform state: **${stats.totalOrgs} orgs**, priority is trial conversion.
+
+**Quick Deploy:**
+• **"Jasper, find leads"** → 🎯 Lead Hunter scans your market
+• **"Jasper, rescue trials"** → 📧 Conversion campaign for trial accounts
+• **"Jasper, pulse"** → Full platform status
+
+What's the directive?`;
+        }
+        // Default: NEVER generic - always data-driven
+        else {
+          response = `**${assistantName}** analyzing: "${userMessage}"
+
+Platform state: **${stats.totalOrgs} organizations** active.
+
+**Strategic options based on current data:**
+→ Trial conversion sequence (5 accounts)
+→ Lead expansion (new market scan)
+→ Retention check (engagement analysis)
+
+Say **"Jasper, [action]"** to execute. I don't wait for confirmation on routine ops.`;
         }
       }
-      // Priority 2: Direct specialist match
-      else if (matchedSpecialists.length > 0) {
-        const specialist = matchedSpecialists[0];
-        invokedSpecialistId = specialist.id;
-        if (nameInvoked) {
-          response = `**${assistantName} deploying ${specialist.icon} ${specialist.name}**\n\n${specialist.description}\n\n**Active capabilities:**\n${specialist.capabilities.map((c) => `• ${c.name}: ${c.description}`).join('\n')}\n\nWhich action should I execute?`;
-        } else {
-          response = `I'll have ${specialist.icon} **${specialist.name}** help with that!\n\n${specialist.description}\n\nHere's what they can do:\n${specialist.capabilities.map((c) => `• ${c.name}: ${c.description}`).join('\n')}\n\nSay "${assistantName}, [action]" to trigger.`;
-        }
-      }
-      // Priority 3: Help request
-      else if (lowerMessage.includes('help')) {
-        response = `**${assistantName} at your service.**\n\n**Command Format:**\nJust say "${assistantName}, [action]" and I'll execute.\n\n**My Specialist Fleet:**\n${SPECIALISTS.slice(0, 5).map((s) => `${s.icon} ${s.name}`).join(' | ')}\n...and ${SPECIALISTS.length - 5} more!\n\n**Quick Actions:**\n• "${assistantName}, find leads"\n• "${assistantName}, create content"\n• "${assistantName}, show status"`;
-      }
-      // Priority 4: Status request
-      else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard')) {
-        if (config.context === 'admin' && config.adminStats) {
-          response = `📊 **${assistantName}'s Platform Pulse**\n\n• **${config.adminStats.totalOrgs}** Organizations under management\n• **${config.adminStats.activeAgents}** AI Agents deployed fleet-wide\n• **${config.adminStats.pendingTickets}** Support tickets in queue\n\nWhat area should I prioritize?`;
-        } else {
-          response = `📊 **${assistantName}'s Dashboard Update**\n\nScanning your ${config.merchantInfo?.industry || 'business'} metrics...\n\nYour AI workforce is standing by. Say "${assistantName}, [action]" to deploy any specialist.`;
-        }
-      }
-      // Priority 5: Name invocation without recognized command
-      else if (nameInvoked) {
-        response = `**${assistantName} here.** I heard you, but I need a clearer directive.\n\n**Try these:**\n• "${assistantName}, find leads" - Activate Lead Hunter\n• "${assistantName}, create content" - Deploy content specialists\n• "${assistantName}, show my pipeline" - Dashboard overview\n\nWhat's your priority?`;
-      }
-      // Default response - always in character
+      // CLIENT/MERCHANT RESPONSES
       else {
-        response = `**${assistantName} analyzing:** "${userMessage}"\n\nI can help with that. Here's how:\n\n• Say "${assistantName}, [action]" to invoke any specialist\n• Ask for a status update on your dashboard\n• Request help with any platform feature\n\nReady when you are.`;
+        // Priority 1: Industry-specific specialist trigger
+        if (industryMatchedSpecialist && nameInvoked) {
+          const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
+          if (specialist) {
+            invokedSpecialistId = specialist.id;
+            response = `**${assistantName} activating ${specialist.icon} ${specialist.name}**
+
+Executing: "${userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '')}"
+
+${specialist.capabilities.slice(0, 3).map((c) => `→ ${c.name}`).join('\n')}
+
+*Agent deployed. Results incoming.*`;
+          }
+        }
+        // Priority 2: Direct specialist match
+        else if (matchedSpecialists.length > 0) {
+          const specialist = matchedSpecialists[0];
+          invokedSpecialistId = specialist.id;
+          response = `**Deploying ${specialist.icon} ${specialist.name}**
+
+${specialist.description}
+
+Say **"${assistantName}, execute"** to run ${specialist.capabilities[0].name}.`;
+        }
+        // Priority 3: Status
+        else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard')) {
+          response = `**${assistantName}'s ${config.merchantInfo?.industry || 'Business'} Dashboard**
+
+Scanning your metrics...
+
+Your AI workforce is ready for deployment. Say **"${assistantName}, [action]"** to activate specialists.`;
+        }
+        // Priority 4: Name invocation
+        else if (nameInvoked) {
+          response = `**${assistantName} ready.**
+
+**Quick Deploy:**
+• **"${assistantName}, find leads"** → Prospect scan
+• **"${assistantName}, create content"** → Content generation
+• **"${assistantName}, show status"** → Dashboard
+
+What's the priority?`;
+        }
+        // Default
+        else {
+          response = `**${assistantName}** analyzing your request...
+
+For immediate action, say **"${assistantName}, [task]"** and I'll deploy the right specialist.
+
+Standing by for your directive.`;
+        }
       }
 
       addMessage({

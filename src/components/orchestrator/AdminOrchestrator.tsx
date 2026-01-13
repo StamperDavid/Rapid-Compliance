@@ -6,9 +6,14 @@
  * High-level AI Architect for the platform owner (Super Admin).
  * Jasper has a COMMAND persona - strategic, growth-oriented, high-level oversight.
  * Provides platform-wide visibility and self-marketing capabilities.
+ *
+ * Security Features:
+ * - Uses verified stats from /api/admin/stats endpoint
+ * - Implements 500ms debounce to prevent 429 rate limit errors
+ * - Stats are scoped based on user's claims (global for super admin)
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { OrchestratorBase, type OrchestratorConfig } from './OrchestratorBase';
 import { FeedbackModal } from './FeedbackModal';
 import { useOrchestratorStore } from '@/lib/stores/orchestrator-store';
@@ -23,12 +28,49 @@ import {
 // Jasper - The Admin AI Assistant Name
 const ADMIN_ASSISTANT_NAME = 'Jasper';
 
+// Debounce delay to prevent 429 rate limit errors
+const STATS_FETCH_DEBOUNCE_MS = 500;
+
 interface AdminStats {
   totalOrgs: number;
   activeAgents: number;
   pendingTickets: number;
   trialOrgs: number;
   monthlyRevenue: number;
+}
+
+/**
+ * Custom debounce hook for stats fetching.
+ * Prevents rapid API calls that could trigger 429 errors.
+ */
+function useDebouncedCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+): T {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedCallback = useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callback(...args);
+      }, delay);
+    },
+    [callback, delay]
+  ) as T;
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return debouncedCallback;
 }
 
 export function AdminOrchestrator() {
@@ -42,49 +84,93 @@ export function AdminOrchestrator() {
     monthlyRevenue: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [statsVerified, setStatsVerified] = useState(false);
+  const fetchAttemptRef = useRef(0);
 
   // Set context on mount
   useEffect(() => {
     setContext('admin');
   }, [setContext]);
 
-  // Fetch platform stats
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        // Fetch organizations count
-        const orgsResponse = await fetch('/api/admin/organizations?limit=1');
-        const orgsData = await orgsResponse.json();
+  // Debounced stats fetch function
+  const fetchStatsInternal = useCallback(async () => {
+    // Prevent concurrent fetches
+    const currentAttempt = ++fetchAttemptRef.current;
 
-        // Fetch users count (approximation for active agents)
-        const usersResponse = await fetch('/api/admin/users?limit=1');
-        const usersData = await usersResponse.json();
+    try {
+      // Use the new secure stats API endpoint
+      const response = await fetch('/api/admin/stats', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
 
-        // In production, these would come from actual API endpoints
+      // Check if this is still the latest fetch attempt
+      if (currentAttempt !== fetchAttemptRef.current) {
+        return; // A newer fetch was triggered, ignore this result
+      }
+
+      if (response.status === 429) {
+        console.warn('Rate limited on stats fetch, will retry');
+        // Don't update stats, keep current values
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Stats fetch failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.stats) {
         setStats({
-          totalOrgs: orgsData.pagination?.total || 0,
-          activeAgents: usersData.pagination?.total || 0,
-          pendingTickets: 0, // Would come from support tickets aggregation
-          trialOrgs: 0, // Would come from subscription status aggregation
-          monthlyRevenue: 0, // Would come from billing system
+          totalOrgs: data.stats.totalOrgs ?? 0,
+          activeAgents: data.stats.activeAgents ?? 0,
+          pendingTickets: data.stats.pendingTickets ?? 0,
+          trialOrgs: data.stats.trialOrgs ?? 0,
+          monthlyRevenue: data.stats.monthlyRevenue ?? 0,
         });
-      } catch (error) {
-        console.error('Error fetching admin stats:', error);
-        // Set fallback stats for demo
-        setStats({
-          totalOrgs: 47,
-          activeAgents: 312,
-          pendingTickets: 8,
-          trialOrgs: 12,
-          monthlyRevenue: 24500,
-        });
-      } finally {
+        setStatsVerified(true);
+      }
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+
+      // Check if this is still the latest fetch attempt
+      if (currentAttempt !== fetchAttemptRef.current) {
+        return;
+      }
+
+      // Only set fallback if we haven't successfully fetched before
+      if (!statsVerified) {
+        // Fallback: Try the old endpoints with debouncing
+        try {
+          const orgsResponse = await fetch('/api/admin/organizations?limit=1');
+          const orgsData = await orgsResponse.json();
+
+          setStats((prev) => ({
+            ...prev,
+            totalOrgs: orgsData.pagination?.total ?? prev.totalOrgs,
+          }));
+        } catch {
+          // Keep existing stats
+        }
+      }
+    } finally {
+      if (currentAttempt === fetchAttemptRef.current) {
         setIsLoading(false);
       }
     }
+  }, [statsVerified]);
 
+  // Apply debounce to the fetch function
+  const fetchStats = useDebouncedCallback(fetchStatsInternal, STATS_FETCH_DEBOUNCE_MS);
+
+  // Fetch platform stats on mount with debounce
+  useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
 
   // Get admin persona for dynamic generation
   const adminPersona = getAdminPersona();
