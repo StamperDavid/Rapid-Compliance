@@ -146,9 +146,10 @@ export default function OnboardingWizard() {
     orderTracking: '',
     complaintResolution: '',
     
-    // Step 12: Agent Personality
+    // Step 12: Agent Personality & Identity
     tone: 'professional',
     agentName: '',
+    ownerName: '', // Business owner's name for personalized greetings
     greeting: '',
     closingMessage: '',
     
@@ -242,7 +243,7 @@ export default function OnboardingWizard() {
       'typicalSalesFlow', 'qualificationCriteria', 'discoveryQuestions', 'closingStrategy',
       'commonObjections', 'priceObjections', 'timeObjections', 'competitorObjections',
       'supportScope', 'technicalSupport', 'orderTracking', 'complaintResolution',
-      'tone', 'agentName', 'greeting', 'closingMessage', 'responseLength',
+      'tone', 'agentName', 'ownerName', 'greeting', 'closingMessage', 'responseLength',
       'faqs', 'requiredDisclosures', 'industryRegulations', 'prohibitedTopics',
       'conversationFlowLogic', 'industryTemplate',
       'priceObjectionStrategy', 'competitorObjectionStrategy', 'timingObjectionStrategy',
@@ -419,6 +420,7 @@ export default function OnboardingWizard() {
       complaintResolution: '',
       tone: 'professional',
       agentName: '',
+      ownerName: '',
       greeting: '',
       closingMessage: '',
       closingAggressiveness: 5,
@@ -1441,22 +1443,53 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {/* Step 12: Agent Personality */}
+          {/* Step 12: Agent Personality & Identity */}
           {currentStep === 12 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
-                  Agent Personality
+                  Your AI Assistant Identity
                 </div>
                 <div style={{ color: '#666', fontSize: '0.875rem' }}>
-                  How should your agent communicate?
+                  Name and personalize your AI business partner
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TextInputField formData={formData} updateField={updateField} label="Agent Name (optional)" field="agentName" placeholder="e.g., Alex, Sam, or leave blank" />
+                {/* AI Assistant Name - Primary Focus */}
+                <div style={{
+                  padding: '1.5rem',
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  borderRadius: '0.75rem'
+                }}>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <span style={{ fontSize: '1.25rem', marginRight: '0.5rem' }}>🤖</span>
+                    <span style={{ color: '#a5b4fc', fontWeight: '600', fontSize: '1rem' }}>What is the name of your AI Assistant?</span>
+                  </div>
+                  <TextInputField
+                    formData={formData}
+                    updateField={updateField}
+                    label="AI Assistant Name *"
+                    field="agentName"
+                    placeholder="e.g., Alex, Maya, Jordan, Riley..."
+                    required
+                  />
+                  <div style={{ color: '#818cf8', fontSize: '0.8rem', marginTop: '0.75rem' }}>
+                    Your AI assistant will introduce itself using this name and serve as your dedicated business partner
+                  </div>
+                </div>
+
+                {/* Owner Name for Personalization */}
+                <TextInputField
+                  formData={formData}
+                  updateField={updateField}
+                  label="Your Name (Business Owner)"
+                  field="ownerName"
+                  placeholder="e.g., John, Sarah, David..."
+                />
                 <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '-1rem' }}>
-                  Give your agent a human name or leave blank for generic greeting
+                  Your AI assistant will greet you by name: &quot;Hello [Your Name], I am [Assistant Name]...&quot;
                 </div>
 
                 <div>

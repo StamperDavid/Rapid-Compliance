@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * Admin Orchestrator - The Growth Partner
+ * Admin Orchestrator - JASPER
  *
- * High-level AI Architect for the platform owner.
+ * High-level AI Architect for the platform owner (Super Admin).
+ * Jasper has a COMMAND persona - strategic, growth-oriented, high-level oversight.
  * Provides platform-wide visibility and self-marketing capabilities.
  */
 
@@ -13,6 +14,14 @@ import { FeedbackModal } from './FeedbackModal';
 import { useOrchestratorStore } from '@/lib/stores/orchestrator-store';
 import { ADMIN_ORCHESTRATOR_PROMPT } from '@/lib/orchestrator/feature-manifest';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import {
+  getAdminPersona,
+  buildPersonaSystemPrompt,
+  generateStatusOpener,
+} from '@/lib/ai/persona-mapper';
+
+// Jasper - The Admin AI Assistant Name
+const ADMIN_ASSISTANT_NAME = 'Jasper';
 
 interface AdminStats {
   totalOrgs: number;
@@ -77,28 +86,34 @@ export function AdminOrchestrator() {
     fetchStats();
   }, []);
 
-  // Generate admin welcome/briefing message
+  // Get admin persona for dynamic generation
+  const adminPersona = getAdminPersona();
+
+  // Generate admin welcome/briefing message with Jasper persona
   const getWelcomeMessage = (): string => {
-    return `🏛️ **Welcome back, Master Architect**
+    const ownerName = adminUser?.email?.split('@')[0] || 'Commander';
 
-I'm your strategic AI partner for platform growth and management.
+    return `**Hello ${ownerName}, I am ${ADMIN_ASSISTANT_NAME}, your ${adminPersona.partnerTitle}.**
 
-**Platform Pulse:**
-• **${stats.totalOrgs}** Total Organizations
-• **${stats.activeAgents}** Active AI Agents Deployed
-• **${stats.pendingTickets}** Pending Support Tickets
+${generateStatusOpener(ADMIN_ASSISTANT_NAME, 'admin', 'admin')}
 
-**Quick Actions I Can Help With:**
+**Platform Command Center:**
+• **${stats.totalOrgs}** Total Organizations under management
+• **${stats.activeAgents}** Active AI Agents deployed fleet-wide
+• **${stats.pendingTickets}** Support tickets requiring attention
+• **${stats.trialOrgs}** Trial organizations (conversion opportunities)
 
-1. **Dashboard Deep Dive** - "Show me platform health"
-2. **Support Triage** - "Review pending tickets"
-3. **Growth Mode** - "Help me create marketing content"
-4. **Merchant Management** - "Show struggling organizations"
+**Strategic Actions Available:**
 
-**Self-Marketing Mode:**
-Say "Activate growth mode" and I'll help you create content to acquire new merchants using the Broadcaster, Visual Storyteller, or Newsletter specialists.
+1. **"${ADMIN_ASSISTANT_NAME}, show platform health"** - Full diagnostic report
+2. **"${ADMIN_ASSISTANT_NAME}, review tickets"** - Support queue triage
+3. **"${ADMIN_ASSISTANT_NAME}, activate growth mode"** - Marketing content generation
+4. **"${ADMIN_ASSISTANT_NAME}, find more clients"** - Trigger Lead Hunter for merchant acquisition
 
-What would you like to focus on today?`;
+**My Specialists at Your Command:**
+I can invoke any of the 11 agents on your behalf - just say "${ADMIN_ASSISTANT_NAME}, [action]" and I'll coordinate the workforce.
+
+Ready to execute your growth strategy.`;
   };
 
   // Generate detailed platform briefing
@@ -136,11 +151,22 @@ Would you like me to drill into any of these areas?`;
     return null;
   }
 
+  // Build enhanced system prompt with Jasper's persona
+  const enhancedSystemPrompt = `${ADMIN_ORCHESTRATOR_PROMPT}
+
+${buildPersonaSystemPrompt(ADMIN_ASSISTANT_NAME, adminUser?.email?.split('@')[0], 'admin', 'admin')}
+
+AGENT INVOCATION:
+When the user says "${ADMIN_ASSISTANT_NAME}, find more clients" or similar, you should trigger the Lead Hunter agent.
+When the user says "${ADMIN_ASSISTANT_NAME}, [specialist action]", invoke the appropriate specialist from the feature manifest.
+`;
+
   const config: OrchestratorConfig = {
     context: 'admin',
-    systemPrompt: ADMIN_ORCHESTRATOR_PROMPT,
+    systemPrompt: enhancedSystemPrompt,
     welcomeMessage: getWelcomeMessage(),
     briefingGenerator: generateBriefing,
+    assistantName: ADMIN_ASSISTANT_NAME,
     adminStats: {
       totalOrgs: stats.totalOrgs,
       activeAgents: stats.activeAgents,

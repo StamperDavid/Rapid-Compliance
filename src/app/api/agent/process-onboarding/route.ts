@@ -88,7 +88,26 @@ export async function POST(request: NextRequest) {
       },
       false
     );
-    
+
+    // Update organization with assistant name and owner name
+    const orgUpdate: Record<string, any> = {
+      updatedAt: new Date().toISOString(),
+      industry: onboardingData.industry,
+      industryName: onboardingData.industry, // Industry display name
+    };
+
+    // Save assistant name if provided
+    if (onboardingData.agentName) {
+      orgUpdate.assistantName = onboardingData.agentName;
+    }
+
+    // Save owner name if provided
+    if (onboardingData.ownerName) {
+      orgUpdate.ownerName = onboardingData.ownerName;
+    }
+
+    await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, orgUpdate);
+
     // Process onboarding
     const result = await processOnboarding({
       onboardingData: onboardingData as OnboardingData,

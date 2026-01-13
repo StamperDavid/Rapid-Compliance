@@ -17,8 +17,12 @@ import {
 import {
   SPECIALISTS,
   findMatchingSpecialists,
+  getSpecialist,
   type Specialist,
+  type SpecialistPlatform,
 } from '@/lib/orchestrator/feature-manifest';
+import { matchSpecialistTrigger } from '@/lib/ai/persona-mapper';
+import type { IndustryType } from '@/types/organization';
 import {
   MessageSquare,
   X,
@@ -42,10 +46,16 @@ export interface OrchestratorConfig {
   welcomeMessage: string;
   briefingGenerator?: () => Promise<string>;
   onSpecialistInvoke?: (specialist: Specialist, action: string) => Promise<void>;
+  /** Dynamic assistant name (e.g., "Jasper" for admin, custom name for clients) */
+  assistantName?: string;
+  /** Owner's name for personalized greetings */
+  ownerName?: string;
   merchantInfo?: {
     industry?: string;
     niche?: string;
     companyName?: string;
+    assistantName?: string;
+    ownerName?: string;
   };
   adminStats?: {
     totalOrgs: number;
@@ -112,7 +122,19 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     // Add user message
     addMessage({ role: 'user', content: userMessage });
 
-    // Check for specialist triggers
+    // Get assistant name for personalized responses
+    const assistantName = config.assistantName || (config.context === 'admin' ? 'Jasper' : 'Assistant');
+    const industry = (config.merchantInfo?.industry as IndustryType) || 'custom';
+
+    // Check for direct name invocation (e.g., "Jasper, find leads" or "Alex, create content")
+    const lowerMessage = userMessage.toLowerCase();
+    const nameInvoked = lowerMessage.includes(assistantName.toLowerCase() + ',') ||
+                        lowerMessage.startsWith(assistantName.toLowerCase() + ' ');
+
+    // Check for industry-specific specialist triggers
+    const industryMatchedSpecialist = matchSpecialistTrigger(userMessage, industry, config.context === 'admin' ? 'admin' : 'client');
+
+    // Check for general specialist triggers
     const matchedSpecialists = findMatchingSpecialists(userMessage);
 
     setTyping(true);
@@ -120,26 +142,51 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     // Simulate AI response (replace with actual AI integration)
     setTimeout(() => {
       let response = '';
+      let invokedSpecialistId: SpecialistPlatform | undefined;
 
-      if (matchedSpecialists.length > 0) {
-        const specialist = matchedSpecialists[0];
-        response = `I'll have ${specialist.icon} **${specialist.name}** help with that!\n\n${specialist.description}\n\nHere's what they can do:\n${specialist.capabilities.map((c) => `• ${c.name}: ${c.description}`).join('\n')}\n\nWhich capability would you like me to trigger?`;
-      } else if (userMessage.toLowerCase().includes('help')) {
-        response = `I'm here to help! Here's what I can do:\n\n**Quick Commands:**\n• Type a specialist name to invoke them\n• Ask about your dashboard status\n• Request help with any feature\n\n**Available Specialists:**\n${SPECIALISTS.slice(0, 5).map((s) => `${s.icon} ${s.name}`).join(' | ')}\n...and ${SPECIALISTS.length - 5} more!\n\nWhat would you like to do?`;
-      } else if (userMessage.toLowerCase().includes('status')) {
-        if (config.context === 'admin' && config.adminStats) {
-          response = `📊 **Platform Pulse**\n\n• Total Organizations: ${config.adminStats.totalOrgs}\n• Active AI Agents: ${config.adminStats.activeAgents}\n• Pending Support Tickets: ${config.adminStats.pendingTickets}\n\nWould you like me to drill down into any of these metrics?`;
-        } else {
-          response = `📊 **Your Dashboard Status**\n\nI'll check your current metrics and provide a summary. Is there a specific area you'd like to focus on?`;
+      // Priority 1: Industry-specific specialist trigger with name invocation
+      if (industryMatchedSpecialist && nameInvoked) {
+        const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
+        if (specialist) {
+          invokedSpecialistId = specialist.id;
+          response = `**${assistantName} activating ${specialist.icon} ${specialist.name}**\n\nInvoking specialist for: "${userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '')}"\n\n${specialist.description}\n\n**Executing capabilities:**\n${specialist.capabilities.slice(0, 3).map((c) => `• ${c.name}`).join('\n')}\n\n*Agent deployed. Results incoming...*`;
         }
-      } else {
-        response = `I understand you're asking about "${userMessage}". Let me help you with that.\n\nYou can:\n• Invoke a specialist by name\n• Ask for a status update\n• Request help with any feature\n• Submit feedback or feature requests\n\nWhat would you like to do next?`;
+      }
+      // Priority 2: Direct specialist match
+      else if (matchedSpecialists.length > 0) {
+        const specialist = matchedSpecialists[0];
+        invokedSpecialistId = specialist.id;
+        if (nameInvoked) {
+          response = `**${assistantName} deploying ${specialist.icon} ${specialist.name}**\n\n${specialist.description}\n\n**Active capabilities:**\n${specialist.capabilities.map((c) => `• ${c.name}: ${c.description}`).join('\n')}\n\nWhich action should I execute?`;
+        } else {
+          response = `I'll have ${specialist.icon} **${specialist.name}** help with that!\n\n${specialist.description}\n\nHere's what they can do:\n${specialist.capabilities.map((c) => `• ${c.name}: ${c.description}`).join('\n')}\n\nSay "${assistantName}, [action]" to trigger.`;
+        }
+      }
+      // Priority 3: Help request
+      else if (lowerMessage.includes('help')) {
+        response = `**${assistantName} at your service.**\n\n**Command Format:**\nJust say "${assistantName}, [action]" and I'll execute.\n\n**My Specialist Fleet:**\n${SPECIALISTS.slice(0, 5).map((s) => `${s.icon} ${s.name}`).join(' | ')}\n...and ${SPECIALISTS.length - 5} more!\n\n**Quick Actions:**\n• "${assistantName}, find leads"\n• "${assistantName}, create content"\n• "${assistantName}, show status"`;
+      }
+      // Priority 4: Status request
+      else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard')) {
+        if (config.context === 'admin' && config.adminStats) {
+          response = `📊 **${assistantName}'s Platform Pulse**\n\n• **${config.adminStats.totalOrgs}** Organizations under management\n• **${config.adminStats.activeAgents}** AI Agents deployed fleet-wide\n• **${config.adminStats.pendingTickets}** Support tickets in queue\n\nWhat area should I prioritize?`;
+        } else {
+          response = `📊 **${assistantName}'s Dashboard Update**\n\nScanning your ${config.merchantInfo?.industry || 'business'} metrics...\n\nYour AI workforce is standing by. Say "${assistantName}, [action]" to deploy any specialist.`;
+        }
+      }
+      // Priority 5: Name invocation without recognized command
+      else if (nameInvoked) {
+        response = `**${assistantName} here.** I heard you, but I need a clearer directive.\n\n**Try these:**\n• "${assistantName}, find leads" - Activate Lead Hunter\n• "${assistantName}, create content" - Deploy content specialists\n• "${assistantName}, show my pipeline" - Dashboard overview\n\nWhat's your priority?`;
+      }
+      // Default response - always in character
+      else {
+        response = `**${assistantName} analyzing:** "${userMessage}"\n\nI can help with that. Here's how:\n\n• Say "${assistantName}, [action]" to invoke any specialist\n• Ask for a status update on your dashboard\n• Request help with any platform feature\n\nReady when you are.`;
       }
 
       addMessage({
         role: 'assistant',
         content: response,
-        metadata: matchedSpecialists.length > 0 ? { specialistInvoked: matchedSpecialists[0].id } : undefined,
+        metadata: invokedSpecialistId ? { specialistInvoked: invokedSpecialistId } : undefined,
       });
       setTyping(false);
     }, 1000);
@@ -217,10 +264,10 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-sm">
-                    {config.context === 'admin' ? 'Master Architect' : 'AI Sales Assistant'}
+                    {config.assistantName || (config.context === 'admin' ? 'Jasper' : config.merchantInfo?.assistantName || 'AI Assistant')}
                   </h3>
                   <p className="text-gray-400 text-xs">
-                    {config.context === 'admin' ? 'Platform Control Center' : 'Your Workforce Commander'}
+                    {config.context === 'admin' ? 'Strategic Growth Architect' : 'Your Business Partner'}
                   </p>
                 </div>
               </div>

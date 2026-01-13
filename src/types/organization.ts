@@ -8,12 +8,16 @@ export interface Organization {
   id: string;
   name: string;
   slug: string; // URL-friendly identifier
-  
+
+  // AI Assistant Configuration
+  assistantName?: string; // Custom name for the AI assistant (e.g., "Alex", "Maya")
+  ownerName?: string; // Name of the business owner for personalized greetings
+
   // Plan & Billing
   plan: 'free' | 'pro' | 'enterprise';
   planLimits: PlanLimits;
   billingEmail: string;
-  
+
   // Branding
   branding: {
     logo?: string; // Cloud Storage URL
