@@ -3,14 +3,41 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme'
-import { logger } from '@/lib/logger/logger';;
+import { motion } from 'framer-motion';
+import {
+  DollarSign,
+  TrendingUp,
+  Target,
+  ShoppingCart,
+  BarChart3,
+  Zap,
+  ArrowRight,
+  TrendingDown,
+  Activity
+} from 'lucide-react';
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { logger } from '@/lib/logger/logger';
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 export default function AnalyticsDashboard() {
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
-  
+
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
@@ -43,16 +70,6 @@ export default function AnalyticsDashboard() {
     }
   };
 
-  const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
-
-  if (loading) {
-    return (
-      <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
-        <div style={{ color: '#999', fontSize: '1rem' }}>Loading analytics...</div>
-      </div>
-    );
-  }
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -70,240 +87,198 @@ export default function AnalyticsDashboard() {
     return `${num.toFixed(1)}%`;
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] p-8">
+        <div className="flex items-center gap-3">
+          <Activity className="w-6 h-6 text-indigo-500 animate-pulse" />
+          <div className="text-white/60 text-lg">Loading analytics...</div>
+        </div>
+      </div>
+    );
+  }
+
+  const kpiCards = [
+    {
+      label: 'Total Revenue',
+      value: analytics?.revenue?.totalRevenue ? formatCurrency(analytics.revenue.totalRevenue) : '$0',
+      change: analytics?.revenue?.growth ? `+${formatPercent(analytics.revenue.growth)} vs previous period` : 'No data',
+      positive: analytics?.revenue?.growth > 0,
+      icon: DollarSign,
+    },
+    {
+      label: 'Pipeline Value',
+      value: analytics?.pipeline?.totalValue ? formatCurrency(analytics.pipeline.totalValue) : '$0',
+      change: analytics?.pipeline?.dealsCount ? `${formatNumber(analytics.pipeline.dealsCount)} deals in pipeline` : 'No deals',
+      positive: null,
+      icon: BarChart3,
+    },
+    {
+      label: 'Win Rate',
+      value: analytics?.pipeline?.winRate ? formatPercent(analytics.pipeline.winRate) : '0%',
+      change: analytics?.pipeline?.avgDealSize ? `Avg deal: ${formatCurrency(analytics.pipeline.avgDealSize)}` : 'No data',
+      positive: null,
+      icon: Target,
+    },
+    {
+      label: 'E-Commerce Orders',
+      value: analytics?.ecommerce?.totalOrders ? formatNumber(analytics.ecommerce.totalOrders) : '0',
+      change: analytics?.ecommerce?.totalRevenue ? formatCurrency(analytics.ecommerce.totalRevenue) : '$0',
+      positive: null,
+      icon: ShoppingCart,
+    },
+  ];
+
+  const quickAccessCards = [
+    {
+      title: 'Revenue Analytics',
+      description: 'Track revenue by source, product, rep, and time. View trends and forecasts.',
+      href: `/workspace/${orgId}/analytics/revenue`,
+      icon: DollarSign,
+      gradient: 'from-emerald-500 to-green-500',
+    },
+    {
+      title: 'Pipeline Analytics',
+      description: 'Analyze pipeline stages, velocity, conversion rates, and forecasts.',
+      href: `/workspace/${orgId}/analytics/pipeline`,
+      icon: BarChart3,
+      gradient: 'from-blue-500 to-cyan-500',
+    },
+    {
+      title: 'E-Commerce Analytics',
+      description: 'Track orders, conversions, cart abandonment, and product performance.',
+      href: `/workspace/${orgId}/analytics/ecommerce`,
+      icon: ShoppingCart,
+      gradient: 'from-purple-500 to-pink-500',
+    },
+    {
+      title: 'Workflow Analytics',
+      description: 'Monitor automation execution, success rates, and error patterns.',
+      href: `/workspace/${orgId}/analytics/workflows`,
+      icon: Zap,
+      gradient: 'from-orange-500 to-red-500',
+    },
+  ];
+
   return (
-      <div style={{ padding: '2rem', overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div className="bg-black min-h-screen p-8 overflow-y-auto">
+      <div className="max-w-[1400px] mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/25 flex-shrink-0">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>
+              <h1 className="text-3xl font-bold text-white mb-2">
                 Analytics Dashboard
               </h1>
-              <p style={{ color: '#999', fontSize: '0.875rem' }}>
+              <p className="text-white/60 text-sm">
                 Track revenue, pipeline, e-commerce, and workflow performance
               </p>
             </div>
-
-            {/* Period Selector */}
-            <div style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', padding: '0.25rem' }}>
-              {(['7d', '30d', '90d', 'all'] as const).map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSelectedPeriod(period)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: selectedPeriod === period ? primaryColor : 'transparent',
-                    color: selectedPeriod === period ? '#fff' : '#999',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {period === 'all' ? 'All Time' : period.toUpperCase()}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Revenue KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Total Revenue
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                {analytics?.revenue?.totalRevenue ? formatCurrency(analytics.revenue.totalRevenue) : '$0'}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#10b981' }}>
-                {analytics?.revenue?.growth ? `+${formatPercent(analytics.revenue.growth)} vs previous period` : 'No data'}
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Pipeline Value
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                {analytics?.pipeline?.totalValue ? formatCurrency(analytics.pipeline.totalValue) : '$0'}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#999' }}>
-                {analytics?.pipeline?.dealsCount ? `${formatNumber(analytics.pipeline.dealsCount)} deals in pipeline` : 'No deals'}
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Win Rate
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                {analytics?.pipeline?.winRate ? formatPercent(analytics.pipeline.winRate) : '0%'}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#999' }}>
-                {analytics?.pipeline?.avgDealSize ? `Avg deal: ${formatCurrency(analytics.pipeline.avgDealSize)}` : 'No data'}
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                E-Commerce Orders
-              </div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.25rem' }}>
-                {analytics?.ecommerce?.totalOrders ? formatNumber(analytics.ecommerce.totalOrders) : '0'}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#999' }}>
-                {analytics?.ecommerce?.totalRevenue ? formatCurrency(analytics.ecommerce.totalRevenue) : '$0'}
-              </div>
-            </div>
+          {/* Period Selector */}
+          <div className="flex gap-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-1.5">
+            {(['7d', '30d', '90d', 'all'] as const).map((period) => (
+              <motion.button
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  selectedPeriod === period
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {period === 'all' ? 'All Time' : period.toUpperCase()}
+              </motion.button>
+            ))}
           </div>
+        </motion.div>
 
-          {/* Quick Access Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-            <Link href={`/workspace/${orgId}/analytics/revenue`} style={{ textDecoration: 'none' }}>
-              <div style={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: '1rem',
-                padding: '2rem',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = primaryColor;
-                e.currentTarget.style.transform = 'translateY(-4px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#333';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>💰</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
-                  Revenue Analytics
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.6' }}>
-                  Track revenue by source, product, rep, and time. View trends and forecasts.
-                </p>
-                <div style={{ marginTop: '1rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '600' }}>
-                  View Details →
+        {/* KPI Cards */}
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8"
+        >
+          {kpiCards.map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <motion.div
+                key={index}
+                variants={item}
+                whileHover={{ scale: 1.02, y: -4 }}
+                className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 hover:border-indigo-500/50 transition-all"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-xs text-white/60 uppercase tracking-wider font-semibold">
+                    {card.label}
+                  </div>
+                  <Icon className="w-5 h-5 text-indigo-400" />
                 </div>
-              </div>
-            </Link>
+                <div className="text-3xl font-bold text-white mb-2">
+                  {card.value}
+                </div>
+                <div className={`text-xs flex items-center gap-1 ${
+                  card.positive === true ? 'text-emerald-400' :
+                  card.positive === false ? 'text-red-400' :
+                  'text-white/60'
+                }`}>
+                  {card.positive === true && <TrendingUp className="w-3 h-3" />}
+                  {card.positive === false && <TrendingDown className="w-3 h-3" />}
+                  {card.change}
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
 
-            <Link href={`/workspace/${orgId}/analytics/pipeline`} style={{ textDecoration: 'none' }}>
-              <div style={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: '1rem',
-                padding: '2rem',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = primaryColor;
-                e.currentTarget.style.transform = 'translateY(-4px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#333';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>📊</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
-                  Pipeline Analytics
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.6' }}>
-                  Analyze pipeline stages, velocity, conversion rates, and forecasts.
-                </p>
-                <div style={{ marginTop: '1rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '600' }}>
-                  View Details →
-                </div>
-              </div>
-            </Link>
-
-            <Link href={`/workspace/${orgId}/analytics/ecommerce`} style={{ textDecoration: 'none' }}>
-              <div style={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: '1rem',
-                padding: '2rem',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = primaryColor;
-                e.currentTarget.style.transform = 'translateY(-4px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#333';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>🛒</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
-                  E-Commerce Analytics
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.6' }}>
-                  Track orders, conversions, cart abandonment, and product performance.
-                </p>
-                <div style={{ marginTop: '1rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '600' }}>
-                  View Details →
-                </div>
-              </div>
-            </Link>
-
-            <Link href={`/workspace/${orgId}/analytics/workflows`} style={{ textDecoration: 'none' }}>
-              <div style={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: '1rem',
-                padding: '2rem',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = primaryColor;
-                e.currentTarget.style.transform = 'translateY(-4px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#333';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>⚡</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff', marginBottom: '0.5rem' }}>
-                  Workflow Analytics
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.6' }}>
-                  Monitor automation execution, success rates, and error patterns.
-                </p>
-                <div style={{ marginTop: '1rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '600' }}>
-                  View Details →
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
+        {/* Quick Access Cards */}
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        >
+          {quickAccessCards.map((card, index) => {
+            const Icon = card.icon;
+            return (
+              <motion.div
+                key={index}
+                variants={item}
+                whileHover={{ scale: 1.02, y: -4 }}
+              >
+                <Link href={card.href} className="block">
+                  <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-8 hover:border-indigo-500/50 transition-all group">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg shadow-indigo-500/25 mb-6`}>
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-indigo-400 transition-colors">
+                      {card.title}
+                    </h3>
+                    <p className="text-sm text-white/60 leading-relaxed mb-6">
+                      {card.description}
+                    </p>
+                    <div className="flex items-center gap-2 text-indigo-400 text-sm font-semibold group-hover:gap-3 transition-all">
+                      View Details
+                      <ArrowRight className="w-4 h-4" />
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </div>
+    </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

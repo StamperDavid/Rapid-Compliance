@@ -7,12 +7,28 @@
  * and quick actions. Includes create form modal with templates.
  *
  * @route /workspace/[orgId]/forms
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FileText,
+  Plus,
+  Eye,
+  Pencil,
+  Archive,
+  Mail,
+  Target,
+  BarChart3,
+  Calendar,
+  Briefcase,
+  X,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 import type { FormDefinition, FormStatus } from '@/lib/forms/types';
 
 // ============================================================================
@@ -24,7 +40,7 @@ interface FormTemplate {
   name: string;
   description: string;
   category: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 // ============================================================================
@@ -37,357 +53,44 @@ const FORM_TEMPLATES: FormTemplate[] = [
     name: 'Blank Form',
     description: 'Start from scratch with a blank form',
     category: 'Basic',
-    icon: '📝',
+    icon: <FileText className="w-6 h-6" />,
   },
   {
     id: 'contact',
     name: 'Contact Form',
     description: 'Simple contact form with name, email, and message',
     category: 'Basic',
-    icon: '✉️',
+    icon: <Mail className="w-6 h-6" />,
   },
   {
     id: 'lead-capture',
     name: 'Lead Capture',
     description: 'Capture leads with company and qualification fields',
     category: 'Sales',
-    icon: '🎯',
+    icon: <Target className="w-6 h-6" />,
   },
   {
     id: 'survey',
     name: 'Customer Survey',
     description: 'Multi-step survey with rating and feedback',
     category: 'Feedback',
-    icon: '📊',
+    icon: <BarChart3 className="w-6 h-6" />,
   },
   {
     id: 'registration',
     name: 'Event Registration',
     description: 'Event signup with attendee details',
     category: 'Events',
-    icon: '🎟️',
+    icon: <Calendar className="w-6 h-6" />,
   },
   {
     id: 'application',
     name: 'Job Application',
     description: 'Application form with file uploads',
     category: 'HR',
-    icon: '💼',
+    icon: <Briefcase className="w-6 h-6" />,
   },
 ];
-
-// ============================================================================
-// STYLES
-// ============================================================================
-
-const styles = {
-  container: {
-    padding: '2rem',
-    maxWidth: '1400px',
-    margin: '0 auto',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2rem',
-  },
-  title: {
-    fontSize: '2rem',
-    fontWeight: 'bold',
-    color: '#fff',
-    margin: 0,
-  },
-  subtitle: {
-    fontSize: '0.875rem',
-    color: '#666',
-    marginTop: '0.25rem',
-  },
-  createButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#6366f1',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '0.5rem',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  },
-  tabs: {
-    display: 'flex',
-    gap: '0.5rem',
-    marginBottom: '1.5rem',
-    borderBottom: '1px solid #1a1a1a',
-    paddingBottom: '1rem',
-  },
-  tab: {
-    padding: '0.5rem 1rem',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: '#666',
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: '0.375rem',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  tabActive: {
-    color: '#fff',
-    backgroundColor: '#1a1a1a',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-    gap: '1.5rem',
-  },
-  card: {
-    backgroundColor: '#0a0a0a',
-    border: '1px solid #1a1a1a',
-    borderRadius: '0.75rem',
-    overflow: 'hidden',
-    transition: 'all 0.2s',
-    cursor: 'pointer',
-  },
-  cardHover: {
-    borderColor: '#333',
-    transform: 'translateY(-2px)',
-  },
-  cardHeader: {
-    padding: '1.25rem',
-    borderBottom: '1px solid #1a1a1a',
-  },
-  cardTitle: {
-    fontSize: '1rem',
-    fontWeight: '600',
-    color: '#fff',
-    margin: 0,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-  },
-  cardDescription: {
-    fontSize: '0.875rem',
-    color: '#666',
-    marginTop: '0.25rem',
-    lineHeight: '1.4',
-  },
-  cardBody: {
-    padding: '1.25rem',
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '1rem',
-  },
-  stat: {
-    textAlign: 'center' as const,
-  },
-  statValue: {
-    fontSize: '1.25rem',
-    fontWeight: '600',
-    color: '#fff',
-  },
-  statLabel: {
-    fontSize: '0.75rem',
-    color: '#666',
-    marginTop: '0.125rem',
-  },
-  cardFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '1rem 1.25rem',
-    borderTop: '1px solid #1a1a1a',
-    backgroundColor: '#050505',
-  },
-  statusBadge: {
-    padding: '0.25rem 0.75rem',
-    fontSize: '0.75rem',
-    fontWeight: '600',
-    borderRadius: '9999px',
-  },
-  statusDraft: {
-    backgroundColor: '#1a1a1a',
-    color: '#999',
-  },
-  statusPublished: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    color: '#22c55e',
-  },
-  statusArchived: {
-    backgroundColor: 'rgba(234, 179, 8, 0.2)',
-    color: '#eab308',
-  },
-  actions: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  actionButton: {
-    padding: '0.375rem 0.75rem',
-    fontSize: '0.75rem',
-    color: '#999',
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
-    borderRadius: '0.375rem',
-    cursor: 'pointer',
-    textDecoration: 'none',
-  },
-  emptyState: {
-    textAlign: 'center' as const,
-    padding: '4rem 2rem',
-    backgroundColor: '#0a0a0a',
-    border: '1px solid #1a1a1a',
-    borderRadius: '0.75rem',
-  },
-  emptyIcon: {
-    fontSize: '3rem',
-    marginBottom: '1rem',
-    opacity: 0.5,
-  },
-  emptyTitle: {
-    fontSize: '1.25rem',
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: '0.5rem',
-  },
-  emptyText: {
-    fontSize: '0.875rem',
-    color: '#666',
-    marginBottom: '1.5rem',
-  },
-  // Modal styles
-  modal: {
-    position: 'fixed' as const,
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 100,
-    padding: '2rem',
-  },
-  modalContent: {
-    backgroundColor: '#0a0a0a',
-    border: '1px solid #1a1a1a',
-    borderRadius: '1rem',
-    width: '100%',
-    maxWidth: '700px',
-    maxHeight: '90vh',
-    overflow: 'auto',
-  },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '1.5rem',
-    borderBottom: '1px solid #1a1a1a',
-  },
-  modalTitle: {
-    fontSize: '1.25rem',
-    fontWeight: '600',
-    color: '#fff',
-    margin: 0,
-  },
-  modalClose: {
-    padding: '0.5rem',
-    fontSize: '1.25rem',
-    color: '#666',
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-  },
-  modalBody: {
-    padding: '1.5rem',
-  },
-  formGroup: {
-    marginBottom: '1.5rem',
-  },
-  label: {
-    display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: '#ccc',
-    marginBottom: '0.5rem',
-  },
-  input: {
-    width: '100%',
-    padding: '0.75rem 1rem',
-    fontSize: '0.875rem',
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
-    borderRadius: '0.5rem',
-    color: '#fff',
-  },
-  templateGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '1rem',
-    marginTop: '1rem',
-  },
-  templateCard: {
-    padding: '1rem',
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
-    borderRadius: '0.5rem',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  templateCardSelected: {
-    borderColor: '#6366f1',
-    backgroundColor: '#1e1e2f',
-  },
-  templateIcon: {
-    fontSize: '1.5rem',
-    marginBottom: '0.5rem',
-  },
-  templateName: {
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    color: '#fff',
-  },
-  templateDescription: {
-    fontSize: '0.75rem',
-    color: '#666',
-    marginTop: '0.25rem',
-  },
-  modalFooter: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '0.75rem',
-    padding: '1.5rem',
-    borderTop: '1px solid #1a1a1a',
-  },
-  cancelButton: {
-    padding: '0.75rem 1.5rem',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: '#999',
-    backgroundColor: '#1a1a1a',
-    border: '1px solid #333',
-    borderRadius: '0.5rem',
-    cursor: 'pointer',
-  },
-  submitButton: {
-    padding: '0.75rem 1.5rem',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    color: '#fff',
-    backgroundColor: '#6366f1',
-    border: 'none',
-    borderRadius: '0.5rem',
-    cursor: 'pointer',
-  },
-  loadingSpinner: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: '4rem',
-  },
-};
 
 // ============================================================================
 // SKELETON LOADER
@@ -395,26 +98,30 @@ const styles = {
 
 function FormCardSkeleton() {
   return (
-    <div style={{ ...styles.card, opacity: 0.7 }}>
-      <div style={styles.cardHeader}>
-        <div style={{ height: '24px', width: '60%', backgroundColor: '#1a1a1a', borderRadius: '4px' }} />
-        <div style={{ height: '16px', width: '80%', backgroundColor: '#1a1a1a', borderRadius: '4px', marginTop: '8px' }} />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 0.7, y: 0 }}
+      className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
+    >
+      <div className="p-5 border-b border-white/10">
+        <div className="h-6 w-3/5 bg-white/5 rounded animate-pulse" />
+        <div className="h-4 w-4/5 bg-white/5 rounded mt-2 animate-pulse" />
       </div>
-      <div style={styles.cardBody}>
-        <div style={styles.statsGrid}>
+      <div className="p-5">
+        <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} style={styles.stat}>
-              <div style={{ height: '28px', width: '40px', backgroundColor: '#1a1a1a', borderRadius: '4px', margin: '0 auto' }} />
-              <div style={{ height: '12px', width: '60px', backgroundColor: '#1a1a1a', borderRadius: '4px', margin: '4px auto 0' }} />
+            <div key={i} className="text-center">
+              <div className="h-7 w-10 bg-white/5 rounded mx-auto animate-pulse" />
+              <div className="h-3 w-15 bg-white/5 rounded mx-auto mt-1 animate-pulse" />
             </div>
           ))}
         </div>
       </div>
-      <div style={styles.cardFooter}>
-        <div style={{ height: '24px', width: '80px', backgroundColor: '#1a1a1a', borderRadius: '9999px' }} />
-        <div style={{ height: '28px', width: '100px', backgroundColor: '#1a1a1a', borderRadius: '4px' }} />
+      <div className="flex justify-between items-center px-5 py-4 border-t border-white/10 bg-black/20">
+        <div className="h-6 w-20 bg-white/5 rounded-full animate-pulse" />
+        <div className="h-7 w-24 bg-white/5 rounded animate-pulse" />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -435,7 +142,6 @@ export default function FormsPage() {
   const [newFormName, setNewFormName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
   const [creating, setCreating] = useState(false);
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   // Fetch forms
   const fetchForms = useCallback(async () => {
@@ -497,15 +203,15 @@ export default function FormsPage() {
     }
   };
 
-  // Get status badge style
-  const getStatusBadgeStyle = (status: FormStatus) => {
+  // Get status badge classes
+  const getStatusBadgeClasses = (status: FormStatus) => {
     switch (status) {
       case 'published':
-        return { ...styles.statusBadge, ...styles.statusPublished };
+        return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
       case 'archived':
-        return { ...styles.statusBadge, ...styles.statusArchived };
+        return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
       default:
-        return { ...styles.statusBadge, ...styles.statusDraft };
+        return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
     }
   };
 
@@ -521,248 +227,349 @@ export default function FormsPage() {
   };
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Forms</h1>
-          <p style={styles.subtitle}>
-            Create and manage forms to capture leads and collect data
-          </p>
-        </div>
-        <button
-          style={styles.createButton}
-          onClick={() => setShowCreateModal(true)}
+    <div className="min-h-screen bg-black p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-between items-start mb-8"
         >
-          <span>+</span>
-          <span>Create New Form</span>
-        </button>
-      </div>
-
-      {/* Filter Tabs */}
-      <div style={styles.tabs}>
-        {(['all', 'draft', 'published', 'archived'] as const).map((filter) => (
-          <button
-            key={filter}
-            style={{
-              ...styles.tab,
-              ...(activeFilter === filter ? styles.tabActive : {}),
-            }}
-            onClick={() => setActiveFilter(filter)}
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">Forms</h1>
+              <p className="text-sm text-gray-400">
+                Create and manage forms to capture leads and collect data
+              </p>
+            </div>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
           >
-            {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            {filter === 'all' && ` (${forms.length})`}
-            {filter !== 'all' && ` (${forms.filter((f) => f.status === filter).length})`}
-          </button>
-        ))}
-      </div>
+            <Plus className="w-5 h-5" />
+            <span>Create New Form</span>
+          </motion.button>
+        </motion.div>
 
-      {/* Error State */}
-      {error && (
-        <div
-          style={{
-            padding: '1rem',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '0.5rem',
-            color: '#ef4444',
-            marginBottom: '1.5rem',
-          }}
+        {/* Filter Tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex gap-2 mb-6 border-b border-white/10 pb-4"
         >
-          {error}
-        </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div style={styles.grid}>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <FormCardSkeleton key={i} />
-          ))}
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && filteredForms.length === 0 && (
-        <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>📝</div>
-          <div style={styles.emptyTitle}>
-            {activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
-          </div>
-          <div style={styles.emptyText}>
-            {activeFilter === 'all'
-              ? 'Create your first form to start capturing leads and collecting data.'
-              : `You don't have any ${activeFilter} forms.`}
-          </div>
-          {activeFilter === 'all' && (
-            <button
-              style={styles.createButton}
-              onClick={() => setShowCreateModal(true)}
+          {(['all', 'draft', 'published', 'archived'] as const).map((filter) => (
+            <motion.button
+              key={filter}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setActiveFilter(filter)}
+              className={`
+                px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
+                ${
+                  activeFilter === filter
+                    ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }
+              `}
             >
-              + Create New Form
-            </button>
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              <span className="ml-1.5">
+                ({filter === 'all' ? forms.length : forms.filter((f) => f.status === filter).length})
+              </span>
+            </motion.button>
+          ))}
+        </motion.div>
+
+        {/* Error State */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"
+            >
+              {error}
+            </motion.div>
           )}
-        </div>
-      )}
+        </AnimatePresence>
 
-      {/* Forms Grid */}
-      {!loading && filteredForms.length > 0 && (
-        <div style={styles.grid}>
-          {filteredForms.map((form) => (
-            <div
-              key={form.id}
-              style={{
-                ...styles.card,
-                ...(hoveredCard === form.id ? styles.cardHover : {}),
-              }}
-              onMouseEnter={() => setHoveredCard(form.id)}
-              onMouseLeave={() => setHoveredCard(null)}
-              onClick={() => router.push(`/workspace/${orgId}/forms/${form.id}/edit`)}
-            >
-              <div style={styles.cardHeader}>
-                <h3 style={styles.cardTitle}>
-                  <span>📋</span>
-                  {form.name}
-                </h3>
-                <p style={styles.cardDescription}>
-                  {form.description || 'No description'}
-                </p>
-              </div>
-
-              <div style={styles.cardBody}>
-                <div style={styles.statsGrid}>
-                  <div style={styles.stat}>
-                    <div style={styles.statValue}>{form.submissionCount || 0}</div>
-                    <div style={styles.statLabel}>Submissions</div>
-                  </div>
-                  <div style={styles.stat}>
-                    <div style={styles.statValue}>{form.viewCount || 0}</div>
-                    <div style={styles.statLabel}>Views</div>
-                  </div>
-                  <div style={styles.stat}>
-                    <div style={styles.statValue}>
-                      {form.viewCount > 0
-                        ? `${Math.round((form.submissionCount / form.viewCount) * 100)}%`
-                        : '0%'}
-                    </div>
-                    <div style={styles.statLabel}>Conversion</div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={styles.cardFooter}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={getStatusBadgeStyle(form.status)}>
-                    {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: '#666' }}>
-                    Updated {formatDate(form.updatedAt)}
-                  </span>
-                </div>
-                <div style={styles.actions}>
-                  <Link
-                    href={`/workspace/${orgId}/forms/${form.id}/edit`}
-                    style={styles.actionButton}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Edit
-                  </Link>
-                  {form.status === 'published' && (
-                    <Link
-                      href={`/forms/${form.id}`}
-                      target="_blank"
-                      style={styles.actionButton}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      View
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Create Form Modal */}
-      {showCreateModal && (
-        <div style={styles.modal} onClick={() => setShowCreateModal(false)}>
-          <div
-            style={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Create New Form</h2>
-              <button
-                style={styles.modalClose}
-                onClick={() => setShowCreateModal(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              {/* Form Name */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Form Name</label>
-                <input
-                  type="text"
-                  value={newFormName}
-                  onChange={(e) => setNewFormName(e.target.value)}
-                  placeholder="Enter form name..."
-                  style={styles.input}
-                  autoFocus
-                />
-              </div>
-
-              {/* Template Selection */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Choose a Template</label>
-                <div style={styles.templateGrid}>
-                  {FORM_TEMPLATES.map((template) => (
-                    <div
-                      key={template.id}
-                      style={{
-                        ...styles.templateCard,
-                        ...(selectedTemplate === template.id
-                          ? styles.templateCardSelected
-                          : {}),
-                      }}
-                      onClick={() => setSelectedTemplate(template.id)}
-                    >
-                      <div style={styles.templateIcon}>{template.icon}</div>
-                      <div style={styles.templateName}>{template.name}</div>
-                      <div style={styles.templateDescription}>
-                        {template.description}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button
-                style={styles.cancelButton}
-                onClick={() => setShowCreateModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                style={{
-                  ...styles.submitButton,
-                  opacity: !newFormName.trim() || creating ? 0.5 : 1,
-                  cursor: !newFormName.trim() || creating ? 'not-allowed' : 'pointer',
-                }}
-                onClick={handleCreateForm}
-                disabled={!newFormName.trim() || creating}
-              >
-                {creating ? 'Creating...' : 'Create Form'}
-              </button>
-            </div>
+        {/* Loading State */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <FormCardSkeleton key={i} />
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Empty State */}
+        {!loading && filteredForms.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-16 px-8 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl"
+          >
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center mx-auto mb-6 opacity-50">
+              <FileText className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">
+              {activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
+            </h3>
+            <p className="text-sm text-gray-400 mb-6">
+              {activeFilter === 'all'
+                ? 'Create your first form to start capturing leads and collecting data.'
+                : `You don't have any ${activeFilter} forms.`}
+            </p>
+            {activeFilter === 'all' && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-violet-500/25 transition-all duration-200"
+              >
+                <Plus className="w-5 h-5" />
+                Create New Form
+              </motion.button>
+            )}
+          </motion.div>
+        )}
+
+        {/* Forms Grid */}
+        {!loading && filteredForms.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {filteredForms.map((form, index) => (
+              <motion.div
+                key={form.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -4, scale: 1.01 }}
+                onClick={() => router.push(`/workspace/${orgId}/forms/${form.id}/edit`)}
+                className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden cursor-pointer hover:border-white/20 transition-all duration-300 group"
+              >
+                {/* Card Header */}
+                <div className="p-5 border-b border-white/10">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-white truncate group-hover:text-violet-400 transition-colors">
+                        {form.name}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                        {form.description || 'No description'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Body - Stats */}
+                <div className="p-5">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
+                        <Users className="w-4 h-4 text-violet-400" />
+                        {form.submissionCount || 0}
+                      </div>
+                      <div className="text-xs text-gray-400">Submissions</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
+                        <Eye className="w-4 h-4 text-purple-400" />
+                        {form.viewCount || 0}
+                      </div>
+                      <div className="text-xs text-gray-400">Views</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 text-xl font-semibold text-white mb-1">
+                        <TrendingUp className="w-4 h-4 text-emerald-400" />
+                        {form.viewCount > 0
+                          ? `${Math.round((form.submissionCount / form.viewCount) * 100)}%`
+                          : '0%'}
+                      </div>
+                      <div className="text-xs text-gray-400">Conversion</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Footer */}
+                <div className="flex justify-between items-center px-5 py-4 border-t border-white/10 bg-black/20">
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClasses(form.status)}`}>
+                      {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {formatDate(form.updatedAt)}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/workspace/${orgId}/forms/${form.id}/edit`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                      title="Edit form"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Link>
+                    {form.status === 'published' && (
+                      <Link
+                        href={`/forms/${form.id}`}
+                        target="_blank"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                        title="View form"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* Create Form Modal */}
+        <AnimatePresence>
+          {showCreateModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCreateModal(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-50 p-8"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-auto shadow-2xl"
+              >
+                {/* Modal Header */}
+                <div className="flex justify-between items-center p-6 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                      <Plus className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-white">Create New Form</h2>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowCreateModal(false)}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 space-y-6">
+                  {/* Form Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Form Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newFormName}
+                      onChange={(e) => setNewFormName(e.target.value)}
+                      placeholder="Enter form name..."
+                      autoFocus
+                      className="w-full px-4 py-3 text-sm bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all"
+                    />
+                  </div>
+
+                  {/* Template Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-3">
+                      Choose a Template
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {FORM_TEMPLATES.map((template) => (
+                        <motion.div
+                          key={template.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setSelectedTemplate(template.id)}
+                          className={`
+                            p-4 rounded-xl cursor-pointer transition-all duration-200
+                            ${
+                              selectedTemplate === template.id
+                                ? 'bg-gradient-to-br from-violet-600/20 to-purple-600/20 border-2 border-violet-500/50 shadow-lg shadow-violet-500/20'
+                                : 'bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/20'
+                            }
+                          `}
+                        >
+                          <div className={`
+                            w-10 h-10 rounded-lg flex items-center justify-center mb-3
+                            ${
+                              selectedTemplate === template.id
+                                ? 'bg-gradient-to-br from-violet-500 to-purple-500 text-white'
+                                : 'bg-white/5 text-gray-400'
+                            }
+                          `}>
+                            {template.icon}
+                          </div>
+                          <div className="text-sm font-semibold text-white mb-1">
+                            {template.name}
+                          </div>
+                          <div className="text-xs text-gray-400 line-clamp-2">
+                            {template.description}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end gap-3 p-6 border-t border-white/10 bg-black/20">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowCreateModal(false)}
+                    className="px-6 py-2.5 text-sm font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: !newFormName.trim() || creating ? 1 : 1.02 }}
+                    whileTap={{ scale: !newFormName.trim() || creating ? 1 : 0.98 }}
+                    onClick={handleCreateForm}
+                    disabled={!newFormName.trim() || creating}
+                    className={`
+                      px-6 py-2.5 text-sm font-semibold rounded-xl transition-all
+                      ${
+                        !newFormName.trim() || creating
+                          ? 'bg-gradient-to-r from-violet-600/50 to-purple-600/50 text-white/50 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white shadow-lg shadow-violet-500/25'
+                      }
+                    `}
+                  >
+                    {creating ? 'Creating...' : 'Create Form'}
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
