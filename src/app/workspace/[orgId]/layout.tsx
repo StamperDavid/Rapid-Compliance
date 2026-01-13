@@ -111,16 +111,62 @@ export default function WorkspaceLayout({
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
       <AdminBar />
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      {/* Mobile Header with Hamburger */}
+      <div style={{
+        display: 'none',
+        padding: '1rem',
+        borderBottom: '1px solid #1a1a1a',
+        backgroundColor: '#0a0a0a',
+        '@media (max-width: 768px)': { display: 'flex' }
+      }} className="md:hidden flex items-center justify-between">
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          style={{
+            padding: '0.5rem',
+            backgroundColor: '#1a1a1a',
+            color: '#999',
+            border: 'none',
+            borderRadius: '0.375rem',
+            cursor: 'pointer',
+            fontSize: '1.25rem',
+          }}
+          aria-label="Toggle menu"
+        >
+          ☰
+        </button>
+        <span style={{ color: '#fff', fontWeight: '600' }}>{brandName}</span>
+      </div>
+
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 40,
+            }}
+            className="md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Left Sidebar - Minimal */}
-        <div style={{ 
+        <div style={{
           width: sidebarOpen ? '260px' : '70px',
           backgroundColor: '#0a0a0a',
           borderRight: '1px solid #1a1a1a',
-          transition: 'width 0.3s',
+          transition: 'width 0.3s, transform 0.3s',
           display: 'flex',
-          flexDirection: 'column'
-        }}>
+          flexDirection: 'column',
+          position: 'fixed',
+          height: '100%',
+          zIndex: 50,
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+        }}
+        className="md:relative md:translate-x-0"
+        >
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             {/* Render all sections */}
             {navSections.map((section, sectionIdx) => (
@@ -184,7 +230,14 @@ export default function WorkspaceLayout({
         </div>
 
         {/* Main Content */}
-        <main style={{ flex: 1, overflowY: 'auto', backgroundColor: '#000' }}>
+        <main style={{
+          flex: 1,
+          overflowY: 'auto',
+          backgroundColor: '#000',
+          width: '100%',
+        }}
+        className="md:ml-0"
+        >
           {children}
         </main>
       </div>

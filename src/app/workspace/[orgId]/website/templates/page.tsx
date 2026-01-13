@@ -10,7 +10,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar';
 import type { PageTemplate } from '@/types/website';
 
 export default function TemplateBrowserPage() {
@@ -122,7 +121,6 @@ export default function TemplateBrowserPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Loading templates...</div>
       </div>
     );
@@ -130,7 +128,6 @@ export default function TemplateBrowserPage() {
 
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
-      <AdminBar />
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}

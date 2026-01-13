@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 import QuickBooksIntegration from '@/components/integrations/QuickBooksIntegration';
 import XeroIntegration from '@/components/integrations/XeroIntegration';
 import StripeIntegration from '@/components/integrations/StripeIntegration';
@@ -191,8 +190,6 @@ export default function IntegrationsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 

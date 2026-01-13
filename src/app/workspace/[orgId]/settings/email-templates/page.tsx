@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 import FilterBuilder from '@/components/FilterBuilder';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
@@ -16,7 +15,6 @@ export default function EmailTemplatesPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'templates' | 'campaigns' | 'designer' | 'sms'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState('welcome');
@@ -173,88 +171,11 @@ Best regards,
   }, [campaignFilters, orgId]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Left Sidebar */}
-        <div style={{ 
-          width: sidebarOpen ? '260px' : '70px',
-          backgroundColor: '#0a0a0a',
-          borderRight: '1px solid #1a1a1a',
-          transition: 'width 0.3s',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            <Link
-              href="/crm"
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: 'transparent',
-                color: '#999',
-                borderLeft: '3px solid transparent',
-                fontSize: '0.875rem',
-                fontWeight: '400',
-                textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>🏠</span>
-              {sidebarOpen && <span>Back to CRM</span>}
-            </Link>
-
-            {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
-              <Link
-                key={key}
-                href={`/crm?view=${key}`}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  backgroundColor: 'transparent',
-                  color: '#999',
-                  borderLeft: '3px solid transparent',
-                  fontSize: '0.875rem',
-                  fontWeight: '400',
-                  textDecoration: 'none'
-                }}
-              >
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
-            ))}
-          </nav>
-
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}
-            >
-              {sidebarOpen ? '← Collapse' : '→'}
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-            {/* Header */}
-            <div style={{ marginBottom: '2rem' }}>
+    <>
+      <div style={{ padding: '2rem' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '2rem' }}>
               <Link href={`/workspace/${orgId}/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
                 ← Back to Settings
               </Link>
@@ -1966,9 +1887,8 @@ Best regards,
             )}
           </div>
         </div>
-      </div>
 
-      {/* Create Campaign Modal */}
+        {/* Create Campaign Modal */}
       {showCreateCampaign && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '2rem', overflowY: 'auto' }}>
           <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -2510,7 +2430,7 @@ Best regards,
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

@@ -356,6 +356,11 @@ export interface OnboardingData {
   // ===== KNOWLEDGE BASE (Step 15) =====
   websiteUrls?: string[];
   faqUrl?: string;
+  socialMediaUrls?: string[]; // Facebook, LinkedIn, Instagram, Twitter/X, YouTube
+  faqPageUrl?: string; // Direct URL to FAQ page for scraping
+
+  // ===== INDUSTRY TEMPLATE (Step 15.5) =====
+  industryTemplateId?: string; // ID of selected niche template for mutation
   
   // ===== AGENT IDENTITY (Step 16) =====
   agentName?: string;
@@ -617,6 +622,11 @@ export interface KnowledgeBase {
   urls: KnowledgeURL[];
   faqs: FAQ[];
   productCatalog?: ProductCatalog;
+  brandVoice?: {
+    tone: string;
+    keyMessages: string[];
+    commonPhrases: string[];
+  };
 }
 
 export interface KnowledgeDocument {

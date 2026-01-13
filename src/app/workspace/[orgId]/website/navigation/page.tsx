@@ -10,7 +10,6 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar';
 import type { Navigation, NavItem, Page } from '@/types/website';
 
 export default function NavigationManagementPage() {
@@ -177,7 +176,6 @@ export default function NavigationManagementPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Loading navigation...</div>
       </div>
     );
@@ -186,7 +184,6 @@ export default function NavigationManagementPage() {
   if (!navigation) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Failed to load navigation</div>
       </div>
     );
@@ -194,8 +191,6 @@ export default function NavigationManagementPage() {
 
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
-      <AdminBar />
-
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>

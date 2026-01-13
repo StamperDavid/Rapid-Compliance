@@ -8,8 +8,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface Message {
   id: string;
@@ -150,8 +149,6 @@ export default function LeadResearchPage() {
   
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-      
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: '1200px', width: '100%', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>

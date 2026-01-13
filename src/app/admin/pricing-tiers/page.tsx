@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { SubscriptionTier } from '@/types/subscription';
 import { VOLUME_TIERS, TIER_PRICING } from '@/types/subscription';
-import AdminBar from '@/components/AdminBar';
 
 interface TierConfig {
   id: SubscriptionTier;
@@ -127,8 +126,6 @@ export default function PricingTiersAdmin() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000', color: '#fff' }}>
-      <AdminBar />
-      
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '3rem 2rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '3rem' }}>

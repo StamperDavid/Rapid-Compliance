@@ -1,0 +1,292 @@
+/**
+ * Social Media Schedule API Endpoint
+ * POST to schedule posts across LinkedIn and Twitter
+ * GET to retrieve scheduled posts
+ * DELETE to cancel scheduled posts
+ *
+ * Rate Limit: 100 req/min per organization
+ */
+
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger/logger';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
+import type { SocialPlatform } from '@/types/social';
+import { z } from 'zod';
+
+// Request validation schemas
+const schedulePostSchema = z.object({
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  content: z.string().min(1, 'Content is required'),
+  platforms: z.array(z.enum(['twitter', 'linkedin'])).min(1, 'At least one platform is required'),
+  scheduledAt: z.string().datetime('Invalid datetime format'),
+  mediaUrls: z.array(z.string().url()).optional(),
+  hashtags: z.array(z.string()).optional(),
+});
+
+const getScheduledSchema = z.object({
+  organizationId: z.string().min(1),
+  platform: z.enum(['twitter', 'linkedin']).optional(),
+});
+
+const cancelPostSchema = z.object({
+  organizationId: z.string().min(1),
+  postId: z.string().min(1),
+});
+
+/**
+ * POST /api/social/schedule
+ * Schedule a social media post
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/schedule');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    // Parse request body
+    const body = await request.json();
+
+    // Validate input
+    const validation = schedulePostSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+    const scheduledAt = new Date(data.scheduledAt);
+
+    // Validate scheduled time is in the future
+    if (scheduledAt <= new Date()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Scheduled time must be in the future',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate content length for Twitter
+    if (data.platforms.includes('twitter') && data.content.length > 280) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Content exceeds Twitter character limit (280)',
+          currentLength: data.content.length,
+        },
+        { status: 400 }
+      );
+    }
+
+    logger.info('Schedule API: Scheduling post', {
+      organizationId: data.organizationId,
+      platforms: data.platforms,
+      scheduledAt: scheduledAt.toISOString(),
+    });
+
+    // Create posting agent
+    const agent = await createPostingAgent(data.organizationId);
+
+    // Schedule the post
+    const result = await agent.schedulePost(
+      data.content,
+      data.platforms as SocialPlatform[],
+      scheduledAt,
+      {
+        mediaUrls: data.mediaUrls,
+        hashtags: data.hashtags,
+        createdBy: 'api',
+      }
+    );
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Failed to schedule post',
+        },
+        { status: 500 }
+      );
+    }
+
+    logger.info('Schedule API: Post scheduled successfully', {
+      organizationId: data.organizationId,
+      postId: result.postId,
+      scheduledAt: scheduledAt.toISOString(),
+    });
+
+    return NextResponse.json({
+      success: true,
+      postId: result.postId,
+      scheduledAt: scheduledAt.toISOString(),
+      platforms: data.platforms,
+      message: `Post scheduled for ${scheduledAt.toLocaleString()}`,
+    });
+  } catch (error: unknown) {
+    logger.error('Schedule API: Unexpected error', error as Error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * GET /api/social/schedule
+ * Get scheduled posts for organization
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/schedule');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    const { searchParams } = new URL(request.url);
+    const organizationId = searchParams.get('organizationId');
+    const platform = searchParams.get('platform') as SocialPlatform | null;
+
+    // Validate query params
+    const validation = getScheduledSchema.safeParse({ organizationId, platform: platform || undefined });
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+
+    logger.info('Schedule API: Getting scheduled posts', {
+      organizationId: data.organizationId,
+      platform: data.platform,
+    });
+
+    // Create posting agent
+    const agent = await createPostingAgent(data.organizationId);
+
+    // Get scheduled posts
+    const scheduledPosts = await agent.getScheduledPosts(data.platform);
+
+    return NextResponse.json({
+      success: true,
+      posts: scheduledPosts.map((post) => ({
+        id: post.id,
+        platform: post.platform,
+        content: post.content,
+        scheduledAt: post.scheduledAt,
+        status: post.status,
+        createdAt: post.createdAt,
+      })),
+      total: scheduledPosts.length,
+    });
+  } catch (error: unknown) {
+    logger.error('Schedule API: Get scheduled failed', error as Error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to get scheduled posts',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/social/schedule
+ * Cancel a scheduled post
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // Rate limiting
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/schedule');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    // Parse request body
+    const body = await request.json();
+
+    // Validate input
+    const validation = cancelPostSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+
+    logger.info('Schedule API: Cancelling scheduled post', {
+      organizationId: data.organizationId,
+      postId: data.postId,
+    });
+
+    // Create posting agent
+    const agent = await createPostingAgent(data.organizationId);
+
+    // Cancel the post
+    const result = await agent.cancelPost(data.postId);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Failed to cancel post',
+        },
+        { status: 404 }
+      );
+    }
+
+    logger.info('Schedule API: Post cancelled successfully', {
+      organizationId: data.organizationId,
+      postId: data.postId,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Post cancelled successfully',
+      postId: data.postId,
+    });
+  } catch (error: unknown) {
+    logger.error('Schedule API: Cancel failed', error as Error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to cancel post',
+      },
+      { status: 500 }
+    );
+  }
+}

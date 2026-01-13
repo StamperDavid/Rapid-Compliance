@@ -9,7 +9,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
@@ -464,7 +463,6 @@ export default function PageEditorPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Loading editor...</div>
       </div>
     );
@@ -473,22 +471,19 @@ export default function PageEditorPage() {
   if (!page) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Failed to load page</div>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      fontFamily: 'system-ui', 
+    <div style={{
+      fontFamily: 'system-ui',
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
-      <AdminBar />
-
       {/* Editor Toolbar */}
       <EditorToolbar
         page={page}

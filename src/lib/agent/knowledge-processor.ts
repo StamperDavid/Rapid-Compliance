@@ -87,6 +87,15 @@ export async function processKnowledgeBase(
       });
     }
     
+    // Add brand voice from social media analysis
+    if (analysisResult.brandVoice) {
+      knowledgeBase.brandVoice = {
+        tone: analysisResult.brandVoice.tone ?? 'professional',
+        keyMessages: analysisResult.brandVoice.keyMessages ?? [],
+        commonPhrases: analysisResult.brandVoice.commonPhrases ?? [],
+      };
+    }
+
     // Add product catalog if available
     if (analysisResult.products && analysisResult.products.length > 0) {
       knowledgeBase.productCatalog = {

@@ -51,14 +51,14 @@ export async function processOnboarding(
       organizationId,
       uploadedFiles: (onboardingData as any).uploadedDocs ?? [],
       urls: (onboardingData as any).urls ?? [],
-      faqPageUrl: (onboardingData as any).faqPageUrl,
-      socialMediaUrls: (onboardingData as any).socialMediaUrls ?? [],
+      faqPageUrl: onboardingData.faqPageUrl, // Now properly typed
+      socialMediaUrls: onboardingData.socialMediaUrls ?? [], // Now properly typed
       faqs: (onboardingData as any).faqs,
       websiteUrl: onboardingData.website,
     };
-    
+
     const knowledgeBase = await processKnowledgeBase(knowledgeOptions);
-    
+
     // Step 3: Build Base Model (NOT Golden Master yet!)
     const baseModel = await buildBaseModel({
       onboardingData,
@@ -66,6 +66,7 @@ export async function processOnboarding(
       organizationId,
       userId,
       workspaceId,
+      industryTemplateId: onboardingData.industryTemplateId, // Now properly wired!
     });
     
     // Step 4: Save everything to Firestore using Admin SDK (bypasses security rules)

@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
@@ -30,8 +29,6 @@ export default function SecuritySettingsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 

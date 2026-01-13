@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { adminUser, loading } = useAdminAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   useEffect(() => {
     if (!loading && !adminUser) {
@@ -41,15 +42,61 @@ export default function AdminLayout({
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#000' }}>
-      {/* Sidebar */}
-      <aside style={{
-        width: '260px',
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#000', flexDirection: 'column' }}>
+      {/* Mobile Header with Hamburger */}
+      <div style={{
+        padding: '1rem',
+        borderBottom: '1px solid #1a1a1a',
         backgroundColor: '#0a0a0a',
-        borderRight: '1px solid #1a1a1a',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
+      }} className="md:hidden flex items-center justify-between">
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          style={{
+            padding: '0.5rem',
+            backgroundColor: '#1a1a1a',
+            color: '#999',
+            border: 'none',
+            borderRadius: '0.375rem',
+            cursor: 'pointer',
+            fontSize: '1.25rem',
+          }}
+          aria-label="Toggle menu"
+        >
+          ☰
+        </button>
+        <span style={{ color: '#fff', fontWeight: '600' }}>Platform Admin</span>
+      </div>
+
+      <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
+        {/* Mobile Overlay */}
+        {mobileMenuOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 40,
+            }}
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* Sidebar */}
+        <aside style={{
+          width: '260px',
+          backgroundColor: '#0a0a0a',
+          borderRight: '1px solid #1a1a1a',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'fixed',
+          height: '100%',
+          zIndex: 50,
+          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s',
+        }}
+        className="md:relative md:translate-x-0"
+        >
         {/* Header */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
@@ -133,10 +180,11 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main style={{ flex: 1, backgroundColor: '#000' }}>
-        {children}
-      </main>
+        {/* Main Content */}
+        <main style={{ flex: 1, backgroundColor: '#000', width: '100%' }} className="md:ml-0">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
 import type { BlogPost } from '@/types/website';
 
 export default function BlogManagementPage() {
@@ -124,7 +123,6 @@ export default function BlogManagementPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Loading blog posts...</div>
       </div>
     );
@@ -132,8 +130,6 @@ export default function BlogManagementPage() {
 
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
-      <AdminBar />
-
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{

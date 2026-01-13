@@ -92,9 +92,11 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'smtp':
         return keys.email?.smtp;
       
-      // SMS Services
+      // SMS Services (also used for Voice/VoIP)
       case 'twilio':
         return keys.sms?.twilio;
+      case 'telnyx':
+        return keys.sms?.telnyx;
       case 'vonage':
         return keys.sms?.vonage;
       

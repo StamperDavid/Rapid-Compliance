@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
@@ -104,8 +103,6 @@ export default function ProfilePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 

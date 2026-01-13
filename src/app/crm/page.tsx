@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import AdminBar from '@/components/AdminBar';
 import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
@@ -362,9 +361,6 @@ function CRMContent() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      {/* Admin Bar */}
-      <AdminBar />
-
       {/* Main Content Area */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
       {/* Sidebar */}

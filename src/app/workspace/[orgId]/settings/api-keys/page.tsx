@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface APIKey {
   service: string;
@@ -377,8 +376,6 @@ export default function APIKeysPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-      
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Header */}

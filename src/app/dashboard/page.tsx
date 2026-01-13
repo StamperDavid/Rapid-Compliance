@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
 import { usePermission, useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
@@ -387,8 +386,6 @@ function DashboardContent() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 

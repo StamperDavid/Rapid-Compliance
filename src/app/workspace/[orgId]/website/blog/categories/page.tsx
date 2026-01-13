@@ -8,8 +8,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import AdminBar from '@/components/AdminBar';
-
 export default function CategoriesManagementPage() {
   const params = useParams();
   const router = useRouter();
@@ -87,7 +85,6 @@ export default function CategoriesManagementPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Loading categories...</div>
       </div>
     );
@@ -95,7 +92,6 @@ export default function CategoriesManagementPage() {
 
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
-      <AdminBar />
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}

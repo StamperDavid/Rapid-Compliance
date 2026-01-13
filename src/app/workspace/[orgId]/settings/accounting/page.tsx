@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
-import { useAuth } from '@/hooks/useAuth'
-import { logger } from '@/lib/logger/logger';;
+import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface AccountingConfig {
   platform: 'quickbooks' | 'xero' | 'freshbooks' | 'wave' | 'sage' | 'none';
@@ -162,8 +161,6 @@ export default function AccountingPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-      
       {/* Header */}
       <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a', padding: '2rem' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto' }}>

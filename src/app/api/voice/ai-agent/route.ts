@@ -1,0 +1,231 @@
+/**
+ * AI Voice Agent API Route
+ * Main entry point for AI-powered voice calls
+ *
+ * POST /api/voice/ai-agent
+ * - Initiates new AI agent conversation
+ * - Returns TwiML with speech recognition enabled
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
+import { VoiceProviderFactory } from '@/lib/voice/voice-factory';
+import type { VoiceCall } from '@/lib/voice/types';
+import { logger } from '@/lib/logger/logger';
+
+/**
+ * POST /api/voice/ai-agent
+ * Initialize AI agent and start conversation
+ * Called by Twilio/Telnyx when call is answered
+ */
+export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
+  try {
+    // Parse webhook payload (Twilio or Telnyx format)
+    const contentType = request.headers.get('content-type') ?? '';
+    let payload: Record<string, unknown>;
+
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      // Twilio format
+      const formData = await request.formData();
+      payload = Object.fromEntries(formData.entries()) as Record<string, unknown>;
+    } else {
+      // Telnyx or JSON format
+      payload = await request.json();
+    }
+
+    // Extract call information
+    const callId = String(payload.CallSid ?? (payload.data as any)?.call_control_id ?? '');
+    const from = String(payload.From ?? (payload.data as any)?.from?.phone_number ?? '');
+    const to = String(payload.To ?? (payload.data as any)?.to?.phone_number ?? '');
+
+    // Get agent config from query params or use defaults
+    const { searchParams } = new URL(request.url);
+    const organizationId = searchParams.get('organizationId') ?? 'default';
+    const agentId = searchParams.get('agentId') ?? 'ai-prospector';
+    const mode = (searchParams.get('mode') ?? 'prospector') as 'prospector' | 'closer';
+
+    logger.info('[AI-Agent] Incoming call', {
+      callId,
+      from,
+      organizationId,
+      mode,
+      file: 'ai-agent/route.ts',
+    });
+
+    // Load agent configuration from Firestore (or use defaults)
+    const config = await loadAgentConfig(organizationId, agentId, mode);
+
+    // Initialize the voice agent
+    await voiceAgentHandler.initialize(config);
+
+    // Create VoiceCall object
+    const call: VoiceCall = {
+      callId,
+      from,
+      to,
+      status: 'in-progress',
+      direction: 'inbound',
+      startTime: new Date(),
+    };
+
+    // Start AI conversation
+    const response = await voiceAgentHandler.startConversation(call);
+
+    // Log conversation training data
+    await logConversationData(organizationId, callId, 'start', {
+      mode,
+      greeting: response.text,
+      responseTime: Date.now() - startTime,
+    });
+
+    // Return TwiML response
+    return new NextResponse(response.twiml, {
+      headers: {
+        'Content-Type': 'text/xml',
+      },
+    });
+
+  } catch (error: any) {
+    logger.error('[AI-Agent] Error starting conversation:', error, { file: 'ai-agent/route.ts' });
+
+    // Return fallback TwiML that transfers to human
+    const fallbackTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">I apologize, but I'm having technical difficulties. Let me connect you with a team member.</Say>
+  <Dial timeout="30">
+    <Number>${process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567'}</Number>
+  </Dial>
+  <Say voice="Polly.Joanna">I'm sorry, all agents are busy. Please try again later. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+
+    return new NextResponse(fallbackTwiml, {
+      headers: {
+        'Content-Type': 'text/xml',
+      },
+    });
+  }
+}
+
+/**
+ * GET /api/voice/ai-agent
+ * Return agent status or health check
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const callId = searchParams.get('callId');
+
+  if (callId) {
+    // Return conversation context for specific call
+    const context = voiceAgentHandler.getConversationContext(callId);
+    if (context) {
+      return NextResponse.json({
+        callId,
+        state: context.state,
+        qualificationScore: context.qualificationScore,
+        sentiment: context.sentiment,
+        turnsCount: context.turns.length,
+        objectionCount: context.objectionCount,
+        buyingSignals: context.buyingSignals,
+      });
+    }
+    return NextResponse.json({ error: 'Call not found' }, { status: 404 });
+  }
+
+  // Health check
+  return NextResponse.json({
+    status: 'healthy',
+    service: 'ai-voice-agent',
+    modes: ['prospector', 'closer'],
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Load agent configuration from Firestore
+ */
+async function loadAgentConfig(
+  organizationId: string,
+  agentId: string,
+  mode: 'prospector' | 'closer'
+): Promise<VoiceAgentConfig> {
+  try {
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+
+    // Try to load custom config
+    const customConfig = await FirestoreService.get(
+      `organizations/${organizationId}/voiceAgents`,
+      agentId
+    );
+
+    if (customConfig) {
+      return {
+        mode,
+        organizationId,
+        agentId,
+        ...customConfig,
+      } as VoiceAgentConfig;
+    }
+  } catch {
+    // Use defaults if Firestore fetch fails
+  }
+
+  // Return default config
+  return {
+    mode,
+    organizationId,
+    agentId,
+    companyName: 'Our Company',
+    productName: 'Our Solution',
+    valueProposition: 'helping businesses grow and succeed',
+    qualificationCriteria: {
+      budgetThreshold: 1000,
+      requiredFields: ['name', 'company', 'need'],
+      disqualifyingResponses: ['not interested', 'remove me', 'do not call'],
+    },
+    transferRules: {
+      onQualified: 'transfer',
+    },
+    closingConfig: {
+      maxDiscountPercent: 15,
+      urgencyTactics: true,
+      paymentEnabled: false,
+    },
+    voiceSettings: {
+      voice: 'Polly.Joanna',
+      language: 'en-US',
+    },
+    fallbackBehavior: 'transfer',
+  };
+}
+
+/**
+ * Log conversation data for training
+ */
+async function logConversationData(
+  organizationId: string,
+  callId: string,
+  event: string,
+  data: Record<string, unknown>
+): Promise<void> {
+  try {
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+
+    const logId = `${callId}-${event}-${Date.now()}`;
+    await FirestoreService.set(
+      `organizations/${organizationId}/conversationLogs`,
+      logId,
+      {
+        callId,
+        event,
+        ...data,
+        timestamp: new Date().toISOString(),
+      },
+      false
+    );
+  } catch (error) {
+    logger.error('[AI-Agent] Failed to log conversation data:', error, { file: 'ai-agent/route.ts' });
+  }
+}

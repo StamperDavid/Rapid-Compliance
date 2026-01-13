@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface SubscriptionData {
   plan: string;
@@ -228,8 +227,6 @@ export default function BillingSettingsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 

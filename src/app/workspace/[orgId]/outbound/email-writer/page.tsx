@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 
 export default function EmailWriterPage() {
   const params = useParams();
@@ -82,8 +81,6 @@ export default function EmailWriterPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-      
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           {/* Header */}

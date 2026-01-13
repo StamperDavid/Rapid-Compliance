@@ -75,11 +75,16 @@ export interface APIKeysConfig {
     };
   };
   
-  // SMS Services
+  // SMS Services (also used for Voice/VoIP providers)
   sms: {
     twilio?: {
       accountSid: string;
       authToken: string;
+      phoneNumber: string;
+    };
+    telnyx?: {
+      apiKey: string;
+      apiSecret?: string;
       phoneNumber: string;
     };
     vonage?: {
@@ -113,6 +118,19 @@ export interface APIKeysConfig {
       projectToken: string;
     };
   };
+
+  // Video Generation Services
+  video?: {
+    heygen?: {
+      apiKey: string;
+    };
+    sora?: {
+      apiKey: string;
+    };
+    runway?: {
+      apiKey: string;
+    };
+  };
   
   // Prospect Research & Enrichment
   enrichment?: {
@@ -124,6 +142,25 @@ export interface APIKeysConfig {
     rapidApiKey?: string; // For LinkedIn and other APIs
   };
   
+  // Social Media Integrations
+  social?: {
+    twitter?: {
+      clientId: string;
+      clientSecret: string;
+      bearerToken?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      tokenExpiresAt?: Date;
+    };
+    linkedin?: {
+      clientId?: string;
+      clientSecret?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      tokenExpiresAt?: Date;
+    };
+  };
+
   // Other Integrations
   integrations: {
     slack?: {
@@ -155,6 +192,13 @@ export interface APIKeysConfig {
       apiKey: string;
       portalId?: string;
     };
+    twitter?: {
+      clientId: string;
+      clientSecret: string;
+      bearerToken?: string;
+      accessToken?: string;
+      refreshToken?: string;
+    };
     custom?: Array<{
       name: string;
       apiKey: string;
@@ -184,7 +228,7 @@ export interface APIKeyValidationResult {
   details?: unknown;
 }
 
-export type APIServiceName = 
+export type APIServiceName =
   | 'firebase'
   | 'googleCloud'
   | 'openrouter'    // Universal AI provider (RECOMMENDED - one key for all AI)
@@ -202,6 +246,8 @@ export type APIServiceName =
   | 'integrations'
   | 'smtp'
   | 'twilio'
+  | 'telnyx'
+  | 'bandwidth'
   | 'vonage'
   | 'cloudStorage'
   | 's3'
@@ -219,6 +265,11 @@ export type APIServiceName =
   | 'crunchbase'
   | 'builtwith'
   | 'newsapi'
-  | 'rapidapi';
+  | 'rapidapi'
+  | 'twitter'      // Twitter/X API v2
+  | 'linkedin'     // LinkedIn API
+  | 'heygen'       // HeyGen AI Avatar Video
+  | 'sora'         // OpenAI Sora Text-to-Video
+  | 'runway';      // Runway Gen-3 Video Generation
 
 

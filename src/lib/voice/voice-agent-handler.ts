@@ -5,12 +5,24 @@
  * Two modes:
  * 1. THE PROSPECTOR: Qualifies leads, books appointments, transfers to humans
  * 2. THE CLOSER: Handles objections, closes deals, triggers payment APIs
+ *
+ * Integrates with:
+ * - Gemini AI for conversation intelligence
+ * - Telnyx/Twilio for voice infrastructure
+ * - Firestore for call context storage
  */
 
 import { VoiceProviderFactory } from './voice-factory';
 import { callTransferService } from './call-transfer-service';
 import { crmVoiceActivity } from './crm-voice-activity';
-import type { VoiceCall, CallControlOptions } from './types';
+import {
+  aiConversationService,
+  type ConversationState,
+  type ConversationConfig,
+  type ConversationContext,
+  type AIResponse,
+} from './ai-conversation-service';
+import type { VoiceCall, CallControlOptions, VoiceProvider } from './types';
 import { logger } from '@/lib/logger/logger';
 
 export type VoiceAgentMode = 'prospector' | 'closer';
@@ -19,6 +31,12 @@ export interface VoiceAgentConfig {
   mode: VoiceAgentMode;
   organizationId: string;
   agentId: string;
+
+  // Company context for AI
+  companyName?: string;
+  productName?: string;
+  productDescription?: string;
+  valueProposition?: string;
 
   // Prospector mode config
   qualificationCriteria?: {
@@ -41,36 +59,27 @@ export interface VoiceAgentConfig {
     requireManagerApproval?: number; // Deal value threshold
   };
 
-  // Common config
+  // Voice settings
   voiceSettings?: {
     voice?: string;
     language?: string;
     speakingSpeed?: number;
   };
   fallbackBehavior?: 'transfer' | 'voicemail' | 'callback';
-}
 
-export interface ConversationContext {
-  callId: string;
-  customerId?: string;
-  customerName?: string;
-  customerPhone: string;
-  conversationHistory: Array<{
-    role: 'agent' | 'customer';
-    content: string;
-    timestamp: Date;
-  }>;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  qualificationScore?: number;
-  objectionCount: number;
-  dealValue?: number;
-  readyToClose: boolean;
-  intent?: string;
+  // Real-time transcription settings
+  transcriptionSettings?: {
+    provider?: 'twilio' | 'telnyx' | 'deepgram';
+    language?: string;
+    profanityFilter?: boolean;
+  };
 }
 
 export interface AgentResponse {
   text: string;
   action?: 'continue' | 'transfer' | 'book_appointment' | 'process_payment' | 'end_call';
+  state?: ConversationState;
+  qualificationScore?: number;
   transferContext?: {
     reason: string;
     summary: string;
@@ -81,225 +90,519 @@ export interface AgentResponse {
     description: string;
     customerId: string;
   };
+  twiml?: string;
 }
+
+// ===== CONVERSATION STATE MACHINE =====
+
+interface StateMachineTransition {
+  from: ConversationState;
+  to: ConversationState;
+  condition: (context: ConversationContext) => boolean;
+  action?: () => Promise<void>;
+}
+
+const STATE_TRANSITIONS: StateMachineTransition[] = [
+  // GREETING -> QUALIFYING: After initial exchange
+  {
+    from: 'GREETING',
+    to: 'QUALIFYING',
+    condition: (ctx) => ctx.turns.length >= 2,
+  },
+  // QUALIFYING -> TRANSFER (Prospector): When qualified
+  {
+    from: 'QUALIFYING',
+    to: 'TRANSFER',
+    condition: (ctx) => ctx.qualificationScore >= 70,
+  },
+  // QUALIFYING -> PITCHING (Closer): When qualified
+  {
+    from: 'QUALIFYING',
+    to: 'PITCHING',
+    condition: (ctx) => ctx.qualificationScore >= 60,
+  },
+  // QUALIFYING -> OBJECTION_HANDLING: When objection detected
+  {
+    from: 'QUALIFYING',
+    to: 'OBJECTION_HANDLING',
+    condition: (ctx) => ctx.objectionCount > 0 && ctx.sentiment === 'negative',
+  },
+  // PITCHING -> CLOSING: When buying signals detected
+  {
+    from: 'PITCHING',
+    to: 'CLOSING',
+    condition: (ctx) => ctx.buyingSignals.length >= 2 || ctx.readyToClose,
+  },
+  // PITCHING -> OBJECTION_HANDLING: When objection raised
+  {
+    from: 'PITCHING',
+    to: 'OBJECTION_HANDLING',
+    condition: (ctx) => ctx.objectionCount > 0,
+  },
+  // OBJECTION_HANDLING -> PITCHING: When objection resolved
+  {
+    from: 'OBJECTION_HANDLING',
+    to: 'PITCHING',
+    condition: (ctx) => ctx.sentiment !== 'negative',
+  },
+  // Any -> TRANSFER: When too many objections
+  {
+    from: 'OBJECTION_HANDLING',
+    to: 'TRANSFER',
+    condition: (ctx) => ctx.objectionCount >= 3,
+  },
+  // CLOSING -> ENDED: When deal closed or lost
+  {
+    from: 'CLOSING',
+    to: 'ENDED',
+    condition: (ctx) => ctx.readyToClose,
+  },
+];
+
+// ===== VOICE AGENT HANDLER CLASS =====
 
 class VoiceAgentHandler {
   private config: VoiceAgentConfig | null = null;
-  private context: ConversationContext | null = null;
-  private mode: VoiceAgentMode = 'prospector';
+  private provider: VoiceProvider | null = null;
+  private activeCallId: string | null = null;
 
   /**
    * Initialize the voice agent with configuration
    */
   async initialize(config: VoiceAgentConfig): Promise<void> {
     this.config = config;
-    this.mode = config.mode;
-    logger.info(`[VoiceAgent] Initialized in ${config.mode.toUpperCase()} mode`, { file: 'voice-agent-handler.ts' });
+
+    // Get the preferred voice provider (Telnyx for better rates)
+    this.provider = await VoiceProviderFactory.getProvider(
+      config.organizationId,
+      'telnyx' // Prefer Telnyx for 60-70% savings
+    );
+
+    logger.info(`[VoiceAgent] Initialized in ${config.mode.toUpperCase()} mode`, {
+      organizationId: config.organizationId,
+      agentId: config.agentId,
+      file: 'voice-agent-handler.ts',
+    });
   }
 
   /**
-   * Start a new conversation
+   * Start a new AI-powered conversation
    */
   async startConversation(call: VoiceCall): Promise<AgentResponse> {
     if (!this.config) {
       throw new Error('Voice agent not initialized');
     }
 
-    this.context = {
-      callId: call.callId,
-      customerPhone: call.from,
-      conversationHistory: [],
-      sentiment: 'neutral',
-      objectionCount: 0,
-      readyToClose: false,
+    this.activeCallId = call.callId;
+
+    // Build AI conversation config
+    const conversationConfig: ConversationConfig = {
+      mode: this.config.mode,
+      organizationId: this.config.organizationId,
+      agentId: this.config.agentId,
+      companyName: this.config.companyName,
+      productName: this.config.productName,
+      productDescription: this.config.productDescription,
+      valueProposition: this.config.valueProposition,
+      qualificationCriteria: this.config.qualificationCriteria,
+      maxDiscountPercent: this.config.closingConfig?.maxDiscountPercent,
+      voiceName: this.config.voiceSettings?.voice,
+      language: this.config.voiceSettings?.language,
     };
 
-    // Generate opening based on mode
-    if (this.mode === 'prospector') {
-      return this.generateProspectorOpening();
-    } else {
-      return this.generateCloserOpening();
-    }
-  }
+    // Initialize AI conversation
+    const { greeting, context } = await aiConversationService.initializeConversation(
+      call.callId,
+      call.from,
+      conversationConfig
+    );
 
-  /**
-   * Process customer speech and generate response
-   */
-  async processCustomerInput(speechResult: string): Promise<AgentResponse> {
-    if (!this.config || !this.context) {
-      throw new Error('Voice agent not initialized or no active conversation');
-    }
+    // Store call context in Firestore for warm transfer
+    await this.storeCallContext(call.callId, context);
 
-    // Add to conversation history
-    this.context.conversationHistory.push({
-      role: 'customer',
-      content: speechResult,
-      timestamp: new Date(),
+    // Log conversation start
+    logger.info('[VoiceAgent] Started AI conversation', {
+      callId: call.callId,
+      mode: this.config.mode,
+      customerPhone: call.from,
+      file: 'voice-agent-handler.ts',
     });
 
-    // Analyze sentiment
-    this.context.sentiment = await this.analyzeSentiment(speechResult);
+    // Generate TwiML with speech gathering
+    const twiml = this.generateConversationTwiML(greeting, call.callId);
 
-    // Check for objections
-    if (this.detectObjection(speechResult)) {
-      this.context.objectionCount++;
-    }
-
-    // Route to appropriate handler based on mode
-    if (this.mode === 'prospector') {
-      return this.handleProspectorConversation(speechResult);
-    } else {
-      return this.handleCloserConversation(speechResult);
-    }
-  }
-
-  /**
-   * PROSPECTOR MODE: Qualify and transfer
-   */
-  private async handleProspectorConversation(customerInput: string): Promise<AgentResponse> {
-    const criteria = this.config?.qualificationCriteria;
-
-    // Check for disqualifying responses
-    if (criteria?.disqualifyingResponses) {
-      const isDisqualified = criteria.disqualifyingResponses.some(
-        dq => customerInput.toLowerCase().includes(dq.toLowerCase())
-      );
-
-      if (isDisqualified) {
-        return {
-          text: "Thank you for your time today. It sounds like our solution might not be the best fit right now. I'll have someone follow up with some helpful resources via email. Have a great day!",
-          action: 'end_call',
-        };
-      }
-    }
-
-    // Calculate qualification score based on conversation
-    const qualificationScore = await this.calculateQualificationScore();
-    this.context!.qualificationScore = qualificationScore;
-
-    // If qualified, initiate transfer or book appointment
-    if (qualificationScore >= 70) {
-      const transferRules = this.config?.transferRules;
-
-      if (transferRules?.onQualified === 'book_appointment') {
-        return {
-          text: "This sounds like a great fit! Let me check availability with one of our specialists. What day works best for you this week?",
-          action: 'book_appointment',
-        };
-      }
-
-      return {
-        text: "Excellent! Based on what you've shared, I think one of our specialists can really help you. Let me connect you with someone right now who can answer your specific questions. One moment please.",
-        action: 'transfer',
-        transferContext: {
-          reason: 'Qualified lead - ready for specialist',
-          summary: this.generateConversationSummary(),
-          suggestedAgentId: transferRules?.transferToAgentId,
-        },
-      };
-    }
-
-    // Continue qualification
-    const nextQuestion = await this.getNextQualificationQuestion();
     return {
-      text: nextQuestion,
+      text: greeting,
       action: 'continue',
+      state: 'GREETING',
+      twiml,
     };
   }
 
   /**
-   * CLOSER MODE: Handle objections and close deals
+   * Process customer speech input and generate AI response
+   * This is the core conversation loop
    */
-  private async handleCloserConversation(customerInput: string): Promise<AgentResponse> {
-    const closingConfig = this.config?.closingConfig;
-
-    // Detect buying signals
-    if (this.detectBuyingSignal(customerInput)) {
-      this.context!.readyToClose = true;
+  async processCustomerInput(callId: string, speechResult: string): Promise<AgentResponse> {
+    if (!this.config) {
+      throw new Error('Voice agent not initialized');
     }
 
-    // Handle objections
-    if (this.context!.objectionCount > 0 && this.detectObjection(customerInput)) {
-      const objectionResponse = await this.handleObjection(customerInput);
-      return objectionResponse;
-    }
+    const startTime = Date.now();
 
-    // If ready to close and payment is enabled
-    if (this.context!.readyToClose && closingConfig?.paymentEnabled) {
-      const dealValue = this.context!.dealValue ?? 0;
+    try {
+      // Get AI response
+      const aiResponse = await aiConversationService.generateResponse(callId, speechResult);
 
-      // Check if manager approval needed
-      if (closingConfig.requireManagerApproval && dealValue >= closingConfig.requireManagerApproval) {
-        return {
-          text: "This is a significant investment, and I want to make sure we get you the best possible terms. Let me bring in my manager to finalize this deal for you. One moment.",
-          action: 'transfer',
-          transferContext: {
-            reason: 'High-value deal requiring manager approval',
-            summary: this.generateConversationSummary(),
-          },
-        };
+      // Track response time for monitoring
+      const responseTime = Date.now() - startTime;
+      if (responseTime > 2000) {
+        logger.warn('[VoiceAgent] Response time exceeded 2s target', {
+          callId,
+          responseTime,
+          file: 'voice-agent-handler.ts',
+        });
       }
 
-      return {
-        text: "Perfect! Let me get that processed for you right now. I'll just need to confirm a few details and we'll have you all set up today.",
-        action: 'process_payment',
-        paymentContext: {
-          amount: dealValue,
-          description: 'Product/Service Purchase',
-          customerId: this.context!.customerId ?? this.context!.customerPhone,
-        },
-      };
-    }
+      // Handle different actions
+      switch (aiResponse.action) {
+        case 'transfer':
+          return this.handleTransfer(callId, aiResponse);
 
-    // Apply closing techniques
-    if (closingConfig?.urgencyTactics && this.context!.sentiment !== 'negative') {
-      return await this.applyClosingTechnique(customerInput);
-    }
+        case 'close':
+          return this.handleClose(callId, aiResponse);
 
-    // Continue conversation
-    const response = await this.generateCloserResponse(customerInput);
-    return {
-      text: response,
-      action: 'continue',
-    };
+        case 'end_call':
+          return this.handleEndCall(callId, aiResponse);
+
+        default:
+          // Continue conversation
+          return {
+            text: aiResponse.text,
+            action: 'continue',
+            state: aiResponse.newState,
+            qualificationScore: aiConversationService.getConversationContext(callId)?.qualificationScore,
+            twiml: this.generateConversationTwiML(aiResponse.text, callId),
+          };
+      }
+    } catch (error: any) {
+      logger.error('[VoiceAgent] Error processing input:', error, { file: 'voice-agent-handler.ts' });
+
+      // Graceful fallback - transfer to human
+      return this.handleGracefulFallback(callId, error.message);
+    }
   }
 
   /**
    * Handle transfer to human agent
    */
-  async initiateTransfer(): Promise<void> {
-    if (!this.config || !this.context) {
-      throw new Error('No active conversation to transfer');
+  private async handleTransfer(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
+    const context = aiConversationService.getConversationContext(callId);
+    const summary = aiConversationService.generateTransferSummary(callId);
+
+    // Update stored context before transfer
+    if (context) {
+      await this.storeCallContext(callId, context);
     }
 
-    const summary = this.generateConversationSummary();
-
+    // Initiate warm transfer
     await callTransferService.aiToHumanHandoff({
-      callId: this.context.callId,
-      organizationId: this.config.organizationId,
-      aiAgentId: this.config.agentId,
+      callId,
+      organizationId: this.config!.organizationId,
+      aiAgentId: this.config!.agentId,
       conversationSummary: summary,
-      customerSentiment: this.context.sentiment,
-      customerIntent: this.context.intent ?? 'unknown',
-      suggestedActions: this.getSuggestedActions(),
-      conversationHistory: this.context.conversationHistory,
+      customerSentiment: context?.sentiment ?? 'neutral',
+      customerIntent: aiResponse.transferReason ?? 'general inquiry',
+      suggestedActions: this.getSuggestedActions(context),
+      conversationHistory: context?.turns.map(t => ({
+        role: t.role,
+        content: t.content,
+        timestamp: t.timestamp,
+      })) ?? [],
       customerInfo: {
-        name: this.context.customerName,
-        phone: this.context.customerPhone,
-        crmRecordId: this.context.customerId,
+        name: context?.customerInfo.name,
+        phone: context?.customerInfo.phone ?? '',
+        crmRecordId: undefined,
       },
     });
 
     // Log to CRM
-    const provider = await VoiceProviderFactory.getProvider(this.config.organizationId);
-    const call = await provider.getCall(this.context.callId);
+    if (this.provider && context) {
+      const call = await this.provider.getCall(callId);
+      await crmVoiceActivity.logCall(this.config!.organizationId, call, {
+        aiAgentId: this.config!.agentId,
+        sentiment: context.sentiment,
+        outcome: 'transferred_to_human',
+        notes: summary,
+      });
+    }
 
-    await crmVoiceActivity.logCall(this.config.organizationId, call, {
-      aiAgentId: this.config.agentId,
-      sentiment: this.context.sentiment,
-      outcome: 'transferred_to_human',
-      notes: summary,
+    // Generate transfer TwiML
+    const twiml = this.generateTransferTwiML(aiResponse.text);
+
+    return {
+      text: aiResponse.text,
+      action: 'transfer',
+      state: 'TRANSFER',
+      qualificationScore: context?.qualificationScore,
+      transferContext: {
+        reason: aiResponse.transferReason ?? 'Qualified lead',
+        summary,
+        suggestedAgentId: this.config!.transferRules?.transferToAgentId,
+      },
+      twiml,
+    };
+  }
+
+  /**
+   * Handle deal closing (Closer mode)
+   */
+  private async handleClose(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
+    const context = aiConversationService.getConversationContext(callId);
+    const closingConfig = this.config?.closingConfig;
+
+    if (!closingConfig?.paymentEnabled) {
+      // Just end the call with closing message
+      return {
+        text: aiResponse.text,
+        action: 'end_call',
+        state: 'ENDED',
+        twiml: this.generateEndCallTwiML(aiResponse.text),
+      };
+    }
+
+    // TODO: Integrate with payment API
+    // For now, return payment intent
+    return {
+      text: aiResponse.text,
+      action: 'process_payment',
+      state: 'CLOSING',
+      paymentContext: {
+        amount: context?.customerInfo.budget ?? 0,
+        description: 'Product/Service Purchase',
+        customerId: context?.customerInfo.phone ?? callId,
+      },
+      twiml: this.generateConversationTwiML(aiResponse.text, callId),
+    };
+  }
+
+  /**
+   * Handle end call
+   */
+  private async handleEndCall(callId: string, aiResponse: AIResponse): Promise<AgentResponse> {
+    const context = aiConversationService.endConversation(callId);
+
+    // Log final call data
+    if (context && this.provider) {
+      try {
+        const call = await this.provider.getCall(callId);
+        await crmVoiceActivity.logCall(this.config!.organizationId, call, {
+          aiAgentId: this.config!.agentId,
+          sentiment: context.sentiment,
+          outcome: context.qualificationScore >= 70 ? 'qualified' : 'disqualified',
+          notes: aiConversationService.generateTransferSummary(callId),
+        });
+      } catch {
+        // Ignore logging errors on call end
+      }
+    }
+
+    return {
+      text: aiResponse.text,
+      action: 'end_call',
+      state: 'ENDED',
+      qualificationScore: context?.qualificationScore,
+      twiml: this.generateEndCallTwiML(aiResponse.text),
+    };
+  }
+
+  /**
+   * Handle graceful fallback when AI fails
+   */
+  private async handleGracefulFallback(callId: string, errorMessage: string): Promise<AgentResponse> {
+    logger.warn('[VoiceAgent] Graceful fallback triggered', {
+      callId,
+      error: errorMessage,
+      file: 'voice-agent-handler.ts',
     });
+
+    const fallbackMessage = "I apologize, but I'm having some technical difficulties. " +
+      "Let me connect you with one of our team members who can help you right away. " +
+      "Please hold for just a moment.";
+
+    // Attempt transfer
+    try {
+      await callTransferService.aiToHumanHandoff({
+        callId,
+        organizationId: this.config!.organizationId,
+        aiAgentId: this.config!.agentId,
+        conversationSummary: `AI FALLBACK: ${errorMessage}`,
+        customerSentiment: 'neutral',
+        customerIntent: 'unknown',
+        suggestedActions: ['AI system encountered error', 'Continue conversation manually'],
+        conversationHistory: [],
+        customerInfo: {
+          phone: '',
+        },
+      });
+    } catch {
+      // If transfer fails, just end the call
+      return {
+        text: "I apologize for the inconvenience. Please call back and we'll be happy to help you. Goodbye.",
+        action: 'end_call',
+        state: 'ENDED',
+        twiml: this.generateEndCallTwiML("I apologize for the inconvenience. Please call back and we'll be happy to help you. Goodbye."),
+      };
+    }
+
+    return {
+      text: fallbackMessage,
+      action: 'transfer',
+      state: 'TRANSFER',
+      twiml: this.generateTransferTwiML(fallbackMessage),
+    };
+  }
+
+  // ===== TwiML GENERATION =====
+
+  /**
+   * Generate TwiML for conversation with speech recognition
+   */
+  generateConversationTwiML(message: string, callId: string): string {
+    const voice = this.config?.voiceSettings?.voice ?? 'Polly.Joanna';
+    const language = this.config?.voiceSettings?.language ?? 'en-US';
+    const actionUrl = `/api/voice/ai-agent/speech?callId=${encodeURIComponent(callId)}`;
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech" action="${actionUrl}" method="POST" language="${language}" timeout="5" speechTimeout="auto" enhanced="true">
+    <Say voice="${voice}" language="${language}">${this.escapeXML(message)}</Say>
+  </Gather>
+  <Say voice="${voice}">I didn't hear anything. Let me transfer you to someone who can help.</Say>
+  <Redirect>/api/voice/ai-agent/fallback?callId=${encodeURIComponent(callId)}</Redirect>
+</Response>`;
+  }
+
+  /**
+   * Generate TwiML for transfer
+   */
+  private generateTransferTwiML(message: string): string {
+    const voice = this.config?.voiceSettings?.voice ?? 'Polly.Joanna';
+    const language = this.config?.voiceSettings?.language ?? 'en-US';
+    const transferToNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567';
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${voice}" language="${language}">${this.escapeXML(message)}</Say>
+  <Dial timeout="30">
+    <Number>${transferToNumber}</Number>
+  </Dial>
+  <Say voice="${voice}">I'm sorry, but all of our agents are currently busy. Please try again later. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+  }
+
+  /**
+   * Generate TwiML for end call
+   */
+  private generateEndCallTwiML(message: string): string {
+    const voice = this.config?.voiceSettings?.voice ?? 'Polly.Joanna';
+    const language = this.config?.voiceSettings?.language ?? 'en-US';
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${voice}" language="${language}">${this.escapeXML(message)}</Say>
+  <Hangup/>
+</Response>`;
+  }
+
+  // ===== HELPER METHODS =====
+
+  /**
+   * Store call context in Firestore for warm transfer
+   */
+  private async storeCallContext(callId: string, context: ConversationContext): Promise<void> {
+    try {
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+
+      await FirestoreService.set(
+        `organizations/${this.config!.organizationId}/callContexts`,
+        callId,
+        {
+          callId,
+          state: context.state,
+          turns: context.turns.map(t => ({
+            role: t.role,
+            content: t.content,
+            timestamp: t.timestamp.toISOString(),
+          })),
+          customerInfo: context.customerInfo,
+          qualificationScore: context.qualificationScore,
+          objectionCount: context.objectionCount,
+          buyingSignals: context.buyingSignals,
+          sentiment: context.sentiment,
+          updatedAt: new Date().toISOString(),
+        },
+        true // merge
+      );
+    } catch (error) {
+      logger.error('[VoiceAgent] Failed to store call context:', error, { file: 'voice-agent-handler.ts' });
+    }
+  }
+
+  /**
+   * Get suggested actions based on conversation context
+   */
+  private getSuggestedActions(context: ConversationContext | undefined): string[] {
+    const actions: string[] = [];
+
+    if (!context) {
+      return ['Continue discovery'];
+    }
+
+    if (context.sentiment === 'positive') {
+      actions.push('Customer is engaged - prioritize closing');
+    }
+
+    if (context.objectionCount > 0) {
+      actions.push('Address remaining objections');
+    }
+
+    if (context.qualificationScore >= 70) {
+      actions.push('Qualified lead - proceed to proposal');
+    }
+
+    if (context.buyingSignals.length > 0) {
+      actions.push(`Buying signals detected: ${context.buyingSignals.join(', ')}`);
+    }
+
+    return actions.length > 0 ? actions : ['Continue discovery'];
+  }
+
+  /**
+   * Escape XML special characters
+   */
+  private escapeXML(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  /**
+   * Get current conversation context (for external access)
+   */
+  getConversationContext(callId: string): ConversationContext | undefined {
+    return aiConversationService.getConversationContext(callId);
+  }
+
+  /**
+   * End conversation and cleanup
+   */
+  endConversation(callId: string): void {
+    aiConversationService.endConversation(callId);
   }
 
   /**
@@ -315,7 +618,6 @@ class VoiceAgentHandler {
 
       // Route to payment provider
       if (closingConfig?.paymentProvider === 'stripe') {
-        // In production, use Stripe API
         const response = await fetch('/api/payments/stripe/charge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -346,191 +648,9 @@ class VoiceAgentHandler {
       return { success: false, error: error.message };
     }
   }
-
-  // ===== HELPER METHODS =====
-
-  private async generateProspectorOpening(): Promise<AgentResponse> {
-    return {
-      text: "Hi there! Thanks for reaching out. I'm here to learn a bit about your business and see how we might be able to help. Could you start by telling me what challenges you're currently facing?",
-      action: 'continue',
-    };
-  }
-
-  private async generateCloserOpening(): Promise<AgentResponse> {
-    return {
-      text: "Great to speak with you! I understand you've been exploring our solution. I'm here to answer any remaining questions and help you get started today. What would you like to know more about?",
-      action: 'continue',
-    };
-  }
-
-  private async analyzeSentiment(text: string): Promise<'positive' | 'neutral' | 'negative'> {
-    const positiveWords = ['great', 'perfect', 'excellent', 'love', 'amazing', 'yes', 'definitely', 'interested'];
-    const negativeWords = ['no', 'not', 'never', 'hate', 'terrible', 'expensive', 'too much', 'cancel'];
-
-    const lower = text.toLowerCase();
-    const positiveCount = positiveWords.filter(w => lower.includes(w)).length;
-    const negativeCount = negativeWords.filter(w => lower.includes(w)).length;
-
-    if (positiveCount > negativeCount) return 'positive';
-    if (negativeCount > positiveCount) return 'negative';
-    return 'neutral';
-  }
-
-  private detectObjection(text: string): boolean {
-    const objectionPatterns = [
-      'too expensive', 'cost', 'price', "can't afford",
-      'not sure', "don't know", 'maybe later',
-      'competitor', 'other options', 'shopping around',
-      'need to think', 'talk to', 'discuss with',
-      'not ready', 'not right now', 'busy',
-    ];
-
-    const lower = text.toLowerCase();
-    return objectionPatterns.some(p => lower.includes(p));
-  }
-
-  private detectBuyingSignal(text: string): boolean {
-    const buyingSignals = [
-      'how do I sign up', 'what are the next steps',
-      'ready to start', 'let\'s do it', 'sounds good',
-      'can we proceed', 'how do I pay', 'what do you need from me',
-      'when can we start', 'let\'s move forward',
-    ];
-
-    const lower = text.toLowerCase();
-    return buyingSignals.some(s => lower.includes(s));
-  }
-
-  private async calculateQualificationScore(): Promise<number> {
-    if (!this.context) return 0;
-
-    let score = 50; // Base score
-
-    // Add points for conversation length (engagement)
-    score += Math.min(this.context.conversationHistory.length * 5, 20);
-
-    // Add points for positive sentiment
-    if (this.context.sentiment === 'positive') score += 15;
-    if (this.context.sentiment === 'negative') score -= 20;
-
-    // Subtract for objections
-    score -= this.context.objectionCount * 10;
-
-    return Math.max(0, Math.min(100, score));
-  }
-
-  private async getNextQualificationQuestion(): Promise<string> {
-    const questions = [
-      "What's the biggest challenge you're facing in your business right now?",
-      "How are you currently handling this process today?",
-      "What would success look like for you in solving this problem?",
-      "What's your timeline for implementing a solution?",
-      "Who else is involved in making this decision?",
-    ];
-
-    const askedCount = Math.floor(this.context!.conversationHistory.length / 2);
-    return questions[askedCount % questions.length];
-  }
-
-  private async handleObjection(customerInput: string): Promise<AgentResponse> {
-    const lower = customerInput.toLowerCase();
-
-    // Price objection
-    if (lower.includes('expensive') || lower.includes('cost') || lower.includes('price')) {
-      const maxDiscount = this.config?.closingConfig?.maxDiscountPercent ?? 0;
-
-      if (maxDiscount > 0) {
-        return {
-          text: `I completely understand budget is important. Let me see what I can do. I can offer you a ${maxDiscount}% discount if we can get you started today. Would that work better for your budget?`,
-          action: 'continue',
-        };
-      }
-
-      return {
-        text: "I understand the investment is significant. Let me share what kind of ROI our clients typically see - most recover their investment within 3 months and see 300% returns within a year. Would it help to walk through those numbers?",
-        action: 'continue',
-      };
-    }
-
-    // Time objection
-    if (lower.includes('think') || lower.includes('later') || lower.includes('not ready')) {
-      return {
-        text: "Of course, it's a big decision. What specific concerns would you want to think through? I might be able to address them right now and save you some time.",
-        action: 'continue',
-      };
-    }
-
-    // Competitor objection
-    if (lower.includes('competitor') || lower.includes('other') || lower.includes('shopping')) {
-      return {
-        text: "Smart to do your research! What specifically are you comparing? I'd love to help you understand how we stack up - we've won over a lot of customers from those alternatives.",
-        action: 'continue',
-      };
-    }
-
-    return {
-      text: "I hear you. Can you tell me more about what's holding you back? I want to make sure I address your specific concerns.",
-      action: 'continue',
-    };
-  }
-
-  private async applyClosingTechnique(customerInput: string): Promise<AgentResponse> {
-    const techniques = [
-      // Assumptive close
-      "So shall we go ahead and get you set up with the standard package, or would you prefer the premium with the additional features?",
-      // Urgency
-      "Just so you know, we have a special promotion ending this week that could save you 20%. Want me to lock that in for you?",
-      // Summary close
-      "Let me recap what we discussed - you need [solution] to solve [problem], and our product does exactly that with [benefits]. Does that sound right?",
-    ];
-
-    const index = this.context!.conversationHistory.length % techniques.length;
-    return {
-      text: techniques[index],
-      action: 'continue',
-    };
-  }
-
-  private async generateCloserResponse(customerInput: string): Promise<string> {
-    // In production, use AI to generate contextual response
-    return "That's a great question. Let me explain how that works...";
-  }
-
-  private generateConversationSummary(): string {
-    if (!this.context) return '';
-
-    const history = this.context.conversationHistory
-      .map(h => `${h.role.toUpperCase()}: ${h.content}`)
-      .join('\n');
-
-    return `Call Summary:
-Sentiment: ${this.context.sentiment}
-Qualification Score: ${this.context.qualificationScore ?? 'N/A'}
-Objections: ${this.context.objectionCount}
-Intent: ${this.context.intent ?? 'Unknown'}
-
-Conversation:
-${history}`;
-  }
-
-  private getSuggestedActions(): string[] {
-    const actions: string[] = [];
-
-    if (this.context?.sentiment === 'positive') {
-      actions.push('Customer is engaged - prioritize closing');
-    }
-
-    if (this.context?.objectionCount ?? 0 > 0) {
-      actions.push('Address remaining objections');
-    }
-
-    if (this.context?.qualificationScore && this.context.qualificationScore >= 70) {
-      actions.push('Qualified lead - proceed to proposal');
-    }
-
-    return actions.length > 0 ? actions : ['Continue discovery'];
-  }
 }
 
+// Export singleton and types
 export const voiceAgentHandler = new VoiceAgentHandler();
+export type { ConversationContext, ConversationState };
 export default voiceAgentHandler;

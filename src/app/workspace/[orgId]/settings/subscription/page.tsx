@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export default function SubscriptionPage() {
   const params = useParams();
@@ -55,7 +54,6 @@ export default function SubscriptionPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ color: '#999', fontSize: '1rem' }}>Loading subscription...</div>
         </div>
@@ -65,7 +63,6 @@ export default function SubscriptionPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
       
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>

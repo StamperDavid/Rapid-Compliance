@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 export default function AgentConfigurationPage() {
   const { user } = useAuth();
@@ -82,7 +81,6 @@ export default function AgentConfigurationPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
           <p style={{ color: '#999' }}>Loading configuration...</p>
         </div>
@@ -93,7 +91,6 @@ export default function AgentConfigurationPage() {
   if (!baseModel) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-        <AdminBar />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
           <div style={{ textAlign: 'center', maxWidth: '500px', padding: '2rem' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
@@ -1241,8 +1238,6 @@ export default function AgentConfigurationPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
-      <AdminBar />
-
       <div style={{ display: 'flex', flex: 1 }}>
         {/* Sidebar */}
         <div style={{ width: '280px', backgroundColor: '#0a0a0a', borderRight: '1px solid #1a1a1a', padding: '1.5rem 1rem', overflowY: 'auto' }}>

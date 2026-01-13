@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 import { useRecords } from '@/hooks/useRecords';
 import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
@@ -408,8 +407,6 @@ export default function EntityTablePage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-      
       {/* Header */}
       <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>

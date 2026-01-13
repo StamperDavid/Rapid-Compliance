@@ -9,7 +9,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import AdminBar from '@/components/AdminBar';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
 import type { BlogPost, PageSection } from '@/types/website';
@@ -185,7 +184,6 @@ export default function BlogPostEditorPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Loading post editor...</div>
       </div>
     );
@@ -194,22 +192,19 @@ export default function BlogPostEditorPage() {
   if (!post) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Failed to load post</div>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      fontFamily: 'system-ui', 
+    <div style={{
+      fontFamily: 'system-ui',
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
-      <AdminBar />
-
       {/* Editor Toolbar */}
       <div style={{
         height: '60px',

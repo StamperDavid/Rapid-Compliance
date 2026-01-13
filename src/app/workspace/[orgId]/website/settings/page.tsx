@@ -9,7 +9,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 
 export default function WebsiteSettingsPage() {
   const params = useParams();

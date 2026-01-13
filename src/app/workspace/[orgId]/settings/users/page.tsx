@@ -12,7 +12,6 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { usePagination } from '@/hooks/usePagination';
-import AdminBar from '@/components/AdminBar';
 import type { RolePermissions, UserRole } from '@/types/permissions';
 import { ROLE_PERMISSIONS } from '@/types/permissions';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
@@ -222,8 +221,6 @@ export default function TeamMembersPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000000' }}>
-      <AdminBar />
-
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left Sidebar */}
         <div style={{ 

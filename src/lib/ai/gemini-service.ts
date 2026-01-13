@@ -1,46 +1,78 @@
 /**
  * Gemini AI Service
  * Handles all interactions with Google's Gemini API
- * Dynamically fetches API keys from Firestore admin settings
+ * Dynamically fetches API keys from Firestore (organization-specific or platform admin settings)
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { logger } from '@/lib/logger/logger';
 
 let cachedGenAI: GoogleGenerativeAI | null = null;
+let cachedOrgId: string | null = null;
 let lastKeyFetch = 0;
 const KEY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Get API key from Firestore admin settings
+ * Get API key from organization settings or fallback to platform admin settings
  */
-async function getApiKey(): Promise<string> {
+async function getApiKey(organizationId?: string): Promise<string> {
   try {
-    // Check cache first
-    if (cachedGenAI && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
+    // Check cache first (invalidate if different org)
+    if (cachedGenAI && cachedOrgId === (organizationId ?? null) && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
       return 'cached';
     }
 
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-    const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+    let apiKey: string | null = null;
 
-    // Extract API key - prefer Gemini, fallback to Google key (Explicit Ternary for STRING)
-    const geminiKey = adminKeys?.gemini?.apiKey;
-    const googleKey = adminKeys?.google?.apiKey;
-    const apiKey = (geminiKey !== '' && geminiKey != null) ? geminiKey : googleKey;
-    
-    if (!apiKey) {
-      throw new Error('Gemini API key not configured in admin settings. Please add it at /admin/system/api-keys');
+    // Try organization-specific keys first if organizationId provided
+    if (organizationId) {
+      try {
+        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+        apiKey = await apiKeyService.getServiceKey(organizationId, 'gemini');
+
+        if (apiKey) {
+          logger.info('[Gemini] Using organization-specific API key', {
+            organizationId,
+            file: 'gemini-service.ts'
+          });
+        }
+      } catch (error) {
+        logger.warn('[Gemini] Could not fetch org-specific key, falling back to platform key', {
+          organizationId,
+          error,
+          file: 'gemini-service.ts'
+        });
+      }
     }
-    
+
+    // Fallback to platform admin keys if no org key found
+    if (!apiKey) {
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+
+      // Extract API key - prefer Gemini, fallback to Google key (Explicit Ternary for STRING)
+      const geminiKey = adminKeys?.gemini?.apiKey;
+      const googleKey = adminKeys?.google?.apiKey;
+      apiKey = (geminiKey !== '' && geminiKey != null) ? geminiKey : googleKey;
+
+      if (apiKey) {
+        logger.info('[Gemini] Using platform admin API key', { file: 'gemini-service.ts' });
+      }
+    }
+
+    if (!apiKey) {
+      throw new Error('Gemini API key not configured. Please add it in organization settings or admin settings.');
+    }
+
     // Update cache
     cachedGenAI = new GoogleGenerativeAI(apiKey);
+    cachedOrgId = organizationId ?? null;
     lastKeyFetch = Date.now();
-    
+
     return apiKey;
   } catch (error: any) {
     logger.error('Error fetching Gemini API key:', error, { file: 'gemini-service.ts' });
-    throw new Error('Failed to fetch Gemini API key from admin settings');
+    throw new Error('Failed to fetch Gemini API key from settings');
   }
 }
 
@@ -62,8 +94,8 @@ export interface ChatResponse {
 /**
  * Initialize a chat model
  */
-async function getModel(modelName: string = 'gemini-2.0-flash-exp') {
-  await getApiKey(); // Ensure key is loaded
+async function getModel(organizationId?: string, modelName: string = 'gemini-2.0-flash-exp') {
+  await getApiKey(organizationId); // Ensure key is loaded with org context
   if (!cachedGenAI) {
     throw new Error('Gemini API key not configured');
   }
@@ -75,10 +107,11 @@ async function getModel(modelName: string = 'gemini-2.0-flash-exp') {
  */
 export async function sendChatMessage(
   messages: ChatMessage[],
-  systemInstruction?: string
+  systemInstruction?: string,
+  organizationId?: string
 ): Promise<ChatResponse> {
   try {
-    const model = await getModel();
+    const model = await getModel(organizationId);
     
     // Convert messages to Gemini format
     const history = messages
@@ -120,10 +153,11 @@ export async function sendChatMessage(
  */
 export async function generateText(
   prompt: string,
-  systemInstruction?: string
+  systemInstruction?: string,
+  organizationId?: string
 ): Promise<ChatResponse> {
   try {
-    const model = await getModel();
+    const model = await getModel(organizationId);
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       systemInstruction: systemInstruction,
@@ -157,10 +191,11 @@ export async function generateText(
  */
 export async function* streamChatMessage(
   messages: ChatMessage[],
-  systemInstruction?: string
+  systemInstruction?: string,
+  organizationId?: string
 ): AsyncGenerator<string, void, unknown> {
   try {
-    const model = await getModel();
+    const model = await getModel(organizationId);
     
     const history = messages
       .filter(m => m.role !== 'system')

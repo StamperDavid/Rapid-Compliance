@@ -1,10 +1,10 @@
 /**
  * Voice Service Module
- * Multi-provider VoIP abstraction layer
+ * Multi-provider VoIP abstraction layer with AI-powered conversation
  *
  * Usage:
  * ```typescript
- * import { VoiceProviderFactory } from '@/lib/voice';
+ * import { VoiceProviderFactory, voiceAgentHandler, aiConversationService } from '@/lib/voice';
  *
  * // Get the best available provider for an organization
  * const provider = await VoiceProviderFactory.getProvider(orgId);
@@ -12,8 +12,9 @@
  * // Initiate a call
  * const call = await provider.initiateCall('+15551234567', 'agent-123');
  *
- * // Send SMS
- * const sms = await provider.sendSMS('+15551234567', 'Hello!');
+ * // Start AI conversation
+ * await voiceAgentHandler.initialize({ mode: 'prospector', organizationId: orgId, agentId: 'ai-1' });
+ * const response = await voiceAgentHandler.startConversation(call);
  *
  * // Get cost comparison
  * const costs = await VoiceProviderFactory.getCostComparison(orgId);
@@ -32,18 +33,37 @@ export { TelnyxProvider } from './providers/telnyx-provider';
 
 // Voice Agent Handler (Prospector & Closer modes)
 export { voiceAgentHandler } from './voice-agent-handler';
-export type { VoiceAgentMode, VoiceAgentConfig, AgentResponse } from './voice-agent-handler';
+export type {
+  VoiceAgentMode,
+  VoiceAgentConfig,
+  AgentResponse,
+  ConversationContext,
+  ConversationState,
+} from './voice-agent-handler';
+
+// AI Conversation Service
+export { aiConversationService } from './ai-conversation-service';
+export type {
+  AIConversationMode,
+  ConversationConfig,
+  ConversationTurn,
+  AIResponse,
+} from './ai-conversation-service';
 
 // Call Transfer Service
 export { callTransferService } from './call-transfer-service';
+export type { TransferRequest, TransferResult, AIHandoffContext } from './call-transfer-service';
+
+// Call Context Service
+export { callContextService } from './call-context-service';
+export type { StoredCallContext, CallContextQuery } from './call-context-service';
 
 // CRM Voice Activity
 export { crmVoiceActivity } from './crm-voice-activity';
 
-// Legacy compatibility - re-export key functions from old service
-// This allows gradual migration from the old API
+// Legacy compatibility - re-export key functions from old API
 import { VoiceProviderFactory } from './voice-factory';
-import type { VoiceCall, SMSMessage, InitiateCallOptions } from './types';
+import type { VoiceCall, SMSMessage } from './types';
 
 /**
  * @deprecated Use VoiceProviderFactory.getProvider() instead

@@ -9,7 +9,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import AdminBar from '@/components/AdminBar';
 import type { SiteConfig } from '@/types/website';
 
 export default function SEOManagementPage() {
@@ -121,7 +120,6 @@ Sitemap: https://yoursite.com/sitemap.xml`;
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Loading SEO settings...</div>
       </div>
     );
@@ -130,7 +128,6 @@ Sitemap: https://yoursite.com/sitemap.xml`;
   if (!settings) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <AdminBar />
         <div>Failed to load SEO settings</div>
       </div>
     );
@@ -138,8 +135,6 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: '#f5f5f5' }}>
-      <AdminBar />
-
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
