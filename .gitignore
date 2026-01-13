@@ -81,3 +81,7 @@ audit_*.json
 *lint*.json
 CLUSTER_REPORT.txt
 error-cluster-report.json
+
+# AI Tooling Temp Files
+tmpclaude*
+.tmpclaude*
