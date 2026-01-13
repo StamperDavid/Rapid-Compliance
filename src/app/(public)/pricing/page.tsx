@@ -252,7 +252,7 @@ function FallbackContent() {
                       <div className="text-gray-300">Platform Fee</div>
                       <div className="text-xs text-indigo-400">Monthly bill from us</div>
                     </div>
-                    <span className="text-white font-semibold">$650/mo</span>
+                    <span className="text-white font-semibold">$400/mo</span>
                   </div>
                   <div className="flex justify-between items-center pb-3 border-b border-indigo-500/30">
                     <div>
@@ -266,7 +266,7 @@ function FallbackContent() {
                   </div>
                   <div className="flex justify-between items-center pt-3 border-t-2 border-indigo-500/50">
                     <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>
-                    <span className="text-indigo-300 font-bold text-2xl">$750/mo</span>
+                    <span className="text-indigo-300 font-bold text-2xl">$500/mo</span>
                   </div>
                 </div>
               </div>
@@ -275,7 +275,7 @@ function FallbackContent() {
             <div className="mt-8 text-center">
               <div className="inline-block bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-xl px-8 py-4">
                 <p className="text-indigo-300 font-bold text-2xl mb-2">
-                  You Save: $1,150/month ($13,800/year)
+                  You Save: $1,400/month ($16,800/year)
                 </p>
                 <p className="text-white text-sm">
                   Same functionality. Full transparency. Massive savings.

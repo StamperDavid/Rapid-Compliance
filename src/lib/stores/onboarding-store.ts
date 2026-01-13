@@ -198,8 +198,11 @@ export interface OnboardingState {
   selectedIndustry: IndustryOption | null;
   customIndustry?: string;
 
-  // Account info (pre-signup)
+  // Contact info (collected in step 1)
+  fullName: string;
   email: string;
+  phoneNumber: string;
+  nicheDescription: string;
   companyName: string;
 
   // Default trial plan (hidden from user)
@@ -213,6 +216,7 @@ export interface OnboardingState {
   // Actions
   setIndustry: (industry: IndustryOption) => void;
   setCustomIndustry: (name: string) => void;
+  setContactInfo: (info: { fullName: string; email: string; phoneNumber: string; nicheDescription: string }) => void;
   setAccountInfo: (email: string, companyName: string) => void;
   setStep: (step: OnboardingState['currentStep']) => void;
   reset: () => void;
@@ -223,7 +227,10 @@ const initialState = {
   currentStep: 'industry' as const,
   selectedIndustry: null,
   customIndustry: undefined,
+  fullName: '',
   email: '',
+  phoneNumber: '',
+  nicheDescription: '',
   companyName: '',
   planId: 'trial', // Default trial plan - 1000 records
   trialRecords: 1000,
@@ -243,6 +250,13 @@ export const useOnboardingStore = create<OnboardingState>()(
 
       setCustomIndustry: (name) => set({
         customIndustry: name,
+      }),
+
+      setContactInfo: (info) => set({
+        fullName: info.fullName,
+        email: info.email,
+        phoneNumber: info.phoneNumber,
+        nicheDescription: info.nicheDescription,
       }),
 
       setAccountInfo: (email, companyName) => set({
@@ -270,7 +284,10 @@ export const useOnboardingStore = create<OnboardingState>()(
         currentStep: state.currentStep,
         selectedIndustry: state.selectedIndustry,
         customIndustry: state.customIndustry,
+        fullName: state.fullName,
         email: state.email,
+        phoneNumber: state.phoneNumber,
+        nicheDescription: state.nicheDescription,
         companyName: state.companyName,
         planId: state.planId,
         trialRecords: state.trialRecords,

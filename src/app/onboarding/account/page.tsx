@@ -5,6 +5,7 @@
  *
  * Second step of onboarding - create account after industry selection.
  * Skips plan selection entirely - users get default trial plan.
+ * Updated with glassmorphism theme to match industry selection page.
  */
 
 import { useState, useEffect } from 'react';
@@ -18,6 +19,7 @@ import { auth } from '@/lib/firebase/config';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
+import { Building2, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function AccountCreationPage() {
   const router = useRouter();
@@ -25,7 +27,10 @@ export default function AccountCreationPage() {
   const {
     selectedIndustry,
     customIndustry,
+    fullName,
     email: storedEmail,
+    phoneNumber,
+    nicheDescription,
     companyName: storedCompanyName,
     setAccountInfo,
     setStep,
@@ -51,10 +56,8 @@ export default function AccountCreationPage() {
   }, [selectedIndustry, router]);
 
   // If already logged in, redirect to their workspace
-  // They can create additional organizations from the dashboard
   useEffect(() => {
     if (user) {
-      // Redirect to dashboard - they can manage orgs there
       router.push('/workspace');
     }
   }, [user, router]);
@@ -115,6 +118,7 @@ export default function AccountCreationPage() {
         industry: selectedIndustry?.id || 'other',
         industryName: selectedIndustry?.name || customIndustry || 'Other',
         customIndustry: customIndustry || null,
+        nicheDescription: nicheDescription || null,
 
         // Default Trial Plan - no payment required
         subscription: {
@@ -122,7 +126,7 @@ export default function AccountCreationPage() {
           status: 'trial',
           trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
           isTrialing: true,
-          trialRequiresPayment: false, // No credit card required!
+          trialRequiresPayment: false,
           recordCount: 0,
           recordCapacity: trialRecords,
         },
@@ -136,10 +140,12 @@ export default function AccountCreationPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // Create user profile
+      // Create user profile with full contact info
       await setDoc(doc(db, COLLECTIONS.USERS, userId), {
         email: formData.email,
-        displayName: formData.companyName,
+        displayName: fullName || formData.companyName,
+        fullName: fullName || null,
+        phoneNumber: phoneNumber || null,
         organizations: [orgId],
         defaultOrganization: orgId,
         createdAt: serverTimestamp(),
@@ -175,8 +181,11 @@ export default function AccountCreationPage() {
   const industryDisplay = customIndustry || selectedIndustry?.name || 'Your Industry';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Background Pattern */}
+    <div className="min-h-screen bg-black">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-black to-purple-950/20" />
+
+      {/* Grid pattern overlay */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
 
       {/* Content */}
@@ -199,12 +208,12 @@ export default function AccountCreationPage() {
             </h1>
 
             {/* Industry badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full border border-slate-700">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
               <span className="text-lg">{selectedIndustry?.icon || '🌐'}</span>
-              <span className="text-slate-300">{industryDisplay}</span>
+              <span className="text-gray-300">{industryDisplay}</span>
               <Link
                 href="/onboarding/industry"
-                className="text-indigo-400 hover:text-indigo-300 text-sm ml-2"
+                className="text-indigo-400 hover:text-indigo-300 text-sm ml-2 transition-colors"
               >
                 Change
               </Link>
@@ -213,111 +222,110 @@ export default function AccountCreationPage() {
 
           {/* Progress indicator */}
           <div className="flex items-center justify-center gap-2 mt-6">
-            <div className="w-8 h-2 rounded-full bg-indigo-500" />
-            <div className="w-8 h-2 rounded-full bg-indigo-500" />
-            <div className="w-8 h-2 rounded-full bg-slate-700" />
+            <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
+            <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
+            <div className="w-10 h-1.5 rounded-full bg-white/10" />
           </div>
         </div>
 
-        {/* Form */}
+        {/* Form Card - Glassmorphism */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-8"
+          className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-8"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Company Name */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Company / Brand Name
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Company / Brand Name <span className="text-red-400">*</span>
               </label>
-              <input
-                type="text"
-                value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                placeholder="Acme Inc."
-                className={`w-full px-4 py-3 bg-slate-900 border rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                  errors.companyName ? 'border-red-500' : 'border-slate-600'
-                }`}
-              />
+              <div className="relative">
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  type="text"
+                  value={formData.companyName}
+                  onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                  placeholder="Acme Inc."
+                  className={`w-full pl-12 pr-4 py-3.5 bg-white/5 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all ${
+                    errors.companyName ? 'border-red-500/50' : 'border-white/10 focus:border-indigo-500/50'
+                  }`}
+                />
+              </div>
               {errors.companyName && (
-                <p className="mt-1 text-sm text-red-400">{errors.companyName}</p>
+                <p className="mt-1.5 text-sm text-red-400">{errors.companyName}</p>
               )}
             </div>
 
-            {/* Email */}
+            {/* Email - Pre-filled from step 1 */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email Address
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Email Address <span className="text-red-400">*</span>
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="you@company.com"
-                className={`w-full px-4 py-3 bg-slate-900 border rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                  errors.email ? 'border-red-500' : 'border-slate-600'
+                className={`w-full px-4 py-3.5 bg-white/5 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all ${
+                  errors.email ? 'border-red-500/50' : 'border-white/10 focus:border-indigo-500/50'
                 }`}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-400">{errors.email}</p>
+                <p className="mt-1.5 text-sm text-red-400">{errors.email}</p>
               )}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Password
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Password <span className="text-red-400">*</span>
               </label>
               <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
-                  className={`w-full px-4 py-3 bg-slate-900 border rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent pr-12 ${
-                    errors.password ? 'border-red-500' : 'border-slate-600'
+                  className={`w-full pl-12 pr-12 py-3.5 bg-white/5 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all ${
+                    errors.password ? 'border-red-500/50' : 'border-white/10 focus:border-indigo-500/50'
                   }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
                 >
-                  {showPassword ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-400">{errors.password}</p>
+                <p className="mt-1.5 text-sm text-red-400">{errors.password}</p>
               )}
+              <p className="mt-1.5 text-xs text-gray-500">Minimum 8 characters</p>
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Confirm Password
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Confirm Password <span className="text-red-400">*</span>
               </label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                placeholder="••••••••"
-                className={`w-full px-4 py-3 bg-slate-900 border rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
-                  errors.confirmPassword ? 'border-red-500' : 'border-slate-600'
-                }`}
-              />
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  placeholder="••••••••"
+                  className={`w-full pl-12 pr-4 py-3.5 bg-white/5 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all ${
+                    errors.confirmPassword ? 'border-red-500/50' : 'border-white/10 focus:border-indigo-500/50'
+                  }`}
+                />
+              </div>
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>
+                <p className="mt-1.5 text-sm text-red-400">{errors.confirmPassword}</p>
               )}
             </div>
 
@@ -338,7 +346,7 @@ export default function AccountCreationPage() {
                 </div>
                 <div>
                   <p className="text-emerald-300 font-medium">Free 14-day trial</p>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-gray-400 text-sm">
                     Start with {trialRecords.toLocaleString()} records. No credit card required.
                   </p>
                 </div>
@@ -349,7 +357,7 @@ export default function AccountCreationPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -371,22 +379,22 @@ export default function AccountCreationPage() {
           </form>
 
           {/* Terms */}
-          <p className="mt-6 text-center text-slate-500 text-sm">
+          <p className="mt-6 text-center text-gray-500 text-sm">
             By creating an account, you agree to our{' '}
-            <Link href="/terms" className="text-indigo-400 hover:text-indigo-300">
+            <Link href="/terms" className="text-indigo-400 hover:text-indigo-300 transition-colors">
               Terms of Service
             </Link>{' '}
             and{' '}
-            <Link href="/privacy" className="text-indigo-400 hover:text-indigo-300">
+            <Link href="/privacy" className="text-indigo-400 hover:text-indigo-300 transition-colors">
               Privacy Policy
             </Link>
           </p>
         </motion.div>
 
         {/* Sign In Link */}
-        <div className="mt-8 text-center text-slate-500 text-sm">
+        <div className="mt-8 text-center text-gray-500 text-sm">
           Already have an account?{' '}
-          <Link href="/login" className="text-indigo-400 hover:text-indigo-300">
+          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors">
             Sign in
           </Link>
         </div>

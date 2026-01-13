@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import Tooltip from '@/components/Tooltip';
+import { AdminOrchestrator } from '@/components/orchestrator';
 
 export default function AdminLayout({
   children,
@@ -186,6 +187,9 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
+
+      {/* Admin AI Orchestrator - Platform Master Architect */}
+      <AdminOrchestrator />
     </div>
   );
 }

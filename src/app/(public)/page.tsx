@@ -531,7 +531,7 @@ export default function LandingPage() {
                 <div>
                   <div className="flex justify-between items-baseline mb-1">
                     <span className="text-gray-300">Platform Fee <span className="text-xs text-indigo-400">(from us)</span></span>
-                    <span className="text-white font-semibold">$650/mo</span>
+                    <span className="text-white font-semibold">$400/mo</span>
                   </div>
                 </div>
                 <div>
@@ -543,7 +543,7 @@ export default function LandingPage() {
                 </div>
                 <div className="border-t border-indigo-500/50 pt-4 mt-4 flex justify-between items-center">
                   <span className="text-white font-bold text-lg">TOTAL YOU PAY</span>
-                  <span className="text-indigo-300 font-bold text-3xl">$750/mo</span>
+                  <span className="text-indigo-300 font-bold text-3xl">$500/mo</span>
                 </div>
               </div>
             </div>
@@ -552,10 +552,10 @@ export default function LandingPage() {
           <div className="text-center">
             <div className="inline-block bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/50 rounded-xl px-8 py-4">
               <p className="text-indigo-300 font-bold text-2xl mb-1">
-                You Save: $1,150/month
+                You Save: $1,400/month
               </p>
               <p className="text-white text-sm">
-                That&apos;s $13,800 saved per year with complete transparency
+                That&apos;s $16,800 saved per year with complete transparency
               </p>
             </div>
           </div>
@@ -769,21 +769,21 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Coming Soon: Video */}
-            <div className="p-8 bg-gradient-to-br from-slate-800/30 to-indigo-900/10 border border-amber-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-amber-400 mb-2">Coming Soon</div>
+            {/* Video Generation - Active */}
+            <div className="p-8 bg-gradient-to-br from-slate-800/30 to-indigo-900/10 border border-indigo-500/30 rounded-2xl">
+              <div className="text-sm font-semibold text-indigo-400 mb-2">Active</div>
               <h3 className="text-2xl font-bold text-white mb-4">Video Generation</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-400">⏳</span>
+                  <span className="text-green-400">✓</span>
                   <span>AI Avatar Videos (HeyGen)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-400">⏳</span>
+                  <span className="text-green-400">✓</span>
                   <span>Text-to-Video (Sora)</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-amber-400">⏳</span>
+                  <span className="text-green-400">✓</span>
                   <span>Automated Video Ads</span>
                 </li>
               </ul>

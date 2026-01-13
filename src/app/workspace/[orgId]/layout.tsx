@@ -6,7 +6,7 @@ import { useParams, usePathname } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-// STANDARD_SCHEMAS removed - unused
+import { MerchantOrchestrator } from '@/components/orchestrator';
 
 export default function WorkspaceLayout({
   children,
@@ -246,6 +246,9 @@ export default function WorkspaceLayout({
           {children}
         </main>
       </div>
+
+      {/* Merchant AI Orchestrator - Floating Assistant */}
+      <MerchantOrchestrator orgId={orgId} />
     </div>
   );
 }
