@@ -83,19 +83,19 @@ export default function AdminLayout({
         )}
 
         {/* Sidebar */}
-        <aside style={{
-          width: '260px',
-          backgroundColor: '#0a0a0a',
-          borderRight: '1px solid #1a1a1a',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          height: '100%',
-          zIndex: 50,
-          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
-          transition: 'transform 0.3s',
-        }}
-        className="md:relative md:translate-x-0"
+        <aside
+          className={`
+            fixed md:relative
+            w-[260px]
+            h-full
+            bg-[#0a0a0a]
+            border-r border-[#1a1a1a]
+            flex flex-col
+            z-50 md:z-auto
+            transition-transform duration-300
+            ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+            md:translate-x-0
+          `}
         >
         {/* Header */}
         <div style={{ padding: '1.5rem', borderBottom: '1px solid #1a1a1a' }}>
@@ -127,6 +127,7 @@ export default function AdminLayout({
           <NavSection title="Billing">
             <NavLink href="/admin/billing" icon="💳" tooltip="View subscriptions, payments, and invoices (all tabs on one page)">Billing</NavLink>
             <NavLink href="/admin/subscriptions" icon="💰" tooltip="Manage customer subscriptions and plans">Subscriptions</NavLink>
+            <NavLink href="/admin/global-config" icon="🎯" tooltip="Manage platform pricing plans and promotional coupons globally">Global Config</NavLink>
           </NavSection>
 
           <NavSection title="Analytics">

@@ -160,19 +160,19 @@ export default function WorkspaceLayout({
         )}
 
         {/* Left Sidebar - Minimal */}
-        <aside style={{
-          width: '260px',
-          backgroundColor: '#0a0a0a',
-          borderRight: '1px solid #1a1a1a',
-          transition: 'transform 0.3s',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          height: '100%',
-          zIndex: 50,
-          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-        }}
-        className="md:relative md:translate-x-0 md:w-[260px]"
+        <aside
+          className={`
+            fixed md:relative
+            w-[260px]
+            h-full
+            bg-[#0a0a0a]
+            border-r border-[#1a1a1a]
+            flex flex-col
+            z-50 md:z-auto
+            transition-transform duration-300
+            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            md:translate-x-0
+          `}
         >
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             {/* Render all sections */}
