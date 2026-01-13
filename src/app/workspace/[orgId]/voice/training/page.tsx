@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import type { VoiceTrainingSettings, BrandDNA } from '@/types/organization';
+import type { TTSEngineType, TTSEngineConfig, TTSVoice, TTSProviderInfo, APIKeyMode } from '@/lib/voice/tts/types';
+import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS } from '@/lib/voice/tts/types';
 
 // Types
 interface CallMessage {
@@ -91,6 +93,18 @@ export default function VoiceAITrainingLabPage() {
   const [newKnowledgeTitle, setNewKnowledgeTitle] = useState('');
   const [newKnowledgeContent, setNewKnowledgeContent] = useState('');
   const [newKnowledgeType, setNewKnowledgeType] = useState<'script' | 'faq' | 'product' | 'policy'>('faq');
+
+  // TTS Voice Engine state
+  const [ttsEngine, setTtsEngine] = useState<TTSEngineType>('native');
+  const [ttsKeyMode, setTtsKeyMode] = useState<APIKeyMode>('platform');
+  const [ttsUserApiKey, setTtsUserApiKey] = useState('');
+  const [ttsVoices, setTtsVoices] = useState<TTSVoice[]>([]);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
+  const [loadingVoices, setLoadingVoices] = useState(false);
+  const [testingVoice, setTestingVoice] = useState(false);
+  const [validatingKey, setValidatingKey] = useState(false);
+  const [apiKeyValid, setApiKeyValid] = useState<boolean | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Theme colors
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
@@ -237,6 +251,147 @@ export default function VoiceAITrainingLabPage() {
     ]);
   };
 
+  // Load TTS config and voices
+  const loadTTSConfig = async () => {
+    try {
+      const response = await fetch(`/api/voice/tts?orgId=${orgId}&action=config`);
+      const data = await response.json();
+      if (data.success && data.config) {
+        setTtsEngine(data.config.engine || 'native');
+        setTtsKeyMode(data.config.keyMode || 'platform');
+        setSelectedVoiceId(data.config.voiceId || '');
+      }
+    } catch (error) {
+      logger.error('Error loading TTS config:', error, { file: 'voice-training-page.tsx' });
+    }
+  };
+
+  const loadTTSVoices = async (engine: TTSEngineType) => {
+    setLoadingVoices(true);
+    try {
+      const response = await fetch(`/api/voice/tts?orgId=${orgId}&engine=${engine}`);
+      const data = await response.json();
+      if (data.success && data.voices) {
+        setTtsVoices(data.voices);
+        // Set default voice if none selected
+        if (!selectedVoiceId && data.voices.length > 0) {
+          setSelectedVoiceId(data.voices[0].id);
+        }
+      }
+    } catch (error) {
+      logger.error('Error loading TTS voices:', error, { file: 'voice-training-page.tsx' });
+    } finally {
+      setLoadingVoices(false);
+    }
+  };
+
+  // Load TTS config on mount
+  useEffect(() => {
+    loadTTSConfig();
+  }, [orgId]);
+
+  // Load voices when engine changes
+  useEffect(() => {
+    loadTTSVoices(ttsEngine);
+  }, [ttsEngine, orgId]);
+
+  const handleEngineChange = (engine: TTSEngineType) => {
+    setTtsEngine(engine);
+    setSelectedVoiceId('');
+    setApiKeyValid(null);
+    setTtsUserApiKey('');
+    // Reset to platform keys for native
+    if (engine === 'native') {
+      setTtsKeyMode('platform');
+    }
+  };
+
+  const handleValidateApiKey = async () => {
+    if (!ttsUserApiKey.trim()) return;
+    setValidatingKey(true);
+    setApiKeyValid(null);
+    try {
+      const response = await fetch('/api/voice/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'validate-key',
+          engine: ttsEngine,
+          apiKey: ttsUserApiKey,
+        }),
+      });
+      const data = await response.json();
+      setApiKeyValid(data.valid);
+    } catch (error) {
+      logger.error('Error validating API key:', error, { file: 'voice-training-page.tsx' });
+      setApiKeyValid(false);
+    } finally {
+      setValidatingKey(false);
+    }
+  };
+
+  const handleTestVoice = async () => {
+    setTestingVoice(true);
+    try {
+      const testText = voiceSettings.greetingScript || 'Hello, this is a test of your selected voice engine. The quality sounds great!';
+      const response = await fetch('/api/voice/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: testText,
+          organizationId: orgId,
+          engine: ttsEngine,
+          voiceId: selectedVoiceId,
+        }),
+      });
+      const data = await response.json();
+      if (data.success && data.audio) {
+        // Play the audio
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        const audio = new Audio(data.audio);
+        audioRef.current = audio;
+        await audio.play();
+      } else {
+        alert(data.error || 'Failed to generate audio');
+      }
+    } catch (error) {
+      logger.error('Error testing voice:', error, { file: 'voice-training-page.tsx' });
+      alert('Failed to test voice. Please try again.');
+    } finally {
+      setTestingVoice(false);
+    }
+  };
+
+  const handleSaveTTSConfig = async () => {
+    try {
+      const response = await fetch('/api/voice/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save-config',
+          organizationId: orgId,
+          userId: user?.id || 'unknown',
+          config: {
+            engine: ttsEngine,
+            keyMode: ttsKeyMode,
+            userApiKey: ttsKeyMode === 'user' ? ttsUserApiKey : undefined,
+            voiceId: selectedVoiceId,
+            settings: DEFAULT_TTS_CONFIGS[ttsEngine].settings,
+          },
+        }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to save TTS config');
+      }
+    } catch (error) {
+      logger.error('Error saving TTS config:', error, { file: 'voice-training-page.tsx' });
+      throw error;
+    }
+  };
+
   const handleSaveSettings = async () => {
     try {
       setSaving(true);
@@ -277,6 +432,10 @@ export default function VoiceAITrainingLabPage() {
       );
 
       setVoiceSettings(updatedSettings);
+
+      // Also save TTS config
+      await handleSaveTTSConfig();
+
       alert('Voice AI settings saved successfully!');
 
     } catch (error) {
@@ -604,6 +763,255 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem' }}>
               {/* Left: Settings Form */}
               <div>
+                {/* Voice Engine Selection */}
+                <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Voice Engine</h3>
+                      <p style={{ fontSize: '0.875rem', color: '#666666' }}>
+                        Choose the text-to-speech provider for your AI agent's voice
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Engine Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                    {(Object.keys(TTS_PROVIDER_INFO) as TTSEngineType[]).map((engine) => {
+                      const info = TTS_PROVIDER_INFO[engine];
+                      const isSelected = ttsEngine === engine;
+                      return (
+                        <button
+                          key={engine}
+                          onClick={() => handleEngineChange(engine)}
+                          style={{
+                            padding: '1rem',
+                            backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.15)' : '#1a1a1a',
+                            border: isSelected ? `2px solid ${primaryColor}` : '2px solid #333333',
+                            borderRadius: '0.75rem',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                            <span style={{ fontWeight: '600', color: isSelected ? primaryColor : '#ffffff', fontSize: '0.875rem' }}>
+                              {info.name}
+                            </span>
+                            <span style={{
+                              padding: '0.125rem 0.5rem',
+                              backgroundColor: info.quality === 'ultra' ? 'rgba(168, 85, 247, 0.2)' : info.quality === 'premium' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                              color: info.quality === 'ultra' ? '#a855f7' : info.quality === 'premium' ? '#10b981' : '#f59e0b',
+                              borderRadius: '9999px',
+                              fontSize: '0.625rem',
+                              fontWeight: '600',
+                              textTransform: 'uppercase',
+                            }}>
+                              {info.quality}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.75rem', color: '#999999', marginBottom: '0.75rem', lineHeight: '1.4' }}>
+                            {info.description.substring(0, 80)}...
+                          </p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#666666' }}>
+                              ${(info.pricing.costPer1kChars / 100).toFixed(3)}/1k chars
+                            </span>
+                            <span style={{
+                              fontSize: '0.625rem',
+                              padding: '0.125rem 0.375rem',
+                              backgroundColor: info.latency === 'low' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                              color: info.latency === 'low' ? '#10b981' : '#f59e0b',
+                              borderRadius: '0.25rem',
+                            }}>
+                              {info.latency} latency
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* API Key Mode (for Unreal and ElevenLabs) */}
+                  {(ttsEngine === 'unreal' || ttsEngine === 'elevenlabs') && (
+                    <div style={{ padding: '1rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                      <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999999', marginBottom: '0.5rem', display: 'block' }}>
+                          API Key Mode
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                          <button
+                            onClick={() => setTtsKeyMode('platform')}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              backgroundColor: ttsKeyMode === 'platform' ? 'rgba(99, 102, 241, 0.2)' : '#0a0a0a',
+                              border: ttsKeyMode === 'platform' ? `1px solid ${primaryColor}` : '1px solid #333333',
+                              borderRadius: '0.5rem',
+                              color: ttsKeyMode === 'platform' ? primaryColor : '#999999',
+                              cursor: 'pointer',
+                              fontSize: '0.875rem',
+                              fontWeight: ttsKeyMode === 'platform' ? '600' : '400',
+                            }}
+                          >
+                            Use Platform Keys
+                            <div style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.25rem' }}>
+                              We bill you at usage rates
+                            </div>
+                          </button>
+                          <button
+                            onClick={() => setTtsKeyMode('user')}
+                            style={{
+                              flex: 1,
+                              padding: '0.75rem',
+                              backgroundColor: ttsKeyMode === 'user' ? 'rgba(99, 102, 241, 0.2)' : '#0a0a0a',
+                              border: ttsKeyMode === 'user' ? `1px solid ${primaryColor}` : '1px solid #333333',
+                              borderRadius: '0.5rem',
+                              color: ttsKeyMode === 'user' ? primaryColor : '#999999',
+                              cursor: 'pointer',
+                              fontSize: '0.875rem',
+                              fontWeight: ttsKeyMode === 'user' ? '600' : '400',
+                            }}
+                          >
+                            Use My Own Key
+                            <div style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.25rem' }}>
+                              Pay directly to provider
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* User API Key Input */}
+                      {ttsKeyMode === 'user' && (
+                        <div>
+                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999999', marginBottom: '0.5rem', display: 'block' }}>
+                            Your {TTS_PROVIDER_INFO[ttsEngine].name} API Key
+                          </label>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input
+                              type="password"
+                              value={ttsUserApiKey}
+                              onChange={(e) => {
+                                setTtsUserApiKey(e.target.value);
+                                setApiKeyValid(null);
+                              }}
+                              placeholder={`Enter your ${TTS_PROVIDER_INFO[ttsEngine].name} API key...`}
+                              style={{
+                                flex: 1,
+                                padding: '0.75rem',
+                                backgroundColor: '#0a0a0a',
+                                border: apiKeyValid === true ? '1px solid #10b981' : apiKeyValid === false ? '1px solid #ef4444' : '1px solid #333333',
+                                borderRadius: '0.5rem',
+                                color: '#ffffff',
+                                fontSize: '0.875rem',
+                              }}
+                            />
+                            <button
+                              onClick={handleValidateApiKey}
+                              disabled={validatingKey || !ttsUserApiKey.trim()}
+                              style={{
+                                padding: '0.75rem 1rem',
+                                backgroundColor: validatingKey ? '#333333' : '#333333',
+                                border: 'none',
+                                borderRadius: '0.5rem',
+                                color: '#ffffff',
+                                cursor: validatingKey || !ttsUserApiKey.trim() ? 'not-allowed' : 'pointer',
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {validatingKey ? 'Validating...' : 'Validate'}
+                            </button>
+                          </div>
+                          {apiKeyValid !== null && (
+                            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: apiKeyValid ? '#10b981' : '#ef4444' }}>
+                              {apiKeyValid ? 'API key is valid' : 'Invalid API key'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Voice Selection */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: '#999999', marginBottom: '0.5rem', display: 'block' }}>
+                      Select Voice
+                    </label>
+                    <select
+                      value={selectedVoiceId}
+                      onChange={(e) => setSelectedVoiceId(e.target.value)}
+                      disabled={loadingVoices}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333333',
+                        borderRadius: '0.5rem',
+                        color: '#ffffff',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      {loadingVoices ? (
+                        <option>Loading voices...</option>
+                      ) : (
+                        ttsVoices.map((voice) => (
+                          <option key={voice.id} value={voice.id}>
+                            {voice.name} {voice.gender ? `(${voice.gender})` : ''} {voice.language ? `- ${voice.language}` : ''}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    {ttsVoices.find(v => v.id === selectedVoiceId)?.description && (
+                      <p style={{ fontSize: '0.75rem', color: '#666666', marginTop: '0.5rem' }}>
+                        {ttsVoices.find(v => v.id === selectedVoiceId)?.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Test Voice Button */}
+                  <button
+                    onClick={handleTestVoice}
+                    disabled={testingVoice || !selectedVoiceId}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: testingVoice ? '#333333' : '#10b981',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      cursor: testingVoice || !selectedVoiceId ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {testingVoice ? 'Generating...' : 'Test Voice'}
+                  </button>
+
+                  {/* Provider Features */}
+                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#666666', marginBottom: '0.5rem' }}>Features:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {TTS_PROVIDER_INFO[ttsEngine].features.slice(0, 4).map((feature, i) => (
+                        <span key={i} style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: '#0a0a0a',
+                          border: '1px solid #333333',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.625rem',
+                          color: '#999999',
+                        }}>
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Brand DNA Inheritance */}
                 <div style={{ padding: '1.5rem', backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
