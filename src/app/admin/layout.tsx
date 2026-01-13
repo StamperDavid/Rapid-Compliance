@@ -134,6 +134,7 @@ export default function AdminLayout({
           <NavSection title="Analytics">
             <NavLink href="/admin/analytics" icon="📈" tooltip="Platform-wide usage analytics: API calls, storage, feature usage">Usage Analytics</NavLink>
             <NavLink href="/admin/revenue" icon="💵" tooltip="Revenue reports, MRR, ARR, and revenue trends">Revenue</NavLink>
+            <NavLink href="/admin/recovery" icon="🔄" tooltip="Lost leads recovery rate, channel performance, and AI insights">Recovery Analytics</NavLink>
             <NavLink href="/admin/sales-agent" icon="🤖" tooltip="Your AI sales agent performance, conversations, and training">Sales Agent</NavLink>
           </NavSection>
           
