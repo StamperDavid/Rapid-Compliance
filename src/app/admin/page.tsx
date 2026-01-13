@@ -304,7 +304,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         <QuickStat 
           label="Active Orgs" 
           value={metrics?.activeOrganizations ?? 0}

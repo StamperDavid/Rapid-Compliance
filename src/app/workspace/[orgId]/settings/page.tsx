@@ -61,6 +61,7 @@ export default function SettingsPage() {
         { icon: '📊', label: 'Accounting Software', description: 'Sync invoices, payments, and customers to QuickBooks, Xero, FreshBooks, Wave', href: `/workspace/${orgId}/settings/accounting`, permission: canManageIntegrations },
         { icon: '🔌', label: 'Business Apps', description: 'Connect Slack, Zapier, and other third-party apps', href: `/workspace/${orgId}/settings/integrations`, permission: canManageIntegrations },
         { icon: '🌐', label: 'Webhooks', description: 'Configure webhooks for real-time event notifications', href: `/workspace/${orgId}/settings/webhooks`, permission: canManageIntegrations },
+        { icon: '🔧', label: 'Custom Tools', description: 'Add external apps and tools as sandboxed iframes in your workspace', href: `/workspace/${orgId}/settings/custom-tools`, permission: canManageOrganization },
       ]
     },
     {

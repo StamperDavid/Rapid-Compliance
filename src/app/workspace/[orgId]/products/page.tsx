@@ -73,7 +73,8 @@ export default function ProductManagementPage() {
         </div>
       ) : (
         <div className="bg-gray-900 rounded-lg overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full">
             <thead className="bg-gray-800">
               <tr>
                 <th className="text-left p-4">Product</th>
@@ -105,6 +106,7 @@ export default function ProductManagementPage() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Pagination */}
           {(hasMore || loading) && (

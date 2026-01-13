@@ -18,7 +18,7 @@ export default function WorkspaceLayout({
   const orgId = params.orgId as string;
   const { user } = useAuth();
   const { theme } = useOrgTheme();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
   const brandName = (theme?.branding?.companyName !== '' && theme?.branding?.companyName != null) ? theme.branding.companyName : 'AI CRM';
@@ -113,11 +113,9 @@ export default function WorkspaceLayout({
 
       {/* Mobile Header with Hamburger */}
       <div style={{
-        display: 'none',
         padding: '1rem',
         borderBottom: '1px solid #1a1a1a',
         backgroundColor: '#0a0a0a',
-        '@media (max-width: 768px)': { display: 'flex' }
       }} className="md:hidden flex items-center justify-between">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -153,11 +151,11 @@ export default function WorkspaceLayout({
         )}
 
         {/* Left Sidebar - Minimal */}
-        <div style={{
-          width: sidebarOpen ? '260px' : '70px',
+        <aside style={{
+          width: '260px',
           backgroundColor: '#0a0a0a',
           borderRight: '1px solid #1a1a1a',
-          transition: 'width 0.3s, transform 0.3s',
+          transition: 'transform 0.3s',
           display: 'flex',
           flexDirection: 'column',
           position: 'fixed',
@@ -165,7 +163,7 @@ export default function WorkspaceLayout({
           zIndex: 50,
           transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
-        className="md:relative md:translate-x-0"
+        className="md:relative md:translate-x-0 md:w-[260px]"
         >
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             {/* Render all sections */}
@@ -174,13 +172,11 @@ export default function WorkspaceLayout({
                 {sectionIdx > 0 && <div style={{ height: '1px', backgroundColor: '#1a1a1a', margin: '1rem 0' }} />}
                 
                 {/* Section Label */}
-                {sidebarOpen && (
-                  <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem', marginTop: sectionIdx > 0 ? '1rem' : '0' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {section.title}
-                    </span>
-                  </div>
-                )}
+                <div style={{ padding: '0 1.25rem', marginBottom: '0.5rem', marginTop: sectionIdx > 0 ? '1rem' : '0' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {section.title}
+                  </span>
+                </div>
                 
                 {/* Section Items */}
                 {section.items.map((item) => (
@@ -200,34 +196,17 @@ export default function WorkspaceLayout({
                       fontWeight: isActive(item.href) ? '600' : '400',
                       textDecoration: 'none'
                     }}
+                    onClick={() => setSidebarOpen(false)}
                   >
                     <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
-                    {sidebarOpen && <span>{item.label}</span>}
+                    <span>{item.label}</span>
                   </Link>
                 ))}
               </div>
             ))}
           </nav>
 
-          {/* Sidebar Toggle */}
-          <div style={{ padding: '1rem', borderTop: '1px solid #1a1a1a' }}>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                backgroundColor: '#1a1a1a',
-                color: '#999',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}
-            >
-              {sidebarOpen ? '← Collapse' : '→'}
-            </button>
-          </div>
-        </div>
+        </aside>
 
         {/* Main Content */}
         <main style={{

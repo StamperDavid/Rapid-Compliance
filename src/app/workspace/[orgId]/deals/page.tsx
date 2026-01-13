@@ -81,7 +81,7 @@ export default function DealsPage() {
 
       {view === 'pipeline' ? (
         <>
-          <div className="grid grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {DEAL_STAGES.map(stage => {
               const stageDeals = getDealsByStage(stage);
               const stageValue = stageDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
@@ -121,7 +121,8 @@ export default function DealsPage() {
         </>
       ) : (
         <div className="bg-gray-900 rounded-lg overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+            <table className="w-full">
             <thead className="bg-gray-800">
               <tr>
                 <th className="text-left p-4">Deal</th>
@@ -155,6 +156,7 @@ export default function DealsPage() {
               )}
             </tbody>
           </table>
+          </div>
 
           {/* Pagination for List View */}
           {(hasMore || loading) && (

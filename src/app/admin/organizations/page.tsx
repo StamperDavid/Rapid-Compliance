@@ -346,7 +346,7 @@ export default function OrganizationsPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         <Tooltip content="Total number of organizations on the platform">
           <div><StatCard label="Total" value={organizations.length} /></div>
         </Tooltip>
@@ -368,15 +368,16 @@ export default function OrganizationsPage() {
         </div>
       ) : (
         <>
-          <div style={{ 
-            backgroundColor: bgPaper, 
-            border: `1px solid ${borderColor}`, 
-            borderRadius: '0.75rem', 
+          <div style={{
+            backgroundColor: bgPaper,
+            border: `1px solid ${borderColor}`,
+            borderRadius: '0.75rem',
             overflow: 'hidden',
             maxHeight: '70vh',
             overflowY: 'auto'
           }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
               <thead style={{ position: 'sticky', top: 0, backgroundColor: bgPaper, zIndex: 10 }}>
                 <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
                   <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>Organization</th>
@@ -510,6 +511,7 @@ export default function OrganizationsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
             {filteredOrgs.length === 0 && (
               <div style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>
                 No organizations found

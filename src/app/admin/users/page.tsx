@@ -155,7 +155,7 @@ export default function UsersPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
         <StatCard label="Total Users" value={users.length} />
         <StatCard label="Active" value={users.filter(u => u.status === 'active').length} />
         <StatCard label="Suspended" value={users.filter(u => u.status === 'suspended').length} />
@@ -169,7 +169,8 @@ export default function UsersPage() {
         </div>
       ) : (
         <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
                 <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.875rem', fontWeight: '600', color: '#666' }}>User</th>
@@ -250,6 +251,7 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
           {filteredUsers.length === 0 && (
             <div style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>
               No users found
