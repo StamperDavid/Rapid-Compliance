@@ -58,10 +58,12 @@ export default function WorkspaceLayout({
       ]
     },
     {
-      title: 'AI',
+      title: 'AI Workforce',
       items: [
         { href: `/workspace/${orgId}/settings/ai-agents/training`, icon: '🤖', label: 'Agent Training' },
-        { href: `/workspace/${orgId}/ai/fine-tuning`, icon: '🎓', label: 'Fine-Tuning' },
+        { href: `/workspace/${orgId}/voice/training`, icon: '🎙️', label: 'Voice AI Lab' },
+        { href: `/workspace/${orgId}/social/training`, icon: '📱', label: 'Social AI Lab' },
+        { href: `/workspace/${orgId}/seo/training`, icon: '🔍', label: 'SEO AI Lab' },
         { href: `/workspace/${orgId}/ai/datasets`, icon: '📚', label: 'Datasets' },
       ]
     },
