@@ -292,8 +292,12 @@ export class SystemHealthService {
     // Generate recommendations
     const recommendations = this.generateRecommendations(features, score);
 
-    // Get active Golden Master
-    const activeGM = goldenMasters.find(gm => gm.status === 'active');
+    // Get active Golden Master (with proper type casting)
+    const activeGM = goldenMasters.find(gm => gm.status === 'active') as {
+      version?: string;
+      deployedAt?: { toDate?: () => Date };
+      avgScore?: number;
+    } | undefined;
 
     // Build stats
     const configuredFeatures = features.filter(f => f.status === 'configured').length;
@@ -310,9 +314,9 @@ export class SystemHealthService {
       goldenMaster: {
         hasBaseModel: !!baseModel,
         hasGoldenMaster: goldenMasters.length > 0,
-        activeVersion: activeGM?.version,
+        activeVersion: activeGM?.version as string | undefined,
         lastTrainedAt: activeGM?.deployedAt?.toDate?.(),
-        trainingScore: activeGM?.avgScore,
+        trainingScore: activeGM?.avgScore as number | undefined,
       },
       data: {
         hasProducts: productCount > 0,
@@ -322,7 +326,7 @@ export class SystemHealthService {
         hasContacts: contactCount > 0,
         contactCount,
         hasBrandDNA: !!organization?.brandDNA,
-        hasKnowledgeBase: !!baseModel?.knowledgeBase?.documents?.length,
+        hasKnowledgeBase: !!(baseModel?.knowledgeBase as { documents?: unknown[] } | undefined)?.documents?.length,
       },
       recommendations,
       stats: {

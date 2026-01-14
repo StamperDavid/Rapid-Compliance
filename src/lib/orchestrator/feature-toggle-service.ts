@@ -13,6 +13,9 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import type { FeatureStatus } from './system-health-service';
 
+// Re-export FeatureStatus for consumers
+export type { FeatureStatus } from './system-health-service';
+
 // ============================================================================
 // TYPES
 // ============================================================================

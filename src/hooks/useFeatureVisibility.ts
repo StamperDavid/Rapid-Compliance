@@ -106,10 +106,10 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
 
   // Toggle a single feature
   const toggleFeature = useCallback(async (featureId: string, hidden: boolean, reason?: string) => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     const status: FeatureStatus = hidden ? 'hidden' : 'unconfigured';
-    await FeatureToggleService.toggleFeature(organizationId, featureId, status, user.uid, reason);
+    await FeatureToggleService.toggleFeature(organizationId, featureId, status, user.id, reason);
 
     // Update local state immediately for responsiveness
     setSettings(prev => {
@@ -121,13 +121,13 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
               featureId,
               status,
               hiddenAt: hidden ? new Date() : undefined,
-              hiddenBy: hidden ? user.uid : undefined,
+              hiddenBy: hidden ? user.id : undefined,
               reason: hidden ? reason : undefined,
             },
           },
           hiddenCategories: [],
           updatedAt: new Date(),
-          updatedBy: user.uid,
+          updatedBy: user.id,
         };
       }
 
@@ -139,21 +139,21 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
             featureId,
             status,
             hiddenAt: hidden ? new Date() : undefined,
-            hiddenBy: hidden ? user.uid : undefined,
+            hiddenBy: hidden ? user.id : undefined,
             reason: hidden ? reason : undefined,
           },
         },
         updatedAt: new Date(),
-        updatedBy: user.uid,
+        updatedBy: user.id,
       };
     });
-  }, [organizationId, user?.uid]);
+  }, [organizationId, user?.id]);
 
   // Toggle an entire category
   const toggleCategory = useCallback(async (category: FeatureCategory, hidden: boolean) => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
-    await FeatureToggleService.toggleCategory(organizationId, category, hidden, user.uid);
+    await FeatureToggleService.toggleCategory(organizationId, category, hidden, user.id);
 
     // Update local state
     setSettings(prev => {
@@ -163,7 +163,7 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
           features: {},
           hiddenCategories: hidden ? [category] : [],
           updatedAt: new Date(),
-          updatedBy: user.uid,
+          updatedBy: user.id,
         };
       }
 
@@ -175,37 +175,37 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
         ...prev,
         hiddenCategories: newHiddenCategories,
         updatedAt: new Date(),
-        updatedBy: user.uid,
+        updatedBy: user.id,
       };
     });
-  }, [organizationId, user?.uid]);
+  }, [organizationId, user?.id]);
 
   // Hide multiple features
   const hideFeatures = useCallback(async (featureIds: string[], reason?: string) => {
-    if (!user?.uid) return;
-    await FeatureToggleService.hideFeatures(organizationId, featureIds, user.uid, reason);
+    if (!user?.id) return;
+    await FeatureToggleService.hideFeatures(organizationId, featureIds, user.id, reason);
     await fetchSettings();
-  }, [organizationId, user?.uid, fetchSettings]);
+  }, [organizationId, user?.id, fetchSettings]);
 
   // Show multiple features
   const showFeatures = useCallback(async (featureIds: string[]) => {
-    if (!user?.uid) return;
-    await FeatureToggleService.showFeatures(organizationId, featureIds, user.uid);
+    if (!user?.id) return;
+    await FeatureToggleService.showFeatures(organizationId, featureIds, user.id);
     await fetchSettings();
-  }, [organizationId, user?.uid, fetchSettings]);
+  }, [organizationId, user?.id, fetchSettings]);
 
   // Reset to default
   const resetToDefault = useCallback(async () => {
-    if (!user?.uid) return;
-    await FeatureToggleService.resetToDefault(organizationId, user.uid);
+    if (!user?.id) return;
+    await FeatureToggleService.resetToDefault(organizationId, user.id);
     setSettings({
       organizationId,
       features: {},
       hiddenCategories: [],
       updatedAt: new Date(),
-      updatedBy: user.uid,
+      updatedBy: user.id,
     });
-  }, [organizationId, user?.uid]);
+  }, [organizationId, user?.id]);
 
   // Check if a feature is hidden
   const isFeatureHidden = useCallback((featureId: string): boolean => {

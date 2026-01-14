@@ -148,7 +148,7 @@ export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
 
     // First contact - natural introduction
     const systemContext = buildSystemContext();
-    const recommendation = implContext?.currentPhase === 'foundation'
+    const recommendation = implContext?.currentPhase === 'onboarding'
       ? `Since you're getting started, I'd recommend we set up lead generation first - that's usually the highest impact.`
       : `I'm ready to manage leads, content, and outreach for ${industryContext.toLowerCase()} businesses like yours.`;
 
