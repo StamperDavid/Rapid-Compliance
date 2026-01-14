@@ -1,10 +1,17 @@
 'use client';
 
 /**
- * OrchestratorBase - Floating AI Assistant Component
+ * OrchestratorBase - Floating AI Assistant Component with Voice
  *
  * A unified base component for both Merchant and Admin AI Orchestrators.
- * Features glassmorphism styling and integrates with the feature manifest.
+ * Features:
+ * - OpenRouter integration for multi-model support (default: Gemini 2.0 Flash)
+ * - Voice synthesis via TTS Engine (ElevenLabs, Unreal, Native)
+ * - Live Conversation Mode with VAD (Voice Activity Detection)
+ * - Interruptible speech (stops playback when user speaks)
+ * - Model and voice selection
+ *
+ * JASPER BRAIN ACTIVATION: Connects to live OpenRouter API via /api/orchestrator/chat
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -16,13 +23,8 @@ import {
 } from '@/lib/stores/orchestrator-store';
 import {
   SPECIALISTS,
-  findMatchingSpecialists,
-  getSpecialist,
   type Specialist,
-  type SpecialistPlatform,
 } from '@/lib/orchestrator/feature-manifest';
-import { matchSpecialistTrigger } from '@/lib/ai/persona-mapper';
-import type { IndustryType } from '@/types/organization';
 import {
   MessageSquare,
   X,
@@ -32,13 +34,25 @@ import {
   Zap,
   ChevronDown,
   HelpCircle,
-  MessageCircleQuestion,
   Lightbulb,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Settings,
+  Radio,
 } from 'lucide-react';
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+export interface VoiceSettings {
+  enabled: boolean;
+  voiceId?: string;
+  ttsEngine?: 'native' | 'unreal' | 'elevenlabs';
+  liveMode: boolean; // Continuous mic mode with VAD
+}
 
 export interface OrchestratorConfig {
   context: OrchestratorContext;
@@ -62,6 +76,198 @@ export interface OrchestratorConfig {
     activeAgents: number;
     pendingTickets: number;
   };
+  organizationId?: string;
+  /** Model selection (defaults to google/gemini-2.0-flash-exp) */
+  modelId?: string;
+  /** Voice configuration */
+  voiceSettings?: Partial<VoiceSettings>;
+}
+
+// Default voice IDs for different personas
+const DEFAULT_VOICE_IDS = {
+  jasper_deep: '21m00Tcm4TlvDq8ikWAM', // ElevenLabs Rachel - Deep/Strategic
+  jasper_energetic: 'AZnzlk1XvdvUeBnXmlld', // ElevenLabs Domi - Energetic
+  merchant_warm: 'EXAVITQu4vr4xnSDxMaL', // ElevenLabs Sarah - Warm
+};
+
+// Available models
+const AVAILABLE_MODELS = {
+  'google/gemini-2.0-flash-exp': 'Gemini 2.0 Flash (Fast)',
+  'google/gemini-flash-1.5': 'Gemini 1.5 Flash',
+  'anthropic/claude-3-haiku': 'Claude 3 Haiku',
+  'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
+  'openai/gpt-4-turbo': 'GPT-4 Turbo',
+};
+
+// ============================================================================
+// VOICE HOOKS
+// ============================================================================
+
+/**
+ * Custom hook for Voice Activity Detection (VAD)
+ * Detects when user is speaking and triggers callbacks
+ */
+function useVoiceActivityDetection(
+  onSpeechStart: () => void,
+  onSpeechEnd: (transcript: string) => void,
+  enabled: boolean
+) {
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      setIsListening(false);
+      return;
+    }
+
+    // Check for browser support
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn('[VAD] Speech recognition not supported');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalTranscript = '';
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onspeechstart = () => {
+      setIsSpeaking(true);
+      onSpeechStart();
+      // Clear any pending silence timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
+    };
+
+    recognition.onspeechend = () => {
+      setIsSpeaking(false);
+      // Set a timeout to process the final transcript
+      silenceTimeoutRef.current = setTimeout(() => {
+        if (finalTranscript.trim()) {
+          onSpeechEnd(finalTranscript.trim());
+          finalTranscript = '';
+        }
+      }, 1000); // 1 second of silence before processing
+    };
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('[VAD] Recognition error:', event.error);
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        // Restart on errors except no-speech
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {
+            // Ignore restart errors
+          }
+        }, 1000);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      // Auto-restart if still enabled
+      if (enabled) {
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {
+            // Ignore restart errors
+          }
+        }, 100);
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error('[VAD] Failed to start recognition:', e);
+    }
+
+    return () => {
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+      }
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch (e) {
+          // Ignore stop errors
+        }
+      }
+    };
+  }, [enabled, onSpeechStart, onSpeechEnd]);
+
+  return { isListening, isSpeaking };
+}
+
+/**
+ * Custom hook for audio playback with interruption support
+ */
+function useAudioPlayback() {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const playAudio = useCallback((base64Audio: string, format: string) => {
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    // Create new audio element
+    const audio = new Audio(`data:audio/${format};base64,${base64Audio}`);
+    audioRef.current = audio;
+
+    audio.onplay = () => setIsPlaying(true);
+    audio.onended = () => setIsPlaying(false);
+    audio.onerror = () => setIsPlaying(false);
+
+    audio.play().catch((e) => {
+      console.error('[Audio] Playback error:', e);
+      setIsPlaying(false);
+    });
+  }, []);
+
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+      setIsPlaying(false);
+    }
+  }, []);
+
+  return { playAudio, stopAudio, isPlaying };
 }
 
 // ============================================================================
@@ -85,8 +291,46 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
 
   const [input, setInput] = useState('');
   const [showCommands, setShowCommands] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Voice state
+  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
+    enabled: config.voiceSettings?.enabled ?? false,
+    voiceId: config.voiceSettings?.voiceId ?? DEFAULT_VOICE_IDS.jasper_deep,
+    ttsEngine: config.voiceSettings?.ttsEngine ?? 'elevenlabs',
+    liveMode: config.voiceSettings?.liveMode ?? false,
+  });
+  const [selectedModel, setSelectedModel] = useState(config.modelId || 'google/gemini-2.0-flash-exp');
+
+  // Audio playback hook
+  const { playAudio, stopAudio, isPlaying } = useAudioPlayback();
+
+  // VAD hook for Live Conversation mode
+  const handleSpeechStart = useCallback(() => {
+    // Stop any playing audio when user starts speaking (interruptible speech)
+    if (isPlaying) {
+      stopAudio();
+    }
+  }, [isPlaying, stopAudio]);
+
+  const handleSpeechEnd = useCallback((transcript: string) => {
+    if (transcript && voiceSettings.liveMode) {
+      setInput(transcript);
+      // Auto-send after a brief delay to allow correction
+      setTimeout(() => {
+        const sendButton = document.getElementById('orchestrator-send-btn');
+        if (sendButton) sendButton.click();
+      }, 500);
+    }
+  }, [voiceSettings.liveMode]);
+
+  const { isListening, isSpeaking } = useVoiceActivityDetection(
+    handleSpeechStart,
+    handleSpeechEnd,
+    voiceSettings.liveMode
+  );
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -108,192 +352,93 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
 
   // Focus input when opened
   useEffect(() => {
-    if (isOpen && !isMinimized && inputRef.current) {
+    if (isOpen && !isMinimized && inputRef.current && !voiceSettings.liveMode) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, isMinimized]);
+  }, [isOpen, isMinimized, voiceSettings.liveMode]);
 
+  /**
+   * JASPER BRAIN ACTIVATION - Live OpenRouter API Integration with Voice
+   */
   const handleSendMessage = useCallback(async () => {
     if (!input.trim() || isTyping) return;
 
     const userMessage = input.trim();
     setInput('');
 
-    // Add user message
+    // Add user message to chat history
     addMessage({ role: 'user', content: userMessage });
-
-    // Get assistant name for personalized responses
-    const assistantName = config.assistantName || (config.context === 'admin' ? 'Jasper' : 'Assistant');
-    const industry = (config.merchantInfo?.industry as IndustryType) || 'custom';
-    const ownerName = config.ownerName || config.merchantInfo?.ownerName || 'Commander';
-
-    // Check for direct name invocation (e.g., "Jasper, find leads" or "Alex, create content")
-    const lowerMessage = userMessage.toLowerCase();
-    const nameInvoked = lowerMessage.includes(assistantName.toLowerCase() + ',') ||
-                        lowerMessage.startsWith(assistantName.toLowerCase() + ' ');
-
-    // Check for industry-specific specialist triggers
-    const industryMatchedSpecialist = matchSpecialistTrigger(userMessage, industry, config.context === 'admin' ? 'admin' : 'client');
-
-    // Check for general specialist triggers
-    const matchedSpecialists = findMatchingSpecialists(userMessage);
-
-    // PROACTIVE INTENT DETECTION for Admin (Jasper)
-    const isLaunchIntent = config.context === 'admin' && (
-      lowerMessage.includes('where do we start') ||
-      lowerMessage.includes('where should we start') ||
-      lowerMessage.includes('what\'s the plan') ||
-      lowerMessage.includes('what should i do') ||
-      lowerMessage.includes('launch') ||
-      lowerMessage.includes('let\'s go') ||
-      lowerMessage.includes('get started') ||
-      lowerMessage.includes('first steps') ||
-      lowerMessage.includes('what\'s next') ||
-      lowerMessage.includes('priority')
-    );
-
-    const isListRequest = config.context === 'admin' && (
-      lowerMessage.includes('what can you do') ||
-      lowerMessage.includes('what are my options') ||
-      lowerMessage.includes('show me features') ||
-      lowerMessage.includes('list features')
-    );
-
-    // DIRECT DATA QUERIES - Answer immediately, no deflection
-    const isDataQuery = config.context === 'admin' && (
-      lowerMessage.includes('how many') ||
-      lowerMessage.includes('count') ||
-      lowerMessage.includes('total') ||
-      lowerMessage.includes('organizations') ||
-      lowerMessage.includes('orgs') ||
-      lowerMessage.includes('clients') ||
-      lowerMessage.includes('users') ||
-      lowerMessage.includes('trials')
-    );
-
-    // EXPERT GUIDE MODE: Detect requests for unconfigured features
-    const isSocialMediaRequest = lowerMessage.includes('social') ||
-      lowerMessage.includes('instagram') ||
-      lowerMessage.includes('linkedin') ||
-      lowerMessage.includes('twitter') ||
-      lowerMessage.includes('facebook') ||
-      lowerMessage.includes('tiktok');
-
-    const isEmailRequest = lowerMessage.includes('email') ||
-      lowerMessage.includes('newsletter') ||
-      lowerMessage.includes('smtp');
-
-    const isHideRequest = lowerMessage.includes('hide') ||
-      lowerMessage.includes('don\'t need') ||
-      lowerMessage.includes('remove') ||
-      lowerMessage.includes('i don\'t use');
 
     setTyping(true);
 
-    // Simulate AI response (replace with actual AI integration)
-    setTimeout(() => {
-      let response = '';
-      let invokedSpecialistId: SpecialistPlatform | undefined;
+    try {
+      // Build conversation history for context (last 15 messages for memory)
+      const conversationHistory = chatHistory.slice(-15).map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-      // ADMIN RESPONSES (Jasper as Internal Business Partner)
-      if (config.context === 'admin') {
-        const stats = config.adminStats || { totalOrgs: 0, activeAgents: 0, pendingTickets: 0 };
+      // Call the live OpenRouter API via our orchestrator endpoint
+      const response = await fetch('/api/orchestrator/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          message: userMessage,
+          context: config.context,
+          systemPrompt: config.systemPrompt,
+          conversationHistory,
+          adminStats: config.adminStats,
+          merchantInfo: config.merchantInfo,
+          organizationId: config.organizationId,
+          modelId: selectedModel,
+          voiceEnabled: voiceSettings.enabled,
+          voiceId: voiceSettings.voiceId,
+          ttsEngine: voiceSettings.ttsEngine,
+        }),
+      });
 
-        // DIRECT DATA QUERY - Answer immediately
-        if (isDataQuery) {
-          response = `${stats.totalOrgs} organizations active right now${stats.totalOrgs > 0 ? `, with ${stats.activeAgents} AI operations running` : ''}. ${stats.pendingTickets > 0 ? `${stats.pendingTickets} support ticket${stats.pendingTickets > 1 ? 's' : ''} need attention.` : ''}`;
-        }
-        // Launch intent - Proactive data-driven response
-        else if (isLaunchIntent) {
-          const trialEstimate = Math.max(1, Math.floor(stats.totalOrgs * 0.7));
-          response = `${stats.totalOrgs} organizations under management, roughly ${trialEstimate} on trial. The highest-impact move right now is converting those trial accounts - each one is worth about $299/month recurring.
-
-I can start drafting personalized conversion outreach for the most engaged trials. Want me to get that going?`;
-          invokedSpecialistId = 'lead_hunter';
-        }
-        // List request - Redirect to strategic action
-        else if (isListRequest) {
-          response = `I manage your entire sales operation - leads, outreach, content, analytics, the whole stack. But rather than running through capabilities, let me tell you what matters right now: we've got ${stats.totalOrgs} organizations, several on trial. The strategic play is converting those, not reviewing menus. What's your priority?`;
-        }
-        // Social media request (unconfigured)
-        else if (isSocialMediaRequest && !isHideRequest) {
-          response = `I checked - Instagram and LinkedIn aren't connected yet. To post and manage your social presence, I'll need API access to those accounts. Want me to walk you through linking them, or should I hide social features from the dashboard until you're ready to set them up?`;
-        }
-        // Email request (unconfigured)
-        else if (isEmailRequest && !isHideRequest) {
-          response = `Email isn't configured yet - no SMTP connection or email service linked. To send newsletters and campaigns, I'll need those credentials. I can walk you through the setup now, or hide email features until you have time for it. What works better?`;
-        }
-        // Hide feature request
-        else if (isHideRequest) {
-          const featureToHide = isSocialMediaRequest ? 'social media' : isEmailRequest ? 'email' : 'that feature';
-          response = `Done - hiding ${featureToHide} from the dashboard. You can bring it back anytime from Settings → Feature Visibility. Anything else cluttering your workspace?`;
-        }
-        // Task execution with name invocation
-        else if (industryMatchedSpecialist && nameInvoked) {
-          invokedSpecialistId = industryMatchedSpecialist as SpecialistPlatform;
-          const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
-          response = `On it. Working on "${taskDescription}" now - I'll have results for you shortly.`;
-        }
-        // General task matching
-        else if (matchedSpecialists.length > 0) {
-          invokedSpecialistId = matchedSpecialists[0].id;
-          response = `I can handle that. Starting now - I'll update you when there's something to review.`;
-        }
-        // Status/Dashboard request
-        else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard') || lowerMessage.includes('pulse')) {
-          response = `${stats.totalOrgs} organizations active, ${stats.activeAgents} AI operations running${stats.pendingTickets > 0 ? `, ${stats.pendingTickets} tickets need attention` : ', all tickets resolved'}. What should I focus on?`;
-        }
-        // Execute command
-        else if (lowerMessage.includes('execute') || lowerMessage.includes('initiate') || lowerMessage.includes('go') || lowerMessage.includes('start')) {
-          invokedSpecialistId = 'lead_hunter';
-          response = `Starting now. I'm scanning for prospects in your target verticals and queuing up conversion emails for review. Should have the first batch of leads ready in a few minutes - I'll let you know.`;
-        }
-        // Name invocation
-        else if (nameInvoked) {
-          response = `${stats.totalOrgs} organizations active right now. What do you need?`;
-        }
-        // Default response
-        else {
-          response = `${stats.totalOrgs} organizations active, ${stats.activeAgents} operations running. What would you like me to work on?`;
-        }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API error: ${response.status}`);
       }
-      // CLIENT/MERCHANT RESPONSES - Assistant as Internal Business Partner
-      else {
-        const industryContext = config.merchantInfo?.industry || 'your business';
 
-        // Task execution with name invocation
-        if (industryMatchedSpecialist && nameInvoked) {
-          invokedSpecialistId = industryMatchedSpecialist as SpecialistPlatform;
-          const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
-          response = `On it. Working on "${taskDescription}" now - I'll have something for you shortly.`;
+      const data = await response.json();
+
+      if (data.success && data.response) {
+        addMessage({
+          role: 'assistant',
+          content: data.response,
+          metadata: data.metadata?.toolExecuted
+            ? { toolUsed: data.metadata.toolExecuted }
+            : undefined,
+        });
+
+        // Play audio if voice is enabled and audio was returned
+        if (voiceSettings.enabled && data.audio?.data) {
+          playAudio(data.audio.data, data.audio.format);
         }
-        // General task matching
-        else if (matchedSpecialists.length > 0) {
-          invokedSpecialistId = matchedSpecialists[0].id;
-          response = `I can handle that. Starting now.`;
-        }
-        // Status request
-        else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard')) {
-          response = `Pulling up your ${industryContext} dashboard now. What metrics are you looking for?`;
-        }
-        // Name invocation
-        else if (nameInvoked) {
-          response = `I'm here. What do you need me to work on?`;
-        }
-        // Default - natural conversation
-        else {
-          response = `I'm tracking your ${industryContext} operations. What would you like me to focus on?`;
-        }
+      } else {
+        throw new Error('Invalid response from API');
       }
+    } catch (error: any) {
+      console.error('[Jasper] Chat error:', error);
+
+      // Fallback response if API fails
+      const fallbackResponse = config.context === 'admin'
+        ? `I'm having trouble connecting right now. ${config.adminStats?.totalOrgs || 0} organizations are active - what would you like me to work on once I'm back online?`
+        : `I'm experiencing a brief connection issue. I'll be back in a moment to help with your request.`;
 
       addMessage({
         role: 'assistant',
-        content: response,
-        metadata: invokedSpecialistId ? { specialistInvoked: invokedSpecialistId } : undefined,
+        content: fallbackResponse,
       });
+    } finally {
       setTyping(false);
-    }, 1000);
-  }, [input, isTyping, addMessage, setTyping, config]);
+    }
+  }, [input, isTyping, addMessage, setTyping, config, chatHistory, selectedModel, voiceSettings, playAudio]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -306,6 +451,21 @@ I can start drafting personalized conversion outreach for the most engaged trial
     setInput(`Help me with ${specialist.name}`);
     setShowCommands(false);
     setTimeout(() => handleSendMessage(), 100);
+  };
+
+  const toggleLiveMode = () => {
+    setVoiceSettings(prev => ({
+      ...prev,
+      liveMode: !prev.liveMode,
+      enabled: true, // Enable voice when entering live mode
+    }));
+  };
+
+  const toggleVoice = () => {
+    setVoiceSettings(prev => ({
+      ...prev,
+      enabled: !prev.enabled,
+    }));
   };
 
   // Render minimized state
@@ -362,19 +522,56 @@ I can start drafting personalized conversion outreach for the most engaged trial
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center relative">
                   <Zap className="w-5 h-5 text-white" />
+                  {/* Live mode indicator */}
+                  {voiceSettings.liveMode && (
+                    <motion.div
+                      className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                  )}
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-sm">
                     {config.assistantName || (config.context === 'admin' ? 'Jasper' : config.merchantInfo?.assistantName || 'AI Assistant')}
                   </h3>
                   <p className="text-gray-400 text-xs">
-                    {config.context === 'admin' ? 'Strategic Growth Architect' : 'Your Business Partner'}
+                    {voiceSettings.liveMode ? (
+                      <span className="text-green-400 flex items-center gap-1">
+                        <Radio className="w-3 h-3" /> Live Mode
+                      </span>
+                    ) : (
+                      config.context === 'admin' ? 'Strategic Growth Architect' : 'Your Business Partner'
+                    )}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {/* Live Mode Toggle */}
+                <button
+                  onClick={toggleLiveMode}
+                  className={`p-2 rounded-lg transition-colors ${voiceSettings.liveMode ? 'bg-green-600/30 text-green-400' : 'hover:bg-white/10 text-gray-400'}`}
+                  title={voiceSettings.liveMode ? 'Exit Live Mode' : 'Enter Live Mode (Continuous Mic)'}
+                >
+                  {voiceSettings.liveMode ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                </button>
+                {/* Voice Toggle */}
+                <button
+                  onClick={toggleVoice}
+                  className={`p-2 rounded-lg transition-colors ${voiceSettings.enabled ? 'bg-indigo-600/30 text-indigo-400' : 'hover:bg-white/10 text-gray-400'}`}
+                  title={voiceSettings.enabled ? 'Disable Voice' : 'Enable Voice'}
+                >
+                  {voiceSettings.enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                </button>
+                {/* Settings */}
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={`p-2 rounded-lg transition-colors ${showSettings ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-gray-400'}`}
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
                 <button
                   onClick={() => setMinimized(true)}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -389,6 +586,62 @@ I can start drafting personalized conversion outreach for the most engaged trial
                 </button>
               </div>
             </div>
+
+            {/* Settings Panel */}
+            <AnimatePresence>
+              {showSettings && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="border-b border-white/10 bg-black/40 overflow-hidden"
+                >
+                  <div className="p-4 space-y-4">
+                    {/* Model Selection */}
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">AI Model</label>
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      >
+                        {Object.entries(AVAILABLE_MODELS).map(([id, name]) => (
+                          <option key={id} value={id} className="bg-gray-900">{name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* TTS Engine */}
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">Voice Engine</label>
+                      <select
+                        value={voiceSettings.ttsEngine}
+                        onChange={(e) => setVoiceSettings(prev => ({ ...prev, ttsEngine: e.target.value as any }))}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      >
+                        <option value="elevenlabs" className="bg-gray-900">ElevenLabs (Ultra Quality)</option>
+                        <option value="unreal" className="bg-gray-900">Unreal Speech (Fast)</option>
+                        <option value="native" className="bg-gray-900">Native Voice (Balanced)</option>
+                      </select>
+                    </div>
+
+                    {/* Voice ID */}
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">Voice Style</label>
+                      <select
+                        value={voiceSettings.voiceId}
+                        onChange={(e) => setVoiceSettings(prev => ({ ...prev, voiceId: e.target.value }))}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      >
+                        <option value={DEFAULT_VOICE_IDS.jasper_deep} className="bg-gray-900">Deep & Strategic</option>
+                        <option value={DEFAULT_VOICE_IDS.jasper_energetic} className="bg-gray-900">Energetic & Dynamic</option>
+                        <option value={DEFAULT_VOICE_IDS.merchant_warm} className="bg-gray-900">Warm & Friendly</option>
+                      </select>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Chat Messages */}
             <div
@@ -421,6 +674,30 @@ I can start drafting personalized conversion outreach for the most engaged trial
                 </div>
               )}
             </div>
+
+            {/* Live Mode Status Bar */}
+            {voiceSettings.liveMode && (
+              <div className="px-4 py-2 border-t border-white/10 bg-green-900/20 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    className={`w-2 h-2 rounded-full ${isSpeaking ? 'bg-red-500' : isListening ? 'bg-green-500' : 'bg-yellow-500'}`}
+                    animate={isSpeaking ? { scale: [1, 1.3, 1] } : {}}
+                    transition={{ duration: 0.3, repeat: isSpeaking ? Infinity : 0 }}
+                  />
+                  <span className="text-xs text-gray-300">
+                    {isSpeaking ? 'Listening...' : isListening ? 'Ready' : 'Initializing...'}
+                  </span>
+                </div>
+                {isPlaying && (
+                  <button
+                    onClick={stopAudio}
+                    className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                  >
+                    <VolumeX className="w-3 h-3" /> Stop
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Command Palette */}
             <AnimatePresence>
@@ -483,10 +760,11 @@ I can start drafting personalized conversion outreach for the most engaged trial
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask me anything..."
+                  placeholder={voiceSettings.liveMode ? "Speak or type..." : "Ask me anything..."}
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50"
                 />
                 <button
+                  id="orchestrator-send-btn"
                   onClick={handleSendMessage}
                   disabled={!input.trim() || isTyping}
                   className="p-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:from-indigo-500 hover:to-purple-500 transition-all"
@@ -506,8 +784,99 @@ I can start drafting personalized conversion outreach for the most engaged trial
 // MESSAGE BUBBLE
 // ============================================================================
 
+/**
+ * Message Bubble with Markdown Support
+ */
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
+
+  const renderMarkdown = (content: string) => {
+    const paragraphs = content.split(/\n\n+/);
+
+    return paragraphs.map((paragraph, pIndex) => {
+      if (paragraph.match(/^[\s]*[-*]\s/m)) {
+        const items = paragraph.split(/\n/).filter((line) => line.trim());
+        return (
+          <ul key={pIndex} className="list-disc list-inside my-2 space-y-1">
+            {items.map((item, iIndex) => (
+              <li key={iIndex} className="text-sm">
+                {formatInlineMarkdown(item.replace(/^[\s]*[-*]\s/, ''))}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+
+      if (paragraph.match(/^[\s]*\d+\.\s/m)) {
+        const items = paragraph.split(/\n/).filter((line) => line.trim());
+        return (
+          <ol key={pIndex} className="list-decimal list-inside my-2 space-y-1">
+            {items.map((item, iIndex) => (
+              <li key={iIndex} className="text-sm">
+                {formatInlineMarkdown(item.replace(/^[\s]*\d+\.\s/, ''))}
+              </li>
+            ))}
+          </ol>
+        );
+      }
+
+      const lines = paragraph.split('\n');
+      return (
+        <p key={pIndex} className="mb-2 last:mb-0">
+          {lines.map((line, lIndex) => (
+            <span key={lIndex}>
+              {formatInlineMarkdown(line)}
+              {lIndex < lines.length - 1 && <br />}
+            </span>
+          ))}
+        </p>
+      );
+    });
+  };
+
+  const formatInlineMarkdown = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    let remaining = text;
+    let key = 0;
+
+    const patterns = [
+      { regex: /`([^`]+)`/g, render: (match: string) => <code key={key++} className="px-1 py-0.5 bg-black/30 rounded text-xs font-mono">{match}</code> },
+      { regex: /\*\*([^*]+)\*\*/g, render: (match: string) => <strong key={key++} className="font-semibold">{match}</strong> },
+      { regex: /\*([^*]+)\*/g, render: (match: string) => <em key={key++} className="italic">{match}</em> },
+    ];
+
+    for (const { regex, render } of patterns) {
+      const newParts: React.ReactNode[] = [];
+
+      if (typeof remaining === 'string') {
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(remaining)) !== null) {
+          if (match.index > lastIndex) {
+            newParts.push(remaining.slice(lastIndex, match.index));
+          }
+          newParts.push(render(match[1]));
+          lastIndex = match.index + match[0].length;
+        }
+
+        if (lastIndex < remaining.length) {
+          newParts.push(remaining.slice(lastIndex));
+        }
+
+        if (newParts.length > 0) {
+          parts.push(...newParts);
+          remaining = '';
+        }
+      }
+    }
+
+    if (parts.length === 0) {
+      return text;
+    }
+
+    return parts;
+  };
 
   return (
     <motion.div
@@ -522,12 +891,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             : 'bg-white/10 text-gray-100'
         }`}
       >
-        <div className="text-sm whitespace-pre-wrap leading-relaxed">
-          {message.content.split('**').map((part, i) =>
-            i % 2 === 1 ? <strong key={i}>{part}</strong> : part
-          )}
+        <div className="text-sm leading-relaxed">
+          {renderMarkdown(message.content)}
         </div>
-        {/* REMOVED: Specialist metadata display - Jasper is the sole voice */}
       </div>
     </motion.div>
   );
