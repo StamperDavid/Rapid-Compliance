@@ -246,15 +246,11 @@ ${generateStatusOpener(ADMIN_ASSISTANT_NAME, 'admin', 'admin')}
 • ${formatStat(stats.pendingTickets, 'Support tickets requiring attention')}
 • ${formatStat(stats.trialOrgs, 'Trial organizations (conversion opportunities)')}
 
-**Strategic Actions Available:**
-
-1. **"${ADMIN_ASSISTANT_NAME}, show platform health"** - Full diagnostic report
-2. **"${ADMIN_ASSISTANT_NAME}, review tickets"** - Support queue triage
-3. **"${ADMIN_ASSISTANT_NAME}, activate growth mode"** - Marketing content generation
-4. **"${ADMIN_ASSISTANT_NAME}, find more clients"** - Trigger Lead Hunter for merchant acquisition
-
-**My Specialists at Your Command:**
-I can invoke any of the 11 agents on your behalf - just say "${ADMIN_ASSISTANT_NAME}, [action]" and I'll coordinate the workforce.
+**What I Can Do:**
+• **"${ADMIN_ASSISTANT_NAME}, show platform health"** - I'll run a full diagnostic
+• **"${ADMIN_ASSISTANT_NAME}, review tickets"** - I'll triage the support queue
+• **"${ADMIN_ASSISTANT_NAME}, find more clients"** - I'll scan for new merchant opportunities
+• **"${ADMIN_ASSISTANT_NAME}, activate growth mode"** - I'll generate marketing content
 
 Ready to execute your growth strategy.`;
   };
@@ -302,14 +298,27 @@ Would you like me to drill into any of these areas?`;
     return null;
   }
 
-  // Build enhanced system prompt with Jasper's persona
+  // Build enhanced system prompt with Jasper's persona - SOLE VOICE, NO AGENT FRAGMENTATION
   const enhancedSystemPrompt = `${ADMIN_ORCHESTRATOR_PROMPT}
 
 ${buildPersonaSystemPrompt(ADMIN_ASSISTANT_NAME, adminUser?.email?.split('@')[0], 'admin', 'admin')}
 
-AGENT INVOCATION:
-When the user says "${ADMIN_ASSISTANT_NAME}, find more clients" or similar, you should trigger the Lead Hunter agent.
-When the user says "${ADMIN_ASSISTANT_NAME}, [specialist action]", invoke the appropriate specialist from the feature manifest.
+CRITICAL: JASPER IS THE SOLE VOICE
+- NEVER introduce or mention specialist agents by name (Lead Hunter, Direct Line, etc.)
+- NEVER say "I'll have [Agent] help with that" or "Deploying [Agent]"
+- ALWAYS speak as yourself: "I'm scanning for prospects", "I'll draft that email", "I'm analyzing your pipeline"
+- Tools/specialists are called BEHIND THE SCENES - the user only sees Jasper
+
+EXPERT GUIDE MODE:
+When a user asks about a feature that isn't configured (e.g., social media without API keys):
+- DON'T list what the "specialist" can do
+- DO act as a guide: "I see your [Feature] isn't set up yet. Want me to walk you through configuration, or should I hide it from your dashboard until you're ready?"
+
+HIDE FEATURE RESPONSES:
+When user says "I don't need [Feature]" or "Hide [Feature]":
+- Confirm immediately: "Got it. I'm hiding [Feature] from your dashboard now."
+- Remind them: "You can restore it from Settings → Feature Visibility anytime."
+- Offer more cleanup: "Anything else cluttering your workspace?"
 `;
 
   const config: OrchestratorConfig = {

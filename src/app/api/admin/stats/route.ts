@@ -59,6 +59,10 @@ interface PlatformStats {
  * Get document count from a Firestore collection using aggregation.
  * This is much more efficient than fetching all documents.
  *
+ * FALLBACK LOGIC: If prefixed collection (test_) returns 0 in non-production,
+ * also check the unprefixed collection. This handles cases where data
+ * exists in production-style collections during development.
+ *
  * @param collectionPath - Path to the collection
  * @returns Document count
  */
@@ -71,7 +75,31 @@ async function getCollectionCount(collectionPath: string): Promise<number> {
   try {
     const collectionRef = adminDb.collection(collectionPath);
     const countSnapshot = await collectionRef.count().get();
-    return countSnapshot.data().count;
+    const count = countSnapshot.data().count;
+
+    // FALLBACK: If count is 0 and we're using a prefixed collection, try unprefixed
+    if (count === 0 && collectionPath.startsWith('test_')) {
+      const unprefixedPath = collectionPath.replace(/^test_/, '');
+      try {
+        const unprefixedRef = adminDb.collection(unprefixedPath);
+        const unprefixedSnapshot = await unprefixedRef.count().get();
+        const unprefixedCount = unprefixedSnapshot.data().count;
+
+        if (unprefixedCount > 0) {
+          logger.info('Fallback to unprefixed collection succeeded', {
+            prefixedPath: collectionPath,
+            unprefixedPath,
+            count: unprefixedCount,
+            file: 'admin-stats-route.ts',
+          });
+          return unprefixedCount;
+        }
+      } catch {
+        // Unprefixed collection doesn't exist or error, return original count
+      }
+    }
+
+    return count;
   } catch (error: any) {
     logger.error('Failed to get collection count', error, {
       collection: collectionPath,
@@ -83,6 +111,8 @@ async function getCollectionCount(collectionPath: string): Promise<number> {
 
 /**
  * Get document count with a where clause.
+ *
+ * FALLBACK LOGIC: Same as getCollectionCount - tries unprefixed if prefixed returns 0.
  *
  * @param collectionPath - Path to the collection
  * @param field - Field to filter on
@@ -104,7 +134,26 @@ async function getCollectionCountWhere(
     const collectionRef = adminDb.collection(collectionPath);
     const query = collectionRef.where(field, operator, value);
     const countSnapshot = await query.count().get();
-    return countSnapshot.data().count;
+    const count = countSnapshot.data().count;
+
+    // FALLBACK: If count is 0 and we're using a prefixed collection, try unprefixed
+    if (count === 0 && collectionPath.startsWith('test_')) {
+      const unprefixedPath = collectionPath.replace(/^test_/, '');
+      try {
+        const unprefixedRef = adminDb.collection(unprefixedPath);
+        const unprefixedQuery = unprefixedRef.where(field, operator, value);
+        const unprefixedSnapshot = await unprefixedQuery.count().get();
+        const unprefixedCount = unprefixedSnapshot.data().count;
+
+        if (unprefixedCount > 0) {
+          return unprefixedCount;
+        }
+      } catch {
+        // Unprefixed collection doesn't exist or error
+      }
+    }
+
+    return count;
   } catch (error: any) {
     logger.error('Failed to get filtered collection count', error, {
       collection: collectionPath,

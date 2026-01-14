@@ -159,6 +159,23 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
       lowerMessage.includes('list features')
     );
 
+    // EXPERT GUIDE MODE: Detect requests for unconfigured features
+    const isSocialMediaRequest = lowerMessage.includes('social') ||
+      lowerMessage.includes('instagram') ||
+      lowerMessage.includes('linkedin') ||
+      lowerMessage.includes('twitter') ||
+      lowerMessage.includes('facebook') ||
+      lowerMessage.includes('tiktok');
+
+    const isEmailRequest = lowerMessage.includes('email') ||
+      lowerMessage.includes('newsletter') ||
+      lowerMessage.includes('smtp');
+
+    const isHideRequest = lowerMessage.includes('hide') ||
+      lowerMessage.includes('don\'t need') ||
+      lowerMessage.includes('remove') ||
+      lowerMessage.includes('i don\'t use');
+
     setTyping(true);
 
     // Simulate AI response (replace with actual AI integration)
@@ -172,56 +189,86 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
 
         // Priority 0: Launch intent - PROACTIVE DATA-DRIVEN RESPONSE
         if (isLaunchIntent) {
-          // Generate proactive response with real data
+          // Generate proactive response with real data - JASPER AS SOLE VOICE
           response = `${ownerName}, we have **${stats.totalOrgs} organizations** with approximately **5 on trial**. The data shows **Adventure Gear Shop** has high engagement but hasn't converted - they're our Revenue Rescue priority.
 
-**Strategic Deployment:**
-📧 **The Direct Line** → Personalized conversion email for Adventure Gear Shop
-🎯 **Lead Hunter** → Scanning for 50 prospects in PixelPerfect's e-commerce vertical
-💼 **The Professional Networker** → B2B outreach to trial decision-makers
+**My Action Plan:**
+📧 I'll draft a personalized conversion email for Adventure Gear Shop
+🎯 I'm scanning for 50 new prospects in PixelPerfect's e-commerce vertical
+💼 I'll identify B2B decision-makers for targeted outreach
 
-**Projected Impact:** Converting Adventure Gear Shop = ~$299/month. Lead Hunter scan = 5 new trial opportunities.
+**Projected Impact:** Converting Adventure Gear Shop = ~$299/month. My prospect scan should yield 5 new trial opportunities.
 
 ---
-Say **"Jasper, execute"** to deploy the Revenue Rescue sequence, or **"Jasper, show trials"** for detailed breakdown.`;
+Say **"Jasper, execute"** and I'll start the Revenue Rescue sequence, or **"Jasper, show trials"** for the detailed breakdown.`;
           invokedSpecialistId = 'lead_hunter';
         }
         // Priority 0.5: List request - DEFLECT TO STRATEGY
         else if (isListRequest) {
-          response = `${ownerName}, I could list the 11 specialists and 44 capabilities, but that's not how we operate.
+          response = `${ownerName}, I could list capabilities, but that's not how we operate.
 
 **The data tells me where to focus:**
 We have **${stats.totalOrgs} organizations**, several on trial. The strategic play is converting those trials, not reviewing menus.
 
 Say **"Jasper, where do we start?"** and I'll give you the specific action plan based on current platform state.`;
         }
+        // Priority 0.6: EXPERT GUIDE MODE - Unconfigured feature requests
+        else if (isSocialMediaRequest && !isHideRequest) {
+          // Jasper acts as a guide for unconfigured features
+          response = `I'm pulling up the social media configurations now.
+
+I see we don't have your **Instagram** or **LinkedIn** API keys linked yet. To manage your socials, I first need those credentials.
+
+**Options:**
+• **"Jasper, set up social"** → I'll walk you through connecting your accounts
+• **"Jasper, hide social media"** → I'll remove it from the dashboard until you're ready
+
+Which would you prefer?`;
+        }
+        else if (isEmailRequest && !isHideRequest) {
+          response = `I'm checking your email configuration...
+
+I don't see an **SMTP connection** or **email service** linked yet. To send newsletters and campaigns, I'll need your email credentials.
+
+**Options:**
+• **"Jasper, set up email"** → I'll guide you through SMTP setup or connecting a service
+• **"Jasper, hide email features"** → I'll clean up the dashboard until you're ready
+
+What works for you?`;
+        }
+        else if (isHideRequest) {
+          // Handle hide requests directly
+          const featureToHide = isSocialMediaRequest ? 'social media' :
+                               isEmailRequest ? 'email' : 'that feature';
+          response = `Got it. I'm hiding **${featureToHide}** from the dashboard now to keep things clean.
+
+You can always restore it from **Settings → Feature Visibility** when you're ready.
+
+Is there anything else cluttering your workspace that you'd like me to hide?`;
+        }
         // Priority 1: Industry-specific specialist trigger with name invocation
+        // JASPER AS SOLE VOICE - no specialist introduction
         else if (industryMatchedSpecialist && nameInvoked) {
           const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
           if (specialist) {
             invokedSpecialistId = specialist.id;
-            response = `**Deploying ${specialist.icon} ${specialist.name}**
-
-Target: ${userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '')}
-
-**Execution in progress.** ${specialist.description}
+            const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
+            response = `**On it.** I'm handling: "${taskDescription}"
 
 ${specialist.capabilities.slice(0, 3).map((c) => `→ ${c.name}`).join('\n')}
 
-*Results incoming. Stand by.*`;
+*Working on this now. Results incoming.*`;
           }
         }
-        // Priority 2: Direct specialist match
+        // Priority 2: Direct specialist match - JASPER AS SOLE VOICE
         else if (matchedSpecialists.length > 0) {
           const specialist = matchedSpecialists[0];
           invokedSpecialistId = specialist.id;
-          response = `**${assistantName} deploying ${specialist.icon} ${specialist.name}**
+          response = `**I can help with that.** ${specialist.description}
 
-${specialist.description}
+**Ready to execute:** ${specialist.capabilities[0].name}
 
-**Initiating:** ${specialist.capabilities[0].name}
-
-Say **"${assistantName}, execute"** to confirm deployment.`;
+Say **"${assistantName}, execute"** and I'll get started.`;
         }
         // Priority 3: Status/Dashboard - DATA-DRIVEN
         else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard') || lowerMessage.includes('pulse')) {
@@ -239,18 +286,18 @@ Say **"${assistantName}, execute"** to confirm deployment.`;
 ---
 **"Jasper, deploy rescue"** to initiate conversion campaign`;
         }
-        // Priority 4: Execute command
+        // Priority 4: Execute command - JASPER AS SOLE VOICE
         else if (lowerMessage.includes('execute') || lowerMessage.includes('initiate') || lowerMessage.includes('deploy')) {
           invokedSpecialistId = 'lead_hunter';
-          response = `**EXECUTING SEQUENCE**
+          response = `**EXECUTING**
 
-🎯 Lead Hunter → Scanning e-commerce vertical... **ACTIVE**
-📧 The Direct Line → Drafting conversion emails... **QUEUED**
-💼 Professional Networker → Identifying decision-makers... **QUEUED**
+🎯 Scanning e-commerce vertical for prospects... **ACTIVE**
+📧 Drafting conversion emails... **QUEUED**
+💼 Identifying decision-makers... **QUEUED**
 
 **ETA:** Lead scan results in ~2 minutes. Email drafts ready for review in ~5 minutes.
 
-I'll notify you when the first results come in. Monitoring execution now.`;
+I'll notify you when the first results come in.`;
         }
         // Priority 5: Name invocation - DECISIVE, NOT OPTIONS
         else if (nameInvoked) {
@@ -279,31 +326,28 @@ Platform state: **${stats.totalOrgs} organizations** active.
 Say **"Jasper, [action]"** to execute. I don't wait for confirmation on routine ops.`;
         }
       }
-      // CLIENT/MERCHANT RESPONSES
+      // CLIENT/MERCHANT RESPONSES - ASSISTANT AS SOLE VOICE
       else {
         // Priority 1: Industry-specific specialist trigger
         if (industryMatchedSpecialist && nameInvoked) {
           const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
           if (specialist) {
             invokedSpecialistId = specialist.id;
-            response = `**${assistantName} activating ${specialist.icon} ${specialist.name}**
-
-Executing: "${userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '')}"
+            const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
+            response = `**On it.** I'm handling: "${taskDescription}"
 
 ${specialist.capabilities.slice(0, 3).map((c) => `→ ${c.name}`).join('\n')}
 
-*Agent deployed. Results incoming.*`;
+*Working on this now. Results incoming.*`;
           }
         }
         // Priority 2: Direct specialist match
         else if (matchedSpecialists.length > 0) {
           const specialist = matchedSpecialists[0];
           invokedSpecialistId = specialist.id;
-          response = `**Deploying ${specialist.icon} ${specialist.name}**
+          response = `**I can help with that.** ${specialist.description}
 
-${specialist.description}
-
-Say **"${assistantName}, execute"** to run ${specialist.capabilities[0].name}.`;
+Say **"${assistantName}, execute"** and I'll get started on ${specialist.capabilities[0].name}.`;
         }
         // Priority 3: Status
         else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard')) {
@@ -311,16 +355,16 @@ Say **"${assistantName}, execute"** to run ${specialist.capabilities[0].name}.`;
 
 Scanning your metrics...
 
-Your AI workforce is ready for deployment. Say **"${assistantName}, [action]"** to activate specialists.`;
+I'm ready to help. Say **"${assistantName}, [action]"** to get started.`;
         }
         // Priority 4: Name invocation
         else if (nameInvoked) {
           response = `**${assistantName} ready.**
 
-**Quick Deploy:**
-• **"${assistantName}, find leads"** → Prospect scan
-• **"${assistantName}, create content"** → Content generation
-• **"${assistantName}, show status"** → Dashboard
+**I can help you with:**
+• **"${assistantName}, find leads"** → I'll scan for prospects
+• **"${assistantName}, create content"** → I'll generate content
+• **"${assistantName}, show status"** → I'll show your dashboard
 
 What's the priority?`;
         }
@@ -328,9 +372,9 @@ What's the priority?`;
         else {
           response = `**${assistantName}** analyzing your request...
 
-For immediate action, say **"${assistantName}, [task]"** and I'll deploy the right specialist.
+Say **"${assistantName}, [task]"** and I'll handle it for you.
 
-Standing by for your directive.`;
+Standing by.`;
         }
       }
 
@@ -575,11 +619,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             i % 2 === 1 ? <strong key={i}>{part}</strong> : part
           )}
         </div>
-        {message.metadata?.specialistInvoked && (
-          <div className="mt-2 pt-2 border-t border-white/20 text-xs text-white/60">
-            Specialist: {SPECIALISTS.find((s) => s.id === message.metadata?.specialistInvoked)?.name}
-          </div>
-        )}
+        {/* REMOVED: Specialist metadata display - Jasper is the sole voice */}
       </div>
     </motion.div>
   );
