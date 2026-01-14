@@ -8,6 +8,8 @@
  * - Implementation Guide (Proactive Project Manager)
  * - Action Handler (AI Response Processing)
  * - Jasper Proactive Intelligence (Admin AI)
+ * - Jasper Tools (Anti-Hallucination Tool Calling)
+ * - System State Service (Mandatory State Reflection)
  *
  * @module orchestrator
  */
@@ -31,7 +33,7 @@ export {
 
 // System Health Service - Configuration Auditing
 export {
-  SystemHealthService,
+  SystemHealthService as SystemHealthServiceClass,
   PLATFORM_FEATURES,
   type FeatureStatus,
   type FeatureHealthCheck,
@@ -84,3 +86,30 @@ export {
   type PlatformMetrics,
   type LaunchContextResponse,
 } from './jasper-proactive-intelligence';
+
+// Jasper Tools - Anti-Hallucination Tool Calling
+export {
+  JASPER_TOOLS,
+  executeToolCall,
+  executeToolCalls,
+  executeQueryDocs,
+  executeGetPlatformStats,
+  executeDelegateToAgent,
+  executeInspectAgentLogs,
+  executeGetSystemState,
+  type ToolDefinition,
+  type ToolCall,
+  type ToolResult,
+  type SystemState,
+  type BlueprintSection,
+  type AgentDelegation,
+  type AgentLog,
+} from './jasper-tools';
+
+// System State Service - Mandatory State Reflection
+export {
+  SystemStateService,
+  type StateValidation,
+  type StateCorrection,
+  type QueryClassification,
+} from './system-state-service';

@@ -14,6 +14,49 @@ export interface OpenRouterConfig {
   organizationId?: string;
 }
 
+// Tool calling types (OpenAI-compatible format)
+export interface ToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: 'object';
+      properties: Record<string, any>;
+      required: string[];
+    };
+  };
+}
+
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant' | 'tool';
+  content: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+}
+
+export interface ChatCompletionResponse {
+  content: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  model: string;
+  provider: string;
+  toolCalls?: ToolCall[];
+  finishReason?: string;
+}
+
 export class OpenRouterProvider {
   private apiKey: string | null = null;
   private baseURL: string;
@@ -119,6 +162,78 @@ export class OpenRouterProvider {
       },
       model: data.model,
       provider: 'openrouter',
+    };
+  }
+
+  /**
+   * Chat completion with tool calling support.
+   * Use this for Jasper's anti-hallucination system.
+   */
+  async chatWithTools(params: {
+    model: ModelName;
+    messages: ChatMessage[];
+    tools?: ToolDefinition[];
+    toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+  }): Promise<ChatCompletionResponse> {
+    const openrouterModel = this.mapModelName(params.model);
+    const apiKey = await this.getApiKey();
+
+    console.log(`[OpenRouter] Making tool-enabled request to model: ${openrouterModel}`);
+    console.log(`[OpenRouter] Tools provided: ${params.tools?.map(t => t.function.name).join(', ') || 'none'}`);
+
+    const requestBody: Record<string, any> = {
+      model: openrouterModel,
+      messages: params.messages,
+      temperature: params.temperature ?? 0.7,
+      max_tokens: params.maxTokens ?? 4096,
+      top_p: params.topP ?? 0.9,
+    };
+
+    // Add tools if provided
+    if (params.tools && params.tools.length > 0) {
+      requestBody.tools = params.tools;
+      requestBody.tool_choice = params.toolChoice ?? 'auto';
+    }
+
+    const response = await fetch(`${this.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': (process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000',
+        'X-Title': 'AI Sales Platform',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    const message = data.choices[0]?.message;
+    const finishReason = data.choices[0]?.finish_reason;
+
+    console.log(`[OpenRouter] Response received. Finish reason: ${finishReason}`);
+    if (message?.tool_calls) {
+      console.log(`[OpenRouter] Tool calls requested: ${message.tool_calls.map((tc: ToolCall) => tc.function.name).join(', ')}`);
+    }
+
+    return {
+      content: message?.content ?? '',
+      usage: {
+        promptTokens: data.usage?.prompt_tokens ?? 0,
+        completionTokens: data.usage?.completion_tokens ?? 0,
+        totalTokens: data.usage?.total_tokens ?? 0,
+      },
+      model: data.model,
+      provider: 'openrouter',
+      toolCalls: message?.tool_calls,
+      finishReason,
     };
   }
 

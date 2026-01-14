@@ -8,20 +8,22 @@
  * - OpenRouter API integration for multi-model support
  * - Model selection with default to google/gemini-2.0-flash-exp for fast conversational flow
  * - Conversation history for stateful memory
- * - Tool calling for background agent execution
+ * - ANTI-HALLUCINATION: Tool calling for verified data retrieval
  * - Real-time stats and context injection
  * - TTS voice synthesis integration
  */
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { OpenRouterProvider, type ChatMessage, type ToolCall } from '@/lib/ai/openrouter-provider';
 import { requireRole } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
+import { JASPER_TOOLS, executeToolCalls } from '@/lib/orchestrator/jasper-tools';
+import { SystemStateService } from '@/lib/orchestrator/system-state-service';
 
 // Default model for Jasper - Gemini 1.5 Pro (stable)
 const DEFAULT_MODEL = 'google/gemini-pro-1.5';
@@ -153,6 +155,14 @@ export async function POST(request: NextRequest) {
       logger.info('[Jasper] Using custom model', { model: selectedModel });
     }
 
+    // Classify the query to determine if state reflection is needed
+    const queryClassification = SystemStateService.classifyQuery(message);
+    logger.info('[Jasper] Query classified', {
+      queryType: queryClassification.queryType,
+      requiresStateReflection: queryClassification.requiresStateReflection,
+      suggestedTools: queryClassification.suggestedTools,
+    });
+
     // Build the enhanced system prompt with real-time context
     const enhancedSystemPrompt = buildEnhancedSystemPrompt(
       systemPrompt,
@@ -161,9 +171,15 @@ export async function POST(request: NextRequest) {
       merchantInfo
     );
 
-    // Convert conversation history to provider format
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: enhancedSystemPrompt },
+    // For factual queries, inject verified state context
+    let stateContext = '';
+    if (queryClassification.requiresStateReflection) {
+      stateContext = await SystemStateService.generateStateContext(organizationId);
+    }
+
+    // Convert conversation history to provider format with tool support
+    const messages: ChatMessage[] = [
+      { role: 'system', content: enhancedSystemPrompt + stateContext },
       ...conversationHistory.map((msg) => ({
         role: msg.role as 'user' | 'assistant' | 'system',
         content: msg.content,
@@ -177,16 +193,93 @@ export async function POST(request: NextRequest) {
 
     const startTime = Date.now();
 
-    // Make the API call via OpenRouter
-    const response = await provider.chat({
-      model: selectedModel as any,
-      messages,
-      temperature: 0.7,
-      maxTokens: 2048,
-    });
+    // Determine if we should enable tool calling
+    // Use tools for factual/strategic queries in admin context
+    const useTools = isAdminContext && (
+      queryClassification.requiresStateReflection ||
+      queryClassification.queryType === 'strategic'
+    );
+
+    let finalResponse: string;
+    let toolsExecuted: string[] = [];
+
+    if (useTools) {
+      // TOOL-CALLING LOOP: Allows Jasper to query data before responding
+      let currentMessages = [...messages];
+      let iterationCount = 0;
+      const maxIterations = 3; // Prevent infinite loops
+
+      while (iterationCount < maxIterations) {
+        iterationCount++;
+
+        const response = await provider.chatWithTools({
+          model: selectedModel as any,
+          messages: currentMessages,
+          tools: JASPER_TOOLS,
+          toolChoice: 'auto',
+          temperature: 0.7,
+          maxTokens: 4096,
+        });
+
+        // If no tool calls, we have the final response
+        if (!response.toolCalls || response.toolCalls.length === 0) {
+          finalResponse = response.content;
+          break;
+        }
+
+        // Execute the tool calls
+        logger.info('[Jasper] Executing tool calls', {
+          tools: response.toolCalls.map((tc) => tc.function.name),
+          iteration: iterationCount,
+        });
+
+        const toolResults = await executeToolCalls(response.toolCalls);
+        toolsExecuted.push(...response.toolCalls.map((tc) => tc.function.name));
+
+        // Add assistant message with tool calls
+        currentMessages.push({
+          role: 'assistant',
+          content: response.content || '',
+          tool_calls: response.toolCalls,
+        });
+
+        // Add tool results
+        for (const result of toolResults) {
+          currentMessages.push({
+            role: 'tool',
+            content: result.content,
+            tool_call_id: result.tool_call_id,
+          });
+        }
+
+        // If this was the last iteration, force a response
+        if (iterationCount >= maxIterations) {
+          const finalAttempt = await provider.chatWithTools({
+            model: selectedModel as any,
+            messages: currentMessages,
+            tools: JASPER_TOOLS,
+            toolChoice: 'none', // Force text response
+            temperature: 0.7,
+            maxTokens: 4096,
+          });
+          finalResponse = finalAttempt.content;
+        }
+      }
+
+      // Fallback if somehow no response was set
+      finalResponse = finalResponse! || 'I encountered an issue retrieving the data. Please try again.';
+    } else {
+      // Standard chat without tools for conversational queries
+      const response = await provider.chat({
+        model: selectedModel as any,
+        messages: messages as any,
+        temperature: 0.7,
+        maxTokens: 2048,
+      });
+      finalResponse = response.content;
+    }
 
     const responseTime = Date.now() - startTime;
-    const finalResponse = response.content;
 
     // Log the interaction for analytics
     logger.info('[Jasper] Chat completed via OpenRouter', {
@@ -194,8 +287,10 @@ export async function POST(request: NextRequest) {
       model: selectedModel,
       messageLength: message.length,
       responseLength: finalResponse.length,
-      usage: response.usage,
       responseTime,
+      toolsUsed: useTools,
+      toolsExecuted: toolsExecuted.length > 0 ? toolsExecuted : undefined,
+      queryType: queryClassification.queryType,
     });
 
     // Optionally persist to Firestore for long-term memory
@@ -241,8 +336,8 @@ export async function POST(request: NextRequest) {
       response: finalResponse,
       metadata: {
         model: selectedModel,
-        usage: response.usage,
         responseTime,
+        toolExecuted: toolsExecuted.length > 0 ? toolsExecuted.join(', ') : undefined,
       },
       audio: audioOutput,
     };
