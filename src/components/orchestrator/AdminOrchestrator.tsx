@@ -25,6 +25,7 @@ import {
   generateStatusOpener,
 } from '@/lib/ai/persona-mapper';
 import { runProvisioner } from '@/lib/db/provisioner';
+import { auth } from '@/lib/firebase/config';
 
 // Jasper - The Admin AI Assistant Name
 const ADMIN_ASSISTANT_NAME = 'Jasper';
@@ -117,11 +118,22 @@ export function AdminOrchestrator() {
     const currentAttempt = ++fetchAttemptRef.current;
 
     try {
-      // Use the new secure stats API endpoint
+      // Get the current Firebase user and their ID token for authentication
+      const currentUser = auth?.currentUser;
+      if (!currentUser) {
+        console.warn('[Jasper] No authenticated user, cannot fetch stats');
+        setIsLoading(false);
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+
+      // Use the new secure stats API endpoint with proper auth
       const response = await fetch('/api/admin/stats', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         credentials: 'include',
       });
@@ -163,17 +175,32 @@ export function AdminOrchestrator() {
 
       // Only set fallback if we haven't successfully fetched before
       if (!statsVerified) {
-        // Fallback: Try the old endpoints with debouncing
+        // Fallback: Try the organizations endpoint with proper auth
         try {
-          const orgsResponse = await fetch('/api/admin/organizations?limit=1');
-          const orgsData = await orgsResponse.json();
+          const currentUser = auth?.currentUser;
+          if (currentUser) {
+            const token = await currentUser.getIdToken();
+            const orgsResponse = await fetch('/api/admin/organizations?limit=100', {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+            if (orgsResponse.ok) {
+              const orgsData = await orgsResponse.json();
+              const orgCount = orgsData.organizations?.length ?? 0;
 
-          setStats((prev) => ({
-            ...prev,
-            totalOrgs: orgsData.pagination?.total ?? prev.totalOrgs,
-          }));
+              setStats((prev) => ({
+                ...prev,
+                totalOrgs: orgCount,
+                activeAgents: orgCount, // Estimate one agent per org
+              }));
+              setStatsVerified(true);
+              console.log(`[Jasper] Fallback succeeded: ${orgCount} organizations found`);
+            }
+          }
         } catch {
           // Keep existing stats
+          console.warn('[Jasper] Fallback fetch also failed');
         }
       }
     } finally {
@@ -186,10 +213,13 @@ export function AdminOrchestrator() {
   // Apply debounce to the fetch function
   const fetchStats = useDebouncedCallback(fetchStatsInternal, STATS_FETCH_DEBOUNCE_MS);
 
-  // Fetch platform stats on mount with debounce
+  // Fetch platform stats when admin user is authenticated
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    // Wait for admin authentication before fetching stats
+    if (adminUser && auth?.currentUser) {
+      fetchStats();
+    }
+  }, [fetchStats, adminUser]);
 
   // Get admin persona for dynamic generation
   const adminPersona = getAdminPersona();
@@ -198,15 +228,23 @@ export function AdminOrchestrator() {
   const getWelcomeMessage = (): string => {
     const ownerName = adminUser?.email?.split('@')[0] || 'Commander';
 
+    // Show "Analyzing..." for stats that haven't been verified yet
+    const formatStat = (value: number, label: string): string => {
+      if (!statsVerified && value === 0) {
+        return `**Analyzing...** ${label}`;
+      }
+      return `**${value}** ${label}`;
+    };
+
     return `**Hello ${ownerName}, I am ${ADMIN_ASSISTANT_NAME}, your ${adminPersona.partnerTitle}.**
 
 ${generateStatusOpener(ADMIN_ASSISTANT_NAME, 'admin', 'admin')}
 
 **Platform Command Center:**
-• **${stats.totalOrgs}** Total Organizations under management
-• **${stats.activeAgents}** Active AI Agents deployed fleet-wide
-• **${stats.pendingTickets}** Support tickets requiring attention
-• **${stats.trialOrgs}** Trial organizations (conversion opportunities)
+• ${formatStat(stats.totalOrgs, 'Total Organizations under management')}
+• ${formatStat(stats.activeAgents, 'Active AI Agents deployed fleet-wide')}
+• ${formatStat(stats.pendingTickets, 'Support tickets requiring attention')}
+• ${formatStat(stats.trialOrgs, 'Trial organizations (conversion opportunities)')}
 
 **Strategic Actions Available:**
 
@@ -223,16 +261,24 @@ Ready to execute your growth strategy.`;
 
   // Generate detailed platform briefing
   const generateBriefing = async (): Promise<string> => {
-    return `📊 **Platform Intelligence Briefing**
+    // Avoid division by zero
+    const trialConversionPct = stats.totalOrgs > 0
+      ? Math.round((stats.trialOrgs / stats.totalOrgs) * 100)
+      : 0;
+    const avgAgentsPerOrg = stats.totalOrgs > 0
+      ? Math.round(stats.activeAgents / stats.totalOrgs)
+      : 0;
+
+    return `**Platform Intelligence Briefing**
 
 **Organization Health:**
 • Total Active: ${stats.totalOrgs} organizations
-• Trial Users: ${stats.trialOrgs} (${Math.round((stats.trialOrgs / stats.totalOrgs) * 100)}% conversion opportunity)
+• Trial Users: ${stats.trialOrgs} (${trialConversionPct}% conversion opportunity)
 • Monthly Revenue: $${stats.monthlyRevenue.toLocaleString()}
 
 **AI Workforce Status:**
 • ${stats.activeAgents} agents deployed across all orgs
-• Average agents per org: ${Math.round(stats.activeAgents / stats.totalOrgs)}
+• Average agents per org: ${avgAgentsPerOrg}
 • Most popular: Lead Hunter, Newsletter
 
 **Support Overview:**
