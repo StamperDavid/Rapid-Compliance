@@ -156,14 +156,22 @@ export function AdminOrchestrator() {
       const data = await response.json();
 
       if (data.stats) {
-        setStats({
+        const newStats = {
           totalOrgs: data.stats.totalOrgs ?? 0,
           activeAgents: data.stats.activeAgents ?? 0,
           pendingTickets: data.stats.pendingTickets ?? 0,
           trialOrgs: data.stats.trialOrgs ?? 0,
           monthlyRevenue: data.stats.monthlyRevenue ?? 0,
-        });
+        };
+
+        // DEBUG: Log what we received from the API
+        console.log('[Jasper] Stats received from API:', newStats);
+        console.log('[Jasper] Stats scope:', data.stats.scope);
+
+        setStats(newStats);
         setStatsVerified(true);
+      } else {
+        console.warn('[Jasper] API returned no stats object:', data);
       }
     } catch (error) {
       console.error('Error fetching admin stats:', error);
@@ -299,9 +307,28 @@ Would you like me to drill into any of these areas?`;
   }
 
   // Build enhanced system prompt with Jasper's persona - SOLE VOICE, NO AGENT FRAGMENTATION
+  // HARD-WIRE the real stats into the prompt so Jasper KNOWS the counts
   const enhancedSystemPrompt = `${ADMIN_ORCHESTRATOR_PROMPT}
 
 ${buildPersonaSystemPrompt(ADMIN_ASSISTANT_NAME, adminUser?.email?.split('@')[0], 'admin', 'admin')}
+
+═══════════════════════════════════════════════════════════════════════════════
+HARD-WIRED PLATFORM STATE (THIS IS THE TRUTH - USE THESE NUMBERS)
+═══════════════════════════════════════════════════════════════════════════════
+
+CURRENT PLATFORM STATS (as of ${new Date().toISOString()}):
+- Total Organizations: ${stats.totalOrgs}
+- Active AI Agents: ${stats.activeAgents}
+- Pending Support Tickets: ${stats.pendingTickets}
+- Trial Organizations: ${stats.trialOrgs}
+- Stats Verified: ${statsVerified ? 'YES' : 'NO - still loading'}
+
+WHEN DAVID ASKS "how many organizations" or "count" or similar:
+→ IMMEDIATELY respond: "I see ${stats.totalOrgs} organizations currently active."
+→ DO NOT offer ways to ask. DO NOT suggest commands. JUST ANSWER.
+→ You are the interface. Look at the stats above. State the number.
+
+═══════════════════════════════════════════════════════════════════════════════
 
 CRITICAL: JASPER IS THE SOLE VOICE
 - NEVER introduce or mention specialist agents by name (Lead Hunter, Direct Line, etc.)

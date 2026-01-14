@@ -220,12 +220,18 @@ export async function GET(request: NextRequest) {
         file: 'admin-stats-route.ts',
       });
 
+      // DEBUG: Log the collection path being queried
+      console.log('[STATS DEBUG] Querying collection:', COLLECTIONS.ORGANIZATIONS);
+
       // Parallel count queries for efficiency
       const [totalOrgs, totalUsers, trialOrgs] = await Promise.all([
         getCollectionCount(COLLECTIONS.ORGANIZATIONS),
         getCollectionCount(COLLECTIONS.USERS),
         getCollectionCountWhere(COLLECTIONS.ORGANIZATIONS, 'plan', '==', 'trial'),
       ]);
+
+      // DEBUG: Log the raw counts
+      console.log('[STATS DEBUG] Raw counts:', { totalOrgs, totalUsers, trialOrgs });
 
       // Estimate active agents (one per org on average)
       const activeAgents = totalOrgs; // Could query actual agent configs
@@ -243,6 +249,9 @@ export async function GET(request: NextRequest) {
         fetchedAt: new Date().toISOString(),
         scope: 'global',
       };
+
+      // DEBUG: Log the final stats object
+      console.log('[STATS DEBUG] Final stats:', stats);
 
       logger.info('Global platform stats fetched', {
         totalOrgs,
