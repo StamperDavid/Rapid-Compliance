@@ -121,109 +121,45 @@ export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
   const assistantName = profile?.assistantName || 'Assistant';
   const ownerName = profile?.ownerName;
 
-  // Generate personalized welcome message with dynamic persona AND Implementation Guide awareness
+  // Generate personalized welcome message - natural dialogue, no menus
   const getWelcomeMessage = (): string => {
-    // Build the personalized introduction
-    const intro = generateIntroduction(
-      assistantName,
-      ownerName,
-      (profile?.industry as IndustryType) || 'custom',
-      'client'
-    );
+    const displayName = ownerName || 'there';
+    const businessName = profile?.name || 'your business';
+    const industryContext = industryPersona.industryDisplayName;
 
-    // Get Implementation Guide handshake if context available
-    const guideHandshake = implContext
-      ? ImplementationGuide.generateSpecialistHandshake(implContext)
-      : null;
+    // Build system status naturally
+    const buildSystemContext = (): string => {
+      if (!healthReport) return '';
 
-    if (hasSeenWelcome) {
-      // Return briefing for returning users - lead with status update AND system awareness
-      const statusOpener = generateStatusOpener(
-        assistantName,
-        (profile?.industry as IndustryType) || 'custom',
-        'client'
-      );
-
-      // Include system health in returning user message
-      let systemStatus = '';
-      if (healthReport && healthReport.readinessLevel !== 'platform-ready') {
-        const unconfigured = healthReport.features.filter(f => f.status === 'unconfigured');
-        if (unconfigured.length > 0) {
-          systemStatus = `\n**Platform Setup:** ${healthReport.readinessScore}% complete`;
-          systemStatus += `\n• ${unconfigured.slice(0, 2).map(f => `${f.icon} ${f.featureName}: Not configured`).join('\n• ')}`;
-          systemStatus += `\n\n*Say "hide [feature]" if you don't need it, or "set up [feature]" to configure.*`;
-        }
-      } else if (healthReport?.goldenMaster.hasGoldenMaster) {
-        systemStatus = `\n**Golden Master:** Active (${healthReport.goldenMaster.activeVersion}) ✅`;
+      const unconfigured = healthReport.features.filter(f => f.status === 'unconfigured');
+      if (unconfigured.length === 0) {
+        return 'Everything is set up and running.';
       }
 
-      return `**${intro}**
+      const featureNames = unconfigured.slice(0, 2).map(f => f.featureName.toLowerCase()).join(' and ');
+      return `I noticed ${featureNames} ${unconfigured.length === 1 ? "isn't" : "aren't"} configured yet. We can set ${unconfigured.length === 1 ? 'that' : 'those'} up whenever you're ready, or I can hide ${unconfigured.length === 1 ? 'it' : 'them'} to keep your dashboard clean.`;
+    };
 
-${statusOpener}
-
-**Your ${industryPersona.industryDisplayName} Dashboard:**
-${profile?.name ? `• Business: ${profile.name}` : ''}
-• Your AI workforce is standing by
-${industryPersona.statusUpdates.slice(0, 2).map(s => `• ${s.template.replace('{count}', '0').replace('{percentage}', '--').replace('{amount}', '$--').replace('{status}', 'Ready')}`).join('\n')}
-${systemStatus}
-
-**Quick Commands:**
-• "${assistantName}, show my leads"
-• "${assistantName}, create content"
-• "${assistantName}, check my pipeline"
-
-What's your priority today?`;
+    // Returning user - brief status update
+    if (hasSeenWelcome) {
+      const systemContext = buildSystemContext();
+      return `Hey ${displayName}. ${systemContext || `Ready to work on ${businessName}.`} What do you need?`;
     }
 
-    // First contact - Use Implementation Guide's Specialist Handshake if available
-    if (guideHandshake && implContext?.currentPhase !== 'operational') {
-      const unconfiguredList = healthReport?.features
-        .filter(f => f.status === 'unconfigured')
-        .slice(0, 3)
-        .map(f => `${f.icon} ${f.featureName}`) || [];
+    // First contact - natural introduction
+    const systemContext = buildSystemContext();
+    const recommendation = implContext?.currentPhase === 'foundation'
+      ? `Since you're getting started, I'd recommend we set up lead generation first - that's usually the highest impact.`
+      : `I'm ready to manage leads, content, and outreach for ${industryContext.toLowerCase()} businesses like yours.`;
 
-      return `**${guideHandshake.greeting}**
+    return `Hey ${displayName}, I'm ${assistantName}. I'll be managing the sales and marketing operations for ${businessName}.
 
-${guideHandshake.systemAwareness}
+${systemContext}
 
-${unconfiguredList.length > 0 ? `**Features Ready to Configure:**
-${unconfiguredList.map(f => `• ${f}`).join('\n')}
-
-Should we set these up together, or would you like me to hide any you don't need to keep your dashboard clean?` : ''}
-
-**Your ${industryPersona.partnerTitle} Capabilities:**
-1. **Lead Intelligence** 🎯 - Say "${assistantName}, find leads"
-2. **Content Engine** 📝 - 11 specialists at your command
-3. **${industryPersona.communicationStyle.focusArea}** - My focus for ${industryPersona.industryDisplayName}
-
-${profile?.nicheDescription ? `**Your Niche:** ${profile.nicheDescription}\n` : ''}
-
-**Next Recommended Action:**
-${guideHandshake.recommendation}
-
-What would you like to tackle first?`;
-    }
-
-    // Fallback - standard first contact onboarding walkthrough
-    return `**${intro}**
-
-I'm specialized for **${industryPersona.industryDisplayName}** businesses and ready to accelerate your growth.
-
-**Your ${industryPersona.partnerTitle} Capabilities:**
-
-1. **Lead Intelligence** 🎯 - Say "${assistantName}, find leads" and I'll activate the Lead Hunter
-2. **Content Engine** 📝 - I command 11 specialists for every platform
-3. **${industryPersona.communicationStyle.focusArea}** - My primary focus for your industry
-
-${profile?.nicheDescription ? `\n**Your Niche:** ${profile.nicheDescription}\nI've tailored my responses for this market segment.\n` : ''}
-
-**Industry-Specific Actions:**
-${industryPersona.specialistTriggers.slice(0, 3).map(t => `• "${assistantName}, ${t.triggers[0]}"`).join('\n')}
-
-Let's start with what matters most - what's your top priority right now?`;
+${recommendation} What would you like to focus on?`;
   };
 
-  // Generate briefing for returning users with industry context AND implementation progress
+  // Generate briefing for returning users - natural conversation style
   const generateBriefing = async (): Promise<string> => {
     // Get fresh health report for briefing
     let currentHealth = healthReport;
@@ -235,27 +171,15 @@ Let's start with what matters most - what's your top priority right now?`;
       }
     }
 
-    // Build implementation progress section
-    let implProgress = '';
-    if (currentHealth && implContext) {
-      implProgress = `\n${ImplementationGuide.getProgressSummary(implContext)}`;
-    }
+    const businessName = profile?.name || 'your business';
+    const emailConnected = currentHealth?.integrations.find(i => i.id === 'email')?.connected;
+    const recommendation = currentHealth?.recommendations[0]?.title || 'setting up your lead pipeline';
 
-    return `📊 **${industryPersona.industryDisplayName} Briefing from ${assistantName}**
+    return `Here's where things stand for ${businessName}:
 
-**${industryPersona.communicationStyle.focusArea.charAt(0).toUpperCase() + industryPersona.communicationStyle.focusArea.slice(1)} Update:**
-${industryPersona.statusUpdates.map(s => `• ${s.template.replace('{count}', '12').replace('{percentage}', '87').replace('{amount}', '$4,250').replace('{status}', 'Optimal').replace('{change}', '+15')}`).join('\n')}
-${implProgress}
+Lead scanning is active and I'm tracking prospects in the ${industryPersona.industryDisplayName.toLowerCase()} vertical. ${emailConnected ? 'Email is connected and ready for outreach.' : "Email isn't connected yet - we can set that up when you're ready to start outreach campaigns."}
 
-**Specialist Status:**
-• 🎯 Lead Hunter: Active - scanning for ${industryPersona.industryDisplayName.toLowerCase()} prospects
-• 📧 Newsletter: ${currentHealth?.integrations.find(i => i.id === 'email')?.connected ? 'Connected' : 'Not connected'}
-• 💼 Professional Networker: Standing by
-
-**Recommended Next Action:**
-${currentHealth?.recommendations[0]?.title || `"${assistantName}, ${industryPersona.specialistTriggers[0]?.triggers[0] || 'find leads'}"`}
-
-Should I execute this action or focus elsewhere?`;
+Based on your setup, ${recommendation.toLowerCase()} looks like the next high-impact move. Want me to get started on that?`;
   };
 
   if (isLoading) {

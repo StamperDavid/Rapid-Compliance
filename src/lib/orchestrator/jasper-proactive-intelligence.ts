@@ -307,21 +307,17 @@ function buildParallelActions(state: PlatformState): ProactiveRecommendation[] {
 }
 
 /**
- * Build the bridge question - NEVER open-ended
+ * Build the bridge question - direct offer, no "Say X to do Y"
  */
 function buildBridgeQuestion(
   primary: ProactiveRecommendation,
   parallel: ProactiveRecommendation[]
 ): string {
-  const specialistList = primary.specialists
-    .map((s) => `${s.specialist.icon} ${s.specialist.name}`)
-    .join(' and ');
-
   if (parallel.length > 0) {
-    return `Should I deploy ${specialistList} for the ${primary.actionName} now, or run it parallel with the ${parallel[0].actionName}?`;
+    return `I can start on the ${primary.actionName} now, or run it alongside the ${parallel[0].actionName}. What's your priority?`;
   }
 
-  return `Say "Jasper, execute" to deploy ${specialistList} for the ${primary.actionName}. Impact: ${primary.impact}`;
+  return `Want me to start on this now? ${primary.impact}`;
 }
 
 /**
@@ -342,8 +338,8 @@ function estimateRevenue(org: OrgSummary): number {
 // ============================================================================
 
 /**
- * Format Jasper's response in the strategic, decisive tone.
- * NEVER returns bulleted feature lists.
+ * Format Jasper's response in natural dialogue.
+ * NEVER mentions specialists by name - speaks as first person.
  *
  * @param context - The launch context response
  * @returns Formatted response string
@@ -353,28 +349,23 @@ export function formatJasperResponse(context: LaunchContextResponse): string {
 
   let response = `${opener}\n\n`;
 
-  // Primary recommendation - decisive, not a list
-  response += `**${primaryAction.actionName}** - Priority: ${primaryAction.priority.toUpperCase()}\n`;
+  // Primary recommendation - natural language
   response += `${primaryAction.recommendation}\n\n`;
 
-  // Specialist deployment - as a strategic plan, not options
-  response += `**Tactical Deployment:**\n`;
+  // Action plan - first person, no specialist names
+  response += `Here's what I'll do:\n`;
   primaryAction.specialists.forEach((deploy) => {
-    response += `${deploy.specialist.icon} **${deploy.specialist.name}** → ${deploy.task}\n`;
+    response += `→ ${deploy.task}\n`;
   });
-  response += `\n**Projected Impact:** ${primaryAction.impact}\n\n`;
+  response += `\nExpected result: ${primaryAction.impact}\n\n`;
 
-  // Parallel actions - brief, not exhaustive
+  // Parallel actions - brief
   if (parallelActions.length > 0) {
-    response += `**Running in Parallel:**\n`;
-    parallelActions.slice(0, 2).forEach((action) => {
-      response += `• ${action.actionName}: ${action.specialists.map((s) => s.specialist.icon).join('')} targeting ${action.target}\n`;
-    });
-    response += '\n';
+    response += `I can also work on ${parallelActions.slice(0, 2).map((a) => a.actionName.toLowerCase()).join(' and ')} at the same time.\n\n`;
   }
 
-  // Bridge - always ends with action, not question
-  response += `---\n${bridge}`;
+  // Bridge - direct offer
+  response += bridge;
 
   return response;
 }
@@ -433,12 +424,7 @@ export function isListRequest(message: string): boolean {
 export function generateListDeflection(state: PlatformState, userName: string): string {
   const trialCount = state.trialOrgs.length;
 
-  return `${userName}, I could list the 11 specialists and 44 capabilities, but that's not how we operate.
-
-**The data tells me where to focus:**
-We have ${state.totalOrgs} organizations, ${trialCount} on trial. The strategic play is converting those trials, not reviewing menus.
-
-Say **"Jasper, where do we start?"** and I'll give you the specific action plan based on current platform state.`;
+  return `I manage the full sales operation - leads, outreach, content, analytics, the whole stack. But rather than listing capabilities, let me tell you what matters right now: ${state.totalOrgs} organizations, ${trialCount} on trial. Converting those trials is the highest-impact move. What would you like to focus on?`;
 }
 
 // ============================================================================

@@ -234,33 +234,47 @@ export function AdminOrchestrator() {
 
   // Generate admin welcome/briefing message with Jasper persona
   const getWelcomeMessage = (): string => {
-    const ownerName = adminUser?.email?.split('@')[0] || 'Commander';
+    const ownerName = adminUser?.email?.split('@')[0] || 'there';
 
-    // Show "Analyzing..." for stats that haven't been verified yet
-    const formatStat = (value: number, label: string): string => {
-      if (!statsVerified && value === 0) {
-        return `**Analyzing...** ${label}`;
+    // Build a natural status update based on current state
+    const buildStatusUpdate = (): string => {
+      if (!statsVerified && stats.totalOrgs === 0) {
+        return "I'm pulling up the latest platform data now.";
       }
-      return `**${value}** ${label}`;
+
+      const parts: string[] = [];
+      parts.push(`${stats.totalOrgs} organization${stats.totalOrgs !== 1 ? 's' : ''} active`);
+
+      if (stats.trialOrgs > 0) {
+        parts.push(`${stats.trialOrgs} on trial`);
+      }
+
+      if (stats.pendingTickets > 0) {
+        parts.push(`${stats.pendingTickets} ticket${stats.pendingTickets !== 1 ? 's' : ''} need attention`);
+      }
+
+      return parts.join(', ') + '.';
     };
 
-    return `**Hello ${ownerName}, I am ${ADMIN_ASSISTANT_NAME}, your ${adminPersona.partnerTitle}.**
+    // Natural greeting based on state
+    const statusContext = buildStatusUpdate();
+    const hasTrials = stats.trialOrgs > 0;
+    const hasTickets = stats.pendingTickets > 0;
 
-${generateStatusOpener(ADMIN_ASSISTANT_NAME, 'admin', 'admin')}
+    let recommendation = '';
+    if (hasTickets) {
+      recommendation = `Those tickets should probably get addressed first.`;
+    } else if (hasTrials) {
+      recommendation = `The trial accounts look like the highest-impact focus right now - each conversion is recurring revenue.`;
+    } else if (stats.totalOrgs > 0) {
+      recommendation = `Everything looks stable. What would you like me to focus on?`;
+    } else {
+      recommendation = `Ready when you are.`;
+    }
 
-**Platform Command Center:**
-• ${formatStat(stats.totalOrgs, 'Total Organizations under management')}
-• ${formatStat(stats.activeAgents, 'Active AI Agents deployed fleet-wide')}
-• ${formatStat(stats.pendingTickets, 'Support tickets requiring attention')}
-• ${formatStat(stats.trialOrgs, 'Trial organizations (conversion opportunities)')}
+    return `Hey ${ownerName}. ${statusContext}
 
-**What I Can Do:**
-• **"${ADMIN_ASSISTANT_NAME}, show platform health"** - I'll run a full diagnostic
-• **"${ADMIN_ASSISTANT_NAME}, review tickets"** - I'll triage the support queue
-• **"${ADMIN_ASSISTANT_NAME}, find more clients"** - I'll scan for new merchant opportunities
-• **"${ADMIN_ASSISTANT_NAME}, activate growth mode"** - I'll generate marketing content
-
-Ready to execute your growth strategy.`;
+${recommendation}`;
   };
 
   // Generate detailed platform briefing

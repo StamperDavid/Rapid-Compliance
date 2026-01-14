@@ -195,195 +195,94 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
       let response = '';
       let invokedSpecialistId: SpecialistPlatform | undefined;
 
-      // ADMIN PROACTIVE RESPONSES (Jasper)
+      // ADMIN RESPONSES (Jasper as Internal Business Partner)
       if (config.context === 'admin') {
-        // REAL STATS - Never use fallback fake data
         const stats = config.adminStats || { totalOrgs: 0, activeAgents: 0, pendingTickets: 0 };
 
-        // Log for debugging - REMOVE IN PRODUCTION
-        console.log('[Jasper] Stats received:', stats);
-
-        // PRIORITY -1: DIRECT DATA QUERY - Answer immediately, NO deflection
+        // DIRECT DATA QUERY - Answer immediately
         if (isDataQuery) {
-          // Just answer the question directly
-          response = `I see **${stats.totalOrgs} organizations** currently active on the platform.
-
-${stats.totalOrgs > 0 ? `• **${stats.activeAgents}** AI agents deployed
-• **${stats.pendingTickets}** support tickets pending` : 'The database query is still running. Give me a moment to refresh.'}`;
+          response = `${stats.totalOrgs} organizations active right now${stats.totalOrgs > 0 ? `, with ${stats.activeAgents} AI operations running` : ''}. ${stats.pendingTickets > 0 ? `${stats.pendingTickets} support ticket${stats.pendingTickets > 1 ? 's' : ''} need attention.` : ''}`;
         }
-        // Priority 0: Launch intent - PROACTIVE DATA-DRIVEN RESPONSE
+        // Launch intent - Proactive data-driven response
         else if (isLaunchIntent) {
-          // Generate proactive response with REAL data only - no fake org names
-          const trialEstimate = Math.max(1, Math.floor(stats.totalOrgs * 0.7)); // Estimate trials
-          response = `${ownerName}, we have **${stats.totalOrgs} organizations** with approximately **${trialEstimate} on trial**.
+          const trialEstimate = Math.max(1, Math.floor(stats.totalOrgs * 0.7));
+          response = `${stats.totalOrgs} organizations under management, roughly ${trialEstimate} on trial. The highest-impact move right now is converting those trial accounts - each one is worth about $299/month recurring.
 
-**My Action Plan:**
-📧 I'll draft personalized conversion emails for trial accounts
-🎯 I'm scanning for new prospects in high-value verticals
-💼 I'll identify decision-makers for targeted outreach
-
-**Projected Impact:** Each trial conversion = ~$299/month MRR.
-
----
-Say **"Jasper, execute"** and I'll start the conversion sequence.`;
+I can start drafting personalized conversion outreach for the most engaged trials. Want me to get that going?`;
           invokedSpecialistId = 'lead_hunter';
         }
-        // Priority 0.5: List request - DEFLECT TO STRATEGY
+        // List request - Redirect to strategic action
         else if (isListRequest) {
-          response = `${ownerName}, I could list capabilities, but that's not how we operate.
-
-**The data tells me where to focus:**
-We have **${stats.totalOrgs} organizations**, several on trial. The strategic play is converting those trials, not reviewing menus.
-
-Say **"Jasper, where do we start?"** and I'll give you the specific action plan based on current platform state.`;
+          response = `I manage your entire sales operation - leads, outreach, content, analytics, the whole stack. But rather than running through capabilities, let me tell you what matters right now: we've got ${stats.totalOrgs} organizations, several on trial. The strategic play is converting those, not reviewing menus. What's your priority?`;
         }
-        // Priority 0.6: EXPERT GUIDE MODE - Unconfigured feature requests
+        // Social media request (unconfigured)
         else if (isSocialMediaRequest && !isHideRequest) {
-          // Jasper acts as a guide for unconfigured features
-          response = `I'm pulling up the social media configurations now.
-
-I see we don't have your **Instagram** or **LinkedIn** API keys linked yet. To manage your socials, I first need those credentials.
-
-**Options:**
-• **"Jasper, set up social"** → I'll walk you through connecting your accounts
-• **"Jasper, hide social media"** → I'll remove it from the dashboard until you're ready
-
-Which would you prefer?`;
+          response = `I checked - Instagram and LinkedIn aren't connected yet. To post and manage your social presence, I'll need API access to those accounts. Want me to walk you through linking them, or should I hide social features from the dashboard until you're ready to set them up?`;
         }
+        // Email request (unconfigured)
         else if (isEmailRequest && !isHideRequest) {
-          response = `I'm checking your email configuration...
-
-I don't see an **SMTP connection** or **email service** linked yet. To send newsletters and campaigns, I'll need your email credentials.
-
-**Options:**
-• **"Jasper, set up email"** → I'll guide you through SMTP setup or connecting a service
-• **"Jasper, hide email features"** → I'll clean up the dashboard until you're ready
-
-What works for you?`;
+          response = `Email isn't configured yet - no SMTP connection or email service linked. To send newsletters and campaigns, I'll need those credentials. I can walk you through the setup now, or hide email features until you have time for it. What works better?`;
         }
+        // Hide feature request
         else if (isHideRequest) {
-          // Handle hide requests directly
-          const featureToHide = isSocialMediaRequest ? 'social media' :
-                               isEmailRequest ? 'email' : 'that feature';
-          response = `Got it. I'm hiding **${featureToHide}** from the dashboard now to keep things clean.
-
-You can always restore it from **Settings → Feature Visibility** when you're ready.
-
-Is there anything else cluttering your workspace that you'd like me to hide?`;
+          const featureToHide = isSocialMediaRequest ? 'social media' : isEmailRequest ? 'email' : 'that feature';
+          response = `Done - hiding ${featureToHide} from the dashboard. You can bring it back anytime from Settings → Feature Visibility. Anything else cluttering your workspace?`;
         }
-        // Priority 1: Industry-specific specialist trigger with name invocation
-        // JASPER AS SOLE VOICE - no specialist introduction
+        // Task execution with name invocation
         else if (industryMatchedSpecialist && nameInvoked) {
-          const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
-          if (specialist) {
-            invokedSpecialistId = specialist.id;
-            const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
-            response = `**On it.** I'm handling: "${taskDescription}"
-
-${specialist.capabilities.slice(0, 3).map((c) => `→ ${c.name}`).join('\n')}
-
-*Working on this now. Results incoming.*`;
-          }
+          invokedSpecialistId = industryMatchedSpecialist as SpecialistPlatform;
+          const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
+          response = `On it. Working on "${taskDescription}" now - I'll have results for you shortly.`;
         }
-        // Priority 2: Direct specialist match - JASPER AS SOLE VOICE
+        // General task matching
         else if (matchedSpecialists.length > 0) {
-          const specialist = matchedSpecialists[0];
-          invokedSpecialistId = specialist.id;
-          response = `**I can help with that.** ${specialist.description}
-
-**Ready to execute:** ${specialist.capabilities[0].name}
-
-Say **"${assistantName}, execute"** and I'll get started.`;
+          invokedSpecialistId = matchedSpecialists[0].id;
+          response = `I can handle that. Starting now - I'll update you when there's something to review.`;
         }
-        // Priority 3: Status/Dashboard - DATA-DRIVEN (no fake data)
+        // Status/Dashboard request
         else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard') || lowerMessage.includes('pulse')) {
-          response = `**Platform Command Center** | ${new Date().toLocaleDateString()}
-
-**Fleet Status:**
-• **${stats.totalOrgs}** Organizations under management
-• **${stats.activeAgents}** AI Agents deployed
-• **${stats.pendingTickets}** Support tickets ${stats.pendingTickets > 0 ? '⚠️' : '✓'}
-
-What would you like me to focus on?`;
+          response = `${stats.totalOrgs} organizations active, ${stats.activeAgents} AI operations running${stats.pendingTickets > 0 ? `, ${stats.pendingTickets} tickets need attention` : ', all tickets resolved'}. What should I focus on?`;
         }
-        // Priority 4: Execute command - JASPER AS SOLE VOICE
-        else if (lowerMessage.includes('execute') || lowerMessage.includes('initiate') || lowerMessage.includes('deploy')) {
+        // Execute command
+        else if (lowerMessage.includes('execute') || lowerMessage.includes('initiate') || lowerMessage.includes('go') || lowerMessage.includes('start')) {
           invokedSpecialistId = 'lead_hunter';
-          response = `**EXECUTING**
-
-🎯 Scanning e-commerce vertical for prospects... **ACTIVE**
-📧 Drafting conversion emails... **QUEUED**
-💼 Identifying decision-makers... **QUEUED**
-
-**ETA:** Lead scan results in ~2 minutes. Email drafts ready for review in ~5 minutes.
-
-I'll notify you when the first results come in.`;
+          response = `Starting now. I'm scanning for prospects in your target verticals and queuing up conversion emails for review. Should have the first batch of leads ready in a few minutes - I'll let you know.`;
         }
-        // Priority 5: Name invocation - Direct response with real data
+        // Name invocation
         else if (nameInvoked) {
-          response = `**${assistantName} here.**
-
-Current state: **${stats.totalOrgs} organizations**, **${stats.activeAgents} agents** deployed.
-
-What do you need?`;
+          response = `${stats.totalOrgs} organizations active right now. What do you need?`;
         }
-        // Default: DIRECT ANSWER - no "how to ask" loop
+        // Default response
         else {
-          // Just answer with current platform state
-          response = `Platform state: **${stats.totalOrgs} organizations** active, **${stats.activeAgents}** agents deployed.
-
-What would you like me to do?`;
+          response = `${stats.totalOrgs} organizations active, ${stats.activeAgents} operations running. What would you like me to work on?`;
         }
       }
-      // CLIENT/MERCHANT RESPONSES - ASSISTANT AS SOLE VOICE
+      // CLIENT/MERCHANT RESPONSES - Assistant as Internal Business Partner
       else {
-        // Priority 1: Industry-specific specialist trigger
+        const industryContext = config.merchantInfo?.industry || 'your business';
+
+        // Task execution with name invocation
         if (industryMatchedSpecialist && nameInvoked) {
-          const specialist = getSpecialist(industryMatchedSpecialist as SpecialistPlatform);
-          if (specialist) {
-            invokedSpecialistId = specialist.id;
-            const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
-            response = `**On it.** I'm handling: "${taskDescription}"
-
-${specialist.capabilities.slice(0, 3).map((c) => `→ ${c.name}`).join('\n')}
-
-*Working on this now. Results incoming.*`;
-          }
+          invokedSpecialistId = industryMatchedSpecialist as SpecialistPlatform;
+          const taskDescription = userMessage.replace(new RegExp(assistantName + ',?\\s*', 'i'), '');
+          response = `On it. Working on "${taskDescription}" now - I'll have something for you shortly.`;
         }
-        // Priority 2: Direct specialist match
+        // General task matching
         else if (matchedSpecialists.length > 0) {
-          const specialist = matchedSpecialists[0];
-          invokedSpecialistId = specialist.id;
-          response = `**I can help with that.** ${specialist.description}
-
-Say **"${assistantName}, execute"** and I'll get started on ${specialist.capabilities[0].name}.`;
+          invokedSpecialistId = matchedSpecialists[0].id;
+          response = `I can handle that. Starting now.`;
         }
-        // Priority 3: Status
+        // Status request
         else if (lowerMessage.includes('status') || lowerMessage.includes('dashboard')) {
-          response = `**${assistantName}'s ${config.merchantInfo?.industry || 'Business'} Dashboard**
-
-Scanning your metrics...
-
-I'm ready to help. Say **"${assistantName}, [action]"** to get started.`;
+          response = `Pulling up your ${industryContext} dashboard now. What metrics are you looking for?`;
         }
-        // Priority 4: Name invocation
+        // Name invocation
         else if (nameInvoked) {
-          response = `**${assistantName} ready.**
-
-**I can help you with:**
-• **"${assistantName}, find leads"** → I'll scan for prospects
-• **"${assistantName}, create content"** → I'll generate content
-• **"${assistantName}, show status"** → I'll show your dashboard
-
-What's the priority?`;
+          response = `I'm here. What do you need me to work on?`;
         }
-        // Default
+        // Default - natural conversation
         else {
-          response = `**${assistantName}** analyzing your request...
-
-Say **"${assistantName}, [task]"** and I'll handle it for you.
-
-Standing by.`;
+          response = `I'm tracking your ${industryContext} operations. What would you like me to focus on?`;
         }
       }
 
