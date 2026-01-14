@@ -12,7 +12,9 @@ class APIKeyService {
   private cacheTimestamp: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  private constructor() {}
+  private constructor() {
+    console.log('[APIKeyService] Initialized. Ready to fetch keys from Firestore.');
+  }
 
   static getInstance(): APIKeyService {
     if (!APIKeyService.instance) {
@@ -195,8 +197,10 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   // Private helper methods
 
   private async fetchKeysFromFirestore(organizationId: string): Promise<APIKeysConfig | null> {
-    // Special case: 'platform' and 'platform-admin' orgs use global platform API keys
-    if (organizationId === 'platform' || organizationId === 'platform-admin') {
+    // Special case: platform-level orgs use global platform API keys
+    const platformOrgIds = ['platform', 'platform-admin', 'admin', 'default'];
+    if (platformOrgIds.includes(organizationId)) {
+      console.log('[APIKeyService] Using platform keys for org:', organizationId);
       try {
         // Prefer admin SDK to bypass security rules
         const { adminDb } = await import('../firebase/admin');
@@ -214,22 +218,27 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         }
         
         if (platformKeys) {
-          logger.info('[API Key Service] Platform keys found', { 
-            keys: Object.keys(platformKeys),
-            file: 'api-key-service.ts' 
-          });
+          console.log('[APIKeyService] Platform keys found:', Object.keys(platformKeys));
+
+          // Extract OpenRouter key from various possible locations
+          const openrouterKey = platformKeys.ai?.openrouterApiKey
+            || platformKeys.openrouter?.apiKey
+            || null;
+
+          console.log('[APIKeyService] OpenRouter key found:', openrouterKey ? openrouterKey.slice(0, 12) + '...' : 'NOT FOUND');
+
           // Convert platform keys format to APIKeysConfig format
           return {
             id: 'keys-platform',
             organizationId: 'platform',
-            firebase:platformKeys.firebase ?? {},
-            googleCloud:platformKeys.googleCloud ?? {},
-            ai: platformKeys.openrouter || platformKeys.openai || platformKeys.anthropic || platformKeys.gemini ? {
-              openrouterApiKey: platformKeys.openrouter?.apiKey,
-              openaiApiKey: platformKeys.openai?.apiKey,
-              anthropicApiKey: platformKeys.anthropic?.apiKey,
-              geminiApiKey: platformKeys.gemini?.apiKey,
-            } : {},
+            firebase: platformKeys.firebase ?? {},
+            googleCloud: platformKeys.googleCloud ?? {},
+            ai: {
+              openrouterApiKey: openrouterKey,
+              openaiApiKey: platformKeys.ai?.openaiApiKey || platformKeys.openai?.apiKey || null,
+              anthropicApiKey: platformKeys.ai?.anthropicApiKey || platformKeys.anthropic?.apiKey || null,
+              geminiApiKey: platformKeys.ai?.geminiApiKey || platformKeys.gemini?.apiKey || null,
+            },
             payments:platformKeys.stripe ?? {},
             email:platformKeys.sendgrid ?? platformKeys.resend ?? {},
             sms:platformKeys.twilio ?? {},

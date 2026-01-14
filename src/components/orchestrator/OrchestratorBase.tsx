@@ -42,6 +42,7 @@ import {
   Settings,
   Radio,
 } from 'lucide-react';
+import { auth } from '@/lib/firebase/config';
 
 // ============================================================================
 // TYPES
@@ -372,6 +373,14 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     setTyping(true);
 
     try {
+      // Get Firebase ID token for authentication
+      const currentUser = auth?.currentUser;
+      if (!currentUser) {
+        throw new Error('Not authenticated. Please log in.');
+      }
+      const idToken = await currentUser.getIdToken(true);
+      console.log('[Jasper] Auth token acquired for user:', currentUser.email);
+
       // Build conversation history for context (last 15 messages for memory)
       const conversationHistory = chatHistory.slice(-15).map((msg) => ({
         role: msg.role,
@@ -383,6 +392,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
         },
         credentials: 'include',
         body: JSON.stringify({

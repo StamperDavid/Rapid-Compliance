@@ -15,10 +15,10 @@
  * @module provisioner
  */
 
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { getPrefix, COLLECTIONS } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
+import { adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 import type { ProvisionResult, ProvisionReport } from './types';
 import {
@@ -70,14 +70,15 @@ function buildPath(basePath: string): string {
  * Check if a document exists at the given path
  */
 async function documentExists(collectionPath: string, docId: string): Promise<boolean> {
-  if (!db) {
+  if (!adminDb) {
+    logger.error('[Provisioner] Admin SDK not initialized', { file: 'provisioner/index.ts' });
     return false;
   }
 
   try {
-    const docRef = doc(db, collectionPath, docId);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists();
+    const docRef = adminDb.collection(collectionPath).doc(docId);
+    const docSnap = await docRef.get();
+    return docSnap.exists;
   } catch (error) {
     logger.warn(`[Provisioner] Error checking existence: ${collectionPath}/${docId}`, {
       error,
@@ -111,17 +112,17 @@ async function provisionSystemConfig(): Promise<ProvisionResult> {
       };
     }
 
-    if (!db) {
-      throw new Error('Firestore not initialized');
+    if (!adminDb) {
+      throw new Error('Firebase Admin SDK not initialized');
     }
 
     const blueprint = getSystemConfigBlueprint();
-    const docRef = doc(db, collectionPath, docId);
+    const docRef = adminDb.collection(collectionPath).doc(docId);
 
-    await setDoc(docRef, {
+    await docRef.set({
       ...blueprint,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     logger.info('[Provisioner] Created system config', {
@@ -169,17 +170,17 @@ async function provisionAdminPersona(): Promise<ProvisionResult> {
       };
     }
 
-    if (!db) {
-      throw new Error('Firestore not initialized');
+    if (!adminDb) {
+      throw new Error('Firebase Admin SDK not initialized');
     }
 
     const blueprint = getAdminPersonaBlueprint();
-    const docRef = doc(db, collectionPath, docId);
+    const docRef = adminDb.collection(collectionPath).doc(docId);
 
-    await setDoc(docRef, {
+    await docRef.set({
       ...blueprint,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     logger.info('[Provisioner] Created admin persona (Jasper)', {
@@ -229,16 +230,16 @@ async function provisionIndustryPersonas(): Promise<ProvisionResult[]> {
         continue;
       }
 
-      if (!db) {
-        throw new Error('Firestore not initialized');
+      if (!adminDb) {
+        throw new Error('Firebase Admin SDK not initialized');
       }
 
-      const docRef = doc(db, collectionPath, industryId);
+      const docRef = adminDb.collection(collectionPath).doc(industryId);
 
-      await setDoc(docRef, {
+      await docRef.set({
         ...blueprint,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       logger.info(`[Provisioner] Created industry persona: ${industryId}`, {
@@ -291,16 +292,16 @@ async function provisionPricingTiers(): Promise<ProvisionResult[]> {
         continue;
       }
 
-      if (!db) {
-        throw new Error('Firestore not initialized');
+      if (!adminDb) {
+        throw new Error('Firebase Admin SDK not initialized');
       }
 
-      const docRef = doc(db, collectionPath, tierId);
+      const docRef = adminDb.collection(collectionPath).doc(tierId);
 
-      await setDoc(docRef, {
+      await docRef.set({
         ...blueprint,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       });
 
       logger.info(`[Provisioner] Created pricing tier: ${tierId}`, {
@@ -373,9 +374,9 @@ export async function runProvisioner(): Promise<ProvisionReport> {
   });
 
   try {
-    // Check Firebase is initialized
-    if (!isFirebaseConfigured || !db) {
-      logger.warn('[Provisioner] Firebase not configured, skipping provisioning', {
+    // Check Firebase Admin SDK is initialized
+    if (!adminDb) {
+      logger.error('[Provisioner] Firebase Admin SDK not initialized - cannot provision', {
         file: 'provisioner/index.ts',
       });
       return {
@@ -388,6 +389,10 @@ export async function runProvisioner(): Promise<ProvisionReport> {
         summary: { created: 0, skipped: 0, errors: 0 },
       };
     }
+
+    logger.info('[Provisioner] Using Firebase Admin SDK (bypasses security rules)', {
+      file: 'provisioner/index.ts',
+    });
 
     // 1. Provision System Config
     results.push(await provisionSystemConfig());

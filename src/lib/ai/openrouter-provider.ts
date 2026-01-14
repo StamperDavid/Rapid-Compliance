@@ -38,6 +38,9 @@ export class OpenRouterProvider {
    * Chat completion using OpenRouter
    * Works with ANY model: GPT-4, Claude, Gemini, Llama, etc.
    */
+  // Fallback model if primary fails with 404
+  private static readonly FALLBACK_MODEL = 'anthropic/claude-3-haiku';
+
   async chat(params: {
     model: ModelName;
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
@@ -45,53 +48,78 @@ export class OpenRouterProvider {
     maxTokens?: number;
     topP?: number;
   }) {
-    try {
-      // Map internal model names to OpenRouter model names
-      const openrouterModel = this.mapModelName(params.model);
+    const openrouterModel = this.mapModelName(params.model);
 
-      const apiKey = await this.getApiKey();
-      const response = await fetch(`${this.baseURL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          // Extract app URL - empty string is invalid referer (Explicit Ternary for STRING)
-          'HTTP-Referer': (process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000',
-          'X-Title': 'AI Sales Platform',
-        },
-        body: JSON.stringify({
-          model: openrouterModel,
-          messages: params.messages,
-          temperature: params.temperature ?? 0.7,
-          max_tokens: params.maxTokens ?? 2048,
-          top_p: params.topP ?? 0.9,
-        }),
-      });
+    // Try primary model first, then fallback if 404
+    const modelsToTry = [openrouterModel, OpenRouterProvider.FALLBACK_MODEL];
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+    for (const model of modelsToTry) {
+      try {
+        const result = await this.makeRequest(model, params);
+        return result;
+      } catch (error: any) {
+        // If 404 (model not found), try fallback
+        if (error.message?.includes('404') && model !== OpenRouterProvider.FALLBACK_MODEL) {
+          console.log(`[OpenRouter] Model ${model} returned 404, trying fallback: ${OpenRouterProvider.FALLBACK_MODEL}`);
+          continue;
+        }
+        throw error;
       }
-
-      const data = await response.json();
-
-      // Extract content - empty string is valid AI response (use ?? for content)
-      const responseContent = data.choices[0]?.message?.content ?? '';
-      return {
-        content: responseContent,
-        usage: {
-          // Token counts are NUMBERS - 0 is valid (use ?? for numbers)
-          promptTokens: data.usage?.prompt_tokens ?? 0,
-          completionTokens: data.usage?.completion_tokens ?? 0,
-          totalTokens: data.usage?.total_tokens ?? 0,
-        },
-        model: data.model,
-        provider: 'openrouter',
-      };
-    } catch (error: any) {
-      logger.error('[OpenRouterProvider] Error:', error, { file: 'openrouter-provider.ts' });
-      throw error;
     }
+
+    throw new Error('All models failed');
+  }
+
+  private async makeRequest(
+    model: string,
+    params: {
+      messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+      temperature?: number;
+      maxTokens?: number;
+      topP?: number;
+    }
+  ) {
+    const apiKey = await this.getApiKey();
+
+    console.log(`[OpenRouter] Making request to model: ${model}`);
+    console.log(`[OpenRouter] API Key passed to header: ${apiKey.slice(0, 12)}...`);
+
+    const response = await fetch(`${this.baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': (process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000',
+        'X-Title': 'AI Sales Platform',
+      },
+      body: JSON.stringify({
+        model,
+        messages: params.messages,
+        temperature: params.temperature ?? 0.7,
+        max_tokens: params.maxTokens ?? 2048,
+        top_p: params.topP ?? 0.9,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+    console.log(`[OpenRouter] Response received from model: ${data.model}`);
+
+    const responseContent = data.choices[0]?.message?.content ?? '';
+    return {
+      content: responseContent,
+      usage: {
+        promptTokens: data.usage?.prompt_tokens ?? 0,
+        completionTokens: data.usage?.completion_tokens ?? 0,
+        totalTokens: data.usage?.total_tokens ?? 0,
+      },
+      model: data.model,
+      provider: 'openrouter',
+    };
   }
 
   /**

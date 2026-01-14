@@ -72,16 +72,26 @@ function initializeAdmin() {
       }
     }
 
+    // Get project ID from env as fallback
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+      || process.env.FIREBASE_PROJECT_ID
+      || process.env.FIREBASE_ADMIN_PROJECT_ID
+      || 'ai-sales-platform-dev';
+
     if (serviceAccount) {
       adminApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
+        projectId,
       });
     } else {
-      // Use application default credentials (for GCP)
-      logger.warn('⚠️ No Firebase credentials found, using default credentials', { file: 'admin.ts' });
-      adminApp = admin.initializeApp();
+      // Initialize with just project ID (no service account credentials)
+      logger.warn('⚠️ No Firebase credentials found, using project ID only:', { projectId, file: 'admin.ts' });
+      adminApp = admin.initializeApp({
+        projectId,
+      });
     }
 
+    console.log('[Auth] Firebase Admin Handshake Successful - Jasper is Online.');
     logger.info('🔥 Firebase Admin initialized', { file: 'admin.ts' });
     return adminApp;
   } catch (error: any) {

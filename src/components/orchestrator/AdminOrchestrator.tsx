@@ -24,7 +24,6 @@ import {
   buildPersonaSystemPrompt,
   generateStatusOpener,
 } from '@/lib/ai/persona-mapper';
-import { runProvisioner } from '@/lib/db/provisioner';
 import { auth } from '@/lib/firebase/config';
 
 // Jasper - The Admin AI Assistant Name
@@ -94,22 +93,41 @@ export function AdminOrchestrator() {
     setContext('admin');
   }, [setContext]);
 
-  // Run database provisioner for super admins
+  // Run database provisioner for super admins via API
   // This ensures all core system data (personas, config, pricing) exists
   useEffect(() => {
-    if (adminUser?.role === 'super_admin') {
-      runProvisioner()
-        .then((report) => {
-          if (report.summary.created > 0) {
+    async function runProvisionerViaAPI() {
+      if (adminUser?.role !== 'super_admin') return;
+
+      try {
+        const currentUser = auth?.currentUser;
+        if (!currentUser) return;
+
+        const token = await currentUser.getIdToken();
+        const response = await fetch('/api/admin/provision', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.report?.summary?.created > 0) {
             console.log(
-              `[Provisioner] Database provisioned: ${report.summary.created} items created, ${report.summary.skipped} skipped`
+              `[Provisioner] Database provisioned: ${data.report.summary.created} items created, ${data.report.summary.skipped} skipped`
             );
           }
-        })
-        .catch((error) => {
-          console.error('[Provisioner] Error during provisioning:', error);
-        });
+        } else {
+          console.error('[Provisioner] API call failed:', response.status);
+        }
+      } catch (error) {
+        console.error('[Provisioner] Error during provisioning:', error);
+      }
     }
+
+    runProvisionerViaAPI();
   }, [adminUser?.role]);
 
   // Debounced stats fetch function

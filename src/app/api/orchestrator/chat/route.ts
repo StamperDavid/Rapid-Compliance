@@ -16,27 +16,29 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
-import { requireOrganization, requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 
-// Default model for Jasper - Gemini 2.0 Flash for natural, fast conversational flow
-const DEFAULT_MODEL = 'google/gemini-2.0-flash-exp';
+// Default model for Jasper - Gemini 1.5 Pro (stable)
+const DEFAULT_MODEL = 'google/gemini-pro-1.5';
+
+// Fallback model if primary fails
+const FALLBACK_MODEL = 'anthropic/claude-3-haiku';
 
 // Available models for the orchestrator (not exported - use GET endpoint to fetch)
 const AVAILABLE_MODELS = {
   // Fast conversational models (recommended for real-time chat)
-  'google/gemini-2.0-flash-exp': { name: 'Gemini 2.0 Flash', latency: 'ultra-low', quality: 'high', recommended: true },
+  'google/gemini-pro-1.5': { name: 'Gemini 1.5 Pro', latency: 'medium', quality: 'ultra', recommended: true },
   'google/gemini-flash-1.5': { name: 'Gemini 1.5 Flash', latency: 'low', quality: 'high' },
   'anthropic/claude-3-haiku': { name: 'Claude 3 Haiku', latency: 'low', quality: 'high' },
 
   // Balanced models
   'anthropic/claude-3.5-sonnet': { name: 'Claude 3.5 Sonnet', latency: 'medium', quality: 'ultra' },
   'openai/gpt-4-turbo': { name: 'GPT-4 Turbo', latency: 'medium', quality: 'ultra' },
-  'google/gemini-pro-1.5': { name: 'Gemini 1.5 Pro', latency: 'medium', quality: 'ultra' },
 
   // Power models (for complex reasoning)
   'anthropic/claude-3-opus': { name: 'Claude 3 Opus', latency: 'high', quality: 'ultra' },
@@ -101,26 +103,23 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // Authentication - Try basic auth first, then organization
-    let authResult;
-    let isAdminContext = false;
+    // Authentication - Require valid Firebase ID token with admin role
+    const authResult = await requireRole(request, ['super_admin', 'admin', 'owner']);
 
-    try {
-      authResult = await requireAuth(request);
-      if (!(authResult instanceof NextResponse)) {
-        const user = authResult.user;
-        isAdminContext = user?.role === 'super_admin' || user?.role === 'admin';
-      }
-    } catch {
-      // Not authenticated via basic auth, try organization auth
+    if (authResult instanceof NextResponse) {
+      console.error('[Jasper] Auth failed - no valid token or insufficient role');
+      return authResult;
     }
 
-    if (!authResult || authResult instanceof NextResponse) {
-      authResult = await requireOrganization(request);
-      if (authResult instanceof NextResponse) {
-        return authResult;
-      }
-    }
+    const { user } = authResult;
+    const isAdminContext = user.role === 'super_admin' || user.role === 'admin';
+
+    console.log('[Jasper] Authenticated:', {
+      uid: user.uid,
+      email: user.email,
+      role: user.role,
+      isAdmin: isAdminContext,
+    });
 
     // Parse request body
     const body: OrchestratorChatRequest = await request.json();
