@@ -6,6 +6,7 @@ import { useParams, usePathname } from 'next/navigation';
 import AdminBar from '@/components/AdminBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useFeatureVisibility } from '@/hooks/useFeatureVisibility';
 import { MerchantOrchestrator } from '@/components/orchestrator';
 
 export default function WorkspaceLayout({
@@ -20,110 +21,15 @@ export default function WorkspaceLayout({
   const { theme } = useOrgTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // ADAPTIVE NAVIGATION - Filtered based on client's feature visibility settings
+  const { filteredNav, hiddenCount, isLoading: navLoading } = useFeatureVisibility(orgId);
+
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : '#6366f1';
   const brandName = (theme?.branding?.companyName !== '' && theme?.branding?.companyName != null) ? theme.branding.companyName : 'AI CRM';
   const _logoUrl = theme?.branding?.logoUrl;
 
-  // FULLY LOADED navigation - All features connected
-  const navSections = [
-    {
-      title: 'Command Center',
-      items: [
-        { href: `/workspace/${orgId}/workforce`, icon: '🎛️', label: 'Workforce HQ' },
-        { href: `/workspace/${orgId}/dashboard`, icon: '📊', label: 'Dashboard' },
-        { href: `/workspace/${orgId}/conversations`, icon: '💬', label: 'Conversations' },
-      ]
-    },
-    {
-      title: 'CRM',
-      items: [
-        { href: `/workspace/${orgId}/leads`, icon: '🎯', label: 'Leads' },
-        { href: `/workspace/${orgId}/deals`, icon: '💼', label: 'Deals' },
-        { href: `/workspace/${orgId}/contacts`, icon: '👤', label: 'Contacts' },
-        { href: `/workspace/${orgId}/living-ledger`, icon: '📒', label: 'Living Ledger' },
-      ]
-    },
-    {
-      title: 'Lead Gen',
-      items: [
-        { href: `/workspace/${orgId}/forms`, icon: '📋', label: 'Forms' },
-        { href: `/workspace/${orgId}/leads/research`, icon: '🔬', label: 'Lead Research' },
-        { href: `/workspace/${orgId}/lead-scoring`, icon: '⭐', label: 'Lead Scoring' },
-      ]
-    },
-    {
-      title: 'Outbound',
-      items: [
-        { href: `/workspace/${orgId}/outbound/sequences`, icon: '📧', label: 'Sequences' },
-        { href: `/workspace/${orgId}/email/campaigns`, icon: '📮', label: 'Campaigns' },
-        { href: `/workspace/${orgId}/email-writer`, icon: '✍️', label: 'Email Writer' },
-        { href: `/workspace/${orgId}/nurture`, icon: '🌱', label: 'Nurture' },
-        { href: `/workspace/${orgId}/calls`, icon: '📞', label: 'Calls' },
-      ]
-    },
-    {
-      title: 'Automation',
-      items: [
-        { href: `/workspace/${orgId}/workflows`, icon: '⚡', label: 'Workflows' },
-        { href: `/workspace/${orgId}/ab-tests`, icon: '🧪', label: 'A/B Tests' },
-      ]
-    },
-    {
-      title: 'Content Factory',
-      items: [
-        { href: `/workspace/${orgId}/content/video`, icon: '🎬', label: 'Video Studio' },
-        { href: `/workspace/${orgId}/social/campaigns`, icon: '📱', label: 'Social Media' },
-        { href: `/workspace/${orgId}/proposals/builder`, icon: '📄', label: 'Proposals' },
-        { href: `/workspace/${orgId}/battlecards`, icon: '🃏', label: 'Battlecards' },
-      ]
-    },
-    {
-      title: 'AI Workforce',
-      items: [
-        { href: `/workspace/${orgId}/settings/ai-agents/training`, icon: '🤖', label: 'Agent Training' },
-        { href: `/workspace/${orgId}/voice/training`, icon: '🎙️', label: 'Voice AI Lab' },
-        { href: `/workspace/${orgId}/social/training`, icon: '📢', label: 'Social AI Lab' },
-        { href: `/workspace/${orgId}/seo/training`, icon: '🔍', label: 'SEO AI Lab' },
-        { href: `/workspace/${orgId}/ai/datasets`, icon: '📚', label: 'Datasets' },
-        { href: `/workspace/${orgId}/ai/fine-tuning`, icon: '🎯', label: 'Fine-Tuning' },
-      ]
-    },
-    {
-      title: 'E-Commerce',
-      items: [
-        { href: `/workspace/${orgId}/products`, icon: '📦', label: 'Products' },
-        { href: `/workspace/${orgId}/analytics/ecommerce`, icon: '💰', label: 'Orders' },
-        { href: `/workspace/${orgId}/settings/storefront`, icon: '🏪', label: 'Storefront' },
-      ]
-    },
-    {
-      title: 'Analytics',
-      items: [
-        { href: `/workspace/${orgId}/analytics`, icon: '📈', label: 'Overview' },
-        { href: `/workspace/${orgId}/analytics/revenue`, icon: '💵', label: 'Revenue' },
-        { href: `/workspace/${orgId}/analytics/pipeline`, icon: '🔄', label: 'Pipeline' },
-        { href: `/workspace/${orgId}/sequences/analytics`, icon: '📊', label: 'Sequences' },
-      ]
-    },
-    {
-      title: 'Website',
-      items: [
-        { href: `/workspace/${orgId}/website/pages`, icon: '🌐', label: 'Pages' },
-        { href: `/workspace/${orgId}/website/blog`, icon: '📝', label: 'Blog' },
-        { href: `/workspace/${orgId}/website/domains`, icon: '🔗', label: 'Domains' },
-        { href: `/workspace/${orgId}/website/seo`, icon: '🔎', label: 'SEO' },
-        { href: `/workspace/${orgId}/website/settings`, icon: '🎨', label: 'Site Settings' },
-      ]
-    },
-    {
-      title: 'Settings',
-      items: [
-        { href: `/workspace/${orgId}/settings`, icon: '⚙️', label: 'Settings' },
-        { href: `/workspace/${orgId}/integrations`, icon: '🔌', label: 'Integrations' },
-        { href: `/workspace/${orgId}/settings/api-keys`, icon: '🔑', label: 'API Keys' },
-      ]
-    },
-  ];
+  // Use adaptive navigation from hook
+  const navSections = filteredNav;
 
   // Check if current path matches
   const isActive = (href: string) => {
@@ -231,6 +137,30 @@ export default function WorkspaceLayout({
               </div>
             ))}
           </nav>
+
+          {/* Hidden Features Indicator */}
+          {hiddenCount > 0 && !navLoading && (
+            <div style={{
+              padding: '0.75rem 1.25rem',
+              borderTop: '1px solid #1a1a1a',
+              backgroundColor: '#0a0a0a',
+            }}>
+              <Link
+                href={`/workspace/${orgId}/settings`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: '#666',
+                  fontSize: '0.75rem',
+                  textDecoration: 'none',
+                }}
+              >
+                <span>👁️</span>
+                <span>{hiddenCount} hidden feature{hiddenCount > 1 ? 's' : ''}</span>
+              </Link>
+            </div>
+          )}
 
         </aside>
 
