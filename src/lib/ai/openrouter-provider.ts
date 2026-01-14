@@ -152,15 +152,26 @@ export class OpenRouterProvider {
   }
 
   private async getApiKey(): Promise<string> {
-    if (this.apiKey) {return this.apiKey;}
+    if (this.apiKey) {
+      console.log('[OpenRouter] Using cached API key:', this.apiKey.slice(0, 8) + '...');
+      return this.apiKey;
+    }
     if (!this.organizationId) {
+      console.error('[OpenRouter] No organizationId provided and no API key set');
       throw new Error('OpenRouter API key not configured');
     }
+    console.log('[OpenRouter] Fetching API key for org:', this.organizationId);
     const keys = await apiKeyService.getKeys(this.organizationId);
     const key = keys?.ai?.openrouterApiKey;
     if (!key) {
+      console.error('[OpenRouter] No openrouterApiKey found in keys:', {
+        hasKeys: !!keys,
+        hasAiSection: !!keys?.ai,
+        aiKeys: keys?.ai ? Object.keys(keys.ai) : [],
+      });
       throw new Error(`OpenRouter API key not configured for organization ${this.organizationId}. Please add it in the API Keys settings.`);
     }
+    console.log('[OpenRouter] API key loaded:', key.slice(0, 8) + '...');
     this.apiKey = key;
     return key;
   }

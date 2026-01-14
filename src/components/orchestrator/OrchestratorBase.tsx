@@ -426,14 +426,12 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     } catch (error: any) {
       console.error('[Jasper] Chat error:', error);
 
-      // Fallback response if API fails
-      const fallbackResponse = config.context === 'admin'
-        ? `I'm having trouble connecting right now. ${config.adminStats?.totalOrgs || 0} organizations are active - what would you like me to work on once I'm back online?`
-        : `I'm experiencing a brief connection issue. I'll be back in a moment to help with your request.`;
+      // Show raw error message for debugging - NO fallback masking
+      const errorMessage = error?.message || String(error) || 'Unknown error';
 
       addMessage({
         role: 'assistant',
-        content: fallbackResponse,
+        content: `**API Error:** ${errorMessage}\n\nCheck the browser console and server terminal for more details.`,
       });
     } finally {
       setTyping(false);

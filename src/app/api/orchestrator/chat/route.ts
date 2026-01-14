@@ -250,18 +250,27 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(responseData);
   } catch (error: any) {
+    // Log the FULL error to the terminal for debugging
+    console.error('[Jasper] OpenRouter API FAILED:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      cause: error?.cause,
+    });
     logger.error('[Jasper] Chat error', error, { route: '/api/orchestrator/chat' });
 
-    // Handle specific error cases
-    if (error?.message?.includes('API key')) {
-      return handleAPIError(errors.missingAPIKey('OpenRouter'));
-    }
-
-    if (error?.message?.includes('rate limit') || error?.message?.includes('429')) {
-      return handleAPIError(errors.tooManyRequests());
-    }
-
-    return handleAPIError(error);
+    // Return the raw error message to the client for debugging
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Unknown API error',
+        errorDetails: {
+          name: error?.name,
+          stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+        },
+      },
+      { status: 500 }
+    );
   }
 }
 
