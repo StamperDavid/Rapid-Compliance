@@ -13,6 +13,7 @@ interface ElementStyles {
   width?: string;
   height?: string;
   minHeight?: string;
+  minWidth?: string;
   maxWidth?: string;
   padding?: string;
   paddingTop?: string;
@@ -82,13 +83,76 @@ interface ResponsiveStyles {
   mobile?: ElementStyles;
 }
 
+// Content types for different widgets
+type StringContent = string;
+type HeroContent = { title?: string; subtitle?: string; buttonText?: string; buttonLink?: string };
+type IconBoxContent = { icon?: string; title?: string; text?: string };
+type TestimonialContent = { quote?: string; author?: string; role?: string; company?: string; avatar?: string };
+type TestimonialSliderContent = { testimonials?: TestimonialContent[] };
+type CounterContent = { number?: string | number; suffix?: string; label?: string };
+type ProgressBarContent = { label?: string; value?: number };
+type NewsletterContent = { placeholder?: string; buttonText?: string };
+type FeatureGridContent = { items?: Array<{ icon?: string; title?: string; desc?: string }> };
+type StatsContent = { items?: Array<{ value?: string; label?: string }> };
+type FAQContent = { items?: Array<{ q?: string; a?: string }> };
+type AccordionContent = { items?: Array<{ title?: string; content?: string }> };
+type TabsContent = { tabs?: Array<{ title?: string; content?: string }> };
+type FormContent = { fields?: Array<{ type?: string; label?: string; placeholder?: string }>; submitText?: string };
+type SocialLinksContent = { links?: Array<{ platform?: string; url?: string }> };
+type PricingTableContent = { plans?: Array<{ name?: string; price?: string; period?: string; features?: string[]; highlighted?: boolean }> };
+type ListContent = string[];
+
+type WidgetContent =
+  | StringContent
+  | HeroContent
+  | IconBoxContent
+  | TestimonialContent
+  | TestimonialSliderContent
+  | CounterContent
+  | ProgressBarContent
+  | NewsletterContent
+  | FeatureGridContent
+  | StatsContent
+  | FAQContent
+  | AccordionContent
+  | TabsContent
+  | FormContent
+  | SocialLinksContent
+  | PricingTableContent
+  | ListContent
+  | undefined;
+
+interface WidgetSettings {
+  [key: string]: string | number | boolean | string[] | undefined;
+  href?: string;
+  target?: string;
+  src?: string;
+  alt?: string;
+  type?: string;
+  autoplay?: boolean;
+  height?: number;
+  useSiteLogo?: boolean;
+  tag?: string;
+  style?: string;
+  placeholder?: string;
+  options?: string[];
+  images?: string[];
+  modalId?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  language?: string;
+  targetDate?: string;
+  tweetUrl?: string;
+}
+
 interface WidgetElement {
   id: string;
   type: string;
-  content?: any;
+  content?: WidgetContent;
   children?: WidgetElement[];
   styles: ResponsiveStyles;
-  settings?: Record<string, any>;
+  settings?: WidgetSettings;
 }
 
 interface PageSection {
@@ -175,9 +239,9 @@ interface WidgetDefinition {
   name: string;
   icon: string;
   category: 'layout' | 'basic' | 'media' | 'content' | 'forms' | 'social' | 'advanced';
-  defaultContent?: any;
+  defaultContent?: WidgetContent;
   defaultStyles: ElementStyles;
-  defaultSettings?: Record<string, any>;
+  defaultSettings?: WidgetSettings;
 }
 
 const WIDGET_CATEGORIES = [
@@ -195,7 +259,7 @@ const WIDGETS: WidgetDefinition[] = [
   { type: 'section', name: 'Section', icon: '▭', category: 'layout', defaultStyles: { padding: '60px 20px', backgroundColor: '#000000' } },
   { type: 'container', name: 'Container', icon: '☐', category: 'layout', defaultStyles: { maxWidth: '1200px', margin: '0 auto', padding: '0 20px' } },
   { type: 'row', name: 'Row', icon: '⬜⬜', category: 'layout', defaultStyles: { display: 'flex', flexWrap: 'wrap', gap: '20px' } },
-  { type: 'column', name: 'Column', icon: '▯', category: 'layout', defaultStyles: { flex: '1', minWidth: '250px' } as any },
+  { type: 'column', name: 'Column', icon: '▯', category: 'layout', defaultStyles: { display: 'flex', flexDirection: 'column', minWidth: '250px' } },
   { type: 'spacer', name: 'Spacer', icon: '↕️', category: 'layout', defaultStyles: { height: '40px' }, defaultSettings: { height: 40 } },
   { type: 'divider', name: 'Divider', icon: '—', category: 'layout', defaultStyles: { borderBottom: '1px solid rgba(255,255,255,0.1)', margin: '20px 0' } },
   
@@ -1096,6 +1160,19 @@ const createWidget = (type: string): WidgetElement => {
 // STYLE EDITOR COMPONENT
 // ============================================================================
 
+interface StyleField {
+  key: string;
+  label: string;
+  type: 'text' | 'color' | 'select';
+  placeholder?: string;
+  options?: string[];
+}
+
+interface StyleGroup {
+  name: string;
+  fields: StyleField[];
+}
+
 function StyleEditor({ 
   styles, 
   onChange, 
@@ -1114,61 +1191,61 @@ function StyleEditor({
     });
   };
 
-  const styleGroups = [
+  const styleGroups: StyleGroup[] = [
     {
       name: 'Spacing',
       fields: [
-        { key: 'padding', label: 'Padding', type: 'text', placeholder: '20px' },
-        { key: 'margin', label: 'Margin', type: 'text', placeholder: '0' },
-        { key: 'gap', label: 'Gap', type: 'text', placeholder: '20px' },
+        { key: 'padding', label: 'Padding', type: 'text' as const, placeholder: '20px' },
+        { key: 'margin', label: 'Margin', type: 'text' as const, placeholder: '0' },
+        { key: 'gap', label: 'Gap', type: 'text' as const, placeholder: '20px' },
       ],
     },
     {
       name: 'Size',
       fields: [
-        { key: 'width', label: 'Width', type: 'text', placeholder: 'auto' },
-        { key: 'height', label: 'Height', type: 'text', placeholder: 'auto' },
-        { key: 'maxWidth', label: 'Max Width', type: 'text', placeholder: 'none' },
-        { key: 'minHeight', label: 'Min Height', type: 'text', placeholder: 'auto' },
+        { key: 'width', label: 'Width', type: 'text' as const, placeholder: 'auto' },
+        { key: 'height', label: 'Height', type: 'text' as const, placeholder: 'auto' },
+        { key: 'maxWidth', label: 'Max Width', type: 'text' as const, placeholder: 'none' },
+        { key: 'minHeight', label: 'Min Height', type: 'text' as const, placeholder: 'auto' },
       ],
     },
     {
       name: 'Typography',
       fields: [
-        { key: 'fontSize', label: 'Font Size', type: 'text', placeholder: '1rem' },
-        { key: 'fontWeight', label: 'Font Weight', type: 'select', options: ['normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900'] },
-        { key: 'lineHeight', label: 'Line Height', type: 'text', placeholder: '1.5' },
-        { key: 'textAlign', label: 'Text Align', type: 'select', options: ['left', 'center', 'right', 'justify'] },
+        { key: 'fontSize', label: 'Font Size', type: 'text' as const, placeholder: '1rem' },
+        { key: 'fontWeight', label: 'Font Weight', type: 'select' as const, options: ['normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900'] },
+        { key: 'lineHeight', label: 'Line Height', type: 'text' as const, placeholder: '1.5' },
+        { key: 'textAlign', label: 'Text Align', type: 'select' as const, options: ['left', 'center', 'right', 'justify'] },
       ],
     },
     {
       name: 'Colors',
       fields: [
-        { key: 'color', label: 'Text Color', type: 'color' },
-        { key: 'backgroundColor', label: 'Background', type: 'color' },
+        { key: 'color', label: 'Text Color', type: 'color' as const },
+        { key: 'backgroundColor', label: 'Background', type: 'color' as const },
       ],
     },
     {
       name: 'Border',
       fields: [
-        { key: 'borderRadius', label: 'Border Radius', type: 'text', placeholder: '0' },
-        { key: 'border', label: 'Border', type: 'text', placeholder: '1px solid #333' },
+        { key: 'borderRadius', label: 'Border Radius', type: 'text' as const, placeholder: '0' },
+        { key: 'border', label: 'Border', type: 'text' as const, placeholder: '1px solid #333' },
       ],
     },
     {
       name: 'Layout',
       fields: [
-        { key: 'display', label: 'Display', type: 'select', options: ['block', 'flex', 'grid', 'inline', 'inline-block', 'none'] },
-        { key: 'flexDirection', label: 'Flex Direction', type: 'select', options: ['row', 'column', 'row-reverse', 'column-reverse'] },
-        { key: 'justifyContent', label: 'Justify', type: 'select', options: ['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly'] },
-        { key: 'alignItems', label: 'Align', type: 'select', options: ['flex-start', 'center', 'flex-end', 'stretch', 'baseline'] },
+        { key: 'display', label: 'Display', type: 'select' as const, options: ['block', 'flex', 'grid', 'inline', 'inline-block', 'none'] },
+        { key: 'flexDirection', label: 'Flex Direction', type: 'select' as const, options: ['row', 'column', 'row-reverse', 'column-reverse'] },
+        { key: 'justifyContent', label: 'Justify', type: 'select' as const, options: ['flex-start', 'center', 'flex-end', 'space-between', 'space-around', 'space-evenly'] },
+        { key: 'alignItems', label: 'Align', type: 'select' as const, options: ['flex-start', 'center', 'flex-end', 'stretch', 'baseline'] },
       ],
     },
     {
       name: 'Effects',
       fields: [
-        { key: 'boxShadow', label: 'Box Shadow', type: 'text', placeholder: 'none' },
-        { key: 'opacity', label: 'Opacity', type: 'text', placeholder: '1' },
+        { key: 'boxShadow', label: 'Box Shadow', type: 'text' as const, placeholder: 'none' },
+        { key: 'opacity', label: 'Opacity', type: 'text' as const, placeholder: '1' },
       ],
     },
   ];
@@ -1186,13 +1263,13 @@ function StyleEditor({
                   <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
                     <input
                       type="color"
-                      value={((currentStyles as any)[field.key] !== '' && (currentStyles as any)[field.key] != null) ? (currentStyles as any)[field.key] : '#ffffff'}
+                      value={((currentStyles[field.key as keyof ElementStyles] as string) !== '' && currentStyles[field.key as keyof ElementStyles] != null) ? (currentStyles[field.key as keyof ElementStyles] as string) : '#ffffff'}
                       onChange={(e) => updateStyle(field.key, e.target.value)}
                       style={{ width: '32px', height: '28px', border: '1px solid #333', borderRadius: '4px', cursor: 'pointer' }}
                     />
                     <input
                       type="text"
-                      value={(currentStyles as any)[field.key] ?? ''}
+                      value={(currentStyles[field.key as keyof ElementStyles] as string) ?? ''}
                       onChange={(e) => updateStyle(field.key, e.target.value)}
                       placeholder="transparent"
                       style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
@@ -1200,19 +1277,19 @@ function StyleEditor({
                   </div>
                 ) : field.type === 'select' ? (
                   <select
-                    value={(currentStyles as any)[field.key] ?? ''}
+                    value={(currentStyles[field.key as keyof ElementStyles] as string) ?? ''}
                     onChange={(e) => updateStyle(field.key, e.target.value)}
                     style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
                   >
                     <option value="">-</option>
-                    {'options' in field && field.options?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+                    {field.options?.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 ) : (
                   <input
                     type="text"
-                    value={(currentStyles as any)[field.key] ?? ''}
+                    value={(currentStyles[field.key as keyof ElementStyles] as string) ?? ''}
                     onChange={(e) => updateStyle(field.key, e.target.value)}
-                    placeholder={'placeholder' in field ? field.placeholder : undefined}
+                    placeholder={field.placeholder}
                     style={{ flex: 1, padding: '4px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }}
                   />
                 )}
@@ -1283,7 +1360,7 @@ function WidgetRenderer({
             onDoubleClick={() => setIsEditing(true)}
             style={{ outline: 'none' }}
           >
-            {(element.content !== '' && element.content != null) ? element.content : 'Heading'}
+            {(element.content !== '' && element.content != null) ? (typeof element.content === 'string' ? element.content : JSON.stringify(element.content)) : 'Heading'}
           </div>
         );
       }
@@ -1298,26 +1375,27 @@ function WidgetRenderer({
             onDoubleClick={() => setIsEditing(true)}
             style={{ outline: 'none' }}
           >
-            {(element.content !== '' && element.content != null) ? element.content : 'Text content'}
+            {(element.content !== '' && element.content != null) ? (typeof element.content === 'string' ? element.content : JSON.stringify(element.content)) : 'Text content'}
           </div>
         );
 
       case 'button':
         return (
-          <span style={{ cursor: 'pointer' }}>{(element.content !== '' && element.content != null) ? element.content : 'Button'}</span>
+          <span style={{ cursor: 'pointer' }}>{(element.content !== '' && element.content != null) ? (typeof element.content === 'string' ? element.content : JSON.stringify(element.content)) : 'Button'}</span>
         );
 
       case 'image':
         return (
-          <img 
-            src={(element.settings?.src !== '' && element.settings?.src != null) ? element.settings.src : 'https://placehold.co/800x400'} 
-            alt={element.settings?.alt ?? ''} 
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={(element.settings?.src !== '' && element.settings?.src != null) ? element.settings.src : 'https://placehold.co/800x400'}
+            alt={element.settings?.alt ?? ''}
             style={{ maxWidth: '100%', display: 'block' }}
           />
         );
 
       case 'icon':
-        return <span>{(element.content !== '' && element.content != null) ? element.content : '⚡'}</span>;
+        return <span>{(element.content !== '' && element.content != null) ? (typeof element.content === 'string' ? element.content : JSON.stringify(element.content)) : '⚡'}</span>;
 
       case 'spacer':
         return <div style={{ height: element.settings?.height ?? 40 }} />;
@@ -1325,30 +1403,35 @@ function WidgetRenderer({
       case 'divider':
         return <hr style={{ border: 'none', borderBottom: (styles.borderBottom !== '' && styles.borderBottom != null) ? styles.borderBottom : '1px solid rgba(255,255,255,0.1)', margin: 0 }} />;
 
-      case 'icon-box':
+      case 'icon-box': {
+        const iconBoxContent = element.content as IconBoxContent | undefined;
         return (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{(element.content?.icon !== '' && element.content?.icon != null) ? element.content.icon : '🚀'}</div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>{(element.content?.title !== '' && element.content?.title != null) ? element.content.title : 'Title'}</h3>
-            <p style={{ opacity: 0.7 }}>{(element.content?.text !== '' && element.content?.text != null) ? element.content.text : 'Description'}</p>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{(iconBoxContent?.icon !== '' && iconBoxContent?.icon != null) ? iconBoxContent.icon : '🚀'}</div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>{(iconBoxContent?.title !== '' && iconBoxContent?.title != null) ? iconBoxContent.title : 'Title'}</h3>
+            <p style={{ opacity: 0.7 }}>{(iconBoxContent?.text !== '' && iconBoxContent?.text != null) ? iconBoxContent.text : 'Description'}</p>
           </div>
         );
+      }
 
-      case 'hero':
+      case 'hero': {
+        const heroContent = element.content as HeroContent | undefined;
         return (
           <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>{(element.content?.title !== '' && element.content?.title != null) ? element.content.title : 'Hero Title'}</h1>
-            <p style={{ fontSize: '1.25rem', opacity: 0.8, marginBottom: '2rem' }}>{(element.content?.subtitle !== '' && element.content?.subtitle != null) ? element.content.subtitle : 'Subtitle'}</p>
+            <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>{(heroContent?.title !== '' && heroContent?.title != null) ? heroContent.title : 'Hero Title'}</h1>
+            <p style={{ fontSize: '1.25rem', opacity: 0.8, marginBottom: '2rem' }}>{(heroContent?.subtitle !== '' && heroContent?.subtitle != null) ? heroContent.subtitle : 'Subtitle'}</p>
             <span style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: branding.colors.primary, color: '#fff', borderRadius: '8px', fontWeight: '600' }}>
-              {(element.content?.buttonText !== '' && element.content?.buttonText != null) ? element.content.buttonText : 'Get Started'}
+              {(heroContent?.buttonText !== '' && heroContent?.buttonText != null) ? heroContent.buttonText : 'Get Started'}
             </span>
           </div>
         );
+      }
 
-      case 'feature-grid':
+      case 'feature-grid': {
+        const featureContent = element.content as FeatureGridContent | undefined;
         return (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '30px' }}>
-            {(element.content?.items ?? []).map((item: any, i: number) => (
+            {(featureContent?.items ?? []).map((item, i) => (
               <div key={i} style={{ textAlign: 'center', padding: '20px' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{item.icon}</div>
                 <h3 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>{item.title}</h3>
@@ -1357,36 +1440,42 @@ function WidgetRenderer({
             ))}
           </div>
         );
+      }
 
-      case 'testimonial':
+      case 'testimonial': {
+        const testimonialContent = element.content as TestimonialContent | undefined;
         return (
           <div>
-            <p style={{ fontSize: '1.125rem', fontStyle: 'italic', marginBottom: '1rem' }}>"{element.content?.quote}"</p>
+            <p style={{ fontSize: '1.125rem', fontStyle: 'italic', marginBottom: '1rem' }}>&quot;{testimonialContent?.quote}&quot;</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ width: '40px', height: '40px', backgroundColor: '#333', borderRadius: '50%' }} />
               <div>
-                <div style={{ fontWeight: '600' }}>{element.content?.author}</div>
-                <div style={{ fontSize: '0.875rem', opacity: 0.6 }}>{element.content?.role}, {element.content?.company}</div>
+                <div style={{ fontWeight: '600' }}>{testimonialContent?.author}</div>
+                <div style={{ fontSize: '0.875rem', opacity: 0.6 }}>{testimonialContent?.role}, {testimonialContent?.company}</div>
               </div>
             </div>
           </div>
         );
+      }
 
-      case 'cta':
+      case 'cta': {
+        const ctaContent = element.content as HeroContent | undefined;
         return (
           <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{(element.content?.title !== '' && element.content?.title != null) ? element.content.title : 'CTA Title'}</h2>
-            <p style={{ opacity: 0.8, marginBottom: '1.5rem' }}>{(element.content?.subtitle !== '' && element.content?.subtitle != null) ? element.content.subtitle : 'Subtitle'}</p>
+            <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>{(ctaContent?.title !== '' && ctaContent?.title != null) ? ctaContent.title : 'CTA Title'}</h2>
+            <p style={{ opacity: 0.8, marginBottom: '1.5rem' }}>{(ctaContent?.subtitle !== '' && ctaContent?.subtitle != null) ? ctaContent.subtitle : 'Subtitle'}</p>
             <span style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: '#fff', color: '#000', borderRadius: '8px', fontWeight: '600' }}>
-              {(element.content?.buttonText !== '' && element.content?.buttonText != null) ? element.content.buttonText : 'Get Started'}
+              {(ctaContent?.buttonText !== '' && ctaContent?.buttonText != null) ? ctaContent.buttonText : 'Get Started'}
             </span>
           </div>
         );
+      }
 
-      case 'stats':
+      case 'stats': {
+        const statsContent = element.content as StatsContent | undefined;
         return (
           <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
-            {(element.content?.items ?? []).map((item: any, i: number) => (
+            {(statsContent?.items ?? []).map((item, i) => (
               <div key={i}>
                 <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>{item.value}</div>
                 <div style={{ opacity: 0.6 }}>{item.label}</div>
@@ -1394,38 +1483,46 @@ function WidgetRenderer({
             ))}
           </div>
         );
+      }
 
-      case 'counter':
+      case 'counter': {
+        const counterContent = element.content as CounterContent | undefined;
         return (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', fontWeight: 'bold' }}>{element.content?.number}{element.content?.suffix}</div>
-            <div style={{ opacity: 0.6 }}>{element.content?.label}</div>
+            <div style={{ fontSize: '3rem', fontWeight: 'bold' }}>{counterContent?.number}{counterContent?.suffix}</div>
+            <div style={{ opacity: 0.6 }}>{counterContent?.label}</div>
           </div>
         );
+      }
 
-      case 'newsletter':
+      case 'newsletter': {
+        const newsletterContent = element.content as NewsletterContent | undefined;
         return (
           <div style={{ display: 'flex', gap: '10px', maxWidth: '400px' }}>
-            <input type="email" placeholder={(element.content?.placeholder !== '' && element.content?.placeholder != null) ? element.content.placeholder : 'Enter email'} style={{ flex: 1, padding: '12px', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#fff' }} />
-            <button style={{ padding: '12px 20px', backgroundColor: branding.colors.primary, color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>{(element.content?.buttonText !== '' && element.content?.buttonText != null) ? element.content.buttonText : 'Subscribe'}</button>
+            <input type="email" placeholder={(newsletterContent?.placeholder !== '' && newsletterContent?.placeholder != null) ? newsletterContent.placeholder : 'Enter email'} style={{ flex: 1, padding: '12px', backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', color: '#fff' }} />
+            <button style={{ padding: '12px 20px', backgroundColor: branding.colors.primary, color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }}>{(newsletterContent?.buttonText !== '' && newsletterContent?.buttonText != null) ? newsletterContent.buttonText : 'Subscribe'}</button>
           </div>
         );
+      }
 
-      case 'social-icons':
+      case 'social-icons': {
+        const socialContent = element.content as SocialLinksContent | undefined;
         return (
           <div style={{ display: 'flex', gap: '15px' }}>
-            {(element.content?.links ?? []).map((link: any, i: number) => (
+            {(socialContent?.links ?? []).map((link, i) => (
               <span key={i} style={{ fontSize: '1.5rem', opacity: 0.7 }}>
                 {link.platform === 'twitter' ? '𝕏' : link.platform === 'linkedin' ? 'in' : link.platform === 'facebook' ? 'f' : '🌐'}
               </span>
             ))}
           </div>
         );
+      }
 
-      case 'faq':
+      case 'faq': {
+        const faqContent = element.content as FAQContent | undefined;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {(element.content?.items ?? []).map((item: any, i: number) => (
+            {(faqContent?.items ?? []).map((item, i) => (
               <div key={i} style={{ padding: '1rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
                 <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>{item.q}</div>
                 <div style={{ opacity: 0.7 }}>{item.a}</div>
@@ -1433,12 +1530,13 @@ function WidgetRenderer({
             ))}
           </div>
         );
+      }
 
       case 'alert':
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span>ℹ️</span>
-            <span>{(element.content !== '' && element.content != null) ? element.content : 'Alert message'}</span>
+            <span>{(element.content !== '' && element.content != null) ? (typeof element.content === 'string' ? element.content : JSON.stringify(element.content)) : 'Alert message'}</span>
           </div>
         );
 
@@ -1536,7 +1634,17 @@ export default function WebsiteEditorPage() {
 
   const findElementInSections = (sections: PageSection[], id: string): WidgetElement | null => {
     for (const section of sections) {
-      if (section.id === id) {return section as any;}
+      if (section.id === id) {
+        // PageSection can be treated as a WidgetElement (omitting PageSection-specific fields)
+        return {
+          id: section.id,
+          type: section.type,
+          content: undefined,
+          children: section.children,
+          styles: section.styles,
+          settings: undefined
+        };
+      }
       const found = findElement(section.children, id);
       if (found) {return found;}
     }
@@ -1547,7 +1655,7 @@ export default function WebsiteEditorPage() {
 
   // Load config - smart merge: prefer defaults for pages with more content
   useEffect(() => {
-const load = async () => {
+    const load = () => {
       // Always start with DEFAULT_CONFIG which has the real website content
       // Firestore is only used for saving edits
       setConfig(DEFAULT_CONFIG);
@@ -1573,10 +1681,12 @@ const load = async () => {
       }, false);
       
       setHasChanges(false);
-      alert('Published successfully!');
+      // eslint-disable-next-line no-alert
+      window.alert('Published successfully!');
     } catch (e) {
       logger.error('Failed to save:', e, { file: 'page.tsx' });
-      alert('Failed to save');
+      // eslint-disable-next-line no-alert
+      window.alert('Failed to save');
     } finally {
       setIsSaving(false);
     }
@@ -1726,7 +1836,8 @@ const load = async () => {
           
           <button
             onClick={() => {
-              if (confirm('Reset this page to defaults? This will restore the original content for the currently selected page.')) {
+              // eslint-disable-next-line no-alert
+              if (window.confirm('Reset this page to defaults? This will restore the original content for the currently selected page.')) {
                 const defaultPage = DEFAULT_CONFIG.pages.find(p => p.id === selectedPageId);
                 if (defaultPage) {
                   updateConfig({
@@ -1748,7 +1859,7 @@ const load = async () => {
             Reset Page
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={isSaving || !hasChanges}
             style={{
               padding: '6px 16px',
@@ -1870,7 +1981,8 @@ const load = async () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <button
                   onClick={() => {
-                    const name = prompt('Page name:');
+                    // eslint-disable-next-line no-alert
+                    const name = window.prompt('Page name:');
                     if (name) {
                       const slug = `/${  name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
                       const newPage: WebsitePage = {
@@ -2035,7 +2147,8 @@ const load = async () => {
                       {selectedPage.id !== 'home' && (
                         <button
                           onClick={() => {
-                            if (confirm(`Delete "${selectedPage.name}" page?`)) {
+                            // eslint-disable-next-line no-alert
+                            if (window.confirm(`Delete "${selectedPage.name}" page?`)) {
                               updateConfig({ pages: config.pages.filter(p => p.id !== selectedPage.id) });
                               setSelectedPageId('home');
                             }
@@ -2058,6 +2171,7 @@ const load = async () => {
                   <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Logo</label>
                   <div style={{ backgroundColor: '#1a1a1a', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
                     {config.branding.logoUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={config.branding.logoUrl} alt="Logo" style={{ maxHeight: '60px', marginBottom: '0.5rem' }} />
                     )}
                     <label style={{ display: 'block', padding: '8px', backgroundColor: '#6366f1', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}>
@@ -2350,19 +2464,19 @@ const load = async () => {
                       <>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Title</label>
-                          <input type="text" value={selectedElement.content?.title ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, title: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          <input type="text" value={(selectedElement.content as HeroContent)?.title ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as HeroContent), title: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Subtitle</label>
-                          <textarea value={selectedElement.content?.subtitle ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, subtitle: e.target.value } })} rows={3} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
+                          <textarea value={(selectedElement.content as HeroContent)?.subtitle ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as HeroContent), subtitle: e.target.value } })} rows={3} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Button Text</label>
-                          <input type="text" value={selectedElement.content?.buttonText ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, buttonText: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          <input type="text" value={(selectedElement.content as HeroContent)?.buttonText ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as HeroContent), buttonText: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Button Link</label>
-                          <input type="text" value={selectedElement.content?.buttonLink ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, buttonLink: e.target.value } })} placeholder="/signup" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          <input type="text" value={(selectedElement.content as HeroContent)?.buttonLink ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as HeroContent), buttonLink: e.target.value } })} placeholder="/signup" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                         </div>
                       </>
                     )}
@@ -2372,21 +2486,21 @@ const load = async () => {
                       <>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Quote</label>
-                          <textarea value={selectedElement.content?.quote ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, quote: e.target.value } })} rows={3} placeholder="What the customer said..." style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
+                          <textarea value={(selectedElement.content as TestimonialContent)?.quote ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as TestimonialContent), quote: e.target.value } })} rows={3} placeholder="What the customer said..." style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Author</label>
-                            <input type="text" value={selectedElement.content?.author ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, author: e.target.value } })} placeholder="John Doe" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
+                            <input type="text" value={(selectedElement.content as TestimonialContent)?.author ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as TestimonialContent), author: e.target.value } })} placeholder="John Doe" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
                           </div>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Role</label>
-                            <input type="text" value={selectedElement.content?.role ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, role: e.target.value } })} placeholder="CEO" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
+                            <input type="text" value={(selectedElement.content as TestimonialContent)?.role ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as TestimonialContent), role: e.target.value } })} placeholder="CEO" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
                           </div>
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Company</label>
-                          <input type="text" value={selectedElement.content?.company ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, company: e.target.value } })} placeholder="Acme Inc" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
+                          <input type="text" value={(selectedElement.content as TestimonialContent)?.company ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as TestimonialContent), company: e.target.value } })} placeholder="Acme Inc" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.8rem' }} />
                         </div>
                       </>
                     )}
@@ -2397,16 +2511,16 @@ const load = async () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr', gap: '8px' }}>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Icon</label>
-                            <input type="text" value={selectedElement.content?.icon ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, icon: e.target.value } })} style={{ width: '100%', padding: '8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '1.25rem', textAlign: 'center' }} />
+                            <input type="text" value={(selectedElement.content as IconBoxContent)?.icon ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as IconBoxContent), icon: e.target.value } })} style={{ width: '100%', padding: '8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '1.25rem', textAlign: 'center' }} />
                           </div>
                           <div>
                             <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Title</label>
-                            <input type="text" value={selectedElement.content?.title ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, title: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                            <input type="text" value={(selectedElement.content as IconBoxContent)?.title ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as IconBoxContent), title: e.target.value } })} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                           </div>
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Description</label>
-                          <textarea value={selectedElement.content?.text ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, text: e.target.value } })} rows={3} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
+                          <textarea value={(selectedElement.content as IconBoxContent)?.text ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as IconBoxContent), text: e.target.value } })} rows={3} style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', resize: 'vertical' }} />
                         </div>
                       </>
                     )}
@@ -2416,91 +2530,91 @@ const load = async () => {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '8px' }}>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Number</label>
-                          <input type="text" value={selectedElement.content?.number ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, number: e.target.value } })} placeholder="1000" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          <input type="text" value={(selectedElement.content as CounterContent)?.number ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as CounterContent), number: e.target.value } })} placeholder="1000" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Suffix</label>
-                          <input type="text" value={selectedElement.content?.suffix ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, suffix: e.target.value } })} placeholder="+" style={{ width: '100%', padding: '8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', textAlign: 'center' }} />
+                          <input type="text" value={(selectedElement.content as CounterContent)?.suffix ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as CounterContent), suffix: e.target.value } })} placeholder="+" style={{ width: '100%', padding: '8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem', textAlign: 'center' }} />
                         </div>
                         <div style={{ gridColumn: '1/-1' }}>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Label</label>
-                          <input type="text" value={selectedElement.content?.label ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, label: e.target.value } })} placeholder="Happy Customers" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          <input type="text" value={(selectedElement.content as CounterContent)?.label ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as CounterContent), label: e.target.value } })} placeholder="Happy Customers" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                         </div>
                       </div>
                     )}
 
                     {/* Feature Grid Items */}
-                    {selectedElement.type === 'feature-grid' && selectedElement.content?.items && (
+                    {selectedElement.type === 'feature-grid' && ((selectedElement.content as FeatureGridContent)?.items) && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Features ({selectedElement.content.items.length})</label>
-                        {selectedElement.content.items.map((item: any, idx: number) => (
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Features ({((selectedElement.content as FeatureGridContent).items ?? []).length})</label>
+                        {((selectedElement.content as FeatureGridContent).items ?? []).map((item, idx) => (
                           <div key={idx} style={{ padding: '10px', backgroundColor: '#111', borderRadius: '6px', marginBottom: '6px' }}>
                             <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                              <input type="text" value={item.icon ?? ''} placeholder="🚀" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], icon: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '40px', padding: '6px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '1rem', textAlign: 'center' }} />
-                              <input type="text" value={item.title ?? ''} placeholder="Feature Title" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], title: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
-                              <button onClick={() => { const items = selectedElement.content.items.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                              <input type="text" value={item.icon ?? ''} placeholder="🚀" onChange={(e) => { const currentContent = selectedElement.content as FeatureGridContent; const items = [...(currentContent.items ?? [])]; items[idx] = { ...items[idx], icon: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ width: '40px', padding: '6px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '1rem', textAlign: 'center' }} />
+                              <input type="text" value={item.title ?? ''} placeholder="Feature Title" onChange={(e) => { const currentContent = selectedElement.content as FeatureGridContent; const items = [...(currentContent.items ?? [])]; items[idx] = { ...items[idx], title: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <button onClick={() => { const currentContent = selectedElement.content as FeatureGridContent; const items = (currentContent.items ?? []).filter((_, i) => i !== idx); updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
                             </div>
-                            <input type="text" value={item.desc ?? ''} placeholder="Feature description" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], desc: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }} />
+                            <input type="text" value={item.desc ?? ''} placeholder="Feature description" onChange={(e) => { const currentContent = selectedElement.content as FeatureGridContent; const items = [...(currentContent.items ?? [])]; items[idx] = { ...items[idx], desc: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem' }} />
                           </div>
                         ))}
-                        <button onClick={() => { const items = [...(selectedElement.content.items ?? []), { icon: '⚡', title: 'New Feature', desc: 'Description' }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Feature</button>
+                        <button onClick={() => { const currentContent = selectedElement.content as FeatureGridContent; const items = [...(currentContent.items ?? []), { icon: '⚡', title: 'New Feature', desc: 'Description' }]; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Feature</button>
                       </div>
                     )}
 
                     {/* Stats Items */}
-                    {selectedElement.type === 'stats' && selectedElement.content?.items && (
+                    {selectedElement.type === 'stats' && ((selectedElement.content as StatsContent)?.items) && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Stats ({selectedElement.content.items.length})</label>
-                        {selectedElement.content.items.map((item: any, idx: number) => (
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Stats ({((selectedElement.content as StatsContent).items ?? []).length})</label>
+                        {((selectedElement.content as StatsContent).items ?? []).map((item, idx) => (
                           <div key={idx} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                            <input type="text" value={item.value ?? ''} placeholder="100+" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], value: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '70px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
-                            <input type="text" value={item.label ?? ''} placeholder="Label" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], label: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
-                            <button onClick={() => { const items = selectedElement.content.items.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                            <input type="text" value={item.value ?? ''} placeholder="100+" onChange={(e) => { const currentContent = selectedElement.content as StatsContent; const items = [...(currentContent.items ?? [])]; items[idx] = { ...items[idx], value: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ width: '70px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                            <input type="text" value={item.label ?? ''} placeholder="Label" onChange={(e) => { const currentContent = selectedElement.content as StatsContent; const items = [...(currentContent.items ?? [])]; items[idx] = { ...items[idx], label: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                            <button onClick={() => { const currentContent = selectedElement.content as StatsContent; const items = (currentContent.items ?? []).filter((_, i) => i !== idx); updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
                           </div>
                         ))}
-                        <button onClick={() => { const items = [...(selectedElement.content.items ?? []), { value: '100+', label: 'New Stat' }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Stat</button>
+                        <button onClick={() => { const currentContent = selectedElement.content as StatsContent; const items = [...(currentContent.items ?? []), { value: '100+', label: 'New Stat' }]; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Stat</button>
                       </div>
                     )}
 
                     {/* FAQ Items */}
-                    {selectedElement.type === 'faq' && selectedElement.content?.items && (
+                    {selectedElement.type === 'faq' && ((selectedElement.content as FAQContent)?.items) && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>FAQ Items ({selectedElement.content.items.length})</label>
-                        {selectedElement.content.items.map((item: any, idx: number) => (
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>FAQ Items ({((selectedElement.content as FAQContent).items ?? []).length})</label>
+                        {((selectedElement.content as FAQContent).items ?? []).map((item, idx) => (
                           <div key={idx} style={{ padding: '10px', backgroundColor: '#111', borderRadius: '6px', marginBottom: '6px' }}>
                             <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                              <input type="text" value={item.q ?? ''} placeholder="Question?" onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], q: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
-                              <button onClick={() => { const items = selectedElement.content.items.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                              <input type="text" value={item.q ?? ''} placeholder="Question?" onChange={(e) => { const currentContent = selectedElement.content as FAQContent; const items = [...(currentContent.items ?? [])]; items[idx] = { ...items[idx], q: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <button onClick={() => { const currentContent = selectedElement.content as FAQContent; const items = (currentContent.items ?? []).filter((_, i) => i !== idx); updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
                             </div>
-                            <textarea value={item.a ?? ''} placeholder="Answer..." onChange={(e) => { const items = [...selectedElement.content.items]; items[idx] = { ...items[idx], a: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} rows={2} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', resize: 'vertical' }} />
+                            <textarea value={item.a ?? ''} placeholder="Answer..." onChange={(e) => { const currentContent = selectedElement.content as FAQContent; const items = [...(currentContent.items ?? [])]; items[idx] = { ...items[idx], a: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} rows={2} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', resize: 'vertical' }} />
                           </div>
                         ))}
-                        <button onClick={() => { const items = [...(selectedElement.content.items ?? []), { q: 'New Question?', a: 'Answer here' }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add FAQ</button>
+                        <button onClick={() => { const currentContent = selectedElement.content as FAQContent; const items = [...(currentContent.items ?? []), { q: 'New Question?', a: 'Answer here' }]; updateElement(selectedElement.id, { content: { ...currentContent, items } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add FAQ</button>
                       </div>
                     )}
 
                     {/* Pricing Table */}
-                    {selectedElement.type === 'pricing-table' && selectedElement.content?.plans && (
+                    {selectedElement.type === 'pricing-table' && ((selectedElement.content as PricingTableContent)?.plans) && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Pricing Plans ({selectedElement.content.plans.length})</label>
-                        {selectedElement.content.plans.map((plan: any, idx: number) => (
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '8px', fontWeight: '500' }}>Pricing Plans ({((selectedElement.content as PricingTableContent).plans ?? []).length})</label>
+                        {((selectedElement.content as PricingTableContent).plans ?? []).map((plan, idx) => (
                           <div key={idx} style={{ padding: '10px', backgroundColor: '#111', borderRadius: '6px', marginBottom: '6px', border: plan.highlighted ? '1px solid #6366f1' : '1px solid #222' }}>
                             <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                              <input type="text" value={plan.name ?? ''} placeholder="Plan Name" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], name: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
-                              <button onClick={() => { const plans = selectedElement.content.plans.filter((_: any, i: number) => i !== idx); updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
+                              <input type="text" value={plan.name ?? ''} placeholder="Plan Name" onChange={(e) => { const currentContent = selectedElement.content as PricingTableContent; const plans = [...(currentContent.plans ?? [])]; plans[idx] = { ...plans[idx], name: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, plans } }); }} style={{ flex: 1, padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <button onClick={() => { const currentContent = selectedElement.content as PricingTableContent; const plans = (currentContent.plans ?? []).filter((_, i) => i !== idx); updateElement(selectedElement.id, { content: { ...currentContent, plans } }); }} style={{ padding: '6px 8px', backgroundColor: '#7f1d1d', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}>×</button>
                             </div>
                             <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
-                              <input type="text" value={plan.price ?? ''} placeholder="$99" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], price: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ width: '70px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
-                              <input type="text" value={plan.period ?? ''} placeholder="/mo" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], period: e.target.value }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ width: '60px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <input type="text" value={plan.price ?? ''} placeholder="$99" onChange={(e) => { const currentContent = selectedElement.content as PricingTableContent; const plans = [...(currentContent.plans ?? [])]; plans[idx] = { ...plans[idx], price: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, plans } }); }} style={{ width: '70px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
+                              <input type="text" value={plan.period ?? ''} placeholder="/mo" onChange={(e) => { const currentContent = selectedElement.content as PricingTableContent; const plans = [...(currentContent.plans ?? [])]; plans[idx] = { ...plans[idx], period: e.target.value }; updateElement(selectedElement.id, { content: { ...currentContent, plans } }); }} style={{ width: '60px', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }} />
                               <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#888', cursor: 'pointer' }}>
-                                <input type="checkbox" checked={plan.highlighted ?? false} onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], highlighted: e.target.checked }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} />
+                                <input type="checkbox" checked={plan.highlighted ?? false} onChange={(e) => { const currentContent = selectedElement.content as PricingTableContent; const plans = [...(currentContent.plans ?? [])]; plans[idx] = { ...plans[idx], highlighted: e.target.checked }; updateElement(selectedElement.id, { content: { ...currentContent, plans } }); }} />
                                 Featured
                               </label>
                             </div>
-                            <textarea value={(plan.features ?? []).join('\n')} placeholder="Feature 1&#10;Feature 2" onChange={(e) => { const plans = [...selectedElement.content.plans]; plans[idx] = { ...plans[idx], features: e.target.value.split('\n') }; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} rows={3} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', resize: 'vertical' }} />
+                            <textarea value={(plan.features ?? []).join('\n')} placeholder="Feature 1&#10;Feature 2" onChange={(e) => { const currentContent = selectedElement.content as PricingTableContent; const plans = [...(currentContent.plans ?? [])]; plans[idx] = { ...plans[idx], features: e.target.value.split('\n') }; updateElement(selectedElement.id, { content: { ...currentContent, plans } }); }} rows={3} style={{ width: '100%', padding: '6px 8px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '4px', color: '#fff', fontSize: '0.75rem', resize: 'vertical' }} />
                           </div>
                         ))}
-                        <button onClick={() => { const plans = [...(selectedElement.content.plans ?? []), { name: 'New Plan', price: '$0', period: '/mo', features: ['Feature 1'], highlighted: false }]; updateElement(selectedElement.id, { content: { ...selectedElement.content, plans } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Plan</button>
+                        <button onClick={() => { const currentContent = selectedElement.content as PricingTableContent; const plans = [...(currentContent.plans ?? []), { name: 'New Plan', price: '$0', period: '/mo', features: ['Feature 1'], highlighted: false }]; updateElement(selectedElement.id, { content: { ...currentContent, plans } }); }} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', border: '1px dashed #444', borderRadius: '6px', color: '#888', cursor: 'pointer', fontSize: '0.75rem' }}>+ Add Plan</button>
                       </div>
                     )}
 
@@ -2509,11 +2623,11 @@ const load = async () => {
                       <>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Placeholder Text</label>
-                          <input type="text" value={selectedElement.content?.placeholder ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, placeholder: e.target.value } })} placeholder="Enter your email" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          <input type="text" value={(selectedElement.content as NewsletterContent)?.placeholder ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as NewsletterContent), placeholder: e.target.value } })} placeholder="Enter your email" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.7rem', color: '#888', marginBottom: '4px', fontWeight: '500' }}>Button Text</label>
-                          <input type="text" value={selectedElement.content?.buttonText ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...selectedElement.content, buttonText: e.target.value } })} placeholder="Subscribe" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
+                          <input type="text" value={(selectedElement.content as NewsletterContent)?.buttonText ?? ''} onChange={(e) => updateElement(selectedElement.id, { content: { ...(selectedElement.content as NewsletterContent), buttonText: e.target.value } })} placeholder="Subscribe" style={{ width: '100%', padding: '8px 10px', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '6px', color: '#fff', fontSize: '0.875rem' }} />
                         </div>
                       </>
                     )}

@@ -21,31 +21,79 @@
 import { logger } from '@/lib/logger/logger';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import type {
-  Conversation,
-  ConversationAnalysis,
-  AnalyzeConversationRequest,
-  AnalyzeTranscriptRequest,
-  BatchAnalysisRequest,
-  BatchAnalysisResponse,
-  SentimentAnalysis,
-  TalkRatioAnalysis,
-  TopicAnalysis,
-  ObjectionAnalysis,
-  CompetitorMention,
-  KeyMoment,
-  CoachingInsight,
-  FollowUpAction,
-  ConversationScores,
-  QualityIndicator,
-  RedFlag,
-  PositiveSignal,
-  ConversationEngineConfig,
-  Participant,
-  ConversationType,
-  AnalysisSummary,
+import {
+  DEFAULT_CONVERSATION_CONFIG,
+  type Conversation,
+  type ConversationAnalysis,
+  type AnalyzeConversationRequest,
+  type AnalyzeTranscriptRequest,
+  type BatchAnalysisRequest,
+  type BatchAnalysisResponse,
+  type TalkRatioAnalysis,
+  type CoachingInsight,
+  type FollowUpAction,
+  type ConversationScores,
+  type QualityIndicator,
+  type RedFlag,
+  type PositiveSignal,
+  type ConversationEngineConfig,
+  type Participant,
+  type ConversationType,
+  type AnalysisSummary,
+  type ParticipantTalkStats,
+  type SentimentScore,
+  type ObjectionType,
+  type TalkRatioAssessment,
+  type SentimentTimePoint,
+  type CriticalMoment,
+  type Topic,
+  type TopicTimeAllocation,
+  type ObjectionAnalysis,
+  type CompetitorMention,
+  type KeyMoment,
 } from './types';
-import { DEFAULT_CONVERSATION_CONFIG } from './types';
+
+// ============================================================================
+// INTERNAL TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * AI Analysis Response - Parsed JSON structure from AI
+ */
+interface AIAnalysisResponse {
+  sentiment: {
+    overall: SentimentScore;
+    byParticipant: Record<string, SentimentScore>;
+    timeline: SentimentTimePoint[];
+    trendDirection: 'improving' | 'declining' | 'stable';
+    criticalMoments: CriticalMoment[];
+  };
+  topics: {
+    mainTopics: Topic[];
+    coverageMap: Record<string, number>;
+    uncoveredTopics: string[];
+    timeAllocation: TopicTimeAllocation[];
+  };
+  objections: ObjectionAnalysis[];
+  competitors: CompetitorMention[];
+  keyMoments: KeyMoment[];
+  summary: string;
+  highlights: string[];
+  confidence: number;
+}
+
+/**
+ * Transcript Turn - Individual speaking turn in transcript
+ */
+interface TranscriptTurn {
+  speakerId: string;
+  speakerName: string;
+  text: string;
+  wordCount: number;
+  duration: number;
+  isQuestion: boolean;
+  wasInterruption: boolean;
+}
 
 // ============================================================================
 // MAIN ANALYSIS FUNCTION
@@ -114,13 +162,14 @@ export async function analyzeConversation(
     await emitAnalysisSignal(analysis, conversation);
     
     return analysis;
-    
-  } catch (error: any) {
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Conversation analysis failed', error, {
       conversationId: request.conversationId,
       organizationId: request.organizationId,
     });
-    throw new Error(`Conversation analysis failed: ${error.message}`);
+    throw new Error(`Conversation analysis failed: ${errorMessage}`);
   }
 }
 
@@ -231,12 +280,13 @@ export async function analyzeTranscript(
     };
     
     return analysis;
-    
-  } catch (error: any) {
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Transcript analysis failed', error, {
       organizationId: request.organizationId,
     });
-    throw new Error(`Transcript analysis failed: ${error.message}`);
+    throw new Error(`Transcript analysis failed: ${errorMessage}`);
   }
 }
 
@@ -270,12 +320,13 @@ export async function analyzeBatchConversations(
           },
           config
         );
-        
+
         analyses.set(conversationId, analysis);
-      } catch (error: any) {
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger.warn('Failed to analyze conversation', {
           conversationId,
-          error: error.message,
+          error: errorMessage,
         });
       }
     }
@@ -294,12 +345,13 @@ export async function analyzeBatchConversations(
       summary,
       analyzedAt: new Date(),
     };
-    
-  } catch (error: any) {
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Batch conversation analysis failed', error, {
       organizationId: request.organizationId,
     });
-    throw new Error(`Batch conversation analysis failed: ${error.message}`);
+    throw new Error(`Batch conversation analysis failed: ${errorMessage}`);
   }
 }
 
@@ -440,21 +492,21 @@ Focus on actionable insights. Be specific and use exact quotes. Identify both st
 /**
  * Parse AI analysis response
  */
-function parseAIAnalysis(aiResponse: string): any {
+function parseAIAnalysis(aiResponse: string): AIAnalysisResponse {
   try {
     // Extract JSON from response
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No JSON found in AI response');
     }
-    
-    const parsed = JSON.parse(jsonMatch[0]);
-    
+
+    const parsed = JSON.parse(jsonMatch[0]) as Partial<AIAnalysisResponse>;
+
     // Validate required fields
     if (!parsed.sentiment || !parsed.topics || !parsed.summary) {
       throw new Error('Missing required fields in AI response');
     }
-    
+
     return {
       sentiment: parsed.sentiment,
       topics: parsed.topics,
@@ -465,22 +517,23 @@ function parseAIAnalysis(aiResponse: string): any {
       highlights: parsed.highlights ?? [],
       confidence: parsed.confidence ?? 75,
     };
-    
-  } catch (error: any) {
-    logger.error('Failed to parse AI analysis', { error: error.message });
-    
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to parse AI analysis', { error: errorMessage });
+
     // Return minimal fallback
     return {
       sentiment: {
         overall: {
-          polarity: 'neutral',
+          polarity: 'neutral' as const,
           score: 0,
           confidence: 50,
           tone: ['unknown'],
         },
         byParticipant: {},
         timeline: [],
-        trendDirection: 'stable',
+        trendDirection: 'stable' as const,
         criticalMoments: [],
       },
       topics: {
@@ -516,18 +569,18 @@ function calculateTalkRatio(
   try {
     // Parse transcript into turns
     const turns = parseTranscriptTurns(transcript, participants);
-    
+
     // Calculate per-participant stats
-    const byParticipant: Record<string, any> = {};
+    const byParticipant: Record<string, ParticipantTalkStats> = {};
     let repTalkTime = 0;
     let prospectTalkTime = 0;
-    
+
     participants.forEach(participant => {
       const participantTurns = turns.filter(t => t.speakerId === participant.id);
       const totalTime = participantTurns.reduce((sum, turn) => sum + turn.duration, 0);
       const questionCount = participantTurns.filter(t => t.isQuestion).length;
-      
-      const stats = {
+
+      const stats: ParticipantTalkStats = {
         totalTime,
         percentage: duration > 0 ? Math.round((totalTime / duration) * 100) : 0,
         turnCount: participantTurns.length,
@@ -536,9 +589,9 @@ function calculateTalkRatio(
         interruptionCount: participantTurns.filter(t => t.wasInterruption).length,
         questionCount,
       };
-      
+
       byParticipant[participant.id] = stats;
-      
+
       // Track rep vs prospect time
       if (participant.id === repId || participant.role === 'sales_rep' || participant.role === 'sales_manager') {
         repTalkTime += totalTime;
@@ -546,18 +599,18 @@ function calculateTalkRatio(
         prospectTalkTime += totalTime;
       }
     });
-    
+
     // Calculate overall ratio
     const totalTalkTime = repTalkTime + prospectTalkTime;
     const repPercentage = totalTalkTime > 0 ? Math.round((repTalkTime / totalTalkTime) * 100) : 0;
     const prospectPercentage = totalTalkTime > 0 ? Math.round((prospectTalkTime / totalTalkTime) * 100) : 0;
     const ratio = prospectTalkTime > 0 ? repTalkTime / prospectTalkTime : 1;
-    
+
     // Assess talk ratio
     const repRatio = totalTalkTime > 0 ? repTalkTime / totalTalkTime : 0.5;
-    let assessment: any;
+    let assessment: TalkRatioAssessment;
     let recommendation: string;
-    
+
     if (repRatio >= config.idealTalkRatioMin && repRatio <= config.idealTalkRatioMax) {
       assessment = 'ideal';
       recommendation = 'Excellent talk ratio! Continue listening actively and asking thoughtful questions.';
@@ -574,7 +627,7 @@ function calculateTalkRatio(
       assessment = 'needs_improvement';
       recommendation = 'Work on finding the right talk/listen balance. Aim for 30-40% of the conversation.';
     }
-    
+
     return {
       overall: {
         speakerTime: repTalkTime,
@@ -590,10 +643,11 @@ function calculateTalkRatio(
       assessment,
       recommendation,
     };
-    
-  } catch (error: any) {
-    logger.error('Talk ratio calculation failed', { error: error.message });
-    
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Talk ratio calculation failed', { error: errorMessage });
+
     // Return default/fallback
     return {
       overall: {
@@ -616,35 +670,36 @@ function calculateTalkRatio(
 /**
  * Parse transcript into individual speaking turns
  */
-function parseTranscriptTurns(transcript: string, participants: Participant[]): any[] {
-  const turns: any[] = [];
-  
+function parseTranscriptTurns(transcript: string, participants: Participant[]): TranscriptTurn[] {
+  const turns: TranscriptTurn[] = [];
+
   // Common transcript formats:
   // "Speaker Name: text"
   // "[Speaker Name]: text"
   // "Speaker Name - text"
-  
+
   const lines = transcript.split('\n').filter(line => line.trim().length > 0);
-  
-  lines.forEach((line, index) => {
+
+  lines.forEach((_line) => {
+    const line = _line;
     // Try to extract speaker name
     const match = line.match(/^[[()]?([^:\])]+ )[\])]?\s*[:-]\s*(.+)$/);
-    
+
     if (match) {
       const speakerName = match[1].trim();
       const text = match[2].trim();
-      
+
       // Find matching participant
-      const participant = participants.find(p => 
+      const participant = participants.find(p =>
         p.name.toLowerCase().includes(speakerName.toLowerCase()) ||
         speakerName.toLowerCase().includes(p.name.toLowerCase())
       );
-      
+
       if (participant) {
         // Estimate duration (rough: ~150 words per minute, ~2.5 words per second)
         const wordCount = text.split(/\s+/).length;
         const estimatedDuration = wordCount / 2.5;
-        
+
         turns.push({
           speakerId: participant.id,
           speakerName: participant.name,
@@ -657,7 +712,7 @@ function parseTranscriptTurns(transcript: string, participants: Participant[]): 
       }
     }
   });
-  
+
   return turns;
 }
 
@@ -668,7 +723,7 @@ function parseTranscriptTurns(transcript: string, participants: Participant[]): 
 /**
  * Calculate conversation scores
  */
-function calculateScores(aiAnalysis: any, talkRatio: TalkRatioAnalysis): ConversationScores {
+function calculateScores(aiAnalysis: AIAnalysisResponse, talkRatio: TalkRatioAnalysis): ConversationScores {
   // Overall sentiment score (convert -1 to 1 → 0 to 100)
   const sentimentScore = Math.round(((aiAnalysis.sentiment.overall.score + 1) / 2) * 100);
   
@@ -685,24 +740,24 @@ function calculateScores(aiAnalysis: any, talkRatio: TalkRatioAnalysis): Convers
   
   // Objection handling score
   const totalObjections = aiAnalysis.objections.length;
-  const addressedObjections = aiAnalysis.objections.filter((obj: any) => obj.wasAddressed).length;
-  const objectionScore = totalObjections > 0 
+  const addressedObjections = aiAnalysis.objections.filter(obj => obj.wasAddressed).length;
+  const objectionScore = totalObjections > 0
     ? Math.round((addressedObjections / totalObjections) * 100)
     : 80; // No objections = good
-  
+
   // Closing score (based on next steps and commitments)
-  const hasNextSteps = aiAnalysis.keyMoments.some((m: any) => m.type === 'next_steps_agreed');
-  const hasCommitment = aiAnalysis.keyMoments.some((m: any) => m.type === 'commitment');
+  const hasNextSteps = aiAnalysis.keyMoments.some(m => m.type === 'next_steps_agreed');
+  const hasCommitment = aiAnalysis.keyMoments.some(m => m.type === 'commitment');
   const closingScore = hasNextSteps && hasCommitment ? 90 :
                        hasNextSteps ? 75 :
                        hasCommitment ? 70 : 50;
-  
+
   // Rapport score (based on sentiment and engagement)
   const rapportScore = Math.max(50, sentimentScore);
-  
+
   // Engagement score (positive signals - red flags)
-  const positiveSignals = aiAnalysis.keyMoments.filter((m: any) => m.impact === 'positive').length;
-  const negativeSignals = aiAnalysis.keyMoments.filter((m: any) => m.impact === 'negative').length;
+  const positiveSignals = aiAnalysis.keyMoments.filter(m => m.impact === 'positive').length;
+  const negativeSignals = aiAnalysis.keyMoments.filter(m => m.impact === 'negative').length;
   const engagementScore = Math.min(100, Math.max(30, 70 + (positiveSignals * 5) - (negativeSignals * 10)));
   
   // Overall score (weighted average)
@@ -734,9 +789,9 @@ function calculateScores(aiAnalysis: any, talkRatio: TalkRatioAnalysis): Convers
  * Identify quality indicators
  */
 function identifyQualityIndicators(
-  aiAnalysis: any,
+  aiAnalysis: AIAnalysisResponse,
   talkRatio: TalkRatioAnalysis,
-  scores: ConversationScores
+  _scores: ConversationScores
 ): QualityIndicator[] {
   const indicators: QualityIndicator[] = [];
   
@@ -764,7 +819,7 @@ function identifyQualityIndicators(
   });
   
   // Next steps clarity indicator
-  const hasNextSteps = aiAnalysis.keyMoments.some((m: any) => m.type === 'next_steps_agreed');
+  const hasNextSteps = aiAnalysis.keyMoments.some(m => m.type === 'next_steps_agreed');
   indicators.push({
     type: 'next_steps_clarity',
     status: hasNextSteps ? 'excellent' : 'poor',
@@ -772,10 +827,10 @@ function identifyQualityIndicators(
     description: hasNextSteps ? 'Clear next steps defined' : 'No clear next steps',
     recommendation: hasNextSteps ? undefined : 'Always end calls with specific next steps and timeline',
   });
-  
+
   // Objection handling indicator
   const objectionCount = aiAnalysis.objections.length;
-  const handledCount = aiAnalysis.objections.filter((obj: any) => obj.wasAddressed).length;
+  const handledCount = aiAnalysis.objections.filter(obj => obj.wasAddressed).length;
   if (objectionCount > 0) {
     indicators.push({
       type: 'objection_handling',
@@ -798,11 +853,11 @@ function identifyQualityIndicators(
 /**
  * Extract red flags from analysis
  */
-function extractRedFlags(aiAnalysis: any, qualityIndicators: QualityIndicator[]): RedFlag[] {
+function extractRedFlags(aiAnalysis: AIAnalysisResponse, _qualityIndicators: QualityIndicator[]): RedFlag[] {
   const redFlags: RedFlag[] = [];
-  
+
   // No next steps
-  const hasNextSteps = aiAnalysis.keyMoments.some((m: any) => m.type === 'next_steps_agreed');
+  const hasNextSteps = aiAnalysis.keyMoments.some(m => m.type === 'next_steps_agreed');
   if (!hasNextSteps) {
     redFlags.push({
       type: 'no_next_steps',
@@ -811,9 +866,9 @@ function extractRedFlags(aiAnalysis: any, qualityIndicators: QualityIndicator[])
       recommendation: 'Always establish concrete next actions and timeline before ending the call',
     });
   }
-  
+
   // Multiple unaddressed objections
-  const unaddressedObjections = aiAnalysis.objections.filter((obj: any) => !obj.wasAddressed);
+  const unaddressedObjections = aiAnalysis.objections.filter(obj => !obj.wasAddressed);
   if (unaddressedObjections.length >= 2) {
     redFlags.push({
       type: 'multiple_objections',
@@ -822,18 +877,18 @@ function extractRedFlags(aiAnalysis: any, qualityIndicators: QualityIndicator[])
       recommendation: 'Circle back to acknowledge and address all concerns',
     });
   }
-  
+
   // Competitor preference
-  const competitorConcerns = aiAnalysis.competitors.filter((c: any) => c.concernLevel === 'high');
+  const competitorConcerns = aiAnalysis.competitors.filter(c => c.concernLevel === 'high');
   if (competitorConcerns.length > 0) {
     redFlags.push({
       type: 'competitor_preference',
       severity: 'high',
-      description: `Strong preference indicated for: ${competitorConcerns.map((c: any) => c.competitor).join(', ')}`,
+      description: `Strong preference indicated for: ${competitorConcerns.map(c => c.competitor).join(', ')}`,
       recommendation: 'Use battlecard to differentiate and highlight unique value proposition',
     });
   }
-  
+
   // Negative sentiment trend
   if (aiAnalysis.sentiment.trendDirection === 'declining') {
     redFlags.push({
@@ -843,22 +898,22 @@ function extractRedFlags(aiAnalysis: any, qualityIndicators: QualityIndicator[])
       recommendation: 'Re-engage by asking about their specific challenges and desired outcomes',
     });
   }
-  
+
   return redFlags;
 }
 
 /**
  * Extract positive signals from analysis
  */
-function extractPositiveSignals(aiAnalysis: any): PositiveSignal[] {
+function extractPositiveSignals(aiAnalysis: AIAnalysisResponse): PositiveSignal[] {
   const signals: PositiveSignal[] = [];
-  
+
   // Buying intent
-  const buyingSignals = aiAnalysis.keyMoments.filter((m: any) => m.type === 'buying_signal');
-  buyingSignals.forEach((signal: any) => {
+  const buyingSignals = aiAnalysis.keyMoments.filter(m => m.type === 'buying_signal');
+  buyingSignals.forEach(signal => {
     signals.push({
       type: 'buying_intent',
-      strength: signal.significance === 'critical' ? 'strong' : 
+      strength: signal.significance === 'critical' ? 'strong' :
                 signal.significance === 'high' ? 'moderate' : 'weak',
       description: signal.description,
       quote: signal.quote,
@@ -866,9 +921,9 @@ function extractPositiveSignals(aiAnalysis: any): PositiveSignal[] {
       impact: 'Strong indicator of purchase intent',
     });
   });
-  
+
   // Decision maker engaged
-  const dmEngagement = aiAnalysis.keyMoments.filter((m: any) => m.type === 'decision_maker_engagement');
+  const dmEngagement = aiAnalysis.keyMoments.filter(m => m.type === 'decision_maker_engagement');
   if (dmEngagement.length > 0) {
     signals.push({
       type: 'decision_maker_engaged',
@@ -877,9 +932,9 @@ function extractPositiveSignals(aiAnalysis: any): PositiveSignal[] {
       impact: 'Direct access to economic buyer increases close probability',
     });
   }
-  
+
   // Clear pain point
-  const painTopics = aiAnalysis.topics.mainTopics.filter((t: any) => t.category === 'pain_points');
+  const painTopics = aiAnalysis.topics.mainTopics.filter(t => t.category === 'pain_points');
   if (painTopics.length > 0) {
     signals.push({
       type: 'clear_pain_point',
@@ -888,7 +943,7 @@ function extractPositiveSignals(aiAnalysis: any): PositiveSignal[] {
       impact: 'Strong pain points drive purchase urgency',
     });
   }
-  
+
   // Positive sentiment
   if (aiAnalysis.sentiment.overall.score > 0.5) {
     signals.push({
@@ -898,7 +953,7 @@ function extractPositiveSignals(aiAnalysis: any): PositiveSignal[] {
       impact: 'Prospect is receptive to the solution',
     });
   }
-  
+
   return signals;
 }
 
@@ -910,7 +965,7 @@ function extractPositiveSignals(aiAnalysis: any): PositiveSignal[] {
  * Generate coaching insights with AI
  */
 async function generateCoachingInsights(
-  aiAnalysis: any,
+  aiAnalysis: AIAnalysisResponse,
   talkRatio: TalkRatioAnalysis,
   scores: ConversationScores,
   customContext: string | undefined,
@@ -918,20 +973,21 @@ async function generateCoachingInsights(
 ): Promise<CoachingInsight[]> {
   try {
     const prompt = buildCoachingPrompt(aiAnalysis, talkRatio, scores, customContext);
-    
+
     const response = await sendUnifiedChatMessage({
       model: config.aiModel,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       maxTokens: 2000,
     });
-    
+
     const insights = parseCoachingInsights(response.text, config.maxCoachingInsights);
-    
+
     return insights;
-    
-  } catch (error: any) {
-    logger.error('Coaching insights generation failed', { error: error.message });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Coaching insights generation failed', { error: errorMessage });
     return [];
   }
 }
@@ -940,7 +996,7 @@ async function generateCoachingInsights(
  * Build coaching prompt
  */
 function buildCoachingPrompt(
-  aiAnalysis: any,
+  aiAnalysis: AIAnalysisResponse,
   talkRatio: TalkRatioAnalysis,
   scores: ConversationScores,
   customContext?: string
@@ -988,10 +1044,10 @@ function parseCoachingInsights(aiResponse: string, maxInsights: number): Coachin
     if (!jsonMatch) {
       return [];
     }
-    
-    const parsed = JSON.parse(jsonMatch[0]);
+
+    const parsed = JSON.parse(jsonMatch[0]) as CoachingInsight[];
     return parsed.slice(0, maxInsights);
-    
+
   } catch (error) {
     logger.warn('Failed to parse coaching insights', { error });
     return [];
@@ -1006,27 +1062,28 @@ function parseCoachingInsights(aiResponse: string, maxInsights: number): Coachin
  * Generate follow-up action recommendations
  */
 async function generateFollowUpActions(
-  aiAnalysis: any,
+  aiAnalysis: AIAnalysisResponse,
   conversationType: ConversationType,
   customContext: string | undefined,
   config: ConversationEngineConfig
 ): Promise<FollowUpAction[]> {
   try {
     const prompt = buildFollowUpPrompt(aiAnalysis, conversationType, customContext);
-    
+
     const response = await sendUnifiedChatMessage({
       model: config.aiModel,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       maxTokens: 1500,
     });
-    
+
     const actions = parseFollowUpActions(response.text, config.maxFollowUpActions);
-    
+
     return actions;
-    
-  } catch (error: any) {
-    logger.error('Follow-up actions generation failed', { error: error.message });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Follow-up actions generation failed', { error: errorMessage });
     return [];
   }
 }
@@ -1035,7 +1092,7 @@ async function generateFollowUpActions(
  * Build follow-up actions prompt
  */
 function buildFollowUpPrompt(
-  aiAnalysis: any,
+  aiAnalysis: AIAnalysisResponse,
   conversationType: ConversationType,
   customContext?: string
 ): string {
@@ -1043,8 +1100,8 @@ function buildFollowUpPrompt(
 
 CONVERSATION TYPE: ${conversationType}
 SUMMARY: ${aiAnalysis.summary}
-KEY MOMENTS: ${aiAnalysis.keyMoments.map((m: any) => `- ${m.description}`).join('\n')}
-OBJECTIONS: ${aiAnalysis.objections.map((o: any) => `- ${o.objection}`).join('\n')}
+KEY MOMENTS: ${aiAnalysis.keyMoments.map(m => `- ${m.description}`).join('\n')}
+OBJECTIONS: ${aiAnalysis.objections.map(o => `- ${o.objection}`).join('\n')}
 ${customContext ? `\nCONTEXT:\n${customContext}\n` : ''}
 
 Provide 3-5 follow-up actions as a JSON array:
@@ -1074,10 +1131,10 @@ function parseFollowUpActions(aiResponse: string, maxActions: number): FollowUpA
     if (!jsonMatch) {
       return [];
     }
-    
-    const parsed = JSON.parse(jsonMatch[0]);
+
+    const parsed = JSON.parse(jsonMatch[0]) as FollowUpAction[];
     return parsed.slice(0, maxActions);
-    
+
   } catch (error) {
     logger.warn('Failed to parse follow-up actions', { error });
     return [];
@@ -1169,7 +1226,7 @@ function calculateAnalysisSummary(
     
     commonObjections: Array.from(objectionMap.entries())
       .map(([type, data]) => ({
-        type: type as any,
+        type: type as ObjectionType,
         frequency: data.count,
         avgSeverity: 50, // Would need more data
         successRate: Math.round((data.addressed / data.count) * 100),
@@ -1207,9 +1264,9 @@ async function emitAnalysisSignal(
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
-    
+
     await coordinator.emitSignal({
-      type: 'conversation.analyzed' as any,
+      type: 'conversation.analyzed',
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
       orgId: analysis.organizationId,
       workspaceId: analysis.workspaceId,
@@ -1226,12 +1283,12 @@ async function emitAnalysisSignal(
         coachingInsightsCount: analysis.coachingInsights.length,
       },
     });
-    
+
     logger.info('Analysis signal emitted', {
       conversationId: conversation.id,
       overallScore: analysis.scores.overall,
     });
-    
+
   } catch (error) {
     logger.error('Failed to emit analysis signal', error, {
       conversationId: conversation.id,
@@ -1246,12 +1303,12 @@ async function emitAnalysisSignal(
 /**
  * Get conversation data (placeholder - would query Firestore)
  */
-async function getConversation(
-  organizationId: string,
-  conversationId: string,
-  workspaceId: string
+function getConversation(
+  _organizationId: string,
+  _conversationId: string,
+  _workspaceId: string
 ): Promise<Conversation | null> {
   // TODO: Implement Firestore query
   // For now, return null to indicate not found
-  return null;
+  return Promise.resolve(null);
 }
