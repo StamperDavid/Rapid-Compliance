@@ -5,8 +5,7 @@
  * Uses Firebase Admin SDK to bypass security rules.
  */
 
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/api-auth';
 import { runProvisioner, getLastProvisionReport } from '@/lib/db/provisioner';
 import { logger } from '@/lib/logger/logger';
@@ -43,12 +42,13 @@ export async function POST(request: NextRequest) {
       success: true,
       report,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Provisioner API] Error', error, { file: 'provision/route.ts' });
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || 'Unknown error',
+        error: errorMessage,
       },
       { status: 500 }
     );
@@ -73,12 +73,13 @@ export async function GET(request: NextRequest) {
       success: true,
       report,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Provisioner API] Error', error, { file: 'provision/route.ts' });
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || 'Unknown error',
+        error: errorMessage,
       },
       { status: 500 }
     );

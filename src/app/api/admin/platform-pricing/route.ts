@@ -1,11 +1,9 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import type { PlatformPricingPlan } from '@/types/pricing';
-import { DEFAULT_PRICING_TIERS } from '@/types/pricing';
+import { type PlatformPricingPlan, DEFAULT_PRICING_TIERS } from '@/types/pricing';
 
 /**
  * GET: Retrieve all platform pricing plans
@@ -29,9 +27,10 @@ export async function GET(request: NextRequest) {
     const plans = await FirestoreService.getAll(COLLECTIONS.PLATFORM_PRICING);
 
     if (plans && plans.length > 0) {
+      const typedPlans = plans as PlatformPricingPlan[];
       return NextResponse.json({
         success: true,
-        plans: plans.sort((a, b) => (a.display_order || 0) - (b.display_order || 0)),
+        plans: typedPlans.sort((a, b) => a.display_order - b.display_order),
       });
     }
 
@@ -75,8 +74,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const plan = body as PlatformPricingPlan;
+    const body = (await request.json()) as PlatformPricingPlan;
+    const plan = body;
 
     // Validate required fields
     if (!plan.plan_id || !plan.name || typeof plan.price_usd !== 'number') {
@@ -95,14 +94,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if plan exists
-    const existingPlan = await FirestoreService.get(COLLECTIONS.PLATFORM_PRICING, plan.plan_id);
+    const existingPlan = await FirestoreService.get<PlatformPricingPlan>(COLLECTIONS.PLATFORM_PRICING, plan.plan_id);
     const now = new Date().toISOString();
 
     const planData: PlatformPricingPlan = {
       ...plan,
-      created_at: existingPlan?.created_at || now,
+      created_at: existingPlan?.created_at ?? now,
       updated_at: now,
-      created_by: existingPlan?.created_by || user.uid,
+      created_by: existingPlan?.created_by ?? user.uid,
     };
 
     // Save to Firestore

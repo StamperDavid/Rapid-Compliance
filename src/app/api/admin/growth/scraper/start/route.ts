@@ -3,9 +3,14 @@
  * POST to start a new scraper job
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface ScraperRequest {
+  url: string;
+  type: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +19,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as ScraperRequest;
     const { url, type } = body;
 
     if (!url) {

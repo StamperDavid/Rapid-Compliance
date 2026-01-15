@@ -3,7 +3,7 @@
  * GET/POST SEO settings, content queue, scraper jobs
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 

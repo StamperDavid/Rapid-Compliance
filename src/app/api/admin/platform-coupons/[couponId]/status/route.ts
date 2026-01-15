@@ -1,9 +1,19 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
+
+type CouponStatus = 'active' | 'disabled' | 'expired' | 'depleted';
+
+interface StatusRequestBody {
+  status: CouponStatus;
+}
+
+interface ExistingCoupon {
+  code: string;
+  status: CouponStatus;
+}
 
 /**
  * PATCH: Toggle coupon status (active/disabled)
@@ -28,10 +38,11 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as StatusRequestBody;
     const { status } = body;
 
-    if (!['active', 'disabled', 'expired', 'depleted'].includes(status)) {
+    const validStatuses: CouponStatus[] = ['active', 'disabled', 'expired', 'depleted'];
+    if (!validStatuses.includes(status)) {
       return NextResponse.json(
         { success: false, error: 'Invalid status value' },
         { status: 400 }
@@ -39,7 +50,7 @@ export async function PATCH(
     }
 
     // Check if coupon exists
-    const existingCoupon = await FirestoreService.get(COLLECTIONS.PLATFORM_COUPONS, couponId);
+    const existingCoupon = await FirestoreService.get<ExistingCoupon>(COLLECTIONS.PLATFORM_COUPONS, couponId);
     if (!existingCoupon) {
       return NextResponse.json(
         { success: false, error: 'Coupon not found' },

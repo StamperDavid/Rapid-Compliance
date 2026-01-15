@@ -1,9 +1,18 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface QuickUpdateRequest {
+  plan_id: string;
+  price_usd: number;
+  yearly_price_usd?: number;
+}
+
+interface ExistingPlan {
+  price_usd: number;
+}
 
 /**
  * POST: Quick price update for a single plan
@@ -23,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as QuickUpdateRequest;
     const { plan_id, price_usd, yearly_price_usd } = body;
 
     if (!plan_id || typeof price_usd !== 'number') {
@@ -34,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if plan exists
-    const existingPlan = await FirestoreService.get(COLLECTIONS.PLATFORM_PRICING, plan_id);
+    const existingPlan = await FirestoreService.get<ExistingPlan>(COLLECTIONS.PLATFORM_PRICING, plan_id);
     if (!existingPlan) {
       return NextResponse.json(
         { success: false, error: 'Plan not found' },

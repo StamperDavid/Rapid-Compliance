@@ -1,10 +1,13 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { PlatformCoupon } from '@/types/pricing';
+
+interface CouponRequestBody extends Partial<PlatformCoupon> {
+  code?: string;
+}
 
 /**
  * GET: Retrieve all platform coupons
@@ -58,8 +61,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const couponData = body as Partial<PlatformCoupon>;
+    const body = (await request.json()) as CouponRequestBody;
+    const couponData = body;
 
     // Validate required fields
     if (!couponData.code) {
@@ -98,23 +101,24 @@ export async function POST(request: NextRequest) {
     const existingCoupon = isNew ? null : await FirestoreService.get(COLLECTIONS.PLATFORM_COUPONS, couponId);
 
     // Build coupon object
+    const existingCouponTyped = existingCoupon as PlatformCoupon | null;
     const coupon: PlatformCoupon = {
       id: couponId,
       code: normalizedCode,
-      discount_type: couponData.discount_type || 'percentage',
-      value: couponData.value || 0,
-      is_free_forever: couponData.is_free_forever || false,
-      is_internal_only: couponData.is_internal_only || false,
-      applies_to_plans: couponData.applies_to_plans || 'all',
-      billing_cycles: couponData.billing_cycles || 'all',
+      discount_type: couponData.discount_type ?? 'percentage',
+      value: couponData.value ?? 0,
+      is_free_forever: couponData.is_free_forever ?? false,
+      is_internal_only: couponData.is_internal_only ?? false,
+      applies_to_plans: couponData.applies_to_plans ?? 'all',
+      billing_cycles: couponData.billing_cycles ?? 'all',
       max_uses: couponData.max_uses,
-      current_uses: existingCoupon?.current_uses || 0,
-      valid_from: couponData.valid_from || now,
+      current_uses: existingCouponTyped?.current_uses ?? 0,
+      valid_from: couponData.valid_from ?? now,
       valid_until: couponData.valid_until,
-      status: couponData.status || 'active',
-      created_at: existingCoupon?.created_at || now,
+      status: couponData.status ?? 'active',
+      created_at: existingCouponTyped?.created_at ?? now,
       updated_at: now,
-      created_by: existingCoupon?.created_by || user.uid,
+      created_by: existingCouponTyped?.created_by ?? user.uid,
       notes: couponData.notes,
     };
 

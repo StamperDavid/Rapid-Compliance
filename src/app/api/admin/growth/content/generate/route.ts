@@ -3,9 +3,23 @@
  * POST to generate blog posts or social media content using AI
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface ContentGenerationRequest {
+  type: 'blog' | 'social';
+  topic: string;
+  brandVoice?: string;
+}
+
+interface GeneratedContent {
+  title: string;
+  content: string;
+  excerpt?: string;
+  keywords?: string[];
+  hashtags?: string[];
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as ContentGenerationRequest;
     const { type, topic, brandVoice } = body;
 
     // Generate content using AI
@@ -50,7 +64,7 @@ Return a JSON object with:
     const jsonMatch = response.text.match(/\{[\s\S]*\}/);
 
     if (jsonMatch) {
-      const generated = JSON.parse(jsonMatch[0]);
+      const generated = JSON.parse(jsonMatch[0]) as GeneratedContent;
 
       const content = {
         id: `content_${Date.now()}`,

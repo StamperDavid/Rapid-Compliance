@@ -4,10 +4,20 @@
  * Uses platform-level API keys from environment variables
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
+
+interface TwitterResponse {
+  data?: {
+    id?: string;
+  };
+}
+
+interface LinkedInResponse {
+  id?: string;
+}
 
 // Request validation schema
 const postSchema = z.object({
@@ -30,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate request body
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = postSchema.safeParse(body);
 
     if (!validation.success) {
@@ -80,9 +90,9 @@ export async function POST(request: NextRequest) {
     if (platform === 'twitter') {
       const twitterBearerToken = process.env.PLATFORM_TWITTER_BEARER_TOKEN;
       const twitterAccessToken = process.env.PLATFORM_TWITTER_ACCESS_TOKEN;
-      const twitterAccessSecret = process.env.PLATFORM_TWITTER_ACCESS_SECRET;
-      const twitterApiKey = process.env.PLATFORM_TWITTER_API_KEY;
-      const twitterApiSecret = process.env.PLATFORM_TWITTER_API_SECRET;
+      const _twitterAccessSecret = process.env.PLATFORM_TWITTER_ACCESS_SECRET;
+      const _twitterApiKey = process.env.PLATFORM_TWITTER_API_KEY;
+      const _twitterApiSecret = process.env.PLATFORM_TWITTER_API_SECRET;
 
       if (!twitterBearerToken || !twitterAccessToken) {
         logger.warn('[AdminSocialPost] Platform Twitter credentials not configured', {
@@ -96,7 +106,7 @@ export async function POST(request: NextRequest) {
             postId: `mock_tweet_${Date.now()}`,
             platform: 'twitter',
             content,
-            scheduledAt: scheduledAt || null,
+            scheduledAt: scheduledAt ?? null,
             postedAt: scheduledAt ? null : new Date().toISOString(),
             message: '[DEV MODE] Platform Twitter credentials not configured. Mock post created.',
           });
@@ -142,7 +152,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!twitterResponse.ok) {
-          const errorData = await twitterResponse.json().catch(() => ({}));
+          const errorData: unknown = await twitterResponse.json().catch(() => ({}));
           logger.error('[AdminSocialPost] Twitter API error', {
             status: twitterResponse.status,
             error: errorData,
@@ -159,11 +169,11 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const tweetData = await twitterResponse.json();
+        const tweetData = (await twitterResponse.json()) as TwitterResponse;
 
         return NextResponse.json({
           success: true,
-          postId: tweetData.data?.id || `tweet_${Date.now()}`,
+          postId: tweetData.data?.id ?? `tweet_${Date.now()}`,
           platform: 'twitter',
           content,
           postedAt: new Date().toISOString(),
@@ -200,7 +210,7 @@ export async function POST(request: NextRequest) {
             postId: `mock_linkedin_${Date.now()}`,
             platform: 'linkedin',
             content,
-            scheduledAt: scheduledAt || null,
+            scheduledAt: scheduledAt ?? null,
             postedAt: scheduledAt ? null : new Date().toISOString(),
             message: '[DEV MODE] Platform LinkedIn credentials not configured. Mock post created.',
           });
@@ -260,7 +270,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!linkedInResponse.ok) {
-          const errorData = await linkedInResponse.json().catch(() => ({}));
+          const errorData: unknown = await linkedInResponse.json().catch(() => ({}));
           logger.error('[AdminSocialPost] LinkedIn API error', {
             status: linkedInResponse.status,
             error: errorData,
@@ -277,11 +287,11 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const postData = await linkedInResponse.json();
+        const postData = (await linkedInResponse.json()) as LinkedInResponse;
 
         return NextResponse.json({
           success: true,
-          postId: postData.id || `linkedin_${Date.now()}`,
+          postId: postData.id ?? `linkedin_${Date.now()}`,
           platform: 'linkedin',
           content,
           postedAt: new Date().toISOString(),
@@ -352,7 +362,7 @@ export async function GET(request: NextRequest) {
       platforms: {
         twitter: {
           configured: twitterConfigured,
-          handle: process.env.PLATFORM_TWITTER_HANDLE || '@SalesVelocityAI',
+          handle: process.env.PLATFORM_TWITTER_HANDLE ?? '@SalesVelocityAI',
         },
         linkedin: {
           configured: linkedInConfigured,

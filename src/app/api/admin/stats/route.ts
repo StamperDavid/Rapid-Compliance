@@ -11,7 +11,6 @@
  */
 
 import type { NextRequest } from 'next/server';
-import { adminDal } from '@/lib/firebase/admin-dal';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import {
   verifyAdminRequest,
@@ -100,7 +99,7 @@ async function getCollectionCount(collectionPath: string): Promise<number> {
     }
 
     return count;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get collection count', error, {
       collection: collectionPath,
       file: 'admin-stats-route.ts',
@@ -124,7 +123,7 @@ async function getCollectionCountWhere(
   collectionPath: string,
   field: string,
   operator: FirebaseFirestore.WhereFilterOp,
-  value: any
+  value: string
 ): Promise<number> {
   if (!adminDb) {
     return 0;
@@ -154,7 +153,7 @@ async function getCollectionCountWhere(
     }
 
     return count;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get filtered collection count', error, {
       collection: collectionPath,
       field,
@@ -221,7 +220,7 @@ export async function GET(request: NextRequest) {
       });
 
       // DEBUG: Log the collection path being queried
-      console.log('[STATS DEBUG] Querying collection:', COLLECTIONS.ORGANIZATIONS);
+      logger.debug('[STATS DEBUG] Querying collection:', { collection: COLLECTIONS.ORGANIZATIONS });
 
       // Parallel count queries for efficiency
       const [totalOrgs, totalUsers, trialOrgs] = await Promise.all([
@@ -231,7 +230,7 @@ export async function GET(request: NextRequest) {
       ]);
 
       // DEBUG: Log the raw counts
-      console.log('[STATS DEBUG] Raw counts:', { totalOrgs, totalUsers, trialOrgs });
+      logger.debug('[STATS DEBUG] Raw counts:', { totalOrgs, totalUsers, trialOrgs });
 
       // Estimate active agents (one per org on average)
       const activeAgents = totalOrgs; // Could query actual agent configs
@@ -251,7 +250,7 @@ export async function GET(request: NextRequest) {
       };
 
       // DEBUG: Log the final stats object
-      console.log('[STATS DEBUG] Final stats:', stats);
+      logger.debug('[STATS DEBUG] Final stats:', stats);
 
       logger.info('Global platform stats fetched', {
         totalOrgs,
@@ -306,11 +305,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Admin stats fetch error', error, { route: '/api/admin/stats' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
-        ? `Failed to fetch stats: ${error.message}`
+        ? `Failed to fetch stats: ${errorMessage}`
         : 'Failed to fetch platform statistics',
       500
     );
@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Stats refresh error', error, { route: '/api/admin/stats' });
     return createErrorResponse('Failed to refresh statistics', 500);
   }

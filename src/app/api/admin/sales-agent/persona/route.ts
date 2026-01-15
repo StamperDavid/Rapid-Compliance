@@ -1,8 +1,14 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
+
+interface PersonaData {
+  name?: string;
+  description?: string;
+  traits?: string[];
+  [key: string]: unknown;
+}
 
 export async function GET(_req: NextRequest) {
   try {
@@ -20,7 +26,7 @@ export async function GET(_req: NextRequest) {
 
     return NextResponse.json(personaDoc.data());
   } catch (error) {
-    logger.error('Error fetching platform sales agent persona', error, { 
+    logger.error('Error fetching platform sales agent persona', error, {
       route: '/api/admin/sales-agent/persona',
       method: 'GET'
     });
@@ -37,11 +43,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    const personaData = await req.json();
+    const personaData = (await req.json()) as PersonaData;
 
     // Save the persona to Firestore using nested doc reference
     const personaDocRef = adminDal.getNestedDocRef('admin/platform-sales-agent/config/persona');
-    
+
     await personaDocRef.set({
       ...personaData,
       updatedAt: FieldValue.serverTimestamp(),
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('Error saving platform sales agent persona', error, { 
+    logger.error('Error saving platform sales agent persona', error, {
       route: '/api/admin/sales-agent/persona',
       method: 'POST'
     });

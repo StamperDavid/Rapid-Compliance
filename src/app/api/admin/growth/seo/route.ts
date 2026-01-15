@@ -3,9 +3,18 @@
  * POST to update platform SEO settings
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface SEOSettingsRequest {
+  title: string;
+  description: string;
+  keywords: string[];
+  ogImage: string;
+  googleAnalyticsId: string;
+  googleTagManagerId: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,11 +23,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = await request.json();
-    const { title, description, keywords, ogImage, googleAnalyticsId, googleTagManagerId } = body;
+    const body = (await request.json()) as SEOSettingsRequest;
+    const { title } = body;
 
     // In production, save to Firestore
-    // await FirestoreService.set('platform', 'seo', { title, description, keywords, ogImage, googleAnalyticsId, googleTagManagerId });
+    // await FirestoreService.set('platform', 'seo', body);
 
     logger.info('[AdminSEO] Settings saved', { title, file: 'seo/route.ts' });
 
