@@ -6,11 +6,13 @@
  *
  * Features:
  * - OpenRouter API integration for multi-model support
- * - Model selection with default to google/gemini-2.0-flash-exp for fast conversational flow
+ * - Model fallback chain: if primary model returns 404, automatically tries fallbacks
+ * - Configurable default model via JASPER_DEFAULT_MODEL env var
  * - Conversation history for stateful memory
  * - ANTI-HALLUCINATION: Tool calling for verified data retrieval
  * - Real-time stats and context injection
  * - TTS voice synthesis integration
+ * - Detailed OpenRouter error logging for debugging
  */
 
 import type { NextRequest } from 'next/server';
@@ -18,18 +20,21 @@ import { NextResponse } from 'next/server';
 import { OpenRouterProvider, type ChatMessage, type ToolCall } from '@/lib/ai/openrouter-provider';
 import { requireRole } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import { JASPER_TOOLS, executeToolCalls } from '@/lib/orchestrator/jasper-tools';
 import { SystemStateService } from '@/lib/orchestrator/system-state-service';
 
-// Default model for Jasper - Gemini 1.5 Pro (stable)
-const DEFAULT_MODEL = 'google/gemini-pro-1.5';
+// Model configuration - can be overridden via environment variable
+const DEFAULT_MODEL = process.env.JASPER_DEFAULT_MODEL || 'google/gemini-pro-1.5';
 
-// Fallback model if primary fails
-const FALLBACK_MODEL = 'anthropic/claude-3-haiku';
+// Fallback models in priority order - tried sequentially if primary fails
+const FALLBACK_MODELS = [
+  'google/gemini-flash-1.5',
+  'anthropic/claude-3.5-sonnet',
+  'anthropic/claude-3-haiku',
+];
 
 // Available models for the orchestrator (not exported - use GET endpoint to fetch)
 const AVAILABLE_MODELS = {
@@ -50,6 +55,73 @@ const AVAILABLE_MODELS = {
   'meta-llama/llama-3.1-70b-instruct': { name: 'Llama 3.1 70B', latency: 'medium', quality: 'high' },
   'meta-llama/llama-3.1-8b-instruct': { name: 'Llama 3.1 8B', latency: 'low', quality: 'good' },
 } as const;
+
+/**
+ * Parse OpenRouter error from exception message
+ */
+function parseOpenRouterError(error: Error): { statusCode: number; errorBody: string } | null {
+  const match = error.message.match(/OpenRouter API error: (\d+) - (.+)/s);
+  if (match) {
+    return {
+      statusCode: parseInt(match[1], 10),
+      errorBody: match[2],
+    };
+  }
+  return null;
+}
+
+/**
+ * Check if error is a model-not-found error (404)
+ */
+function isModelNotFoundError(error: Error): boolean {
+  const parsed = parseOpenRouterError(error);
+  return parsed?.statusCode === 404;
+}
+
+/**
+ * Try a chat request with model fallback on 404 errors
+ */
+async function chatWithFallback<T>(
+  modelsToTry: string[],
+  chatFn: (model: string) => Promise<T>,
+  context: string
+): Promise<{ result: T; model: string }> {
+  let lastError: Error | null = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const result = await chatFn(model);
+      return { result, model };
+    } catch (error: unknown) {
+      const err = error as Error;
+      const parsed = parseOpenRouterError(err);
+
+      // Log the specific OpenRouter error for debugging
+      logger.warn(`[Jasper] OpenRouter error for model ${model}`, {
+        context,
+        statusCode: parsed?.statusCode,
+        errorBody: parsed?.errorBody?.slice(0, 500),
+        rawMessage: err?.message,
+      });
+
+      // If 404 (model not found), try next model
+      if (isModelNotFoundError(err)) {
+        logger.warn(`[Jasper] Model ${model} returned 404, trying next fallback`, {
+          model,
+          fallbacksRemaining: modelsToTry.indexOf(model) < modelsToTry.length - 1,
+        });
+        lastError = err;
+        continue;
+      }
+
+      // For other errors, throw immediately
+      throw error;
+    }
+  }
+
+  // All models failed
+  throw lastError ?? new Error('All models failed');
+}
 
 interface OrchestratorChatRequest {
   message: string;
@@ -200,6 +272,10 @@ export async function POST(request: NextRequest) {
 
     let finalResponse: string;
     let toolsExecuted: string[] = [];
+    let modelUsed = selectedModel;
+
+    // Build model fallback chain: selected model + fallback models
+    const modelsToTry = [selectedModel, ...FALLBACK_MODELS.filter(m => m !== selectedModel)];
 
     if (useTools) {
       // TOOL-CALLING LOOP: Allows Jasper to query data before responding
@@ -210,14 +286,19 @@ export async function POST(request: NextRequest) {
       while (iterationCount < maxIterations) {
         iterationCount++;
 
-        const response = await provider.chatWithTools({
-          model: selectedModel as any,
-          messages: currentMessages,
-          tools: JASPER_TOOLS,
-          toolChoice: 'auto',
-          temperature: 0.7,
-          maxTokens: 4096,
-        });
+        const { result: response, model } = await chatWithFallback(
+          modelsToTry,
+          (m) => provider.chatWithTools({
+            model: m as unknown as Parameters<typeof provider.chatWithTools>[0]['model'],
+            messages: currentMessages,
+            tools: JASPER_TOOLS,
+            toolChoice: 'auto',
+            temperature: 0.7,
+            maxTokens: 4096,
+          }),
+          `tool-call-iteration-${iterationCount}`
+        );
+        modelUsed = model;
 
         // If no tool calls, we have the final response
         if (!response.toolCalls || response.toolCalls.length === 0) {
@@ -227,12 +308,12 @@ export async function POST(request: NextRequest) {
 
         // Execute the tool calls
         logger.info('[Jasper] Executing tool calls', {
-          tools: response.toolCalls.map((tc) => tc.function.name),
+          tools: response.toolCalls.map((tc: ToolCall) => tc.function.name),
           iteration: iterationCount,
         });
 
         const toolResults = await executeToolCalls(response.toolCalls);
-        toolsExecuted.push(...response.toolCalls.map((tc) => tc.function.name));
+        toolsExecuted.push(...response.toolCalls.map((tc: ToolCall) => tc.function.name));
 
         // Add assistant message with tool calls
         currentMessages.push({
@@ -252,14 +333,19 @@ export async function POST(request: NextRequest) {
 
         // If this was the last iteration, force a response
         if (iterationCount >= maxIterations) {
-          const finalAttempt = await provider.chatWithTools({
-            model: selectedModel as any,
-            messages: currentMessages,
-            tools: JASPER_TOOLS,
-            toolChoice: 'none', // Force text response
-            temperature: 0.7,
-            maxTokens: 4096,
-          });
+          const { result: finalAttempt, model: finalModel } = await chatWithFallback(
+            modelsToTry,
+            (m) => provider.chatWithTools({
+              model: m as unknown as Parameters<typeof provider.chatWithTools>[0]['model'],
+              messages: currentMessages,
+              tools: JASPER_TOOLS,
+              toolChoice: 'none', // Force text response
+              temperature: 0.7,
+              maxTokens: 4096,
+            }),
+            'final-forced-response'
+          );
+          modelUsed = finalModel;
           finalResponse = finalAttempt.content;
         }
       }
@@ -268,12 +354,17 @@ export async function POST(request: NextRequest) {
       finalResponse = finalResponse! || 'I encountered an issue retrieving the data. Please try again.';
     } else {
       // Standard chat without tools for conversational queries
-      const response = await provider.chat({
-        model: selectedModel as any,
-        messages: messages as any,
-        temperature: 0.7,
-        maxTokens: 2048,
-      });
+      const { result: response, model } = await chatWithFallback(
+        modelsToTry,
+        (m) => provider.chat({
+          model: m as unknown as Parameters<typeof provider.chat>[0]['model'],
+          messages: messages as Parameters<typeof provider.chat>[0]['messages'],
+          temperature: 0.7,
+          maxTokens: 2048,
+        }),
+        'standard-chat'
+      );
+      modelUsed = model;
       finalResponse = response.content;
     }
 
@@ -282,7 +373,9 @@ export async function POST(request: NextRequest) {
     // Log the interaction for analytics
     logger.info('[Jasper] Chat completed via OpenRouter', {
       context,
-      model: selectedModel,
+      requestedModel: selectedModel,
+      actualModel: modelUsed,
+      modelFallbackOccurred: modelUsed !== selectedModel,
       messageLength: message.length,
       responseLength: finalResponse.length,
       responseTime,
@@ -294,7 +387,7 @@ export async function POST(request: NextRequest) {
     // Optionally persist to Firestore for long-term memory
     if (organizationId) {
       try {
-        await persistConversation(organizationId, context, message, finalResponse, selectedModel);
+        await persistConversation(organizationId, context, message, finalResponse, modelUsed);
       } catch (error) {
         logger.warn('[Jasper] Failed to persist conversation', { error });
       }
@@ -333,35 +426,66 @@ export async function POST(request: NextRequest) {
       success: true,
       response: finalResponse,
       metadata: {
-        model: selectedModel,
+        model: modelUsed,
         responseTime,
         toolExecuted: toolsExecuted.length > 0 ? toolsExecuted.join(', ') : undefined,
       },
       audio: audioOutput,
     };
 
+    // Log if fallback occurred for monitoring
+    if (modelUsed !== selectedModel) {
+      console.log(`[Jasper] Model fallback: ${selectedModel} → ${modelUsed}`);
+    }
+
     return NextResponse.json(responseData);
   } catch (error: any) {
+    // Parse OpenRouter-specific error details
+    const parsedError = parseOpenRouterError(error);
+    let openRouterDetails: Record<string, any> | undefined;
+
+    if (parsedError) {
+      try {
+        const errorJson = JSON.parse(parsedError.errorBody);
+        openRouterDetails = {
+          statusCode: parsedError.statusCode,
+          code: errorJson?.error?.code,
+          message: errorJson?.error?.message,
+          provider: errorJson?.error?.metadata?.provider_name,
+        };
+      } catch {
+        openRouterDetails = {
+          statusCode: parsedError.statusCode,
+          rawBody: parsedError.errorBody.slice(0, 500),
+        };
+      }
+    }
+
     // Log the FULL error to the terminal for debugging
     console.error('[Jasper] OpenRouter API FAILED:', {
       message: error?.message,
+      openRouterDetails,
       stack: error?.stack,
       name: error?.name,
       cause: error?.cause,
     });
-    logger.error('[Jasper] Chat error', error, { route: '/api/orchestrator/chat' });
+    logger.error('[Jasper] Chat error', error, {
+      route: '/api/orchestrator/chat',
+      openRouterDetails,
+    });
 
-    // Return the raw error message to the client for debugging
+    // Return structured error response
     return NextResponse.json(
       {
         success: false,
         error: error?.message || 'Unknown API error',
         errorDetails: {
           name: error?.name,
+          openRouter: openRouterDetails,
           stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
         },
       },
-      { status: 500 }
+      { status: openRouterDetails?.statusCode || 500 }
     );
   }
 }
