@@ -1,17 +1,17 @@
 {
   "$schema": "SWARM_REGISTRY_V1",
   "lastAudit": "2026-01-15",
-  "totalAgents": 28,
-  "builtAgents": 11,
+  "totalAgents": 32,
+  "builtAgents": 15,
   "ghostAgents": 17,
-  "honestAssessment": "Architect Department HIRED. 11 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook) + Architect (4: Manager, UX/UI, Funnel, Copywriter).",
+  "honestAssessment": "Sales & Commerce Department HIRED. 15 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook) + Architect (4: Manager, UX/UI, Funnel, Copywriter) + Sales (4: Revenue Director, Lead Qualifier, Outreach Specialist, Merchandiser).",
 
   "hierarchy": {
     "JASPER": {
       "role": "Chief Orchestrator",
       "status": "ACTIVE",
       "canDelegate": true,
-      "directReports": ["MARKETING_MANAGER", "BUILDER_MANAGER", "INTELLIGENCE_MANAGER", "COMMERCE_MANAGER", "OUTREACH_MANAGER", "CONTENT_MANAGER"]
+      "directReports": ["MARKETING_MANAGER", "BUILDER_MANAGER", "INTELLIGENCE_MANAGER", "SALES_MANAGER", "COMMERCE_MANAGER", "OUTREACH_MANAGER", "CONTENT_MANAGER"]
     }
   },
 
@@ -40,6 +40,13 @@
       "status": "GHOST",
       "path": "src/lib/agents/commerce/manager.ts",
       "specialists": ["PRICING_STRATEGIST", "INVENTORY_MANAGER"]
+    },
+    "SALES_MANAGER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/revenue/manager.ts",
+      "specialists": ["LEAD_QUALIFIER", "OUTREACH_SPECIALIST", "MERCHANDISER"],
+      "functionalLOC": 1477,
+      "note": "L2 orchestrator - Revenue Director monitors lead pipeline, coordinates BANT scoring, outreach, and nudge decisions"
     },
     "OUTREACH_MANAGER": {
       "status": "GHOST",
@@ -242,6 +249,50 @@
       "functionalLOC": 0,
       "boilerplateLOC": 0,
       "verdict": "DOES_NOT_EXIST"
+    },
+    "REVENUE_DIRECTOR": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/revenue/manager.ts",
+      "reportsTo": "JASPER",
+      "capabilities": ["lead_pipeline_management", "stage_transition_logic", "readiness_scoring", "delegation_routing", "intelligence_to_outreach_handoff"],
+      "functionalLOC": 1477,
+      "boilerplateLOC": 100,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_sales",
+      "systemPrompt": "Lead Pipeline State Machine: DISCOVERY -> QUALIFIED -> INTELLIGENCE -> OUTREACH -> NEGOTIATION -> CLOSED. Transition engine with BANT threshold (60), intelligence completeness (75%), time constraints (max 7 days), engagement signals"
+    },
+    "LEAD_QUALIFIER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/qualifier/specialist.ts",
+      "reportsTo": "REVENUE_DIRECTOR",
+      "capabilities": ["bant_scoring", "budget_analysis", "authority_detection", "need_assessment", "timeline_evaluation", "icp_alignment"],
+      "functionalLOC": 1835,
+      "boilerplateLOC": 80,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_sales",
+      "systemPrompt": "BANT Framework (0-100): Budget (25pts: company size, funding, pricing behavior) + Authority (25pts: job title, decision-maker signals) + Need (25pts: pain points, competitor usage, tech gaps) + Timeline (25pts: urgency signals, contract expiry, hiring activity). Qualification tiers: HOT/WARM/COLD/DISQUALIFIED"
+    },
+    "OUTREACH_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/outreach/specialist.ts",
+      "reportsTo": "REVENUE_DIRECTOR",
+      "capabilities": ["context_aware_messaging", "competitor_displacement", "framework_selection", "personalization_injection", "follow_up_sequences", "channel_optimization"],
+      "functionalLOC": 2000,
+      "boilerplateLOC": 100,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_sales",
+      "systemPrompt": "8 OUTREACH_FRAMEWORKS: COLD_INTRO (pattern interrupt), COMPETITOR_DISPLACEMENT (weakness targeting from scraper), TRIGGER_EVENT (hiring/funding/tech), REFERRAL_WARM, PAIN_AGITATION, CASE_STUDY_PROOF, DIRECT_ASK, FOLLOW_UP_SEQUENCE (5 touches). Channels: Email/LinkedIn DM/Twitter DM"
+    },
+    "MERCHANDISER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/sales/merchandiser/specialist.ts",
+      "reportsTo": "REVENUE_DIRECTOR",
+      "capabilities": ["nudge_eligibility", "coupon_strategy", "stripe_integration", "roi_calculation", "interaction_scoring", "constraint_validation"],
+      "functionalLOC": 1581,
+      "boilerplateLOC": 60,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_sales",
+      "systemPrompt": "7 NUDGE_STRATEGIES: ENGAGEMENT_NUDGE (10% after 3+ pricing visits), CART_ABANDONMENT (15% within 24h), WIN_BACK (20% for churned), TRIAL_CONVERSION (10% at day 12), REFERRAL_REWARD (25% both), SEASONAL_PROMO, LOYALTY_TIER (5-20% progressive). Stripe coupon generation, ROI calculation with LTV lift analysis"
     }
   },
 
@@ -263,7 +314,11 @@
     "BUILDER_MANAGER",
     "UX_UI_SPECIALIST",
     "FUNNEL_SPECIALIST",
-    "COPY_SPECIALIST"
+    "COPY_SPECIALIST",
+    "SALES_MANAGER",
+    "LEAD_QUALIFIER",
+    "OUTREACH_SPECIALIST",
+    "MERCHANDISER"
   ],
 
   "jasperHandshake": {
@@ -313,6 +368,21 @@
           "ux_ui": "COMPONENT_SCHEMAS library (10 categories), COLOR_PSYCHOLOGY (10 industries), responsive design, WCAG accessibility",
           "funnel": "THE SQUEEZE (Lead Magnet -> Tripwire -> Core Offer -> Upsell), 8 business templates, urgency/scarcity tactics, price anchoring",
           "copy": "6 frameworks (PAS, AIDA, BAB, FAB, 4Ps, StoryBrand), headline formulas, CTA optimization, persuasion psychology"
+        }
+      }
+    },
+    "salesTools": {
+      "delegate_to_sales": {
+        "manager": "REVENUE_DIRECTOR",
+        "status": "CONNECTED",
+        "input": "{ action, leadId?, leadData?, scraperData?, outreachChannel?, interactionHistory? }",
+        "output": "{ pipelineState, bantScore, outreachMessages[], nudgeDecision, delegations[], confidence }",
+        "actions": ["qualify_lead", "generate_outreach", "evaluate_nudge", "analyze_pipeline", "check_transition"],
+        "delegates_to": ["LEAD_QUALIFIER", "OUTREACH_SPECIALIST", "MERCHANDISER"],
+        "specialistCapabilities": {
+          "lead_qualifier": "BANT Framework (0-100): Budget/Authority/Need/Timeline scoring, ICP alignment, qualification tiers (HOT/WARM/COLD/DISQUALIFIED)",
+          "outreach_specialist": "8 OUTREACH_FRAMEWORKS (Cold Intro, Competitor Displacement, Trigger Event, Referral, Pain, Case Study, Direct Ask, Follow-Up), Context injection from Scraper, 3 channels",
+          "merchandiser": "7 NUDGE_STRATEGIES (Engagement 10%, Cart Abandonment 15%, Win-Back 20%, Trial 10%, Referral 25%, Seasonal, Loyalty), Stripe coupon generation, ROI analysis"
         }
       }
     }

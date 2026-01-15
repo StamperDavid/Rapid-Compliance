@@ -1024,6 +1024,50 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SALES DEPARTMENT TOOLS (The Handshake)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_sales',
+      description:
+        'Delegate a sales/commerce request to the Sales Department. The Revenue Director will analyze the lead and coordinate Lead Qualifier (BANT scoring), Outreach Specialist (personalized messages), and Merchandiser (coupon/nudge decisions). ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: 'The sales action to perform',
+            enum: ['qualify_lead', 'generate_outreach', 'evaluate_nudge', 'analyze_pipeline', 'check_transition'],
+          },
+          leadId: {
+            type: 'string',
+            description: 'The lead ID to process (required for lead-specific actions)',
+          },
+          leadData: {
+            type: 'string',
+            description: 'JSON-encoded lead data including company info, contacts, engagement history',
+          },
+          scraperData: {
+            type: 'string',
+            description: 'Optional: JSON-encoded scraper intelligence from scrape_website tool to enhance qualification and outreach',
+          },
+          outreachChannel: {
+            type: 'string',
+            description: 'Preferred outreach channel (for generate_outreach action)',
+            enum: ['email', 'linkedinDM', 'twitterDM', 'auto'],
+          },
+          interactionHistory: {
+            type: 'string',
+            description: 'JSON-encoded interaction history (for evaluate_nudge action)',
+          },
+        },
+        required: ['action'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // INTELLIGENCE SPECIALIST TOOLS (The Handshake)
   // ═══════════════════════════════════════════════════════════════════════════
   {
@@ -2031,6 +2075,76 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           data: result.data,
           errors: result.errors,
           manager: 'ARCHITECT_MANAGER',
+          delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
+            ? (result.data as Record<string, unknown>).delegations
+            : 'See data for details',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // SALES DEPARTMENT EXECUTION
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_sales': {
+        const { RevenueDirector } = await import('@/lib/agents/sales/revenue/manager');
+        const director = new RevenueDirector();
+        await director.initialize();
+
+        // Parse optional JSON parameters
+        let leadData: Record<string, unknown> = {};
+        let scraperData: Record<string, unknown> | undefined;
+        let interactionHistory: Record<string, unknown> | undefined;
+
+        if (args.leadData) {
+          try {
+            leadData = JSON.parse(args.leadData as string) as Record<string, unknown>;
+          } catch {
+            leadData = { raw: args.leadData };
+          }
+        }
+
+        if (args.scraperData) {
+          try {
+            scraperData = JSON.parse(args.scraperData as string) as Record<string, unknown>;
+          } catch {
+            scraperData = undefined;
+          }
+        }
+
+        if (args.interactionHistory) {
+          try {
+            interactionHistory = JSON.parse(args.interactionHistory as string) as Record<string, unknown>;
+          } catch {
+            interactionHistory = undefined;
+          }
+        }
+
+        const salesPayload = {
+          action: args.action as string,
+          leadId: args.leadId as string | undefined,
+          leadData,
+          scraperData,
+          outreachChannel: args.outreachChannel as string | undefined,
+          interactionHistory,
+        };
+
+        const result = await director.execute({
+          id: `sales_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'REVENUE_DIRECTOR',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: salesPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        content = JSON.stringify({
+          status: result.status,
+          data: result.data,
+          errors: result.errors,
+          manager: 'REVENUE_DIRECTOR',
           delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
             ? (result.data as Record<string, unknown>).delegations
             : 'See data for details',
