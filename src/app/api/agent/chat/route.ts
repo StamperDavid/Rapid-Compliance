@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
@@ -7,6 +6,86 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
+
+// ===== TYPE DEFINITIONS =====
+
+/**
+ * Validation error detail structure
+ */
+interface ValidationErrorDetail {
+  path: string;
+  message: string;
+}
+
+/**
+ * Zod validation error structure
+ */
+interface ZodValidationIssue {
+  path: Array<string | number>;
+  message: string;
+}
+
+/**
+ * Agent configuration from Firestore
+ */
+interface AgentConfig {
+  selectedModel: string;
+  modelConfig: ModelConfig;
+}
+
+/**
+ * Model configuration parameters
+ */
+interface ModelConfig {
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+}
+
+/**
+ * Conversation message from customer memory
+ */
+interface MemoryMessage {
+  role: 'customer' | 'agent' | 'human_agent';
+  content?: string;
+  text?: string;
+}
+
+/**
+ * Chat message format for AI provider
+ */
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * RAG message format
+ */
+interface RAGMessage {
+  role: 'user' | 'model';
+  parts: Array<{ text: string }>;
+}
+
+/**
+ * AI provider response
+ */
+interface AIResponse {
+  text: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+/**
+ * Error object with optional properties
+ */
+interface APIError {
+  message?: string;
+  code?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,20 +103,20 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(agentChatSchema, body);
 
     if (!validation.success) {
-      // Type assertion: when success is false, we have the error structure
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
-        const joinedPath = e.path?.join('.');
+      // Type-safe validation error handling
+      const zodError = validation.errors;
+      const errorDetails: ValidationErrorDetail[] = zodError.errors.map((e: ZodValidationIssue) => {
+        const joinedPath = e.path.join('.');
         return {
           path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
           message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
         };
-      }) ?? [];
-      
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -63,25 +142,26 @@ export async function POST(request: NextRequest) {
     const instance = await instanceManager.spawnInstance(customerId, orgId);
 
     // Get agent configuration
-    const agentConfig = await FirestoreService.get(
+    const agentConfigRaw: unknown = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/agentConfig`,
       'default'
     );
-    
-    // Single model configuration (ensemble removed for MVP)
-    const configSelectedModel = (agentConfig as any)?.selectedModel;
+
+    // Type-safe agent configuration parsing
+    const agentConfig = agentConfigRaw as Partial<AgentConfig> | null;
+    const configSelectedModel = agentConfig?.selectedModel;
     const selectedModel = (configSelectedModel !== '' && configSelectedModel != null) ? configSelectedModel : 'gpt-4-turbo';
-    const modelConfig = (agentConfig as any)?.modelConfig ?? {
+    const modelConfig: ModelConfig = agentConfig?.modelConfig ?? {
       temperature: 0.7,
       maxTokens: 2048,
       topP: 0.9,
     };
 
     // Build conversation history
-    const messages = [
-      ...instance.customerMemory.conversationHistory.map((msg: any) => ({
-        role: msg.role as 'user' | 'assistant',
-        content:msg.content ?? msg.text,
+    const messages: ChatMessage[] = [
+      ...instance.customerMemory.conversationHistory.map((msg: MemoryMessage): ChatMessage => ({
+        role: msg.role === 'customer' ? 'user' : 'assistant',
+        content: msg.content ?? msg.text ?? '',
       })),
       {
         role: 'user' as const,
@@ -94,7 +174,7 @@ export async function POST(request: NextRequest) {
     try {
       const { enhanceChatWithRAG } = await import('@/lib/agent/rag-service');
       // Convert to RAG format temporarily
-      const ragMessages = messages.map(m => ({
+      const ragMessages: RAGMessage[] = messages.map((m): RAGMessage => ({
         role: m.role === 'user' ? 'user' as const : 'model' as const,
         parts: [{ text: m.content }],
       }));
@@ -108,9 +188,9 @@ export async function POST(request: NextRequest) {
     // Use single model with RAG (MVP approach - proven to work)
     const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
     const provider = await AIProviderFactory.createProvider(selectedModel, orgId);
-    
+
     const startTime = Date.now();
-    const response = await provider.generateResponse(
+    const response: AIResponse = await provider.generateResponse(
       messages,
       enhancedSystemPrompt,
       modelConfig
@@ -132,22 +212,25 @@ export async function POST(request: NextRequest) {
       usage: response.usage,
       processingTime,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Agent chat error', error, { route: '/api/agent/chat' });
-    
+
+    // Type-safe error handling
+    const apiError = error as APIError;
+
     // Handle specific error cases
-    if (error?.message?.includes('API key')) {
+    if (apiError.message?.includes('API key')) {
       return handleAPIError(errors.missingAPIKey('AI Provider'));
     }
-    
-    if (error?.code === 'permission-denied') {
+
+    if (apiError.code === 'permission-denied') {
       return handleAPIError(errors.forbidden('You do not have access to this AI agent'));
     }
-    
-    if (error?.message?.includes('rate limit')) {
+
+    if (apiError.message?.includes('rate limit')) {
       return handleAPIError(errors.tooManyRequests());
     }
-    
+
     return handleAPIError(error);
   }
 }

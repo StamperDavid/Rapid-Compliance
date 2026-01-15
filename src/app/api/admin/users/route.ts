@@ -1,14 +1,30 @@
 import type { NextRequest } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { FieldValue } from 'firebase-admin/firestore';
-import { 
-  verifyAdminRequest, 
-  createErrorResponse, 
+import { FieldValue, type Timestamp } from 'firebase-admin/firestore';
+import {
+  verifyAdminRequest,
+  createErrorResponse,
   createSuccessResponse,
   isAuthError
 } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+// Firestore document data interfaces
+interface FirestoreTimestamp {
+  toDate(): Date;
+}
+
+interface FirestoreUserData {
+  email?: string;
+  name?: string;
+  displayName?: string;
+  role?: string;
+  organizationId?: string;
+  createdAt?: FirestoreTimestamp | Timestamp;
+  updatedAt?: FirestoreTimestamp | Timestamp;
+  lastLoginAt?: FirestoreTimestamp | Timestamp;
+}
 
 interface UserData {
   id: string;
@@ -19,6 +35,42 @@ interface UserData {
   createdAt: string | null;
   updatedAt: string | null;
   lastLoginAt: string | null;
+}
+
+interface UpdateUserRequestBody {
+  userId: string;
+  name?: string;
+  role?: string;
+  organizationId?: string;
+  status?: string;
+}
+
+// Type guard for request body
+function isUpdateUserRequestBody(body: unknown): body is UpdateUserRequestBody {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+  const obj = body as Record<string, unknown>;
+  return typeof obj.userId === 'string';
+}
+
+// Helper to safely convert Firestore timestamp to ISO string
+function timestampToISOString(timestamp: unknown): string | null {
+  if (!timestamp || typeof timestamp !== 'object') {
+    return null;
+  }
+
+  const ts = timestamp as { toDate?: () => Date };
+  if (typeof ts.toDate === 'function') {
+    try {
+      const date = ts.toDate();
+      return date.toISOString();
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -77,18 +129,18 @@ export async function GET(request: NextRequest) {
     
     const hasMore = usersSnapshot.docs.length > pageSize;
     const docs = hasMore ? usersSnapshot.docs.slice(0, pageSize) : usersSnapshot.docs;
-    
+
     const users: UserData[] = docs.map(doc => {
-      const data = doc.data();
+      const data = doc.data() as FirestoreUserData;
       return {
         id: doc.id,
         email: data.email ?? '',
-        name:(data.name || data.displayName !== '' && data.name || data.displayName != null) ? data.name ?? data.displayName: 'Unknown',
-        role:(data.role !== '' && data.role != null) ? data.role : 'member',
+        name: (data.name || data.displayName) ? (data.name ?? data.displayName ?? 'Unknown') : 'Unknown',
+        role: data.role ?? 'member',
         organizationId: data.organizationId ?? '',
-        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? null,
-        lastLoginAt: data.lastLoginAt?.toDate?.()?.toISOString() ?? null,
+        createdAt: timestampToISOString(data.createdAt),
+        updatedAt: timestampToISOString(data.updatedAt),
+        lastLoginAt: timestampToISOString(data.lastLoginAt),
       };
     });
     
@@ -104,7 +156,7 @@ export async function GET(request: NextRequest) {
       hasMore 
     });
     
-    return createSuccessResponse({ 
+    return createSuccessResponse({
       users,
       pagination: {
         count: users.length,
@@ -113,12 +165,13 @@ export async function GET(request: NextRequest) {
       },
       fetchedAt: new Date().toISOString()
     });
-    
-  } catch (error: any) {
+
+  } catch (error: unknown) {
     logger.error('Admin users fetch error', error, { route: '/api/admin/users' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
-        ? `Failed to fetch users: ${error.message}`
+        ? `Failed to fetch users: ${errorMessage}`
         : 'Failed to fetch users',
       500
     );
@@ -141,53 +194,56 @@ export async function PATCH(request: NextRequest) {
     if (!adminDal) {
       return createErrorResponse('Server configuration error', 500);
     }
-    
-    const body = await request.json();
-    
-    if (!body.userId || typeof body.userId !== 'string') {
+
+    const rawBody: unknown = await request.json();
+
+    if (!isUpdateUserRequestBody(rawBody)) {
       return createErrorResponse('User ID is required', 400);
     }
-    
+
+    const body: UpdateUserRequestBody = rawBody;
+
     // Validate update fields
-    const allowedFields = ['name', 'role', 'organizationId', 'status'];
+    const allowedFields: Array<keyof UpdateUserRequestBody> = ['name', 'role', 'organizationId', 'status'];
     const updates: Record<string, unknown> = {};
-    
+
     for (const field of allowedFields) {
-      if (body[field] !== undefined) {
+      if (field !== 'userId' && body[field] !== undefined) {
         updates[field] = body[field];
       }
     }
-    
+
     if (Object.keys(updates).length === 0) {
       return createErrorResponse('No valid update fields provided', 400);
     }
-    
+
     updates.updatedAt = FieldValue.serverTimestamp();
     updates.updatedBy = authResult.user.uid;
-    
+
     await adminDal.safeUpdateDoc('USERS', body.userId, updates, {
       audit: true,
       userId: authResult.user.uid,
     });
-    
+
     logger.info('Admin updated user', {
       route: '/api/admin/users',
       admin: authResult.user.email,
       userId: body.userId,
       fields: Object.keys(updates)
     });
-    
-    return createSuccessResponse({ 
+
+    return createSuccessResponse({
       success: true,
       userId: body.userId,
       updatedFields: Object.keys(updates).filter(k => k !== 'updatedAt' && k !== 'updatedBy')
     });
-    
-  } catch (error: any) {
+
+  } catch (error: unknown) {
     logger.error('Admin user update error', error, { route: '/api/admin/users' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
-        ? `Failed to update user: ${error.message}`
+        ? `Failed to update user: ${errorMessage}`
         : 'Failed to update user',
       500
     );

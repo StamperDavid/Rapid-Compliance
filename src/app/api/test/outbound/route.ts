@@ -4,9 +4,38 @@
  * Verifies all outbound features are configured correctly
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+// Type-safe interfaces for test results
+interface EnvironmentChecks {
+  sendgrid: boolean;
+  googleClientId: boolean;
+  googleClientSecret: boolean;
+  openai: boolean;
+  firebase: boolean;
+}
+
+interface TestResult {
+  name: string;
+  status: 'pass' | 'fail' | 'error';
+  message?: string;
+  checks?: EnvironmentChecks;
+}
+
+interface TestSummary {
+  passed: number;
+  failed: number;
+  errors: number;
+  total: number;
+  ready: boolean;
+}
+
+interface TestResults {
+  timestamp: string;
+  tests: TestResult[];
+  summary?: TestSummary;
+}
 
 export async function GET(request: NextRequest) {
   // Rate limiting (strict - test endpoint should be disabled in production)
@@ -16,9 +45,9 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const orgId = searchParams.get('orgId');
+  const _orgId = searchParams.get('orgId'); // Prefixed with _ to indicate intentionally unused
 
-  const results: any = {
+  const results: TestResults = {
     timestamp: new Date().toISOString(),
     tests: [],
   };
@@ -53,11 +82,11 @@ export async function GET(request: NextRequest) {
         message: 'SENDGRID_API_KEY not configured',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     results.tests.push({
       name: 'SendGrid Connection',
       status: 'error',
-      message: error.message,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     });
   }
 
@@ -78,17 +107,17 @@ export async function GET(request: NextRequest) {
         message: 'Google OAuth credentials not configured',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     results.tests.push({
       name: 'Google OAuth',
       status: 'error',
-      message: error.message,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     });
   }
 
   // Test 4: AI Email Generation
   try {
-    const { generateColdEmail } = await import('@/lib/outbound/email-writer');
+    const { generateColdEmail: _generateColdEmail } = await import('@/lib/outbound/email-writer');
     if (process.env.OPENAI_API_KEY) {
       // Don't actually call the API, just check it's configured
       results.tests.push({
@@ -103,34 +132,34 @@ export async function GET(request: NextRequest) {
         message: 'OPENAI_API_KEY not configured',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     results.tests.push({
       name: 'AI Email Generation',
       status: 'error',
-      message: error.message,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     });
   }
 
   // Test 5: Firestore Connection
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { FirestoreService: _FirestoreService } = await import('@/lib/db/firestore-service');
     results.tests.push({
       name: 'Firestore Connection',
       status: 'pass',
       message: 'Firestore service available',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     results.tests.push({
       name: 'Firestore Connection',
       status: 'error',
-      message: error.message,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     });
   }
 
   // Calculate overall status
-  const passed = results.tests.filter((t: any) => t.status === 'pass').length;
-  const failed = results.tests.filter((t: any) => t.status === 'fail').length;
-  const errors = results.tests.filter((t: any) => t.status === 'error').length;
+  const passed = results.tests.filter((t: TestResult) => t.status === 'pass').length;
+  const failed = results.tests.filter((t: TestResult) => t.status === 'fail').length;
+  const errors = results.tests.filter((t: TestResult) => t.status === 'error').length;
 
   results.summary = {
     passed,
@@ -142,22 +171,3 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(results);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

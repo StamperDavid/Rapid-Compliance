@@ -15,9 +15,8 @@
  * - Detailed OpenRouter error logging for debugging
  */
 
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
-import { OpenRouterProvider, type ChatMessage, type ToolCall } from '@/lib/ai/openrouter-provider';
+import { NextResponse, type NextRequest } from 'next/server';
+import { OpenRouterProvider, type ChatMessage, type ToolCall, type ChatCompletionResponse } from '@/lib/ai/openrouter-provider';
 import { requireRole } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -26,8 +25,62 @@ import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import { JASPER_TOOLS, executeToolCalls } from '@/lib/orchestrator/jasper-tools';
 import { SystemStateService } from '@/lib/orchestrator/system-state-service';
 
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/**
+ * OpenRouter error metadata structure
+ */
+interface OpenRouterErrorMetadata {
+  provider_name?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * OpenRouter error object structure
+ */
+interface OpenRouterErrorObject {
+  code?: string;
+  message?: string;
+  metadata?: OpenRouterErrorMetadata;
+}
+
+/**
+ * Parsed OpenRouter error body (JSON structure)
+ */
+interface OpenRouterErrorBody {
+  error?: OpenRouterErrorObject;
+  [key: string]: unknown;
+}
+
+/**
+ * OpenRouter error details for logging
+ */
+interface OpenRouterErrorDetails {
+  statusCode: number;
+  code?: string;
+  message?: string;
+  provider?: string;
+  rawBody?: string;
+}
+
+/**
+ * Structured error object for catch blocks
+ */
+interface StructuredError {
+  message: string;
+  name: string;
+  stack?: string;
+  cause?: unknown;
+}
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
 // Model configuration - can be overridden via environment variable
-const DEFAULT_MODEL = process.env.JASPER_DEFAULT_MODEL || 'google/gemini-pro-1.5';
+const DEFAULT_MODEL = process.env.JASPER_DEFAULT_MODEL ?? 'google/gemini-pro-1.5';
 
 // Fallback models in priority order - tried sequentially if primary fails
 const FALLBACK_MODELS = [
@@ -188,7 +241,7 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
     const isAdminContext = user.role === 'super_admin' || user.role === 'admin';
 
-    console.log('[Jasper] Authenticated:', {
+    logger.info('[Jasper] Authenticated', {
       uid: user.uid,
       email: user.email,
       role: user.role,
@@ -196,7 +249,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Parse request body
-    const body: OrchestratorChatRequest = await request.json();
+    const body = await request.json() as OrchestratorChatRequest;
     const {
       message,
       context,
@@ -219,7 +272,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine model to use
-    const selectedModel = modelId || DEFAULT_MODEL;
+    const selectedModel = modelId ?? DEFAULT_MODEL;
 
     // Validate model exists in our list or allow any OpenRouter model
     const isKnownModel = selectedModel in AVAILABLE_MODELS;
@@ -253,14 +306,14 @@ export async function POST(request: NextRequest) {
     const messages: ChatMessage[] = [
       { role: 'system', content: enhancedSystemPrompt + stateContext },
       ...conversationHistory.map((msg) => ({
-        role: msg.role as 'user' | 'assistant' | 'system',
+        role: msg.role,
         content: msg.content,
       })),
       { role: 'user', content: message },
     ];
 
     // Initialize OpenRouter provider
-    const orgId = organizationId || (isAdminContext ? 'admin' : 'default');
+    const orgId = organizationId ?? (isAdminContext ? 'admin' : 'default');
     const provider = new OpenRouterProvider(orgId);
 
     const startTime = Date.now();
@@ -271,7 +324,7 @@ export async function POST(request: NextRequest) {
     const useTools = isAdminContext; // Tools ALWAYS enabled for admin
 
     let finalResponse: string;
-    let toolsExecuted: string[] = [];
+    const toolsExecuted: string[] = [];
     let modelUsed = selectedModel;
 
     // Build model fallback chain: selected model + fallback models
@@ -279,14 +332,14 @@ export async function POST(request: NextRequest) {
 
     if (useTools) {
       // TOOL-CALLING LOOP: Allows Jasper to query data before responding
-      let currentMessages = [...messages];
+      const currentMessages = [...messages];
       let iterationCount = 0;
       const maxIterations = 3; // Prevent infinite loops
 
       while (iterationCount < maxIterations) {
         iterationCount++;
 
-        const { result: response, model } = await chatWithFallback(
+        const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(
           modelsToTry,
           (m) => provider.chatWithTools({
             model: m as unknown as Parameters<typeof provider.chatWithTools>[0]['model'],
@@ -333,7 +386,7 @@ export async function POST(request: NextRequest) {
 
         // If this was the last iteration, force a response
         if (iterationCount >= maxIterations) {
-          const { result: finalAttempt, model: finalModel } = await chatWithFallback(
+          const { result: finalAttempt, model: finalModel } = await chatWithFallback<ChatCompletionResponse>(
             modelsToTry,
             (m) => provider.chatWithTools({
               model: m as unknown as Parameters<typeof provider.chatWithTools>[0]['model'],
@@ -351,10 +404,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Fallback if somehow no response was set
-      finalResponse = finalResponse! || 'I encountered an issue retrieving the data. Please try again.';
+      if (!finalResponse) {
+        finalResponse = 'I encountered an issue retrieving the data. Please try again.';
+      }
     } else {
       // Standard chat without tools for conversational queries
-      const { result: response, model } = await chatWithFallback(
+      const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(
         modelsToTry,
         (m) => provider.chat({
           model: m as unknown as Parameters<typeof provider.chat>[0]['model'],
@@ -394,7 +449,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate voice output if enabled
-    let audioOutput: OrchestratorChatResponse['audio'] | undefined;
+    let audioOutput: OrchestratorChatResponse['audio'];
 
     if (voiceEnabled && finalResponse) {
       try {
@@ -435,23 +490,25 @@ export async function POST(request: NextRequest) {
 
     // Log if fallback occurred for monitoring
     if (modelUsed !== selectedModel) {
-      console.log(`[Jasper] Model fallback: ${selectedModel} → ${modelUsed}`);
+      logger.info(`[Jasper] Model fallback: ${selectedModel} → ${modelUsed}`);
     }
 
     return NextResponse.json(responseData);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const structuredError = error as StructuredError;
+
     // Parse OpenRouter-specific error details
-    const parsedError = parseOpenRouterError(error);
-    let openRouterDetails: Record<string, any> | undefined;
+    const parsedError = parseOpenRouterError(structuredError as Error);
+    let openRouterDetails: OpenRouterErrorDetails | undefined;
 
     if (parsedError) {
       try {
-        const errorJson = JSON.parse(parsedError.errorBody);
+        const errorJson = JSON.parse(parsedError.errorBody) as OpenRouterErrorBody;
         openRouterDetails = {
           statusCode: parsedError.statusCode,
-          code: errorJson?.error?.code,
-          message: errorJson?.error?.message,
-          provider: errorJson?.error?.metadata?.provider_name,
+          code: errorJson.error?.code,
+          message: errorJson.error?.message,
+          provider: errorJson.error?.metadata?.provider_name,
         };
       } catch {
         openRouterDetails = {
@@ -462,14 +519,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the FULL error to the terminal for debugging
-    console.error('[Jasper] OpenRouter API FAILED:', {
-      message: error?.message,
+    logger.error('[Jasper] OpenRouter API FAILED', structuredError, {
+      message: structuredError.message,
       openRouterDetails,
-      stack: error?.stack,
-      name: error?.name,
-      cause: error?.cause,
+      stack: structuredError.stack,
+      name: structuredError.name,
+      cause: structuredError.cause,
     });
-    logger.error('[Jasper] Chat error', error, {
+    logger.error('[Jasper] Chat error', structuredError, {
       route: '/api/orchestrator/chat',
       openRouterDetails,
     });
@@ -478,14 +535,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || 'Unknown API error',
+        error: structuredError.message ?? 'Unknown API error',
         errorDetails: {
-          name: error?.name,
+          name: structuredError.name,
           openRouter: openRouterDetails,
-          stack: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
+          stack: process.env.NODE_ENV === 'development' ? structuredError.stack : undefined,
         },
       },
-      { status: openRouterDetails?.statusCode || 500 }
+      { status: openRouterDetails?.statusCode ?? 500 }
     );
   }
 }
@@ -545,9 +602,9 @@ Available capabilities (speak as your own actions):
 MERCHANT CONTEXT (Updated: ${timestamp})
 ═══════════════════════════════════════════════════════════════════════════════
 
-Business: ${merchantInfo.companyName || 'Not specified'}
-Industry: ${merchantInfo.industry || 'General'}
-Owner: ${merchantInfo.ownerName || 'Business Owner'}
+Business: ${merchantInfo.companyName ?? 'Not specified'}
+Industry: ${merchantInfo.industry ?? 'General'}
+Owner: ${merchantInfo.ownerName ?? 'Business Owner'}
 
 You are this business's dedicated operations partner. Speak with authority
 about their specific industry and business context.
@@ -630,7 +687,7 @@ async function persistConversation(
 /**
  * GET endpoint to retrieve available models
  */
-export async function GET() {
+export function GET() {
   return NextResponse.json({
     success: true,
     defaultModel: DEFAULT_MODEL,

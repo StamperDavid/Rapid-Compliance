@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { handleWebhook } from '@/lib/billing/stripe-service';
 import Stripe from 'stripe';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
@@ -8,6 +7,16 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Stripe service keys interface
+ * Matches the structure returned by apiKeyService.getServiceKey('platform', 'stripe')
+ */
+interface StripeServiceKeys {
+  publicKey: string;
+  secretKey: string;
+  webhookSecret: string;
+}
 
 /**
  * Stripe Webhook Handler
@@ -30,11 +39,11 @@ export async function POST(request: NextRequest) {
   // Get webhook secret from platform API keys (admin settings)
   // Fallback to environment variable
   let webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  
+
   if (!webhookSecret) {
     try {
       // Try to get from admin settings
-      const adminKeys = await apiKeyService.getServiceKey('platform', 'stripe');
+      const adminKeys = await apiKeyService.getServiceKey('platform', 'stripe') as StripeServiceKeys | null;
       webhookSecret = adminKeys?.webhookSecret;
     } catch (_error) {
       // Silently fail - will use env var or error
@@ -50,7 +59,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // Get Stripe instance (use platform keys)
-    const stripeKeys = await apiKeyService.getServiceKey('platform', 'stripe');
+    const stripeKeys = await apiKeyService.getServiceKey('platform', 'stripe') as StripeServiceKeys | null;
     if (!stripeKeys?.secretKey) {
       throw new Error('Stripe platform keys not configured');
     }
@@ -64,16 +73,17 @@ export async function POST(request: NextRequest) {
       signature,
       webhookSecret
     );
-  } catch (err: any) {
-    logger.error('Webhook signature verification failed', err, { route: '/api/billing/webhook' });
-    return errors.badRequest(`Webhook Error: ${err.message}`);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Webhook signature verification failed', err instanceof Error ? err : new Error(String(err)), { route: '/api/billing/webhook' });
+    return errors.badRequest(`Webhook Error: ${errorMessage}`);
   }
 
   try {
     await handleWebhook(event);
     return NextResponse.json({ success: true, received: true });
-  } catch (error: any) {
-    logger.error('Error handling webhook', error, { route: '/api/billing/webhook' });
+  } catch (error) {
+    logger.error('Error handling webhook', error instanceof Error ? error : new Error(String(error)), { route: '/api/billing/webhook' });
     return errors.internal('Webhook handler failed', error instanceof Error ? error : undefined);
   }
 }

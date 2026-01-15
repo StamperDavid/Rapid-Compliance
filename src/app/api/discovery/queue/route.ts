@@ -1,38 +1,81 @@
 /**
  * API Route: Queue Discovery Tasks
- * 
+ *
  * Endpoint to add new tasks to the discovery queue.
- * 
+ *
  * POST /api/discovery/queue
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { queueDiscoveryTask } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
 
+/**
+ * Discovery task request body schema
+ */
+interface DiscoveryTaskRequest {
+  type: 'company' | 'person';
+  target: string;
+  organizationId: string;
+  workspaceId: string;
+  priority?: number;
+}
+
+/**
+ * Batch discovery tasks request body schema
+ */
+interface BatchDiscoveryTasksRequest {
+  tasks: DiscoveryTaskRequest[];
+}
+
+/**
+ * Type guard to validate discovery task request
+ */
+function isDiscoveryTaskRequest(body: unknown): body is DiscoveryTaskRequest {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+
+  const obj = body as Record<string, unknown>;
+
+  return (
+    (obj.type === 'company' || obj.type === 'person') &&
+    typeof obj.target === 'string' &&
+    typeof obj.organizationId === 'string' &&
+    typeof obj.workspaceId === 'string' &&
+    (obj.priority === undefined || typeof obj.priority === 'number')
+  );
+}
+
+/**
+ * Type guard to validate batch tasks request
+ */
+function isBatchDiscoveryTasksRequest(
+  body: unknown
+): body is BatchDiscoveryTasksRequest {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+
+  const obj = body as Record<string, unknown>;
+
+  return (
+    Array.isArray(obj.tasks) &&
+    obj.tasks.every((task) => isDiscoveryTaskRequest(task))
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
 
-    // Validate required fields
-    if (!body.type || !['company', 'person'].includes(body.type)) {
+    // Validate request body structure
+    if (!isDiscoveryTaskRequest(body)) {
       return NextResponse.json(
-        { error: 'Invalid type. Must be "company" or "person".' },
-        { status: 400 }
-      );
-    }
-
-    if (!body.target) {
-      return NextResponse.json(
-        { error: 'Missing target (domain for company, email for person)' },
-        { status: 400 }
-      );
-    }
-
-    if (!body.organizationId || !body.workspaceId) {
-      return NextResponse.json(
-        { error: 'Missing organizationId or workspaceId' },
+        {
+          error:
+            'Invalid request body. Must include type (company/person), target, organizationId, and workspaceId.',
+        },
         { status: 400 }
       );
     }
@@ -57,7 +100,7 @@ export async function POST(request: NextRequest) {
       taskId,
       message: `Discovery task queued for ${body.type}: ${body.target}`,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('[API] Failed to queue discovery task', error);
 
     return NextResponse.json(
@@ -75,17 +118,21 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
 
-    if (!Array.isArray(body.tasks)) {
+    // Validate request body structure
+    if (!isBatchDiscoveryTasksRequest(body)) {
       return NextResponse.json(
-        { error: 'Request body must contain a "tasks" array' },
+        {
+          error:
+            'Request body must contain a "tasks" array with valid discovery task objects',
+        },
         { status: 400 }
       );
     }
 
     const results = await Promise.allSettled(
-      body.tasks.map((task: any) =>
+      body.tasks.map((task: DiscoveryTaskRequest) =>
         queueDiscoveryTask(
           task.type,
           task.target,
@@ -96,8 +143,12 @@ export async function PUT(request: NextRequest) {
       )
     );
 
-    const succeeded = results.filter(r => r.status === 'fulfilled');
-    const failed = results.filter(r => r.status === 'rejected');
+    const succeeded = results.filter(
+      (r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled'
+    );
+    const failed = results.filter(
+      (r): r is PromiseRejectedResult => r.status === 'rejected'
+    );
 
     logger.info('[API] Batch discovery tasks queued', {
       total: body.tasks.length,
@@ -112,10 +163,12 @@ export async function PUT(request: NextRequest) {
         succeeded: succeeded.length,
         failed: failed.length,
       },
-      taskIds: succeeded.map(r => r.status === 'fulfilled' ? r.value : null),
-      errors: failed.map(r => r.status === 'rejected' ? r.reason?.message : null),
+      taskIds: succeeded.map((r) => r.value),
+      errors: failed.map((r) =>
+        r.reason instanceof Error ? r.reason.message : 'Unknown error'
+      ),
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('[API] Failed to batch queue discovery tasks', error);
 
     return NextResponse.json(

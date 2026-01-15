@@ -101,11 +101,20 @@
   "overrides": [
     {
       // =====================================================================
-      // STRICT ZONE - The Orchestrator Brain
-      // Zero tolerance for type violations in the core AI engine
+      // STRICT ZONE - Production-Ready Territory
+      // Zero tolerance for type violations in core systems:
+      // - The Orchestrator Brain (AI engine)
+      // - The API Layer (external contracts)
+      // All logic-affecting rules are ERRORS, not warnings
       // =====================================================================
-      "files": ["src/lib/orchestrator/**/*.ts", "src/lib/orchestrator/**/*.tsx"],
+      "files": [
+        "src/lib/orchestrator/**/*.ts",
+        "src/lib/orchestrator/**/*.tsx",
+        "src/app/api/**/*.ts",
+        "src/app/api/**/*.tsx"
+      ],
       "rules": {
+        // Type Safety - ZERO TOLERANCE
         "@typescript-eslint/no-explicit-any": "error",
         "@typescript-eslint/no-unused-vars": [
           "error",
@@ -125,11 +134,20 @@
         "@typescript-eslint/no-unsafe-argument": "error",
         "@typescript-eslint/no-unsafe-call": "error",
         "@typescript-eslint/no-unsafe-return": "error",
+        "@typescript-eslint/no-non-null-assertion": "error",
+        "@typescript-eslint/prefer-nullish-coalescing": "error",
+        "@typescript-eslint/prefer-optional-chain": "error",
+
+        // Code Quality - ZERO TOLERANCE
         "no-var": "error",
         "prefer-const": "error",
         "eqeqeq": ["error", "always", { "null": "ignore" }],
         "curly": ["error", "all"],
-        "no-duplicate-imports": "error"
+        "no-duplicate-imports": "error",
+        "import/no-anonymous-default-export": "error",
+
+        // React Hooks - ZERO TOLERANCE (if applicable)
+        "react-hooks/rules-of-hooks": "error"
       }
     },
     {

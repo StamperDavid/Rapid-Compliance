@@ -223,15 +223,13 @@ export class FeatureToggleService {
     // Get existing settings
     let settings = await this.getVisibilitySettings(organizationId);
 
-    if (!settings) {
-      settings = {
-        organizationId,
-        features: {},
-        hiddenCategories: [],
-        updatedAt: new Date(),
-        updatedBy: userId,
-      };
-    }
+    settings ??= {
+      organizationId,
+      features: {},
+      hiddenCategories: [],
+      updatedAt: new Date(),
+      updatedBy: userId,
+    };
 
     // Update the feature
     settings.features[featureId] = {
@@ -263,15 +261,13 @@ export class FeatureToggleService {
 
     let settings = await this.getVisibilitySettings(organizationId);
 
-    if (!settings) {
-      settings = {
-        organizationId,
-        features: {},
-        hiddenCategories: [],
-        updatedAt: new Date(),
-        updatedBy: userId,
-      };
-    }
+    settings ??= {
+      organizationId,
+      features: {},
+      hiddenCategories: [],
+      updatedAt: new Date(),
+      updatedBy: userId,
+    };
 
     if (hidden) {
       if (!settings.hiddenCategories.includes(category)) {

@@ -627,7 +627,7 @@ export class SystemHealthService {
         recommendations.push({
           priority: featureId === 'golden_master' ? 'critical' : 'high',
           category: feature.category,
-          title: feature.recommendedAction || `Configure ${feature.featureName}`,
+          title: feature.recommendedAction ?? `Configure ${feature.featureName}`,
           description: feature.description,
           action: `setup_${feature.featureId}`,
           impact: featureId === 'golden_master'
@@ -643,7 +643,7 @@ export class SystemHealthService {
       recommendations.push({
         priority: 'medium',
         category: 'integration',
-        title: feature.recommendedAction || `Connect ${feature.featureName}`,
+        title: feature.recommendedAction ?? `Connect ${feature.featureName}`,
         description: feature.description,
         action: `connect_${feature.featureId}`,
         impact: 'Enables specialist deployment',
@@ -656,7 +656,7 @@ export class SystemHealthService {
       recommendations.push({
         priority: 'low',
         category: 'data',
-        title: feature.recommendedAction || `Add ${feature.featureName}`,
+        title: feature.recommendedAction ?? `Add ${feature.featureName}`,
         description: feature.description,
         action: `import_${feature.featureId}`,
         impact: 'Improves AI knowledge',

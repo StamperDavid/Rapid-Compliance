@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import {
   getOrCreateCart,
@@ -7,13 +6,24 @@ import {
   removeFromCart,
   updateCartItemQuantity,
 } from '@/lib/ecommerce/cart-service';
-
-export const dynamic = 'force-dynamic';
 import { z } from 'zod';
 import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+export const dynamic = 'force-dynamic';
+
+// TypeScript interfaces for type-safe validation error handling
+interface ZodValidationError {
+  path: (string | number)[];
+  message: string;
+}
+
+interface ValidationErrorDetails {
+  path: string;
+  message: string;
+}
 
 const addToCartSchema = z.object({
   sessionId: z.string(),
@@ -68,10 +78,11 @@ export async function GET(request: NextRequest) {
       success: true,
       cart,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error getting cart', error, { route: '/api/ecommerce/cart' });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to get cart';
     return NextResponse.json(
-      { success: false, error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get cart'},
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
@@ -87,19 +98,18 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(addToCartSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
-        const joinedPath = e.path?.join('.');
+      const errorDetails: ValidationErrorDetails[] = validation.errors.errors.map((e: ZodValidationError) => {
+        const joinedPath = e.path.join('.');
         return {
-          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
-          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+          path: joinedPath !== '' ? joinedPath : 'unknown',
+          message: e.message !== '' ? e.message : 'Validation error',
         };
-      }) ?? [];
-      
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -122,7 +132,7 @@ export async function POST(request: NextRequest) {
       success: true,
       cart,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error adding to cart', error, { route: '/api/ecommerce/cart' });
     return errors.database('Failed to add to cart', error instanceof Error ? error : undefined);
   }
@@ -138,19 +148,18 @@ export async function PATCH(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(updateCartSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
-        const joinedPath = e.path?.join('.');
+      const errorDetails: ValidationErrorDetails[] = validation.errors.errors.map((e: ZodValidationError) => {
+        const joinedPath = e.path.join('.');
         return {
-          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
-          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+          path: joinedPath !== '' ? joinedPath : 'unknown',
+          message: e.message !== '' ? e.message : 'Validation error',
         };
-      }) ?? [];
-      
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -161,10 +170,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { sessionId, workspaceId, itemId, quantity } = validation.data;
+    const { sessionId, workspaceId, itemId, quantity, organizationId } = validation.data;
 
-    // Get organizationId from body
-    const organizationId = body.organizationId;
     if (!organizationId) {
       return errors.badRequest('organizationId required');
     }
@@ -175,7 +182,7 @@ export async function PATCH(request: NextRequest) {
       success: true,
       cart,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error updating cart', error, { route: '/api/ecommerce/cart' });
     return errors.database('Failed to update cart', error instanceof Error ? error : undefined);
   }
@@ -212,7 +219,7 @@ export async function DELETE(request: NextRequest) {
       success: true,
       cart,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error removing from cart', error, { route: '/api/ecommerce/cart' });
     return errors.database('Failed to remove from cart', error instanceof Error ? error : undefined);
   }

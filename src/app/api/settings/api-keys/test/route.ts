@@ -3,13 +3,65 @@
  * Verifies that API keys are working
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+// Type definitions for API responses
+interface OpenAIErrorResponse {
+  error?: {
+    message?: string;
+  };
+}
+
+interface AnthropicErrorResponse {
+  error?: {
+    message?: string;
+  };
+}
+
+interface GeminiErrorResponse {
+  error?: {
+    message?: string;
+  };
+}
+
+interface SlackAuthResponse {
+  ok: boolean;
+  team?: string;
+  error?: string;
+}
+
+// Type definition for API keys collection
+interface ApiKeysCollection {
+  openai?: string;
+  anthropic?: string;
+  gemini?: string;
+  openrouter?: string;
+  sendgrid?: string;
+  resend?: string;
+  twilio_account_sid?: string;
+  twilio_auth_token?: string;
+  google_client_id?: string;
+  google_client_secret?: string;
+  stripe_publishable?: string;
+  stripe_secret?: string;
+  paypal_client_id?: string;
+  paypal_client_secret?: string;
+  square_access_token?: string;
+  quickbooks_client_id?: string;
+  quickbooks_client_secret?: string;
+  xero_client_id?: string;
+  xero_client_secret?: string;
+  slack_token?: string;
+  teams_webhook_url?: string;
+  zoom_api_key?: string;
+  zoom_api_secret?: string;
+  [key: string]: string | undefined;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +82,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Load API keys
-    const apiKeys = await FirestoreService.get(
+    const apiKeys = await FirestoreService.get<ApiKeysCollection>(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
       'apiKeys'
     );
@@ -41,70 +93,74 @@ export async function GET(request: NextRequest) {
 
     const apiKey = apiKeys[service];
 
+    if (!apiKey) {
+      return errors.notFound('API key not found');
+    }
+
     // Test the specific service
     switch (service) {
       case 'openai':
         return await testOpenAI(apiKey);
-      
+
       case 'anthropic':
         return await testAnthropic(apiKey);
-      
+
       case 'gemini':
         return await testGemini(apiKey);
-      
+
       case 'openrouter':
         return await testOpenRouter(apiKey);
-      
+
       case 'sendgrid':
         return await testSendGrid(apiKey);
-      
+
       case 'resend':
         return await testResend(apiKey);
-      
+
       case 'twilio_account_sid':
       case 'twilio_auth_token':
         return await testTwilio(apiKeys);
-      
+
       case 'google_client_id':
       case 'google_client_secret':
-        return await testGoogle(apiKeys);
-      
+        return testGoogle(apiKeys);
+
       case 'stripe_publishable':
       case 'stripe_secret':
         return await testStripe(apiKeys);
-      
+
       case 'paypal_client_id':
       case 'paypal_client_secret':
         return await testPayPal(apiKeys);
-      
+
       case 'square_access_token':
         return await testSquare(apiKey);
-      
+
       case 'quickbooks_client_id':
       case 'quickbooks_client_secret':
-        return await testQuickBooks(apiKeys);
-      
+        return testQuickBooks(apiKeys);
+
       case 'xero_client_id':
       case 'xero_client_secret':
-        return await testXero(apiKeys);
-      
+        return testXero(apiKeys);
+
       case 'slack_token':
         return await testSlack(apiKey);
-      
+
       case 'teams_webhook_url':
         return await testTeams(apiKey);
-      
+
       case 'zoom_api_key':
       case 'zoom_api_secret':
-        return await testZoom(apiKeys);
-      
+        return testZoom(apiKeys);
+
       default:
         return NextResponse.json({
           success: true,
           message: 'API key saved (test not implemented for this service)',
         });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('API key test error', error, { route: '/api/settings/api-keys/test' });
     return errors.externalService('API service', error instanceof Error ? error : undefined);
   }
@@ -127,17 +183,17 @@ async function testOpenAI(apiKey: string): Promise<NextResponse> {
         message: 'OpenAI API key is valid and working!',
       });
     } else {
-      const error = await response.json();
-      const errorMessage = error.error?.message;
+      const errorData = await response.json() as OpenAIErrorResponse;
+      const errorMessage = errorData.error?.message;
       return NextResponse.json({
         success: false,
         error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Invalid API key',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
@@ -165,10 +221,10 @@ async function testSendGrid(apiKey: string): Promise<NextResponse> {
         error: 'Invalid SendGrid API key',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
@@ -176,7 +232,7 @@ async function testSendGrid(apiKey: string): Promise<NextResponse> {
 /**
  * Test Google OAuth credentials
  */
-async function testGoogle(apiKeys: any): Promise<NextResponse> {
+function testGoogle(apiKeys: ApiKeysCollection): NextResponse {
   const clientId = apiKeys.google_client_id;
   const clientSecret = apiKeys.google_client_secret;
 
@@ -211,7 +267,7 @@ async function testGoogle(apiKeys: any): Promise<NextResponse> {
 /**
  * Test Stripe API keys
  */
-async function testStripe(apiKeys: any): Promise<NextResponse> {
+async function testStripe(apiKeys: ApiKeysCollection): Promise<NextResponse> {
   const secretKey = apiKeys.stripe_secret;
 
   if (!secretKey) {
@@ -240,10 +296,10 @@ async function testStripe(apiKeys: any): Promise<NextResponse> {
         error: 'Invalid Stripe API key',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }
@@ -273,17 +329,17 @@ async function testAnthropic(apiKey: string): Promise<NextResponse> {
         message: 'Anthropic API key is valid and working!',
       });
     } else {
-      const error = await response.json();
-      const errorMessage = error.error?.message;
+      const errorData = await response.json() as AnthropicErrorResponse;
+      const errorMessage = errorData.error?.message;
       return NextResponse.json({
         success: false,
         error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Invalid API key',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -306,17 +362,17 @@ async function testGemini(apiKey: string): Promise<NextResponse> {
         message: 'Gemini API key is valid and working!',
       });
     } else {
-      const error = await response.json();
-      const errorMessage = error.error?.message;
+      const errorData = await response.json() as GeminiErrorResponse;
+      const errorMessage = errorData.error?.message;
       return NextResponse.json({
         success: false,
         error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Invalid API key',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -344,10 +400,10 @@ async function testOpenRouter(apiKey: string): Promise<NextResponse> {
         error: 'Invalid OpenRouter API key',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -375,10 +431,10 @@ async function testResend(apiKey: string): Promise<NextResponse> {
         error: 'Invalid Resend API key',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -386,7 +442,7 @@ async function testResend(apiKey: string): Promise<NextResponse> {
 /**
  * Test Twilio credentials
  */
-async function testTwilio(apiKeys: any): Promise<NextResponse> {
+async function testTwilio(apiKeys: ApiKeysCollection): Promise<NextResponse> {
   const accountSid = apiKeys.twilio_account_sid;
   const authToken = apiKeys.twilio_auth_token;
 
@@ -420,10 +476,10 @@ async function testTwilio(apiKeys: any): Promise<NextResponse> {
         error: 'Invalid Twilio credentials',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -431,7 +487,7 @@ async function testTwilio(apiKeys: any): Promise<NextResponse> {
 /**
  * Test PayPal credentials
  */
-async function testPayPal(apiKeys: any): Promise<NextResponse> {
+async function testPayPal(apiKeys: ApiKeysCollection): Promise<NextResponse> {
   const clientId = apiKeys.paypal_client_id;
   const clientSecret = apiKeys.paypal_client_secret;
 
@@ -465,10 +521,10 @@ async function testPayPal(apiKeys: any): Promise<NextResponse> {
         error: 'Invalid PayPal credentials',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -497,10 +553,10 @@ async function testSquare(apiKey: string): Promise<NextResponse> {
         error: 'Invalid Square access token',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -508,7 +564,7 @@ async function testSquare(apiKey: string): Promise<NextResponse> {
 /**
  * Test QuickBooks credentials
  */
-async function testQuickBooks(apiKeys: any): Promise<NextResponse> {
+function testQuickBooks(apiKeys: ApiKeysCollection): NextResponse {
   const clientId = apiKeys.quickbooks_client_id;
   const clientSecret = apiKeys.quickbooks_client_secret;
 
@@ -536,7 +592,7 @@ async function testQuickBooks(apiKeys: any): Promise<NextResponse> {
 /**
  * Test Xero credentials
  */
-async function testXero(apiKeys: any): Promise<NextResponse> {
+function testXero(apiKeys: ApiKeysCollection): NextResponse {
   const clientId = apiKeys.xero_client_id;
   const clientSecret = apiKeys.xero_client_secret;
 
@@ -573,12 +629,12 @@ async function testSlack(apiKey: string): Promise<NextResponse> {
       },
     });
 
-    const data = await response.json();
+    const data = await response.json() as SlackAuthResponse;
 
     if (data.ok) {
       return NextResponse.json({
         success: true,
-        message: `Slack token is valid! Connected to: ${data.team}`,
+        message: `Slack token is valid! Connected to: ${data.team ?? 'Unknown team'}`,
       });
     } else {
       return NextResponse.json({
@@ -586,10 +642,10 @@ async function testSlack(apiKey: string): Promise<NextResponse> {
         error:(data.error !== '' && data.error != null) ? data.error : 'Invalid Slack token',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -621,10 +677,10 @@ async function testTeams(webhookUrl: string): Promise<NextResponse> {
         error: 'Invalid Teams webhook URL',
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
 }
@@ -632,7 +688,7 @@ async function testTeams(webhookUrl: string): Promise<NextResponse> {
 /**
  * Test Zoom credentials
  */
-async function testZoom(apiKeys: any): Promise<NextResponse> {
+function testZoom(apiKeys: ApiKeysCollection): NextResponse {
   const apiKey = apiKeys.zoom_api_key;
   const apiSecret = apiKeys.zoom_api_secret;
 
@@ -656,22 +712,3 @@ async function testZoom(apiKeys: any): Promise<NextResponse> {
     message: 'Zoom credentials saved! (Full test requires generating JWT token)',
   });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

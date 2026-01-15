@@ -414,10 +414,10 @@ function generateContextualResponse(
  */
 export function initializeConversationState(storedMemory?: UserProgress): ConversationState {
   return {
-    completedSteps: storedMemory?.completedSteps || [],
+    completedSteps: storedMemory?.completedSteps ?? [],
     currentFocus: storedMemory?.currentFocus,
-    preferences: storedMemory?.preferences || {},
-    hiddenFeatures: storedMemory?.hiddenFeatures || [],
+    preferences: storedMemory?.preferences ?? {},
+    hiddenFeatures: storedMemory?.hiddenFeatures ?? [],
     industry: storedMemory?.industry,
     lastInteraction: storedMemory?.lastInteraction,
   };
@@ -437,9 +437,11 @@ export function updateConversationState(
   };
 }
 
-export default {
+const JasperThoughtPartner = {
   JASPER_THOUGHT_PARTNER_PROMPT,
   generateThoughtPartnerResponse,
   initializeConversationState,
   updateConversationState,
 };
+
+export default JasperThoughtPartner;

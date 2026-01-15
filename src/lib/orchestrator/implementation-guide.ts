@@ -184,7 +184,7 @@ export class ImplementationGuide {
       organizationId,
       assistantName,
       ownerName,
-      industry: industry || 'default',
+      industry: industry ?? 'default',
       niche,
       template: template ?? undefined,
       healthReport,
@@ -294,7 +294,7 @@ Remember: You are a GUIDE, not a help desk. Lead conversations with expertise an
         featureId,
         'hidden',
         userId,
-        reason || 'Client indicated not needed'
+        reason ?? 'Client indicated not needed'
       );
 
       return {
@@ -374,7 +374,7 @@ Remember: You are a GUIDE, not a help desk. Lead conversations with expertise an
     } else {
       summary += `🎉 Your AI is fully operational!\n`;
       summary += `Golden Master: ${healthReport.goldenMaster.activeVersion}\n`;
-      summary += `Training Score: ${healthReport.goldenMaster.trainingScore || 'N/A'}`;
+      summary += `Training Score: ${healthReport.goldenMaster.trainingScore ?? 'N/A'}`;
     }
 
     return summary;

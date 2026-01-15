@@ -1,19 +1,38 @@
 /**
  * Notification Preferences API
- * 
+ *
  * GET /api/notifications/preferences - Get user preferences
  * PUT /api/notifications/preferences - Update user preferences
- * 
+ *
  * Rate Limit: 30 requests per minute
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { Timestamp } from 'firebase/firestore';
-import type { NotificationPreferences, NotificationCategory } from '@/lib/notifications/types';
+import type { NotificationPreferences } from '@/lib/notifications/types';
+
+/**
+ * Request body interface for PUT /api/notifications/preferences
+ */
+interface UpdatePreferencesRequestBody {
+  userId?: string;
+  orgId?: string;
+  enabled?: boolean;
+  channels?: NotificationPreferences['channels'];
+  categories?: NotificationPreferences['categories'];
+  batching?: NotificationPreferences['batching'];
+  [key: string]: unknown;
+}
+
+/**
+ * Firestore document with unknown data structure
+ */
+interface FirestoreDocument {
+  [key: string]: unknown;
+}
 
 /**
  * Rate limiting map
@@ -125,14 +144,26 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // Parse request body
-    const body = await request.json();
+    const rawBody: unknown = await request.json();
+
+    // Type guard for request body
+    if (!isObject(rawBody)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    const body = rawBody as UpdatePreferencesRequestBody;
 
     // Get user ID and org ID (from session/auth)
     const userIdHeader = request.headers.get('x-user-id');
-    const userId = userIdHeader || (body.userId && body.userId !== '') ? (userIdHeader ?? body.userId) : 'default_user';
+    const bodyUserId = typeof body.userId === 'string' ? body.userId : undefined;
+    const userId = userIdHeader || (bodyUserId && bodyUserId !== '') ? (userIdHeader ?? bodyUserId) : 'default_user';
 
     const orgIdHeader = request.headers.get('x-org-id');
-    const orgId = orgIdHeader || (body.orgId && body.orgId !== '') ? (orgIdHeader ?? body.orgId) : 'default_org';
+    const bodyOrgId = typeof body.orgId === 'string' ? body.orgId : undefined;
+    const orgId = orgIdHeader || (bodyOrgId && bodyOrgId !== '') ? (orgIdHeader ?? bodyOrgId) : 'default_org';
 
     // Add userId and orgId to body for validation
     body.userId = userId;
@@ -152,18 +183,20 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get existing preferences
-    let existingPrefs = await FirestoreService.get(
+    const existingPrefsDoc = await FirestoreService.get<FirestoreDocument>(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/notification_preferences`,
       userId
     );
 
     // Create default preferences if not exists
-    existingPrefs ??= getDefaultPreferences(userId, orgId);
+    const existingPrefs = existingPrefsDoc
+      ? (existingPrefsDoc as unknown as NotificationPreferences)
+      : getDefaultPreferences(userId, orgId);
 
     // Merge with updates
     // Deep merge is necessary because validatedData uses deepPartial()
     const now = Timestamp.now();
-    
+
     // Construct updated preferences by merging with existing
     // Type assertion is safe because existingPrefs has all required fields
     // and validatedData only provides overrides (validated by Zod schema)
@@ -172,27 +205,27 @@ export async function PUT(request: NextRequest) {
       orgId,
       enabled: validatedData.enabled ?? existingPrefs.enabled,
       channels: {
-        slack: validatedData.channels?.slack 
-          ? { ...existingPrefs.channels.slack!, ...validatedData.channels.slack }
+        slack: validatedData.channels?.slack
+          ? { ...existingPrefs.channels.slack, ...validatedData.channels.slack }
           : existingPrefs.channels.slack,
         email: validatedData.channels?.email
-          ? { ...existingPrefs.channels.email!, ...validatedData.channels.email }
+          ? { ...existingPrefs.channels.email, ...validatedData.channels.email }
           : existingPrefs.channels.email,
         webhook: validatedData.channels?.webhook
-          ? { ...existingPrefs.channels.webhook!, ...validatedData.channels.webhook }
+          ? { ...existingPrefs.channels.webhook, ...validatedData.channels.webhook }
           : existingPrefs.channels.webhook,
         inApp: validatedData.channels?.inApp
-          ? { ...existingPrefs.channels.inApp!, ...validatedData.channels.inApp }
+          ? { ...existingPrefs.channels.inApp, ...validatedData.channels.inApp }
           : existingPrefs.channels.inApp,
-      } as NotificationPreferences['channels'],
+      },
       categories: {
         ...existingPrefs.categories,
         ...validatedData.categories,
-      } as NotificationPreferences['categories'],
+      },
       batching: {
         ...existingPrefs.batching,
         ...validatedData.batching,
-      } as NotificationPreferences['batching'],
+      },
       metadata: {
         createdAt: existingPrefs.metadata.createdAt,
         updatedAt: now,
@@ -244,37 +277,35 @@ export async function PUT(request: NextRequest) {
 }
 
 /**
+ * Type guard to check if value is an object
+ */
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
  * Get default notification preferences
  */
 function getDefaultPreferences(userId: string, orgId: string): NotificationPreferences {
   const now = Timestamp.now();
-  
-  const categories: NotificationPreferences['categories'] = {} as any;
-  
-  const categoryList: NotificationCategory[] = [
-    'deal_risk',
-    'conversation',
-    'coaching',
-    'team_performance',
-    'playbook',
-    'sequence',
-    'lead_routing',
-    'email_writer',
-    'workflow',
-    'analytics',
-    'forecasting',
-    'deal_scoring',
-    'battlecard',
-    'discovery',
-    'system',
-  ];
 
-  categoryList.forEach((category) => {
-    categories[category] = {
-      enabled: true,
-      minPriority: 'low',
-    };
-  });
+  const categories: NotificationPreferences['categories'] = {
+    deal_risk: { enabled: true, minPriority: 'low' },
+    conversation: { enabled: true, minPriority: 'low' },
+    coaching: { enabled: true, minPriority: 'low' },
+    team_performance: { enabled: true, minPriority: 'low' },
+    playbook: { enabled: true, minPriority: 'low' },
+    sequence: { enabled: true, minPriority: 'low' },
+    lead_routing: { enabled: true, minPriority: 'low' },
+    email_writer: { enabled: true, minPriority: 'low' },
+    workflow: { enabled: true, minPriority: 'low' },
+    analytics: { enabled: true, minPriority: 'low' },
+    forecasting: { enabled: true, minPriority: 'low' },
+    deal_scoring: { enabled: true, minPriority: 'low' },
+    battlecard: { enabled: true, minPriority: 'low' },
+    discovery: { enabled: true, minPriority: 'low' },
+    system: { enabled: true, minPriority: 'low' },
+  };
 
   return {
     userId,

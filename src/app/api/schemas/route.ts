@@ -7,6 +7,103 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
+// Type Interfaces
+interface SchemaField {
+  id?: string;
+  key?: string;
+  label?: string;
+  type?: string;
+  required?: boolean;
+  createdAt?: FirebaseFirestore.FieldValue;
+  updatedAt?: FirebaseFirestore.FieldValue;
+}
+
+interface SchemaPermissions {
+  create: string[];
+  read: string[];
+  update: string[];
+  delete: string[];
+}
+
+interface SchemaSettings {
+  allowAttachments: boolean;
+  allowComments: boolean;
+  allowActivityLog: boolean;
+  enableVersioning: boolean;
+}
+
+interface IncomingSchema {
+  id?: string;
+  name: string;
+  pluralName?: string;
+  singularName?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  fields?: SchemaField[];
+  permissions?: SchemaPermissions;
+  settings?: SchemaSettings;
+}
+
+interface RequestBody {
+  organizationId?: string;
+  workspaceId?: string;
+  schema?: IncomingSchema;
+  userId?: string;
+}
+
+interface ProcessedSchemaField {
+  id: string;
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  createdAt: FirebaseFirestore.FieldValue;
+  updatedAt: FirebaseFirestore.FieldValue;
+}
+
+interface NewSchema {
+  id: string;
+  organizationId: string;
+  workspaceId: string;
+  name: string;
+  pluralName: string;
+  singularName: string;
+  description: string;
+  icon: string;
+  color: string;
+  fields: ProcessedSchemaField[];
+  primaryFieldId: string;
+  relations: unknown[];
+  permissions: SchemaPermissions;
+  settings: SchemaSettings;
+  createdAt: FirebaseFirestore.FieldValue;
+  updatedAt: FirebaseFirestore.FieldValue;
+  createdBy: string;
+  status: string;
+  version: number;
+}
+
+interface ErrorWithMessage {
+  message: string;
+}
+
+function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as Record<string, unknown>).message === 'string'
+  );
+}
+
+function getErrorMessage(error: unknown): string {
+  if (isErrorWithMessage(error)) {
+    return error.message;
+  }
+  return 'An unknown error occurred';
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -32,7 +129,7 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
-    
+
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
     const workspaceId = searchParams.get('workspaceId');
@@ -52,7 +149,7 @@ export async function GET(request: NextRequest) {
     }
 
     const dal = adminDal; // Type narrowing for callback
-    const snapshot = await dal.safeQuery('ORGANIZATIONS', (ref) => {
+    const snapshot = await dal.safeQuery('ORGANIZATIONS', (_ref) => {
       return dal.getWorkspaceCollection(organizationId, workspaceId, 'schemas')
         .where('status', '==', 'active');
     });
@@ -60,10 +157,10 @@ export async function GET(request: NextRequest) {
     const schemas = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
     return NextResponse.json({ success: true, schemas });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Schemas API][GET] Failed to list schemas', error, { route: '/api/schemas' });
     return NextResponse.json(
-      { error: 'Failed to fetch schemas', details: error.message },
+      { error: 'Failed to fetch schemas', details: getErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -77,8 +174,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-    
-    const body = await request.json();
+
+    const rawBody: unknown = await request.json();
+    const body = rawBody as RequestBody;
     const { organizationId, workspaceId, schema, userId } = body ?? {};
 
     if (!organizationId || !workspaceId || !schema?.name) {
@@ -89,31 +187,31 @@ export async function POST(request: NextRequest) {
     }
 
     const now = FieldValue.serverTimestamp();
-    const schemaId = schema.id ?? buildSchemaId(schema.name);
+    const schemaId: string = schema.id ?? buildSchemaId(schema.name);
 
-    const fields = (schema.fields ?? []).map((field: any) => ({
+    const fields: ProcessedSchemaField[] = (schema.fields ?? []).map((field: SchemaField): ProcessedSchemaField => ({
       id: field.id ?? buildFieldId((field.key ?? field.label ?? 'field')),
       key: field.key ?? slugify((field.label ?? 'field')),
-      label:(field.label ?? field.key ?? 'Field'),
-      type:(field.type ?? 'text'),
+      label: (field.label ?? field.key ?? 'Field'),
+      type: (field.type ?? 'text'),
       required: !!field.required,
       createdAt: now,
       updatedAt: now,
     }));
 
-    const firstFieldId = fields[0]?.id;
-    const primaryFieldId = (firstFieldId !== '' && firstFieldId != null) ? firstFieldId : 'field_name';
+    const firstFieldId: string | undefined = fields[0]?.id;
+    const primaryFieldId: string = (firstFieldId !== '' && firstFieldId != null) ? firstFieldId : 'field_name';
 
-    const newSchema = {
+    const newSchema: NewSchema = {
       id: schemaId,
       organizationId,
       workspaceId,
       name: schema.name,
-      pluralName:(schema.pluralName !== '' && schema.pluralName != null) ? schema.pluralName : `${schema.name}s`,
-      singularName:schema.singularName ?? schema.name,
+      pluralName: (schema.pluralName !== '' && schema.pluralName != null) ? schema.pluralName : `${schema.name}s`,
+      singularName: schema.singularName ?? schema.name,
       description: schema.description ?? '',
-      icon:(schema.icon !== '' && schema.icon != null) ? schema.icon : '📋',
-      color:(schema.color !== '' && schema.color != null) ? schema.color : '#3B82F6',
+      icon: (schema.icon !== '' && schema.icon != null) ? schema.icon : '📋',
+      color: (schema.color !== '' && schema.color != null) ? schema.color : '#3B82F6',
       fields: fields.length
         ? fields
         : [
@@ -129,13 +227,13 @@ export async function POST(request: NextRequest) {
           ],
       primaryFieldId,
       relations: [],
-      permissions:schema.permissions ?? {
+      permissions: schema.permissions ?? {
         create: ['admin', 'editor'],
         read: ['admin', 'editor', 'viewer'],
         update: ['admin', 'editor'],
         delete: ['admin'],
       },
-      settings:schema.settings ?? {
+      settings: schema.settings ?? {
         allowAttachments: true,
         allowComments: true,
         allowActivityLog: true,
@@ -143,7 +241,7 @@ export async function POST(request: NextRequest) {
       },
       createdAt: now,
       updatedAt: now,
-      createdBy:(userId !== '' && userId != null) ? userId : 'system',
+      createdBy: (userId !== '' && userId != null) ? userId : 'system',
       status: 'active',
       version: 1,
     };
@@ -162,13 +260,11 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, schema: newSchema });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Schemas API][POST] Failed to create schema', error, { route: '/api/schemas' });
     return NextResponse.json(
-      { error: 'Failed to create schema', details: error.message },
+      { error: 'Failed to create schema', details: getErrorMessage(error) },
       { status: 500 }
     );
   }
 }
-
-

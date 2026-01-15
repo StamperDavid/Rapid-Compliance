@@ -8,8 +8,7 @@
  * Provides comprehensive analytics for sequence performance monitoring.
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
@@ -17,6 +16,80 @@ import { logger } from '@/lib/logger/logger';
 // ============================================================================
 // TYPES
 // ============================================================================
+
+// Firestore document types
+interface FirestoreTimestamp {
+  toDate(): Date;
+}
+
+interface NativeSequenceStats {
+  totalEnrolled?: number;
+  activeEnrollments?: number;
+  completedEnrollments?: number;
+  responseRate?: number;
+}
+
+interface StepMetrics {
+  sent?: number;
+  delivered?: number;
+  opened?: number;
+  clicked?: number;
+  replied?: number;
+}
+
+interface NativeSequenceStep {
+  id: string;
+  stepIndex: number;
+  channel: 'email' | 'linkedin' | 'phone' | 'sms';
+  action: string;
+  metrics?: StepMetrics;
+}
+
+interface NativeSequenceData {
+  organizationId?: string;
+  name: string;
+  isActive: boolean;
+  stats?: NativeSequenceStats;
+  steps?: NativeSequenceStep[];
+  createdAt?: FirestoreTimestamp;
+  lastExecutedAt?: FirestoreTimestamp;
+}
+
+interface LegacyStepData {
+  id: string;
+  type: string;
+  subject?: string;
+  body?: string;
+  sent?: number;
+  delivered?: number;
+  opened?: number;
+  clicked?: number;
+  replied?: number;
+}
+
+interface LegacySequenceAnalytics {
+  totalEnrolled?: number;
+  activeProspects?: number;
+  completedProspects?: number;
+  totalSent?: number;
+  totalDelivered?: number;
+  totalOpened?: number;
+  totalClicked?: number;
+  totalReplied?: number;
+  deliveryRate?: number;
+  openRate?: number;
+  clickRate?: number;
+  replyRate?: number;
+  lastRun?: string;
+}
+
+interface LegacySequenceData {
+  name: string;
+  status: string;
+  analytics?: LegacySequenceAnalytics;
+  steps?: LegacyStepData[];
+  createdAt?: string;
+}
 
 interface SequencePerformance {
   sequenceId: string;
@@ -122,7 +195,13 @@ export async function GET(request: NextRequest) {
     }
 
     const { user } = authResult;
-    const organizationId = user.organizationId!;
+    const organizationId = user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'Organization ID not found' },
+        { status: 400 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const sequenceId = searchParams.get('sequenceId');
     
@@ -201,7 +280,7 @@ function parseDateRange(startDate: string | null, endDate: string | null): { sta
 async function getSequencePerformance(
   organizationId: string,
   sequenceId: string,
-  dateRange?: { start: Date; end: Date } | null
+  _dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance | null> {
   try {
     if (!adminDal) {
@@ -250,7 +329,7 @@ async function getSequencePerformance(
  */
 async function getAllSequencePerformances(
   organizationId: string,
-  dateRange?: { start: Date; end: Date } | null
+  _dateRange?: { start: Date; end: Date } | null
 ): Promise<SequencePerformance[]> {
   if (!adminDal) {
     return [];
@@ -295,9 +374,9 @@ async function getAllSequencePerformances(
  */
 function buildNativeSequencePerformance(
   sequenceId: string,
-  data: any
+  data: NativeSequenceData
 ): SequencePerformance {
-  const stats = data.stats ?? {
+  const stats: NativeSequenceStats = data.stats ?? {
     totalEnrolled: 0,
     activeEnrollments: 0,
     completedEnrollments: 0,
@@ -305,21 +384,7 @@ function buildNativeSequencePerformance(
   };
 
   // Aggregate step metrics
-  interface SequenceStepData {
-    id: string;
-    stepIndex: number;
-    channel: string;
-    action: string;
-    metrics?: {
-      sent?: number;
-      delivered?: number;
-      opened?: number;
-      clicked?: number;
-      replied?: number;
-    };
-  }
-
-  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: SequenceStepData) => {
+  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: NativeSequenceStep) => {
     const sent = step.metrics?.sent ?? 0;
     const delivered = step.metrics?.delivered ?? 0;
     const opened = step.metrics?.opened ?? 0;
@@ -355,20 +420,25 @@ function buildNativeSequencePerformance(
     acc[step.channel] = (acc[step.channel] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  
-  const primaryChannelKey = Object.keys(channelCounts)[0] as any;
-  const primaryChannel = Object.entries(channelCounts).length > 1 
-    ? 'multi-channel' 
-    : ((primaryChannelKey !== '' && primaryChannelKey != null) ? primaryChannelKey : 'email');
+
+  const primaryChannelKey = Object.keys(channelCounts)[0];
+  const isMultiChannel = Object.entries(channelCounts).length > 1;
+
+  let primaryChannel: 'email' | 'linkedin' | 'phone' | 'sms' | 'multi-channel' = 'email';
+  if (isMultiChannel) {
+    primaryChannel = 'multi-channel';
+  } else if (primaryChannelKey && ['email', 'linkedin', 'phone', 'sms'].includes(primaryChannelKey)) {
+    primaryChannel = primaryChannelKey as 'email' | 'linkedin' | 'phone' | 'sms';
+  }
 
   return {
     sequenceId,
     sequenceName: data.name,
     isActive: data.isActive,
     channel: primaryChannel,
-    totalEnrolled: stats.totalEnrolled,
-    activeEnrollments: stats.activeEnrollments,
-    completedEnrollments: stats.completedEnrollments,
+    totalEnrolled: stats.totalEnrolled ?? 0,
+    activeEnrollments: stats.activeEnrollments ?? 0,
+    completedEnrollments: stats.completedEnrollments ?? 0,
     totalSent,
     totalDelivered,
     totalOpened,
@@ -379,7 +449,7 @@ function buildNativeSequencePerformance(
     clickRate: totalDelivered > 0 ? (totalClicked / totalDelivered) * 100 : 0,
     replyRate: totalDelivered > 0 ? (totalReplied / totalDelivered) * 100 : 0,
     stepPerformance,
-    createdAt:data.createdAt?.toDate() ?? new Date(),
+    createdAt: data.createdAt?.toDate() ?? new Date(),
     lastExecutedAt: data.lastExecutedAt?.toDate(),
   };
 }
@@ -389,23 +459,31 @@ function buildNativeSequencePerformance(
  */
 function buildLegacySequencePerformance(
   sequenceId: string,
-  data: any
+  data: LegacySequenceData
 ): SequencePerformance {
-  const analytics = data.analytics ?? {};
-  
+  const analytics: LegacySequenceAnalytics = data.analytics ?? {};
+
   // Build step performance from legacy steps
-  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: any, index: number) => {
+  const stepPerformance: StepPerformance[] = (data.steps ?? []).map((step: LegacyStepData, index: number) => {
     const sent = step.sent ?? 0;
     const delivered = step.delivered ?? 0;
     const opened = step.opened ?? 0;
     const clicked = step.clicked ?? 0;
     const replied = step.replied ?? 0;
 
+    // Determine action description
+    let action = 'Email';
+    if (step.subject && step.subject !== '') {
+      action = step.subject;
+    } else if (step.body && step.body !== '') {
+      action = step.body.substring(0, 50);
+    }
+
     return {
       stepId: step.id,
       stepIndex: index,
       channel: mapLegacyStepType(step.type),
-      action: (step.subject !== '' && step.subject != null) ? step.subject : ((step.body?.substring(0, 50) !== '' && step.body?.substring(0, 50) != null) ? step.body.substring(0, 50) : 'Email'),
+      action,
       sent,
       delivered,
       opened,
@@ -436,8 +514,8 @@ function buildLegacySequencePerformance(
     clickRate: analytics.clickRate ?? 0,
     replyRate: analytics.replyRate ?? 0,
     stepPerformance,
-    createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
-    lastExecutedAt: analytics.lastRun ? new Date(analytics.lastRun) : undefined,
+    createdAt: data.createdAt && data.createdAt !== '' ? new Date(data.createdAt) : new Date(),
+    lastExecutedAt: analytics.lastRun && analytics.lastRun !== '' ? new Date(analytics.lastRun) : undefined,
   };
 }
 

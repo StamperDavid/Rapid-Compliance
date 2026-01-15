@@ -1,28 +1,55 @@
 import type { NextRequest } from 'next/server';
+import { FieldValue, type Query, type DocumentSnapshot, type Timestamp } from 'firebase-admin/firestore';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { FieldValue } from 'firebase-admin/firestore';
-import { 
-  verifyAdminRequest, 
-  createErrorResponse, 
+import {
+  verifyAdminRequest,
+  createErrorResponse,
   createSuccessResponse,
   isAuthError
 } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+// Firestore document data structure (from database)
+interface FirestoreOrgDocument {
+  name: string;
+  slug?: string;
+  plan?: string;
+  status?: string;
+  industry?: string | null;
+  billingEmail?: string | null;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  createdBy?: string;
+  settings?: Record<string, unknown>;
+  isTest?: boolean;
+}
+
+// API response structure
 interface OrganizationData {
   id: string;
   name: string;
   slug?: string;
   plan: string;
   status: string;
-  industry?: string;
-  billingEmail?: string;
+  industry?: string | null;
+  billingEmail?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   createdBy?: string;
   settings?: Record<string, unknown>;
   isTest?: boolean;
+}
+
+// Request body structure for POST
+interface CreateOrganizationRequest {
+  name: string;
+  slug?: string;
+  plan?: string;
+  status?: string;
+  industry?: string;
+  billingEmail?: string;
+  settings?: Record<string, unknown>;
 }
 
 /**
@@ -59,34 +86,39 @@ export async function GET(request: NextRequest) {
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
     
     // Build query with pagination using Admin DAL
-    const orgsSnapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref) => {
-      let query = ref.orderBy('createdAt', 'desc');
-      
+    const orgsSnapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref): Query => {
+      let query: Query = ref.orderBy('createdAt', 'desc');
+
       // Add cursor if provided
       if (startAfter) {
         const cursorDate = new Date(startAfter);
         query = query.startAfter(cursorDate);
       }
-      
+
       // Fetch one extra to check if there are more results
       return query.limit(pageSize + 1);
     });
-    
+
     const hasMore = orgsSnapshot.docs.length > pageSize;
     const docs = hasMore ? orgsSnapshot.docs.slice(0, pageSize) : orgsSnapshot.docs;
-    
-    const organizations: OrganizationData[] = docs.map(doc => {
-      const data = doc.data();
+
+    const organizations: OrganizationData[] = docs.map((doc: DocumentSnapshot) => {
+      const data = doc.data() as FirestoreOrgDocument | undefined;
+
+      if (!data) {
+        throw new Error(`Document ${doc.id} has no data`);
+      }
+
       return {
         id: doc.id,
         name: (data.name !== '' && data.name != null) ? data.name : 'Unnamed Organization',
         slug: data.slug,
         plan: (data.plan !== '' && data.plan != null) ? data.plan : 'starter',
         status: (data.status !== '' && data.status != null) ? data.status : 'active',
-        industry: data.industry,
-        billingEmail: data.billingEmail,
-        createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
-        updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? null,
+        industry: data.industry ?? null,
+        billingEmail: data.billingEmail ?? null,
+        createdAt: data.createdAt?.toDate().toISOString() ?? null,
+        updatedAt: data.updatedAt?.toDate().toISOString() ?? null,
         createdBy: data.createdBy,
         settings: data.settings,
         isTest: data.isTest ?? false,
@@ -115,11 +147,12 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString()
     });
     
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Admin organizations fetch error', error, { route: '/api/admin/organizations' });
     return createErrorResponse(
-      process.env.NODE_ENV === 'development' 
-        ? `Failed to fetch organizations: ${error.message}`
+      process.env.NODE_ENV === 'development'
+        ? `Failed to fetch organizations: ${errorMessage}`
         : 'Failed to fetch organizations',
       500
     );
@@ -142,62 +175,75 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return createErrorResponse('Server configuration error', 500);
     }
-    
-    const body = await request.json();
-    
+
+    const body = (await request.json()) as CreateOrganizationRequest;
+
     // Validate required fields
     if (!body.name || typeof body.name !== 'string') {
       return createErrorResponse('Organization name is required', 400);
     }
-    
+
     // Generate org ID
     const orgId = `org_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    
+
+    // Create slug from name
+    const trimmedName = body.name.trim();
+    const generatedSlug = trimmedName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    // Prepare values with proper null handling
+    const slug = (body.slug !== '' && body.slug != null) ? body.slug : generatedSlug;
+    const plan = (body.plan !== '' && body.plan != null) ? body.plan : 'starter';
+    const status = (body.status !== '' && body.status != null) ? body.status : 'active';
+    const industry = (body.industry !== '' && body.industry != null) ? body.industry : null;
+    const billingEmail = (body.billingEmail !== '' && body.billingEmail != null) ? body.billingEmail : null;
+    const settings = body.settings ?? {};
+
     // Create organization document
     const orgData = {
-      name: body.name.trim(),
-      slug: (body.slug !== '' && body.slug != null) ? body.slug : body.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-      plan: (body.plan !== '' && body.plan != null) ? body.plan : 'starter',
-      status: (body.status !== '' && body.status != null) ? body.status : 'active',
-      industry: (body.industry !== '' && body.industry != null) ? body.industry : null,
-      billingEmail: (body.billingEmail !== '' && body.billingEmail != null) ? body.billingEmail : null,
+      name: trimmedName,
+      slug,
+      plan,
+      status,
+      industry,
+      billingEmail,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       createdBy: authResult.user.uid,
-      settings: body.settings ?? {},
+      settings,
     };
-    
+
     await adminDal.safeSetDoc('ORGANIZATIONS', orgId, orgData, {
       audit: true,
       userId: authResult.user.uid,
     });
-    
+
     logger.info('Admin created organization', {
       route: '/api/admin/organizations',
       admin: authResult.user.email,
       orgId,
-      name: body.name
+      name: trimmedName
     });
-    
+
     return createSuccessResponse({
       id: orgId,
-      name: body.name.trim(),
-      slug: (body.slug !== '' && body.slug != null) ? body.slug : body.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-      plan: (body.plan !== '' && body.plan != null) ? body.plan : 'starter',
-      status: (body.status !== '' && body.status != null) ? body.status : 'active',
-      industry: (body.industry !== '' && body.industry != null) ? body.industry : null,
-      billingEmail: (body.billingEmail !== '' && body.billingEmail != null) ? body.billingEmail : null,
+      name: trimmedName,
+      slug,
+      plan,
+      status,
+      industry,
+      billingEmail,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: authResult.user.uid,
-      settings: body.settings ?? {},
+      settings,
     });
-    
-  } catch (error: any) {
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Admin organization create error', error, { route: '/api/admin/organizations' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
-        ? `Failed to create organization: ${error.message}`
+        ? `Failed to create organization: ${errorMessage}`
         : 'Failed to create organization',
       500
     );

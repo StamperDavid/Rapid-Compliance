@@ -108,6 +108,43 @@ interface GetSystemStateArgs {
 }
 
 // ============================================================================
+// TYPE VALIDATION FUNCTIONS (No unsafe casts)
+// ============================================================================
+
+function parseQueryDocsArgs(args: Record<string, unknown>): QueryDocsArgs | null {
+  if (typeof args.query !== 'string') {
+    return null;
+  }
+  return {
+    query: args.query,
+    section: typeof args.section === 'string' ? args.section : undefined,
+  };
+}
+
+function parseDelegateToAgentArgs(args: Record<string, unknown>): DelegateToAgentArgs | null {
+  if (typeof args.agentId !== 'string' || typeof args.action !== 'string') {
+    return null;
+  }
+  return {
+    agentId: args.agentId,
+    action: args.action,
+    parameters: typeof args.parameters === 'string' ? args.parameters : undefined,
+  };
+}
+
+function parseInspectAgentLogsArgs(args: Record<string, unknown>): InspectAgentLogsArgs | null {
+  const validSources = ['provisioner', 'agents', 'errors', 'all'] as const;
+  if (typeof args.source !== 'string' || !validSources.includes(args.source as InspectAgentLogsArgs['source'])) {
+    return null;
+  }
+  return {
+    source: args.source as InspectAgentLogsArgs['source'],
+    limit: typeof args.limit === 'number' ? args.limit : undefined,
+    organizationId: typeof args.organizationId === 'string' ? args.organizationId : undefined,
+  };
+}
+
+// ============================================================================
 // PLATFORM STATS TYPES (type-safe return values)
 // ============================================================================
 
@@ -1124,7 +1161,7 @@ export async function executeGetPlatformStats(
           readinessScore: healthReport.readinessScore,
           configuredFeatures: healthReport.features.filter((f) => f.status === 'configured').length,
           unconfiguredFeatures: healthReport.features.filter((f) => f.status === 'unconfigured').length,
-          recommendations: healthReport.recommendations.slice(0, 3),
+          recommendations: healthReport.recommendations.slice(0, 3).map((r) => r.title),
         };
       } else {
         stats.health = {
@@ -1361,8 +1398,12 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // KNOWLEDGE & STATE TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'query_docs': {
-        const typedArgs = args as QueryDocsArgs;
-        const results = await executeQueryDocs(typedArgs.query, typedArgs.section);
+        const parsedArgs = parseQueryDocsArgs(args);
+        if (!parsedArgs) {
+          content = JSON.stringify({ error: 'Invalid arguments: query is required' });
+          break;
+        }
+        const results = await executeQueryDocs(parsedArgs.query, parsedArgs.section);
         content = JSON.stringify(results);
         break;
       }
@@ -1603,22 +1644,30 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // AGENT DELEGATION TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_agent': {
-        const typedArgs = args as DelegateToAgentArgs;
+        const parsedArgs = parseDelegateToAgentArgs(args);
+        if (!parsedArgs) {
+          content = JSON.stringify({ error: 'Invalid arguments: agentId and action are required' });
+          break;
+        }
         const delegation = await executeDelegateToAgent(
-          typedArgs.agentId as SpecialistPlatform,
-          typedArgs.action,
-          typedArgs.parameters
+          parsedArgs.agentId as SpecialistPlatform,
+          parsedArgs.action,
+          parsedArgs.parameters
         );
         content = JSON.stringify(delegation);
         break;
       }
 
       case 'inspect_agent_logs': {
-        const typedArgs = args as InspectAgentLogsArgs;
+        const parsedArgs = parseInspectAgentLogsArgs(args);
+        if (!parsedArgs) {
+          content = JSON.stringify({ error: 'Invalid arguments: source must be provisioner, agents, errors, or all' });
+          break;
+        }
         const logs = await executeInspectAgentLogs(
-          typedArgs.source ?? 'all',
-          typedArgs.limit ?? 10,
-          typedArgs.organizationId
+          parsedArgs.source,
+          parsedArgs.limit ?? 10,
+          parsedArgs.organizationId
         );
         content = JSON.stringify(logs);
         break;

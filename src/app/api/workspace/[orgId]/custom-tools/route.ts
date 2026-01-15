@@ -1,10 +1,7 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { orderBy } from 'firebase/firestore';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { validateToolUrl } from '@/types/custom-tools';
-import type { CustomTool, CustomToolFormData } from '@/types/custom-tools';
-import { serverTimestamp } from 'firebase/firestore';
-import { where, orderBy } from 'firebase/firestore';
+import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
 
 /**
  * Custom Tools API Route
@@ -12,6 +9,68 @@ import { where, orderBy } from 'firebase/firestore';
  * Handles CRUD operations for organization custom tools.
  * Tools are stored in: organizations/{orgId}/customTools/{toolId}
  */
+
+/**
+ * Request body for POST endpoint
+ */
+interface CreateToolRequestBody {
+  name: unknown;
+  icon?: unknown;
+  url: unknown;
+  enabled?: unknown;
+  order?: unknown;
+  description?: unknown;
+  allowedRoles?: unknown;
+}
+
+/**
+ * Request body for PUT endpoint
+ */
+interface UpdateToolRequestBody {
+  id: unknown;
+  name?: unknown;
+  icon?: unknown;
+  url?: unknown;
+  enabled?: unknown;
+  order?: unknown;
+  description?: unknown;
+  allowedRoles?: unknown;
+}
+
+/**
+ * Request body for DELETE endpoint
+ */
+interface DeleteToolRequestBody {
+  id: unknown;
+}
+
+/**
+ * Type guard to check if value is a string
+ */
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+/**
+ * Type guard to check if value is a boolean
+ */
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+
+/**
+ * Type guard to check if value is a number
+ */
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number';
+}
+
+/**
+ * Type guard to check if value is a string array
+ */
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
 
 // Collection path helper
 function getCollectionPath(orgId: string): string {
@@ -56,10 +115,11 @@ export async function GET(
     );
 
     return NextResponse.json({ tools });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch custom tools:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch custom tools';
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch custom tools' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -76,18 +136,18 @@ export async function POST(
   { params }: { params: { orgId: string } }
 ) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as CreateToolRequestBody;
     const { name, icon, url, enabled, order, description, allowedRoles } = body;
 
     // Validate required fields
-    if (!name || name.trim() === '') {
+    if (!isString(name) || name.trim() === '') {
       return NextResponse.json(
         { error: 'Name is required' },
         { status: 400 }
       );
     }
 
-    if (!url || url.trim() === '') {
+    if (!isString(url) || url.trim() === '') {
       return NextResponse.json(
         { error: 'URL is required' },
         { status: 400 }
@@ -98,24 +158,24 @@ export async function POST(
     const validation = validateToolUrl(url);
     if (!validation.valid) {
       return NextResponse.json(
-        { error: validation.error || 'Invalid URL' },
+        { error: validation.error ?? 'Invalid URL' },
         { status: 400 }
       );
     }
 
     // Generate unique ID
-    const toolId = `tool_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const toolId = `tool_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
     const now = new Date();
     const toolData: Omit<CustomTool, 'id'> = {
       organizationId: params.orgId,
       name: name.trim(),
-      icon: icon || '🔧',
+      icon: isString(icon) ? icon : '🔧',
       url: url.trim(),
       enabled: enabled !== false,
-      order: typeof order === 'number' ? order : 0,
-      description: description?.trim() || undefined,
-      allowedRoles: allowedRoles || undefined,
+      order: isNumber(order) ? order : 0,
+      description: isString(description) ? (description.trim() || undefined) : undefined,
+      allowedRoles: isStringArray(allowedRoles) ? allowedRoles : undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -129,10 +189,11 @@ export async function POST(
     };
 
     return NextResponse.json({ tool }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to create custom tool:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create custom tool';
     return NextResponse.json(
-      { error: error.message || 'Failed to create custom tool' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -149,10 +210,10 @@ export async function PUT(
   { params }: { params: { orgId: string } }
 ) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as UpdateToolRequestBody;
     const { id, name, icon, url, enabled, order, description, allowedRoles } = body;
 
-    if (!id) {
+    if (!isString(id)) {
       return NextResponse.json(
         { error: 'Tool ID is required' },
         { status: 400 }
@@ -171,11 +232,11 @@ export async function PUT(
     }
 
     // Validate URL if provided
-    if (url) {
+    if (isString(url)) {
       const validation = validateToolUrl(url);
       if (!validation.valid) {
         return NextResponse.json(
-          { error: validation.error || 'Invalid URL' },
+          { error: validation.error ?? 'Invalid URL' },
           { status: 400 }
         );
       }
@@ -186,13 +247,27 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    if (name !== undefined) updateData.name = name.trim();
-    if (icon !== undefined) updateData.icon = icon;
-    if (url !== undefined) updateData.url = url.trim();
-    if (enabled !== undefined) updateData.enabled = enabled;
-    if (order !== undefined) updateData.order = order;
-    if (description !== undefined) updateData.description = description?.trim() || undefined;
-    if (allowedRoles !== undefined) updateData.allowedRoles = allowedRoles;
+    if (isString(name)) {
+      updateData.name = name.trim();
+    }
+    if (icon !== undefined) {
+      updateData.icon = isString(icon) ? icon : '🔧';
+    }
+    if (isString(url)) {
+      updateData.url = url.trim();
+    }
+    if (isBoolean(enabled)) {
+      updateData.enabled = enabled;
+    }
+    if (isNumber(order)) {
+      updateData.order = order;
+    }
+    if (description !== undefined) {
+      updateData.description = isString(description) ? (description.trim() || undefined) : undefined;
+    }
+    if (allowedRoles !== undefined) {
+      updateData.allowedRoles = isStringArray(allowedRoles) ? allowedRoles : undefined;
+    }
 
     await FirestoreService.update(collectionPath, id, updateData);
 
@@ -204,10 +279,11 @@ export async function PUT(
     };
 
     return NextResponse.json({ tool: updatedTool });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to update custom tool:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update custom tool';
     return NextResponse.json(
-      { error: error.message || 'Failed to update custom tool' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -224,10 +300,10 @@ export async function DELETE(
   { params }: { params: { orgId: string } }
 ) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as DeleteToolRequestBody;
     const { id } = body;
 
-    if (!id) {
+    if (!isString(id)) {
       return NextResponse.json(
         { error: 'Tool ID is required' },
         { status: 400 }
@@ -248,10 +324,11 @@ export async function DELETE(
     await FirestoreService.delete(collectionPath, id);
 
     return NextResponse.json({ success: true, deleted: id });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete custom tool:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete custom tool';
     return NextResponse.json(
-      { error: error.message || 'Failed to delete custom tool' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

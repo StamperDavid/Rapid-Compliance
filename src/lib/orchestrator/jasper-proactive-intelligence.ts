@@ -208,9 +208,13 @@ function buildPrimaryRecommendation(
   state: PlatformState,
   priorityTrial: OrgSummary | null
 ): ProactiveRecommendation {
-  const leadHunter = getSpecialist('lead_hunter')!;
-  const newsletter = getSpecialist('newsletter')!;
-  const linkedin = getSpecialist('linkedin')!;
+  const leadHunter = getSpecialist('lead_hunter');
+  const newsletter = getSpecialist('newsletter');
+  const linkedin = getSpecialist('linkedin');
+
+  if (!leadHunter || !newsletter || !linkedin) {
+    throw new Error('Core specialists (lead_hunter, newsletter, linkedin) not found in manifest');
+  }
 
   if (priorityTrial) {
     return {
@@ -261,9 +265,13 @@ function buildPrimaryRecommendation(
  */
 function buildParallelActions(state: PlatformState): ProactiveRecommendation[] {
   const actions: ProactiveRecommendation[] = [];
-  const youtube = getSpecialist('youtube')!;
-  const instagram = getSpecialist('instagram')!;
-  const _tiktok = getSpecialist('tiktok')!;
+  const youtube = getSpecialist('youtube');
+  const instagram = getSpecialist('instagram');
+  const tiktok = getSpecialist('tiktok');
+
+  if (!youtube || !instagram || !tiktok) {
+    return actions; // Skip parallel actions if specialists unavailable
+  }
 
   // Content generation for platform marketing
   actions.push({
@@ -288,21 +296,23 @@ function buildParallelActions(state: PlatformState): ProactiveRecommendation[] {
 
   // At-risk organization recovery
   if (state.atRiskOrgs.length > 0) {
-    const newsletter = getSpecialist('newsletter')!;
-    actions.push({
-      priority: 'high',
-      actionName: 'Retention Alert',
-      target: `${state.atRiskOrgs.length} At-Risk Organizations`,
-      recommendation: `**${state.atRiskOrgs.length} organizations** show declining engagement. Proactive outreach prevents churn.`,
-      specialists: [
-        {
-          specialist: newsletter,
-          task: 'Re-engagement sequence for low-activity accounts',
-          rationale: 'Retention is cheaper than acquisition',
-        },
-      ],
-      impact: `Prevent ~$${state.atRiskOrgs.length * 500}/month in churn`,
-    });
+    const newsletterSpecialist = getSpecialist('newsletter');
+    if (newsletterSpecialist) {
+      actions.push({
+        priority: 'high',
+        actionName: 'Retention Alert',
+        target: `${state.atRiskOrgs.length} At-Risk Organizations`,
+        recommendation: `**${state.atRiskOrgs.length} organizations** show declining engagement. Proactive outreach prevents churn.`,
+        specialists: [
+          {
+            specialist: newsletterSpecialist,
+            task: 'Re-engagement sequence for low-activity accounts',
+            rationale: 'Retention is cheaper than acquisition',
+          },
+        ],
+        impact: `Prevent ~$${state.atRiskOrgs.length * 500}/month in churn`,
+      });
+    }
   }
 
   return actions;
@@ -433,7 +443,7 @@ export function generateListDeflection(state: PlatformState, _userName: string):
 // EXPORTS
 // ============================================================================
 
-export default {
+const JasperProactiveIntelligence = {
   generateLaunchContext,
   formatJasperResponse,
   isLaunchIntent,
@@ -442,3 +452,5 @@ export default {
   FORBIDDEN_PATTERNS,
   STRATEGIC_TONE_MARKERS,
 };
+
+export default JasperProactiveIntelligence;

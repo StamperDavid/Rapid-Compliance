@@ -3,13 +3,167 @@
  * Executes saved reports and returns results
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+// Type Interfaces
+interface RequestBody {
+  reportId: string;
+  orgId: string;
+  parameters?: ReportParameters;
+}
+
+interface ReportParameters {
+  period?: string;
+  [key: string]: unknown;
+}
+
+interface ReportConfig {
+  period?: string;
+  entity?: string;
+  filters?: Record<string, unknown>;
+  groupBy?: string;
+  aggregations?: Record<string, AggregationType>;
+  [key: string]: unknown;
+}
+
+interface Report {
+  id: string;
+  type: ReportType;
+  config: ReportConfig;
+}
+
+type ReportType = 'revenue' | 'pipeline' | 'leads' | 'deals' | 'contacts' | 'custom';
+type AggregationType = 'sum' | 'avg' | 'min' | 'max';
+
+interface AnalyticsResponse {
+  totalRevenue?: number;
+  dealsCount?: number;
+  avgDealSize?: number;
+  growth?: number;
+  bySource?: Array<{ source: string; value: number }>;
+  totalValue?: number;
+  winRate?: number;
+  byStage?: Array<{ stage: string; count: number; value: number }>;
+}
+
+interface ChartData {
+  type: string;
+  title: string;
+  data: Array<Record<string, unknown>>;
+}
+
+interface RevenueReportResult {
+  type: 'revenue';
+  period: string;
+  data: AnalyticsResponse;
+  summary: {
+    totalRevenue: number | undefined;
+    dealsCount: number | undefined;
+    avgDealSize: number | undefined;
+    growth: number | undefined;
+  };
+  charts: ChartData[];
+}
+
+interface PipelineReportResult {
+  type: 'pipeline';
+  data: AnalyticsResponse;
+  summary: {
+    totalValue: number | undefined;
+    dealsCount: number | undefined;
+    avgDealSize: number | undefined;
+    winRate: number | undefined;
+  };
+  charts: ChartData[];
+}
+
+interface LeadsReportResult {
+  type: 'leads';
+  totalLeads: number;
+  byStatus: Array<{ status: string; count: number }>;
+  bySource: Array<{ source: string; count: number }>;
+  recentLeads: Array<{
+    id: string;
+    name: string;
+    email: string;
+    status: string | undefined;
+    createdAt: unknown;
+  }>;
+}
+
+interface DealsReportResult {
+  type: 'deals';
+  totalDeals: number;
+  totalValue: number;
+  avgDealSize: number;
+  byStage: Array<{ stage: string; count: number; value: number }>;
+  topDeals: Array<{
+    id: string;
+    name: string;
+    value: string | number;
+    stage: string | undefined;
+  }>;
+}
+
+interface ContactsReportResult {
+  type: 'contacts';
+  totalContacts: number;
+  recentContacts: Array<{
+    id: string;
+    name: string;
+    email: string;
+    company: string | undefined;
+    createdAt: unknown;
+  }>;
+}
+
+interface CustomReportResult {
+  type: 'custom';
+  data: Array<Record<string, unknown>>;
+  totalRecords: number;
+}
+
+type ReportResult =
+  | RevenueReportResult
+  | PipelineReportResult
+  | LeadsReportResult
+  | DealsReportResult
+  | ContactsReportResult
+  | CustomReportResult;
+
+interface LeadData {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  status?: string;
+  source?: string;
+  createdAt: unknown;
+}
+
+interface DealData {
+  id: string;
+  name: string;
+  value: string | number;
+  stage?: string;
+  status?: string;
+}
+
+interface ContactData {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  company?: string;
+  createdAt: unknown;
+}
 
 /**
  * POST /api/reports/execute
@@ -25,7 +179,7 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as RequestBody;
     const { reportId, orgId, parameters } = body;
 
     if (!reportId || !orgId) {
@@ -33,19 +187,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Get report configuration
-    const report = await FirestoreService.get(
+    const reportDoc = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/reports`,
       reportId
     );
 
-    if (!report) {
+    if (!reportDoc) {
       return errors.notFound('Report not found');
     }
 
-    logger.info('Executing report', { reportId, orgId, type: (report as any).type });
+    const report = reportDoc as Report;
+    logger.info('Executing report', { reportId, orgId, type: report.type });
 
     // Execute report based on type
-    const results = await executeReport(report as any, orgId, parameters);
+    const results = await executeReport(report, orgId, parameters);
 
     return NextResponse.json({
       success: true,
@@ -53,7 +208,7 @@ export async function POST(request: NextRequest) {
       executedAt: new Date().toISOString(),
       results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Report execution error', error, { route: '/api/reports/execute' });
     return errors.internal('Failed to execute report', error instanceof Error ? error : undefined);
   }
@@ -62,7 +217,11 @@ export async function POST(request: NextRequest) {
 /**
  * Execute report based on type
  */
-async function executeReport(report: any, orgId: string, parameters: any = {}) {
+async function executeReport(
+  report: Report,
+  orgId: string,
+  parameters: ReportParameters = {}
+): Promise<ReportResult> {
   const { type, config } = report;
 
   switch (type) {
@@ -92,13 +251,22 @@ async function executeReport(report: any, orgId: string, parameters: any = {}) {
 /**
  * Revenue Report
  */
-async function executeRevenueReport(orgId: string, config: any, parameters: any) {
-  const period =(parameters.period || config.period !== '' && parameters.period || config.period != null) ? parameters.period ?? config.period: '30d';
-  
+async function executeRevenueReport(
+  orgId: string,
+  config: ReportConfig,
+  parameters: ReportParameters
+): Promise<RevenueReportResult> {
+  const period =
+    (parameters.period || config.period !== '' && parameters.period || config.period != null)
+      ? (parameters.period ?? config.period) as string
+      : '30d';
+
   // Call analytics service
-  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analytics/revenue?orgId=${orgId}&period=${period}`);
-  const analytics = await response.json();
-  
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL as string}/api/analytics/revenue?orgId=${orgId}&period=${period}`
+  );
+  const analytics = (await response.json()) as AnalyticsResponse;
+
   return {
     type: 'revenue',
     period,
@@ -127,10 +295,16 @@ async function executeRevenueReport(orgId: string, config: any, parameters: any)
 /**
  * Pipeline Report
  */
-async function executePipelineReport(orgId: string, config: any, parameters: any) {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analytics/pipeline?orgId=${orgId}`);
-  const analytics = await response.json();
-  
+async function executePipelineReport(
+  orgId: string,
+  _config: ReportConfig,
+  _parameters: ReportParameters
+): Promise<PipelineReportResult> {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL as string}/api/analytics/pipeline?orgId=${orgId}`
+  );
+  const analytics = (await response.json()) as AnalyticsResponse;
+
   return {
     type: 'pipeline',
     data: analytics,
@@ -153,43 +327,29 @@ async function executePipelineReport(orgId: string, config: any, parameters: any
 /**
  * Leads Report
  */
-interface LeadData {
-  id: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  email: string;
-  status?: string;
-  source?: string;
-  createdAt: any;
-}
-
-interface DealData {
-  id: string;
-  name: string;
-  value: string | number;
-  stage?: string;
-  status?: string;
-}
-
-async function executeLeadsReport(orgId: string, config: any, parameters: any) {
+async function executeLeadsReport(
+  orgId: string,
+  _config: ReportConfig,
+  _parameters: ReportParameters
+): Promise<LeadsReportResult> {
   const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/leads/records`;
-  const allLeads = await FirestoreService.getAll(leadsPath, []);
-  
+  const allLeadsData = await FirestoreService.getAll(leadsPath, []);
+  const allLeads = allLeadsData as LeadData[];
+
   // Group by status
   const statusMap = new Map<string, number>();
   allLeads.forEach((lead) => {
-    const status =(lead.status !== '' && lead.status != null) ? lead.status : 'new';
+    const status = (lead.status !== '' && lead.status != null) ? lead.status : 'new';
     statusMap.set(status, (statusMap.get(status) ?? 0) + 1);
   });
 
   // Group by source
   const sourceMap = new Map<string, number>();
   allLeads.forEach((lead) => {
-    const source =(lead.source !== '' && lead.source != null) ? lead.source : 'direct';
+    const source = (lead.source !== '' && lead.source != null) ? lead.source : 'direct';
     sourceMap.set(source, (sourceMap.get(source) ?? 0) + 1);
   });
-  
+
   return {
     type: 'leads',
     totalLeads: allLeads.length,
@@ -197,7 +357,9 @@ async function executeLeadsReport(orgId: string, config: any, parameters: any) {
     bySource: Array.from(sourceMap.entries()).map(([source, count]) => ({ source, count })),
     recentLeads: allLeads.slice(0, 10).map((lead) => ({
       id: lead.id,
-      name:(lead.name !== '' && lead.name != null) ? lead.name : `${lead.firstName} ${lead.lastName}`,
+      name: (lead.name !== '' && lead.name != null)
+        ? lead.name
+        : `${lead.firstName ?? ''} ${lead.lastName ?? ''}`,
       email: lead.email,
       status: lead.status,
       createdAt: lead.createdAt,
@@ -208,16 +370,27 @@ async function executeLeadsReport(orgId: string, config: any, parameters: any) {
 /**
  * Deals Report
  */
-async function executeDealsReport(orgId: string, config: any, parameters: any) {
+async function executeDealsReport(
+  orgId: string,
+  _config: ReportConfig,
+  _parameters: ReportParameters
+): Promise<DealsReportResult> {
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/deals/records`;
-  const allDeals = await FirestoreService.getAll(dealsPath, []);
-  
-  const totalValue = allDeals.reduce((sum: number, deal) => sum + (parseFloat(deal.value.toString()) || 0), 0);
-  
+  const allDealsData = await FirestoreService.getAll(dealsPath, []);
+  const allDeals = allDealsData as DealData[];
+
+  const totalValue = allDeals.reduce(
+    (sum: number, deal) => sum + (parseFloat(deal.value.toString()) || 0),
+    0
+  );
+
   // Group by stage
   const stageMap = new Map<string, { count: number; value: number }>();
   allDeals.forEach((deal) => {
-    const stage =(deal.stage || deal.status !== '' && deal.stage || deal.status != null) ? deal.stage ?? deal.status: 'new';
+    const stage =
+      (deal.stage || deal.status !== '' && deal.stage || deal.status != null)
+        ? (deal.stage ?? deal.status)
+        : 'new';
     const value = parseFloat(deal.value.toString()) || 0;
     const existing = stageMap.get(stage) ?? { count: 0, value: 0 };
     stageMap.set(stage, {
@@ -225,7 +398,7 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
       value: existing.value + value,
     });
   });
-  
+
   return {
     type: 'deals',
     totalDeals: allDeals.length,
@@ -243,7 +416,7 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
         id: deal.id,
         name: deal.name,
         value: deal.value,
-        stage:deal.stage ?? deal.status,
+        stage: deal.stage ?? deal.status,
       })),
   };
 }
@@ -251,16 +424,23 @@ async function executeDealsReport(orgId: string, config: any, parameters: any) {
 /**
  * Contacts Report
  */
-async function executeContactsReport(orgId: string, config: any, parameters: any) {
+async function executeContactsReport(
+  orgId: string,
+  _config: ReportConfig,
+  _parameters: ReportParameters
+): Promise<ContactsReportResult> {
   const contactsPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/contacts/records`;
-  const allContacts = await FirestoreService.getAll(contactsPath, []);
-  
+  const allContactsData = await FirestoreService.getAll(contactsPath, []);
+  const allContacts = allContactsData as ContactData[];
+
   return {
     type: 'contacts',
     totalContacts: allContacts.length,
-    recentContacts: allContacts.slice(0, 10).map((contact: any) => ({
+    recentContacts: allContacts.slice(0, 10).map((contact) => ({
       id: contact.id,
-      name:(contact.name !== '' && contact.name != null) ? contact.name : `${contact.firstName} ${contact.lastName}`,
+      name: (contact.name !== '' && contact.name != null)
+        ? contact.name
+        : `${contact.firstName ?? ''} ${contact.lastName ?? ''}`,
       email: contact.email,
       company: contact.company,
       createdAt: contact.createdAt,
@@ -271,38 +451,55 @@ async function executeContactsReport(orgId: string, config: any, parameters: any
 /**
  * Custom Report (SQL-like queries)
  */
-async function executeCustomReport(orgId: string, config: any, parameters: any) {
+async function executeCustomReport(
+  orgId: string,
+  config: ReportConfig,
+  _parameters: ReportParameters
+): Promise<CustomReportResult> {
   // For custom reports, execute the configured query
   const { entity, filters, groupBy, aggregations } = config;
-  
+
+  if (!entity) {
+    throw new Error('Entity is required for custom reports');
+  }
+
   const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${orgId}/workspaces/default/entities/${entity}/records`;
-  const records = await FirestoreService.getAll(entityPath, []);
-  
+  const recordsData = await FirestoreService.getAll(entityPath, []);
+  const records = recordsData as Array<Record<string, unknown>>;
+
   // Apply filters (simple key-value matching)
   let filtered = records;
   if (filters) {
-    filtered = records.filter((record: any) => {
+    filtered = records.filter((record) => {
       return Object.entries(filters).every(([key, value]) => record[key] === value);
     });
   }
-  
+
   // Apply groupBy and aggregations
   if (groupBy && aggregations) {
-    const grouped = new Map<any, any[]>();
-    filtered.forEach((record: any) => {
+    const grouped = new Map<unknown, Array<Record<string, unknown>>>();
+    filtered.forEach((record) => {
       const key = record[groupBy];
       if (!grouped.has(key)) {
         grouped.set(key, []);
       }
-      grouped.get(key)!.push(record);
+      const existingGroup = grouped.get(key);
+      if (existingGroup) {
+        existingGroup.push(record);
+      }
     });
-    
+
     const result = Array.from(grouped.entries()).map(([key, group]) => {
-      const aggregated: any = { [groupBy]: key, count: group.length };
-      
+      const aggregated: Record<string, unknown> = { [groupBy]: key, count: group.length };
+
       // Apply aggregations
       Object.entries(aggregations).forEach(([field, agg]) => {
-        const values = group.map((r: any) => parseFloat(r[field]) || 0);
+        const values = group.map((r) => {
+          const fieldValue = r[field];
+          return typeof fieldValue === 'number'
+            ? fieldValue
+            : parseFloat(String(fieldValue)) || 0;
+        });
         switch (agg) {
           case 'sum':
             aggregated[`${field}_sum`] = values.reduce((a, b) => a + b, 0);
@@ -318,17 +515,17 @@ async function executeCustomReport(orgId: string, config: any, parameters: any) 
             break;
         }
       });
-      
+
       return aggregated;
     });
-    
+
     return {
       type: 'custom',
       data: result,
       totalRecords: filtered.length,
     };
   }
-  
+
   return {
     type: 'custom',
     data: filtered,

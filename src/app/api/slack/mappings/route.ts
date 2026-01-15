@@ -1,22 +1,58 @@
 /**
  * Slack Channel Mappings Endpoint
- * 
+ *
  * Manage channel mappings for notification categories.
- * 
+ *
  * Rate Limit: 30 req/min per user
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { 
+import {
   createChannelMappingSchema,
   updateChannelMappingSchema,
 } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackChannelMapping, SlackWorkspace } from '@/lib/slack/types';
+
+// Type-safe interfaces for request bodies
+interface CreateMappingRequestBody {
+  workspaceId: string;
+  category: string;
+  channelId: string;
+  channelName: string;
+  minPriority?: string;
+  enabled?: boolean;
+  userId?: string;
+}
+
+interface UpdateMappingRequestBody {
+  mappingId: string;
+  updates: {
+    channelId?: string;
+    channelName?: string;
+    minPriority?: string;
+    enabled?: boolean;
+  };
+}
+
+// Type guard for Error objects
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
+}
+
+// Extract error message safely
+function getErrorMessage(error: unknown): string {
+  if (isError(error)) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'An unknown error occurred';
+}
 
 /**
  * GET /api/slack/mappings
@@ -76,13 +112,15 @@ export async function GET(request: NextRequest) {
       mappings,
     });
     
-  } catch (error: any) {
-    logger.error('Failed to list Slack mappings', { error });
-    
+  } catch (error: unknown) {
+    logger.error('Failed to list Slack mappings', {
+      error: isError(error) ? error.message : String(error),
+    });
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to list mappings',
+        message: getErrorMessage(error) || 'Failed to list mappings',
       },
       { status: 500 }
     );
@@ -103,8 +141,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Parse request body
-    const body = await request.json();
-    
+    const body = (await request.json()) as CreateMappingRequestBody;
+
     // Validate input
     const validation = createChannelMappingSchema.safeParse(body);
     
@@ -161,7 +199,7 @@ export async function POST(request: NextRequest) {
       channelName: data.channelName,
       minPriority: data.minPriority,
       enabled: data.enabled,
-      createdBy:(body.userId !== '' && body.userId != null) ? body.userId : 'system',
+      createdBy: body.userId && body.userId !== '' ? body.userId : 'system',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
@@ -184,14 +222,16 @@ export async function POST(request: NextRequest) {
       success: true,
       mapping,
     }, { status: 201 });
-    
-  } catch (error: any) {
-    logger.error('Failed to create Slack mapping', { error });
-    
+
+  } catch (error: unknown) {
+    logger.error('Failed to create Slack mapping', {
+      error: isError(error) ? error.message : String(error),
+    });
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to create mapping',
+        message: getErrorMessage(error) || 'Failed to create mapping',
       },
       { status: 500 }
     );
@@ -212,16 +252,16 @@ export async function PUT(request: NextRequest) {
     }
     
     // Parse request body
-    const body = await request.json();
+    const body = (await request.json()) as UpdateMappingRequestBody;
     const mappingId = body.mappingId;
-    
+
     if (!mappingId) {
       return NextResponse.json(
         { error: 'Missing mappingId' },
         { status: 400 }
       );
     }
-    
+
     // Validate updates
     const validation = updateChannelMappingSchema.safeParse(body.updates);
     
@@ -273,18 +313,20 @@ export async function PUT(request: NextRequest) {
       mappingId,
       updates: Object.keys(validation.data),
     });
-    
+
     return NextResponse.json({
       success: true,
     });
-    
-  } catch (error: any) {
-    logger.error('Failed to update Slack mapping', { error });
-    
+
+  } catch (error: unknown) {
+    logger.error('Failed to update Slack mapping', {
+      error: isError(error) ? error.message : String(error),
+    });
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to update mapping',
+        message: getErrorMessage(error) || 'Failed to update mapping',
       },
       { status: 500 }
     );
@@ -349,18 +391,20 @@ export async function DELETE(request: NextRequest) {
     logger.info('Deleted Slack channel mapping', {
       mappingId,
     });
-    
+
     return NextResponse.json({
       success: true,
     });
-    
-  } catch (error: any) {
-    logger.error('Failed to delete Slack mapping', { error });
-    
+
+  } catch (error: unknown) {
+    logger.error('Failed to delete Slack mapping', {
+      error: isError(error) ? error.message : String(error),
+    });
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to delete mapping',
+        message: getErrorMessage(error) || 'Failed to delete mapping',
       },
       { status: 500 }
     );

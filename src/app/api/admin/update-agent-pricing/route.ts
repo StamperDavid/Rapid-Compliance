@@ -1,8 +1,47 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
+
+/**
+ * Pricing tier interface matching the subscription plan structure
+ */
+interface PricingTier {
+  name: string;
+  price: number;
+  recordMin: number;
+  recordMax: number;
+  description: string;
+  active: boolean;
+}
+
+/**
+ * Request body structure
+ */
+interface UpdateAgentPricingBody {
+  tiers: PricingTier[];
+}
+
+/**
+ * Organization document from Firestore
+ */
+interface OrganizationDocument {
+  id: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Pricing knowledge document structure
+ */
+interface PricingKnowledgeDocument {
+  category: string;
+  title: string;
+  content: string;
+  priority: number;
+  updatedAt: string;
+  updatedBy: string;
+  organizationId?: string;
+}
 
 /**
  * POST: Update AI Agent's pricing knowledge
@@ -24,11 +63,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as UpdateAgentPricingBody;
     const { tiers } = body;
 
     // Format pricing knowledge for AI agent
-    const pricingKnowledge = {
+    const firstTierPrice = tiers[0]?.price ?? 400;
+    const lastTierPrice = tiers[tiers.length - 1]?.price ?? 1250;
+    const firstTierRecordMax = tiers[0]?.recordMax ?? 100;
+
+    const tierDescriptions = tiers
+      .map((tier: PricingTier) => {
+        return `
+### ${tier.name} - $${tier.price}/month
+- **Record Capacity:** ${tier.recordMin}-${tier.recordMax} records
+- **Description:** ${tier.description}
+${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ Not currently offered'}
+`;
+      })
+      .join('\n');
+
+    const pricingKnowledge: PricingKnowledgeDocument = {
       category: 'pricing',
       title: 'Current Pricing Tiers',
       content: `
@@ -38,12 +92,7 @@ export async function POST(request: NextRequest) {
 
 ## Current Pricing Tiers
 
-${tiers.map((tier: any, _index: number) => `
-### ${tier.name} - $${tier.price}/month
-- **Record Capacity:** ${tier.recordMin}-${tier.recordMax} records
-- **Description:** ${tier.description}
-${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ Not currently offered'}
-`).join('\n')}
+${tierDescriptions}
 
 ## Key Points to Communicate to Customers
 
@@ -58,7 +107,7 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
    - API Access
    - White-Label Options
 
-2. **No Feature Gating:** The $${tiers[0]?.price ?? 400} user gets the same AI Sales Engine as the $${tiers[tiers.length - 1]?.price ?? 1250} user.
+2. **No Feature Gating:** The $${firstTierPrice} user gets the same AI Sales Engine as the $${lastTierPrice} user.
 
 3. **BYOK (Bring Your Own Keys):** We don't markup AI tokens. Customers connect their own OpenRouter, OpenAI, or Anthropic API keys to pay raw market rates for compute.
 
@@ -68,8 +117,8 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
    - Sintra Social: $49-199/mo → Included
    - Zapier Automation: $29-599/mo → Included
    - **Total Competitor Cost:** $677-3,197/mo
-   - **Our Cost:** $${tiers[0]?.price ?? 400}-$${tiers[tiers.length - 1]?.price ?? 1250}/mo
-   - **Savings:** $${677 - (tiers[0]?.price ?? 400)}-$${3197 - (tiers[tiers.length - 1]?.price ?? 1250)}/mo
+   - **Our Cost:** $${firstTierPrice}-$${lastTierPrice}/mo
+   - **Savings:** $${677 - firstTierPrice}-$${3197 - lastTierPrice}/mo
 
 5. **Trial Terms:**
    - 14-day free trial
@@ -86,14 +135,14 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
 
 **Example responses:**
 
-- "How much does this cost?" 
-  → "We have success-linked pricing starting at $${tiers[0]?.price ?? 400}/month for 0-${tiers[0]?.recordMax ?? 100} records. The best part? You get access to ALL features regardless of tier - no gated features!"
+- "How much does this cost?"
+  → "We have success-linked pricing starting at $${firstTierPrice}/month for 0-${firstTierRecordMax} records. The best part? You get access to ALL features regardless of tier - no gated features!"
 
 - "What's the difference between tiers?"
   → "The only difference is record capacity (how many contacts/leads you can store). Every tier has access to the full platform - AI agents, lead scraping, email sequences, everything."
 
 - "Why is this better than [competitor]?"
-  → "Instead of paying $677-3,197/month for separate tools (lead data, AI agents, social media, automation), you get everything in one platform for $${tiers[0]?.price ?? 400}-$${tiers[tiers.length - 1]?.price ?? 1250}/month. Plus, we use BYOK so you're not paying marked-up AI token costs."
+  → "Instead of paying $677-3,197/month for separate tools (lead data, AI agents, social media, automation), you get everything in one platform for $${firstTierPrice}-$${lastTierPrice}/month. Plus, we use BYOK so you're not paying marked-up AI token costs."
 
 **Last Updated:** ${new Date().toISOString()}
       `.trim(),
@@ -111,21 +160,27 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
 
     // Also update all organization-level agents if they exist
     // This ensures customer-facing agents get the updated pricing
-    const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, []);
-    
+    const orgs = await FirestoreService.getAll<OrganizationDocument>(COLLECTIONS.ORGANIZATIONS, []);
+
     for (const org of orgs) {
       try {
         // Update agent knowledge for this organization
+        const orgPricingKnowledge: PricingKnowledgeDocument = {
+          ...pricingKnowledge,
+          organizationId: org.id,
+        };
+
         await FirestoreService.set(
           `${COLLECTIONS.ORGANIZATIONS}/${org.id}/agent_knowledge`,
           'pricing',
-          {
-            ...pricingKnowledge,
-            organizationId: org.id,
-          }
+          orgPricingKnowledge
         );
-      } catch (error) {
-        logger.warn(`Failed to update agent knowledge for org ${org.id}`, error as Error);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          logger.warn(`Failed to update agent knowledge for org ${org.id}`, error);
+        } else {
+          logger.warn(`Failed to update agent knowledge for org ${org.id}`, new Error(String(error)));
+        }
       }
     }
 
@@ -135,13 +190,18 @@ ${tier.active ? '- **Status:** ✅ Currently available' : '- **Status:** ⏸️ 
       organizationsUpdated: orgs.length,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'AI agent pricing knowledge updated',
       organizationsUpdated: orgs.length,
     });
-  } catch (error: any) {
-    logger.error('[Admin] Error updating agent pricing knowledge:', error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      logger.error('[Admin] Error updating agent pricing knowledge:', error);
+    } else {
+      logger.error('[Admin] Error updating agent pricing knowledge:', new Error(String(error)));
+    }
+
     return NextResponse.json(
       { success: false, error: 'Failed to update agent knowledge' },
       { status: 500 }

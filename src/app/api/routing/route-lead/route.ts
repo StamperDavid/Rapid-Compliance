@@ -19,9 +19,7 @@
  * @module api/routing/route-lead
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { Timestamp } from 'firebase-admin/firestore';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { leadRoutingEngine } from '@/lib/routing';
 import { routeLeadRequestSchema } from '@/lib/routing/validation';
@@ -34,6 +32,18 @@ import type {
 } from '@/lib/routing/types';
 import { createLeadRoutedSignal, createRoutingFailedSignal } from '@/lib/routing/events';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Minimal lead ID body for error handling
+ */
+interface LeadIdBody {
+  leadId: string;
+  [key: string]: unknown;
+}
 
 // ============================================================================
 // RATE LIMITING
@@ -122,10 +132,10 @@ export async function POST(request: NextRequest) {
 
   try {
     // Parse and validate request body
-    const body = await request.json();
+    const body = (await request.json()) as unknown;
     const validatedRequest = routeLeadRequestSchema.parse(body);
 
-    const { leadId, strategy, forceRepId, context } = validatedRequest;
+    const { leadId, strategy, forceRepId } = validatedRequest;
 
     // Rate limiting (use leadId as identifier)
     const rateLimit = checkRateLimit(leadId);
@@ -496,9 +506,10 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error) {
       // Try to emit failure signal
       try {
-        const body = await request.json();
-        const { leadId } = body;
-        
+        const bodyRaw = (await request.json()) as unknown;
+        const body = bodyRaw as LeadIdBody;
+        const leadId = body.leadId;
+
         // Mock lead for signal emission
         const lead: Lead = {
           id: leadId,
@@ -562,7 +573,7 @@ export async function POST(request: NextRequest) {
  * GET /api/routing/route-lead
  * Method not allowed
  */
-export async function GET() {
+export function GET() {
   return NextResponse.json(
     { error: 'Method not allowed. Use POST.' },
     { status: 405 }
