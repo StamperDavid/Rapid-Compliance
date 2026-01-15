@@ -104,12 +104,15 @@
       // STRICT ZONE - Production-Ready Territory
       // Zero tolerance for type violations in core systems:
       // - The Orchestrator Brain (AI engine)
+      // - The Intelligence Module (RAG + Agent orchestration)
       // - The API Layer (external contracts)
       // All logic-affecting rules are ERRORS, not warnings
       // =====================================================================
       "files": [
         "src/lib/orchestrator/**/*.ts",
         "src/lib/orchestrator/**/*.tsx",
+        "src/lib/intelligence/**/*.ts",
+        "src/lib/intelligence/**/*.tsx",
         "src/app/api/**/*.ts",
         "src/app/api/**/*.tsx"
       ],
