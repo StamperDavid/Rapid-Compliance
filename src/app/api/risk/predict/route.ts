@@ -22,25 +22,28 @@
  * - customContext (optional): Additional context for AI analysis
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { predictDealRisk, predictBatchDealRisk } from '@/lib/risk/risk-engine';
-import { 
-  validateRiskPredictionRequest,
-  validateBatchRiskPredictionRequest,
+import {
   safeValidate,
   RiskPredictionRequestSchema,
   BatchRiskPredictionRequestSchema,
 } from '@/lib/risk/validation';
 import { emitRiskPredictionSignals } from '@/lib/risk/events';
 import { getDeal } from '@/lib/crm/deal-service';
-import type { 
+import type {
   RiskPredictionRequest,
   BatchRiskPredictionRequest,
   DealRiskPrediction,
-  BatchRiskPredictionResponse,
 } from '@/lib/risk/types';
 import { logger } from '@/lib/logger/logger';
+
+interface RawRequestBody {
+  dealIds?: string[];
+  dealId?: string;
+  organizationId?: string;
+  [key: string]: unknown;
+}
 
 // ============================================================================
 // RATE LIMITING
@@ -133,16 +136,16 @@ function getCacheKey(request: RiskPredictionRequest): string {
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Parse request body
-    const body = await request.json();
-    
+    const body = (await request.json()) as RawRequestBody;
+
     // Check if batch request
     const isBatch = Array.isArray(body.dealIds);
-    
+
     if (isBatch) {
-      return handleBatchRequest(body, request, startTime);
+      return await handleBatchRequest(body, request, startTime);
     }
     
     // Validate single request
@@ -280,14 +283,14 @@ export async function POST(request: NextRequest) {
       }
     );
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Risk prediction API error', error);
-    
+
     return NextResponse.json(
       {
         success: false,
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to predict deal risk',
+        message: error instanceof Error ? error.message : 'Failed to predict deal risk',
       },
       { status: 500 }
     );
@@ -298,8 +301,8 @@ export async function POST(request: NextRequest) {
  * Handle batch risk prediction request
  */
 async function handleBatchRequest(
-  body: any,
-  request: NextRequest,
+  body: RawRequestBody,
+  _request: NextRequest,
   startTime: number
 ): Promise<NextResponse> {
   try {
@@ -358,7 +361,7 @@ async function handleBatchRequest(
     });
     
     // Convert Map to object for JSON serialization
-    const predictionsObject: Record<string, any> = {};
+    const predictionsObject: Record<string, DealRiskPrediction> = {};
     batchResult.predictions.forEach((prediction, dealId) => {
       predictionsObject[dealId] = prediction;
     });
@@ -383,14 +386,14 @@ async function handleBatchRequest(
       }
     );
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Batch risk prediction API error', error);
-    
+
     return NextResponse.json(
       {
         success: false,
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to predict batch risk',
+        message: error instanceof Error ? error.message : 'Failed to predict batch risk',
       },
       { status: 500 }
     );
@@ -408,7 +411,7 @@ export async function GET(request: NextRequest) {
     
     const dealId = searchParams.get('dealId');
     const organizationId = searchParams.get('organizationId');
-    const workspaceId = searchParams.get('workspaceId') || 'default';
+    const workspaceId = searchParams.get('workspaceId') ?? 'default';
     const includeInterventions = searchParams.get('includeInterventions') !== 'false';
     
     if (!dealId || !organizationId) {
@@ -422,7 +425,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Convert to POST request format
+    // Convert to POST request format and call prediction directly
     const riskRequest: RiskPredictionRequest = {
       dealId,
       organizationId,
@@ -430,18 +433,37 @@ export async function GET(request: NextRequest) {
       includeInterventions,
       forceRefresh: false,
     };
+
+    // Rate limiting
+    const rateLimit = checkRateLimit(organizationId);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Rate limit exceeded' },
+        { status: 429 }
+      );
+    }
+
+    // Check cache
+    const cacheKey = getCacheKey(riskRequest);
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      return NextResponse.json({ success: true, data: cached, cached: true });
+    }
+
+    // Predict risk
+    const prediction = await predictDealRisk(riskRequest);
+    cacheResponse(cacheKey, prediction);
+
+    return NextResponse.json({ success: true, data: prediction, cached: false });
     
-    // Reuse POST logic
-    return POST(request);
-    
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Risk prediction GET error', error);
-    
+
     return NextResponse.json(
       {
         success: false,
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to get risk prediction',
+        message: error instanceof Error ? error.message : 'Failed to get risk prediction',
       },
       { status: 500 }
     );

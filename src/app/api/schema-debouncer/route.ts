@@ -3,8 +3,7 @@
  * Control debouncer behavior
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
 
@@ -12,7 +11,7 @@ import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
  * GET /api/schema-debouncer
  * Get debouncer status
  */
-export async function GET(_request: NextRequest) {
+export function GET(_request: NextRequest) {
   try {
     const debouncer = SchemaChangeDebouncer.getInstance();
     
@@ -38,9 +37,14 @@ export async function GET(_request: NextRequest) {
  * POST /api/schema-debouncer
  * Control debouncer
  */
+interface DebouncerRequestBody {
+  action: 'flush' | 'clear' | 'set_debounce';
+  debounceMs?: number;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as DebouncerRequestBody;
     const { action, debounceMs } = body;
     
     const debouncer = SchemaChangeDebouncer.getInstance();

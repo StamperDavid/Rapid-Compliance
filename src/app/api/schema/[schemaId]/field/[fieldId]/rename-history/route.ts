@@ -3,11 +3,23 @@
  * Get rename history and rollback fields
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
 import { adminDal } from '@/lib/firebase/admin-dal';
+import type { SchemaField } from '@/types/schema';
+
+interface SchemaData {
+  fields?: SchemaField[];
+  [key: string]: unknown;
+}
+
+interface RollbackRequestBody {
+  organizationId: string;
+  workspaceId: string;
+  toVersion: number;
+  userId: string;
+}
 
 /**
  * GET /api/schema/[schemaId]/field/[fieldId]/rename-history
@@ -51,23 +63,23 @@ export async function GET(
       );
     }
     
-    const schema = schemaDoc.data();
-    
+    const schema = schemaDoc.data() as SchemaData | undefined;
+
     // Find field
-    const field = schema?.fields?.find((f: any) => f.id === params.fieldId);
-    
+    const field = schema?.fields?.find((f: SchemaField) => f.id === params.fieldId);
+
     if (!field) {
       return NextResponse.json(
         { error: 'Field not found' },
         { status: 404 }
       );
     }
-    
+
     // Get rename history
     const history = FieldRenameManager.getRenameHistory(field);
     const timeline = FieldRenameManager.getRenameTimeline(field);
     const aliases = FieldRenameManager.getAllAliases(field);
-    
+
     return NextResponse.json({
       success: true,
       field: {
@@ -102,7 +114,7 @@ export async function POST(
 ) {
   try {
     const params = await context.params;
-    const body = await request.json();
+    const body = (await request.json()) as RollbackRequestBody;
     const { organizationId, workspaceId, toVersion, userId } = body;
     
     if (!organizationId || !workspaceId || toVersion === undefined || !userId) {

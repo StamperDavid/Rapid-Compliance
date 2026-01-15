@@ -3,14 +3,20 @@
  * Handles schema updates with proper event publishing (server-side)
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
 import { SchemaChangeEventPublisherServer } from '@/lib/schema/server/schema-change-publisher-server';
-import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
 import { logger } from '@/lib/logger/logger';
+import type { Schema } from '@/types/schema';
+
+interface SchemaUpdateRequestBody {
+  organizationId: string;
+  workspaceId: string;
+  updates: Partial<Schema>;
+  userId: string;
+}
 
 /**
  * POST /api/schemas/[schemaId]/update
@@ -29,7 +35,7 @@ export async function POST(
     }
     
     const params = await context.params;
-    const body = await request.json();
+    const body = (await request.json()) as SchemaUpdateRequestBody;
     const { organizationId, workspaceId, updates, userId } = body;
     
     if (!organizationId || !workspaceId || !updates || !userId) {
@@ -50,31 +56,37 @@ export async function POST(
       );
     }
     
-    const oldSchema = schemaDoc.data();
-    
+    const oldSchemaData = schemaDoc.data() as Schema | undefined;
+
+    if (!oldSchemaData) {
+      return NextResponse.json(
+        { error: 'Schema data not found' },
+        { status: 404 }
+      );
+    }
+
     // Create new schema with updates
-    const newSchema = { ...oldSchema, ...updates };
-    
+    const newSchema: Schema = { ...oldSchemaData, ...updates } as Schema;
+
     // Detect changes
     const events = SchemaChangeDetector.detectChanges(
-      oldSchema as any,
+      oldSchemaData,
       newSchema,
       organizationId
     );
-    
-    // Publish events via debouncer (server-side)
+
+    // Publish events (server-side)
     if (events.length > 0) {
-      const debouncer = SchemaChangeDebouncer.getInstance(5000);
       for (const event of events) {
-        // Use server-side publisher
         await SchemaChangeEventPublisherServer.publishEvent(event);
       }
     }
-    
+
     // Update schema using Admin DAL
+    const version = typeof oldSchemaData.version === 'number' ? oldSchemaData.version : 1;
     await schemaDoc.ref.update({
       ...updates,
-      version: (oldSchema?.version ?? 1) + 1,
+      version: version + 1,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: userId,
     });
@@ -85,14 +97,14 @@ export async function POST(
       message: 'Schema updated successfully',
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update schema', error, {
       route: '/api/schemas/[schemaId]/update',
       method: 'POST'
     });
-    
+
     return NextResponse.json(
-      { error: 'Failed to update schema', details: error.message },
+      { error: 'Failed to update schema', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

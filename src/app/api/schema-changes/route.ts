@@ -3,18 +3,16 @@
  * Endpoints for managing schema change events and impact analysis
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { type QueryConstraint, where } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import type {
-  SchemaChangeEvent} from '@/lib/schema/schema-change-tracker';
 import {
+  type SchemaChangeEvent,
   SchemaChangeEventPublisher
 } from '@/lib/schema/schema-change-tracker';
 import {
   processSchemaChangeEvent,
   processUnprocessedEvents,
-  getSchemaChangeImpactSummary,
 } from '@/lib/schema/schema-change-handler';
 
 /**
@@ -48,15 +46,15 @@ export async function GET(request: NextRequest) {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/schemaChangeEvents`;
       
-      const filters: any[] = [];
+      const filters: QueryConstraint[] = [];
       if (schemaId) {
-        filters.push({ field: 'schemaId', operator: '==', value: schemaId });
+        filters.push(where('schemaId', '==', schemaId));
       }
       if (workspaceId) {
-        filters.push({ field: 'workspaceId', operator: '==', value: workspaceId });
+        filters.push(where('workspaceId', '==', workspaceId));
       }
-      
-      events = await FirestoreService.getAll(eventsPath, filters);
+
+      events = await FirestoreService.getAll<SchemaChangeEvent>(eventsPath, filters);
     }
     
     return NextResponse.json({
@@ -81,9 +79,14 @@ export async function GET(request: NextRequest) {
  * POST /api/schema-changes/process
  * Manually process schema change events
  */
+interface ProcessRequestBody {
+  organizationId: string;
+  eventId?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as ProcessRequestBody;
     const { organizationId, eventId } = body;
     
     if (!organizationId) {

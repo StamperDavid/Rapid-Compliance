@@ -2,12 +2,25 @@
  * Field Type Conversion API - SERVER SIDE (Admin SDK Only)
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
-import type { FieldType } from '@/types/schema';
+import type { FieldType, SchemaField } from '@/types/schema';
+
+interface ConversionRequestBody {
+  organizationId: string;
+  workspaceId: string;
+  fieldKey: string;
+  oldType: FieldType;
+  newType: FieldType;
+}
+
+interface SchemaData {
+  name: string;
+  fields: SchemaField[];
+  [key: string]: unknown;
+}
 
 /**
  * GET /api/schema/[schemaId]/field/[fieldId]/convert-type
@@ -81,7 +94,7 @@ export async function POST(
 ) {
   try {
     const params = await context.params;
-    const body = await request.json();
+    const body = (await request.json()) as ConversionRequestBody;
     const { organizationId, workspaceId, fieldKey, oldType, newType } = body;
     
     // Validate required fields
@@ -126,7 +139,7 @@ export async function POST(
       );
     }
     
-    const schemaData = schemaDoc.data();
+    const schemaData = schemaDoc.data() as SchemaData | undefined;
     const schemaName = schemaData?.name;
     
     if (!schemaName) {
@@ -161,12 +174,15 @@ export async function POST(
       const batch = db.batch();
       
       for (const doc of batchDocs) {
-        const data = doc.data();
+        const data = doc.data() as Record<string, unknown>;
         const oldValue = data[fieldKey];
-        const conversion = FieldTypeConverterServer.convertValue(oldValue, oldType as FieldType, newType as FieldType);
+        const conversion = FieldTypeConverterServer.convertValue(oldValue, oldType, newType);
         
         if (conversion.success) {
-          batch.update(doc.ref, { [fieldKey]: conversion.value });
+          // conversion.value is any from external library, explicitly type it
+          const convertedValue = conversion.value as unknown;
+          const updateData: Record<string, unknown> = { [fieldKey]: convertedValue };
+          batch.update(doc.ref, updateData);
           successCount++;
         } else {
           failureCount++;
@@ -188,7 +204,7 @@ export async function POST(
     }
     
     // Update field type in schema metadata
-    const updatedFields = schemaData.fields.map((f: any) => 
+    const updatedFields = schemaData?.fields.map((f: SchemaField) =>
       f.id === params.fieldId ? { ...f, type: newType } : f
     );
     

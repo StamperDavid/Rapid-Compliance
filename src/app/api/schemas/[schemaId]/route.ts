@@ -2,8 +2,7 @@
  * Schema CRUD API - get/delete single schema (server-side, admin SDK)
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -40,13 +39,13 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, schema: { id: docSnap.id, ...docSnap.data() } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch schema', error, {
       route: '/api/schemas/[schemaId]',
       method: 'GET'
     });
     return NextResponse.json(
-      { error: 'Failed to fetch schema', details: error.message },
+      { error: 'Failed to fetch schema', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -90,13 +89,13 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete schema', error, {
       route: '/api/schemas/[schemaId]',
       method: 'DELETE'
     });
     return NextResponse.json(
-      { error: 'Failed to delete schema', details: error.message },
+      { error: 'Failed to delete schema', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
