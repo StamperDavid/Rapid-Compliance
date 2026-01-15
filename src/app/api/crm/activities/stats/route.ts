@@ -3,8 +3,7 @@
  * GET /api/crm/activities/stats - Get activity statistics
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getActivityStats } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

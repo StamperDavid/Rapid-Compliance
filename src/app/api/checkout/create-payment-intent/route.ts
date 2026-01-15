@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { requireOrganization } from '@/lib/auth/api-auth';
@@ -9,6 +8,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 
 export async function POST(request: NextRequest) {
+  let requestOrganizationId: string | undefined;
   try {
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/checkout/create-payment-intent');
@@ -24,23 +24,32 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(paymentIntentSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      interface ValidationErrorItem {
+        path?: string[];
+        message?: string;
+      }
+      interface ValidationErrorResult {
+        success: false;
+        errors?: { errors?: ValidationErrorItem[] };
+      }
+      const validationError = validation as ValidationErrorResult;
+      const errorDetails = validationError.errors?.errors?.map((e: ValidationErrorItem) => {
         const joinedPath = e.path?.join('.');
         return {
           path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
           message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
         };
       }) ?? [];
-      
+
       return errors.validation('Validation failed', errorDetails);
     }
 
     const { organizationId, amount, currency, metadata } = validation.data;
+    requestOrganizationId = organizationId;
 
     if (!currency) {
       return errors.badRequest('Currency is required');
@@ -52,8 +61,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe keys from API key service
-    const stripeKeys = await apiKeyService.getServiceKey(organizationId, 'stripe');
-    
+    const stripeKeys = await apiKeyService.getServiceKey(organizationId, 'stripe') as { secretKey?: string } | null;
+
     if (!stripeKeys?.secretKey) {
       return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
     }
@@ -94,10 +103,10 @@ export async function POST(request: NextRequest) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Payment intent creation error', error, {
       route: '/api/checkout/create-payment-intent',
-      organizationId: (await request.json()).organizationId,
+      organizationId: requestOrganizationId,
     });
     return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }

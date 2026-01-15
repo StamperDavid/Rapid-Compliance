@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { createCustomer, createSubscription } from '@/lib/billing/stripe-service';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { subscriptionCreateSchema, validateInput } from '@/lib/validation/schemas';
@@ -29,19 +28,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(subscriptionCreateSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      interface ValidationErrorItem {
+        path?: string[];
+        message?: string;
+      }
+      interface ValidationErrorResult {
+        success: false;
+        errors?: { errors?: ValidationErrorItem[] };
+      }
+      const validationError = validation as ValidationErrorResult;
+      const errorDetails = validationError.errors?.errors?.map((e: ValidationErrorItem) => {
         const joinedPath = e.path?.join('.');
         return {
           path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
           message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
         };
       }) ?? [];
-      
+
       return errors.validation('Validation failed', errorDetails);
     }
 
@@ -102,7 +109,7 @@ export async function POST(request: NextRequest) {
               : undefined)
           : undefined,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error creating subscription', error, {
       route: '/api/billing/subscribe',
     });

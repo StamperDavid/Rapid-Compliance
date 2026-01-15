@@ -3,16 +3,30 @@
  * Returns count of contacts matching filter criteria
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import type { QueryConstraint } from 'firebase/firestore';
-import { where } from 'firebase/firestore';
+import { where, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import type { ViewFilter } from '@/types/filters';
+
+/** Request body interface for counting contacts */
+interface CountContactsRequestBody {
+  organizationId: string;
+  workspaceId?: string;
+  filters?: ViewFilter[];
+}
+
+/** Type guard for validating request body */
+function isValidRequestBody(body: unknown): body is CountContactsRequestBody {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+  const b = body as Record<string, unknown>;
+  return typeof b.organizationId === 'string';
+}
 
 /**
  * Convert ViewFilter to Firestore query constraints
@@ -122,12 +136,13 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
-    const { organizationId, workspaceId = 'default', filters = [] } = body;
+    const body: unknown = await request.json();
 
-    if (!organizationId) {
+    if (!isValidRequestBody(body)) {
       return errors.badRequest('Missing organizationId');
     }
+
+    const { organizationId, workspaceId = 'default', filters = [] } = body;
 
     // Build Firestore query constraints from filters
     const constraints = buildQueryConstraints(filters);
@@ -162,11 +177,11 @@ export async function POST(request: NextRequest) {
       workspaceId,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error counting contacts', error, {
       route: '/api/contacts/count',
     });
 
-    return errors.internal('Failed to count contacts', error.message);
+    return errors.internal('Failed to count contacts', error instanceof Error ? error : undefined);
   }
 }

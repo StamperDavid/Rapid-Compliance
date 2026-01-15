@@ -4,12 +4,25 @@
  * POST /api/crm/activities - Create activity
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getActivities, createActivity } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import type { RelatedEntityType, ActivityType, ActivityDirection } from '@/types/activity';
+import type { RelatedEntityType, ActivityType, ActivityDirection, CreateActivityInput } from '@/types/activity';
+
+/** Request body interface for creating an activity */
+interface CreateActivityRequestBody extends CreateActivityInput {
+  workspaceId?: string;
+}
+
+/** Type guard for validating create activity request body */
+function isValidCreateActivityBody(body: unknown): body is CreateActivityRequestBody {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+  const b = body as Record<string, unknown>;
+  return typeof b.type === 'string' && typeof b.entityType === 'string' && typeof b.entityId === 'string';
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -98,25 +111,30 @@ export async function POST(request: NextRequest) {
   try {
     const token = await getAuthToken(request);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const rawBody: unknown = await request.json();
     const organizationId = token.organizationId;
 
     if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId : 'default';
+    if (!isValidCreateActivityBody(rawBody)) {
+      return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const workspaceId = (rawBody.workspaceId !== '' && rawBody.workspaceId != null) ? rawBody.workspaceId : 'default';
 
     // Add user attribution if not provided
-    if (!body.createdBy) {
-      body.createdBy = token.uid;
-      body.createdByName = token.email;
-    }
+    const activityInput: CreateActivityInput = {
+      ...rawBody,
+      createdBy: rawBody.createdBy ?? token.uid,
+      createdByName: rawBody.createdByName ?? token.email ?? undefined,
+    };
 
-    const activity = await createActivity(organizationId, workspaceId, body);
+    const activity = await createActivity(organizationId, workspaceId, activityInput);
 
     return NextResponse.json({
       success: true,

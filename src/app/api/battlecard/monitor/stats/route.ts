@@ -6,12 +6,11 @@
  * Get competitive monitoring statistics
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getCompetitiveMonitor } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 
-export async function GET(request: NextRequest) {
+export function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
@@ -36,10 +35,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     logger.error('API: Failed to get monitoring stats', error);
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: errorMessage },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

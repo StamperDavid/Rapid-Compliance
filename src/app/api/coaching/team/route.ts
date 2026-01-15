@@ -22,8 +22,7 @@
  * - includeRepDetails (optional): Include individual rep metrics (default: true)
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { CoachingAnalyticsEngine } from '@/lib/coaching/coaching-analytics-engine';
@@ -136,7 +135,7 @@ export async function POST(request: NextRequest) {
   
   try {
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate request
     const validationResult = safeValidateGenerateTeamCoachingRequest(body);
@@ -150,8 +149,8 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid request parameters',
-          details: validationResult.error.errors.map((e: any) => ({
-            field: e.path.join('.'),
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.map(String).join('.'),
             message: e.message
           }))
         },
@@ -288,14 +287,15 @@ export async function POST(request: NextRequest) {
     // Emit error signal
     try {
       const coordinator = getServerSignalCoordinator();
+      // Using type assertion for signal bus compatibility with custom event types
       await coordinator.emitSignal({
-        type: 'coaching.team.error' as any,
+        type: 'coaching.team.error',
         timestamp: new Date(),
         data: {
           error: error instanceof Error ? error.message : 'Unknown error',
           timestamp: new Date()
         }
-      } as any);
+      } as unknown as Parameters<typeof coordinator.emitSignal>[0]);
     } catch (signalError) {
       logger.error('Failed to emit error signal', { signalError });
     }
@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
  * 
  * Handle CORS preflight requests
  */
-export async function OPTIONS(_request: NextRequest) {
+export function OPTIONS(_request: NextRequest) {
   return NextResponse.json(
     {},
     {
@@ -342,22 +342,22 @@ export async function OPTIONS(_request: NextRequest) {
  * @param teamId - Team identifier
  * @returns Array of team member user IDs
  */
-async function getTeamMembers(teamId: string): Promise<string[]> {
+function getTeamMembers(teamId: string): Promise<string[]> {
   // TODO: Implement actual team member query
   // For now, return mock data for development
   logger.warn('Using mock team members - implement actual database query', { teamId });
-  
+
   // In production, this would be something like:
   // const teamDoc = await adminDal.getDocument(`teams/${teamId}`);
   // return teamDoc?.memberIds || [];
-  
-  return [
+
+  return Promise.resolve([
     'rep_001',
     'rep_002',
     'rep_003',
     'rep_004',
     'rep_005'
-  ];
+  ]);
 }
 
 /**
@@ -366,14 +366,14 @@ async function getTeamMembers(teamId: string): Promise<string[]> {
  * @param teamId - Team identifier
  * @returns Team name
  */
-async function getTeamName(teamId: string): Promise<string> {
+function getTeamName(teamId: string): Promise<string> {
   // TODO: Implement actual team name query
   // For now, return mock data for development
   logger.warn('Using mock team name - implement actual database query', { teamId });
-  
+
   // In production, this would be something like:
   // const teamDoc = await adminDal.getDocument(`teams/${teamId}`);
   // return teamDoc?.name || 'Unknown Team';
-  
-  return `Sales Team ${teamId}`;
+
+  return Promise.resolve(`Sales Team ${teamId}`);
 }

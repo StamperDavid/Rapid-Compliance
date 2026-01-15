@@ -22,8 +22,7 @@
  * - includeActionItems (optional): Include action items (default: true)
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { CoachingAnalyticsEngine } from '@/lib/coaching/coaching-analytics-engine';
@@ -136,7 +135,7 @@ export async function POST(request: NextRequest) {
   
   try {
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate request
     const validationResult = safeValidateGenerateCoachingRequest(body);
@@ -150,8 +149,8 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid request parameters',
-          details: validationResult.error.errors.map((e: any) => ({
-            field: e.path.join('.'),
+          details: validationResult.error.errors.map((e) => ({
+            field: e.path.map(String).join('.'),
             message: e.message
           }))
         },
@@ -246,8 +245,8 @@ export async function POST(request: NextRequest) {
         'gpt-4o',
         Date.now() - startTime
       );
-      // Signal coordinator expects the full event object
-      await coordinator.emitSignal(event as any);
+      // Signal coordinator expects the full event object - using type assertion for signal bus compatibility
+      await coordinator.emitSignal(event as unknown as Parameters<typeof coordinator.emitSignal>[0]);
     } catch (signalError) {
       logger.error('Failed to emit coaching insights signal', { signalError });
       // Don't fail the request if signal emission fails
@@ -291,14 +290,15 @@ export async function POST(request: NextRequest) {
     // Emit error signal
     try {
       const coordinator = getServerSignalCoordinator();
+      // Using type assertion for signal bus compatibility with custom event types
       await coordinator.emitSignal({
-        type: 'coaching.error' as any,
+        type: 'coaching.error',
         timestamp: new Date(),
         data: {
           error: error instanceof Error ? error.message : 'Unknown error',
           timestamp: new Date()
         }
-      } as any);
+      } as unknown as Parameters<typeof coordinator.emitSignal>[0]);
     } catch (signalError) {
       logger.error('Failed to emit error signal', { signalError });
     }
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
  * 
  * Handle CORS preflight requests
  */
-export async function OPTIONS(_request: NextRequest) {
+export function OPTIONS(_request: NextRequest) {
   return NextResponse.json(
     {},
     {

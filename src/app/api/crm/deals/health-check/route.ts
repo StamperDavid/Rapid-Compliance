@@ -8,25 +8,41 @@
  * Part of the CRM "Living Ledger" automated monitoring.
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { runDealHealthCheck } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
+
+/** Request body interface for health check */
+interface HealthCheckRequestBody {
+  organizationId?: string;
+  workspaceId?: string;
+}
+
+/** Parse and validate body with fallback to empty object */
+function parseBody(rawBody: unknown): HealthCheckRequestBody {
+  if (typeof rawBody !== 'object' || rawBody === null) {
+    return {};
+  }
+  const b = rawBody as Record<string, unknown>;
+  return {
+    organizationId: typeof b.organizationId === 'string' ? b.organizationId : undefined,
+    workspaceId: typeof b.workspaceId === 'string' ? b.workspaceId : undefined,
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
     // Get orgId and workspaceId from headers or body
-    const body = await request.json().catch(() => ({}));
-    const orgIdFromBody = body.organizationId;
+    const rawBody = await request.json().catch(() => ({})) as unknown;
+    const body = parseBody(rawBody);
     const orgIdFromHeader = request.headers.get('x-organization-id');
-    const organizationId = (orgIdFromBody !== '' && orgIdFromBody != null) ? orgIdFromBody 
-      : (orgIdFromHeader !== '' && orgIdFromHeader != null) ? orgIdFromHeader 
+    const organizationId = (body.organizationId !== '' && body.organizationId != null) ? body.organizationId
+      : (orgIdFromHeader !== '' && orgIdFromHeader != null) ? orgIdFromHeader
       : 'default-org';
-    
-    const wsIdFromBody = body.workspaceId;
+
     const wsIdFromHeader = request.headers.get('x-workspace-id');
-    const workspaceId = (wsIdFromBody !== '' && wsIdFromBody != null) ? wsIdFromBody 
-      : (wsIdFromHeader !== '' && wsIdFromHeader != null) ? wsIdFromHeader 
+    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId
+      : (wsIdFromHeader !== '' && wsIdFromHeader != null) ? wsIdFromHeader
       : 'default';
 
     logger.info('Running deal health check', {

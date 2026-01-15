@@ -3,8 +3,7 @@
  * GET /api/crm/deals/[dealId]/health - Get health score for a deal
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { calculateDealHealth } from '@/lib/crm/deal-health';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';

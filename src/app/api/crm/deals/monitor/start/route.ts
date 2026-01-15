@@ -8,38 +8,65 @@
  * Part of the CRM "Living Ledger" real-time intelligence.
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { startDealMonitor } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
+
+/** Request body interface for starting deal monitor */
+interface StartDealMonitorRequestBody {
+  organizationId?: string;
+  workspaceId?: string;
+  autoGenerateRecommendations?: boolean;
+  autoRecalculateHealth?: boolean;
+  signalPriority?: string;
+}
+
+/** Parse and validate body with fallback to empty object */
+function parseBody(rawBody: unknown): StartDealMonitorRequestBody {
+  if (typeof rawBody !== 'object' || rawBody === null) {
+    return {};
+  }
+  const b = rawBody as Record<string, unknown>;
+  return {
+    organizationId: typeof b.organizationId === 'string' ? b.organizationId : undefined,
+    workspaceId: typeof b.workspaceId === 'string' ? b.workspaceId : undefined,
+    autoGenerateRecommendations: typeof b.autoGenerateRecommendations === 'boolean' ? b.autoGenerateRecommendations : undefined,
+    autoRecalculateHealth: typeof b.autoRecalculateHealth === 'boolean' ? b.autoRecalculateHealth : undefined,
+    signalPriority: typeof b.signalPriority === 'string' ? b.signalPriority : undefined,
+  };
+}
 
 export async function POST(request: NextRequest) {
   try {
     // Get config from request body
-    const body = await request.json().catch(() => ({}));
-    const bodyOrgId = body.organizationId;
+    const rawBody = await request.json().catch(() => ({})) as unknown;
+    const body = parseBody(rawBody);
     const headerOrgId = request.headers.get('x-organization-id');
-    const organizationId = (bodyOrgId !== '' && bodyOrgId != null) ? bodyOrgId : 
+    const organizationId = (body.organizationId !== '' && body.organizationId != null) ? body.organizationId :
       ((headerOrgId !== '' && headerOrgId != null) ? headerOrgId : 'default-org');
-    
-    const bodyWorkspaceId = body.workspaceId;
+
     const headerWorkspaceId = request.headers.get('x-workspace-id');
-    const workspaceId = (bodyWorkspaceId !== '' && bodyWorkspaceId != null) ? bodyWorkspaceId :
+    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId :
       ((headerWorkspaceId !== '' && headerWorkspaceId != null) ? headerWorkspaceId : 'default');
 
-    const signalPriorityVal = body.signalPriority;
+    const signalPriorityValue = body.signalPriority;
+    const validPriorities = ['Low', 'Medium', 'High'] as const;
+    const signalPriority: 'Low' | 'Medium' | 'High' = (signalPriorityValue && validPriorities.includes(signalPriorityValue as typeof validPriorities[number]))
+      ? signalPriorityValue as 'Low' | 'Medium' | 'High'
+      : 'Medium';
+
     const config = {
       organizationId,
       workspaceId,
       autoGenerateRecommendations: body.autoGenerateRecommendations ?? true,
       autoRecalculateHealth: body.autoRecalculateHealth ?? true,
-      signalPriority: (signalPriorityVal !== '' && signalPriorityVal != null) ? signalPriorityVal : 'Medium',
+      signalPriority,
     };
 
     logger.info('Starting deal monitor', config);
 
     // Start monitoring
-    const unsubscribe = await startDealMonitor(config);
+    await startDealMonitor(config);
 
     // Store unsubscribe function (in production, this would be managed server-side)
     // For now, just return success

@@ -16,8 +16,7 @@
  * @module api/conversation/analyze
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { analyzeConversation, analyzeTranscript } from '@/lib/conversation/conversation-engine';
 import {
   validateAnalyzeConversationRequest,
@@ -83,7 +82,7 @@ setInterval(() => {
 // ============================================================================
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   expiresAt: number;
 }
 
@@ -93,39 +92,46 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 /**
  * Get cached response
  */
-function getCachedResponse(key: string): any | null {
+function getCachedResponse(key: string): unknown {
   const entry = responseCache.get(key);
   if (!entry) {return null;}
-  
+
   if (Date.now() >= entry.expiresAt) {
     responseCache.delete(key);
     return null;
   }
-  
+
   return entry.data;
 }
 
 /**
  * Set cached response
  */
-function setCachedResponse(key: string, data: any): void {
+function setCachedResponse(key: string, data: unknown): void {
   responseCache.set(key, {
     data,
     expiresAt: Date.now() + CACHE_TTL,
   });
 }
 
+/** Cache key request interface */
+interface CacheKeyRequest {
+  conversationId?: string;
+  organizationId: string;
+  transcript?: string;
+}
+
 /**
  * Generate cache key
  */
-function getCacheKey(request: any): string {
+function getCacheKey(request: CacheKeyRequest): string {
   if (request.conversationId) {
     return `conv_${request.organizationId}_${request.conversationId}`;
   }
-  
+
   // For transcript analysis, hash the transcript (simplified)
-  const transcriptHash = request.transcript 
-    ? request.transcript.substring(0, 100) 
+  const transcriptHash = request.transcript
+    ? request.transcript.substring(0, 100)
     : 'unknown';
   return `trans_${request.organizationId}_${transcriptHash}`;
 }
@@ -180,20 +186,23 @@ export async function POST(request: NextRequest) {
   
   try {
     // Parse request body
-    const body = await request.json();
-    
+    const body = await request.json() as Record<string, unknown>;
+
     // Determine request type and validate
-    let validatedRequest: any;
+    type ConversationRequest = ReturnType<typeof validateAnalyzeConversationRequest>;
+    type TranscriptRequest = ReturnType<typeof validateAnalyzeTranscriptRequest>;
+    let validatedConversationRequest: ConversationRequest | null = null;
+    let validatedTranscriptRequest: TranscriptRequest | null = null;
     let isTranscriptAnalysis = false;
-    
+
     try {
       if (body.conversationId) {
         // Existing conversation analysis
-        validatedRequest = validateAnalyzeConversationRequest(body);
+        validatedConversationRequest = validateAnalyzeConversationRequest(body);
         isTranscriptAnalysis = false;
       } else if (body.transcript) {
         // Raw transcript analysis
-        validatedRequest = validateAnalyzeTranscriptRequest(body);
+        validatedTranscriptRequest = validateAnalyzeTranscriptRequest(body);
         isTranscriptAnalysis = true;
       } else {
         return NextResponse.json(
@@ -211,7 +220,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: 'Invalid request body',
             details: error.errors.map(err => ({
-              path: err.path.join('.'),
+              path: err.path.map(String).join('.'),
               message: err.message,
             })),
           },
@@ -220,14 +229,17 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
-    
-    const organizationId = validatedRequest.organizationId;
-    
+
+    // Get organization ID from validated request (one must be set due to earlier validation)
+    const organizationId = isTranscriptAnalysis
+      ? (validatedTranscriptRequest ?? { organizationId: '' }).organizationId
+      : (validatedConversationRequest ?? { organizationId: '' }).organizationId;
+
     // Check rate limit
     const rateLimit = checkRateLimit(organizationId);
     if (!rateLimit.allowed) {
       const resetIn = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -246,54 +258,65 @@ export async function POST(request: NextRequest) {
         }
       );
     }
-    
-    // Check cache (unless forceRefresh)
-    if (!validatedRequest.forceRefresh && !isTranscriptAnalysis) {
-      const cacheKey = getCacheKey(validatedRequest);
-      const cachedData = getCachedResponse(cacheKey);
-      
-      if (cachedData) {
-        logger.info('Returning cached conversation analysis', {
-          organizationId,
-          conversationId: validatedRequest.conversationId,
+
+    // Check cache (unless forceRefresh) - only for conversation analysis
+    if (!isTranscriptAnalysis && validatedConversationRequest) {
+      const forceRefresh = validatedConversationRequest.forceRefresh;
+      if (!forceRefresh) {
+        const cacheKey = getCacheKey({
+          conversationId: validatedConversationRequest.conversationId,
+          organizationId: validatedConversationRequest.organizationId,
         });
-        
-        return NextResponse.json(
-          {
-            success: true,
-            data: cachedData,
-            cached: true,
-          },
-          {
-            headers: {
-              'X-Cache': 'HIT',
-              'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
-              'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-              'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+        const cachedData = getCachedResponse(cacheKey);
+
+        if (cachedData) {
+          logger.info('Returning cached conversation analysis', {
+            organizationId,
+            conversationId: validatedConversationRequest.conversationId,
+          });
+
+          return NextResponse.json(
+            {
+              success: true,
+              data: cachedData,
+              cached: true,
             },
-          }
-        );
+            {
+              headers: {
+                'X-Cache': 'HIT',
+                'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
+                'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+                'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+              },
+            }
+          );
+        }
       }
     }
-    
+
     // Perform analysis
     logger.info('Starting conversation analysis', {
       organizationId,
       isTranscriptAnalysis,
-      conversationId: validatedRequest.conversationId,
+      conversationId: validatedConversationRequest?.conversationId,
     });
-    
+
     let analysis;
-    
-    if (isTranscriptAnalysis) {
-      analysis = await analyzeTranscript(validatedRequest);
+
+    if (isTranscriptAnalysis && validatedTranscriptRequest) {
+      analysis = await analyzeTranscript(validatedTranscriptRequest);
+    } else if (validatedConversationRequest) {
+      analysis = await analyzeConversation(validatedConversationRequest);
     } else {
-      analysis = await analyzeConversation(validatedRequest);
+      throw new Error('No validated request available');
     }
-    
-    // Cache the response
-    if (!isTranscriptAnalysis) {
-      const cacheKey = getCacheKey(validatedRequest);
+
+    // Cache the response for conversation analysis
+    if (!isTranscriptAnalysis && validatedConversationRequest) {
+      const cacheKey = getCacheKey({
+        conversationId: validatedConversationRequest.conversationId,
+        organizationId: validatedConversationRequest.organizationId,
+      });
       setCachedResponse(cacheKey, analysis);
     }
     
@@ -324,19 +347,20 @@ export async function POST(request: NextRequest) {
       }
     );
     
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Conversation analysis API error', error, {
       path: '/api/conversation/analyze',
       method: 'POST',
     });
-    
+
     // Don't expose internal errors to client
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       {
         success: false,
         error: 'Analysis failed',
-        message: process.env.NODE_ENV === 'development' 
-          ? error.message 
+        message: process.env.NODE_ENV === 'development'
+          ? errorMessage
           : 'An error occurred while analyzing the conversation',
       },
       { status: 500 }
@@ -346,10 +370,10 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/conversation/analyze
- * 
+ *
  * Get API information
  */
-export async function GET() {
+export function GET() {
   return NextResponse.json({
     name: 'Conversation Analysis API',
     version: '1.0.0',

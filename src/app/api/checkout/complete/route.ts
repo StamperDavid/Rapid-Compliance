@@ -1,8 +1,7 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { requireAuth, requireOrganization } from '@/lib/auth/api-auth';
+import { requireOrganization } from '@/lib/auth/api-auth';
 import { checkoutCompleteSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
@@ -24,19 +23,27 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(checkoutCompleteSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      interface ValidationErrorItem {
+        path?: string[];
+        message?: string;
+      }
+      interface ValidationErrorResult {
+        success: false;
+        errors?: { errors?: ValidationErrorItem[] };
+      }
+      const validationError = validation as ValidationErrorResult;
+      const errorDetails = validationError.errors?.errors?.map((e: ValidationErrorItem) => {
         const joinedPath = e.path?.join('.');
         return {
           path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
           message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
         };
       }) ?? [];
-      
+
       return errors.validation('Validation failed', errorDetails);
     }
 
@@ -51,8 +58,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Stripe keys
-    const stripeKeys = await apiKeyService.getServiceKey(organizationId, 'stripe');
-    
+    const stripeKeys = await apiKeyService.getServiceKey(organizationId, 'stripe') as { secretKey?: string } | null;
+
     if (!stripeKeys?.secretKey) {
       return NextResponse.json(
         { success: false, error: 'Stripe not configured' },
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest) {
       orderId: `order_${Date.now()}`,
       status: 'completed',
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Checkout completion error', error, { route: '/api/checkout/complete' });
     return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }

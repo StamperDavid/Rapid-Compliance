@@ -7,8 +7,7 @@
  * Part of the CRM "Living Ledger" with real-time intelligence.
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { generateNextBestActions } from '@/lib/crm/next-best-action-engine';
 import { logger } from '@/lib/logger/logger';
 
@@ -21,8 +20,10 @@ export async function GET(
 
     // Get orgId and workspaceId from headers or session
     // For now, using default values (TODO: Add proper auth)
-    const organizationId = request.headers.get('x-organization-id') || 'default-org';
-    const workspaceId = request.headers.get('x-workspace-id') || 'default';
+    const orgIdHeader = request.headers.get('x-organization-id');
+    const organizationId = (orgIdHeader !== '' && orgIdHeader != null) ? orgIdHeader : 'default-org';
+    const wsIdHeader = request.headers.get('x-workspace-id');
+    const workspaceId = (wsIdHeader !== '' && wsIdHeader != null) ? wsIdHeader : 'default';
 
     logger.info('Generating deal recommendations', {
       dealId,
