@@ -1,0 +1,222 @@
+{
+  "$schema": "SWARM_REGISTRY_V1",
+  "lastAudit": "2026-01-14",
+  "totalAgents": 27,
+  "builtAgents": 0,
+  "ghostAgents": 27,
+  "honestAssessment": "ZERO specialists actually exist. Jasper has been doing everything alone.",
+
+  "hierarchy": {
+    "JASPER": {
+      "role": "Chief Orchestrator",
+      "status": "ACTIVE",
+      "canDelegate": true,
+      "directReports": ["MARKETING_MANAGER", "BUILDER_MANAGER", "INTELLIGENCE_MANAGER", "COMMERCE_MANAGER", "OUTREACH_MANAGER", "CONTENT_MANAGER"]
+    }
+  },
+
+  "managers": {
+    "MARKETING_MANAGER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/marketing/manager.ts",
+      "specialists": ["TIKTOK_EXPERT", "X_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT"]
+    },
+    "BUILDER_MANAGER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/builder/manager.ts",
+      "specialists": ["UX_UI_ARCHITECT", "FUNNEL_ENGINEER", "ASSET_GENERATOR"]
+    },
+    "INTELLIGENCE_MANAGER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/intelligence/manager.ts",
+      "specialists": ["COMPETITOR_ANALYST", "SENTIMENT_ANALYST", "TECHNOGRAPHIC_SCOUT"]
+    },
+    "COMMERCE_MANAGER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/commerce/manager.ts",
+      "specialists": ["PRICING_STRATEGIST", "INVENTORY_MANAGER"]
+    },
+    "OUTREACH_MANAGER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/outreach/manager.ts",
+      "specialists": ["EMAIL_SPECIALIST", "SMS_SPECIALIST"]
+    },
+    "CONTENT_MANAGER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/content/manager.ts",
+      "specialists": ["COPYWRITER", "CALENDAR_COORDINATOR"]
+    }
+  },
+
+  "specialists": {
+    "TIKTOK_EXPERT": {
+      "status": "GHOST",
+      "path": "src/lib/agents/marketing/tiktok/specialist.ts",
+      "reportsTo": "MARKETING_MANAGER",
+      "capabilities": ["trend_analysis", "content_optimization", "hashtag_strategy", "posting_schedule"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "X_EXPERT": {
+      "status": "GHOST",
+      "path": "src/lib/agents/marketing/x/specialist.ts",
+      "reportsTo": "MARKETING_MANAGER",
+      "capabilities": ["tweet_optimization", "thread_strategy", "engagement_analysis", "viral_detection"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "FACEBOOK_EXPERT": {
+      "status": "GHOST",
+      "path": "src/lib/agents/marketing/facebook/specialist.ts",
+      "reportsTo": "MARKETING_MANAGER",
+      "capabilities": ["ad_optimization", "audience_targeting", "page_management", "group_engagement"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "LINKEDIN_EXPERT": {
+      "status": "GHOST",
+      "path": "src/lib/agents/marketing/linkedin/specialist.ts",
+      "reportsTo": "MARKETING_MANAGER",
+      "capabilities": ["b2b_targeting", "thought_leadership", "connection_strategy", "post_optimization"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "SEO_EXPERT": {
+      "status": "GHOST",
+      "path": "src/lib/agents/marketing/seo/specialist.ts",
+      "reportsTo": "MARKETING_MANAGER",
+      "capabilities": ["keyword_research", "on_page_optimization", "link_building", "serp_analysis"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "UX_UI_ARCHITECT": {
+      "status": "GHOST",
+      "path": "src/lib/agents/builder/ux-ui/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["wireframe_generation", "component_design", "accessibility_audit", "responsive_layout"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "FUNNEL_ENGINEER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/builder/funnel/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["funnel_architecture", "conversion_optimization", "ab_testing", "journey_mapping"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "ASSET_GENERATOR": {
+      "status": "GHOST",
+      "path": "src/lib/agents/builder/assets/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["image_generation", "logo_creation", "banner_design", "brand_asset_management"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "COMPETITOR_ANALYST": {
+      "status": "GHOST",
+      "path": "src/lib/agents/intelligence/competitor/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["competitor_discovery", "pricing_analysis", "feature_comparison", "market_positioning"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "SENTIMENT_ANALYST": {
+      "status": "GHOST",
+      "path": "src/lib/agents/intelligence/sentiment/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["social_listening", "brand_sentiment", "crisis_detection", "trend_analysis"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "TECHNOGRAPHIC_SCOUT": {
+      "status": "GHOST",
+      "path": "src/lib/agents/intelligence/technographic/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["tech_stack_detection", "integration_discovery", "vulnerability_scan", "tool_analysis"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "PRICING_STRATEGIST": {
+      "status": "GHOST",
+      "path": "src/lib/agents/commerce/pricing/specialist.ts",
+      "reportsTo": "COMMERCE_MANAGER",
+      "capabilities": ["dynamic_pricing", "competitor_price_tracking", "margin_optimization", "discount_strategy"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "INVENTORY_MANAGER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/commerce/inventory/specialist.ts",
+      "reportsTo": "COMMERCE_MANAGER",
+      "capabilities": ["stock_tracking", "reorder_automation", "demand_forecasting", "supplier_management"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "EMAIL_SPECIALIST": {
+      "status": "GHOST",
+      "path": "src/lib/agents/outreach/email/specialist.ts",
+      "reportsTo": "OUTREACH_MANAGER",
+      "capabilities": ["campaign_creation", "sequence_building", "deliverability_optimization", "ab_testing"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "SMS_SPECIALIST": {
+      "status": "GHOST",
+      "path": "src/lib/agents/outreach/sms/specialist.ts",
+      "reportsTo": "OUTREACH_MANAGER",
+      "capabilities": ["sms_campaigns", "two_way_messaging", "compliance_management", "short_code_optimization"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "COPYWRITER": {
+      "status": "GHOST",
+      "path": "src/lib/agents/content/copywriter/specialist.ts",
+      "reportsTo": "CONTENT_MANAGER",
+      "capabilities": ["headline_generation", "ad_copy", "landing_page_copy", "email_copy", "brand_voice"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
+    "CALENDAR_COORDINATOR": {
+      "status": "GHOST",
+      "path": "src/lib/agents/content/calendar/specialist.ts",
+      "reportsTo": "CONTENT_MANAGER",
+      "capabilities": ["content_scheduling", "cross_platform_sync", "deadline_management", "publishing_automation"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    }
+  },
+
+  "signalBus": {
+    "status": "UNBUILT",
+    "path": "src/lib/orchestrator/signal-bus.ts",
+    "description": "Hierarchical message passing: Jasper → Manager → Specialist"
+  },
+
+  "criticalPath": [
+    "INTELLIGENCE_MANAGER",
+    "COMPETITOR_ANALYST",
+    "TECHNOGRAPHIC_SCOUT",
+    "MARKETING_MANAGER",
+    "SEO_EXPERT",
+    "BUILDER_MANAGER",
+    "FUNNEL_ENGINEER"
+  ]
+}
