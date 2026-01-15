@@ -301,7 +301,7 @@ export interface SiteTheme {
   organizationId: string; // CRITICAL: Isolation
   
   // Branding
-  branding: BrandingConfig;
+  branding: WebsiteBrandingConfig;
   
   // Colors
   colors: ColorScheme;
@@ -310,14 +310,14 @@ export interface SiteTheme {
   typography: TypographyConfig;
   
   // Layout
-  layout: LayoutConfig;
+  layout: WebsiteLayoutConfig;
   
   // Metadata
   createdAt: string;
   updatedAt: string;
 }
 
-export interface BrandingConfig {
+export interface WebsiteBrandingConfig {
   logo?: string; // URL to logo image
   logoLight?: string; // For dark backgrounds
   logoDark?: string; // For light backgrounds
@@ -363,7 +363,7 @@ export interface TypographyConfig {
   bodyLineHeight: string;
 }
 
-export interface LayoutConfig {
+export interface WebsiteLayoutConfig {
   maxWidth: number; // px
   containerPadding: string;
   sectionPadding: string;

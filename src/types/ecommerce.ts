@@ -629,7 +629,7 @@ export interface EcommerceWidget {
   type: WidgetType;
   
   // Configuration
-  config: WidgetConfig;
+  config: EcommerceWidgetConfig;
   
   // Shortcode
   shortcode: string; // e.g., [crm-store id="abc123" type="full"]
@@ -668,7 +668,7 @@ export type WidgetType =
   | 'featured'          // Featured products
   | 'buy_button';       // Simple buy button
 
-export interface WidgetConfig {
+export interface EcommerceWidgetConfig {
   // Display options
   width?: string; // e.g., "100%", "800px"
   height?: string;

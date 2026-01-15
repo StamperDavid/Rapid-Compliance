@@ -250,6 +250,34 @@ export async function GET(request: NextRequest) {
 }
 
 // ============================================================================
+// TYPE GUARDS
+// ============================================================================
+
+/**
+ * Type guard to validate NativeSequenceData from Firestore DocumentData
+ */
+function isNativeSequenceData(data: unknown): data is NativeSequenceData {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+
+  const d = data as Record<string, unknown>;
+  return typeof d.name === 'string' && typeof d.isActive === 'boolean';
+}
+
+/**
+ * Type guard to validate LegacySequenceData from Firestore DocumentData
+ */
+function isLegacySequenceData(data: unknown): data is LegacySequenceData {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+
+  const d = data as Record<string, unknown>;
+  return typeof d.name === 'string' && typeof d.status === 'string';
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -297,6 +325,11 @@ async function getSequencePerformance(
         return null;
       }
 
+      if (!isNativeSequenceData(data)) {
+        logger.error('[Analytics] Invalid native sequence data structure', { sequenceId });
+        return null;
+      }
+
       return buildNativeSequencePerformance(sequenceId, data);
     }
 
@@ -313,6 +346,11 @@ async function getSequencePerformance(
 
     const legacyData = legacySeqDoc.data();
     if (!legacyData) {
+      return null;
+    }
+
+    if (!isLegacySequenceData(legacyData)) {
+      logger.error('[Analytics] Invalid legacy sequence data structure', { sequenceId });
       return null;
     }
 
@@ -346,7 +384,11 @@ async function getAllSequencePerformances(
 
     for (const doc of nativeSeqsSnap.docs) {
       const data = doc.data();
-      performances.push(buildNativeSequencePerformance(doc.id, data));
+      if (isNativeSequenceData(data)) {
+        performances.push(buildNativeSequencePerformance(doc.id, data));
+      } else {
+        logger.warn('[Analytics] Skipping native sequence with invalid data structure', { sequenceId: doc.id });
+      }
     }
 
     // Fetch legacy OutboundSequences
@@ -358,7 +400,11 @@ async function getAllSequencePerformances(
 
     for (const doc of legacySeqsSnap.docs) {
       const data = doc.data();
-      performances.push(buildLegacySequencePerformance(doc.id, data));
+      if (isLegacySequenceData(data)) {
+        performances.push(buildLegacySequencePerformance(doc.id, data));
+      } else {
+        logger.warn('[Analytics] Skipping legacy sequence with invalid data structure', { sequenceId: doc.id });
+      }
     }
 
     return performances;

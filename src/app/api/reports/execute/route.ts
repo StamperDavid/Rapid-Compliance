@@ -387,9 +387,11 @@ async function executeDealsReport(
   // Group by stage
   const stageMap = new Map<string, { count: number; value: number }>();
   allDeals.forEach((deal) => {
-    const stage =
-      (deal.stage || deal.status !== '' && deal.stage || deal.status != null)
-        ? (deal.stage ?? deal.status)
+    const stage: string =
+      (deal.stage && deal.stage !== '')
+        ? deal.stage
+        : (deal.status && deal.status !== '')
+        ? deal.status
         : 'new';
     const value = parseFloat(deal.value.toString()) || 0;
     const existing = stageMap.get(stage) ?? { count: 0, value: 0 };

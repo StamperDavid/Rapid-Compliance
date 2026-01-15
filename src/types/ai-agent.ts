@@ -1,5 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { EntityFilter } from './entity';
+import type { KnowledgeBase, KnowledgeDocument } from './agent-memory';
 
 /**
  * AI Agent Configuration
@@ -25,31 +26,31 @@ export interface AIAgent {
   
   // Knowledge base
   knowledgeBase: KnowledgeBase;
-  
+
   // Capabilities & Tools
   capabilities: AgentCapabilities;
-  
+
   // Training
   training: TrainingConfig;
-  
+
   // Golden Master (production version)
   goldenMaster?: GoldenMaster;
-  
+
   // Deployment
   deployment: DeploymentConfig;
-  
+
   // Permissions
   permissions: {
     canUse: string[]; // roles
     canTrain: string[];
     canDeploy: string[];
   };
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;
-  
+
   // Status
   status: 'draft' | 'training' | 'active' | 'paused' | 'archived';
   version: number;
@@ -91,10 +92,10 @@ export interface PersonalityConfig {
   tone: AgentTone;
   verbosity: 'concise' | 'balanced' | 'detailed';
   formality: 'casual' | 'professional' | 'formal';
-  
+
   // Custom traits
   traits?: string[]; // e.g., ["empathetic", "data-driven", "solution-focused"]
-  
+
   // Response style
   useEmojis: boolean;
   useBulletPoints: boolean;
@@ -111,41 +112,10 @@ export type AgentTone =
   | 'custom';
 
 /**
- * Knowledge Base
+ * Note: KnowledgeBase and KnowledgeDocument are imported from agent-memory.ts
+ * to avoid duplication. They are re-exported here for convenience.
  */
-export interface KnowledgeBase {
-  // Documents
-  documents: KnowledgeDocument[];
-  
-  // URLs & Web content
-  urls: KnowledgeURL[];
-  
-  // Entity data (from CRM objects)
-  entitySources: EntityKnowledgeSource[];
-  
-  // Custom text/instructions
-  customInstructions?: string;
-  
-  // Vector search enabled
-  vectorSearchEnabled: boolean;
-  lastIndexedAt?: Timestamp;
-}
-
-export interface KnowledgeDocument {
-  id: string;
-  name: string;
-  url: string; // Cloud Storage URL
-  type: string; // mime type
-  size: number;
-  uploadedAt: Timestamp;
-  uploadedBy: string;
-  
-  // Processing
-  status: 'processing' | 'ready' | 'failed';
-  extractedText?: string;
-  embeddingId?: string; // Vertex AI Vector Search ID
-  chunks?: number; // Number of text chunks
-}
+export type { KnowledgeBase, KnowledgeDocument };
 
 export interface KnowledgeURL {
   id: string;

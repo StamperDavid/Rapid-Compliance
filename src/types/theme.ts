@@ -22,13 +22,13 @@ export interface Theme {
   
   // Spacing & Layout
   spacing: SpacingSystem;
-  layout: LayoutConfig;
+  layout: ThemeLayoutConfig;
   
   // Component Styles
   components: ComponentStyles;
-  
+
   // Branding
-  branding: BrandingConfig;
+  branding: ThemeBrandingConfig;
   
   // Custom CSS
   customCSS?: string;
@@ -194,9 +194,9 @@ export interface SpacingSystem {
 }
 
 /**
- * Layout Configuration with Advanced Window Styling
+ * Layout Configuration with Advanced Window Styling (Theme)
  */
-export interface LayoutConfig {
+export interface ThemeLayoutConfig {
   // Container
   container: {
     maxWidth: string;
@@ -463,9 +463,9 @@ export interface ComponentVariant {
 }
 
 /**
- * White-Label Branding Configuration
+ * White-Label Branding Configuration (Theme)
  */
-export interface BrandingConfig {
+export interface ThemeBrandingConfig {
   // Logo (fully customizable)
   logo: {
     url?: string;

@@ -159,11 +159,11 @@ export async function PUT(request: NextRequest) {
     // Get user ID and org ID (from session/auth)
     const userIdHeader = request.headers.get('x-user-id');
     const bodyUserId = typeof body.userId === 'string' ? body.userId : undefined;
-    const userId = userIdHeader || (bodyUserId && bodyUserId !== '') ? (userIdHeader ?? bodyUserId) : 'default_user';
+    const userId: string = userIdHeader ?? bodyUserId ?? 'default_user';
 
     const orgIdHeader = request.headers.get('x-org-id');
     const bodyOrgId = typeof body.orgId === 'string' ? body.orgId : undefined;
-    const orgId = orgIdHeader || (bodyOrgId && bodyOrgId !== '') ? (orgIdHeader ?? bodyOrgId) : 'default_org';
+    const orgId: string = orgIdHeader ?? bodyOrgId ?? 'default_org';
 
     // Add userId and orgId to body for validation
     body.userId = userId;
@@ -205,18 +205,57 @@ export async function PUT(request: NextRequest) {
       orgId,
       enabled: validatedData.enabled ?? existingPrefs.enabled,
       channels: {
-        slack: validatedData.channels?.slack
-          ? { ...existingPrefs.channels.slack, ...validatedData.channels.slack }
-          : existingPrefs.channels.slack,
-        email: validatedData.channels?.email
-          ? { ...existingPrefs.channels.email, ...validatedData.channels.email }
-          : existingPrefs.channels.email,
-        webhook: validatedData.channels?.webhook
-          ? { ...existingPrefs.channels.webhook, ...validatedData.channels.webhook }
-          : existingPrefs.channels.webhook,
-        inApp: validatedData.channels?.inApp
-          ? { ...existingPrefs.channels.inApp, ...validatedData.channels.inApp }
-          : existingPrefs.channels.inApp,
+        slack: (() => {
+          const existing = existingPrefs.channels.slack;
+          const update = validatedData.channels?.slack;
+          if (!update || !existing) return existing;
+
+          return {
+            enabled: update.enabled ?? existing.enabled,
+            channelId: update.channelId ?? existing.channelId,
+            threadMessages: update.threadMessages ?? existing.threadMessages,
+            quietHours: update.quietHours ? {
+              enabled: update.quietHours.enabled ?? existing.quietHours?.enabled ?? false,
+              start: update.quietHours.start ?? existing.quietHours?.start ?? '22:00',
+              end: update.quietHours.end ?? existing.quietHours?.end ?? '08:00',
+              timezone: update.quietHours.timezone ?? existing.quietHours?.timezone ?? 'UTC',
+            } : existing.quietHours,
+          };
+        })(),
+        email: (() => {
+          const existing = existingPrefs.channels.email;
+          const update = validatedData.channels?.email;
+          if (!update || !existing) return existing;
+
+          return {
+            enabled: update.enabled ?? existing.enabled,
+            address: update.address ?? existing.address,
+            digest: update.digest ?? existing.digest,
+            digestTime: update.digestTime ?? existing.digestTime,
+          };
+        })(),
+        webhook: (() => {
+          const existing = existingPrefs.channels.webhook;
+          const update = validatedData.channels?.webhook;
+          if (!update || !existing) return existing;
+
+          return {
+            enabled: update.enabled ?? existing.enabled,
+            url: update.url ?? existing.url,
+            secret: update.secret ?? existing.secret,
+          };
+        })(),
+        inApp: (() => {
+          const existing = existingPrefs.channels.inApp;
+          const update = validatedData.channels?.inApp;
+          if (!update || !existing) return existing;
+
+          return {
+            enabled: update.enabled ?? existing.enabled,
+            sound: update.sound ?? existing.sound,
+            desktop: update.desktop ?? existing.desktop,
+          };
+        })(),
       },
       categories: {
         ...existingPrefs.categories,

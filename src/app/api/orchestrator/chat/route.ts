@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
     // Tools are Jasper's PRIMARY interface to the platform (Anti-Hallucination Architecture)
     const useTools = isAdminContext; // Tools ALWAYS enabled for admin
 
-    let finalResponse: string;
+    let finalResponse = '';
     const toolsExecuted: string[] = [];
     let modelUsed = selectedModel;
 

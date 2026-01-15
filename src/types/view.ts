@@ -253,7 +253,7 @@ export interface DashboardWidget {
   height: number;
   
   // Configuration
-  config: WidgetConfig;
+  config: DashboardWidgetConfig;
   
   // Data
   dataSource?: {
@@ -271,7 +271,7 @@ export type WidgetType =
   | 'text'          // Custom text/markdown
   | 'embed';        // Embedded content
 
-export interface WidgetConfig {
+export interface DashboardWidgetConfig {
   // Metric widget
   metric?: {
     field: string;
