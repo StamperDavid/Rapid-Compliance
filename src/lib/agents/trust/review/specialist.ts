@@ -611,6 +611,7 @@ export class ReviewSpecialist extends BaseSpecialist {
     this.log('INFO', `Configured for ${Object.keys(PLATFORM_SPECIFIC_TEMPLATES).length} review platforms`);
     this.log('INFO', `Response tone library contains ${Object.keys(RESPONSE_TONE_LIBRARY).length} tones`);
     this.isInitialized = true;
+    await Promise.resolve();
   }
 
   async execute(message: AgentMessage): Promise<AgentReport> {
@@ -668,6 +669,7 @@ export class ReviewSpecialist extends BaseSpecialist {
       });
     }
 
+    await Promise.resolve();
     return this.createReport(message.id, 'COMPLETED', {
       message: 'Query processed',
     });
@@ -726,10 +728,15 @@ export class ReviewSpecialist extends BaseSpecialist {
     // Update platform stats
     this.updatePlatformStats(review);
 
+    // Convert PersonalizationContext to Record<string, string>, filtering out undefined values
+    const personalizedTokens: Record<string, string> = Object.fromEntries(
+      Object.entries(context).filter((entry): entry is [string, string] => entry[1] !== undefined)
+    );
+
     return {
       responseText: platformFormatting,
       tone: tones,
-      personalizedTokens: context,
+      personalizedTokens,
       estimatedSentiment: sentiment.overallSentiment,
       requiresApproval: strategy.requiresManagerReview,
       followUpScheduled,
@@ -774,8 +781,11 @@ export class ReviewSpecialist extends BaseSpecialist {
       // Check urgency
       if (word in SENTIMENT_KEYWORDS.urgency) {
         const level = SENTIMENT_KEYWORDS.urgency[word as keyof typeof SENTIMENT_KEYWORDS.urgency];
-        if (level === 'high') urgencyLevel = 'high';
-        else if (level === 'medium' && urgencyLevel !== 'high') urgencyLevel = 'medium';
+        if (level === 'high') {
+          urgencyLevel = 'high';
+        } else if (level === 'medium' && urgencyLevel !== 'high') {
+          urgencyLevel = 'medium';
+        }
       }
 
       // Check emotional tone
@@ -877,15 +887,15 @@ export class ReviewSpecialist extends BaseSpecialist {
     sentiment: SentimentAnalysis
   ): PersonalizationContext {
     const context: PersonalizationContext = {
-      customer_name: review.reviewerName || 'Valued Customer',
+      customer_name: review.reviewerName ?? 'Valued Customer',
       business_name: review.businessName,
-      service_used: review.serviceUsed || 'our services',
+      service_used: review.serviceUsed ?? 'our services',
       date: review.reviewDate.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       }),
-      manager_name: review.managerName || 'our management team',
+      manager_name: review.managerName ?? 'our management team',
     };
 
     // Add specific issue if detected
@@ -898,7 +908,7 @@ export class ReviewSpecialist extends BaseSpecialist {
         cleanliness: 'the cleanliness concerns you raised',
         billing: 'the billing issue you experienced',
       };
-      context.specific_issue = issueMap[sentiment.specificIssues[0]] || 'the issue you encountered';
+      context.specific_issue = issueMap[sentiment.specificIssues[0]] ?? 'the issue you encountered';
     }
 
     // Extract product mentioned if any
@@ -919,30 +929,30 @@ export class ReviewSpecialist extends BaseSpecialist {
     let response = '';
 
     // Build response from template sections
-    response += this.replaceTokens(template.opening, context) + '.\n\n';
-    response += this.replaceTokens(template.acknowledgment, context) + '.\n\n';
+    response += `${this.replaceTokens(template.opening, context)}.\n\n`;
+    response += `${this.replaceTokens(template.acknowledgment, context)}.\n\n`;
 
     if (template.resolution) {
-      response += this.replaceTokens(template.resolution, context) + '.\n\n';
+      response += `${this.replaceTokens(template.resolution, context)}.\n\n`;
     }
 
     if (template.escalation) {
-      response += this.replaceTokens(template.escalation, context) + '.\n\n';
+      response += `${this.replaceTokens(template.escalation, context)}.\n\n`;
     }
 
     if (template.referralAsk) {
-      response += this.replaceTokens(template.referralAsk, context) + '.\n\n';
+      response += `${this.replaceTokens(template.referralAsk, context)}.\n\n`;
     }
 
     if (template.socialProofRequest) {
-      response += this.replaceTokens(template.socialProofRequest, context) + '.\n\n';
+      response += `${this.replaceTokens(template.socialProofRequest, context)}.\n\n`;
     }
 
-    response += this.replaceTokens(template.closing, context) + '.';
+    response += `${this.replaceTokens(template.closing, context)}.`;
 
     // Ensure response doesn't exceed platform max length
     if (response.length > platformConfig.maxLength) {
-      response = response.substring(0, platformConfig.maxLength - 3) + '...';
+      response = `${response.substring(0, platformConfig.maxLength - 3)}...`;
     }
 
     return response;
@@ -952,8 +962,10 @@ export class ReviewSpecialist extends BaseSpecialist {
     let result = text;
 
     Object.entries(context).forEach(([key, value]) => {
-      const token = `{{${key}}}`;
-      result = result.replace(new RegExp(token, 'g'), value);
+      if (typeof value === 'string') {
+        const token = `{{${key}}}`;
+        result = result.replace(new RegExp(token, 'g'), value);
+      }
     });
 
     // Replace any remaining tokens with defaults
@@ -986,7 +998,7 @@ export class ReviewSpecialist extends BaseSpecialist {
 
     // Ensure length compliance
     if (formatted.length > config.maxLength) {
-      formatted = formatted.substring(0, config.maxLength - 3) + '...';
+      formatted = `${formatted.substring(0, config.maxLength - 3)}...`;
     }
 
     return formatted.trim();
@@ -1023,9 +1035,15 @@ export class ReviewSpecialist extends BaseSpecialist {
   }
 
   private determineFollowUpType(starRating: StarRating): FollowUpSequence['followUpType'] {
-    if (starRating === 1) return 'resolution_verification';
-    if (starRating === 2) return 'win_back';
-    if (starRating === 3) return 'check_in';
+    if (starRating === 1) {
+      return 'resolution_verification';
+    }
+    if (starRating === 2) {
+      return 'win_back';
+    }
+    if (starRating === 3) {
+      return 'check_in';
+    }
     return 'referral_request';
   }
 
@@ -1048,7 +1066,7 @@ export class ReviewSpecialist extends BaseSpecialist {
     const templates = [
       `${review.reviewerName}, your positive experience means the world to us! If you know anyone who could benefit from ${review.businessName}, we would love to help them achieve the same results you did.`,
       `We are thrilled you had such a great experience! Would you be willing to refer friends or colleagues who might need our services?`,
-      `Thank you for your amazing review! If you know anyone looking for ${review.serviceUsed || 'our services'}, we would be honored to help them.`,
+      `Thank you for your amazing review! If you know anyone looking for ${review.serviceUsed ?? 'our services'}, we would be honored to help them.`,
     ];
 
     return templates[Math.floor(Math.random() * templates.length)];
@@ -1080,7 +1098,7 @@ export class ReviewSpecialist extends BaseSpecialist {
     }
   }
 
-  private async executeAction(action: string, review: Review, sentiment: SentimentAnalysis): Promise<void> {
+  private async executeAction(action: string, review: Review, _sentiment: SentimentAnalysis): Promise<void> {
     switch (action) {
       case 'immediate_escalation':
         this.log('WARN', `CRITICAL REVIEW ALERT: 1-star review from ${review.reviewerName} on ${review.platform}`);
@@ -1112,6 +1130,7 @@ export class ReviewSpecialist extends BaseSpecialist {
       default:
         this.log('INFO', `Executed action: ${action} for review ${review.id}`);
     }
+    await Promise.resolve();
   }
 
   // ============================================================================
@@ -1121,7 +1140,7 @@ export class ReviewSpecialist extends BaseSpecialist {
   private calculateConfidenceScore(
     review: Review,
     sentiment: SentimentAnalysis,
-    strategy: StarRatingStrategy
+    _strategy: StarRatingStrategy
   ): number {
     let confidence = 0.5; // Base confidence
 
@@ -1141,7 +1160,9 @@ export class ReviewSpecialist extends BaseSpecialist {
 
   private updatePlatformStats(review: Review): void {
     const stats = this.platformStats.get(review.platform);
-    if (!stats) return;
+    if (!stats) {
+      return;
+    }
 
     const newTotal = stats.totalReviews + 1;
     const newAverage = (stats.averageRating * stats.totalReviews + review.starRating) / newTotal;
@@ -1171,12 +1192,12 @@ export class ReviewSpecialist extends BaseSpecialist {
 
     return {
       id: message.id,
-      platform: (payload.platform as ReviewPlatform) || 'generic',
-      starRating: (payload.starRating as StarRating) || 3,
-      reviewText: payload.reviewText || '',
-      reviewerName: payload.reviewerName || 'Customer',
+      platform: (payload.platform as ReviewPlatform) ?? 'generic',
+      starRating: (payload.starRating as StarRating) ?? 3,
+      reviewText: payload.reviewText ?? '',
+      reviewerName: payload.reviewerName ?? 'Customer',
       reviewDate: payload.reviewDate ? new Date(payload.reviewDate) : new Date(),
-      businessName: payload.businessName || 'Our Business',
+      businessName: payload.businessName ?? 'Our Business',
       serviceUsed: payload.serviceUsed,
       managerName: payload.managerName,
     };

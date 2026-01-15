@@ -1,5 +1,8 @@
 'use client';
 
+/* eslint-disable no-alert -- This admin UI uses native dialogs for quick user confirmations. Replace with modal components in production. */
+/* eslint-disable @next/next/no-img-element -- Email template images use blob URLs from FileReader which don't work with next/image. */
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -9,10 +12,83 @@ import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import type { ViewFilter } from '@/types/filters';
 import { sendEmail } from '@/lib/email/email-service';
-import { sendSMS } from '@/lib/sms/sms-service';
+import { sendSMS as _sendSMS } from '@/lib/sms/sms-service';
+
+// Type definitions for email template designer
+// Using a flat interface since the code accesses properties after type checking block.type
+// but TypeScript doesn't narrow the content type in this pattern
+interface SocialLink {
+  platform: string;
+  url: string;
+}
+
+interface BlockContent {
+  // Hero block
+  imageUrl?: string;
+  linkUrl?: string;
+  height?: string;
+  // Text block
+  text?: string;
+  align?: string;
+  fontSize?: string;
+  color?: string;
+  // Button block
+  url?: string;
+  bgColor?: string;
+  textColor?: string;
+  width?: string;
+  // Image block
+  alt?: string;
+  // ProductGrid block
+  columns?: number;
+  productIds?: string[];
+  showPrice?: boolean;
+  showButton?: boolean;
+  // Divider block
+  thickness?: string;
+  style?: string;
+  // Social block
+  links?: SocialLink[];
+  iconSize?: string;
+  // Html block
+  html?: string;
+}
+
+type BlockType = 'hero' | 'text' | 'button' | 'image' | 'productGrid' | 'divider' | 'spacer' | 'social' | 'html';
+
+interface DesignerBlock {
+  id: string;
+  type: BlockType;
+  content: BlockContent;
+}
+
+interface CustomTemplate {
+  id: string;
+  name: string;
+  type: string;
+  html: string;
+  blocks: DesignerBlock[];
+  preview?: string;
+}
+
+interface UploadedAsset {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  uploadedAt: Date;
+}
+
+interface SmsTemplate {
+  id: string;
+  name: string;
+  message: string;
+  trigger: string;
+  isCustom: boolean;
+}
 
 export default function EmailTemplatesPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
@@ -21,13 +97,13 @@ export default function EmailTemplatesPage() {
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
   const [campaignFilters, setCampaignFilters] = useState<ViewFilter[]>([]);
   const [estimatedRecipients, setEstimatedRecipients] = useState(0);
-  const [customTemplates, setCustomTemplates] = useState<any[]>([]);
-  const [editingCustomTemplate, setEditingCustomTemplate] = useState<any | null>(null);
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+  const [editingCustomTemplate, setEditingCustomTemplate] = useState<CustomTemplate | null>(null);
   const [showDesigner, setShowDesigner] = useState(false);
-  const [uploadedAssets, setUploadedAssets] = useState<any[]>([]);
+  const [uploadedAssets, setUploadedAssets] = useState<UploadedAsset[]>([]);
   const [showAssetLibrary, setShowAssetLibrary] = useState(false);
-  const [selectedBlock, setSelectedBlock] = useState<any>(null);
-  const [designerBlocks, setDesignerBlocks] = useState<any[]>([]);
+  const [selectedBlock, setSelectedBlock] = useState<DesignerBlock | null>(null);
+  const [designerBlocks, setDesignerBlocks] = useState<DesignerBlock[]>([]);
   const [testEmailAddress, setTestEmailAddress] = useState('');
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message?: string } | null>(null);
@@ -108,7 +184,7 @@ export default function EmailTemplatesPage() {
     }
   ];
 
-  const [smsTemplates, setSmsTemplates] = useState([
+  const [smsTemplates, setSmsTemplates] = useState<SmsTemplate[]>([
     { id: 'order-shipped', name: 'Order Shipped', message: 'Your order #{orderNumber} has shipped! Track it here: {trackingLink}', trigger: 'order_shipped', isCustom: false },
     { id: 'appointment-reminder', name: 'Appointment Reminder', message: 'Reminder: You have an appointment tomorrow at {time}. Reply CONFIRM to confirm.', trigger: 'appointment_reminder', isCustom: false },
     { id: 'payment-received', name: 'Payment Received', message: 'Payment of {amount} received. Thank you!', trigger: 'payment_received', isCustom: false }
@@ -156,7 +232,7 @@ Best regards,
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const data: { count?: number } = await response.json() as { count?: number };
           setEstimatedRecipients(data.count ?? 0);
         } else {
           setEstimatedRecipients(0);
@@ -167,7 +243,7 @@ Best regards,
       }
     }
 
-    updateEstimatedRecipients();
+    void updateEstimatedRecipients();
   }, [campaignFilters, orgId]);
 
   return (
@@ -336,52 +412,57 @@ Best regards,
                           style={{ flex: 1, padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
                         />
                         <button
-                          onClick={async () => {
+                          onClick={() => {
                             if (!testEmailAddress) {
+                              // eslint-disable-next-line no-alert
                               alert('Please enter a test email address');
                               return;
                             }
                             setIsSendingTest(true);
                             setTestEmailResult(null);
-                            try {
-                              // Replace variables in email content
-                              let processedSubject = emailContent.subject;
-                              let processedBody = emailContent.body;
-                              const variables: Record<string, string> = {
-                                contact_name: 'Test User',
-                                contact_email: testEmailAddress,
-                                company_name: 'Test Company',
-                                support_email: 'support@test.com',
-                                invoice_number: 'INV-001',
-                                amount: '$1,000.00',
-                              };
-                              for (const [key, value] of Object.entries(variables)) {
-                                processedSubject = processedSubject.replace(new RegExp(`{{${key}}}`, 'g'), value);
-                                processedBody = processedBody.replace(new RegExp(`{{${key}}}`, 'g'), value);
-                              }
 
-                              const result = await sendEmail({
-                                to: testEmailAddress,
-                                subject: processedSubject,
-                                html: processedBody.replace(/\n/g, '<br>'),
-                                text: processedBody,
-                                tracking: {
-                                  trackOpens: true,
-                                  trackClicks: true,
-                                },
-                              });
+                            void (async () => {
+                              try {
+                                // Replace variables in email content
+                                let processedSubject = emailContent.subject;
+                                let processedBody = emailContent.body;
+                                const variables: Record<string, string> = {
+                                  contact_name: 'Test User',
+                                  contact_email: testEmailAddress,
+                                  company_name: 'Test Company',
+                                  support_email: 'support@test.com',
+                                  invoice_number: 'INV-001',
+                                  amount: '$1,000.00',
+                                };
+                                for (const [key, value] of Object.entries(variables)) {
+                                  processedSubject = processedSubject.replace(new RegExp(`{{${key}}}`, 'g'), value);
+                                  processedBody = processedBody.replace(new RegExp(`{{${key}}}`, 'g'), value);
+                                }
 
-                              if (result.success) {
-                                setTestEmailResult({ success: true, message: `Test email sent! Message ID: ${result.messageId}` });
-                                setTestEmailAddress('');
-                              } else {
-                                setTestEmailResult({ success: false, message: (result.error !== '' && result.error != null) ? result.error : 'Failed to send email' });
+                                const result = await sendEmail({
+                                  to: testEmailAddress,
+                                  subject: processedSubject,
+                                  html: processedBody.replace(/\n/g, '<br>'),
+                                  text: processedBody,
+                                  tracking: {
+                                    trackOpens: true,
+                                    trackClicks: true,
+                                  },
+                                });
+
+                                if (result.success) {
+                                  setTestEmailResult({ success: true, message: `Test email sent! Message ID: ${result.messageId}` });
+                                  setTestEmailAddress('');
+                                } else {
+                                  setTestEmailResult({ success: false, message: (result.error !== '' && result.error != null) ? result.error : 'Failed to send email' });
+                                }
+                              } catch (error) {
+                                const message = error instanceof Error ? error.message : 'Failed to send email';
+                                setTestEmailResult({ success: false, message });
+                              } finally {
+                                setIsSendingTest(false);
                               }
-                            } catch (error: any) {
-                              setTestEmailResult({ success: false, message: (error.message !== '' && error.message != null) ? error.message : 'Failed to send email' });
-                            } finally {
-                              setIsSendingTest(false);
-                            }
+                            })();
                           }}
                           disabled={isSendingTest || !testEmailAddress}
                           style={{
@@ -531,7 +612,7 @@ Best regards,
                         <input
                           type="text"
                           value={editingCustomTemplate?.name ?? ''}
-                          onChange={(e) => setEditingCustomTemplate({ ...editingCustomTemplate, name: e.target.value })}
+                          onChange={(e) => editingCustomTemplate && setEditingCustomTemplate({ ...editingCustomTemplate, name: e.target.value })}
                           style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', backgroundColor: 'transparent', border: 'none', outline: 'none', width: '100%' }}
                           placeholder="Template Name"
                         />
@@ -545,6 +626,9 @@ Best regards,
                         </button>
                         <button
                           onClick={() => {
+                            if (!editingCustomTemplate) {
+                              return;
+                            }
                             // Generate HTML from blocks
                             let generatedHtml = `
 <!DOCTYPE html>
@@ -620,16 +704,19 @@ Best regards,
 </html>`;
                             
                             // Save template with generated HTML
-                            const savedTemplate = {
-                              ...editingCustomTemplate,
+                            const savedTemplate: CustomTemplate = {
+                              id: editingCustomTemplate.id,
+                              name: editingCustomTemplate.name,
+                              type: editingCustomTemplate.type,
                               html: generatedHtml,
-                              blocks: designerBlocks
+                              blocks: designerBlocks,
+                              preview: editingCustomTemplate.preview,
                             };
-                            
-                            const updated = customTemplates.find(t => t.id === editingCustomTemplate.id)
+
+                            const updated: CustomTemplate[] = customTemplates.find(t => t.id === editingCustomTemplate.id)
                               ? customTemplates.map(t => t.id === editingCustomTemplate.id ? savedTemplate : t)
                               : [...customTemplates, savedTemplate];
-                            
+
                             setCustomTemplates(updated);
                             setShowDesigner(false);
                             setSelectedBlock(null);
@@ -684,7 +771,7 @@ Best regards,
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'hero',
                                   content: { imageUrl: '', linkUrl: '', height: '400px' }
@@ -701,7 +788,7 @@ Best regards,
                             
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'text',
                                   content: { text: 'Enter your text here...', align: 'left', fontSize: '16px', color: '#000000' }
@@ -718,7 +805,7 @@ Best regards,
                             
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'button',
                                   content: { text: 'Click Here', url: '', bgColor: primaryColor, textColor: '#ffffff', width: 'auto' }
@@ -735,7 +822,7 @@ Best regards,
                             
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'image',
                                   content: { imageUrl: '', alt: '', width: '100%', linkUrl: '' }
@@ -752,7 +839,7 @@ Best regards,
                             
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'productGrid',
                                   content: { columns: 3, productIds: [], showPrice: true, showButton: true }
@@ -769,7 +856,7 @@ Best regards,
                             
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'divider',
                                   content: { color: '#cccccc', thickness: '1px', style: 'solid' }
@@ -786,7 +873,7 @@ Best regards,
                             
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'spacer',
                                   content: { height: '40px' }
@@ -803,7 +890,7 @@ Best regards,
                             
                             <button
                               onClick={() => {
-                                const newBlock = {
+                                const newBlock: DesignerBlock = {
                                   id: `block_${Date.now()}`,
                                   type: 'social',
                                   content: { links: [{ platform: 'facebook', url: '' }, { platform: 'twitter', url: '' }, { platform: 'instagram', url: '' }], iconSize: '32px' }
@@ -822,7 +909,7 @@ Best regards,
                               onClick={() => {
                                 const html = prompt('Paste your custom HTML here:');
                                 if (html) {
-                                  const newBlock = {
+                                  const newBlock: DesignerBlock = {
                                     id: `block_${Date.now()}`,
                                     type: 'html',
                                     content: { html }
@@ -890,7 +977,7 @@ Best regards,
                                 )}
                                 
                                 {block.type === 'text' && (
-                                  <div style={{ padding: '20px', fontSize: (block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px', color: (block.content.color !== '' && block.content.color != null) ? block.content.color : '#000000', textAlign: (block.content.align !== '' && block.content.align != null) ? block.content.align : 'left' }}>
+                                  <div style={{ padding: '20px', fontSize: (block.content.fontSize !== '' && block.content.fontSize != null) ? block.content.fontSize : '16px', color: (block.content.color !== '' && block.content.color != null) ? block.content.color : '#000000', textAlign: ((block.content.align !== '' && block.content.align != null) ? block.content.align : 'left') as React.CSSProperties['textAlign'] }}>
                                     {(block.content.text !== '' && block.content.text != null) ? block.content.text : 'Text block'}
                                   </div>
                                 )}
@@ -918,7 +1005,7 @@ Best regards,
                                 
                                 {block.type === 'productGrid' && (
                                   <div style={{ padding: '20px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${(block.content.columns !== '' && block.content.columns != null) ? block.content.columns : 3}, 1fr)`, gap: '15px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${block.content.columns ?? 3}, 1fr)`, gap: '15px' }}>
                                       {[1, 2, 3].map(i => (
                                         <div key={i} style={{ border: '1px dashed #d1d5db', padding: '15px', borderRadius: '8px', textAlign: 'center', color: '#9ca3af', fontSize: '0.875rem' }}>
                                           <div style={{ backgroundColor: '#f3f4f6', height: '120px', marginBottom: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🛍️</div>
@@ -946,7 +1033,7 @@ Best regards,
                                 {block.type === 'social' && (
                                   <div style={{ padding: '20px', textAlign: 'center' }}>
                                     <div style={{ display: 'inline-flex', gap: '15px' }}>
-                                      {(block.content.links ?? []).map((link: any, i: number) => (
+                                      {(block.content.links ?? []).map((link: SocialLink, i: number) => (
                                         <div key={i} style={{ width: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', height: (block.content.iconSize !== '' && block.content.iconSize != null) ? block.content.iconSize : '32px', backgroundColor: '#3b5998', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>
                                           {link.platform[0].toUpperCase()}
                                         </div>
@@ -1478,7 +1565,7 @@ Best regards,
                                       }}
                                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                                     />
-                                    <span style={{ fontSize: '0.875rem', color: '#ccc' }}>Show "Shop Now" Buttons</span>
+                                    <span style={{ fontSize: '0.875rem', color: '#ccc' }}>Show &quot;Shop Now&quot; Buttons</span>
                                   </label>
                                 </div>
                               </div>
@@ -1538,10 +1625,10 @@ Best regards,
                                         const html = event.target?.result as string;
                                         const newBlock = {
                                           id: `block_${Date.now()}`,
-                                          type: 'html',
+                                          type: 'html' as const,
                                           content: { html }
                                         };
-                                        setDesignerBlocks([...designerBlocks, newBlock]);
+                                        setDesignerBlocks([...designerBlocks, newBlock as DesignerBlock]);
                                       };
                                       reader.readAsText(file);
                                     }
@@ -1654,7 +1741,7 @@ Best regards,
                       
                       {smsTemplates.filter(t => t.isCustom).length === 0 && (
                         <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#666', fontSize: '0.75rem', border: '1px dashed #333', borderRadius: '0.5rem' }}>
-                          No custom triggers yet.<br/>Click "+ New" to create one
+                          No custom triggers yet.<br/>Click &quot;+ New&quot; to create one
                         </div>
                       )}
                     </div>
@@ -1735,7 +1822,7 @@ Best regards,
                           <strong style={{ display: 'block', marginBottom: '0.5rem' }}>📱 SMS Best Practices:</strong>
                           • Keep messages under 160 characters to avoid extra charges<br/>
                           • Always include your business name<br/>
-                          • Add opt-out option: "Reply STOP to unsubscribe"<br/>
+                          • Add opt-out option: &quot;Reply STOP to unsubscribe&quot;<br/>
                           • Personalize with customer name when possible
                         </div>
                       </div>

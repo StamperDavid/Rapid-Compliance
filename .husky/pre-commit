@@ -1,1 +1,14 @@
-npm run lint
+# Atomic Quality Control: Only check staged files for ESLint
+# TypeScript check runs on full project (required for type resolution)
+
+echo "🔍 Running Atomic Quality Control..."
+
+# Step 1: Lint only staged .ts/.tsx files (zero-tolerance)
+echo "📝 ESLint: Checking staged files..."
+npx lint-staged
+
+# Step 2: TypeScript check (full project, but fast since it's incremental)
+echo "🔷 TypeScript: Checking for build blockers..."
+npx tsc --noEmit
+
+echo "✅ Quality check passed!"

@@ -17,14 +17,14 @@ export { OutreachManager } from './outreach/manager';
 export { ContentManager } from './content/manager';
 
 // Intelligence Specialists
-export { CompetitorAnalyst } from './intelligence/competitor/specialist';
+export { CompetitorResearcher } from './intelligence/competitor/specialist';
 export { SentimentAnalyst } from './intelligence/sentiment/specialist';
 export { TechnographicScout } from './intelligence/technographic/specialist';
 
 // Marketing Specialists
 export { TikTokExpert } from './marketing/tiktok/specialist';
 export { XExpert } from './marketing/x/specialist';
-export { FacebookExpert } from './marketing/facebook/specialist';
+export { FacebookAdsExpert } from './marketing/facebook/specialist';
 export { LinkedInExpert } from './marketing/linkedin/specialist';
 export { SEOExpert } from './marketing/seo/specialist';
 

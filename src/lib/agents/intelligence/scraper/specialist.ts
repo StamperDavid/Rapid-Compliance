@@ -205,6 +205,7 @@ export class ScraperSpecialist extends BaseSpecialist {
   }
 
   async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
     this.log('INFO', 'Scraper Specialist initialized');
   }
@@ -291,11 +292,14 @@ export class ScraperSpecialist extends BaseSpecialist {
     }
 
     // Step 2: Extract data points from main content
-    let dataPoints = {
-      potentialEmail: undefined as string | undefined,
-      potentialPhone: undefined as string | undefined,
-      socialLinks: [] as string[],
-      keywords: [] as string[],
+    let dataPoints: {
+      potentialEmail?: string;
+      potentialPhone?: string;
+      socialLinks: string[];
+      keywords: string[];
+    } = {
+      socialLinks: [],
+      keywords: [],
     };
 
     if (mainContent) {
@@ -307,7 +311,7 @@ export class ScraperSpecialist extends BaseSpecialist {
     if (request.includeAboutPage !== false) {
       try {
         aboutContent = await scrapeAboutPage(baseUrl);
-      } catch (error) {
+      } catch (_error) {
         errors.push('About page not found or inaccessible');
       }
     }
@@ -317,7 +321,7 @@ export class ScraperSpecialist extends BaseSpecialist {
     if (request.includeCareers !== false) {
       try {
         careersInfo = await scrapeCareersPage(baseUrl);
-      } catch (error) {
+      } catch (_error) {
         errors.push('Careers page not found or inaccessible');
       }
     }
@@ -365,7 +369,7 @@ export class ScraperSpecialist extends BaseSpecialist {
 
     // Build content summary
     const contentSummary: ContentSummary = {
-      wordCount: mainContent?.cleanedText?.split(/\s+/).length || 0,
+      wordCount: mainContent?.cleanedText?.split(/\s+/).length ?? 0,
       topKeywords: dataPoints.keywords.slice(0, 10),
       mainTopics: this.inferTopics(dataPoints.keywords),
     };
@@ -394,8 +398,8 @@ export class ScraperSpecialist extends BaseSpecialist {
     mainContent: Awaited<ReturnType<typeof scrapeWebsite>> | undefined,
     aboutContent: Awaited<ReturnType<typeof scrapeWebsite>> | null
   ): KeyFindings {
-    const title = mainContent?.title || '';
-    const description = mainContent?.description || aboutContent?.cleanedText?.slice(0, 200) || null;
+    const title = mainContent?.title ?? '';
+    const description = mainContent?.description ?? aboutContent?.cleanedText?.slice(0, 200) ?? null;
 
     // Try to extract company name from title
     let companyName = null;
@@ -408,7 +412,7 @@ export class ScraperSpecialist extends BaseSpecialist {
     }
 
     // Detect industry from keywords and content
-    const industry = this.detectIndustry(mainContent?.cleanedText || '', mainContent?.metadata?.keywords || []);
+    const industry = this.detectIndustry(mainContent?.cleanedText ?? '', mainContent?.metadata?.keywords ?? []);
 
     return {
       companyName,
@@ -545,8 +549,8 @@ export class ScraperSpecialist extends BaseSpecialist {
     mainContent: Awaited<ReturnType<typeof scrapeWebsite>> | undefined,
     careersInfo: { isHiring: boolean; jobCount: number }
   ): BusinessSignals {
-    const html = mainContent?.rawHtml?.toLowerCase() || '';
-    const text = mainContent?.cleanedText?.toLowerCase() || '';
+    const html = mainContent?.rawHtml?.toLowerCase() ?? '';
+    const text = mainContent?.cleanedText?.toLowerCase() ?? '';
 
     return {
       isHiring: careersInfo.isHiring,
@@ -571,34 +575,54 @@ export class ScraperSpecialist extends BaseSpecialist {
 
     // Main content scraped
     maxScore += 20;
-    if (mainContent?.cleanedText && mainContent.cleanedText.length > 100) score += 20;
+    if (mainContent?.cleanedText && mainContent.cleanedText.length > 100) {
+      score += 20;
+    }
 
     // About page found
     maxScore += 15;
-    if (aboutContent) score += 15;
+    if (aboutContent) {
+      score += 15;
+    }
 
     // Company name found
     maxScore += 15;
-    if (keyFindings.companyName) score += 15;
+    if (keyFindings.companyName) {
+      score += 15;
+    }
 
     // Description found
     maxScore += 10;
-    if (keyFindings.description) score += 10;
+    if (keyFindings.description) {
+      score += 10;
+    }
 
     // Industry detected
     maxScore += 10;
-    if (keyFindings.industry) score += 10;
+    if (keyFindings.industry) {
+      score += 10;
+    }
 
     // Contact info found
     maxScore += 15;
-    if (dataPoints.potentialEmail) score += 10;
-    if (dataPoints.socialLinks.length > 0) score += 5;
+    if (dataPoints.potentialEmail) {
+      score += 10;
+    }
+    if (dataPoints.socialLinks.length > 0) {
+      score += 5;
+    }
 
     // Metadata present
     maxScore += 15;
-    if (mainContent?.title) score += 5;
-    if (mainContent?.metadata?.keywords?.length) score += 5;
-    if (mainContent?.description) score += 5;
+    if (mainContent?.title) {
+      score += 5;
+    }
+    if (mainContent?.metadata?.keywords?.length) {
+      score += 5;
+    }
+    if (mainContent?.description) {
+      score += 5;
+    }
 
     return Math.round((score / maxScore) * 100) / 100;
   }
