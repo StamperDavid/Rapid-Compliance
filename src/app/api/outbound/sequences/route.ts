@@ -4,14 +4,42 @@
  * POST: Create new sequence
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { OutboundSequence } from '@/types/outbound-sequence';
+import type { OutboundSequence, SequenceStep, SendTime, StepCondition, SequenceStepVariant } from '@/types/outbound-sequence';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+type StepType = 'email' | 'linkedin_message' | 'sms' | 'call_task' | 'manual_task';
+
+interface SequenceStepInput {
+  delayDays?: number;
+  delayHours?: number;
+  sendTime?: SendTime;
+  type?: string;
+  subject?: string;
+  body?: string;
+  conditions?: StepCondition[];
+  variants?: SequenceStepVariant[];
+}
+
+function isValidStepType(value: string): value is StepType {
+  return ['email', 'linkedin_message', 'sms', 'call_task', 'manual_task'].includes(value);
+}
+
+interface SequenceCreateRequestBody {
+  orgId?: string;
+  name?: string;
+  description?: string;
+  steps?: SequenceStepInput[];
+  autoEnroll?: boolean;
+}
+
+function isSequenceCreateRequestBody(value: unknown): value is SequenceCreateRequestBody {
+  return typeof value === 'object' && value !== null;
+}
 
 /**
  * GET /api/outbound/sequences?orgId=xxx&page=1&limit=50
@@ -63,7 +91,7 @@ export async function GET(request: NextRequest) {
         pageSize: result.data.length,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error listing sequences', error, { route: '/api/outbound/sequences' });
     return errors.database('Failed to list sequences', error instanceof Error ? error : undefined);
   }
@@ -80,7 +108,11 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (!isSequenceCreateRequestBody(body)) {
+      return errors.badRequest('Invalid request body');
+    }
+
     const { orgId, name, description, steps, autoEnroll = false } = body;
 
     if (!orgId) {
@@ -104,24 +136,20 @@ export async function POST(request: NextRequest) {
     const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
-    const sequence: OutboundSequence = {
-      id: sequenceId,
-      organizationId: orgId,
-      name,
-      description,
-      status: 'draft',
-      steps: steps.map((step: any, index: number) => ({
+    const mappedSteps: SequenceStep[] = steps.map((step: SequenceStepInput, index: number) => {
+      const stepType: StepType = step.type && isValidStepType(step.type) ? step.type : 'email';
+      return {
         id: `step_${sequenceId}_${index}`,
         sequenceId,
         order: index + 1,
         delayDays: step.delayDays ?? 0,
         delayHours: step.delayHours,
         sendTime: step.sendTime,
-        type:(step.type !== '' && step.type != null) ? step.type : 'email',
+        type: stepType,
         subject: step.subject,
-        body: step.body,
-        conditions:step.conditions ?? [],
-        variants:step.variants ?? [],
+        body: step.body ?? '',
+        conditions: step.conditions ?? [],
+        variants: step.variants ?? [],
         sent: 0,
         delivered: 0,
         opened: 0,
@@ -129,7 +157,16 @@ export async function POST(request: NextRequest) {
         replied: 0,
         createdAt: now,
         updatedAt: now,
-      })),
+      };
+    });
+
+    const sequence: OutboundSequence = {
+      id: sequenceId,
+      organizationId: orgId,
+      name,
+      description,
+      status: 'draft',
+      steps: mappedSteps,
       autoEnroll,
       stopOnResponse: true,
       stopOnConversion: true,
@@ -173,7 +210,7 @@ export async function POST(request: NextRequest) {
       message: 'Sequence created successfully',
       sequence,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error creating sequence', error, { route: '/api/outbound/sequences' });
     return errors.database('Failed to create sequence', error instanceof Error ? error : undefined);
   }

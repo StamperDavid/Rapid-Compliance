@@ -16,12 +16,15 @@
  * @module api/playbook/generate
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { generatePlaybook } from '@/lib/playbook/playbook-engine';
+import type { GeneratePlaybookRequest, GeneratePlaybookResponse } from '@/lib/playbook/types';
 import { validateGeneratePlaybookRequest } from '@/lib/playbook/validation';
 import { logger } from '@/lib/logger/logger';
 import { ZodError } from 'zod';
+
+// Use the actual response type for caching
+type PlaybookGenerationResult = GeneratePlaybookResponse;
 
 // ============================================================================
 // RATE LIMITING
@@ -80,7 +83,7 @@ setInterval(() => {
 // ============================================================================
 
 interface CacheEntry {
-  data: any;
+  data: PlaybookGenerationResult;
   expiresAt: number;
 }
 
@@ -90,22 +93,22 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 /**
  * Get cached response
  */
-function getCachedResponse(key: string): any | null {
+function getCachedResponse(key: string): PlaybookGenerationResult | null {
   const entry = responseCache.get(key);
-  if (!entry) {return null;}
-  
+  if (!entry) { return null; }
+
   if (Date.now() >= entry.expiresAt) {
     responseCache.delete(key);
     return null;
   }
-  
+
   return entry.data;
 }
 
 /**
  * Set cached response
  */
-function setCachedResponse(key: string, data: any): void {
+function setCachedResponse(key: string, data: PlaybookGenerationResult): void {
   responseCache.set(key, {
     data,
     expiresAt: Date.now() + CACHE_TTL,
@@ -115,7 +118,7 @@ function setCachedResponse(key: string, data: any): void {
 /**
  * Generate cache key for playbook generation request
  */
-function getCacheKey(request: any): string {
+function getCacheKey(request: GeneratePlaybookRequest): string {
   const parts = [
     request.organizationId,
     request.category,
@@ -123,6 +126,33 @@ function getCacheKey(request: any): string {
     (request.sourceConversationIds ?? []).slice(0, 5).join(','),
   ];
   return `playbook_${parts.join('_')}`;
+}
+
+// ============================================================================
+// VALIDATION HELPER
+// ============================================================================
+
+function parsePlaybookRequestOrError(body: unknown): GeneratePlaybookRequest | NextResponse {
+  try {
+    return validateGeneratePlaybookRequest(body) as GeneratePlaybookRequest;
+  } catch (error) {
+    if (error instanceof ZodError) {
+      logger.warn('Invalid playbook generation request', { errors: error.errors });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid request',
+          details: error.errors,
+        },
+        { status: 400 }
+      );
+    }
+    throw error;
+  }
+}
+
+function isNextResponse(value: GeneratePlaybookRequest | NextResponse): value is NextResponse {
+  return value instanceof NextResponse;
 }
 
 // ============================================================================
@@ -172,30 +202,18 @@ function getCacheKey(request: any): string {
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // 1. Parse request body
-    const body = await request.json();
-    
+    const body: unknown = await request.json();
+
     // 2. Validate request
-    let validatedRequest;
-    try {
-      validatedRequest = validateGeneratePlaybookRequest(body);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        logger.warn('Invalid playbook generation request', { errors: error.errors });
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Invalid request',
-            details: error.errors,
-          },
-          { status: 400 }
-        );
-      }
-      throw error;
+    const parseResult = parsePlaybookRequestOrError(body);
+    if (isNextResponse(parseResult)) {
+      return parseResult;
     }
-    
+    const validatedRequest: GeneratePlaybookRequest = parseResult;
+
     // 3. Check rate limit
     const rateLimit = checkRateLimit(validatedRequest.organizationId);
     if (!rateLimit.allowed) {
@@ -204,7 +222,7 @@ export async function POST(request: NextRequest) {
         organizationId: validatedRequest.organizationId,
         retryAfter,
       });
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -222,7 +240,7 @@ export async function POST(request: NextRequest) {
         }
       );
     }
-    
+
     // 4. Check cache (unless forceRefresh specified)
     const cacheKey = getCacheKey(validatedRequest);
     if (!validatedRequest.autoActivate) { // Don't cache if auto-activating
@@ -232,7 +250,7 @@ export async function POST(request: NextRequest) {
           organizationId: validatedRequest.organizationId,
           cacheKey,
         });
-        
+
         return NextResponse.json(cachedResponse, {
           headers: {
             'X-Cache': 'HIT',
@@ -243,23 +261,23 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    
+
     // 5. Generate playbook
     logger.info('Generating playbook', {
       organizationId: validatedRequest.organizationId,
       name: validatedRequest.name,
       category: validatedRequest.category,
     });
-    
+
     const result = await generatePlaybook(validatedRequest);
-    
+
     // 6. Cache successful response
     if (result.success && !validatedRequest.autoActivate) {
       setCachedResponse(cacheKey, result);
     }
-    
+
     const processingTime = Date.now() - startTime;
-    
+
     // 7. Log success
     logger.info('Playbook generation completed', {
       organizationId: validatedRequest.organizationId,
@@ -304,10 +322,10 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/playbook/generate
- * 
+ *
  * Returns API documentation
  */
-export async function GET() {
+export function GET() {
   return NextResponse.json({
     endpoint: '/api/playbook/generate',
     method: 'POST',

@@ -4,25 +4,38 @@
  * Enroll prospects in sequences
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+interface SequenceEnrollRequestBody {
+  orgId?: string;
+  sequenceId?: string;
+  prospectIds?: string[];
+}
+
+function isSequenceEnrollRequestBody(value: unknown): value is SequenceEnrollRequestBody {
+  return typeof value === 'object' && value !== null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/sequences/enroll');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) { return rateLimitResponse; }
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (!isSequenceEnrollRequestBody(body)) {
+      return errors.badRequest('Invalid request body');
+    }
+
     const { orgId, sequenceId, prospectIds } = body;
 
     if (!orgId) {
@@ -70,7 +83,7 @@ export async function POST(request: NextRequest) {
         total: prospectIds.length,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error enrolling prospects in sequence', error, { route: '/api/outbound/sequences/enroll' });
     return errors.database('Failed to enroll prospects', error instanceof Error ? error : undefined);
   }

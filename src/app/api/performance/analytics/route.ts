@@ -15,8 +15,7 @@
  * @module api/performance/analytics
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import {
   generatePerformanceAnalytics,
@@ -134,10 +133,10 @@ function setCache(key: string, data: TeamPerformanceAnalytics): void {
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // 1. Parse and validate request
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     let validatedRequest: PerformanceAnalyticsRequest;
     try {
@@ -294,7 +293,7 @@ export async function POST(request: NextRequest) {
 // OPTIONS HANDLER (CORS)
 // ============================================================================
 
-export async function OPTIONS() {
+export function OPTIONS() {
   return NextResponse.json(
     {},
     {

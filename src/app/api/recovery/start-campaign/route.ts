@@ -3,11 +3,27 @@
  *
  * Triggers multi-channel recovery siege when a lead abandons.
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
+interface RecoveryCampaignRequestBody {
+  merchantId?: string;
+}
+
+function isRecoveryCampaignRequestBody(value: unknown): value is RecoveryCampaignRequestBody {
+  return typeof value === 'object' && value !== null;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { merchantId } = await request.json();
+    const body: unknown = await request.json();
+    if (!isRecoveryCampaignRequestBody(body)) {
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    const { merchantId } = body;
 
     if (!merchantId) {
       return NextResponse.json(

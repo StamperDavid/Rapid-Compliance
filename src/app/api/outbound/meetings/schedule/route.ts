@@ -4,13 +4,40 @@
  * Schedule meetings with prospects
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import type { MeetingRequest } from '@/lib/outbound/meeting-scheduler';
-import { scheduleMeeting } from '@/lib/outbound/meeting-scheduler';
+import { scheduleMeeting, type MeetingRequest } from '@/lib/outbound/meeting-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+
+type MeetingType = 'demo' | 'discovery' | 'intro' | 'follow-up' | 'custom';
+type MeetingUrgency = 'asap' | 'this_week' | 'next_week' | 'flexible';
+
+interface MeetingScheduleRequestBody {
+  orgId?: string;
+  prospectEmail?: string;
+  prospectName?: string;
+  companyName?: string;
+  duration?: number;
+  meetingType?: string;
+  topic?: string;
+  suggestedTimes?: string[];
+  timezone?: string;
+  urgency?: string;
+  context?: string;
+}
+
+function isValidMeetingType(value: string): value is MeetingType {
+  return ['demo', 'discovery', 'intro', 'follow-up', 'custom'].includes(value);
+}
+
+function isValidMeetingUrgency(value: string): value is MeetingUrgency {
+  return ['asap', 'this_week', 'next_week', 'flexible'].includes(value);
+}
+
+function isMeetingScheduleRequestBody(value: unknown): value is MeetingScheduleRequestBody {
+  return typeof value === 'object' && value !== null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +46,11 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (!isMeetingScheduleRequestBody(body)) {
+      return errors.badRequest('Invalid request body');
+    }
+
     const {
       orgId,
       prospectEmail,
@@ -53,16 +84,20 @@ export async function POST(request: NextRequest) {
     // const featureCheck = await requireFeature(request, orgId, 'multiChannelOutreach' as any);
     // if (featureCheck) return featureCheck;
 
+    // Validate meetingType and urgency
+    const validMeetingType: MeetingType = isValidMeetingType(meetingType) ? meetingType : 'discovery';
+    const validUrgency: MeetingUrgency | undefined = urgency && isValidMeetingUrgency(urgency) ? urgency : undefined;
+
     const meetingRequest: MeetingRequest = {
       prospectEmail,
       prospectName,
       companyName,
       duration,
-      meetingType,
+      meetingType: validMeetingType,
       topic,
-      suggestedTimes: suggestedTimes?.map((t: string) => new Date(t)),
+      suggestedTimes: suggestedTimes?.map((t) => new Date(t)),
       timezone,
-      urgency,
+      urgency: validUrgency,
       context,
     };
 
@@ -87,7 +122,7 @@ export async function POST(request: NextRequest) {
         status: meeting.status,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Meeting scheduler error', error, { route: '/api/outbound/meetings/schedule' });
     return errors.externalService('Calendar service', error instanceof Error ? error : undefined);
   }

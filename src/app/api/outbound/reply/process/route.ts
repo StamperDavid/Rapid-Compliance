@@ -4,34 +4,46 @@
  * Process incoming email replies and generate AI responses
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import type {
-  EmailReply,
-  ProspectContext 
-} from '@/lib/outbound/reply-handler';
-import { 
-  classifyReply, 
-  generateReply, 
-  shouldAutoSend 
+import {
+  classifyReply,
+  generateReply,
+  shouldAutoSend,
+  type EmailReply,
+  type ProspectContext,
 } from '@/lib/outbound/reply-handler';
 import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+interface ReplyProcessRequestBody {
+  orgId?: string;
+  emailReply?: EmailReply;
+  prospectContext?: ProspectContext;
+  autoSend?: boolean;
+}
+
+function isReplyProcessRequestBody(value: unknown): value is ReplyProcessRequestBody {
+  return typeof value === 'object' && value !== null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/outbound/reply/process');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) { return rateLimitResponse; }
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (!isReplyProcessRequestBody(body)) {
+      return errors.badRequest('Invalid request body');
+    }
+
     const { orgId, emailReply, prospectContext, autoSend = false } = body;
 
     if (!orgId) {
@@ -42,22 +54,25 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Email reply data is required');
     }
 
+    // Extract reply details with explicit types after validation
+    const validatedReply: EmailReply = emailReply;
+
     // NEW PRICING MODEL: All features available to all active subscriptions
     // Feature check no longer needed - everyone gets reply handling!
     // const featureCheck = await requireFeature(request, orgId, 'replyHandler' as any);
     // if (featureCheck) return featureCheck;
 
     // Classify the reply
-    logger.info('Processing reply', { route: '/api/outbound/reply/process', from: emailReply.from });
-    const classification = await classifyReply(emailReply as EmailReply);
+    logger.info('Processing reply', { route: '/api/outbound/reply/process', from: validatedReply.from });
+    const classification = await classifyReply(validatedReply);
 
     // Generate suggested response
     let suggestedResponse = null;
-    if (classification.suggestedAction === 'send_response') {
+    if (classification.suggestedAction === 'send_response' && prospectContext) {
       suggestedResponse = await generateReply(
-        emailReply as EmailReply,
+        validatedReply,
         classification,
-        prospectContext as ProspectContext
+        prospectContext
       );
     }
 
@@ -68,29 +83,31 @@ export async function POST(request: NextRequest) {
     let sent = false;
     if (canAutoSend && suggestedResponse) {
       try {
+        const replyMessageId: string = String(validatedReply.inReplyTo ?? validatedReply.threadId ?? '');
+        const emailMetadata: Record<string, string> = {
+          organizationId: orgId,
+          type: 'reply_handler',
+          inReplyTo: replyMessageId,
+          references: replyMessageId,
+        };
         await sendEmail({
-          to: emailReply.from,
-          subject: `Re: ${(emailReply.subject !== '' && emailReply.subject != null) ? emailReply.subject : 'Your inquiry'}`,
+          to: validatedReply.from,
+          subject: `Re: ${(validatedReply.subject !== '' && validatedReply.subject != null) ? validatedReply.subject : 'Your inquiry'}`,
           html: suggestedResponse.body,
           text: suggestedResponse.body,
-          from: emailReply.to,
-          metadata: {
-            organizationId: orgId,
-            type: 'reply_handler',
-            inReplyTo: emailReply.messageId,
-            references: emailReply.messageId,
-          }
+          from: validatedReply.to,
+          metadata: emailMetadata,
         });
-        
-        logger.info('Auto-sent reply', { 
-          route: '/api/outbound/reply/process', 
-          to: emailReply.from,
+
+        logger.info('Auto-sent reply', {
+          route: '/api/outbound/reply/process',
+          to: validatedReply.from,
           subject: suggestedResponse.subject,
-          inReplyTo: emailReply.messageId
+          inReplyTo: replyMessageId,
         });
         sent = true;
-      } catch (error) {
-        logger.error('Failed to auto-send reply', error, { route: '/api/outbound/reply/process' });
+      } catch (sendError) {
+        logger.error('Failed to auto-send reply', sendError, { route: '/api/outbound/reply/process' });
         sent = false;
       }
     }
@@ -117,7 +134,7 @@ export async function POST(request: NextRequest) {
         processedAt: new Date().toISOString(),
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Reply processing error', error, { route: '/api/outbound/reply/process' });
     return errors.internal('Failed to process reply', error instanceof Error ? error : undefined);
   }
