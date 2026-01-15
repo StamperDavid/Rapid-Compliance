@@ -350,7 +350,9 @@ export class FeatureToggleService {
       .map(section => ({
         ...section,
         items: section.items.filter(item => {
-          if (!item.featureId) return true; // No feature ID = always show
+          if (!item.featureId) {
+            return true; // No feature ID = always show
+          }
           const featureSettings = settings.features[item.featureId];
           return featureSettings?.status !== 'hidden';
         }),
@@ -364,7 +366,9 @@ export class FeatureToggleService {
    */
   static async getHiddenCount(organizationId: string): Promise<number> {
     const settings = await this.getVisibilitySettings(organizationId);
-    if (!settings) return 0;
+    if (!settings) {
+      return 0;
+    }
 
     const hiddenFeatures = Object.values(settings.features).filter(f => f.status === 'hidden').length;
     const hiddenCategories = settings.hiddenCategories.length;
@@ -377,7 +381,9 @@ export class FeatureToggleService {
    */
   static async isFeatureHidden(organizationId: string, featureId: string): Promise<boolean> {
     const settings = await this.getVisibilitySettings(organizationId);
-    if (!settings) return false;
+    if (!settings) {
+      return false;
+    }
     return settings.features[featureId]?.status === 'hidden';
   }
 }

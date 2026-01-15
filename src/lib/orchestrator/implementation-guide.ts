@@ -17,8 +17,8 @@
 
 import { SystemHealthService, type SystemHealthReport } from './system-health-service';
 import { FeatureToggleService, type FeatureCategory } from './feature-toggle-service';
-import { SPECIALISTS, type Specialist } from './feature-manifest';
-import { getTemplateById, getAllTemplates, type SalesIndustryTemplate } from '@/lib/templates/industry-templates';
+import { SPECIALISTS, type Specialist as _Specialist } from './feature-manifest';
+import { getTemplateById, getAllTemplates as _getAllTemplates, type SalesIndustryTemplate } from '@/lib/templates/industry-templates';
 
 // ============================================================================
 // TYPES
@@ -301,7 +301,7 @@ Remember: You are a GUIDE, not a help desk. Lead conversations with expertise an
         success: true,
         message: `Done! I've hidden that from your dashboard. Your workspace is now cleaner. You can always restore it from Settings → Feature Visibility if you change your mind.`,
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         message: `I couldn't hide that feature right now. Let me try again in a moment.`,
@@ -324,7 +324,7 @@ Remember: You are a GUIDE, not a help desk. Lead conversations with expertise an
         success: true,
         message: `I've hidden the entire ${category.replace('_', ' ')} section. Your navigation is now focused on what you actually use.`,
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         message: `I couldn't hide that section right now. Please try again.`,
@@ -465,11 +465,17 @@ Remember: You are a GUIDE, not a help desk. Lead conversations with expertise an
     for (const rec of healthReport.recommendations.slice(0, 4)) {
       let actionType: GuideAction['type'] = 'configure';
 
-      if (rec.action.startsWith('connect_')) actionType = 'configure';
-      else if (rec.action.startsWith('import_')) actionType = 'import';
-      else if (rec.action.startsWith('setup_')) actionType = 'setup';
+      if (rec.action.startsWith('connect_')) {
+        actionType = 'configure';
+      } else if (rec.action.startsWith('import_')) {
+        actionType = 'import';
+      } else if (rec.action.startsWith('setup_')) {
+        actionType = 'setup';
+      }
 
-      if (rec.category === 'training') actionType = 'train';
+      if (rec.category === 'training') {
+        actionType = 'train';
+      }
 
       actions.push({
         id: rec.action,

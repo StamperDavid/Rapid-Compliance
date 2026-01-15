@@ -314,9 +314,9 @@ export class SystemHealthService {
       goldenMaster: {
         hasBaseModel: !!baseModel,
         hasGoldenMaster: goldenMasters.length > 0,
-        activeVersion: activeGM?.version as string | undefined,
+        activeVersion: activeGM?.version,
         lastTrainedAt: activeGM?.deployedAt?.toDate?.(),
-        trainingScore: activeGM?.avgScore as number | undefined,
+        trainingScore: activeGM?.avgScore,
       },
       data: {
         hasProducts: productCount > 0,
@@ -587,23 +587,31 @@ export class SystemHealthService {
     const configured = activeFeatures.filter(f => f.status === 'configured').length;
     const total = activeFeatures.length;
 
-    if (total === 0) return { score: 0, level: 'not-started' };
+    if (total === 0) {
+      return { score: 0, level: 'not-started' };
+    }
 
     const score = Math.round((configured / total) * 100);
 
     let level: 'not-started' | 'getting-started' | 'in-progress' | 'almost-ready' | 'platform-ready';
-    if (score === 0) level = 'not-started';
-    else if (score < 25) level = 'getting-started';
-    else if (score < 50) level = 'in-progress';
-    else if (score < 80) level = 'almost-ready';
-    else level = 'platform-ready';
+    if (score === 0) {
+      level = 'not-started';
+    } else if (score < 25) {
+      level = 'getting-started';
+    } else if (score < 50) {
+      level = 'in-progress';
+    } else if (score < 80) {
+      level = 'almost-ready';
+    } else {
+      level = 'platform-ready';
+    }
 
     return { score, level };
   }
 
   private static generateRecommendations(
     features: FeatureHealthCheck[],
-    score: number
+    _score: number
   ): SystemRecommendation[] {
     const recommendations: SystemRecommendation[] = [];
 

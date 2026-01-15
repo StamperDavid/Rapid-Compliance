@@ -13,7 +13,7 @@
  * @module jasper-proactive-intelligence
  */
 
-import { SPECIALISTS, getSpecialist, type Specialist } from './feature-manifest';
+import { getSpecialist, type Specialist } from './feature-manifest';
 
 // ============================================================================
 // TYPES
@@ -138,9 +138,9 @@ export function generateLaunchContext(
   userName: string = 'Commander'
 ): LaunchContextResponse {
   // Identify the highest priority action based on data
-  const trialCount = state.trialOrgs.length;
-  const urgentTrials = state.trialOrgs.filter((t) => (t.daysRemaining ?? 0) <= 7);
-  const atRiskCount = state.atRiskOrgs.length;
+  const _trialCount = state.trialOrgs.length;
+  const _urgentTrials = state.trialOrgs.filter((t) => (t.daysRemaining ?? 0) <= 7);
+  const _atRiskCount = state.atRiskOrgs.length;
 
   // Find the most strategic trial to convert
   const priorityTrial = findPriorityTrial(state.trialOrgs);
@@ -163,7 +163,7 @@ export function generateLaunchContext(
  * Build a strategic opener - NEVER generic
  */
 function buildStrategicOpener(state: PlatformState, userName: string): string {
-  const { totalOrgs, trialOrgs, metrics } = state;
+  const { totalOrgs, trialOrgs, metrics: _metrics } = state;
   const trialCount = trialOrgs.length;
   const urgentTrials = trialOrgs.filter((t) => (t.daysRemaining ?? 0) <= 7);
 
@@ -183,7 +183,9 @@ function buildStrategicOpener(state: PlatformState, userName: string): string {
  * Find the highest priority trial based on engagement and revenue potential
  */
 function findPriorityTrial(trials: OrgSummary[]): OrgSummary | null {
-  if (trials.length === 0) return null;
+  if (trials.length === 0) {
+    return null;
+  }
 
   // Sort by engagement score (desc) and days remaining (asc)
   const sorted = [...trials].sort((a, b) => {
@@ -261,7 +263,7 @@ function buildParallelActions(state: PlatformState): ProactiveRecommendation[] {
   const actions: ProactiveRecommendation[] = [];
   const youtube = getSpecialist('youtube')!;
   const instagram = getSpecialist('instagram')!;
-  const tiktok = getSpecialist('tiktok')!;
+  const _tiktok = getSpecialist('tiktok')!;
 
   // Content generation for platform marketing
   actions.push({
@@ -421,7 +423,7 @@ export function isListRequest(message: string): boolean {
  * Generate deflection response when user asks for a list
  * Redirects to strategic recommendation instead
  */
-export function generateListDeflection(state: PlatformState, userName: string): string {
+export function generateListDeflection(state: PlatformState, _userName: string): string {
   const trialCount = state.trialOrgs.length;
 
   return `I manage the full sales operation - leads, outreach, content, analytics, the whole stack. But rather than listing capabilities, let me tell you what matters right now: ${state.totalOrgs} organizations, ${trialCount} on trial. Converting those trials is the highest-impact move. What would you like to focus on?`;

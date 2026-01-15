@@ -18,7 +18,6 @@
  */
 
 import { FeatureToggleService, type FeatureCategory } from './feature-toggle-service';
-import { ImplementationGuide } from './implementation-guide';
 import { SPECIALISTS } from './feature-manifest';
 
 // ============================================================================
@@ -355,9 +354,9 @@ export class ActionHandler {
       if (match) {
         const target = match[1].trim();
         // Try to resolve to a feature ID
-        const resolved = FEATURE_ALIASES[target] || CATEGORY_ALIASES[target as keyof typeof CATEGORY_ALIASES];
+        const resolved = FEATURE_ALIASES[target] || CATEGORY_ALIASES[target];
         if (resolved) {
-          return resolved as string;
+          return resolved;
         }
       }
     }
@@ -383,9 +382,9 @@ export class ActionHandler {
       const match = lowerText.match(pattern);
       if (match) {
         const target = match[1].trim();
-        const resolved = FEATURE_ALIASES[target] || CATEGORY_ALIASES[target as keyof typeof CATEGORY_ALIASES];
+        const resolved = FEATURE_ALIASES[target] || CATEGORY_ALIASES[target];
         if (resolved) {
-          return resolved as string;
+          return resolved;
         }
       }
     }

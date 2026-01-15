@@ -10,9 +10,145 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { SPECIALISTS, getSpecialist, type SpecialistPlatform } from './feature-manifest';
-import { SystemHealthService, type SystemHealthReport } from './system-health-service';
+import { SystemHealthService } from './system-health-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+
+// ============================================================================
+// ORGANIZATION TYPE (for type-safe Firestore queries)
+// ============================================================================
+
+interface OrganizationRecord {
+  id: string;
+  status: 'active' | 'suspended' | 'pending';
+  plan: 'trial' | 'starter' | 'professional' | 'enterprise';
+  trialEndsAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  name?: string;
+  companyName?: string;
+}
+
+interface CouponRecord {
+  code: string;
+  discountType: string;
+  discountValue: number;
+  maxUses: number | null;
+  expiresAt: string | null;
+  applicablePlans: string[];
+  status: 'active' | 'inactive' | 'expired';
+  usageCount: number;
+  createdAt: string;
+}
+
+interface UserRecord {
+  id: string;
+  email: string;
+  role: string;
+  organizationId: string;
+  name?: string;
+  createdAt?: string;
+}
+
+interface ListOrganizationsArgs {
+  status?: string;
+  plan?: string;
+  limit?: string;
+}
+
+interface CreateCouponArgs {
+  code: string;
+  discountType: string;
+  discountValue: string;
+  maxUses?: string;
+  expiresAt?: string;
+  applicablePlans?: string;
+}
+
+interface UpdatePricingArgs {
+  tier: string;
+  monthlyPrice?: string;
+  yearlyPrice?: string;
+}
+
+interface ListUsersArgs {
+  organizationId?: string;
+  role?: string;
+  limit?: string;
+}
+
+// ============================================================================
+// TOOL ARGUMENT TYPES (type-safe JSON parsing)
+// ============================================================================
+
+interface QueryDocsArgs {
+  query: string;
+  section?: string;
+}
+
+interface GetPlatformStatsArgs {
+  metric?: 'all' | 'organizations' | 'agents' | 'health' | 'trials' | 'errors';
+  organizationId?: string;
+}
+
+interface DelegateToAgentArgs {
+  agentId: string;
+  action: string;
+  parameters?: string;
+}
+
+interface InspectAgentLogsArgs {
+  source: 'provisioner' | 'agents' | 'errors' | 'all';
+  limit?: number;
+  organizationId?: string;
+}
+
+interface GetSystemStateArgs {
+  organizationId?: string;
+}
+
+// ============================================================================
+// PLATFORM STATS TYPES (type-safe return values)
+// ============================================================================
+
+interface OrganizationStats {
+  total: number;
+  active: number;
+  trial: number;
+  suspended: number;
+}
+
+interface AgentStats {
+  specialistsAvailable: number;
+  specialists: Array<{
+    id: string;
+    name: string;
+    category: string;
+    requiresConnection: boolean;
+    capabilityCount: number;
+  }>;
+}
+
+interface HealthStats {
+  readinessScore?: number;
+  configuredFeatures?: number;
+  unconfiguredFeatures?: number;
+  recommendations?: string[];
+  note?: string;
+}
+
+interface PlatformStats {
+  timestamp: string;
+  organizations?: OrganizationStats;
+  agents?: AgentStats;
+  health?: HealthStats;
+  recentErrors?: unknown[];
+  error?: string;
+  fallback?: {
+    specialistsCount: number;
+    categories: string[];
+  };
+}
 
 // ============================================================================
 // TOOL TYPE DEFINITIONS (OpenAI/Anthropic Compatible)
@@ -96,7 +232,7 @@ export interface BlueprintSection {
 export interface AgentDelegation {
   agentId: SpecialistPlatform;
   action: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   status: 'queued' | 'executing' | 'completed' | 'failed';
   result?: string;
 }
@@ -106,7 +242,7 @@ export interface AgentLog {
   agentId: string;
   level: 'info' | 'warn' | 'error';
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -767,7 +903,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
  * Query the system blueprint for factual information.
  * Reads from system-blueprint.md and returns relevant sections.
  */
-export async function executeQueryDocs(
+export function executeQueryDocs(
   query: string,
   section?: string
 ): Promise<BlueprintSection[]> {
@@ -780,7 +916,7 @@ export async function executeQueryDocs(
       blueprintContent = readFileSync(blueprintPath, 'utf-8');
     } catch {
       // Fallback: return hardcoded essential info if file not accessible at runtime
-      return getHardcodedBlueprintSection(query, section);
+      return Promise.resolve(getHardcodedBlueprintSection(query, section));
     }
 
     const results: BlueprintSection[] = [];
@@ -827,25 +963,25 @@ export async function executeQueryDocs(
 
     // If no results, return a summary
     if (results.length === 0) {
-      return [
+      return Promise.resolve([
         {
           section: 'Query Result',
           content: `No specific documentation found for "${query}". The system blueprint covers: Platform Identity, Architecture, 11 Specialized Agents, Feature Categories, Provisioner System, Data Models, API Endpoints, Integrations, and Security.`,
         },
-      ];
+      ]);
     }
 
-    return results;
+    return Promise.resolve(results);
   } catch (error) {
     logger.error('[Jasper Tools] query_docs failed', error);
-    return getHardcodedBlueprintSection(query, section);
+    return Promise.resolve(getHardcodedBlueprintSection(query, section));
   }
 }
 
 /**
  * Fallback hardcoded blueprint sections for runtime access.
  */
-function getHardcodedBlueprintSection(query: string, section?: string): BlueprintSection[] {
+function getHardcodedBlueprintSection(query: string, _section?: string): BlueprintSection[] {
   const queryLower = query.toLowerCase();
 
   // Hardcoded essential information
@@ -949,22 +1085,22 @@ MULTI-TENANCY:
 export async function executeGetPlatformStats(
   metric: 'all' | 'organizations' | 'agents' | 'health' | 'trials' | 'errors',
   organizationId?: string
-): Promise<Record<string, any>> {
+): Promise<PlatformStats> {
   try {
-    const stats: Record<string, any> = {
+    const stats: PlatformStats = {
       timestamp: new Date().toISOString(),
     };
 
     if (metric === 'all' || metric === 'organizations') {
       // Get organization counts from Firestore
       const orgsSnapshot = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-      const orgs = orgsSnapshot || [];
+      const orgs = (orgsSnapshot || []) as OrganizationRecord[];
 
       stats.organizations = {
         total: orgs.length,
-        active: orgs.filter((o: any) => o.status === 'active').length,
-        trial: orgs.filter((o: any) => o.plan === 'trial').length,
-        suspended: orgs.filter((o: any) => o.status === 'suspended').length,
+        active: orgs.filter((o) => o.status === 'active').length,
+        trial: orgs.filter((o) => o.plan === 'trial').length,
+        suspended: orgs.filter((o) => o.status === 'suspended').length,
       };
     }
 
@@ -1019,7 +1155,7 @@ export async function executeGetPlatformStats(
 /**
  * Delegate a task to a specialized agent.
  */
-export async function executeDelegateToAgent(
+export function executeDelegateToAgent(
   agentId: SpecialistPlatform,
   action: string,
   parameters?: string
@@ -1027,13 +1163,13 @@ export async function executeDelegateToAgent(
   const specialist = getSpecialist(agentId);
 
   if (!specialist) {
-    return {
+    return Promise.resolve({
       agentId,
       action,
       parameters: {},
       status: 'failed',
       result: `Unknown agent: ${agentId}. Available agents: ${SPECIALISTS.map((s) => s.id).join(', ')}`,
-    };
+    });
   }
 
   // Check if action is valid for this specialist
@@ -1042,20 +1178,20 @@ export async function executeDelegateToAgent(
   );
 
   if (!capability) {
-    return {
+    return Promise.resolve({
       agentId,
       action,
       parameters: {},
       status: 'failed',
       result: `Invalid action "${action}" for ${specialist.name}. Available actions: ${specialist.capabilities.map((c) => c.action).join(', ')}`,
-    };
+    });
   }
 
   // Parse parameters
-  let parsedParams: Record<string, any> = {};
+  let parsedParams: Record<string, unknown> = {};
   if (parameters) {
     try {
-      parsedParams = JSON.parse(parameters);
+      parsedParams = JSON.parse(parameters) as Record<string, unknown>;
     } catch {
       parsedParams = { raw: parameters };
     }
@@ -1072,16 +1208,16 @@ export async function executeDelegateToAgent(
 
   logger.info('[Jasper Tools] Agent delegation queued', { delegation });
 
-  return delegation;
+  return Promise.resolve(delegation);
 }
 
 /**
  * Inspect agent and provisioner logs.
  */
-export async function executeInspectAgentLogs(
+export function executeInspectAgentLogs(
   source: 'provisioner' | 'agents' | 'errors' | 'all',
   limit: number = 10,
-  organizationId?: string
+  _organizationId?: string
 ): Promise<AgentLog[]> {
   const logs: AgentLog[] = [];
 
@@ -1125,7 +1261,7 @@ export async function executeInspectAgentLogs(
     });
   }
 
-  return logs.slice(0, limit);
+  return Promise.resolve(logs.slice(0, limit));
 }
 
 /**
@@ -1165,13 +1301,13 @@ export async function executeGetSystemState(organizationId?: string): Promise<Sy
   try {
     // Fetch real organization data
     const orgsSnapshot = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-    const orgs = orgsSnapshot || [];
+    const orgs = (orgsSnapshot || []) as OrganizationRecord[];
 
     state.platform = {
       totalOrganizations: orgs.length,
-      activeOrganizations: orgs.filter((o: any) => o.status === 'active').length,
-      trialOrganizations: orgs.filter((o: any) => o.plan === 'trial').length,
-      atRiskOrganizations: orgs.filter((o: any) => {
+      activeOrganizations: orgs.filter((o) => o.status === 'active').length,
+      trialOrganizations: orgs.filter((o) => o.plan === 'trial').length,
+      atRiskOrganizations: orgs.filter((o) => {
         // At-risk: trial ending soon or low engagement
         if (o.trialEndsAt) {
           const daysLeft = (new Date(o.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
@@ -1209,10 +1345,10 @@ export async function executeGetSystemState(organizationId?: string): Promise<Sy
  */
 export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
   const { name, arguments: argsString } = toolCall.function;
-  let args: Record<string, any> = {};
+  let args: Record<string, unknown> = {};
 
   try {
-    args = JSON.parse(argsString);
+    args = JSON.parse(argsString) as Record<string, unknown>;
   } catch {
     args = {};
   }
@@ -1225,19 +1361,22 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // KNOWLEDGE & STATE TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'query_docs': {
-        const results = await executeQueryDocs(args.query, args.section);
+        const typedArgs = args as QueryDocsArgs;
+        const results = await executeQueryDocs(typedArgs.query, typedArgs.section);
         content = JSON.stringify(results);
         break;
       }
 
       case 'get_platform_stats': {
-        const stats = await executeGetPlatformStats(args.metric || 'all', args.organizationId);
+        const typedArgs = args as GetPlatformStatsArgs;
+        const stats = await executeGetPlatformStats(typedArgs.metric ?? 'all', typedArgs.organizationId);
         content = JSON.stringify(stats);
         break;
       }
 
       case 'get_system_state': {
-        const state = await executeGetSystemState(args.organizationId);
+        const typedArgs = args as GetSystemStateArgs;
+        const state = await executeGetSystemState(typedArgs.organizationId);
         content = JSON.stringify(state);
         break;
       }
@@ -1246,20 +1385,21 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // ORGANIZATION MANAGEMENT TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'list_organizations': {
+        const typedArgs = args as unknown as ListOrganizationsArgs;
         const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-        let filtered = orgs || [];
-        if (args.status && args.status !== 'all') {
-          filtered = filtered.filter((o: any) => o.status === args.status || o.plan === args.status);
+        let filtered = (orgs ?? []) as OrganizationRecord[];
+        if (typedArgs.status && typedArgs.status !== 'all') {
+          filtered = filtered.filter((o) => o.status === typedArgs.status || o.plan === typedArgs.status);
         }
-        if (args.plan && args.plan !== 'all') {
-          filtered = filtered.filter((o: any) => o.plan === args.plan);
+        if (typedArgs.plan && typedArgs.plan !== 'all') {
+          filtered = filtered.filter((o) => o.plan === typedArgs.plan);
         }
-        const limit = parseInt(args.limit) || 50;
+        const limit = parseInt(typedArgs.limit ?? '50');
         content = JSON.stringify({
           total: filtered.length,
-          organizations: filtered.slice(0, limit).map((o: any) => ({
+          organizations: filtered.slice(0, limit).map((o) => ({
             id: o.id,
-            name: o.name || o.companyName,
+            name: o.name ?? o.companyName,
             plan: o.plan,
             status: o.status,
             createdAt: o.createdAt,
@@ -1269,15 +1409,19 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       }
 
       case 'get_organization': {
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.organizationId);
-        content = JSON.stringify(org || { error: 'Organization not found' });
+        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.organizationId as string);
+        content = JSON.stringify(org ?? { error: 'Organization not found' });
         break;
       }
 
       case 'update_organization': {
-        let updates = {};
-        try { updates = JSON.parse(args.updates); } catch { updates = { note: args.updates }; }
-        await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.organizationId, updates);
+        let updates: Record<string, unknown> = {};
+        try {
+          updates = JSON.parse(args.updates as string) as Record<string, unknown>;
+        } catch {
+          updates = { note: args.updates };
+        }
+        await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.organizationId as string, updates);
         content = JSON.stringify({ success: true, organizationId: args.organizationId, updates });
         break;
       }
@@ -1286,8 +1430,8 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         content = JSON.stringify({
           status: 'queued',
           message: `Provisioning organization "${args.name}" for ${args.ownerEmail}`,
-          plan: args.plan || 'trial',
-          industry: args.industry || 'general',
+          plan: args.plan ?? 'trial',
+          industry: args.industry ?? 'general',
           note: 'Use /api/admin/provision endpoint for full provisioning',
         });
         break;
@@ -1298,23 +1442,24 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // ═══════════════════════════════════════════════════════════════════════
       case 'list_coupons': {
         const coupons = await FirestoreService.getAll('platform-coupons');
-        let filtered = coupons || [];
+        let filtered = (coupons ?? []) as CouponRecord[];
         if (args.status && args.status !== 'all') {
-          filtered = filtered.filter((c: any) => c.status === args.status);
+          filtered = filtered.filter((c) => c.status === args.status);
         }
         content = JSON.stringify({ total: filtered.length, coupons: filtered });
         break;
       }
 
       case 'create_coupon': {
+        const typedArgs = args as unknown as CreateCouponArgs;
         const couponData = {
-          code: args.code.toUpperCase(),
-          discountType: args.discountType,
-          discountValue: parseFloat(args.discountValue),
-          maxUses: args.maxUses ? parseInt(args.maxUses) : null,
-          expiresAt: args.expiresAt || null,
-          applicablePlans: args.applicablePlans ? JSON.parse(args.applicablePlans) : ['all'],
-          status: 'active',
+          code: String(typedArgs.code).toUpperCase(),
+          discountType: typedArgs.discountType,
+          discountValue: parseFloat(typedArgs.discountValue),
+          maxUses: typedArgs.maxUses ? parseInt(typedArgs.maxUses) : null,
+          expiresAt: typedArgs.expiresAt ?? null,
+          applicablePlans: typedArgs.applicablePlans ? (JSON.parse(typedArgs.applicablePlans) as string[]) : ['all'],
+          status: 'active' as const,
           usageCount: 0,
           createdAt: new Date().toISOString(),
         };
@@ -1324,13 +1469,13 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       }
 
       case 'update_coupon_status': {
-        await FirestoreService.update('platform-coupons', args.couponId, { status: args.status });
+        await FirestoreService.update('platform-coupons', args.couponId as string, { status: args.status });
         content = JSON.stringify({ success: true, couponId: args.couponId, status: args.status });
         break;
       }
 
       case 'get_pricing_tiers': {
-        const pricing = await FirestoreService.get('platform-config', 'pricing') || {
+        const pricing = (await FirestoreService.get('platform-config', 'pricing')) ?? {
           tiers: {
             starter: { monthly: 49, yearly: 470, features: ['CRM', 'Lead Gen', '5 Agents'] },
             professional: { monthly: 99, yearly: 950, features: ['All Starter', '11 Agents', 'Analytics'] },
@@ -1342,12 +1487,17 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       }
 
       case 'update_pricing': {
-        const updates: Record<string, any> = {};
-        if (args.monthlyPrice) updates[`tiers.${args.tier}.monthly`] = parseFloat(args.monthlyPrice);
-        if (args.yearlyPrice) updates[`tiers.${args.tier}.yearly`] = parseFloat(args.yearlyPrice);
+        const typedArgs = args as unknown as UpdatePricingArgs;
+        const updates: Record<string, unknown> = {};
+        if (typedArgs.monthlyPrice) {
+          updates[`tiers.${typedArgs.tier}.monthly`] = parseFloat(typedArgs.monthlyPrice);
+        }
+        if (typedArgs.yearlyPrice) {
+          updates[`tiers.${typedArgs.tier}.yearly`] = parseFloat(typedArgs.yearlyPrice);
+        }
         content = JSON.stringify({
           status: 'queued',
-          tier: args.tier,
+          tier: typedArgs.tier,
           updates,
           note: 'Stripe price sync required via /api/admin/platform-pricing',
         });
@@ -1361,10 +1511,10 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         content = JSON.stringify({
           status: 'scanning',
           industry: args.industry,
-          location: args.location || 'all',
-          companySize: args.companySize || 'all',
-          keywords: args.keywords || null,
-          limit: args.limit || 25,
+          location: args.location ?? 'all',
+          companySize: args.companySize ?? 'all',
+          keywords: args.keywords ?? null,
+          limit: args.limit ?? 25,
           message: `Lead scan initiated for ${args.industry} industry. Results will be available shortly.`,
           estimatedResults: Math.floor(Math.random() * 50) + 10,
         });
@@ -1375,7 +1525,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         content = JSON.stringify({
           status: 'enriching',
           leadId: args.leadId,
-          enrichmentLevel: args.enrichmentLevel || 'standard',
+          enrichmentLevel: args.enrichmentLevel ?? 'standard',
           message: `Enrichment process started for lead ${args.leadId}`,
         });
         break;
@@ -1384,8 +1534,8 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       case 'score_leads': {
         content = JSON.stringify({
           status: 'scoring',
-          organizationId: args.organizationId || 'default',
-          leadIds: args.leadIds || 'all',
+          organizationId: args.organizationId ?? 'default',
+          leadIds: args.leadIds ?? 'all',
           message: 'Lead scoring model applied',
         });
         break;
@@ -1398,9 +1548,9 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         content = JSON.stringify({
           status: 'generated',
           contentType: args.contentType,
-          platform: args.platform || 'general',
+          platform: args.platform ?? 'general',
           topic: args.topic,
-          tone: args.tone || 'professional',
+          tone: args.tone ?? 'professional',
           message: `Content generation initiated for ${args.contentType} on topic: ${args.topic}`,
           note: 'Use /api/admin/growth/content/generate for full AI content generation',
         });
@@ -1411,7 +1561,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         content = JSON.stringify({
           status: 'drafted',
           template: args.template,
-          leadId: args.leadId || null,
+          leadId: args.leadId ?? null,
           message: `Outreach email drafted using ${args.template} template`,
           note: 'Use /api/email-writer/generate for full email generation',
         });
@@ -1422,17 +1572,18 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // USER & ACCESS MANAGEMENT TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'list_users': {
+        const typedArgs = args as unknown as ListUsersArgs;
         const users = await FirestoreService.getAll('users');
-        let filtered = users || [];
-        if (args.organizationId) {
-          filtered = filtered.filter((u: any) => u.organizationId === args.organizationId);
+        let filtered = (users ?? []) as UserRecord[];
+        if (typedArgs.organizationId) {
+          filtered = filtered.filter((u) => u.organizationId === typedArgs.organizationId);
         }
-        if (args.role && args.role !== 'all') {
-          filtered = filtered.filter((u: any) => u.role === args.role);
+        if (typedArgs.role && typedArgs.role !== 'all') {
+          filtered = filtered.filter((u) => u.role === typedArgs.role);
         }
         content = JSON.stringify({
           total: filtered.length,
-          users: filtered.map((u: any) => ({
+          users: filtered.map((u) => ({
             id: u.id,
             email: u.email,
             role: u.role,
@@ -1443,7 +1594,7 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       }
 
       case 'update_user_role': {
-        await FirestoreService.update('users', args.userId, { role: args.newRole });
+        await FirestoreService.update('users', args.userId as string, { role: args.newRole });
         content = JSON.stringify({ success: true, userId: args.userId, newRole: args.newRole });
         break;
       }
@@ -1452,20 +1603,22 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // AGENT DELEGATION TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_agent': {
+        const typedArgs = args as DelegateToAgentArgs;
         const delegation = await executeDelegateToAgent(
-          args.agentId,
-          args.action,
-          args.parameters
+          typedArgs.agentId as SpecialistPlatform,
+          typedArgs.action,
+          typedArgs.parameters
         );
         content = JSON.stringify(delegation);
         break;
       }
 
       case 'inspect_agent_logs': {
+        const typedArgs = args as InspectAgentLogsArgs;
         const logs = await executeInspectAgentLogs(
-          args.source || 'all',
-          parseInt(args.limit) || 10,
-          args.organizationId
+          typedArgs.source ?? 'all',
+          typedArgs.limit ?? 10,
+          typedArgs.organizationId
         );
         content = JSON.stringify(logs);
         break;
@@ -1475,18 +1628,19 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // ANALYTICS & REPORTING TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'get_analytics': {
-        const analytics: Record<string, any> = {
+        const analytics: Record<string, unknown> = {
           reportType: args.reportType,
-          dateRange: args.dateRange || 'month',
+          dateRange: args.dateRange ?? 'month',
           timestamp: new Date().toISOString(),
         };
 
         if (args.reportType === 'overview' || args.reportType === 'all') {
-          const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+          const orgsData = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+          const orgs = (orgsData ?? []) as OrganizationRecord[];
           analytics.overview = {
-            totalOrganizations: orgs?.length || 0,
-            activeTrials: orgs?.filter((o: any) => o.plan === 'trial').length || 0,
-            paidCustomers: orgs?.filter((o: any) => o.plan !== 'trial').length || 0,
+            totalOrganizations: orgs.length,
+            activeTrials: orgs.filter((o) => o.plan === 'trial').length,
+            paidCustomers: orgs.filter((o) => o.plan !== 'trial').length,
           };
         }
 
@@ -1498,8 +1652,8 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
         content = JSON.stringify({
           status: 'generating',
           reportType: args.reportType,
-          format: args.format || 'summary',
-          organizationId: args.organizationId || 'platform',
+          format: args.format ?? 'summary',
+          organizationId: args.organizationId ?? 'platform',
           message: `${args.reportType} report generation initiated`,
           estimatedCompletion: '30 seconds',
         });
@@ -1512,8 +1666,9 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           availableTools: JASPER_TOOLS.map(t => t.function.name),
         });
     }
-  } catch (error: any) {
-    content = JSON.stringify({ error: error.message || 'Tool execution failed' });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    content = JSON.stringify({ error: errorMessage || 'Tool execution failed' });
   }
 
   return {

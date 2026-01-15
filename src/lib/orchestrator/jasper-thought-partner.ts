@@ -17,13 +17,22 @@
 // TYPES
 // ============================================================================
 
+export interface UserProgress {
+  completedSteps: string[];
+  currentFocus: string;
+  preferences: Record<string, unknown>;
+  hiddenFeatures: string[];
+  industry: string;
+  lastInteraction: string;
+}
+
 export interface ConversationState {
   /** Previous setup steps completed */
   completedSteps: string[];
   /** Current focus area */
   currentFocus?: string;
   /** User preferences learned */
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   /** Features explicitly hidden by user */
   hiddenFeatures: string[];
   /** Industry/niche context */
@@ -295,7 +304,7 @@ function handleEmailQuery(
 function handleStatusQuery(
   state: SystemState,
   convState: ConversationState,
-  userName: string
+  _userName: string
 ): ThoughtPartnerResponse {
   const { totalOrgs, activeAgents, pendingTickets } = state;
 
@@ -318,7 +327,7 @@ function handleStatusQuery(
 function handleNextStepQuery(
   state: SystemState,
   convState: ConversationState,
-  userName: string
+  _userName: string
 ): ThoughtPartnerResponse {
   // Build recommendation based on state
   if (convState.completedSteps.length === 0) {
@@ -352,7 +361,7 @@ function handleNextStepQuery(
 function handleHideFeatureQuery(
   message: string,
   convState: ConversationState,
-  userName: string
+  _userName: string
 ): ThoughtPartnerResponse {
   const featureMatches = {
     social: /social|instagram|linkedin|twitter|facebook/i,
@@ -387,8 +396,8 @@ function handleHideFeatureQuery(
 function generateContextualResponse(
   message: string,
   state: SystemState,
-  convState: ConversationState,
-  userName: string
+  _convState: ConversationState,
+  _userName: string
 ): ThoughtPartnerResponse {
   // Acknowledge and respond naturally
   return {
@@ -403,7 +412,7 @@ function generateContextualResponse(
 /**
  * Initialize conversation state from stored memory
  */
-export function initializeConversationState(storedMemory?: any): ConversationState {
+export function initializeConversationState(storedMemory?: UserProgress): ConversationState {
   return {
     completedSteps: storedMemory?.completedSteps || [],
     currentFocus: storedMemory?.currentFocus,

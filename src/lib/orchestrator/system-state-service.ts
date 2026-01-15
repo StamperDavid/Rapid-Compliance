@@ -10,7 +10,7 @@
  * @module system-state-service
  */
 
-import { executeGetSystemState, executeGetPlatformStats, type SystemState } from './jasper-tools';
+import { executeGetSystemState, type SystemState } from './jasper-tools';
 import { SPECIALISTS } from './feature-manifest';
 import { logger } from '@/lib/logger/logger';
 
@@ -18,17 +18,33 @@ import { logger } from '@/lib/logger/logger';
 // STATE VALIDATION TYPES
 // ============================================================================
 
+/**
+ * Represents a claimed data value that needs validation.
+ * Used when Jasper makes factual claims about system state.
+ */
+export interface ClaimedData {
+  totalOrgs?: number;
+  agentCount?: number;
+  trialCount?: number;
+  activeOrgs?: number;
+  suspendedOrgs?: number;
+  atRiskOrgs?: number;
+}
+
+/**
+ * Represents a specific data correction when claimed data differs from actual.
+ */
+export interface StateCorrection {
+  field: string;
+  claimed: number | string | boolean;
+  actual: number | string | boolean;
+  message: string;
+}
+
 export interface StateValidation {
   isValid: boolean;
   corrections: StateCorrection[];
   verifiedState: SystemState;
-}
-
-export interface StateCorrection {
-  field: string;
-  claimed: any;
-  actual: any;
-  message: string;
 }
 
 export interface QueryClassification {
@@ -158,7 +174,7 @@ export function classifyQuery(query: string): QueryClassification {
  * Used to catch hallucinations BEFORE they reach the user.
  */
 export async function validateClaim(
-  claimedData: Record<string, any>,
+  claimedData: ClaimedData,
   organizationId?: string
 ): Promise<StateValidation> {
   const actualState = await executeGetSystemState(organizationId);
@@ -237,7 +253,7 @@ SPECIALIZED AGENTS (${state.agents.total} TOTAL):
 
 PROVISIONER STATUS:
 - Recent Errors: ${state.provisioner.recentErrors.length}
-- Last Success: ${state.provisioner.lastSuccessfulProvision || 'N/A'}
+- Last Success: ${state.provisioner.lastSuccessfulProvision ?? 'N/A'}
 
 ${organizationId ? `
 FEATURE CONFIGURATION (${organizationId}):
