@@ -1,10 +1,10 @@
 {
   "$schema": "SWARM_REGISTRY_V1",
-  "lastAudit": "2026-01-14",
+  "lastAudit": "2026-01-15",
   "totalAgents": 28,
-  "builtAgents": 7,
-  "ghostAgents": 21,
-  "honestAssessment": "Marketing Department HIRED. 7 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook).",
+  "builtAgents": 11,
+  "ghostAgents": 17,
+  "honestAssessment": "Architect Department HIRED. 11 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook) + Architect (4: Manager, UX/UI, Funnel, Copywriter).",
 
   "hierarchy": {
     "JASPER": {
@@ -24,9 +24,11 @@
       "note": "L2 orchestrator - coordinates TikTok, Twitter, Facebook specialists with real delegation logic"
     },
     "BUILDER_MANAGER": {
-      "status": "GHOST",
-      "path": "src/lib/agents/builder/manager.ts",
-      "specialists": ["UX_UI_ARCHITECT", "FUNNEL_ENGINEER", "ASSET_GENERATOR"]
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/architect/manager.ts",
+      "specialists": ["UX_UI_SPECIALIST", "FUNNEL_SPECIALIST", "COPY_SPECIALIST"],
+      "functionalLOC": 1172,
+      "note": "L2 orchestrator - translates business niche into Site Map + Funnel Flow, coordinates UX/UI, Funnel, and Copy specialists"
     },
     "INTELLIGENCE_MANAGER": {
       "status": "FUNCTIONAL",
@@ -145,23 +147,38 @@
       "boilerplateLOC": 0,
       "verdict": "DOES_NOT_EXIST"
     },
-    "UX_UI_ARCHITECT": {
-      "status": "GHOST",
-      "path": "src/lib/agents/builder/ux-ui/specialist.ts",
+    "UX_UI_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/architect/ux-ui/specialist.ts",
       "reportsTo": "BUILDER_MANAGER",
-      "capabilities": ["wireframe_generation", "component_design", "accessibility_audit", "responsive_layout"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["component_selection", "color_palette_generation", "wireframe_generation", "responsive_layout", "accessibility_audit"],
+      "functionalLOC": 1879,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_builder",
+      "systemPrompt": "COMPONENT_SCHEMAS library (10 categories: hero, nav, features, pricing, testimonials, forms, cta, footer, social proof, faq) + COLOR_PSYCHOLOGY library (10 industries with psychology-based palettes)"
     },
-    "FUNNEL_ENGINEER": {
-      "status": "GHOST",
-      "path": "src/lib/agents/builder/funnel/specialist.ts",
+    "FUNNEL_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/architect/funnel/specialist.ts",
       "reportsTo": "BUILDER_MANAGER",
-      "capabilities": ["funnel_architecture", "conversion_optimization", "ab_testing", "journey_mapping"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["funnel_architecture", "stage_optimization", "conversion_analysis", "price_strategy", "urgency_tactics"],
+      "functionalLOC": 1705,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_builder",
+      "systemPrompt": "THE SQUEEZE: Lead Magnet (8 types) -> Tripwire ($7-47) -> Core Offer ($197-1997) -> Upsell (5 types). 8 business templates (coach, saas, ecommerce, course, agency, membership, local, info)"
+    },
+    "COPY_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/architect/copy/specialist.ts",
+      "reportsTo": "BUILDER_MANAGER",
+      "capabilities": ["framework_selection", "headline_generation", "cta_optimization", "copy_generation", "ab_variations"],
+      "functionalLOC": 1514,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_builder",
+      "systemPrompt": "6 copywriting frameworks (PAS, AIDA, BAB, FAB, 4Ps, StoryBrand), 10 headline formulas, 5 CTA categories, 6 persuasion principles, 7 voice presets by industry"
     },
     "ASSET_GENERATOR": {
       "status": "GHOST",
@@ -240,9 +257,13 @@
     "COMPETITOR_ANALYST",
     "TECHNOGRAPHIC_SCOUT",
     "MARKETING_MANAGER",
-    "SEO_EXPERT",
+    "TIKTOK_EXPERT",
+    "X_EXPERT",
+    "FACEBOOK_EXPERT",
     "BUILDER_MANAGER",
-    "FUNNEL_ENGINEER"
+    "UX_UI_SPECIALIST",
+    "FUNNEL_SPECIALIST",
+    "COPY_SPECIALIST"
   ],
 
   "jasperHandshake": {
@@ -278,6 +299,20 @@
           "tiktok": "viral hooks, video pacing, trending sounds - Gen Z/young audience",
           "twitter": "thread architecture, engagement replies, ratio assessment - B2B/thought leadership",
           "facebook": "ad creative, audience personas, AIDA/PAS frameworks - older demographics/conversions"
+        }
+      }
+    },
+    "builderTools": {
+      "delegate_to_builder": {
+        "manager": "BUILDER_MANAGER",
+        "status": "CONNECTED",
+        "input": "{ niche, objective?, audience?, pageType?, includeDesign?, includeFunnel?, includeCopy? }",
+        "output": "{ siteMap, funnelFlow, delegations[], confidence, warnings }",
+        "delegates_to": ["UX_UI_SPECIALIST", "FUNNEL_SPECIALIST", "COPY_SPECIALIST"],
+        "specialistCapabilities": {
+          "ux_ui": "COMPONENT_SCHEMAS library (10 categories), COLOR_PSYCHOLOGY (10 industries), responsive design, WCAG accessibility",
+          "funnel": "THE SQUEEZE (Lead Magnet -> Tripwire -> Core Offer -> Upsell), 8 business templates, urgency/scarcity tactics, price anchoring",
+          "copy": "6 frameworks (PAS, AIDA, BAB, FAB, 4Ps, StoryBrand), headline formulas, CTA optimization, persuasion psychology"
         }
       }
     }

@@ -976,6 +976,54 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ARCHITECT DEPARTMENT TOOLS (The Handshake)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_builder',
+      description:
+        'Delegate a website/funnel building request to the Architect Department. The Lead Architect will analyze the niche and coordinate UX/UI, Funnel, and Copywriting specialists to generate site maps, design systems, funnel flows, and conversion copy. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          niche: {
+            type: 'string',
+            description: 'The business niche or industry (e.g., "fitness coaching", "real estate agency", "SaaS startup", "e-commerce fashion")',
+          },
+          objective: {
+            type: 'string',
+            description: 'Primary objective for the site/funnel',
+            enum: ['lead_generation', 'ecommerce', 'course_sales', 'service_booking', 'brand_awareness'],
+          },
+          audience: {
+            type: 'string',
+            description: 'Target audience description (e.g., "busy professionals 30-50", "Gen Z fitness enthusiasts", "B2B decision makers")',
+          },
+          pageType: {
+            type: 'string',
+            description: 'Type of page to design (optional - defaults to landing page)',
+            enum: ['landing', 'homepage', 'pricing', 'product', 'about', 'contact', 'saas', 'ecommerce'],
+          },
+          includeDesign: {
+            type: 'boolean',
+            description: 'Include UX/UI design specs (color palette, components, wireframe). Default: true',
+          },
+          includeFunnel: {
+            type: 'boolean',
+            description: 'Include funnel architecture (lead magnet -> tripwire -> core offer -> upsell). Default: true',
+          },
+          includeCopy: {
+            type: 'boolean',
+            description: 'Include conversion copy (headlines, CTAs, body copy). Default: true',
+          },
+        },
+        required: ['niche'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // INTELLIGENCE SPECIALIST TOOLS (The Handshake)
   // ═══════════════════════════════════════════════════════════════════════════
   {
@@ -1943,6 +1991,49 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           data: result.data,
           errors: result.errors,
           specialist: 'TECHNOGRAPHIC_SCOUT',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // ARCHITECT DEPARTMENT EXECUTION
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_builder': {
+        const { ArchitectManager } = await import('@/lib/agents/architect/manager');
+        const manager = new ArchitectManager();
+        await manager.initialize();
+
+        // Build architect request from args
+        const architectPayload = {
+          niche: args.niche as string,
+          objective: args.objective as string | undefined,
+          audience: args.audience as string | undefined,
+          pageType: args.pageType as string | undefined,
+          includeDesign: args.includeDesign !== false,
+          includeFunnel: args.includeFunnel !== false,
+          includeCopy: args.includeCopy !== false,
+        };
+
+        const result = await manager.execute({
+          id: `architect_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'ARCHITECT_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: architectPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        content = JSON.stringify({
+          status: result.status,
+          data: result.data,
+          errors: result.errors,
+          manager: 'ARCHITECT_MANAGER',
+          delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
+            ? (result.data as Record<string, unknown>).delegations
+            : 'See data for details',
         });
         break;
       }
