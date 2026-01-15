@@ -7,40 +7,89 @@ import { logger } from '@/lib/logger/logger';
  * Pricing tier interface matching the subscription plan structure
  */
 interface PricingTier {
-  name: string;
-  price: number;
-  recordMin: number;
-  recordMax: number;
-  description: string;
-  active: boolean;
+  readonly name: string;
+  readonly price: number;
+  readonly recordMin: number;
+  readonly recordMax: number;
+  readonly description: string;
+  readonly active: boolean;
 }
 
 /**
  * Request body structure
  */
 interface UpdateAgentPricingBody {
-  tiers: PricingTier[];
+  readonly tiers: ReadonlyArray<PricingTier>;
 }
 
 /**
- * Organization document from Firestore
+ * Organization document from Firestore with strict typing
  */
 interface OrganizationDocument {
-  id: string;
-  [key: string]: unknown;
+  readonly id: string;
+  readonly name?: string;
+  readonly createdAt?: string;
+  readonly plan?: string;
+  readonly status?: string;
 }
 
 /**
  * Pricing knowledge document structure
  */
 interface PricingKnowledgeDocument {
-  category: string;
-  title: string;
-  content: string;
-  priority: number;
-  updatedAt: string;
-  updatedBy: string;
-  organizationId?: string;
+  readonly category: string;
+  readonly title: string;
+  readonly content: string;
+  readonly priority: number;
+  readonly updatedAt: string;
+  readonly updatedBy: string;
+  readonly organizationId?: string;
+}
+
+/**
+ * API Response types following Result<T, E> pattern
+ */
+interface UpdateAgentPricingSuccess {
+  readonly success: true;
+  readonly message: string;
+  readonly organizationsUpdated: number;
+}
+
+interface UpdateAgentPricingError {
+  readonly success: false;
+  readonly error: string;
+}
+
+type _UpdateAgentPricingResponse = UpdateAgentPricingSuccess | UpdateAgentPricingError;
+
+/**
+ * Validates the request body structure
+ */
+function isValidUpdateAgentPricingBody(body: unknown): body is UpdateAgentPricingBody {
+  if (typeof body !== 'object' || body === null) {
+    return false;
+  }
+
+  const candidate = body as Record<string, unknown>;
+
+  if (!Array.isArray(candidate.tiers)) {
+    return false;
+  }
+
+  return candidate.tiers.every((tier: unknown) => {
+    if (typeof tier !== 'object' || tier === null) {
+      return false;
+    }
+    const t = tier as Record<string, unknown>;
+    return (
+      typeof t.name === 'string' &&
+      typeof t.price === 'number' &&
+      typeof t.recordMin === 'number' &&
+      typeof t.recordMax === 'number' &&
+      typeof t.description === 'string' &&
+      typeof t.active === 'boolean'
+    );
+  });
 }
 
 /**
@@ -57,22 +106,60 @@ export async function POST(request: NextRequest) {
 
     const { user } = authResult;
     if (user.role !== 'owner' && user.role !== 'admin') {
-      return NextResponse.json(
+      return NextResponse.json<UpdateAgentPricingError>(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
       );
     }
 
-    const body = (await request.json()) as UpdateAgentPricingBody;
+    // Parse and validate request body
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (parseError: unknown) {
+      const errorMessage = parseError instanceof Error ? parseError.message : 'Invalid JSON';
+      logger.error('[Admin] Failed to parse request body:', parseError);
+      return NextResponse.json<UpdateAgentPricingError>(
+        { success: false, error: `Invalid request body: ${errorMessage}` },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUpdateAgentPricingBody(body)) {
+      return NextResponse.json<UpdateAgentPricingError>(
+        { success: false, error: 'Invalid pricing tiers data structure' },
+        { status: 400 }
+      );
+    }
+
     const { tiers } = body;
 
+    // Validate tiers array is not empty
+    if (tiers.length === 0) {
+      return NextResponse.json<UpdateAgentPricingError>(
+        { success: false, error: 'At least one pricing tier is required' },
+        { status: 400 }
+      );
+    }
+
     // Format pricing knowledge for AI agent
-    const firstTierPrice = tiers[0]?.price ?? 400;
-    const lastTierPrice = tiers[tiers.length - 1]?.price ?? 1250;
-    const firstTierRecordMax = tiers[0]?.recordMax ?? 100;
+    // Safe access: tiers.length > 0 is validated above
+    const firstTier = tiers[0];
+    const lastTier = tiers[tiers.length - 1];
+
+    if (!firstTier || !lastTier) {
+      return NextResponse.json<UpdateAgentPricingError>(
+        { success: false, error: 'Failed to access pricing tier data' },
+        { status: 500 }
+      );
+    }
+
+    const firstTierPrice = firstTier.price;
+    const lastTierPrice = lastTier.price;
+    const firstTierRecordMax = firstTier.recordMax;
 
     const tierDescriptions = tiers
-      .map((tier: PricingTier) => {
+      .map((tier: PricingTier): string => {
         return `
 ### ${tier.name} - $${tier.price}/month
 - **Record Capacity:** ${tier.recordMin}-${tier.recordMax} records
@@ -160,7 +247,20 @@ ${tierDescriptions}
 
     // Also update all organization-level agents if they exist
     // This ensures customer-facing agents get the updated pricing
-    const orgs = await FirestoreService.getAll<OrganizationDocument>(COLLECTIONS.ORGANIZATIONS, []);
+    let orgs: OrganizationDocument[] = [];
+    try {
+      orgs = await FirestoreService.getAll<OrganizationDocument>(COLLECTIONS.ORGANIZATIONS, []);
+    } catch (fetchError: unknown) {
+      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+      logger.error('[Admin] Failed to fetch organizations:', fetchError);
+      return NextResponse.json<UpdateAgentPricingError>(
+        { success: false, error: `Failed to fetch organizations: ${errorMessage}` },
+        { status: 500 }
+      );
+    }
+
+    let successCount = 0;
+    const failedOrgIds: string[] = [];
 
     for (const org of orgs) {
       try {
@@ -175,7 +275,9 @@ ${tierDescriptions}
           'pricing',
           orgPricingKnowledge
         );
+        successCount++;
       } catch (error: unknown) {
+        failedOrgIds.push(org.id);
         if (error instanceof Error) {
           logger.warn(`Failed to update agent knowledge for org ${org.id}`, error);
         } else {
@@ -184,16 +286,26 @@ ${tierDescriptions}
       }
     }
 
+    if (failedOrgIds.length > 0) {
+      logger.warn('[Admin] Some organizations failed to update', {
+        userId: user.uid,
+        totalOrgs: orgs.length,
+        successCount,
+        failedCount: failedOrgIds.length,
+        failedOrgIds,
+      });
+    }
+
     logger.info('[Admin] Agent pricing knowledge updated', {
       userId: user.uid,
       tierCount: tiers.length,
-      organizationsUpdated: orgs.length,
+      organizationsUpdated: successCount,
     });
 
-    return NextResponse.json({
+    return NextResponse.json<UpdateAgentPricingSuccess>({
       success: true,
       message: 'AI agent pricing knowledge updated',
-      organizationsUpdated: orgs.length,
+      organizationsUpdated: successCount,
     });
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -202,7 +314,7 @@ ${tierDescriptions}
       logger.error('[Admin] Error updating agent pricing knowledge:', new Error(String(error)));
     }
 
-    return NextResponse.json(
+    return NextResponse.json<UpdateAgentPricingError>(
       { success: false, error: 'Failed to update agent knowledge' },
       { status: 500 }
     );

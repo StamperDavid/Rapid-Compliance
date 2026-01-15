@@ -5,8 +5,7 @@
  * Requires admin role
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireUserRole } from '@/lib/auth/server-auth';
 import {
   saveGlobalTemplate,
@@ -16,16 +15,17 @@ import {
   getIndustryOptionsWithOverrides,
 } from '@/lib/templates/template-resolver';
 import { validateTemplate, getValidationErrors } from '@/lib/templates/template-validation';
+import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import { logger } from '@/lib/logger/logger';
 
 /**
  * GET /api/admin/templates
  * List all templates with override status
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     // Require admin role
-
+    await requireUserRole(request, ['admin', 'super_admin', 'owner']);
 
     const options = await getIndustryOptionsWithOverrides();
 
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Require admin role
     const user = await requireUserRole(request, ['admin', 'super_admin', 'owner']);
 
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Validate template structure
     const validation = validateTemplate(body);
@@ -86,7 +86,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Save template to Firestore
-    await saveGlobalTemplate(validation.data as any, user.uid);
+    // validation.data is guaranteed to be IndustryTemplate due to successful validation
+    await saveGlobalTemplate(validation.data as IndustryTemplate, user.uid);
 
     logger.info('Template saved', {
       templateId: validation.data.id,

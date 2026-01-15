@@ -95,8 +95,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const period = (searchParams.get('period') !== '' && searchParams.get('period') != null)
-      ? searchParams.get('period')
+    const periodParam = searchParams.get('period');
+    const period = (periodParam !== '' && periodParam !== null)
+      ? periodParam
       : 'month';
 
     // Get open deals from Firestore

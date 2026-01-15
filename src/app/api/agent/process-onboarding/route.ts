@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { processOnboarding } from '@/lib/agent/onboarding-processor';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { validateInput } from '@/lib/validation/schemas';
@@ -9,10 +8,58 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+// Interfaces for type safety
+interface ValidationErrorDetail {
+  path: string;
+  message: string;
+}
+
+interface ZodValidationError {
+  path: Array<string | number>;
+  message: string;
+}
+
+interface ValidationFailureResult {
+  success: false;
+  errors: {
+    errors?: ZodValidationError[];
+  };
+}
+
+interface OrganizationRecord {
+  ownerId: string;
+  members?: string[];
+  [key: string]: unknown;
+}
+
+interface OrganizationUpdateData {
+  updatedAt: string;
+  industry: string;
+  industryName: string;
+  assistantName?: string;
+  ownerName?: string;
+}
+
+// Result type for API responses
+interface ApiSuccessResponse {
+  success: true;
+  persona: unknown;
+  knowledgeBase: unknown;
+  baseModel: unknown;
+}
+
+interface ApiErrorResponse {
+  success: false;
+  error: string;
+}
+
+// Union type for all API responses (used for type annotations)
+type _ApiResponse = ApiSuccessResponse | ApiErrorResponse;
+
 // Schema for onboarding request validation
 const processOnboardingSchema = z.object({
   organizationId: z.string(),
-  onboardingData: z.record(z.any()),
+  onboardingData: z.record(z.unknown()),
 });
 
 export async function POST(request: NextRequest) {
@@ -29,20 +76,24 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(processOnboardingSchema, body);
 
     if (!validation.success) {
-      // Type assertion: when success is false, we have the error structure
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
-        const joinedPath = e.path?.join('.');
-        return {
-          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
-          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
-        };
-      }) ?? [];
-      
+      // Type-safe validation error handling
+      const validationError = validation as ValidationFailureResult;
+      const zodErrors = validationError.errors?.errors;
+
+      const errorDetails: ValidationErrorDetail[] = Array.isArray(zodErrors)
+        ? zodErrors.map((e: ZodValidationError): ValidationErrorDetail => {
+            const joinedPath = Array.isArray(e.path) ? e.path.join('.') : '';
+            return {
+              path: (joinedPath !== '' && joinedPath !== null) ? joinedPath : 'unknown',
+              message: (e.message !== '' && e.message !== null) ? e.message : 'Validation error',
+            };
+          })
+        : [];
+
       return errors.validation('Validation failed', errorDetails);
     }
 
@@ -51,18 +102,21 @@ export async function POST(request: NextRequest) {
     // Import Admin SDK services for multi-tenant security check
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     try {
-      const org = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-      
-      if (org) {
+      const orgData: unknown = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+
+      if (orgData && typeof orgData === 'object') {
+        const org = orgData as OrganizationRecord;
+
         // Organization exists - verify user is owner or member
         const isOwner = org.ownerId === user.uid;
-        const isMember = org.members?.includes(user.uid);
-        const isAdmin = user.role === 'admin' || user.role === 'super_admin';
-        
+        const isMember = Array.isArray(org.members) && org.members.includes(user.uid);
+        const userRole = user.role ?? '';
+        const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
         if (!isOwner && !isMember && !isAdmin) {
-          return NextResponse.json(
+          return NextResponse.json<ApiErrorResponse>(
             { success: false, error: 'You do not have permission to configure this organization' },
             { status: 403 }
           );
@@ -72,7 +126,7 @@ export async function POST(request: NextRequest) {
         // This is allowed, but we'll set them as the owner
         logger.debug('Creating new organization during onboarding', { organizationId, userId: user.uid, route: '/api/agent/process-onboarding' });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error('Error checking organization access', error, { route: '/api/agent/process-onboarding' });
       // If we can't verify, allow it (onboarding scenario)
     }
@@ -89,60 +143,74 @@ export async function POST(request: NextRequest) {
       false
     );
 
+    // Type guard to check if onboardingData has required properties
+    const typedOnboardingData = onboardingData as Partial<OnboardingData>;
+    const industry = typeof typedOnboardingData.industry === 'string' ? typedOnboardingData.industry : 'unknown';
+
     // Update organization with assistant name and owner name
-    const orgUpdate: Record<string, any> = {
+    const orgUpdate: OrganizationUpdateData = {
       updatedAt: new Date().toISOString(),
-      industry: onboardingData.industry,
-      industryName: onboardingData.industry, // Industry display name
+      industry: industry,
+      industryName: industry, // Industry display name
     };
 
     // Save assistant name if provided
-    if (onboardingData.agentName) {
-      orgUpdate.assistantName = onboardingData.agentName;
+    if (
+      'agentName' in typedOnboardingData &&
+      typeof typedOnboardingData.agentName === 'string' &&
+      typedOnboardingData.agentName !== ''
+    ) {
+      orgUpdate.assistantName = typedOnboardingData.agentName;
     }
 
     // Save owner name if provided
-    if (onboardingData.ownerName) {
-      orgUpdate.ownerName = onboardingData.ownerName;
+    if (
+      'ownerName' in typedOnboardingData &&
+      typeof typedOnboardingData.ownerName === 'string' &&
+      typedOnboardingData.ownerName !== ''
+    ) {
+      orgUpdate.ownerName = typedOnboardingData.ownerName;
     }
 
     await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, orgUpdate);
 
     // Process onboarding
     const result = await processOnboarding({
-      onboardingData: onboardingData as OnboardingData,
+      onboardingData: onboardingData as unknown as OnboardingData,
       organizationId,
       userId: user.uid,
     });
 
     if (result.success) {
       // Update user's organizationId if not already set
-      if (!user.organizationId) {
+      const userOrgId = user.organizationId;
+      if (typeof userOrgId !== 'string' || userOrgId === '') {
         try {
           await AdminFirestoreService.update('users', user.uid, {
             organizationId,
             currentOrganizationId: organizationId,
             updatedAt: new Date().toISOString(),
           });
-        } catch (error) {
+        } catch (error: unknown) {
           logger.warn('Failed to update user organizationId', { route: '/api/agent/process-onboarding', error });
           // Continue anyway - onboarding succeeded
         }
       }
-      
-      return NextResponse.json({
+
+      return NextResponse.json<ApiSuccessResponse>({
         success: true,
-        persona: result.persona,
-        knowledgeBase: result.knowledgeBase,
-        baseModel: result.baseModel, // Returns editable Base Model, not Golden Master
+        persona: result.persona ?? null,
+        knowledgeBase: result.knowledgeBase ?? null,
+        baseModel: result.baseModel ?? null, // Returns editable Base Model, not Golden Master
       });
     } else {
-      return NextResponse.json(
-        { success: false, error: result.error },
+      const errorMessage = typeof result.error === 'string' ? result.error : 'Unknown error occurred during onboarding';
+      return NextResponse.json<ApiErrorResponse>(
+        { success: false, error: errorMessage },
         { status: 500 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Onboarding processing error', error, { route: '/api/agent/process-onboarding' });
     return errors.internal('Failed to process onboarding', error instanceof Error ? error : undefined);
   }

@@ -4,6 +4,93 @@ import { verifyAdminRequest, createErrorResponse, createSuccessResponse, isAuthE
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+interface TestConnectionRequestBody {
+  orgId: string;
+  service: string;
+}
+
+interface ConnectionTestDetails {
+  model?: string;
+  [key: string]: unknown;
+}
+
+interface ConnectionTestResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  details?: ConnectionTestDetails;
+}
+
+interface OpenAIResponse {
+  model?: string;
+  [key: string]: unknown;
+}
+
+interface AnthropicResponse {
+  model?: string;
+  [key: string]: unknown;
+}
+
+interface OpenRouterResponse {
+  model?: string;
+  [key: string]: unknown;
+}
+
+interface ApiErrorResponse {
+  error?: {
+    message?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+// ============================================================================
+// Type Guards
+// ============================================================================
+
+function isTestConnectionRequestBody(body: unknown): body is TestConnectionRequestBody {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    'orgId' in body &&
+    'service' in body &&
+    typeof (body as TestConnectionRequestBody).orgId === 'string' &&
+    typeof (body as TestConnectionRequestBody).service === 'string'
+  );
+}
+
+function isValidService(service: string): service is 'openai' | 'anthropic' | 'openrouter' | 'gemini' {
+  return ['openai', 'anthropic', 'openrouter', 'gemini'].includes(service);
+}
+
+function isOpenAIResponse(data: unknown): data is OpenAIResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isAnthropicResponse(data: unknown): data is AnthropicResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isOpenRouterResponse(data: unknown): data is OpenRouterResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isApiErrorResponse(data: unknown): data is ApiErrorResponse {
+  return typeof data === 'object' && data !== null;
+}
+
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
+}
+
+// ============================================================================
+// Main Handler
+// ============================================================================
+
 /**
  * POST /api/admin/test-api-connection
  * Tests API connection for an organization's service
@@ -11,18 +98,19 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function POST(request: NextRequest) {
   const authResult = await verifyAdminRequest(request);
-  
+
   if (isAuthError(authResult)) {
     return createErrorResponse(authResult.error, authResult.status);
   }
 
   try {
-    const body = await request.json();
-    const { orgId, service } = body;
+    const body: unknown = await request.json();
 
-    if (!orgId || !service) {
-      return createErrorResponse('Missing orgId or service', 400);
+    if (!isTestConnectionRequestBody(body)) {
+      return createErrorResponse('Missing or invalid orgId or service', 400);
     }
+
+    const { orgId, service } = body;
 
     // Get API key for the service
     const keys = await apiKeyService.getKeys(orgId);
@@ -30,8 +118,11 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('No API keys configured for this organization', 404);
     }
 
-    let testResult;
-    let _errorDetails;
+    if (!isValidService(service)) {
+      return createErrorResponse(`Unsupported service: ${service}`, 400);
+    }
+
+    let testResult: ConnectionTestResult;
 
     switch (service) {
       case 'openai':
@@ -46,8 +137,6 @@ export async function POST(request: NextRequest) {
       case 'gemini':
         testResult = await testGeminiConnection(keys.ai?.geminiApiKey);
         break;
-      default:
-        return createErrorResponse(`Unsupported service: ${service}`, 400);
     }
 
     // Update API key document with test result
@@ -65,34 +154,39 @@ export async function POST(request: NextRequest) {
             updatedAt: new Date().toISOString()
           });
       }
-    } catch (updateError) {
+    } catch (updateError: unknown) {
       logger.error('Failed to update API key test result:', updateError, { file: 'route.ts' });
     }
 
     if (testResult.success) {
       return createSuccessResponse({
-        message:(testResult.message !== '' && testResult.message != null) ? testResult.message : 'Connection successful',
+        message: testResult.message && testResult.message !== '' ? testResult.message : 'Connection successful',
         details: testResult.details
       });
     } else {
-      return createErrorResponse((testResult.error !== '' && testResult.error != null) ? testResult.error : 'Connection failed', 400);
+      return createErrorResponse(testResult.error && testResult.error !== '' ? testResult.error : 'Connection failed', 400);
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('API connection test error:', error, { file: 'route.ts' });
+    const errorMessage = isError(error) ? error.message : 'Unknown error';
     return createErrorResponse(
-      process.env.NODE_ENV === 'development' 
-        ? `Test failed: ${error.message}`
+      process.env.NODE_ENV === 'development'
+        ? `Test failed: ${errorMessage}`
         : 'Test failed',
       500
     );
   }
 }
 
+// ============================================================================
+// Connection Test Functions
+// ============================================================================
+
 /**
  * Test OpenAI API connection
  */
-async function testOpenAIConnection(apiKey?: string): Promise<{ success: boolean; message?: string; error?: string; details?: any }> {
+async function testOpenAIConnection(apiKey?: string): Promise<ConnectionTestResult> {
   if (!apiKey) {
     return { success: false, error: 'OpenAI API key not configured' };
   }
@@ -112,25 +206,39 @@ async function testOpenAIConnection(apiKey?: string): Promise<{ success: boolean
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data: unknown = await response.json();
+      if (isOpenAIResponse(data)) {
+        return {
+          success: true,
+          message: 'OpenAI API key is valid and working',
+          details: { model: data.model }
+        };
+      }
       return {
         success: true,
-        message: 'OpenAI API key is valid and working',
-        details: { model: data.model }
+        message: 'OpenAI API key is valid and working'
       };
     } else {
-      const errorData = await response.json().catch(() => ({}));
-      const errDataMsg = errorData.error?.message;
-      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
+      const errorData: unknown = await response.json().catch(() => ({}));
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      if (isApiErrorResponse(errorData)) {
+        const errDataMsg = errorData.error?.message;
+        if (errDataMsg && errDataMsg !== '') {
+          errorMessage = errDataMsg;
+        }
+      }
+
       return {
         success: false,
         error: errorMessage
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = isError(error) ? error.message : 'Unknown error';
     return {
       success: false,
-      error: `Network error: ${error.message}`
+      error: `Network error: ${errorMessage}`
     };
   }
 }
@@ -138,7 +246,7 @@ async function testOpenAIConnection(apiKey?: string): Promise<{ success: boolean
 /**
  * Test Anthropic API connection
  */
-async function testAnthropicConnection(apiKey?: string): Promise<{ success: boolean; message?: string; error?: string; details?: any }> {
+async function testAnthropicConnection(apiKey?: string): Promise<ConnectionTestResult> {
   if (!apiKey) {
     return { success: false, error: 'Anthropic API key not configured' };
   }
@@ -159,25 +267,39 @@ async function testAnthropicConnection(apiKey?: string): Promise<{ success: bool
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data: unknown = await response.json();
+      if (isAnthropicResponse(data)) {
+        return {
+          success: true,
+          message: 'Anthropic API key is valid and working',
+          details: { model: data.model }
+        };
+      }
       return {
         success: true,
-        message: 'Anthropic API key is valid and working',
-        details: { model: data.model }
+        message: 'Anthropic API key is valid and working'
       };
     } else {
-      const errorData = await response.json().catch(() => ({}));
-      const errDataMsg = errorData.error?.message;
-      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
+      const errorData: unknown = await response.json().catch(() => ({}));
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      if (isApiErrorResponse(errorData)) {
+        const errDataMsg = errorData.error?.message;
+        if (errDataMsg && errDataMsg !== '') {
+          errorMessage = errDataMsg;
+        }
+      }
+
       return {
         success: false,
         error: errorMessage
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = isError(error) ? error.message : 'Unknown error';
     return {
       success: false,
-      error: `Network error: ${error.message}`
+      error: `Network error: ${errorMessage}`
     };
   }
 }
@@ -185,7 +307,7 @@ async function testAnthropicConnection(apiKey?: string): Promise<{ success: bool
 /**
  * Test OpenRouter API connection
  */
-async function testOpenRouterConnection(apiKey?: string): Promise<{ success: boolean; message?: string; error?: string; details?: any }> {
+async function testOpenRouterConnection(apiKey?: string): Promise<ConnectionTestResult> {
   if (!apiKey) {
     return { success: false, error: 'OpenRouter API key not configured' };
   }
@@ -207,25 +329,39 @@ async function testOpenRouterConnection(apiKey?: string): Promise<{ success: boo
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data: unknown = await response.json();
+      if (isOpenRouterResponse(data)) {
+        return {
+          success: true,
+          message: 'OpenRouter API key is valid and working',
+          details: { model: data.model }
+        };
+      }
       return {
         success: true,
-        message: 'OpenRouter API key is valid and working',
-        details: { model: data.model }
+        message: 'OpenRouter API key is valid and working'
       };
     } else {
-      const errorData = await response.json().catch(() => ({}));
-      const errDataMsg = errorData.error?.message;
-      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
+      const errorData: unknown = await response.json().catch(() => ({}));
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      if (isApiErrorResponse(errorData)) {
+        const errDataMsg = errorData.error?.message;
+        if (errDataMsg && errDataMsg !== '') {
+          errorMessage = errDataMsg;
+        }
+      }
+
       return {
         success: false,
         error: errorMessage
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = isError(error) ? error.message : 'Unknown error';
     return {
       success: false,
-      error: `Network error: ${error.message}`
+      error: `Network error: ${errorMessage}`
     };
   }
 }
@@ -233,7 +369,7 @@ async function testOpenRouterConnection(apiKey?: string): Promise<{ success: boo
 /**
  * Test Google Gemini API connection
  */
-async function testGeminiConnection(apiKey?: string): Promise<{ success: boolean; message?: string; error?: string; details?: any }> {
+async function testGeminiConnection(apiKey?: string): Promise<ConnectionTestResult> {
   if (!apiKey) {
     return { success: false, error: 'Gemini API key not configured' };
   }
@@ -258,18 +394,26 @@ async function testGeminiConnection(apiKey?: string): Promise<{ success: boolean
         details: { model: 'gemini-pro' }
       };
     } else {
-      const errorData = await response.json().catch(() => ({}));
-      const errDataMsg = errorData.error?.message;
-      const errorMessage = (errDataMsg !== '' && errDataMsg != null) ? errDataMsg : `HTTP ${response.status}: ${response.statusText}`;
+      const errorData: unknown = await response.json().catch(() => ({}));
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      if (isApiErrorResponse(errorData)) {
+        const errDataMsg = errorData.error?.message;
+        if (errDataMsg && errDataMsg !== '') {
+          errorMessage = errDataMsg;
+        }
+      }
+
       return {
         success: false,
         error: errorMessage
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = isError(error) ? error.message : 'Unknown error';
     return {
       success: false,
-      error: `Network error: ${error.message}`
+      error: `Network error: ${errorMessage}`
     };
   }
 }

@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import type { DecodedIdToken } from 'firebase-admin/auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { adminAuth } from '@/lib/firebase/admin';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api/admin-auth';
@@ -10,6 +11,44 @@ import {
   isSuperAdmin,
   type TenantClaims,
 } from '@/lib/auth/claims-validator';
+
+/**
+ * Firestore user document structure
+ */
+interface FirestoreUserData {
+  email?: string;
+  name?: string;
+  displayName?: string;
+  role?: string;
+  organizationId?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  lastLoginAt?: unknown;
+}
+
+/**
+ * Verified admin response payload
+ */
+interface VerifyResponseData {
+  uid: string;
+  email: string;
+  name: string;
+  role: string;
+  organizationId: string;
+  verified: boolean;
+  claims: {
+    isGlobalAdmin: boolean;
+    tenantId: string | null;
+    hasAdminClaim: boolean;
+  };
+}
+
+/**
+ * Firebase Auth error structure
+ */
+interface FirebaseAuthError extends Error {
+  code?: string;
+}
 
 /**
  * POST /api/admin/verify
@@ -49,10 +88,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the token and extract claims
-    let decodedToken;
+    let decodedToken: DecodedIdToken;
     try {
       decodedToken = await adminAuth.verifyIdToken(token);
-    } catch (tokenError: any) {
+    } catch (error: unknown) {
+      const tokenError = error as FirebaseAuthError;
       logger.warn('Token verification failed', { route: '/api/admin/verify', code: tokenError.code });
       return createErrorResponse(
         tokenError.code === 'auth/id-token-expired'
@@ -73,13 +113,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user document to enrich with database role
-    const userDoc = await adminDal.safeGetDoc('USERS', userId);
+    const userDoc = await adminDal.safeGetDoc<FirestoreUserData>('USERS', userId);
 
     if (!userDoc.exists) {
       return createErrorResponse('User not found in database', 403);
     }
 
-    const userData = userDoc.data()!;
+    const userData = userDoc.data();
+
+    if (!userData) {
+      return createErrorResponse('User data is missing', 500);
+    }
 
     // Merge token claims with database role
     // Token claims take precedence, but we fall back to database role if claims are missing
@@ -116,27 +160,31 @@ export async function POST(request: NextRequest) {
       tenantId: effectiveClaims.tenant_id,
     });
 
-    return createSuccessResponse({
+    // Build verified response with safe fallbacks
+    const responseData: VerifyResponseData = {
       uid: userId,
-      email: userData.email ?? decodedToken.email,
-      name: (userData.name !== '' && userData.name != null)
+      email: userData.email ?? decodedToken.email ?? '',
+      name: (userData.name && userData.name !== '')
         ? userData.name
-        : (userData.displayName !== '' && userData.displayName != null)
+        : (userData.displayName && userData.displayName !== '')
           ? userData.displayName
           : 'Admin User',
-      role: effectiveClaims.role ?? userData.role,
+      role: effectiveClaims.role ?? userData.role ?? 'admin',
       organizationId: effectiveClaims.tenant_id ?? userData.organizationId ?? 'platform',
       verified: true,
       // Include claims metadata for frontend
       claims: {
         isGlobalAdmin,
         tenantId: effectiveClaims.tenant_id,
-        hasAdminClaim: claims.admin,
+        hasAdminClaim: claims.admin ?? false,
       },
-    });
+    };
 
-  } catch (error: any) {
-    logger.error('Admin verify error', error, { route: '/api/admin/verify' });
+    return createSuccessResponse<VerifyResponseData>(responseData);
+
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Admin verify error', err, { route: '/api/admin/verify' });
     return createErrorResponse('Verification failed', 500);
   }
 }

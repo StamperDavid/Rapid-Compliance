@@ -4,10 +4,11 @@
  * POST to update default AI agent settings
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
+import type { DocumentData, Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
 
 // Default agent settings schema
@@ -47,6 +48,49 @@ interface VoiceStats {
 }
 
 /**
+ * Firestore document structure for voice metrics
+ */
+interface VoiceMetricsDocument extends DocumentData {
+  totalCalls?: number;
+  callsToday?: number;
+  callsThisWeek?: number;
+  callsThisMonth?: number;
+  avgCallDuration?: number;
+  avgQualificationScore?: number;
+  transferRate?: number;
+  completionRate?: number;
+  totalMinutes?: number;
+  estimatedCost?: number;
+  byStatus?: {
+    completed?: number;
+    inProgress?: number;
+    failed?: number;
+    noAnswer?: number;
+  };
+  byOutcome?: {
+    qualified?: number;
+    notQualified?: number;
+    callback?: number;
+    transferred?: number;
+  };
+  updatedAt?: Timestamp;
+}
+
+/**
+ * Request body for POST endpoint
+ */
+interface UpdateSettingsRequestBody {
+  defaultSettings: unknown;
+}
+
+/**
+ * Type guard to check if data matches VoiceMetricsDocument structure
+ */
+function isVoiceMetricsDocument(data: DocumentData | undefined): data is VoiceMetricsDocument {
+  return data !== undefined && typeof data === 'object';
+}
+
+/**
  * GET /api/admin/voice/stats
  * Get platform-wide voice call statistics
  */
@@ -75,37 +119,51 @@ export async function GET(request: NextRequest) {
           .get();
 
         if (metricsDoc.exists) {
-          const data = metricsDoc.data();
-          stats = {
-            totalCalls: data?.totalCalls || 0,
-            callsToday: data?.callsToday || 0,
-            callsThisWeek: data?.callsThisWeek || 0,
-            callsThisMonth: data?.callsThisMonth || 0,
-            avgCallDuration: data?.avgCallDuration || 0,
-            avgQualificationScore: data?.avgQualificationScore || 0,
-            transferRate: data?.transferRate || 0,
-            completionRate: data?.completionRate || 0,
-            totalMinutes: data?.totalMinutes || 0,
-            estimatedCost: data?.estimatedCost || 0,
-            byStatus: {
-              completed: data?.byStatus?.completed || 0,
-              inProgress: data?.byStatus?.inProgress || 0,
-              failed: data?.byStatus?.failed || 0,
-              noAnswer: data?.byStatus?.noAnswer || 0,
-            },
-            byOutcome: {
-              qualified: data?.byOutcome?.qualified || 0,
-              notQualified: data?.byOutcome?.notQualified || 0,
-              callback: data?.byOutcome?.callback || 0,
-              transferred: data?.byOutcome?.transferred || 0,
-            },
-          };
+          const rawData = metricsDoc.data();
 
-          return NextResponse.json({
-            success: true,
-            stats,
-            lastUpdated: data?.updatedAt?.toDate?.() || new Date().toISOString(),
-          });
+          // Type guard to ensure data is valid
+          if (isVoiceMetricsDocument(rawData)) {
+            const data: VoiceMetricsDocument = rawData;
+
+            stats = {
+              totalCalls: data.totalCalls ?? 0,
+              callsToday: data.callsToday ?? 0,
+              callsThisWeek: data.callsThisWeek ?? 0,
+              callsThisMonth: data.callsThisMonth ?? 0,
+              avgCallDuration: data.avgCallDuration ?? 0,
+              avgQualificationScore: data.avgQualificationScore ?? 0,
+              transferRate: data.transferRate ?? 0,
+              completionRate: data.completionRate ?? 0,
+              totalMinutes: data.totalMinutes ?? 0,
+              estimatedCost: data.estimatedCost ?? 0,
+              byStatus: {
+                completed: data.byStatus?.completed ?? 0,
+                inProgress: data.byStatus?.inProgress ?? 0,
+                failed: data.byStatus?.failed ?? 0,
+                noAnswer: data.byStatus?.noAnswer ?? 0,
+              },
+              byOutcome: {
+                qualified: data.byOutcome?.qualified ?? 0,
+                notQualified: data.byOutcome?.notQualified ?? 0,
+                callback: data.byOutcome?.callback ?? 0,
+                transferred: data.byOutcome?.transferred ?? 0,
+              },
+            };
+
+            // Safely convert Firestore Timestamp to ISO string
+            let lastUpdated: string;
+            if (data.updatedAt && typeof data.updatedAt.toDate === 'function') {
+              lastUpdated = data.updatedAt.toDate().toISOString();
+            } else {
+              lastUpdated = new Date().toISOString();
+            }
+
+            return NextResponse.json({
+              success: true,
+              stats,
+              lastUpdated,
+            });
+          }
         }
       } catch (dbError) {
         logger.warn('[AdminVoiceStats] Failed to fetch from Firestore, using mock data', {
@@ -178,9 +236,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate request body
-    const body = await request.json();
+    const rawBody: unknown = await request.json();
 
-    if (!body.defaultSettings) {
+    // Type guard for request body structure
+    if (
+      typeof rawBody !== 'object' ||
+      rawBody === null ||
+      !('defaultSettings' in rawBody)
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -190,6 +253,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const body = rawBody as UpdateSettingsRequestBody;
     const validation = defaultSettingsSchema.safeParse(body.defaultSettings);
 
     if (!validation.success) {

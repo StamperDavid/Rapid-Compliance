@@ -10,67 +10,161 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
-// Firestore document data interfaces
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+/**
+ * Firestore timestamp interface
+ */
 interface FirestoreTimestamp {
   toDate(): Date;
 }
 
+/**
+ * Raw Firestore user document data (all fields optional as stored in DB)
+ */
 interface FirestoreUserData {
-  email?: string;
-  name?: string;
-  displayName?: string;
-  role?: string;
-  organizationId?: string;
-  createdAt?: FirestoreTimestamp | Timestamp;
-  updatedAt?: FirestoreTimestamp | Timestamp;
-  lastLoginAt?: FirestoreTimestamp | Timestamp;
+  readonly email?: string;
+  readonly name?: string;
+  readonly displayName?: string;
+  readonly role?: string;
+  readonly organizationId?: string;
+  readonly createdAt?: FirestoreTimestamp | Timestamp;
+  readonly updatedAt?: FirestoreTimestamp | Timestamp;
+  readonly lastLoginAt?: FirestoreTimestamp | Timestamp;
 }
 
+/**
+ * Validated user data for API response
+ */
 interface UserData {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  organizationId: string;
-  createdAt: string | null;
-  updatedAt: string | null;
-  lastLoginAt: string | null;
+  readonly id: string;
+  readonly email: string;
+  readonly name: string;
+  readonly role: string;
+  readonly organizationId: string;
+  readonly createdAt: string | null;
+  readonly updatedAt: string | null;
+  readonly lastLoginAt: string | null;
 }
 
+/**
+ * Request body for updating a user
+ */
 interface UpdateUserRequestBody {
-  userId: string;
+  readonly userId: string;
+  readonly name?: string;
+  readonly role?: string;
+  readonly organizationId?: string;
+  readonly status?: string;
+}
+
+/**
+ * Validated update fields that will be written to Firestore
+ */
+interface ValidatedUpdateFields {
   name?: string;
   role?: string;
   organizationId?: string;
   status?: string;
+  updatedAt: ReturnType<typeof FieldValue.serverTimestamp>;
+  updatedBy: string;
 }
 
-// Type guard for request body
+/**
+ * GET response with pagination
+ */
+interface GetUsersResponse {
+  readonly users: readonly UserData[];
+  readonly pagination: {
+    readonly count: number;
+    readonly hasMore: boolean;
+    readonly nextCursor: string | null;
+  };
+  readonly fetchedAt: string;
+}
+
+/**
+ * PATCH response
+ */
+interface UpdateUserResponse {
+  readonly success: true;
+  readonly userId: string;
+  readonly updatedFields: readonly string[];
+}
+
+// ============================================================================
+// TYPE GUARDS & VALIDATORS
+// ============================================================================
+
+/**
+ * Type guard for update user request body
+ * Validates that the body has required userId field
+ */
 function isUpdateUserRequestBody(body: unknown): body is UpdateUserRequestBody {
   if (typeof body !== 'object' || body === null) {
     return false;
   }
   const obj = body as Record<string, unknown>;
-  return typeof obj.userId === 'string';
+  return typeof obj.userId === 'string' && obj.userId.length > 0;
 }
 
-// Helper to safely convert Firestore timestamp to ISO string
+/**
+ * Type guard for objects with toDate method (Firestore Timestamps)
+ */
+function hasToDateMethod(value: unknown): value is { toDate: () => Date } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as Record<string, unknown>).toDate === 'function'
+  );
+}
+
+/**
+ * Safely convert Firestore timestamp to ISO string
+ * Returns null if conversion fails or timestamp is invalid
+ */
 function timestampToISOString(timestamp: unknown): string | null {
-  if (!timestamp || typeof timestamp !== 'object') {
+  if (!timestamp) {
     return null;
   }
 
-  const ts = timestamp as { toDate?: () => Date };
-  if (typeof ts.toDate === 'function') {
-    try {
-      const date = ts.toDate();
-      return date.toISOString();
-    } catch {
-      return null;
-    }
+  if (!hasToDateMethod(timestamp)) {
+    return null;
   }
 
-  return null;
+  try {
+    const date = timestamp.toDate();
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toISOString();
+  } catch (error: unknown) {
+    logger.warn('Failed to convert timestamp', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      route: '/api/admin/users'
+    });
+    return null;
+  }
+}
+
+/**
+ * Transform Firestore user data to validated UserData
+ * Provides safe defaults for all required fields
+ */
+function transformFirestoreUser(docId: string, data: FirestoreUserData): UserData {
+  return {
+    id: docId,
+    email: data.email ?? '',
+    name: (data.name ?? data.displayName) ?? 'Unknown',
+    role: data.role ?? 'member',
+    organizationId: data.organizationId ?? '',
+    createdAt: timestampToISOString(data.createdAt),
+    updatedAt: timestampToISOString(data.updatedAt),
+    lastLoginAt: timestampToISOString(data.lastLoginAt),
+  };
 }
 
 /**
@@ -130,33 +224,24 @@ export async function GET(request: NextRequest) {
     const hasMore = usersSnapshot.docs.length > pageSize;
     const docs = hasMore ? usersSnapshot.docs.slice(0, pageSize) : usersSnapshot.docs;
 
-    const users: UserData[] = docs.map(doc => {
+    // Transform Firestore documents to validated UserData objects
+    const users: readonly UserData[] = docs.map(doc => {
       const data = doc.data() as FirestoreUserData;
-      return {
-        id: doc.id,
-        email: data.email ?? '',
-        name: (data.name || data.displayName) ? (data.name ?? data.displayName ?? 'Unknown') : 'Unknown',
-        role: data.role ?? 'member',
-        organizationId: data.organizationId ?? '',
-        createdAt: timestampToISOString(data.createdAt),
-        updatedAt: timestampToISOString(data.updatedAt),
-        lastLoginAt: timestampToISOString(data.lastLoginAt),
-      };
+      return transformFirestoreUser(doc.id, data);
     });
-    
+
     // Get cursor for next page (last user's createdAt)
-    const nextCursor = hasMore && users.length > 0 
-      ? users[users.length - 1].createdAt 
-      : null;
+    const lastUser = users.length > 0 ? users[users.length - 1] : null;
+    const nextCursor = hasMore && lastUser ? lastUser.createdAt : null;
     
-    logger.info('Admin fetched users', { 
+    logger.info('Admin fetched users', {
       route: '/api/admin/users',
-      admin: authResult.user.email, 
-      count: users.length, 
-      hasMore 
+      admin: authResult.user.email,
+      count: users.length,
+      hasMore
     });
-    
-    return createSuccessResponse({
+
+    const response: GetUsersResponse = {
       users,
       pagination: {
         count: users.length,
@@ -164,7 +249,9 @@ export async function GET(request: NextRequest) {
         nextCursor,
       },
       fetchedAt: new Date().toISOString()
-    });
+    };
+
+    return createSuccessResponse(response);
 
   } catch (error: unknown) {
     logger.error('Admin users fetch error', error, { route: '/api/admin/users' });
@@ -203,22 +290,34 @@ export async function PATCH(request: NextRequest) {
 
     const body: UpdateUserRequestBody = rawBody;
 
-    // Validate update fields
-    const allowedFields: Array<keyof UpdateUserRequestBody> = ['name', 'role', 'organizationId', 'status'];
-    const updates: Record<string, unknown> = {};
+    // Build validated update object with only provided fields
+    const partialUpdates: Partial<Omit<ValidatedUpdateFields, 'updatedAt' | 'updatedBy'>> = {};
 
-    for (const field of allowedFields) {
-      if (field !== 'userId' && body[field] !== undefined) {
-        updates[field] = body[field];
-      }
+    if (body.name !== undefined) {
+      partialUpdates.name = body.name;
+    }
+    if (body.role !== undefined) {
+      partialUpdates.role = body.role;
+    }
+    if (body.organizationId !== undefined) {
+      partialUpdates.organizationId = body.organizationId;
+    }
+    if (body.status !== undefined) {
+      partialUpdates.status = body.status;
     }
 
-    if (Object.keys(updates).length === 0) {
+    const updateFieldNames = Object.keys(partialUpdates) as Array<keyof typeof partialUpdates>;
+
+    if (updateFieldNames.length === 0) {
       return createErrorResponse('No valid update fields provided', 400);
     }
 
-    updates.updatedAt = FieldValue.serverTimestamp();
-    updates.updatedBy = authResult.user.uid;
+    // Create final updates object with audit fields
+    const updates: ValidatedUpdateFields & Partial<Omit<ValidatedUpdateFields, 'updatedAt' | 'updatedBy'>> = {
+      ...partialUpdates,
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: authResult.user.uid,
+    };
 
     await adminDal.safeUpdateDoc('USERS', body.userId, updates, {
       audit: true,
@@ -229,14 +328,16 @@ export async function PATCH(request: NextRequest) {
       route: '/api/admin/users',
       admin: authResult.user.email,
       userId: body.userId,
-      fields: Object.keys(updates)
+      fields: updateFieldNames
     });
 
-    return createSuccessResponse({
+    const response: UpdateUserResponse = {
       success: true,
       userId: body.userId,
-      updatedFields: Object.keys(updates).filter(k => k !== 'updatedAt' && k !== 'updatedBy')
-    });
+      updatedFields: updateFieldNames
+    };
+
+    return createSuccessResponse(response);
 
   } catch (error: unknown) {
     logger.error('Admin user update error', error, { route: '/api/admin/users' });

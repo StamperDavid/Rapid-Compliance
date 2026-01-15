@@ -6,6 +6,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
+import type { ModelName } from '@/types/ai-models';
 
 // ===== TYPE DEFINITIONS =====
 
@@ -80,13 +81,128 @@ interface AIResponse {
 }
 
 /**
- * Error object with optional properties
+ * Success response for agent chat
+ * Follows Result<T, E> pattern for type-safe API responses
  */
-interface APIError {
-  message?: string;
-  code?: string;
+interface _ChatSuccessResponse {
+  success: true;
+  response: string;
+  model: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  processingTime: number;
 }
 
+/**
+ * Error response for agent chat
+ * Follows Result<T, E> pattern for type-safe API responses
+ */
+interface _ChatErrorResponse {
+  success: false;
+  error: string;
+  details?: unknown;
+}
+
+// ===== TYPE GUARDS =====
+
+/**
+ * Type guard to check if a value is a valid AgentConfig
+ */
+function isAgentConfig(value: unknown): value is AgentConfig {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return (
+    (typeof obj.selectedModel === 'string' || obj.selectedModel === undefined) &&
+    (typeof obj.modelConfig === 'object' || obj.modelConfig === undefined)
+  );
+}
+
+/**
+ * Type guard to check if a value is a valid ModelConfig
+ */
+function isModelConfig(value: unknown): value is ModelConfig {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.temperature === 'number' &&
+    typeof obj.maxTokens === 'number' &&
+    typeof obj.topP === 'number'
+  );
+}
+
+/**
+ * Type guard to check if a string is a valid ModelName
+ */
+function isModelName(value: string): value is ModelName {
+  const validModels: readonly string[] = [
+    'gpt-4-turbo',
+    'gpt-4',
+    'gpt-3.5-turbo',
+    'claude-3-5-sonnet',
+    'claude-3-opus',
+    'claude-3-sonnet',
+    'claude-3-haiku',
+    'gemini-1.5-pro',
+    'gemini-1.5-flash',
+    'gemini-1.0-pro',
+  ];
+  return validModels.includes(value) || value.startsWith('openrouter/');
+}
+
+/**
+ * Type guard to check if error has API key issue
+ */
+function isAPIKeyError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const err = error as Record<string, unknown>;
+  const message = err.message;
+  return typeof message === 'string' && message.includes('API key');
+}
+
+/**
+ * Type guard to check if error is permission denied
+ */
+function isPermissionDeniedError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const err = error as Record<string, unknown>;
+  return err.code === 'permission-denied';
+}
+
+/**
+ * Type guard to check if error is rate limit
+ */
+function isRateLimitError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const err = error as Record<string, unknown>;
+  const message = err.message;
+  return typeof message === 'string' && message.includes('rate limit');
+}
+
+// ===== API ROUTE HANDLER =====
+
+/**
+ * POST /api/agent/chat
+ * Handles agent chat interactions with customers
+ *
+ * Returns:
+ * - Success: ChatSuccessResponse with agent's reply
+ * - Error: ChatErrorResponse with error details
+ *
+ * All responses follow Result<T, E> pattern for type-safe error handling
+ */
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
@@ -147,15 +263,23 @@ export async function POST(request: NextRequest) {
       'default'
     );
 
-    // Type-safe agent configuration parsing
-    const agentConfig = agentConfigRaw as Partial<AgentConfig> | null;
+    // Type-safe agent configuration parsing with proper type guards
+    const agentConfig = isAgentConfig(agentConfigRaw) ? agentConfigRaw : null;
     const configSelectedModel = agentConfig?.selectedModel;
-    const selectedModel = (configSelectedModel !== '' && configSelectedModel != null) ? configSelectedModel : 'gpt-4-turbo';
-    const modelConfig: ModelConfig = agentConfig?.modelConfig ?? {
-      temperature: 0.7,
-      maxTokens: 2048,
-      topP: 0.9,
-    };
+    const selectedModelString = (configSelectedModel !== '' && configSelectedModel != null) ? configSelectedModel : 'gpt-4-turbo';
+
+    // Validate model name before using
+    const selectedModel: ModelName = isModelName(selectedModelString) ? selectedModelString : 'gpt-4-turbo';
+
+    // Safely extract model config with proper type checking
+    const rawModelConfig = agentConfig?.modelConfig;
+    const modelConfig: ModelConfig = (rawModelConfig != null && isModelConfig(rawModelConfig))
+      ? rawModelConfig
+      : {
+          temperature: 0.7,
+          maxTokens: 2048,
+          topP: 0.9,
+        };
 
     // Build conversation history
     const messages: ChatMessage[] = [
@@ -187,7 +311,7 @@ export async function POST(request: NextRequest) {
 
     // Use single model with RAG (MVP approach - proven to work)
     const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
-    const provider = await AIProviderFactory.createProvider(selectedModel as import('@/types/ai-models').ModelName, orgId);
+    const provider = await AIProviderFactory.createProvider(selectedModel, orgId);
 
     const startTime = Date.now();
     const response: AIResponse = await provider.generateResponse(
@@ -215,19 +339,16 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     logger.error('Agent chat error', error, { route: '/api/agent/chat' });
 
-    // Type-safe error handling
-    const apiError = error as APIError;
-
-    // Handle specific error cases
-    if (apiError.message?.includes('API key')) {
+    // Type-safe error handling using type guards
+    if (isAPIKeyError(error)) {
       return handleAPIError(errors.missingAPIKey('AI Provider'));
     }
 
-    if (apiError.code === 'permission-denied') {
+    if (isPermissionDeniedError(error)) {
       return handleAPIError(errors.forbidden('You do not have access to this AI agent'));
     }
 
-    if (apiError.message?.includes('rate limit')) {
+    if (isRateLimitError(error)) {
       return handleAPIError(errors.tooManyRequests());
     }
 

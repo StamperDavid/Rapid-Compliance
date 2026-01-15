@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -10,8 +9,8 @@ import { withCache } from '@/lib/cache/analytics-cache';
  * Helper function to convert various date formats to Date object
  */
 function toDate(value: unknown): Date {
-  if (!value) return new Date();
-  if (value instanceof Date) return value;
+  if (!value) {return new Date();}
+  if (value instanceof Date) {return value;}
   if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
     return (value as { toDate: () => Date }).toDate();
   }
@@ -236,7 +235,7 @@ async function calculateRevenueAnalytics(orgId: string, period: string) {
           productMap.set(name, (productMap.get(name) ?? 0) + value);
         });
       } else if (deal.productName || deal.product) {
-        const name = deal.productName || deal.product || 'Unknown Product';
+        const name = deal.productName ?? deal.product ?? 'Unknown Product';
         const value = Number(deal.value) || Number(deal.amount) || 0;
         productMap.set(name, (productMap.get(name) ?? 0) + value);
       }

@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -13,7 +12,7 @@ import { getAuthToken } from '@/lib/auth/server-auth';
  * This function properly returns the fallback when the input cannot be parsed.
  */
 function safeParseFloat(value: unknown, fallback: number): number {
-  if (value === undefined || value === null) return fallback;
+  if (value === undefined || value === null) {return fallback;}
   const parsed = typeof value === 'number' ? value : parseFloat(String(value));
   return isNaN(parsed) ? fallback : parsed;
 }
@@ -23,8 +22,8 @@ function safeParseFloat(value: unknown, fallback: number): number {
  * Handles Firestore Timestamp objects, Date instances, strings, and numbers.
  */
 function toDate(value: unknown): Date {
-  if (!value) return new Date();
-  if (value instanceof Date) return value;
+  if (!value) {return new Date();}
+  if (value instanceof Date) {return value;}
   if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
     return (value as { toDate: () => Date }).toDate();
   }

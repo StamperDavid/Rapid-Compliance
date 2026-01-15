@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -11,8 +10,8 @@ import { getAuthToken } from '@/lib/auth/server-auth';
  * Helper to convert Firestore timestamps, Date objects, strings, or numbers to Date
  */
 function toDate(value: unknown): Date {
-  if (!value) return new Date();
-  if (value instanceof Date) return value;
+  if (!value) {return new Date();}
+  if (value instanceof Date) {return value;}
   if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
     return (value as { toDate: () => Date }).toDate();
   }
@@ -135,7 +134,7 @@ async function calculateWinLossAnalytics(orgId: string, period: string) {
   
   try {
     allDeals = await FirestoreService.getAll(dealsPath, []);
-  } catch (e) {
+  } catch (_e) {
     logger.debug('No deals collection yet', { orgId });
   }
 

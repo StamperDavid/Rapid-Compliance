@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -12,8 +11,8 @@ import { getAuthToken } from '@/lib/auth/server-auth';
  * Handles Firestore Timestamp, Date, string, and number types
  */
 function toDate(value: unknown): Date {
-  if (!value) return new Date();
-  if (value instanceof Date) return value;
+  if (!value) {return new Date();}
+  if (value instanceof Date) {return value;}
   if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
     return (value as { toDate: () => Date }).toDate();
   }
@@ -219,7 +218,7 @@ async function calculateLeadScoringAnalytics(orgId: string, period: string) {
     // Score by source
     const sourceMap = new Map<string, { total: number; count: number }>();
     scoredLeads.forEach(lead => {
-      const source = lead.source || lead.lead_source || 'unknown';
+      const source = lead.source ?? lead.lead_source ?? 'unknown';
       const existing = sourceMap.get(source) ?? { total: 0, count: 0 };
       sourceMap.set(source, {
         total: existing.total + (lead.score ?? 0),

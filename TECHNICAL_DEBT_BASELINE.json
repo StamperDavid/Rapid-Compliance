@@ -1,0 +1,193 @@
+{
+  "$schema": "TECHNICAL_DEBT_AUDIT_V1",
+  "auditDate": "2026-01-15",
+  "auditVersion": "1.0.0",
+  "status": "BASELINE_ESTABLISHED",
+
+  "summary": {
+    "totalLintIssues": 17446,
+    "lintWarnings": 15053,
+    "lintErrors": 2393,
+    "typeScriptErrors": 4,
+    "uniqueFilesWithIssues": 835,
+    "cleanBuild": false
+  },
+
+  "typeScriptErrors": {
+    "count": 4,
+    "errors": [
+      {
+        "file": "src/lib/agents/index.ts",
+        "line": 20,
+        "code": "TS2724",
+        "message": "'./intelligence/competitor/specialist' has no exported member named 'CompetitorAnalyst'. Did you mean 'CompetitorSignals'?"
+      },
+      {
+        "file": "src/lib/agents/index.ts",
+        "line": 27,
+        "code": "TS2724",
+        "message": "'./marketing/facebook/specialist' has no exported member named 'FacebookExpert'. Did you mean 'FacebookAdsExpert'?"
+      },
+      {
+        "file": "src/lib/agents/intelligence/scraper/specialist.ts",
+        "line": 302,
+        "code": "TS2322",
+        "message": "Type mismatch: potentialEmail/potentialPhone optional vs required in return type"
+      },
+      {
+        "file": "src/lib/agents/trust/review/specialist.ts",
+        "line": 732,
+        "code": "TS2322",
+        "message": "Type 'PersonalizationContext' is not assignable to type 'Record<string, string>'"
+      }
+    ]
+  },
+
+  "lintByRule": {
+    "@typescript-eslint/no-unsafe-member-access": 5448,
+    "@typescript-eslint/no-unsafe-assignment": 3898,
+    "@typescript-eslint/no-explicit-any": 2274,
+    "@typescript-eslint/no-unsafe-argument": 1050,
+    "@typescript-eslint/no-unused-vars": 784,
+    "@typescript-eslint/prefer-nullish-coalescing": 580,
+    "@typescript-eslint/no-unsafe-call": 534,
+    "curly": 523,
+    "@typescript-eslint/no-unsafe-return": 322,
+    "@typescript-eslint/require-await": 296,
+    "@typescript-eslint/no-misused-promises": 245,
+    "@typescript-eslint/no-floating-promises": 199,
+    "@typescript-eslint/no-non-null-assertion": 164,
+    "react-hooks/exhaustive-deps": 90,
+    "@typescript-eslint/no-redundant-type-constituents": 31,
+    "@typescript-eslint/consistent-type-imports": 25,
+    "@typescript-eslint/await-thenable": 19,
+    "@typescript-eslint/no-unnecessary-type-assertion": 14,
+    "@typescript-eslint/prefer-optional-chain": 10,
+    "@typescript-eslint/return-await": 5,
+    "react-hooks/rules-of-hooks": 4
+  },
+
+  "topOffendersByWarnings": [
+    { "file": "src/app/workspace/[orgId]/settings/email-templates/page.tsx", "warnings": 489 },
+    { "file": "src/app/admin/website-editor/page.tsx", "warnings": 288 },
+    { "file": "src/lib/conversation/conversation-engine.ts", "warnings": 232 },
+    { "file": "src/lib/coaching/coaching-analytics-engine.ts", "warnings": 232 },
+    { "file": "src/app/crm/page.tsx", "warnings": 207 },
+    { "file": "src/lib/voice/providers/twilio-provider.ts", "warnings": 182 },
+    { "file": "src/app/admin/sales-agent/training/page.tsx", "warnings": 154 },
+    { "file": "src/app/workspace/[orgId]/settings/ai-agents/training/page.tsx", "warnings": 147 },
+    { "file": "src/lib/voice/providers/telnyx-provider.ts", "warnings": 139 },
+    { "file": "src/app/workspace/[orgId]/settings/ai-agents/configuration/page.tsx", "warnings": 130 },
+    { "file": "src/lib/ecommerce/checkout-service.ts", "warnings": 128 },
+    { "file": "src/lib/analytics/dashboard/analytics-engine.ts", "warnings": 124 },
+    { "file": "src/lib/integrations/oauth-service.ts", "warnings": 122 },
+    { "file": "src/lib/services/sequencer.ts", "warnings": 113 },
+    { "file": "src/lib/ecommerce/cart-service.ts", "warnings": 105 },
+    { "file": "src/lib/workflows/actions/entity-action.ts", "warnings": 103 },
+    { "file": "src/lib/widgets/react-sdk.tsx", "warnings": 103 },
+    { "file": "src/lib/email/email-service.ts", "warnings": 102 },
+    { "file": "src/lib/agents/sales/qualifier/specialist.ts", "warnings": 94 },
+    { "file": "src/app/workspace/[orgId]/voice/training/page.tsx", "warnings": 92 }
+  ],
+
+  "topOffendersByErrors": [
+    { "file": "src/app/api/admin/voice/stats/route.ts", "errors": 51 },
+    { "file": "src/app/api/learning/fine-tune/route.ts", "errors": 50 },
+    { "file": "src/app/api/admin/test-api-connection/route.ts", "errors": 49 },
+    { "file": "src/app/api/integrations/oauth/[provider]/callback/route.ts", "errors": 47 },
+    { "file": "src/app/api/video/storyboard/route.ts", "errors": 43 },
+    { "file": "src/app/api/workspace/[orgId]/identity/route.ts", "errors": 41 },
+    { "file": "src/app/api/team/tasks/route.ts", "errors": 38 },
+    { "file": "src/app/api/conversation/analyze/route.ts", "errors": 37 },
+    { "file": "src/app/api/website/pages/[pageId]/publish/route.ts", "errors": 35 },
+    { "file": "src/app/api/ecommerce/checkout/create-session/route.ts", "errors": 35 },
+    { "file": "src/app/api/website/blog/posts/[postId]/publish/route.ts", "errors": 33 },
+    { "file": "src/app/api/workflows/[workflowId]/route.ts", "errors": 32 },
+    { "file": "src/app/api/webhooks/sms/route.ts", "errors": 32 },
+    { "file": "src/app/api/website/pages/route.ts", "errors": 31 },
+    { "file": "src/app/api/lead-scoring/rules/route.ts", "errors": 29 }
+  ],
+
+  "ruleCategories": {
+    "typeSafety": {
+      "description": "Issues related to TypeScript type safety (any, unsafe operations)",
+      "rules": [
+        "@typescript-eslint/no-unsafe-member-access",
+        "@typescript-eslint/no-unsafe-assignment",
+        "@typescript-eslint/no-explicit-any",
+        "@typescript-eslint/no-unsafe-argument",
+        "@typescript-eslint/no-unsafe-call",
+        "@typescript-eslint/no-unsafe-return"
+      ],
+      "totalCount": 13526
+    },
+    "asyncHandling": {
+      "description": "Issues with Promise handling and async/await",
+      "rules": [
+        "@typescript-eslint/no-misused-promises",
+        "@typescript-eslint/no-floating-promises",
+        "@typescript-eslint/require-await",
+        "@typescript-eslint/await-thenable",
+        "@typescript-eslint/return-await"
+      ],
+      "totalCount": 764
+    },
+    "codeQuality": {
+      "description": "General code quality and style issues",
+      "rules": [
+        "@typescript-eslint/no-unused-vars",
+        "@typescript-eslint/prefer-nullish-coalescing",
+        "curly",
+        "@typescript-eslint/no-non-null-assertion",
+        "@typescript-eslint/prefer-optional-chain",
+        "@typescript-eslint/consistent-type-imports"
+      ],
+      "totalCount": 2086
+    },
+    "reactIssues": {
+      "description": "React-specific hook and component issues",
+      "rules": [
+        "react-hooks/exhaustive-deps",
+        "react-hooks/rules-of-hooks"
+      ],
+      "totalCount": 94
+    }
+  },
+
+  "trustDepartmentDebt": {
+    "note": "Warnings in newly created Trust Department agents",
+    "files": [
+      { "file": "src/lib/agents/trust/gmb/specialist.ts", "warnings": 55 },
+      { "file": "src/lib/agents/trust/review/specialist.ts", "warnings": 0, "typeErrors": 1 },
+      { "file": "src/lib/agents/trust/reputation/manager.ts", "warnings": 0 }
+    ]
+  },
+
+  "priorityFixes": {
+    "p0_blocking": {
+      "description": "TypeScript errors that prevent build",
+      "count": 4,
+      "effort": "LOW"
+    },
+    "p1_typeSafety": {
+      "description": "no-explicit-any and unsafe operations",
+      "count": 13526,
+      "effort": "HIGH"
+    },
+    "p2_asyncIssues": {
+      "description": "Promise and async/await problems",
+      "count": 764,
+      "effort": "MEDIUM"
+    },
+    "p3_codeQuality": {
+      "description": "Style and quality improvements",
+      "count": 2086,
+      "effort": "MEDIUM"
+    },
+    "p4_reactHooks": {
+      "description": "React hook dependency issues",
+      "count": 94,
+      "effort": "LOW"
+    }
+  }
+}

@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -9,8 +8,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
  * Helper function to safely convert various date formats to Date object
  */
 function toDate(value: unknown): Date {
-  if (!value) return new Date();
-  if (value instanceof Date) return value;
+  if (!value) {return new Date();}
+  if (value instanceof Date) {return value;}
   if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
     return (value as { toDate: () => Date }).toDate();
   }
@@ -146,7 +145,7 @@ export async function GET(request: NextRequest) {
     // By workflow
     const workflowMap = new Map<string, { name: string; executions: number; success: number; failed: number }>();
     executionsInPeriod.forEach(exec => {
-      const workflowId = exec.workflowId || 'unknown';
+      const workflowId = exec.workflowId ?? 'unknown';
       const workflow = allWorkflows.find(w => w.id === workflowId);
       const name = (workflow?.name !== '' && workflow?.name != null) 
         ? workflow.name 
