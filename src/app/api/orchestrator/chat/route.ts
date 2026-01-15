@@ -194,11 +194,9 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now();
 
     // Determine if we should enable tool calling
-    // Use tools for factual/strategic queries in admin context
-    const useTools = isAdminContext && (
-      queryClassification.requiresStateReflection ||
-      queryClassification.queryType === 'strategic'
-    );
+    // ALWAYS enable tools for admin context - Jasper needs full platform access
+    // Tools are Jasper's PRIMARY interface to the platform (Anti-Hallucination Architecture)
+    const useTools = isAdminContext; // Tools ALWAYS enabled for admin
 
     let finalResponse: string;
     let toolsExecuted: string[] = [];

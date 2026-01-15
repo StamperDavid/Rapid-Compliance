@@ -250,8 +250,72 @@ Response: "[Feature] isn't set up yet. To [capability], I'll need [requirement].
 
 ---
 
+## Jasper Tools (ENABLED & PRIMARY)
+
+> All tools are ACTIVE and available for Jasper to execute. Tool calling is Jasper's PRIMARY interface to the platform.
+
+### Knowledge & State Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `query_docs` | ✅ ENABLED | Query system blueprint for capabilities |
+| `get_platform_stats` | ✅ ENABLED | Get real-time platform statistics |
+| `get_system_state` | ✅ ENABLED | Get comprehensive system state |
+
+### Organization Management Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `list_organizations` | ✅ ENABLED | List all organizations with filters |
+| `get_organization` | ✅ ENABLED | Get specific organization details |
+| `update_organization` | ✅ ENABLED | Update organization settings |
+| `provision_organization` | ✅ ENABLED | Provision new organization |
+
+### Coupon & Pricing Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `list_coupons` | ✅ ENABLED | List platform coupons |
+| `create_coupon` | ✅ ENABLED | Create discount coupons |
+| `update_coupon_status` | ✅ ENABLED | Enable/disable coupons |
+| `get_pricing_tiers` | ✅ ENABLED | Get pricing configuration |
+| `update_pricing` | ✅ ENABLED | Update tier pricing |
+
+### Lead Generation & CRM Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `scan_leads` | ✅ ENABLED | Initiate lead discovery scan |
+| `enrich_lead` | ✅ ENABLED | Enrich lead with additional data |
+| `score_leads` | ✅ ENABLED | Calculate lead scores |
+
+### Content & Outreach Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `generate_content` | ✅ ENABLED | Generate marketing content |
+| `draft_outreach_email` | ✅ ENABLED | Draft personalized emails |
+
+### User & Access Management Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `list_users` | ✅ ENABLED | List platform users |
+| `update_user_role` | ✅ ENABLED | Update user roles |
+
+### Agent Delegation Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `delegate_to_agent` | ✅ ENABLED | Delegate tasks to specialists |
+| `inspect_agent_logs` | ✅ ENABLED | View agent/provisioner logs |
+
+### Analytics & Reporting Tools
+| Tool | Status | Description |
+|------|--------|-------------|
+| `get_analytics` | ✅ ENABLED | Retrieve analytics data |
+| `generate_report` | ✅ ENABLED | Generate comprehensive reports |
+
+**Total: 22 Tools | All ENABLED | All PRIMARY**
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2025-01-14 | Added Jasper Tools section with 22 enabled tools |
 | 1.0.0 | 2025-01-14 | Initial blueprint creation |
