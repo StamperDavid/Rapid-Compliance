@@ -91,3 +91,4 @@ nul
 # Local dev configs
 .claude/
 .playwright-mcp/
+scripts/update-openrouter-key.js
