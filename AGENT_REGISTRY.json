@@ -2,9 +2,9 @@
   "$schema": "SWARM_REGISTRY_V1",
   "lastAudit": "2026-01-14",
   "totalAgents": 28,
-  "builtAgents": 3,
-  "ghostAgents": 25,
-  "honestAssessment": "Intelligence Department HIRED. 3 specialists now functional: Scraper, Competitor, Technographic.",
+  "builtAgents": 7,
+  "ghostAgents": 21,
+  "honestAssessment": "Marketing Department HIRED. 7 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook).",
 
   "hierarchy": {
     "JASPER": {
@@ -17,9 +17,11 @@
 
   "managers": {
     "MARKETING_MANAGER": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/manager.ts",
-      "specialists": ["TIKTOK_EXPERT", "X_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT"]
+      "specialists": ["TIKTOK_EXPERT", "X_EXPERT", "FACEBOOK_EXPERT", "LINKEDIN_EXPERT", "SEO_EXPERT"],
+      "functionalLOC": 450,
+      "note": "L2 orchestrator - coordinates TikTok, Twitter, Facebook specialists with real delegation logic"
     },
     "BUILDER_MANAGER": {
       "status": "GHOST",
@@ -93,31 +95,37 @@
       "verdict": "DOES_NOT_EXIST"
     },
     "TIKTOK_EXPERT": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/tiktok/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
-      "capabilities": ["trend_analysis", "content_optimization", "hashtag_strategy", "posting_schedule"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["viral_hook_generation", "video_pacing_scripts", "trending_sound_analysis", "retention_optimization", "algorithm_alignment"],
+      "functionalLOC": 650,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_marketing",
+      "systemPrompt": "TikTok-specific: Hook templates library (5 categories), first 1-3 seconds critical, pattern interrupts, 15-60s optimal, native aesthetic over polished ads"
     },
     "X_EXPERT": {
-      "status": "GHOST",
-      "path": "src/lib/agents/marketing/x/specialist.ts",
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/marketing/twitter/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
-      "capabilities": ["tweet_optimization", "thread_strategy", "engagement_analysis", "viral_detection"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["thread_architecture", "engagement_replies", "ratio_risk_assessment", "viral_detection", "blue_check_optimization"],
+      "functionalLOC": 450,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_marketing",
+      "systemPrompt": "Twitter/X-specific: Thread templates (5 types), 280 char optimization, ratio risk scoring, quote tweet tactics, peak timing"
     },
     "FACEBOOK_EXPERT": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/marketing/facebook/specialist.ts",
       "reportsTo": "MARKETING_MANAGER",
-      "capabilities": ["ad_optimization", "audience_targeting", "page_management", "group_engagement"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
+      "capabilities": ["ad_creative_generation", "audience_persona_matching", "copy_framework_selection", "ab_testing_variations"],
+      "functionalLOC": 850,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_marketing",
+      "systemPrompt": "Facebook Ads-specific: 9 audience personas, 6 copywriting frameworks (AIDA/PAS/BAB/FAB), primary text 125 chars visible, cold vs warm audience strategies"
     },
     "LINKEDIN_EXPERT": {
       "status": "GHOST",
@@ -238,8 +246,8 @@
   ],
 
   "jasperHandshake": {
-    "description": "Jasper's direct tool connections to Intelligence specialists",
-    "tools": {
+    "description": "Jasper's direct tool connections to specialists",
+    "intelligenceTools": {
       "scrape_website": {
         "specialist": "SCRAPER_SPECIALIST",
         "status": "CONNECTED",
@@ -257,6 +265,20 @@
         "status": "CONNECTED",
         "input": "{ url, deep, categories }",
         "output": "{ platform, analytics[], marketing[], advertising[], support[], summary }"
+      }
+    },
+    "marketingTools": {
+      "delegate_to_marketing": {
+        "manager": "MARKETING_MANAGER",
+        "status": "CONNECTED",
+        "input": "{ goal, platform?, niche?, audience?, budget?, contentType? }",
+        "output": "{ campaignAnalysis, platformStrategy, delegations[], aggregatedPlan, confidence }",
+        "delegates_to": ["TIKTOK_EXPERT", "X_EXPERT", "FACEBOOK_EXPERT"],
+        "platformStrategies": {
+          "tiktok": "viral hooks, video pacing, trending sounds - Gen Z/young audience",
+          "twitter": "thread architecture, engagement replies, ratio assessment - B2B/thought leadership",
+          "facebook": "ad creative, audience personas, AIDA/PAS frameworks - older demographics/conversions"
+        }
       }
     }
   }

@@ -932,6 +932,50 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // MARKETING DEPARTMENT TOOLS (The Handshake)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_marketing',
+      description:
+        'Delegate a marketing campaign or content request to the Marketing Department. The Marketing Manager will analyze the goal and coordinate TikTok, Twitter/X, and Facebook specialists as needed. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          goal: {
+            type: 'string',
+            description: 'The marketing goal or campaign request (e.g., "Launch a viral TikTok campaign for fitness niche", "Create a Twitter thread about AI trends", "Generate Facebook ads for real estate leads")',
+          },
+          platform: {
+            type: 'string',
+            description: 'Optional: Specific platform to target. If not provided, Marketing Manager will select best platform(s) based on goal.',
+            enum: ['tiktok', 'twitter', 'facebook', 'all', 'auto'],
+          },
+          niche: {
+            type: 'string',
+            description: 'The business niche or industry for targeting (e.g., "fitness", "real estate", "SaaS", "coaching")',
+          },
+          audience: {
+            type: 'string',
+            description: 'Target audience description (e.g., "Gen Z fitness enthusiasts", "B2B decision makers", "local homeowners")',
+          },
+          budget: {
+            type: 'string',
+            description: 'Optional: Campaign budget if applicable',
+          },
+          contentType: {
+            type: 'string',
+            description: 'Type of content to create',
+            enum: ['viral_hook', 'thread', 'ad_creative', 'engagement', 'campaign'],
+          },
+        },
+        required: ['goal'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // INTELLIGENCE SPECIALIST TOOLS (The Handshake)
   // ═══════════════════════════════════════════════════════════════════════════
   {
@@ -1899,6 +1943,50 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           data: result.data,
           errors: result.errors,
           specialist: 'TECHNOGRAPHIC_SCOUT',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // MARKETING DEPARTMENT EXECUTION
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_marketing': {
+        const { MarketingManager } = await import('@/lib/agents/marketing/manager');
+        const manager = new MarketingManager();
+        await manager.initialize();
+
+        // Build campaign goal from args
+        const campaignPayload = {
+          goal: args.goal as string,
+          platform: args.platform as string | undefined,
+          niche: args.niche as string | undefined,
+          audience: args.audience as string | undefined,
+          budget: args.budget as string | undefined,
+          contentType: args.contentType as string | undefined,
+          message: args.goal as string, // For platform detection
+          targetAudience: args.audience ? { demographics: args.audience as string } : undefined,
+        };
+
+        const result = await manager.execute({
+          id: `marketing_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'MARKETING_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: campaignPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        content = JSON.stringify({
+          status: result.status,
+          data: result.data,
+          errors: result.errors,
+          manager: 'MARKETING_MANAGER',
+          delegatedTo: result.data && typeof result.data === 'object' && 'platformStrategy' in result.data
+            ? (result.data as Record<string, unknown>).platformStrategy
+            : 'See data for details',
         });
         break;
       }
