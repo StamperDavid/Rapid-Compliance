@@ -1,7 +1,13 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+/**
+ * Slack OAuth - Initiate Auth Flow
+ * GET /api/integrations/slack/auth
+ */
+
+import { type NextRequest, NextResponse } from 'next/server';
 import { getSlackAuthUrl } from '@/lib/integrations/slack-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   // Rate limiting
@@ -16,32 +22,13 @@ export async function GET(request: NextRequest) {
 
   if (!userId || !orgId) {
     return NextResponse.json(
-      { error: 'Missing userId or orgId' },
+      { success: false, error: 'Missing userId or orgId' },
       { status: 400 }
     );
   }
 
   const state = Buffer.from(JSON.stringify({ userId, orgId })).toString('base64');
-  const authUrl = `${getSlackAuthUrl()  }&state=${state}`;
+  const authUrl = `${getSlackAuthUrl()}&state=${state}`;
 
   return NextResponse.redirect(authUrl);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

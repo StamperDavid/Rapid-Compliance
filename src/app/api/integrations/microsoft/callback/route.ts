@@ -1,8 +1,22 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+/**
+ * Microsoft OAuth - Handle callback
+ * GET /api/integrations/microsoft/callback
+ */
+
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/outlook-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
+
+export const dynamic = 'force-dynamic';
+
+// Zod schema for OAuth state validation
+const OAuthStateSchema = z.object({
+  userId: z.string().min(1),
+  orgId: z.string().min(1),
+});
 
 export async function GET(request: NextRequest) {
   // Rate limiting
@@ -20,7 +34,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { userId, orgId } = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+    // Decode and validate state
+    const decodedState: unknown = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+
+    const stateValidation = OAuthStateSchema.safeParse(decodedState);
+    if (!stateValidation.success) {
+      logger.warn('Invalid OAuth state', { errors: stateValidation.error.errors });
+      return NextResponse.redirect('/integrations?error=invalid_state');
+    }
+
+    const { userId, orgId } = stateValidation.data;
     const tokens = await getTokensFromCode(code);
 
     await FirestoreService.set(
@@ -40,27 +63,12 @@ export async function GET(request: NextRequest) {
       false
     );
 
+    logger.info('Microsoft integration saved', { route: '/api/integrations/microsoft/callback', orgId });
+
     return NextResponse.redirect(`/workspace/${orgId}/integrations?success=microsoft`);
-  } catch (_error) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Microsoft OAuth callback error', { error: errorMessage, route: '/api/integrations/microsoft/callback' });
     return NextResponse.redirect('/integrations?error=oauth_failed');
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

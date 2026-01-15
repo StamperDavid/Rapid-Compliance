@@ -1,28 +1,84 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { logger } from '@/lib/logger/logger';
-
 /**
  * OAuth Callback Handler
+ * GET /api/integrations/oauth/[provider]/callback
+ *
  * Exchanges authorization code for access token and stores credentials
  * Note: This is called by OAuth provider, so we validate state but don't require auth header
  */
 
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { logger } from '@/lib/logger/logger';
+
+export const dynamic = 'force-dynamic';
+
+// Zod schemas for OAuth responses
+const OAuthStateSchema = z.object({
+  organizationId: z.string().min(1),
+  provider: z.string().optional(),
+});
+
+const GoogleTokenResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  expires_in: z.number(),
+  token_type: z.string().optional(),
+  scope: z.string().optional(),
+});
+
+const MicrosoftTokenResponseSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string().optional(),
+  expires_in: z.number(),
+  token_type: z.string().optional(),
+});
+
+const SlackTokenResponseSchema = z.object({
+  ok: z.boolean(),
+  access_token: z.string().optional(),
+  error: z.string().optional(),
+  bot: z.object({
+    bot_access_token: z.string().optional(),
+  }).optional(),
+  team: z.object({
+    id: z.string().optional(),
+  }).optional(),
+  incoming_webhook: z.object({
+    url: z.string().optional(),
+  }).optional(),
+});
+
+// Credential types
+interface OAuthCredentials {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: Date;
+}
+
+interface SlackCredentials {
+  accessToken?: string;
+  botToken?: string;
+  teamId?: string;
+  webhookUrl?: string;
+}
+
+type ProviderCredentials = OAuthCredentials | SlackCredentials;
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { provider: string } }
+  { params }: { params: Promise<{ provider: string }> }
 ) {
   try {
-    const provider = params.provider;
+    const { provider } = await params;
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
     const state = searchParams.get('state');
-    const error = searchParams.get('error');
+    const errorParam = searchParams.get('error');
 
-    if (error) {
+    if (errorParam) {
       return NextResponse.redirect(
-        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(error)}`
+        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(errorParam)}`
       );
     }
 
@@ -33,15 +89,17 @@ export async function GET(
     }
 
     try {
-      const stateData = JSON.parse(state);
-      const { organizationId } = stateData;
+      const stateData: unknown = JSON.parse(state);
+      const stateValidation = OAuthStateSchema.safeParse(stateData);
 
-      if (!organizationId) {
+      if (!stateValidation.success) {
         throw new Error('Invalid state: missing organizationId');
       }
 
+      const { organizationId } = stateValidation.data;
+
       // Exchange code for access token
-      let credentials: any = {};
+      let credentials: ProviderCredentials;
 
       switch (provider) {
         case 'gmail':
@@ -61,7 +119,7 @@ export async function GET(
 
       // Store credentials in API keys
       const existingKeys = await apiKeyService.getKeys(organizationId);
-      const updatedKeys: any = {
+      const updatedKeys = {
         ...existingKeys,
         integrations: {
           ...existingKeys?.integrations,
@@ -75,22 +133,25 @@ export async function GET(
       return NextResponse.redirect(
         `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?success=${encodeURIComponent(provider)}`
       );
-    } catch (error: any) {
-      logger.error('OAuth callback inner error', error, { route: '/api/integrations/oauth/callback', provider: params.provider });
+    } catch (innerError) {
+      const innerErrorMsg = innerError instanceof Error ? innerError.message : 'Unknown error';
+      const resolvedParams = await params;
+      logger.error('OAuth callback inner error', { error: innerErrorMsg, route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
       return NextResponse.redirect(
-        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(error.message)}`
+        `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(innerErrorMsg)}`
       );
     }
-  } catch (error: any) {
-    logger.error('OAuth callback error', error, { route: '/api/integrations/oauth/callback', provider: params.provider });
-    const outerErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Unknown error';
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    const resolvedParams = await params;
+    logger.error('OAuth callback error', { error: errorMsg, route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
     return NextResponse.redirect(
-      `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(outerErrorMsg)}`
+      `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(errorMsg)}`
     );
   }
 }
 
-async function exchangeGoogleToken(code: string, redirectUri: string): Promise<any> {
+async function exchangeGoogleToken(code: string, redirectUri: string): Promise<OAuthCredentials> {
   const clientIdEnv = process.env.GOOGLE_CLIENT_ID;
   const clientId = (clientIdEnv !== '' && clientIdEnv != null) ? clientIdEnv : '';
   const clientSecretEnv = process.env.GOOGLE_CLIENT_SECRET;
@@ -111,11 +172,18 @@ async function exchangeGoogleToken(code: string, redirectUri: string): Promise<a
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Google token exchange failed: ${error}`);
+    const errorText = await response.text();
+    throw new Error(`Google token exchange failed: ${errorText}`);
   }
 
-  const data = await response.json();
+  const rawData: unknown = await response.json();
+  const validation = GoogleTokenResponseSchema.safeParse(rawData);
+
+  if (!validation.success) {
+    throw new Error('Invalid Google token response');
+  }
+
+  const data = validation.data;
   return {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
@@ -123,7 +191,7 @@ async function exchangeGoogleToken(code: string, redirectUri: string): Promise<a
   };
 }
 
-async function exchangeMicrosoftToken(code: string, redirectUri: string): Promise<any> {
+async function exchangeMicrosoftToken(code: string, redirectUri: string): Promise<OAuthCredentials> {
   const clientIdEnv = process.env.MICROSOFT_CLIENT_ID;
   const clientId = (clientIdEnv !== '' && clientIdEnv != null) ? clientIdEnv : '';
   const clientSecretEnv = process.env.MICROSOFT_CLIENT_SECRET;
@@ -147,11 +215,18 @@ async function exchangeMicrosoftToken(code: string, redirectUri: string): Promis
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Microsoft token exchange failed: ${error}`);
+    const errorText = await response.text();
+    throw new Error(`Microsoft token exchange failed: ${errorText}`);
   }
 
-  const data = await response.json();
+  const rawData: unknown = await response.json();
+  const validation = MicrosoftTokenResponseSchema.safeParse(rawData);
+
+  if (!validation.success) {
+    throw new Error('Invalid Microsoft token response');
+  }
+
+  const data = validation.data;
   return {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
@@ -159,7 +234,7 @@ async function exchangeMicrosoftToken(code: string, redirectUri: string): Promis
   };
 }
 
-async function exchangeSlackToken(code: string, redirectUri: string): Promise<any> {
+async function exchangeSlackToken(code: string, redirectUri: string): Promise<SlackCredentials> {
   const clientIdEnv = process.env.SLACK_CLIENT_ID;
   const clientId = (clientIdEnv !== '' && clientIdEnv != null) ? clientIdEnv : '';
   const clientSecretEnv = process.env.SLACK_CLIENT_SECRET;
@@ -179,13 +254,20 @@ async function exchangeSlackToken(code: string, redirectUri: string): Promise<an
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Slack token exchange failed: ${error}`);
+    const errorText = await response.text();
+    throw new Error(`Slack token exchange failed: ${errorText}`);
   }
 
-  const data = await response.json();
+  const rawData: unknown = await response.json();
+  const validation = SlackTokenResponseSchema.safeParse(rawData);
+
+  if (!validation.success) {
+    throw new Error('Invalid Slack token response');
+  }
+
+  const data = validation.data;
   if (!data.ok) {
-    throw new Error(`Slack error: ${data.error}`);
+    throw new Error(`Slack error: ${data.error ?? 'Unknown error'}`);
   }
 
   return {

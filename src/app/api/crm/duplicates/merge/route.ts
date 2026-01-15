@@ -3,39 +3,66 @@
  * POST /api/crm/duplicates/merge - Merge two duplicate records
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { mergeRecords } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import type { RelatedEntityType } from '@/types/activity';
+
+export const dynamic = 'force-dynamic';
+
+// Zod schema for request validation
+const MergeRequestSchema = z.object({
+  entityType: z.enum(['lead', 'contact', 'company', 'deal', 'opportunity']),
+  keepId: z.string().min(1, 'keepId is required'),
+  mergeId: z.string().min(1, 'mergeId is required'),
+  workspaceId: z.string().optional().default('default'),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const token = await getAuthToken(request);
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const body = await request.json();
     const organizationId = token.organizationId;
 
     if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
-    }
-
-    const { entityType, keepId, mergeId, workspaceId = 'default' } = body;
-
-    if (!entityType || !keepId || !mergeId) {
       return NextResponse.json(
-        { error: 'entityType, keepId, and mergeId are required' },
+        { success: false, error: 'Organization ID required' },
         { status: 400 }
       );
     }
 
-    const merged = await mergeRecords(
+    // Parse and validate request body
+    const body: unknown = await request.json();
+    const validation = MergeRequestSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid request body',
+          details: validation.error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const { entityType, keepId, mergeId, workspaceId } = validation.data;
+
+    const merged: unknown = await mergeRecords(
       organizationId,
       workspaceId,
-      entityType,
+      entityType as RelatedEntityType,
       keepId,
       mergeId
     );
@@ -55,4 +82,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

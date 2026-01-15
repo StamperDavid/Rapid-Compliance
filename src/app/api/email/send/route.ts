@@ -1,11 +1,22 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/email-service';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
 import { errors } from '@/lib/middleware/error-handler';
+
+interface ValidationError {
+  path?: string[];
+  message?: string;
+}
+
+interface ValidationFailure {
+  success: false;
+  errors?: {
+    errors?: ValidationError[];
+  };
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
@@ -24,19 +35,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(emailSendSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      const validationError = validation as ValidationFailure;
+      const errorDetails = validationError.errors?.errors?.map((e: ValidationError) => {
         const joinedPath = e.path?.join('.');
         return {
-          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
-          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+          path: joinedPath ?? 'unknown',
+          message: e.message ?? 'Validation error',
         };
       }) ?? [];
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -74,7 +85,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const result = await sendEmail({
       ...emailData,
       metadata: { ...emailData.metadata, organizationId, userId: user.uid },
-    } as any);
+    } as Parameters<typeof sendEmail>[0]);
 
     if (!result.success) {
       const response = NextResponse.json(
@@ -94,24 +105,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       userId: user.uid,
     });
     return response;
-  } catch (error: any) {
-    logApiError(request, error, 500);
-    
+  } catch (error: unknown) {
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    logApiError(request, errorObj, 500);
+
     // Handle specific email errors
     let response;
-    
-    if (error?.message?.includes('API key')) {
+    const errorMessage = errorObj.message;
+    const errorCode = (error as { code?: string })?.code;
+
+    if (errorMessage.includes('API key')) {
       response = errors.badRequest('SendGrid API key not configured');
-    } else if (error?.message?.includes('Invalid email')) {
+    } else if (errorMessage.includes('Invalid email')) {
       response = errors.badRequest('Invalid email address');
-    } else if (error?.code === 'ECONNREFUSED') {
-      response = errors.internal('Email service unavailable', error instanceof Error ? error : undefined);
+    } else if (errorCode === 'ECONNREFUSED') {
+      response = errors.internal('Email service unavailable', errorObj);
     } else {
-      response = errors.internal('Failed to send email', error instanceof Error ? error : undefined);
+      response = errors.internal('Failed to send email', errorObj);
     }
-    
+
     await logApiRequest(request, response, startTime);
     return response;
   }
 }
-

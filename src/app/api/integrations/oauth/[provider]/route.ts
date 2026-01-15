@@ -1,32 +1,36 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
-import { organizationIdSchema } from '@/lib/validation/schemas';
-import { logger } from '@/lib/logger/logger';
-
 /**
  * OAuth Integration Routes
+ * GET /api/integrations/oauth/[provider]
+ *
  * Handles OAuth flows for Gmail, Outlook, Google Calendar, etc.
  * Note: This route redirects to OAuth provider, so auth is checked but no rate limiting
  */
 
+import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
+import { organizationIdSchema } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger/logger';
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { provider: string } }
+  { params }: { params: Promise<{ provider: string }> }
 ) {
   try {
+    const { provider } = await params;
+
     // Authentication (but allow redirect even if not fully authenticated for OAuth flow)
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse && process.env.NODE_ENV === 'production') {
       // In production, require auth
       return authResult;
     }
-    
-    const user = authResult instanceof NextResponse 
+
+    const user = authResult instanceof NextResponse
       ? { uid: 'dev-user', organizationId: 'dev-org' } // Dev fallback
       : authResult.user;
 
-    const provider = params.provider;
     const searchParams = request.nextUrl.searchParams;
     const organizationId = searchParams.get('organizationId');
     const redirectUriParam = searchParams.get('redirectUri');
@@ -80,11 +84,11 @@ export async function GET(
 
     // Redirect to OAuth provider
     return NextResponse.redirect(authUrl);
-  } catch (error: any) {
-    logger.error('OAuth initiation error', error, { route: '/api/integrations/oauth' });
-    const oauthErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to initiate OAuth';
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to initiate OAuth';
+    logger.error('OAuth initiation error', { error: errorMessage, route: '/api/integrations/oauth' });
     return NextResponse.json(
-      { success: false, error: oauthErrorMsg },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
@@ -96,7 +100,7 @@ function generateGoogleAuthUrl(provider: string, redirectUri: string, organizati
   const scopes = provider === 'google-calendar'
     ? 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events'
     : 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly';
-  
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -118,7 +122,7 @@ function generateMicrosoftAuthUrl(provider: string, redirectUri: string, organiz
   const scopes = provider === 'outlook-calendar'
     ? 'https://graph.microsoft.com/Calendars.ReadWrite'
     : 'https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/Mail.Read';
-  
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -135,7 +139,7 @@ function generateSlackAuthUrl(redirectUri: string, organizationId: string): stri
   const slackClientIdEnv = process.env.SLACK_CLIENT_ID;
   const clientId = (slackClientIdEnv !== '' && slackClientIdEnv != null) ? slackClientIdEnv : '';
   const scopes = 'chat:write,channels:read,users:read';
-  
+
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,

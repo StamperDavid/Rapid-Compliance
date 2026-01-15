@@ -1,18 +1,23 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+/**
+ * OAuth Authorization URL Generator
+ * GET /api/integrations/oauth/authorize
+ */
+
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { generateAuthUrl } from '@/lib/integrations/oauth-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
-/**
- * GET /api/integrations/oauth/authorize - Generate OAuth authorization URL
- */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/oauth/authorize');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
@@ -32,7 +37,10 @@ export async function GET(request: NextRequest) {
     const organizationId = user.organizationId;
 
     if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Organization ID required' },
+        { status: 400 }
+      );
     }
 
     const workspaceIdForAuth = (workspaceId !== '' && workspaceId != null) ? workspaceId : undefined;
@@ -42,27 +50,9 @@ export async function GET(request: NextRequest) {
       success: true,
       authUrl,
     });
-  } catch (error: any) {
-    logger.error('Error generating auth URL', error, { route: '/api/integrations/oauth/authorize' });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate auth URL';
+    logger.error('Error generating auth URL', { error: errorMessage, route: '/api/integrations/oauth/authorize' });
     return errors.externalService('OAuth service', error instanceof Error ? error : undefined);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
