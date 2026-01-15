@@ -6,13 +6,41 @@
  * Provides aggregated analytics on lead scores
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
+import type { Timestamp } from 'firebase-admin/firestore';
 import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
+
+// Interface for Firestore timestamp conversion
+interface FirestoreLeadScore extends Omit<StoredLeadScore, 'metadata'> {
+  metadata: {
+    scoredAt: Timestamp | string | Date;
+    expiresAt: Timestamp | string | Date;
+    version: string;
+    algorithmVersion: string;
+    dataQuality: number;
+    sources: string[];
+    cached?: boolean;
+  };
+}
+
+// Helper to convert Firestore timestamp to Date
+function toDate(value: Timestamp | string | Date): Date {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return new Date(value);
+  }
+  // Firestore Timestamp
+  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  return new Date();
+}
 
 /**
  * GET /api/lead-scoring/analytics
@@ -79,13 +107,13 @@ export async function GET(req: NextRequest) {
 
     const scores = snapshot.docs
       .map((doc) => {
-        const data = doc.data() as StoredLeadScore;
+        const data = doc.data() as FirestoreLeadScore;
         return {
           ...data,
           metadata: {
             ...data.metadata,
-            scoredAt:(data.metadata.scoredAt as any)?.toDate?.() ?? new Date(data.metadata.scoredAt as any),
-            expiresAt:(data.metadata.expiresAt as any)?.toDate?.() ?? new Date(data.metadata.expiresAt as any),
+            scoredAt: toDate(data.metadata.scoredAt),
+            expiresAt: toDate(data.metadata.expiresAt),
           },
         };
       })
@@ -148,7 +176,8 @@ export async function GET(req: NextRequest) {
     // Calculate trends (daily aggregates)
     const trendsMap = new Map<string, { sum: number; count: number }>();
     scores.forEach((score) => {
-      const dateKey = score.metadata.scoredAt.toISOString().split('T')[0];
+      const scoredAtDate = score.metadata.scoredAt;
+      const dateKey = scoredAtDate.toISOString().split('T')[0] ?? '';
       const current = trendsMap.get(dateKey) ?? { sum: 0, count: 0 };
       trendsMap.set(dateKey, {
         sum: current.sum + score.totalScore,

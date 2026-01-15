@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { enrichLead } from '@/lib/analytics/lead-nurturing';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { leadEnrichSchema, validateInput } from '@/lib/validation/schemas';
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(leadEnrichSchema, body);
 
     if (!validation.success) {

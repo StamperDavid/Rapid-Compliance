@@ -3,11 +3,34 @@
  * Handles OAuth callback and stores access token
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+
+// Zod schema for Teams OAuth callback
+const teamsCallbackSchema = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+  error: z.string().optional(),
+});
+
+// Interface for Microsoft 365 API keys
+interface Microsoft365Keys {
+  clientId: string;
+  clientSecret: string;
+  redirectUri?: string;
+}
+
+// Interface for Microsoft token response
+interface MicrosoftTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  error?: string;
+  error_description?: string;
+}
 
 /**
  * GET /api/integrations/teams/callback
@@ -23,26 +46,29 @@ export async function GET(request: NextRequest) {
     if (error) {
       logger.error('Teams OAuth error', new Error(error), { state });
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${state}/settings/integrations?error=teams_auth_failed`
+        `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${state ?? 'default'}/settings/integrations?error=teams_auth_failed`
       );
     }
 
-    if (!code || !state) {
+    // Zod validation for OAuth callback params
+    const validation = teamsCallbackSchema.safeParse({ code, state, error });
+    if (!validation.success) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${state}/settings/integrations?error=invalid_callback`
+        `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${state ?? 'default'}/settings/integrations?error=invalid_callback`
       );
     }
 
-    const organizationId = state;
+    const organizationId = validation.data.state;
+    const validatedCode = validation.data.code;
 
     // Get Microsoft 365 (Teams) config
-    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId, 'microsoft365');
+    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId, 'microsoft365') as Microsoft365Keys | null;
     if (!microsoft365Keys) {
       throw new Error('Microsoft 365 (Teams) not configured');
     }
 
     const { clientId, clientSecret, redirectUri } = microsoft365Keys;
-    const baseRedirectUri = (redirectUri !== '' && redirectUri != null) ? redirectUri : `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
+    const baseRedirectUri = (redirectUri && redirectUri !== '') ? redirectUri : `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
 
     // Exchange code for access token
     const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
@@ -53,19 +79,19 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
-        code,
+        code: validatedCode,
         redirect_uri: baseRedirectUri,
         grant_type: 'authorization_code',
       }),
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json();
-      const errorDesc = (errorData.error_description !== '' && errorData.error_description != null) ? errorData.error_description : errorData.error;
+      const errorData = await tokenResponse.json() as MicrosoftTokenResponse;
+      const errorDesc = errorData.error_description ?? errorData.error ?? 'Unknown error';
       throw new Error(`Token exchange failed: ${errorDesc}`);
     }
 
-    const tokens = await tokenResponse.json();
+    const tokens = await tokenResponse.json() as MicrosoftTokenResponse;
 
     // Store tokens
     await FirestoreService.set(
@@ -98,11 +124,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/integrations?success=teams_connected`
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Teams callback error', error, { route: '/api/integrations/teams/callback' });
-    const errorOrgId = (error.organizationId !== '' && error.organizationId != null) ? error.organizationId : 'default';
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${errorOrgId}/settings/integrations?error=teams_callback_failed`
+      `${process.env.NEXT_PUBLIC_APP_URL}/workspace/default/settings/integrations?error=teams_callback_failed`
     );
   }
 }

@@ -3,12 +3,18 @@
  * Initiates OAuth flow for Teams integration
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { requireAuth } from '@/lib/auth/api-auth';
+
+// Interface for Microsoft 365 API keys
+interface Microsoft365Keys {
+  clientId: string;
+  clientSecret?: string;
+  redirectUri?: string;
+}
 
 /**
  * POST /api/integrations/teams/auth
@@ -31,8 +37,8 @@ export async function POST(request: NextRequest) {
 
 
     // Check if Microsoft 365 (Teams) is configured
-    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId, 'microsoft365');
-    
+    const microsoft365Keys = await apiKeyService.getServiceKey(organizationId, 'microsoft365') as Microsoft365Keys | null;
+
     if (!microsoft365Keys?.clientId) {
       return NextResponse.json({
         success: false,
@@ -42,15 +48,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { clientId, redirectUri } = microsoft365Keys;
-    const baseRedirectUri = (redirectUri !== '' && redirectUri != null) ? redirectUri : `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
-    
+    const baseRedirectUri = (redirectUri && redirectUri !== '') ? redirectUri : `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
+
     // Microsoft Teams uses Azure AD OAuth
     const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
       `client_id=${clientId}` +
       `&response_type=code` +
       `&redirect_uri=${encodeURIComponent(baseRedirectUri)}` +
       `&scope=${encodeURIComponent('https://graph.microsoft.com/ChannelMessage.Send offline_access')}` +
-      `&state=${organizationId}`;
+      `&state=${String(organizationId)}`;
 
     logger.info('Teams OAuth flow started', { organizationId, userId });
 
@@ -58,7 +64,7 @@ export async function POST(request: NextRequest) {
       success: true,
       authUrl,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Teams auth error', error, { route: '/api/integrations/teams/auth' });
     return errors.internal('Failed to initiate Teams auth', error instanceof Error ? error : undefined);
   }

@@ -1,6 +1,5 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { createNurtureSequence, enrollLeadInSequence, analyzeLeadLifecycle, getLeadAttribution } from '@/lib/analytics/lead-nurturing';
+import { type NextRequest, NextResponse } from 'next/server';
+import { createNurtureSequence, enrollLeadInSequence, analyzeLeadLifecycle, getLeadAttribution, type LeadNurtureSequence } from '@/lib/analytics/lead-nurturing';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { leadNurtureSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -36,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(leadNurtureSchema, body);
 
     if (!validation.success) {
@@ -67,8 +66,9 @@ export async function POST(request: NextRequest) {
         if (!data.sequence) {
           return errors.badRequest('Sequence data is required');
         }
+        const sequenceData = data.sequence as Partial<LeadNurtureSequence>;
         const sequence = await createNurtureSequence({
-          ...data.sequence,
+          ...sequenceData,
           organizationId,
           createdBy: user.uid,
         });

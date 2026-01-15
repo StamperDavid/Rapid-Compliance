@@ -3,12 +3,18 @@
  * Handles natural language queries for lead generation
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { enrichCompany } from '@/lib/enrichment/enrichment-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+// Zod schema for research request
+const leadResearchSchema = z.object({
+  query: z.string().min(1),
+  organizationId: z.string().min(1),
+});
 
 interface ResearchLead {
   name: string;
@@ -23,19 +29,23 @@ interface ResearchLead {
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/leads/research');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
-    const body = await request.json();
-    const { query, organizationId } = body;
-    
-    if (!query || !organizationId) {
+    const body: unknown = await request.json();
+    const validation = leadResearchSchema.safeParse(body);
+
+    if (!validation.success) {
       return errors.badRequest('Missing query or organizationId');
     }
-    
+
+    const { query, organizationId } = validation.data;
+
     logger.info('Lead research query received', { route: '/api/leads/research', query, organizationId });
-    
+
     // Parse the natural language query
-    const parsedQuery = await parseSearchQuery(query);
+    const parsedQuery = parseSearchQuery(query);
     
     logger.debug('Lead research query parsed', { route: '/api/leads/research', parsedQuery });
     
@@ -99,13 +109,13 @@ export async function POST(request: NextRequest) {
  * Parse natural language search query
  * This is a simple version - can be enhanced with AI
  */
-async function parseSearchQuery(query: string): Promise<{
+function parseSearchQuery(query: string): {
   companyNames?: string[];
   industry?: string;
   location?: string;
   size?: string;
   techStack?: string[];
-}> {
+} {
   const lowerQuery = query.toLowerCase();
   
   // Extract industry

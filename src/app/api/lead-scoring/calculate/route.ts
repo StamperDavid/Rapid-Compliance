@@ -6,13 +6,23 @@
  * Calculates AI-powered lead score based on discovery data.
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getAuth } from 'firebase-admin/auth';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { calculateLeadScore, calculateLeadScoresBatch } from '@/lib/services/lead-scoring-engine';
-import type { LeadScoreRequest, BatchLeadScoreRequest } from '@/types/lead-scoring';
+import type { LeadScoreRequest, BatchLeadScoreRequest, LeadScore } from '@/types/lead-scoring';
+
+// Zod schema for lead scoring request body
+const leadScoringRequestSchema = z.object({
+  leadId: z.string().optional(),
+  leadIds: z.array(z.string()).optional(),
+  organizationId: z.string().min(1),
+  scoringRulesId: z.string().optional(),
+  forceRescore: z.boolean().optional(),
+  discoveryData: z.record(z.unknown()).optional(),
+});
 
 /**
  * POST /api/lead-scoring/calculate
@@ -41,26 +51,21 @@ export async function POST(req: NextRequest) {
     const decodedToken = await getAuth(adminApp).verifyIdToken(token);
     const userId = decodedToken.uid;
 
-    // Parse request body
-    const body = await req.json();
-    const { 
-      leadId, 
-      leadIds, 
-      organizationId, 
-      scoringRulesId, 
-      forceRescore,
-      discoveryData 
-    } = body;
+    // Parse and validate request body
+    const body: unknown = await req.json();
+    const validation = leadScoringRequestSchema.safeParse(body);
 
-    if (!organizationId) {
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'organizationId is required' },
+        { success: false, error: 'Invalid request body', details: validation.error.issues },
         { status: 400 }
       );
     }
 
+    const { leadId, leadIds, organizationId, scoringRulesId, forceRescore, discoveryData } = validation.data;
+
     // Batch scoring
-    if (leadIds && Array.isArray(leadIds)) {
+    if (leadIds && leadIds.length > 0) {
       logger.info('Batch lead scoring request', {
         userId,
         organizationId,
@@ -75,11 +80,11 @@ export async function POST(req: NextRequest) {
       };
 
       const scores = await calculateLeadScoresBatch(request);
-      
+
       // Convert Map to object for JSON response
-      const scoresObj: Record<string, any> = {};
-      scores.forEach((score, leadId) => {
-        scoresObj[leadId] = score;
+      const scoresObj: Record<string, LeadScore> = {};
+      scores.forEach((score, id) => {
+        scoresObj[id] = score;
       });
 
       return NextResponse.json({

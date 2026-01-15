@@ -7,15 +7,41 @@
  * DELETE /api/lead-scoring/rules - Delete scoring rules
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getAuth } from 'firebase-admin/auth';
+import { type Timestamp, FieldValue } from 'firebase-admin/firestore';
 import adminApp from '@/lib/firebase/admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import type { ScoringRules } from '@/types/lead-scoring';
-import { DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
+import { type ScoringRules, DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
+
+// Interface for Firestore scoring rules data
+interface FirestoreScoringRulesData {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  createdBy?: string;
+  [key: string]: unknown;
+}
+
+// Zod schemas for request validation
+const createRulesSchema = z.object({
+  organizationId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+const updateRulesSchema = z.object({
+  organizationId: z.string().min(1),
+  rulesId: z.string().min(1),
+  isActive: z.boolean().optional(),
+});
 
 /**
  * GET /api/lead-scoring/rules
@@ -47,7 +73,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decodedToken = await getAuth(adminApp).verifyIdToken(token);
+    await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
@@ -67,11 +93,17 @@ export async function GET(req: NextRequest) {
     const snapshot = await rulesRef.orderBy('createdAt', 'desc').get();
 
     const rules = snapshot.docs.map((doc) => {
-      const data = doc.data();
+      const data = doc.data() as FirestoreScoringRulesData;
+      const createdAt = data.createdAt && typeof data.createdAt === 'object' && 'toDate' in data.createdAt
+        ? data.createdAt.toDate()
+        : new Date();
+      const updatedAt = data.updatedAt && typeof data.updatedAt === 'object' && 'toDate' in data.updatedAt
+        ? data.updatedAt.toDate()
+        : new Date();
       return {
         ...data,
-        createdAt:data.createdAt?.toDate() ?? new Date(),
-        updatedAt:data.updatedAt?.toDate() ?? new Date(),
+        createdAt,
+        updatedAt,
       } as ScoringRules;
     });
 
@@ -123,15 +155,17 @@ export async function POST(req: NextRequest) {
     const decodedToken = await getAuth(adminApp).verifyIdToken(token);
     const userId = decodedToken.uid;
 
-    const body = await req.json();
-    const { organizationId, name, description, ...rulesData } = body;
+    const body: unknown = await req.json();
+    const validation = createRulesSchema.safeParse(body);
 
-    if (!organizationId || !name) {
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'organizationId and name are required' },
+        { success: false, error: 'organizationId and name are required', details: validation.error.issues },
         { status: 400 }
       );
     }
+
+    const { organizationId, name, description, isActive } = validation.data;
 
     const now = new Date();
     // Generate a new document ID
@@ -142,12 +176,12 @@ export async function POST(req: NextRequest) {
     const rulesId = rulesRef.doc().id;
 
     // If this is set to active, deactivate all other rules
-    if (rulesData.isActive) {
-      const rulesRef = adminDal.getNestedCollection(
+    if (isActive) {
+      const existingRulesRef = adminDal.getNestedCollection(
         'organizations/{orgId}/scoringRules',
         { orgId: organizationId }
       );
-      const existingSnapshot = await rulesRef.where('isActive', '==', true).get();
+      const existingSnapshot = await existingRulesRef.where('isActive', '==', true).get();
 
       const batch = adminDal.batch();
       existingSnapshot.docs.forEach((doc) => {
@@ -158,11 +192,11 @@ export async function POST(req: NextRequest) {
 
     const rules: ScoringRules = {
       ...DEFAULT_SCORING_RULES,
-      ...rulesData,
       id: rulesId,
       organizationId,
       name,
       description,
+      isActive: isActive ?? false,
       createdAt: now,
       updatedAt: now,
       createdBy: userId,
@@ -229,33 +263,28 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    if (!adminApp) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
     const token = authHeader.substring(7);
     await getAuth(adminApp).verifyIdToken(token);
 
-    const body = await req.json();
-    const { organizationId, rulesId, ...updates } = body;
+    const body: unknown = await req.json();
+    const validation = updateRulesSchema.safeParse(body);
 
-    if (!organizationId || !rulesId) {
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'organizationId and rulesId are required' },
+        { success: false, error: 'organizationId and rulesId are required', details: validation.error.issues },
         { status: 400 }
       );
     }
 
+    const { organizationId, rulesId, isActive } = validation.data;
+
     // If setting to active, deactivate others
-    if (updates.isActive) {
-      const rulesRef = adminDal.getNestedCollection(
+    if (isActive) {
+      const existingRulesRef = adminDal.getNestedCollection(
         'organizations/{orgId}/scoringRules',
         { orgId: organizationId }
       );
-      const existingSnapshot = await rulesRef.where('isActive', '==', true).get();
+      const existingSnapshot = await existingRulesRef.where('isActive', '==', true).get();
 
       const batch = adminDal.batch();
       existingSnapshot.docs.forEach((doc) => {
@@ -271,10 +300,14 @@ export async function PUT(req: NextRequest) {
       { orgId: organizationId, rulesId }
     );
 
-    await rulesDocRef.update({
-      ...updates,
+    const updateData: Record<string, unknown> = {
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    };
+    if (isActive !== undefined) {
+      updateData.isActive = isActive;
+    }
+
+    await rulesDocRef.update(updateData);
 
     logger.info('Updated scoring rules', { rulesId, organizationId });
 
