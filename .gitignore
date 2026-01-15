@@ -82,9 +82,11 @@ audit_*.json
 CLUSTER_REPORT.txt
 error-cluster-report.json
 
-# AI Tooling Temp Files
+# AI Tooling Temp Files (Claude Code working directory markers)
 tmpclaude*
 .tmpclaude*
+**/tmpclaude-*
+nul
 
 # Local dev configs
 .claude/
