@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { applyDiscountCode, removeDiscountCode } from '@/lib/ecommerce/cart-service';
 import { z } from 'zod';
@@ -15,32 +14,46 @@ const discountSchema = z.object({
   code: z.string(),
 });
 
+interface ValidationError {
+  path?: string[];
+  message?: string;
+}
+
+interface ValidationFailure {
+  success: false;
+  errors?: {
+    errors?: ValidationError[];
+  };
+}
+
 /**
  * POST /api/ecommerce/cart/discount - Apply discount code
  */
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/cart/discount');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(discountSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      const validationError = validation as ValidationFailure;
+      const errorDetails = validationError.errors?.errors?.map((e: ValidationError) => {
         const joinedPath = e.path?.join('.');
         return {
-          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
-          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+          path: joinedPath ?? 'unknown',
+          message: e.message ?? 'Validation error',
         };
       }) ?? [];
-      
+
       return errors.validation('Validation failed', errorDetails);
     }
 
@@ -52,10 +65,11 @@ export async function POST(request: NextRequest) {
       success: true,
       cart,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to apply discount code';
     logger.error('Error applying discount', error, { route: '/api/ecommerce/cart/discount' });
     return NextResponse.json(
-      { success: false, error:(error.message !== '' && error.message != null) ? error.message : 'Failed to apply discount code'},
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
@@ -90,9 +104,8 @@ export async function DELETE(request: NextRequest) {
       success: true,
       cart,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error removing discount', error, { route: '/api/ecommerce/cart/discount' });
     return errors.database('Failed to remove discount', error instanceof Error ? error : undefined);
   }
 }
-

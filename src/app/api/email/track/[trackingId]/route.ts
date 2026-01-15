@@ -1,7 +1,5 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { recordEmailOpen } from '@/lib/email/email-service';
+import { type NextRequest, NextResponse } from 'next/server';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
@@ -23,7 +21,7 @@ export async function GET(
 
   try {
     const trackingId = params.trackingId;
-    
+
     // Basic validation - trackingId should be alphanumeric with dashes
     if (!trackingId || !/^[a-zA-Z0-9\-_]+$/.test(trackingId)) {
       // Still return pixel to avoid breaking email clients
@@ -39,38 +37,12 @@ export async function GET(
       });
     }
 
-    const ipAddress = (() => {
-      const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0];
-      const realIp = request.headers.get('x-real-ip');
-      return (forwarded !== '' && forwarded != null) ? forwarded 
-        : (realIp !== '' && realIp != null) ? realIp 
-        : 'unknown';
-    })();
-    const userAgent =(request.headers.get('user-agent') !== '' && request.headers.get('user-agent') != null) ? request.headers.get('user-agent') : 'unknown';
+    const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0];
+    const realIp = request.headers.get('x-real-ip');
+    const ipAddress = forwarded ?? realIp ?? 'unknown';
+    const userAgent = request.headers.get('user-agent') ?? 'unknown';
 
-    // Look up tracking mapping to get organizationId and messageId
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
-    // Try to find the mapping - we need to search across organizations
-    // In production, we should have a global mapping collection or encode orgId in trackingId
-    // For now, we'll search the most common organization paths
-    // Note: This is not efficient - in production, use a global mapping collection
-    
-    // Try to find mapping (this is a simplified approach - production should use a global mapping)
-    // We'll store open events and process them later with proper org lookup
-    // Or we can encode organizationId in the trackingId format
-    
-    // For now, record the open event - we'll need to update the tracking system
-    // to store mappings when emails are sent
-    const { recordEmailOpen } = await import('@/lib/email/email-service');
-    
-    // Try to extract organizationId from trackingId or search
-    // If trackingId is a messageId, we can try to find it in organizations
-    // For now, we'll record it generically and process later
-    // In production, trackingId should map directly to organizationId
-    
-    // Fire and forget - try to record with org lookup
-    // We'll need to update the email sending to store proper mappings
+    // Fire and forget - try to record tracking event
     FirestoreService.set(
       'emailTrackingEvents',
       `${trackingId}_${Date.now()}`,
@@ -102,7 +74,7 @@ export async function GET(
         'Expires': '0',
       },
     });
-  } catch (error: any) {
+  } catch (_error) {
     // Still return pixel even on error to avoid breaking email clients
     const pixel = Buffer.from(
       'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',

@@ -1,8 +1,14 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+interface RequestPayload {
+  linkId: string;
+  messageId: string;
+  originalUrl: string;
+  organizationId: string;
+}
 
 /**
  * Store tracked link mapping
@@ -16,7 +22,7 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const body = await request.json();
+    const body = await request.json() as RequestPayload;
     const { linkId, messageId, originalUrl, organizationId } = body;
 
     if (!linkId || !messageId || !originalUrl || !organizationId) {
@@ -39,31 +45,12 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error storing tracked link', error, { route: '/api/email/track/link' });
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

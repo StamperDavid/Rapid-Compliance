@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, orderBy } from 'firebase/firestore';
@@ -7,6 +6,8 @@ import type { Order } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+type QueryConstraint = ReturnType<typeof where> | ReturnType<typeof orderBy>;
 
 /**
  * GET /api/ecommerce/orders - List orders with pagination
@@ -34,13 +35,13 @@ export async function GET(request: NextRequest) {
     const workspaceId = searchParams.get('workspaceId');
     const customerEmail = searchParams.get('customerEmail');
     const status = searchParams.get('status');
-    const pageSize = parseInt(searchParams.get('limit') || '50');
+    const pageSize = parseInt(searchParams.get('limit') ?? '50');
 
     if (!workspaceId) {
       return errors.badRequest('workspaceId required');
     }
 
-    const constraints: any[] = [orderBy('createdAt', 'desc')];
+    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
 
     // Filter by customer email if provided
     if (customerEmail) {
@@ -80,29 +81,10 @@ export async function GET(request: NextRequest) {
         pageSize: result.data.length,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error listing orders', error, {
       route: '/api/ecommerce/orders',
     });
     return errors.database('Failed to list orders', error instanceof Error ? error : undefined);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

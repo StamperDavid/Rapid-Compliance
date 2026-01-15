@@ -2,8 +2,7 @@
  * Create Stripe checkout session
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import Stripe from 'stripe';
@@ -12,17 +11,56 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+interface CustomerInfo {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
+
+interface Address {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
+interface RequestPayload {
+  orgId: string;
+  workspaceId?: string;
+  customerInfo: CustomerInfo;
+  shippingAddress?: Address;
+  billingAddress?: Address;
+  shippingMethodId?: string;
+}
+
+interface CartItem {
+  name: string;
+  description?: string;
+  image?: string;
+  price: number;
+  quantity: number;
+}
+
+interface Cart {
+  items?: CartItem[];
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/checkout/create-session');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body = await request.json() as RequestPayload;
     const { orgId, workspaceId = 'default', customerInfo, shippingAddress, billingAddress, shippingMethodId } = body;
 
     if (!orgId) {
@@ -42,7 +80,7 @@ export async function POST(request: NextRequest) {
     const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
 
     // Get cart
-    const cart = await FirestoreService.get(
+    const cart = await FirestoreService.get<Cart>(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/carts`,
       authResult.user.uid
     );
@@ -52,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create line items
-    const lineItems = cart.items.map((item: any) => ({
+    const lineItems = cart.items.map((item: CartItem) => ({
       price_data: {
         currency: 'usd',
         product_data: {
@@ -94,9 +132,8 @@ export async function POST(request: NextRequest) {
       success: true,
       sessionId: session.id,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Checkout session creation error', error, { route: '/api/ecommerce/checkout/create-session' });
     return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }
 }
-

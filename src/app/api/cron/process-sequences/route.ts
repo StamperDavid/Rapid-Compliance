@@ -1,14 +1,13 @@
 /**
  * Cron Job: Process Email Sequences
  * Runs every hour to process scheduled sequence steps
- * 
+ *
  * Setup in Vercel:
  * - Add vercel.json with cron configuration
  * - Protect this endpoint with CRON_SECRET
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { processSequences } from '@/lib/outbound/sequence-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -43,7 +42,7 @@ export async function GET(request: NextRequest) {
       errors: result.errors,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Fatal error processing sequences (cron)', error, { route: '/api/cron/process-sequences' });
     return errors.internal('Failed to process sequences', error instanceof Error ? error : undefined);
   }
@@ -51,22 +50,3 @@ export async function GET(request: NextRequest) {
 
 // Allow both GET and POST (Vercel crons use GET, some systems use POST)
 export const POST = GET;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

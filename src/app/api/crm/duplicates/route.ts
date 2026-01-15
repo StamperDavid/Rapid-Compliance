@@ -3,15 +3,20 @@
  * POST /api/crm/duplicates - Detect duplicates for a record
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { 
+import { type NextRequest, NextResponse } from 'next/server';
+import {
   detectLeadDuplicates,
   detectContactDuplicates,
   detectCompanyDuplicates,
 } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+
+interface RequestPayload {
+  entityType: 'lead' | 'contact' | 'company';
+  record: Record<string, unknown>;
+  workspaceId?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await request.json() as RequestPayload;
     const organizationId = token.organizationId;
 
     if (!organizationId) {
@@ -69,4 +74,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

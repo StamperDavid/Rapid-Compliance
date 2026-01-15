@@ -4,8 +4,7 @@
  * This should be called by a cron job (e.g., Vercel Cron or external service)
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { runScheduledPublisher } from '@/lib/scheduled-publisher';
 import { logger } from '@/lib/logger/logger';
 
@@ -21,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Verify this is a legitimate cron request
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    
+
     // If CRON_SECRET is set, require authentication
     if (cronSecret) {
       if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
@@ -45,7 +44,8 @@ export async function GET(request: NextRequest) {
       ...result,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scheduled publisher error', error, {
       route: '/api/cron/scheduled-publisher',
       method: 'GET'
@@ -53,11 +53,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString(),
       },
       { status: 500 }
     );
   }
 }
-

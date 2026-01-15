@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { createCampaign, sendCampaign, getCampaignStats, listCampaigns } from '@/lib/email/campaign-manager';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { campaignActionSchema, validateInput, organizationIdSchema } from '@/lib/validation/schemas';
@@ -8,6 +7,18 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 
 export const dynamic = 'force-dynamic';
+
+interface ValidationError {
+  path?: string[];
+  message?: string;
+}
+
+interface ValidationFailure {
+  success: false;
+  errors?: {
+    errors?: ValidationError[];
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,11 +57,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, stats });
     } else {
       // List all campaigns with pagination
-      const limit = parseInt(searchParams.get('limit') || '50');
+      const limit = parseInt(searchParams.get('limit') ?? '50');
       const cursor = searchParams.get('cursor') ?? undefined;
       const result = await listCampaigns(organizationId, limit, cursor);
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         campaigns: result.campaigns,
         pagination: {
           hasMore: result.hasMore,
@@ -58,7 +69,7 @@ export async function GET(request: NextRequest) {
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Campaign fetch error', error, { route: '/api/email/campaigns' });
     return errors.database('Failed to fetch campaigns', error instanceof Error ? error : undefined);
   }
@@ -80,19 +91,19 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(campaignActionSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      const validationError = validation as ValidationFailure;
+      const errorDetails = validationError.errors?.errors?.map((e: ValidationError) => {
         const joinedPath = e.path?.join('.');
         return {
-          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
-          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+          path: joinedPath ?? 'unknown',
+          message: e.message ?? 'Validation error',
         };
       }) ?? [];
-      
+
       return errors.validation('Validation failed', errorDetails);
     }
 
@@ -123,16 +134,15 @@ export async function POST(request: NextRequest) {
 
       const result = await sendCampaign(campaignId);
       if (!result.success) {
-        return errors.badRequest((result.error !== '' && result.error != null) ? result.error : 'Failed to send campaign');
+        return errors.badRequest(result.error ?? 'Failed to send campaign');
       }
 
       return NextResponse.json({ success: true });
     }
 
     return errors.badRequest('Invalid action. Use: create or send');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Campaign processing error', error, { route: '/api/email/campaigns' });
     return errors.database('Failed to process campaign', error instanceof Error ? error : undefined);
   }
 }
-

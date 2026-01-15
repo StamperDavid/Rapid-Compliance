@@ -1,24 +1,31 @@
 /**
  * API Route: Process Discovery Queue
- * 
+ *
  * Endpoint to trigger the discovery dispatcher.
  * Can be called manually or via Vercel Cron.
- * 
+ *
  * POST /api/discovery/queue/process
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { processDiscoveryQueue } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
+
+interface RequestPayload {
+  batchSize?: number;
+  concurrency?: number;
+  maxRetries?: number;
+  delayMs?: number;
+  organizationId?: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
     logger.info('[API] Discovery queue processing started');
 
     // Parse request body for config options
-    const body = await request.json().catch(() => ({}));
-    
+    const body = await request.json().catch(() => ({})) as RequestPayload;
+
     const config = {
       batchSize: body.batchSize ?? 10,
       concurrency: body.concurrency ?? 3,

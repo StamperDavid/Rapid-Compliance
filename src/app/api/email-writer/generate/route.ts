@@ -1,54 +1,12 @@
 /**
  * Email Writer API - Generate Email Endpoint
- * 
+ *
  * POST /api/email-writer/generate
- * 
+ *
  * Generate AI-powered sales emails based on deal context, scoring, and battlecard data.
- * 
- * FEATURES:
- * - Input validation with Zod schemas
- * - Rate limiting (AI_OPERATIONS: 20 req/min)
- * - Deal scoring integration
- * - Battlecard integration for competitive positioning
- * - Industry template integration for best practices
- * - Signal Bus integration for tracking
- * 
- * REQUEST BODY:
- * ```json
- * {
- *   "organizationId": "org_123",
- *   "workspaceId": "workspace_123",
- *   "userId": "user_123",
- *   "emailType": "intro",
- *   "dealId": "deal_123",
- *   "recipientName": "John Doe",
- *   "recipientEmail": "john@example.com",
- *   "companyName": "Example Inc",
- *   "tone": "professional",
- *   "includeCompetitive": true,
- *   "competitorDomain": "https://competitor.com"
- * }
- * ```
- * 
- * RESPONSE:
- * ```json
- * {
- *   "success": true,
- *   "email": {
- *     "id": "email_abc",
- *     "subject": "Quick question about Example Inc",
- *     "body": "<html>...</html>",
- *     "bodyPlain": "Hi John...",
- *     "emailType": "intro",
- *     "dealScore": 75,
- *     "dealTier": "warm"
- *   }
- * }
- * ```
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 import { generateSalesEmail, GenerateEmailSchema, validateRequestBody } from '@/lib/email-writer/server';
@@ -57,30 +15,30 @@ export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/email-writer/generate
- * 
+ *
  * Generate AI-powered sales email
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // 1. Rate limiting (AI operations: 20 req/min)
     const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // 2. Parse and validate request body
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateRequestBody(body, GenerateEmailSchema);
-    
+
     if (validation.success === false) {
       const { error, details } = validation;
       logger.warn('Invalid email generation request', {
         error,
         details,
       });
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -90,16 +48,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     const validData = validation.data;
-    
+
     // 3. Generate email
     logger.info('Generating sales email', {
       organizationId: validData.organizationId,
       dealId: validData.dealId,
       emailType: validData.emailType,
     });
-    
+
     const result = await generateSalesEmail({
       organizationId: validData.organizationId,
       workspaceId: validData.workspaceId,
@@ -118,9 +76,9 @@ export async function POST(request: NextRequest) {
       includeSocialProof: validData.includeSocialProof,
       customInstructions: validData.customInstructions,
     });
-    
+
     const duration = Date.now() - startTime;
-    
+
     if (!result.success) {
       logger.error('Email generation failed', {
         error: result.error,
@@ -128,16 +86,16 @@ export async function POST(request: NextRequest) {
         dealId: validData.dealId,
         duration,
       });
-      
+
       return NextResponse.json(
         {
           success: false,
-          error:(result.error !== '' && result.error != null) ? result.error : 'Failed to generate email',
+          error: result.error ?? 'Failed to generate email',
         },
         { status: 500 }
       );
     }
-    
+
     logger.info('Email generated successfully', {
       emailId: result.email?.id,
       organizationId: validData.organizationId,
@@ -145,7 +103,7 @@ export async function POST(request: NextRequest) {
       emailType: validData.emailType,
       duration,
     });
-    
+
     // 4. Return generated email
     return NextResponse.json(
       {
@@ -155,15 +113,15 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-    
+
   } catch (error) {
     const duration = Date.now() - startTime;
-    
+
     logger.error('Unexpected error in email generation endpoint', {
       error,
       duration,
     });
-    
+
     return NextResponse.json(
       {
         success: false,

@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
 import { z } from 'zod';
@@ -49,32 +48,48 @@ const checkoutSchema = z.object({
   giftMessage: z.string().optional(),
 });
 
+type CheckoutData = z.infer<typeof checkoutSchema>;
+
+interface ValidationError {
+  path?: string[];
+  message?: string;
+}
+
+interface ValidationFailure {
+  success: false;
+  errors?: {
+    errors?: ValidationError[];
+  };
+}
+
 /**
  * POST /api/ecommerce/checkout - Process checkout
  */
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/checkout');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const authResult = await requireOrganization(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(checkoutSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = validationError.errors?.errors?.map((e: any) => {
+      const validationError = validation as ValidationFailure;
+      const errorDetails = validationError.errors?.errors?.map((e: ValidationError) => {
         const joinedPath = e.path?.join('.');
         return {
-          path: (joinedPath !== '' && joinedPath != null) ? joinedPath : 'unknown',
-          message: (e.message !== '' && e.message != null) ? e.message : 'Validation error',
+          path: joinedPath ?? 'unknown',
+          message: e.message ?? 'Validation error',
         };
       }) ?? [];
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -85,7 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const checkoutData = validation.data;
+    const checkoutData: CheckoutData = validation.data;
 
     // Verify required fields
     if (!checkoutData.cartId || !checkoutData.organizationId || !checkoutData.workspaceId) {
@@ -95,17 +110,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process checkout (after validation, we can safely cast)
-    const order = await processCheckout(checkoutData as any);
+    // Process checkout
+    const order = await processCheckout(checkoutData);
 
     return NextResponse.json({
       success: true,
       order,
       message: 'Order placed successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Checkout processing error', error, { route: '/api/ecommerce/checkout' });
     return errors.externalService('Checkout service', error instanceof Error ? error : undefined);
   }
 }
-

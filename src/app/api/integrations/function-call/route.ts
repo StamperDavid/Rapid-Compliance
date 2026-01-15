@@ -3,8 +3,7 @@
  * AI agent calls this to execute integration functions
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { executeFunctionCall } from '@/lib/integrations/function-calling';
 import type { FunctionCallRequest } from '@/types/integrations';
@@ -12,10 +11,22 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+interface RequestPayload {
+  integrationId: string;
+  functionName: string;
+  parameters: Record<string, unknown>;
+  conversationId?: string;
+  customerId?: string;
+  conversationContext?: string;
+  userMessage?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/function-call');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     // Authentication
     const authResult = await requireAuth(request);
@@ -24,8 +35,12 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
+    if (!user.organizationId) {
+      return errors.badRequest('Organization ID required');
+    }
+
     // Parse request
-    const body = await request.json();
+    const body = await request.json() as RequestPayload;
     const {
       integrationId,
       functionName,
@@ -40,14 +55,14 @@ export async function POST(request: NextRequest) {
 
     // Build function call request
     const functionCallRequest: FunctionCallRequest = {
-      organizationId: user.organizationId!,
-      conversationId: (conversationId !== '' && conversationId != null) ? conversationId : '',
-      customerId: (customerId !== '' && customerId != null) ? customerId : '',
+      organizationId: user.organizationId,
+      conversationId: conversationId ?? '',
+      customerId: customerId ?? '',
       integrationId,
       functionName,
       parameters,
-      conversationContext: (body.conversationContext !== '' && body.conversationContext != null) ? body.conversationContext : '',
-      userMessage: (body.userMessage !== '' && body.userMessage != null) ? body.userMessage : '',
+      conversationContext: body.conversationContext ?? '',
+      userMessage: body.userMessage ?? '',
       timestamp: new Date().toISOString(),
     };
 
@@ -55,13 +70,13 @@ export async function POST(request: NextRequest) {
     const result = await executeFunctionCall(functionCallRequest);
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to execute function';
     logger.error('Error executing function call', error, { route: '/api/integrations/function-call' });
-    const funcErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to execute function';
     return NextResponse.json(
       {
         success: false,
-        error: funcErrorMsg,
+        error: errorMessage,
         humanReadableResult: 'Sorry, I encountered an error trying to do that.',
         executionTime: 0,
         timestamp: new Date().toISOString(),
@@ -70,22 +85,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

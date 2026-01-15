@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { requireRole } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -25,8 +24,8 @@ export async function GET(request: NextRequest) {
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      version:(process.env.NEXT_PUBLIC_APP_VERSION !== '' && process.env.NEXT_PUBLIC_APP_VERSION != null) ? process.env.NEXT_PUBLIC_APP_VERSION : '1.0.0',
-      environment: process.env.NODE_ENV || 'development',
+      version: process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0',
+      environment: process.env.NODE_ENV ?? 'development',
       services: {
         database: {
           status: 'unknown' as string,
@@ -58,25 +57,25 @@ export async function GET(request: NextRequest) {
         health.services.database.status = 'unavailable';
         health.status = 'degraded';
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       health.services.database.status = 'unhealthy';
-      health.services.database.error = error.message;
+      health.services.database.error = errorMessage;
       health.status = 'unhealthy';
     }
 
     const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
 
     return NextResponse.json(health, { status: statusCode });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Health check failed';
     return NextResponse.json(
       {
         status: 'error',
-        error:(error.message !== '' && error.message != null) ? error.message : 'Health check failed',
+        error: errorMessage,
         timestamp: new Date().toISOString(),
       },
       { status: 500 }
     );
   }
 }
-
-
