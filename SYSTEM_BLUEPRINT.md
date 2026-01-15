@@ -1,8 +1,26 @@
 # SYSTEM BLUEPRINT
 ## AI Sales Platform - Definitive Architecture Guide
-**Version:** 1.0.0
-**Last Updated:** 2026-01-12
-**Status:** Source of Truth
+**Version:** 2.0.0
+**Last Updated:** 2026-01-14
+**Status:** Source of Truth - SYNCHRONIZED
+
+---
+
+> **IMPORTANT - CROSS-REFERENCE DOCUMENTS:**
+>
+> This document describes the INTENDED architecture. For the ACTUAL implementation status, always consult:
+>
+> | Document | Purpose |
+> |----------|---------|
+> | `SYSTEM_TRUTH_MANIFEST.md` | Forensic audit of what's actually implemented vs stub |
+> | `ARCHITECTURE_GRAPH.md` | Visual dependency map: Jasper → Managers → Agents |
+> | `src/lib/orchestrator/system-blueprint.md` | Jasper's runtime knowledge base with SOPs |
+>
+> **Key Reality Check:**
+> - API Routes: 224 total (180 functional, 30 partial, 14 stub)
+> - Jasper Tools: 23 total (13 functional, 10 incomplete)
+> - 11 Specialists: All DEFINED but NONE fully wired to execution
+> - Lead Generation Tools: Return mock/random data
 
 ---
 
