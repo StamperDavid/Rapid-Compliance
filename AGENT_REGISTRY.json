@@ -1,10 +1,10 @@
 {
   "$schema": "SWARM_REGISTRY_V1",
   "lastAudit": "2026-01-14",
-  "totalAgents": 27,
-  "builtAgents": 0,
-  "ghostAgents": 27,
-  "honestAssessment": "ZERO specialists actually exist. Jasper has been doing everything alone.",
+  "totalAgents": 28,
+  "builtAgents": 3,
+  "ghostAgents": 25,
+  "honestAssessment": "Intelligence Department HIRED. 3 specialists now functional: Scraper, Competitor, Technographic.",
 
   "hierarchy": {
     "JASPER": {
@@ -27,9 +27,10 @@
       "specialists": ["UX_UI_ARCHITECT", "FUNNEL_ENGINEER", "ASSET_GENERATOR"]
     },
     "INTELLIGENCE_MANAGER": {
-      "status": "GHOST",
+      "status": "FUNCTIONAL",
       "path": "src/lib/agents/intelligence/manager.ts",
-      "specialists": ["COMPETITOR_ANALYST", "SENTIMENT_ANALYST", "TECHNOGRAPHIC_SCOUT"]
+      "specialists": ["SCRAPER_SPECIALIST", "COMPETITOR_ANALYST", "TECHNOGRAPHIC_SCOUT", "SENTIMENT_ANALYST"],
+      "note": "3 of 4 specialists now functional"
     },
     "COMMERCE_MANAGER": {
       "status": "GHOST",
@@ -49,6 +50,48 @@
   },
 
   "specialists": {
+    "SCRAPER_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/intelligence/scraper/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["website_scraping", "content_extraction", "contact_discovery", "business_signal_detection", "structured_output"],
+      "functionalLOC": 280,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "scrape_website",
+      "systemPrompt": "Full system prompt for URL scraping and key findings extraction"
+    },
+    "COMPETITOR_ANALYST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/intelligence/competitor/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["competitor_discovery", "seo_analysis", "market_positioning", "feature_comparison", "gap_analysis"],
+      "functionalLOC": 350,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "research_competitors",
+      "systemPrompt": "Full system prompt for niche/location competitor research"
+    },
+    "TECHNOGRAPHIC_SCOUT": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/intelligence/technographic/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["tech_stack_detection", "platform_identification", "analytics_detection", "pixel_detection", "integration_discovery"],
+      "functionalLOC": 400,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "scan_tech_stack",
+      "systemPrompt": "Full system prompt for tech stack detection via script/meta analysis"
+    },
+    "SENTIMENT_ANALYST": {
+      "status": "GHOST",
+      "path": "src/lib/agents/intelligence/sentiment/specialist.ts",
+      "reportsTo": "INTELLIGENCE_MANAGER",
+      "capabilities": ["social_listening", "brand_sentiment", "crisis_detection", "trend_analysis"],
+      "functionalLOC": 0,
+      "boilerplateLOC": 0,
+      "verdict": "DOES_NOT_EXIST"
+    },
     "TIKTOK_EXPERT": {
       "status": "GHOST",
       "path": "src/lib/agents/marketing/tiktok/specialist.ts",
@@ -121,33 +164,6 @@
       "boilerplateLOC": 0,
       "verdict": "DOES_NOT_EXIST"
     },
-    "COMPETITOR_ANALYST": {
-      "status": "GHOST",
-      "path": "src/lib/agents/intelligence/competitor/specialist.ts",
-      "reportsTo": "INTELLIGENCE_MANAGER",
-      "capabilities": ["competitor_discovery", "pricing_analysis", "feature_comparison", "market_positioning"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
-    },
-    "SENTIMENT_ANALYST": {
-      "status": "GHOST",
-      "path": "src/lib/agents/intelligence/sentiment/specialist.ts",
-      "reportsTo": "INTELLIGENCE_MANAGER",
-      "capabilities": ["social_listening", "brand_sentiment", "crisis_detection", "trend_analysis"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
-    },
-    "TECHNOGRAPHIC_SCOUT": {
-      "status": "GHOST",
-      "path": "src/lib/agents/intelligence/technographic/specialist.ts",
-      "reportsTo": "INTELLIGENCE_MANAGER",
-      "capabilities": ["tech_stack_detection", "integration_discovery", "vulnerability_scan", "tool_analysis"],
-      "functionalLOC": 0,
-      "boilerplateLOC": 0,
-      "verdict": "DOES_NOT_EXIST"
-    },
     "PRICING_STRATEGIST": {
       "status": "GHOST",
       "path": "src/lib/agents/commerce/pricing/specialist.ts",
@@ -207,16 +223,41 @@
   "signalBus": {
     "status": "UNBUILT",
     "path": "src/lib/orchestrator/signal-bus.ts",
-    "description": "Hierarchical message passing: Jasper → Manager → Specialist"
+    "description": "Hierarchical message passing: Jasper -> Manager -> Specialist"
   },
 
   "criticalPath": [
     "INTELLIGENCE_MANAGER",
+    "SCRAPER_SPECIALIST",
     "COMPETITOR_ANALYST",
     "TECHNOGRAPHIC_SCOUT",
     "MARKETING_MANAGER",
     "SEO_EXPERT",
     "BUILDER_MANAGER",
     "FUNNEL_ENGINEER"
-  ]
+  ],
+
+  "jasperHandshake": {
+    "description": "Jasper's direct tool connections to Intelligence specialists",
+    "tools": {
+      "scrape_website": {
+        "specialist": "SCRAPER_SPECIALIST",
+        "status": "CONNECTED",
+        "input": "{ url, includeAboutPage, includeCareers, deep }",
+        "output": "{ keyFindings, contactInfo, businessSignals, techSignals, contentSummary }"
+      },
+      "research_competitors": {
+        "specialist": "COMPETITOR_ANALYST",
+        "status": "CONNECTED",
+        "input": "{ niche, location, limit, includeAnalysis }",
+        "output": "{ competitors[], marketInsights, confidence }"
+      },
+      "scan_tech_stack": {
+        "specialist": "TECHNOGRAPHIC_SCOUT",
+        "status": "CONNECTED",
+        "input": "{ url, deep, categories }",
+        "output": "{ platform, analytics[], marketing[], advertising[], support[], summary }"
+      }
+    }
+  }
 }

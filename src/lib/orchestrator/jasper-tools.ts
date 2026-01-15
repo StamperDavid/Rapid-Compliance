@@ -930,6 +930,96 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INTELLIGENCE SPECIALIST TOOLS (The Handshake)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'scrape_website',
+      description:
+        'Scrape a website URL and return structured key findings including company info, contact details, business signals, and tech stack. Delegates to the Scraper Specialist. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: {
+            type: 'string',
+            description: 'The website URL to scrape (e.g., "https://company.com")',
+          },
+          includeAboutPage: {
+            type: 'boolean',
+            description: 'Also scrape the About page for company details (default: true)',
+          },
+          includeCareers: {
+            type: 'boolean',
+            description: 'Also check for careers/jobs page to detect hiring (default: true)',
+          },
+          deep: {
+            type: 'boolean',
+            description: 'Perform deep scraping across multiple pages (default: false)',
+          },
+        },
+        required: ['url'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'research_competitors',
+      description:
+        'Find top 10 competitors in a specific niche and location, ranked by SEO presence. Delegates to the Competitor Researcher. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          niche: {
+            type: 'string',
+            description: 'The business niche/industry to search (e.g., "plumbing services", "SaaS CRM", "organic skincare")',
+          },
+          location: {
+            type: 'string',
+            description: 'Geographic focus (e.g., "Austin, TX", "United Kingdom", "Global")',
+          },
+          limit: {
+            type: 'number',
+            description: 'Maximum competitors to return (default: 10)',
+          },
+          includeAnalysis: {
+            type: 'boolean',
+            description: 'Include deep analysis of each competitor (default: false)',
+          },
+        },
+        required: ['niche'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'scan_tech_stack',
+      description:
+        'Scan a website to identify its technology stack including CMS, e-commerce platform, analytics tools, marketing tools, advertising pixels, and chat widgets. Delegates to the Technographic Scout. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          url: {
+            type: 'string',
+            description: 'The website URL to scan for technologies',
+          },
+          deep: {
+            type: 'boolean',
+            description: 'Scan multiple pages for more comprehensive detection (default: false)',
+          },
+          categories: {
+            type: 'string',
+            description: 'JSON array of categories to filter (e.g., ["analytics", "marketing", "support"])',
+          },
+        },
+        required: ['url'],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -1705,6 +1795,110 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           organizationId: args.organizationId ?? 'platform',
           message: `${args.reportType} report generation initiated`,
           estimatedCompletion: '30 seconds',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // INTELLIGENCE SPECIALIST TOOLS (The Handshake)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'scrape_website': {
+        const { getScraperSpecialist } = await import('@/lib/agents/intelligence/scraper/specialist');
+        const specialist = getScraperSpecialist();
+        await specialist.initialize();
+
+        const result = await specialist.execute({
+          id: `scrape_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'SCRAPER_SPECIALIST',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            url: args.url as string,
+            includeAboutPage: args.includeAboutPage ?? true,
+            includeCareers: args.includeCareers ?? true,
+            deep: args.deep ?? false,
+          },
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        content = JSON.stringify({
+          status: result.status,
+          data: result.data,
+          errors: result.errors,
+          specialist: 'SCRAPER_SPECIALIST',
+        });
+        break;
+      }
+
+      case 'research_competitors': {
+        const { getCompetitorResearcher } = await import('@/lib/agents/intelligence/competitor/specialist');
+        const specialist = getCompetitorResearcher();
+        await specialist.initialize();
+
+        const result = await specialist.execute({
+          id: `competitor_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'COMPETITOR_ANALYST',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            niche: args.niche as string,
+            location: args.location as string ?? 'Global',
+            limit: typeof args.limit === 'number' ? args.limit : 10,
+            includeAnalysis: args.includeAnalysis ?? false,
+          },
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        content = JSON.stringify({
+          status: result.status,
+          data: result.data,
+          errors: result.errors,
+          specialist: 'COMPETITOR_ANALYST',
+        });
+        break;
+      }
+
+      case 'scan_tech_stack': {
+        const { getTechnographicScout } = await import('@/lib/agents/intelligence/technographic/specialist');
+        const specialist = getTechnographicScout();
+        await specialist.initialize();
+
+        let categories: string[] | undefined;
+        if (args.categories) {
+          try {
+            categories = JSON.parse(args.categories as string) as string[];
+          } catch {
+            categories = undefined;
+          }
+        }
+
+        const result = await specialist.execute({
+          id: `techscan_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'TECHNOGRAPHIC_SCOUT',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            url: args.url as string,
+            deep: args.deep ?? false,
+            categories,
+          },
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        content = JSON.stringify({
+          status: result.status,
+          data: result.data,
+          errors: result.errors,
+          specialist: 'TECHNOGRAPHIC_SCOUT',
         });
         break;
       }
