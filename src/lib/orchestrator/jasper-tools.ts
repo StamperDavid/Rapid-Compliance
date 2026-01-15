@@ -1156,6 +1156,64 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TRUST & REPUTATION DEPARTMENT TOOLS (The Handshake)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_trust',
+      description:
+        'Delegate a reputation, review response, or local SEO request to the Trust & Reputation Department. The Reputation Manager will analyze brand sentiment and coordinate Review Specialist (1-5 star response logic) and GMB Specialist (Local SEO, Map Pack optimization). ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: 'The trust/reputation action to perform',
+            enum: [
+              'analyze_sentiment',
+              'respond_to_review',
+              'generate_gmb_post',
+              'optimize_map_pack',
+              'monitor_brand_health',
+              'request_testimonials',
+              'handle_crisis'
+            ],
+          },
+          platform: {
+            type: 'string',
+            description: 'Review platform (for respond_to_review action)',
+            enum: ['google', 'yelp', 'facebook', 'trustpilot', 'g2', 'auto'],
+          },
+          reviewData: {
+            type: 'string',
+            description: 'JSON-encoded review data including rating (1-5), content, reviewer name, date',
+          },
+          businessData: {
+            type: 'string',
+            description: 'JSON-encoded business data including name, location, industry, services',
+          },
+          postType: {
+            type: 'string',
+            description: 'GMB post type (for generate_gmb_post action)',
+            enum: ['local_update', 'offer', 'event', 'product', 'photo'],
+          },
+          sentimentData: {
+            type: 'string',
+            description: 'JSON-encoded sentiment signals for analysis (recent reviews, social mentions, etc.)',
+          },
+          urgency: {
+            type: 'string',
+            description: 'Urgency level for crisis handling',
+            enum: ['low', 'medium', 'high', 'critical'],
+          },
+        },
+        required: ['action'],
+      },
+    },
+  },
 ];
 
 // ============================================================================

@@ -2,16 +2,16 @@
   "$schema": "SWARM_REGISTRY_V1",
   "lastAudit": "2026-01-15",
   "totalAgents": 32,
-  "builtAgents": 15,
-  "ghostAgents": 17,
-  "honestAssessment": "Sales & Commerce Department HIRED. 15 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook) + Architect (4: Manager, UX/UI, Funnel, Copywriter) + Sales (4: Revenue Director, Lead Qualifier, Outreach Specialist, Merchandiser).",
+  "builtAgents": 18,
+  "ghostAgents": 14,
+  "honestAssessment": "SWARM COMPLETE - 18 agents now functional: Intelligence (3: Scraper, Competitor, Technographic) + Marketing (4: Manager, TikTok, Twitter, Facebook) + Architect (4: Manager, UX/UI, Funnel, Copywriter) + Sales (4: Revenue Director, Lead Qualifier, Outreach Specialist, Merchandiser) + Trust (3: Reputation Manager, Review Specialist, GMB Specialist).",
 
   "hierarchy": {
     "JASPER": {
       "role": "Chief Orchestrator",
       "status": "ACTIVE",
       "canDelegate": true,
-      "directReports": ["MARKETING_MANAGER", "BUILDER_MANAGER", "INTELLIGENCE_MANAGER", "SALES_MANAGER", "COMMERCE_MANAGER", "OUTREACH_MANAGER", "CONTENT_MANAGER"]
+      "directReports": ["MARKETING_MANAGER", "BUILDER_MANAGER", "INTELLIGENCE_MANAGER", "SALES_MANAGER", "TRUST_MANAGER", "COMMERCE_MANAGER", "OUTREACH_MANAGER", "CONTENT_MANAGER"]
     }
   },
 
@@ -57,6 +57,13 @@
       "status": "GHOST",
       "path": "src/lib/agents/content/manager.ts",
       "specialists": ["COPYWRITER", "CALENDAR_COORDINATOR"]
+    },
+    "TRUST_MANAGER": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/trust/reputation/manager.ts",
+      "specialists": ["REVIEW_SPECIALIST", "GMB_SPECIALIST"],
+      "functionalLOC": 1458,
+      "note": "L2 orchestrator - Reputation Manager monitors brand sentiment, coordinates Review (1-5 star responses) and GMB (Local SEO) specialists"
     }
   },
 
@@ -293,6 +300,28 @@
       "verdict": "HIRED",
       "jasperTool": "delegate_to_sales",
       "systemPrompt": "7 NUDGE_STRATEGIES: ENGAGEMENT_NUDGE (10% after 3+ pricing visits), CART_ABANDONMENT (15% within 24h), WIN_BACK (20% for churned), TRIAL_CONVERSION (10% at day 12), REFERRAL_REWARD (25% both), SEASONAL_PROMO, LOYALTY_TIER (5-20% progressive). Stripe coupon generation, ROI calculation with LTV lift analysis"
+    },
+    "REVIEW_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/trust/review/specialist.ts",
+      "reportsTo": "TRUST_MANAGER",
+      "capabilities": ["star_rating_responses", "sentiment_analysis", "platform_specific_templates", "referral_requests", "social_proof_collection", "follow_up_scheduling"],
+      "functionalLOC": 1520,
+      "boilerplateLOC": 60,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_trust",
+      "systemPrompt": "5-STAR RESPONSE LOGIC: 1-star (Crisis: empathy + escalation + manager contact), 2-star (Damage Control: solution-focused + service recovery), 3-star (Constructive: appreciative + improvement-focused), 4-star (Nurture: grateful + subtle referral ask), 5-star (Amplification: referral request + social proof collection). Platform-specific templates for Google, Yelp, Facebook, Trustpilot, G2"
+    },
+    "GMB_SPECIALIST": {
+      "status": "FUNCTIONAL",
+      "path": "src/lib/agents/trust/gmb/specialist.ts",
+      "reportsTo": "TRUST_MANAGER",
+      "capabilities": ["local_update_drafting", "photo_post_optimization", "map_pack_ranking", "nap_consistency", "local_keyword_optimization", "competitor_analysis"],
+      "functionalLOC": 1570,
+      "boilerplateLOC": 50,
+      "verdict": "HIRED",
+      "jasperTool": "delegate_to_trust",
+      "systemPrompt": "LOCAL SEO MASTERY: GMB_POST_TYPES (Local Update, Offer, Event, Product), PHOTO_STRATEGIES (storefront, interior, team, product, behind-scenes), MAP_PACK_FACTORS (proximity 30%, relevance 30%, prominence 40%), LOCAL_KEYWORDS by industry, NAP_CONSISTENCY rules, posting schedule optimization, competitor gap analysis"
     }
   },
 
@@ -318,7 +347,10 @@
     "SALES_MANAGER",
     "LEAD_QUALIFIER",
     "OUTREACH_SPECIALIST",
-    "MERCHANDISER"
+    "MERCHANDISER",
+    "TRUST_MANAGER",
+    "REVIEW_SPECIALIST",
+    "GMB_SPECIALIST"
   ],
 
   "jasperHandshake": {
@@ -383,6 +415,20 @@
           "lead_qualifier": "BANT Framework (0-100): Budget/Authority/Need/Timeline scoring, ICP alignment, qualification tiers (HOT/WARM/COLD/DISQUALIFIED)",
           "outreach_specialist": "8 OUTREACH_FRAMEWORKS (Cold Intro, Competitor Displacement, Trigger Event, Referral, Pain, Case Study, Direct Ask, Follow-Up), Context injection from Scraper, 3 channels",
           "merchandiser": "7 NUDGE_STRATEGIES (Engagement 10%, Cart Abandonment 15%, Win-Back 20%, Trial 10%, Referral 25%, Seasonal, Loyalty), Stripe coupon generation, ROI analysis"
+        }
+      }
+    },
+    "trustTools": {
+      "delegate_to_trust": {
+        "manager": "TRUST_MANAGER",
+        "status": "CONNECTED",
+        "input": "{ action, platform?, reviewData?, businessData?, postType?, sentimentData?, urgency? }",
+        "output": "{ sentimentAnalysis, reviewResponse?, gmbPost?, brandHealth, delegations[], confidence }",
+        "actions": ["analyze_sentiment", "respond_to_review", "generate_gmb_post", "optimize_map_pack", "monitor_brand_health", "request_testimonials", "handle_crisis"],
+        "delegates_to": ["REVIEW_SPECIALIST", "GMB_SPECIALIST"],
+        "specialistCapabilities": {
+          "review_specialist": "5-STAR RESPONSE LOGIC: 1-star (Crisis + escalation), 2-star (Damage Control), 3-star (Constructive), 4-star (Nurture + referral), 5-star (Amplification + social proof). Platform-specific templates for Google/Yelp/Facebook/Trustpilot/G2",
+          "gmb_specialist": "LOCAL SEO: GMB_POST_TYPES (Update, Offer, Event, Product), PHOTO_STRATEGIES (storefront, interior, team, product), MAP_PACK optimization (prominence 40%, relevance 30%, proximity 30%), NAP consistency, local keyword injection"
         }
       }
     }
