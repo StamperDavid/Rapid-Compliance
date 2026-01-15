@@ -8,21 +8,28 @@
  * POST /api/orchestrator/feature-toggle
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
 
 interface ToggleFeatureRequest {
-  organizationId: string;
-  userId: string;
-  action: 'hide_feature' | 'show_feature' | 'hide_category' | 'show_category' | 'reset';
+  organizationId?: string;
+  userId?: string;
+  action?: string;
   featureId?: string;
   category?: FeatureCategory;
   reason?: string;
 }
 
+function isToggleFeatureRequest(value: unknown): value is ToggleFeatureRequest {
+  return typeof value === 'object' && value !== null;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body: ToggleFeatureRequest = await request.json();
+    const body: unknown = await request.json();
+    if (!isToggleFeatureRequest(body)) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
 
     const { organizationId, userId, action, featureId, category, reason } = body;
 

@@ -8,8 +8,7 @@
  * Rate Limit: 50 requests per minute
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendNotificationRequestSchema } from '@/lib/notifications/validation';
 import { NotificationService } from '@/lib/notifications/notification-service';
@@ -57,7 +56,7 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Validate request
     const validatedData = sendNotificationRequestSchema.parse(body);

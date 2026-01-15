@@ -16,8 +16,7 @@
  * Rate Limit: 60 requests per minute
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getNotificationsRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
@@ -115,21 +114,24 @@ export async function GET(request: NextRequest) {
     );
 
     // Apply filters
-    if (validatedFilters.categories && validatedFilters.categories.length > 0) {
-      notifications = notifications.filter((n) => 
-        validatedFilters.categories!.includes(n.category)
+    const filterCategories = validatedFilters.categories;
+    if (filterCategories && filterCategories.length > 0) {
+      notifications = notifications.filter((n) =>
+        filterCategories.includes(n.category)
       );
     }
 
-    if (validatedFilters.statuses && validatedFilters.statuses.length > 0) {
-      notifications = notifications.filter((n) => 
-        validatedFilters.statuses!.includes(n.status)
+    const filterStatuses = validatedFilters.statuses;
+    if (filterStatuses && filterStatuses.length > 0) {
+      notifications = notifications.filter((n) =>
+        filterStatuses.includes(n.status)
       );
     }
 
-    if (validatedFilters.channels && validatedFilters.channels.length > 0) {
-      notifications = notifications.filter((n) => 
-        n.channels.some((c) => validatedFilters.channels!.includes(c))
+    const filterChannels = validatedFilters.channels;
+    if (filterChannels && filterChannels.length > 0) {
+      notifications = notifications.filter((n) =>
+        n.channels.some((c) => filterChannels.includes(c))
       );
     }
 
@@ -207,6 +209,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
+interface MarkReadRequestBody {
+  notificationIds?: unknown[];
+}
+
+function isMarkReadRequestBody(value: unknown): value is MarkReadRequestBody {
+  return typeof value === 'object' && value !== null;
+}
+
 /**
  * POST /api/notifications/list
  * Mark notifications as read
@@ -214,8 +224,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
-    const body = await request.json();
-    
+    const body: unknown = await request.json();
+    if (!isMarkReadRequestBody(body)) {
+      return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
+    }
+
     // Get user ID and org ID
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
@@ -223,8 +236,8 @@ export async function POST(request: NextRequest) {
     const orgId = (orgIdHeader !== '' && orgIdHeader != null) ? orgIdHeader : 'default_org';
 
     // Validate notification IDs
-    const { notificationIds } = body;
-    
+    const notificationIds = body.notificationIds;
+
     if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Invalid notification IDs' },
@@ -232,9 +245,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure all IDs are strings
+    const validIds = notificationIds.filter((id): id is string => typeof id === 'string');
+    if (validIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid notification IDs provided' },
+        { status: 400 }
+      );
+    }
+
     // Check rate limit
     const rateLimit = checkRateLimit(`mark_read:${userId}`, 60, 60000);
-    
+
     if (!rateLimit.allowed) {
       return NextResponse.json(
         { success: false, error: 'Rate limit exceeded' },
@@ -243,7 +265,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark as read
-    const updatePromises = notificationIds.map((id) =>
+    const updatePromises = validIds.map((id) =>
       FirestoreService.update(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/notifications`,
         id,
@@ -259,7 +281,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        updated: notificationIds.length,
+        updated: validIds.length,
       },
       {
         headers: {

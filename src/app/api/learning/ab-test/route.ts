@@ -3,18 +3,41 @@
  * Manage A/B tests for fine-tuned models
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { 
-  createABTest, 
-  getActiveABTest, 
-  evaluateABTest, 
-  completeABTestAndDeploy 
+import { type NextRequest, NextResponse } from 'next/server';
+import {
+  createABTest,
+  getActiveABTest,
+  evaluateABTest,
+  completeABTestAndDeploy
 } from '@/lib/ai/learning/ab-testing-service';
 import { checkAndDeployWinner } from '@/lib/ai/learning/continuous-learning-engine';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+interface CreateABTestRequestBody {
+  organizationId?: string;
+  controlModel?: string;
+  treatmentModel?: string;
+  trafficSplit?: number;
+  minSampleSize?: number;
+  confidenceThreshold?: number;
+}
+
+interface UpdateABTestRequestBody {
+  organizationId?: string;
+  action?: string;
+  testId?: string;
+  autoDeploy?: boolean;
+}
+
+function isCreateABTestRequestBody(value: unknown): value is CreateABTestRequestBody {
+  return typeof value === 'object' && value !== null;
+}
+
+function isUpdateABTestRequestBody(value: unknown): value is UpdateABTestRequestBody {
+  return typeof value === 'object' && value !== null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,7 +69,7 @@ export async function GET(request: NextRequest) {
         treatmentProgress: (test.metrics.treatmentConversations / test.minSampleSize) * 100,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('A/B test GET error', error, { route: '/api/learning/ab-test' });
     return errors.database('Failed to get A/B test', error instanceof Error ? error : undefined);
   }
@@ -54,23 +77,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { 
-      organizationId, 
-      controlModel, 
+    const body: unknown = await request.json();
+    if (!isCreateABTestRequestBody(body)) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const {
+      organizationId,
+      controlModel,
       treatmentModel,
       trafficSplit,
       minSampleSize,
       confidenceThreshold,
     } = body;
-    
+
     if (!organizationId || !controlModel || !treatmentModel) {
       return NextResponse.json(
         { error: 'organizationId, controlModel, and treatmentModel are required' },
         { status: 400 }
       );
     }
-    
+
     // Check for existing test
     const existingTest = await getActiveABTest(organizationId);
     if (existingTest?.status === 'running') {
@@ -79,7 +106,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // Create new test
     const test = await createABTest({
       organizationId,
@@ -89,16 +116,17 @@ export async function POST(request: NextRequest) {
       minSampleSize,
       confidenceThreshold,
     });
-    
+
     return NextResponse.json({
       success: true,
       test,
       message: `A/B test started: ${controlModel} vs ${treatmentModel}`,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('A/B test creation error', error, { route: '/api/learning/ab-test' });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create A/B test';
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to create A/B test'},
+      { error: errorMessage },
       { status: 500 }
     );
   }
@@ -106,16 +134,20 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (!isUpdateABTestRequestBody(body)) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
     const { organizationId, action, testId, autoDeploy } = body;
-    
+
     if (!organizationId) {
       return NextResponse.json(
         { error: 'Organization ID required' },
         { status: 400 }
       );
     }
-    
+
     if (action === 'evaluate') {
       // Force evaluation of current test
       const test = await getActiveABTest(organizationId);
@@ -125,14 +157,14 @@ export async function PUT(request: NextRequest) {
           { status: 400 }
         );
       }
-      
+
       const results = await evaluateABTest(organizationId, test.id);
       return NextResponse.json({
         success: true,
         results,
       });
     }
-    
+
     if (action === 'complete') {
       // Complete test and optionally deploy winner
       const result = await checkAndDeployWinner(organizationId);
@@ -141,7 +173,7 @@ export async function PUT(request: NextRequest) {
         ...result,
       });
     }
-    
+
     if (action === 'deploy' && testId) {
       // Force deployment
       const result = await completeABTestAndDeploy(
@@ -154,12 +186,12 @@ export async function PUT(request: NextRequest) {
         ...result,
       });
     }
-    
+
     return NextResponse.json(
       { error: 'Invalid action. Use: evaluate, complete, or deploy' },
       { status: 400 }
     );
-  } catch (error: any) {
+  } catch (error) {
     logger.error('A/B test PUT error', error, { route: '/api/learning/ab-test' });
     return errors.database('Failed to update A/B test', error instanceof Error ? error : undefined);
   }

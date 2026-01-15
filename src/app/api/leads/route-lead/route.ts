@@ -3,12 +3,20 @@
  * POST /api/leads/route-lead - Automatically route a lead to appropriate user
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { routeLead } from '@/lib/crm/lead-routing';
 import { updateLead, getLead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+
+interface RouteLeadRequestBody {
+  leadId?: string;
+  workspaceId?: string;
+}
+
+function isRouteLeadRequestBody(value: unknown): value is RouteLeadRequestBody {
+  return typeof value === 'object' && value !== null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,14 +25,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (!isRouteLeadRequestBody(body)) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
     const organizationId = token.organizationId;
 
     if (!organizationId) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const { leadId, workspaceId = 'default' } = body;
+    const leadId = body.leadId;
+    const workspaceId = body.workspaceId ?? 'default';
 
     if (!leadId) {
       return NextResponse.json(

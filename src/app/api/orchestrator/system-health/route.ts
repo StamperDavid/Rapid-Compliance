@@ -8,8 +8,16 @@
  * GET /api/orchestrator/system-health?organizationId=xxx
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
+
+interface SpecialistStatusRequestBody {
+  organizationId?: string;
+}
+
+function isSpecialistStatusRequestBody(value: unknown): value is SpecialistStatusRequestBody {
+  return typeof value === 'object' && value !== null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +58,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (!isSpecialistStatusRequestBody(body)) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
     const { organizationId } = body;
 
     if (!organizationId) {
