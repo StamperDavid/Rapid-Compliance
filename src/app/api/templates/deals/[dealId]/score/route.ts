@@ -3,8 +3,7 @@
  * POST /api/templates/deals/[dealId]/score - Calculate predictive deal score
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { calculateDealScore } from '@/lib/templates';
 import { ScoreDealSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';
@@ -15,7 +14,7 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/templates/deals/[dealId]/score
  * Calculate predictive deal score
- * 
+ *
  * Body:
  * {
  *   organizationId: string;
@@ -25,23 +24,23 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { dealId: string } }
+  { params }: { params: Promise<{ dealId: string }> }
 ) {
   // Rate limiting: 20 requests per minute (AI operation)
   const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
-  
+
   try {
-    const dealId = params.dealId;
-    const body = await request.json();
-    
-    // Validate request body with Zod schema
-    const validation = validateRequestBody(
-      ScoreDealSchema,
-      { ...body, dealId }
-    );
+    const { dealId } = await params;
+    const body: unknown = await request.json();
+
+    // Validate request body with Zod schema (merge dealId from route params)
+    const bodyWithDealId = typeof body === 'object' && body !== null
+      ? { ...body, dealId }
+      : { dealId };
+    const validation = validateRequestBody(ScoreDealSchema, bodyWithDealId);
     
     if (validation.success === false) {
       const { error, details } = validation;

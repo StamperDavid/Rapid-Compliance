@@ -3,8 +3,7 @@
  * POST /api/templates/apply - Apply an industry template to an organization
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { applyTemplate } from '@/lib/templates';
 import { ApplyTemplateSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';
@@ -15,7 +14,7 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/templates/apply
  * Apply an industry template to an organization
- * 
+ *
  * Body:
  * {
  *   organizationId: string;
@@ -32,9 +31,9 @@ export async function POST(request: NextRequest) {
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
-  
+
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate request body with Zod schema
     const validation = validateRequestBody(ApplyTemplateSchema, body);

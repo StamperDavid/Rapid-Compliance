@@ -1,10 +1,61 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+// Type-safe interfaces for diagnostics
+interface EnvVars {
+  FIREBASE_ADMIN_PROJECT_ID: string;
+  FIREBASE_ADMIN_CLIENT_EMAIL: string;
+  FIREBASE_ADMIN_PRIVATE_KEY: string;
+}
+
+interface PrivateKeyDiagnostics {
+  hasBackslashN: boolean;
+  hasActualNewlines: boolean;
+  startsWithBegin: boolean;
+  endsWithEnd: boolean;
+  firstChars: string;
+  lastChars: string;
+}
+
+interface AdminStatus {
+  adminDb: string;
+  adminAuth: string;
+  adminStorage: string;
+}
+
+interface TestReadSuccess {
+  success: true;
+  docExists: boolean;
+  docId: string;
+}
+
+interface TestReadFailure {
+  success: false;
+  error: string;
+  code?: string;
+}
+
+type TestRead = TestReadSuccess | TestReadFailure;
+
+interface CriticalError {
+  message: string;
+  stack?: string;
+}
+
+interface Diagnostics {
+  timestamp: string;
+  environment: string | undefined;
+  runtime: string;
+  envVars?: EnvVars;
+  privateKeyDiagnostics?: PrivateKeyDiagnostics;
+  adminStatus?: AdminStatus;
+  testRead?: TestRead;
+  criticalError?: CriticalError;
+}
 
 /**
  * Diagnostic endpoint to check Firebase Admin SDK status
@@ -16,7 +67,7 @@ export async function GET(request: NextRequest) {
     return rateLimitResponse;
   }
 
-  const diagnostics: any = {
+  const diagnostics: Diagnostics = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     runtime: 'nodejs',
@@ -29,7 +80,7 @@ export async function GET(request: NextRequest) {
       FIREBASE_ADMIN_PROJECT_ID: process.env.FIREBASE_ADMIN_PROJECT_ID ? 'SET' : 'MISSING',
       FIREBASE_ADMIN_CLIENT_EMAIL: process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'SET' : 'MISSING',
       FIREBASE_ADMIN_PRIVATE_KEY: privateKey
-        ? `SET (length: ${privateKey.length})` 
+        ? `SET (length: ${privateKey.length})`
         : 'MISSING',
     };
 
@@ -47,7 +98,7 @@ export async function GET(request: NextRequest) {
 
     // Try to import and check adminDb
     const { adminDb, adminAuth, adminStorage } = await import('@/lib/firebase/admin');
-    
+
     diagnostics.adminStatus = {
       adminDb: adminDb ? 'INITIALIZED' : 'NULL',
       adminAuth: adminAuth ? 'INITIALIZED' : 'NULL',
@@ -64,11 +115,13 @@ export async function GET(request: NextRequest) {
           docExists: testDoc.exists,
           docId: testDoc.id,
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorCode = error instanceof Error && 'code' in error ? String(error.code) : undefined;
         diagnostics.testRead = {
           success: false,
-          error: error.message,
-          code: error.code,
+          error: errorMessage,
+          code: errorCode,
         };
       }
     } else {
@@ -79,10 +132,12 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(diagnostics, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     diagnostics.criticalError = {
-      message: error.message,
-      stack: error.stack,
+      message: errorMessage,
+      stack: errorStack,
     };
     return NextResponse.json(diagnostics, { status: 500 });
   }

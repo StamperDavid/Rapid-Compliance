@@ -3,8 +3,7 @@
  * GET /api/templates - List all available industry templates
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { listTemplates } from '@/lib/templates';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';

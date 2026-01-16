@@ -3,10 +3,8 @@
  * POST /api/templates/forecast - Generate revenue forecast
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { generateRevenueForecast, calculateQuotaPerformance } from '@/lib/templates';
-import type { ForecastPeriod } from '@/lib/templates';
+import { type NextRequest, NextResponse } from 'next/server';
+import { generateRevenueForecast, calculateQuotaPerformance, type ForecastPeriod } from '@/lib/templates';
 import { RevenueForecastSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
@@ -16,7 +14,7 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/templates/forecast
  * Generate revenue forecast
- * 
+ *
  * Body:
  * {
  *   organizationId: string;
@@ -33,9 +31,9 @@ export async function POST(request: NextRequest) {
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
-  
+
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     
     // Validate request body with Zod schema
     const validation = validateRequestBody(RevenueForecastSchema, body);

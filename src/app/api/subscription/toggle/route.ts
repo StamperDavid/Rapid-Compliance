@@ -4,14 +4,35 @@
  * Enable/disable specific outbound features
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import type { OrganizationSubscription } from '@/types/subscription';
+
+// Valid outbound feature keys
+const OUTBOUND_FEATURES = [
+  'aiEmailWriter',
+  'emailSequences',
+  'emailReplyHandler',
+  'meetingScheduler',
+  'prospectFinder',
+  'multiChannel',
+  'abTesting',
+  'advanced'
+] as const;
+
+// Zod schema for feature toggle request
+const ToggleFeatureSchema = z.object({
+  orgId: z.string().min(1, 'Organization ID required'),
+  feature: z.enum(OUTBOUND_FEATURES),
+  enabled: z.boolean({ required_error: 'Enabled must be a boolean' }),
+});
+
+type OutboundFeatureKey = keyof OrganizationSubscription['outboundFeatures'];
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,27 +45,18 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
-    const { orgId, feature, enabled } = body as {
-      orgId: string;
-      feature: keyof OrganizationSubscription['outboundFeatures'];
-      enabled: boolean;
-    };
+    const body: unknown = await request.json();
+    const parseResult = ToggleFeatureSchema.safeParse(body);
 
-    if (!orgId) {
-      return errors.badRequest('Organization ID required');
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0]?.message ?? 'Invalid request';
+      return errors.badRequest(firstError);
     }
 
-    if (!feature) {
-      return errors.badRequest('Feature name required');
-    }
+    const { orgId, feature, enabled } = parseResult.data;
 
-    if (typeof enabled !== 'boolean') {
-      return errors.badRequest('Enabled must be a boolean');
-    }
-
-    // Toggle feature
-    await FeatureGate.toggleFeature(orgId, feature, enabled);
+    // Toggle feature (cast validated feature to expected type)
+    await FeatureGate.toggleFeature(orgId, feature as OutboundFeatureKey, enabled);
 
     // Get updated subscription
     const subscription = await FeatureGate.getSubscription(orgId);
@@ -54,8 +66,9 @@ export async function POST(request: NextRequest) {
       message: `${feature} ${enabled ? 'enabled' : 'disabled'}`,
       subscription,
     });
-  } catch (error: any) {
-    logger.error('Error toggling feature', error, { route: '/api/subscription/toggle' });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error toggling feature', { error: errorMessage, route: '/api/subscription/toggle' });
     return errors.database('Failed to toggle feature', error instanceof Error ? error : undefined);
   }
 }

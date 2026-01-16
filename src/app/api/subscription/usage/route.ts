@@ -4,13 +4,20 @@
  * Check usage limits for specific features
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+// Valid features type
+type UsageFeature = 'aiEmailWriter' | 'prospectFinder' | 'linkedin' | 'sms' | 'email';
+const VALID_FEATURES: readonly UsageFeature[] = ['aiEmailWriter', 'prospectFinder', 'linkedin', 'sms', 'email'] as const;
+
+function isValidFeature(value: string): value is UsageFeature {
+  return (VALID_FEATURES as readonly string[]).includes(value);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,25 +42,21 @@ export async function GET(request: NextRequest) {
       return errors.badRequest('Feature name required');
     }
 
-    // Check usage limits
-    const validFeatures = ['aiEmailWriter', 'prospectFinder', 'linkedin', 'sms', 'email'];
-    if (!validFeatures.includes(feature)) {
-      return errors.badRequest(`Invalid feature. Must be one of: ${validFeatures.join(', ')}`);
+    // Check usage limits with type guard
+    if (!isValidFeature(feature)) {
+      return errors.badRequest(`Invalid feature. Must be one of: ${VALID_FEATURES.join(', ')}`);
     }
 
-    const usage = await FeatureGate.checkLimit(
-      orgId,
-      feature as any,
-      1
-    );
+    const usage = await FeatureGate.checkLimit(orgId, feature, 1);
 
     return NextResponse.json({
       success: true,
       feature,
       ...usage,
     });
-  } catch (error: any) {
-    logger.error('Error checking usage', error, { route: '/api/subscription/usage' });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error checking usage', { error: errorMessage, route: '/api/subscription/usage' });
     return errors.database('Failed to check usage', error instanceof Error ? error : undefined);
   }
 }

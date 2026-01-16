@@ -4,11 +4,33 @@
  * POST /api/team/tasks - Create task
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { createTask, getUserTasks, completeTask } from '@/lib/team/collaboration';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createTask, getUserTasks } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
+
+// Task status type with type guard
+type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'completed';
+const VALID_STATUSES: readonly TaskStatus[] = ['todo', 'in_progress', 'blocked', 'completed'] as const;
+
+function isValidStatus(value: string): value is TaskStatus {
+  return (VALID_STATUSES as readonly string[]).includes(value);
+}
+
+// Zod schema for task creation
+const CreateTaskSchema = z.object({
+  workspaceId: z.string().optional(),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  assignedTo: z.string().min(1, 'Assigned to is required'),
+  assignedToName: z.string().optional(),
+  dueDate: z.string().optional(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).optional().default('normal'),
+  relatedEntityType: z.enum(['deal', 'lead', 'contact']).optional(),
+  relatedEntityId: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +50,8 @@ export async function GET(request: NextRequest) {
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const userIdParam = searchParams.get('userId');
     const userId = (userIdParam !== '' && userIdParam != null) ? userIdParam : token.uid;
-    const status = searchParams.get('status') as any;
+    const statusParam = searchParams.get('status');
+    const status: TaskStatus | undefined = statusParam && isValidStatus(statusParam) ? statusParam : undefined;
 
     const tasks = await getUserTasks(organizationId, workspaceId, userId, status);
 
@@ -37,10 +60,11 @@ export async function GET(request: NextRequest) {
       data: tasks,
     });
 
-  } catch (error: any) {
-    logger.error('Tasks GET API failed', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Tasks GET API failed', { error: errorMessage });
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
@@ -53,31 +77,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body: unknown = await request.json();
+    const parseResult = CreateTaskSchema.safeParse(body);
+
+    if (!parseResult.success) {
+      const firstError = parseResult.error.errors[0]?.message ?? 'Invalid request';
+      return NextResponse.json({ success: false, error: firstError }, { status: 400 });
+    }
+
+    const validatedData = parseResult.data;
     const organizationId = token.organizationId;
 
     if (!organizationId) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
-    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId : 'default';
-    const assignedByName = (token.email !== '' && token.email != null) ? token.email : undefined;
-    const priorityVal = body.priority;
-    const priority = (priorityVal !== '' && priorityVal != null) ? priorityVal : 'normal';
+    const workspaceId = validatedData.workspaceId ?? 'default';
+    const assignedByName = token.email ?? undefined;
 
     const task = await createTask(organizationId, workspaceId, {
-      title: body.title,
-      description: body.description,
-      assignedTo: body.assignedTo,
-      assignedToName: body.assignedToName,
+      title: validatedData.title,
+      description: validatedData.description,
+      assignedTo: validatedData.assignedTo,
+      assignedToName: validatedData.assignedToName,
       assignedBy: token.uid,
       assignedByName,
-      dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-      priority,
+      dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined,
+      priority: validatedData.priority,
       status: 'todo',
-      relatedEntityType: body.relatedEntityType,
-      relatedEntityId: body.relatedEntityId,
-      tags: body.tags,
+      relatedEntityType: validatedData.relatedEntityType,
+      relatedEntityId: validatedData.relatedEntityId,
+      tags: validatedData.tags,
     });
 
     return NextResponse.json({
@@ -85,10 +115,11 @@ export async function POST(request: NextRequest) {
       data: task,
     });
 
-  } catch (error: any) {
-    logger.error('Task POST API failed', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Task POST API failed', { error: errorMessage });
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
