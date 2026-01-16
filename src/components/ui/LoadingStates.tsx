@@ -5,13 +5,15 @@
 
 import React from 'react';
 
+interface SkeletonTextProps {
+  lines?: number;
+  width?: string;
+}
+
 /**
  * Skeleton loader for text
  */
-export const SkeletonText: React.FC<{
-  lines?: number;
-  width?: string;
-}> = ({ lines = 1, width = '100%' }) => (
+export const SkeletonText: React.FC<SkeletonTextProps> = ({ lines = 1, width = '100%' }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
     {Array.from({ length: lines }).map((_, i) => (
       <div
@@ -50,13 +52,15 @@ export const SkeletonCard: React.FC = () => (
   </div>
 );
 
+interface SkeletonTableProps {
+  rows?: number;
+  columns?: number;
+}
+
 /**
  * Skeleton loader for table
  */
-export const SkeletonTable: React.FC<{
-  rows?: number;
-  columns?: number;
-}> = ({ rows = 5, columns = 4 }) => (
+export const SkeletonTable: React.FC<SkeletonTableProps> = ({ rows = 5, columns = 4 }) => (
   <div style={{ width: '100%' }}>
     {Array.from({ length: rows }).map((_, i) => (
       <div
@@ -85,19 +89,21 @@ export const SkeletonTable: React.FC<{
   </div>
 );
 
+interface SpinnerProps {
+  size?: 'sm' | 'md' | 'lg';
+  color?: string;
+}
+
 /**
  * Spinner loading indicator
  */
-export const Spinner: React.FC<{
-  size?: 'sm' | 'md' | 'lg';
-  color?: string;
-}> = ({ size = 'md', color = '#6366f1' }) => {
+export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', color = '#6366f1' }) => {
   const sizeMap = {
     sm: '1rem',
     md: '2rem',
     lg: '3rem',
   };
-  
+
   return (
     <div
       style={{
@@ -112,14 +118,16 @@ export const Spinner: React.FC<{
   );
 };
 
+interface ProgressBarProps {
+  progress: number;
+  color?: string;
+  showLabel?: boolean;
+}
+
 /**
  * Progress bar
  */
-export const ProgressBar: React.FC<{
-  progress: number; // 0-100
-  color?: string;
-  showLabel?: boolean;
-}> = ({ progress, color = '#6366f1', showLabel = true }) => (
+export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color = '#6366f1', showLabel = true }) => (
   <div style={{ width: '100%' }}>
     {showLabel && (
       <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>
@@ -164,12 +172,14 @@ export const DotLoader: React.FC = () => (
   </div>
 );
 
+interface LoadingOverlayProps {
+  message?: string;
+}
+
 /**
  * Loading overlay
  */
-export const LoadingOverlay: React.FC<{
-  message?: string;
-}> = ({ message }) => (
+export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message }) => (
   <div style={{
     position: 'fixed',
     inset: 0,
@@ -200,12 +210,12 @@ if (typeof document !== 'undefined') {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
-    
+
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    
+
     @keyframes bounce {
       0%, 80%, 100% {
         transform: scale(0);
@@ -217,25 +227,3 @@ if (typeof document !== 'undefined') {
   `;
   document.head.appendChild(style);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -43,8 +43,8 @@ const Select = ({ value: controlledValue, defaultValue, onValueChange, children 
 
 const SelectTrigger = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, children, ...props }, ref) => {
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { contentId?: string }
+>(({ className, children, contentId, ...props }, ref) => {
   const { open, setOpen } = useSelect()
 
   return (
@@ -53,6 +53,7 @@ const SelectTrigger = React.forwardRef<
       type="button"
       role="combobox"
       aria-expanded={open}
+      aria-controls={contentId}
       onClick={() => setOpen(!open)}
       className={cn(
         "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
@@ -84,7 +85,7 @@ SelectValue.displayName = "SelectValue"
 const SelectContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, ...props }, _ref) => {
   const { open, setOpen } = useSelect()
   const contentRef = React.useRef<HTMLDivElement>(null)
 
