@@ -60,7 +60,7 @@ export interface Signal {
   id: string;
   type: 'BROADCAST' | 'DIRECT' | 'BUBBLE_UP' | 'BUBBLE_DOWN';
   origin: string;
-  target: string | 'ALL' | 'MANAGERS' | 'SPECIALISTS';
+  target: string; // Agent ID, or broadcast targets: 'ALL' | 'MANAGERS' | 'SPECIALISTS'
   payload: AgentMessage;
   hops: string[]; // Track signal path
   maxHops: number;
