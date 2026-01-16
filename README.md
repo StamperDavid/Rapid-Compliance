@@ -1,9 +1,25 @@
 # AI Sales Platform
 
-> 📊 **Current Status:** 100% CODE READY - See [PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md) for deployment  
-> 🚀 **Build Status:** ✅ Passing - TypeScript: 0 errors, Tests: 98.1% pass rate - Last updated Dec 29, 2025
+> 📊 **Current Status:** 100% CODE READY - See [PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md) for deployment
+> 🚀 **Build Status:** ✅ Passing - TypeScript: 0 errors, Tests: 98.1% pass rate
+> 🛡️ **API Directory:** HARDENED ZONE - Zero `any` types, 100% Zod validation, strict type safety
 
 AI-powered sales platform with intelligent agent system, customer memory persistence, and real-time conversation management.
+
+## Engineering Standards
+
+The `src/app/api/` directory is a **Hardened Zone** with enforced type safety:
+
+- **Zero `any` Policy** - All 224 API routes use strict TypeScript
+- **Zod Validation** - All inputs validated with schemas
+- **Async Params** - Next.js 15 compliant `await params` pattern
+- **Service Layer** - Business logic delegated to typed services
+
+See [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) for complete coding standards.
+
+**Guardrails:**
+- Husky pre-commit hooks block unsafe patterns
+- GitHub Actions CI validates type safety on all PRs
 
 ## Core Innovation: Golden Master + Customer Memory
 
@@ -130,6 +146,7 @@ Open [http://localhost:3000](http://localhost:3000)
   - Complete data architecture, API surface, feature inventory
   - Security, performance, extensibility details
   - **READ THIS for complete system understanding**
+- **[ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md)** - Type safety standards and API coding guidelines
 - **[HOW_TO_RUN.md](./HOW_TO_RUN.md)** - Local development quick start
 - **[PROJECT_STATUS.md](./PROJECT_STATUS.md)** - Development journey & current status
 
@@ -178,8 +195,8 @@ See **[PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md)
 
 ## Tech Stack
 
-- **Framework** - Next.js 14 (App Router)
-- **Language** - TypeScript
+- **Framework** - Next.js 15 (App Router)
+- **Language** - TypeScript (Strict Mode, Zero `any` Policy)
 - **Database** - Firebase Firestore
 - **Auth** - Firebase Auth
 - **AI Providers** - OpenAI, Anthropic, Google Gemini, OpenRouter
@@ -187,6 +204,8 @@ See **[PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md)
 - **Payments** - Stripe
 - **Deployment** - Vercel
 - **Real-time** - Firestore subscriptions
+- **Validation** - Zod schema validation on all API inputs
+- **Guardrails** - Husky pre-commit hooks + GitHub Actions CI
 
 ## Project Structure
 
