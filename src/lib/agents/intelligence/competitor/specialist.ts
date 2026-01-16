@@ -222,9 +222,10 @@ export class CompetitorResearcher extends BaseSpecialist {
     super(CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
     this.log('INFO', 'Competitor Researcher initialized');
+    return Promise.resolve();
   }
 
   /**
@@ -407,7 +408,7 @@ export class CompetitorResearcher extends BaseSpecialist {
   /**
    * Simulated search - Replace with real search API integration
    */
-  private async simulatedSearch(query: string): Promise<string[]> {
+  private simulatedSearch(query: string): Promise<string[]> {
     // This is a placeholder - in production, call a real search API
     // For demonstration, we'll return a message indicating this needs integration
 
@@ -419,7 +420,7 @@ export class CompetitorResearcher extends BaseSpecialist {
     // const data = await response.json();
     // return data.organic_results.map(r => r.link);
 
-    return [];
+    return Promise.resolve([]);
   }
 
   /**
@@ -485,13 +486,13 @@ export class CompetitorResearcher extends BaseSpecialist {
     rank: number,
     niche: string,
     location: string,
-    deep: boolean
+    _deep: boolean
   ): Promise<Competitor | null> {
     try {
       // Scrape the competitor's website
       const content = await scrapeWebsite(url);
 
-      if (!content || !content.cleanedText) {
+      if (!content?.cleanedText) {
         return null;
       }
 
@@ -512,7 +513,7 @@ export class CompetitorResearcher extends BaseSpecialist {
 
       return {
         rank,
-        name: this.extractCompanyName(content) || domain,
+        name: this.extractCompanyName(content) ?? domain,
         url,
         domain,
         seoMetrics,
@@ -549,7 +550,7 @@ export class CompetitorResearcher extends BaseSpecialist {
     // Estimate traffic based on content quality signals
     const hasRichContent = text.length > 2000;
     const hasMetadata = !!(content.title && content.description);
-    const hasStructuredContent = text.includes('#') || (content.cleanedText?.match(/\n/g)?.length || 0) > 10;
+    const hasStructuredContent = text.includes('#') || (content.cleanedText?.match(/\n/g)?.length ?? 0) > 10;
 
     let trafficEstimate: 'high' | 'medium' | 'low' = 'low';
     if (hasRichContent && hasMetadata && hasStructuredContent) {
@@ -580,12 +581,24 @@ export class CompetitorResearcher extends BaseSpecialist {
     // For now, estimate based on content signals
     let score = 30; // Base score
 
-    if (content.cleanedText && content.cleanedText.length > 5000) score += 15;
-    if (content.title) score += 5;
-    if (content.description) score += 5;
-    if (content.metadata?.keywords?.length) score += 5;
-    if (content.rawHtml?.includes('schema.org')) score += 10;
-    if (content.rawHtml?.includes('https://')) score += 5;
+    if (content.cleanedText && content.cleanedText.length > 5000) {
+      score += 15;
+    }
+    if (content.title) {
+      score += 5;
+    }
+    if (content.description) {
+      score += 5;
+    }
+    if (content.metadata?.keywords?.length) {
+      score += 5;
+    }
+    if (content.rawHtml?.includes('schema.org')) {
+      score += 10;
+    }
+    if (content.rawHtml?.includes('https://')) {
+      score += 5;
+    }
 
     return Math.min(score, 100);
   }
@@ -639,8 +652,8 @@ export class CompetitorResearcher extends BaseSpecialist {
     dataPoints: ReturnType<typeof extractDataPoints>,
     location: string
   ): CompetitorSignals {
-    const text = content.cleanedText?.toLowerCase() || '';
-    const html = content.rawHtml?.toLowerCase() || '';
+    const text = content.cleanedText?.toLowerCase() ?? '';
+    const html = content.rawHtml?.toLowerCase() ?? '';
 
     return {
       isHiring: text.includes('hiring') || text.includes('careers') || text.includes('job opening'),
@@ -659,29 +672,53 @@ export class CompetitorResearcher extends BaseSpecialist {
   ): { strengths: string[]; weaknesses: string[] } {
     const strengths: string[] = [];
     const weaknesses: string[] = [];
-    const text = content.cleanedText?.toLowerCase() || '';
-    const html = content.rawHtml?.toLowerCase() || '';
+    const text = content.cleanedText?.toLowerCase() ?? '';
+    const html = content.rawHtml?.toLowerCase() ?? '';
 
     // SEO Strengths
-    if (seoMetrics.domainAuthority > 60) strengths.push('High domain authority');
-    if (seoMetrics.contentQuality === 'high') strengths.push('Rich, comprehensive content');
-    if (seoMetrics.keywordRelevance > 0.7) strengths.push('Strong keyword optimization');
+    if (seoMetrics.domainAuthority > 60) {
+      strengths.push('High domain authority');
+    }
+    if (seoMetrics.contentQuality === 'high') {
+      strengths.push('Rich, comprehensive content');
+    }
+    if (seoMetrics.keywordRelevance > 0.7) {
+      strengths.push('Strong keyword optimization');
+    }
 
     // Feature strengths
-    if (text.includes('testimonial') || text.includes('case study')) strengths.push('Social proof present');
-    if (text.includes('free trial') || text.includes('demo')) strengths.push('Offers free trial/demo');
-    if (text.includes('integration') || text.includes('api')) strengths.push('Integration capabilities');
+    if (text.includes('testimonial') || text.includes('case study')) {
+      strengths.push('Social proof present');
+    }
+    if (text.includes('free trial') || text.includes('demo')) {
+      strengths.push('Offers free trial/demo');
+    }
+    if (text.includes('integration') || text.includes('api')) {
+      strengths.push('Integration capabilities');
+    }
     if (html.includes('live chat') || html.includes('intercom') || html.includes('drift')) {
       strengths.push('Live chat support');
     }
 
     // Weaknesses
-    if (seoMetrics.domainAuthority < 40) weaknesses.push('Lower domain authority');
-    if (seoMetrics.contentQuality === 'low') weaknesses.push('Limited website content');
-    if (!content.description) weaknesses.push('Missing meta description');
-    if (!html.includes('https://')) weaknesses.push('May lack HTTPS');
-    if (!html.includes('schema.org')) weaknesses.push('No structured data markup');
-    if (text.length < 500) weaknesses.push('Thin content');
+    if (seoMetrics.domainAuthority < 40) {
+      weaknesses.push('Lower domain authority');
+    }
+    if (seoMetrics.contentQuality === 'low') {
+      weaknesses.push('Limited website content');
+    }
+    if (!content.description) {
+      weaknesses.push('Missing meta description');
+    }
+    if (!html.includes('https://')) {
+      weaknesses.push('May lack HTTPS');
+    }
+    if (!html.includes('schema.org')) {
+      weaknesses.push('No structured data markup');
+    }
+    if (text.length < 500) {
+      weaknesses.push('Thin content');
+    }
 
     return {
       strengths: strengths.slice(0, 5),
@@ -765,7 +802,7 @@ export class CompetitorResearcher extends BaseSpecialist {
   /**
    * Identify market gaps from competitor analysis
    */
-  private identifyMarketGaps(competitors: Competitor[], niche: string): string[] {
+  private identifyMarketGaps(competitors: Competitor[], _niche: string): string[] {
     const gaps: string[] = [];
 
     // Check for common weaknesses across competitors
@@ -784,15 +821,23 @@ export class CompetitorResearcher extends BaseSpecialist {
 
     // Check for feature gaps
     const hasLiveChat = competitors.some(c => c.strengths.includes('Live chat support'));
-    if (!hasLiveChat) gaps.push('Live chat support opportunity');
+    if (!hasLiveChat) {
+      gaps.push('Live chat support opportunity');
+    }
 
     const hasFreeTrial = competitors.some(c => c.strengths.includes('Offers free trial/demo'));
-    if (!hasFreeTrial) gaps.push('Free trial/demo differentiation opportunity');
+    if (!hasFreeTrial) {
+      gaps.push('Free trial/demo differentiation opportunity');
+    }
 
     // Price point gaps
     const pricePoints = competitors.map(c => c.positioning.pricePoint);
-    if (!pricePoints.includes('budget')) gaps.push('Budget-friendly option gap');
-    if (!pricePoints.includes('premium')) gaps.push('Premium service gap');
+    if (!pricePoints.includes('budget')) {
+      gaps.push('Budget-friendly option gap');
+    }
+    if (!pricePoints.includes('premium')) {
+      gaps.push('Premium service gap');
+    }
 
     return gaps.slice(0, 5);
   }
@@ -844,7 +889,7 @@ export class CompetitorResearcher extends BaseSpecialist {
     errorCount: number
   ): number {
     let score = 0;
-    let maxScore = 100;
+    const maxScore = 100;
 
     // Competitors found
     score += Math.min(competitors.length * 5, 30);
@@ -857,11 +902,21 @@ export class CompetitorResearcher extends BaseSpecialist {
     const avgDataQuality = competitors.length > 0
       ? competitors.reduce((sum, c) => {
           let quality = 0;
-          if (c.name) quality += 20;
-          if (c.positioning.tagline) quality += 20;
-          if (c.seoMetrics.domainAuthority > 0) quality += 20;
-          if (c.strengths.length > 0) quality += 20;
-          if (c.weaknesses.length > 0) quality += 20;
+          if (c.name) {
+            quality += 20;
+          }
+          if (c.positioning.tagline) {
+            quality += 20;
+          }
+          if (c.seoMetrics.domainAuthority > 0) {
+            quality += 20;
+          }
+          if (c.strengths.length > 0) {
+            quality += 20;
+          }
+          if (c.weaknesses.length > 0) {
+            quality += 20;
+          }
           return sum + quality;
         }, 0) / competitors.length
       : 0;

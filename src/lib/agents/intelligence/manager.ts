@@ -68,28 +68,29 @@ export class IntelligenceManager extends BaseManager {
     super(INTELLIGENCE_MANAGER_CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.log('INFO', 'Initializing Intelligence Manager...');
     // TODO: Load specialists, verify they exist
     this.isInitialized = true;
+    return Promise.resolve();
   }
 
-  async execute(message: AgentMessage): Promise<AgentReport> {
+  execute(message: AgentMessage): Promise<AgentReport> {
     // STATUS: SHELL - Just returns delegation target, doesn't actually delegate
     const delegationTarget = this.findDelegationTarget(message);
 
     if (!delegationTarget) {
-      return this.createReport(
+      return Promise.resolve(this.createReport(
         message.id,
         'FAILED',
         null,
         ['Could not determine delegation target for this request']
-      );
+      ));
     }
 
     // TODO: Actually delegate to specialist and wait for response
     // Currently just identifies the target without executing
-    return this.createReport(
+    return Promise.resolve(this.createReport(
       message.id,
       'BLOCKED',
       {
@@ -97,17 +98,17 @@ export class IntelligenceManager extends BaseManager {
         reason: 'MANAGER_IS_SHELL - Cannot actually delegate yet',
       },
       ['Intelligence Manager is a SHELL - delegation not implemented']
-    );
+    ));
   }
 
-  async handleSignal(signal: Signal): Promise<AgentReport> {
+  handleSignal(signal: Signal): Promise<AgentReport> {
     // TODO: Implement signal handling
-    return this.createReport(
+    return Promise.resolve(this.createReport(
       signal.id,
       'BLOCKED',
       { reason: 'Signal handling not implemented' },
       ['SHELL: handleSignal not implemented']
-    );
+    ));
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {

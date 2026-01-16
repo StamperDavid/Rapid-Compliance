@@ -23,10 +23,10 @@ const CONFIG: SpecialistConfig = {
 
 export class InventoryManagerAgent extends BaseSpecialist {
   constructor() { super(CONFIG); }
-  async initialize(): Promise<void> { throw new Error('GHOST'); }
-  async execute(_m: AgentMessage): Promise<AgentReport> { throw new Error('GHOST'); }
-  async handleSignal(_s: Signal): Promise<AgentReport> { throw new Error('GHOST'); }
+  initialize(): Promise<void> { return Promise.reject(new Error('GHOST')); }
+  execute(_m: AgentMessage): Promise<AgentReport> { return Promise.reject(new Error('GHOST')); }
+  handleSignal(_s: Signal): Promise<AgentReport> { return Promise.reject(new Error('GHOST')); }
   generateReport(taskId: string, data: unknown): AgentReport { return this.createReport(taskId, 'FAILED', data); }
   hasRealLogic(): boolean { return false; }
-  getFunctionalLOC() { return { functional: 0, boilerplate: 35 }; }
+  getFunctionalLOC(): { functional: number; boilerplate: number } { return { functional: 0, boilerplate: 35 }; }
 }

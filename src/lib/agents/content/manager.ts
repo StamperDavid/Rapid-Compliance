@@ -47,20 +47,21 @@ export class ContentManager extends BaseManager {
     super(CONTENT_MANAGER_CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
+    return Promise.resolve();
   }
 
-  async execute(message: AgentMessage): Promise<AgentReport> {
-    return this.createReport(
+  execute(message: AgentMessage): Promise<AgentReport> {
+    return Promise.resolve(this.createReport(
       message.id,
       'BLOCKED',
       { reason: 'CONTENT_MANAGER_IS_SHELL' }
-    );
+    ));
   }
 
-  async handleSignal(signal: Signal): Promise<AgentReport> {
-    return this.createReport(signal.id, 'BLOCKED', {});
+  handleSignal(signal: Signal): Promise<AgentReport> {
+    return Promise.resolve(this.createReport(signal.id, 'BLOCKED', {}));
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {
