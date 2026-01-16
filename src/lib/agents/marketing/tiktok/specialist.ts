@@ -15,7 +15,7 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger } from '@/lib/logger/logger';
+import { logger as _logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // HOOK TEMPLATES LIBRARY - Core TikTok Psychology
@@ -373,6 +373,7 @@ export class TikTokExpert extends BaseSpecialist {
   }
 
   async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
     this.log('INFO', 'TikTok Expert initialized with viral content strategies');
   }
@@ -381,6 +382,7 @@ export class TikTokExpert extends BaseSpecialist {
    * Main execution entry point
    */
   async execute(message: AgentMessage): Promise<AgentReport> {
+    await Promise.resolve();
     const taskId = message.id;
 
     try {
@@ -396,13 +398,13 @@ export class TikTokExpert extends BaseSpecialist {
 
       switch (payload.method) {
         case 'generate_viral_hook':
-          result = await this.generateViralHook(payload);
+          result = this.generateViralHook(payload);
           break;
         case 'script_video_pacing':
-          result = await this.scriptVideoPacing(payload);
+          result = this.scriptVideoPacing(payload);
           break;
         case 'analyze_trending_sounds':
-          result = await this.analyzeTrendingSounds(payload);
+          result = this.analyzeTrendingSounds(payload);
           break;
         default:
           return this.createReport(taskId, 'FAILED', null, ['Unknown method']);
@@ -457,7 +459,7 @@ export class TikTokExpert extends BaseSpecialist {
   /**
    * Generate viral hooks for TikTok videos
    */
-  async generateViralHook(request: ViralHookRequest): Promise<ViralHookResult> {
+  generateViralHook(request: ViralHookRequest): ViralHookResult {
     const {
       topic,
       targetAudience,
@@ -502,7 +504,7 @@ export class TikTokExpert extends BaseSpecialist {
   /**
    * Script video pacing with beats and timing
    */
-  async scriptVideoPacing(request: VideoPacingRequest): Promise<VideoPacingResult> {
+  scriptVideoPacing(request: VideoPacingRequest): VideoPacingResult {
     const { topic, targetAudience, duration, contentType, keyPoints, cta } = request;
 
     this.log('INFO', `Scripting ${duration} video pacing for: ${topic}`);
@@ -536,7 +538,7 @@ export class TikTokExpert extends BaseSpecialist {
   /**
    * Analyze trending sounds and music strategies
    */
-  async analyzeTrendingSounds(request: TrendingSoundsRequest): Promise<TrendingSoundsResult> {
+  analyzeTrendingSounds(request: TrendingSoundsRequest): TrendingSoundsResult {
     const { niche, contentTheme, audienceAge } = request;
 
     this.log('INFO', `Analyzing trending sounds for niche: ${niche}`);
@@ -696,7 +698,7 @@ export class TikTokExpert extends BaseSpecialist {
   /**
    * Get visual suggestion for hook
    */
-  private getVisualSuggestion(hookType: string, topic: string): string {
+  private getVisualSuggestion(hookType: string, _topic: string): string {
     const suggestions: Record<string, string> = {
       controversy: `Direct-to-camera with confident expression. Text overlay with controversial statement. High contrast colors.`,
       curiosity: `Show partial result/outcome first (backwards storytelling). Text overlay with "Wait until you see..." Dynamic zoom.`,
@@ -711,7 +713,7 @@ export class TikTokExpert extends BaseSpecialist {
   /**
    * Get audio suggestion for hook
    */
-  private getAudioSuggestion(hookType: string, brandVoice: string): string {
+  private getAudioSuggestion(hookType: string, _brandVoice: string): string {
     const suggestions: Record<string, string> = {
       controversy: 'Bold, confident tone. Slightly provocative. Use trending upbeat sound underneath.',
       curiosity: 'Mysterious, intriguing tone with pauses. Trending mysterious/dramatic sound.',
@@ -726,7 +728,7 @@ export class TikTokExpert extends BaseSpecialist {
   /**
    * Explain why top hook wins
    */
-  private explainTopHook(hook: Hook, goal: string, audience: string): string {
+  private explainTopHook(hook: Hook, goal: string, _audience: string): string {
     return `This ${hook.hookType} hook scores highest (${(hook.estimatedRetention * 100).toFixed(0)}% retention) because it combines immediate scroll-stopping power with ${goal}-focused messaging. ${hook.reasoning} The ${hook.hookType} pattern is proven to drive ${this.getHookOutcome(hook.hookType)} which aligns perfectly with your content goals.`;
   }
 
@@ -815,9 +817,9 @@ export class TikTokExpert extends BaseSpecialist {
       beats.push({
         timestamp: `${totalSeconds - 5}-${totalSeconds}s`,
         beat: 'CTA',
-        script: `Remember: ${this.summarizePoints(keyPoints)}. ${cta || 'Follow for more tips!'}`,
+        script: `Remember: ${this.summarizePoints(keyPoints)}. ${cta ?? 'Follow for more tips!'}`,
         visual: 'Back to camera, energetic close',
-        textOverlay: cta || 'Follow for more',
+        textOverlay: cta ?? 'Follow for more',
         audio: 'Upbeat, motivational',
         purpose: 'Drive action and follows',
       });
@@ -837,9 +839,9 @@ export class TikTokExpert extends BaseSpecialist {
       beats.push({
         timestamp: `${totalSeconds - 5}-${totalSeconds}s`,
         beat: 'CTA',
-        script: `${cta || 'Save this and follow for more!'}`,
+        script: `${cta ?? 'Save this and follow for more!'}`,
         visual: 'Direct to camera with gesture',
-        textOverlay: cta || 'Follow for more',
+        textOverlay: cta ?? 'Follow for more',
         audio: 'Clear call to action',
         purpose: 'Convert viewer to follower',
       });
@@ -858,7 +860,7 @@ export class TikTokExpert extends BaseSpecialist {
       beats.push({
         timestamp: `${totalSeconds - 8}-${totalSeconds}s`,
         beat: 'Lesson/CTA',
-        script: `The lesson: ${keyPoints[keyPoints.length - 1] || topic}. ${cta || 'Share if you relate!'}`,
+        script: `The lesson: ${keyPoints[keyPoints.length - 1] ?? topic}. ${cta ?? 'Share if you relate!'}`,
         visual: 'Reflective close to camera',
         textOverlay: 'The Lesson',
         audio: 'Thoughtful, inspiring',
@@ -873,7 +875,9 @@ export class TikTokExpert extends BaseSpecialist {
    * Build solution script from key points
    */
   private buildSolutionScript(points: string[]): string {
-    if (points.length === 0) return 'Here\'s what you need to do...';
+    if (points.length === 0) {
+      return 'Here\'s what you need to do...';
+    }
     return points.slice(0, 3).map((p, i) => `${i + 1}. ${p}`).join('. ');
   }
 
@@ -895,15 +899,19 @@ export class TikTokExpert extends BaseSpecialist {
    * Summarize key points
    */
   private summarizePoints(points: string[]): string {
-    if (points.length === 0) return 'what you learned today';
-    if (points.length === 1) return points[0];
+    if (points.length === 0) {
+      return 'what you learned today';
+    }
+    if (points.length === 1) {
+      return points[0];
+    }
     return `${points[0]} and ${points[points.length - 1]}`;
   }
 
   /**
    * Generate pattern interrupts
    */
-  private generatePatternInterrupts(duration: string, beatCount: number): PatternInterrupt[] {
+  private generatePatternInterrupts(duration: string, _beatCount: number): PatternInterrupt[] {
     const totalSeconds = parseInt(duration);
     const interrupts: PatternInterrupt[] = [];
 
@@ -933,7 +941,7 @@ export class TikTokExpert extends BaseSpecialist {
   /**
    * Generate engagement tactics
    */
-  private generateEngagementTactics(contentType: string, topic: string): string[] {
+  private generateEngagementTactics(contentType: string, _topic: string): string[] {
     const tactics: string[] = [];
 
     // Always include these
@@ -988,7 +996,7 @@ export class TikTokExpert extends BaseSpecialist {
         'Match tempo/vibe to your content pacing',
       ],
       viralPotential: 0.85,
-      audience: audienceAge || 'All ages (varies by trend)',
+      audience: audienceAge ?? 'All ages (varies by trend)',
     });
 
     // Strategy 2: Original audio
@@ -1024,7 +1032,7 @@ export class TikTokExpert extends BaseSpecialist {
    * Get primary audio recommendation
    */
   private getPrimaryAudioRecommendation(niche: string, contentTheme?: string): string {
-    return `For ${niche} content, use trending audio when available (3-7 day window) to ride algorithm boost. For evergreen ${contentTheme || 'educational'} content, prioritize clear voiceover with subtle trending background music at 20-30% volume.`;
+    return `For ${niche} content, use trending audio when available (3-7 day window) to ride algorithm boost. For evergreen ${contentTheme ?? 'educational'} content, prioritize clear voiceover with subtle trending background music at 20-30% volume.`;
   }
 
   /**

@@ -17,7 +17,7 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger } from '@/lib/logger/logger';
+import { logger as _logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // THREAD TEMPLATES - Core content structures
@@ -512,6 +512,7 @@ export class TwitterExpert extends BaseSpecialist {
   }
 
   async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
     this.log('INFO', 'Twitter/X Expert initialized');
   }
@@ -520,6 +521,7 @@ export class TwitterExpert extends BaseSpecialist {
    * Main execution entry point
    */
   async execute(message: AgentMessage): Promise<AgentReport> {
+    await Promise.resolve();
     const taskId = message.id;
 
     try {
@@ -535,16 +537,18 @@ export class TwitterExpert extends BaseSpecialist {
 
       switch (request.action) {
         case 'build_thread_architecture':
-          result = await this.buildThreadArchitecture(request.params);
+          result = this.buildThreadArchitecture(request.params);
           break;
         case 'draft_engagement_replies':
-          result = await this.draftEngagementReplies(request.params);
+          result = this.draftEngagementReplies(request.params);
           break;
         case 'ratio_risk_assessment':
-          result = await this.ratioRiskAssessment(request.params);
+          result = this.ratioRiskAssessment(request.params);
           break;
-        default:
-          return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${(request as any).action}`]);
+        default: {
+          const unknownRequest = request as { action?: string };
+          return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${unknownRequest.action ?? 'undefined'}`]);
+        }
       }
 
       return this.createReport(taskId, 'COMPLETED', { action: request.action, result });
@@ -596,9 +600,9 @@ export class TwitterExpert extends BaseSpecialist {
   /**
    * Build thread architecture based on topic and goal
    */
-  async buildThreadArchitecture(
+  buildThreadArchitecture(
     params: ThreadArchitectureRequest['params']
-  ): Promise<ThreadArchitectureResult> {
+  ): ThreadArchitectureResult {
     const { topic, goal, targetAudience, tonePreference, riskTolerance, maxTweets = 10 } = params;
 
     this.log('INFO', `Building thread architecture: ${goal} thread on "${topic}"`);
@@ -643,7 +647,7 @@ export class TwitterExpert extends BaseSpecialist {
   /**
    * Draft engagement reply strategies
    */
-  async draftEngagementReplies(params: EngagementReplyRequest['params']): Promise<EngagementReplyResult> {
+  draftEngagementReplies(params: EngagementReplyRequest['params']): EngagementReplyResult {
     const { originalTweet, yourBrand, goal, style } = params;
 
     this.log('INFO', `Drafting engagement replies for goal: ${goal}`);
@@ -670,7 +674,7 @@ export class TwitterExpert extends BaseSpecialist {
   /**
    * Assess ratio risk for a draft tweet
    */
-  async ratioRiskAssessment(params: RatioRiskRequest['params']): Promise<RatioRiskResult> {
+  ratioRiskAssessment(params: RatioRiskRequest['params']): RatioRiskResult {
     const { draftTweet, context = '', yourFollowerCount = 1000, hasBlueCheck = false } = params;
 
     this.log('INFO', 'Assessing ratio risk for draft tweet');
@@ -735,7 +739,7 @@ export class TwitterExpert extends BaseSpecialist {
   private generateThreadStructure(
     topic: string,
     template: (typeof THREAD_TEMPLATES)[keyof typeof THREAD_TEMPLATES],
-    tone: string,
+    _tone: string,
     audience: string,
     maxTweets: number
   ): TweetStructure[] {
@@ -747,8 +751,8 @@ export class TwitterExpert extends BaseSpecialist {
       const isHook = index === 0;
       const isCTA = index === structure.length - 1;
 
-      // Generate draft text based on template step
-      const draftText = this.generateTweetText(topic, step, tone, audience, isHook, isCTA);
+      // Generate draft text based on template step (tone passed to generateTweetText)
+      const draftText = this.generateTweetText(topic, step, _tone, audience, isHook, isCTA);
 
       // Identify engagement tactics
       const engagementTactics = this.identifyEngagementTactics(step, isHook, isCTA);
@@ -828,10 +832,14 @@ export class TwitterExpert extends BaseSpecialist {
   private assessEngagementPotential(
     goal: string,
     templateName: string,
-    tone: string
+    _tone: string
   ): 'HIGH' | 'MEDIUM' | 'LOW' {
-    if (goal === 'viral' || templateName.includes('CONTRARIAN')) return 'HIGH';
-    if (goal === 'educational' || templateName.includes('STORY')) return 'MEDIUM';
+    if (goal === 'viral' || templateName.includes('CONTRARIAN')) {
+      return 'HIGH';
+    }
+    if (goal === 'educational' || templateName.includes('STORY')) {
+      return 'MEDIUM';
+    }
     return 'MEDIUM';
   }
 
@@ -840,12 +848,16 @@ export class TwitterExpert extends BaseSpecialist {
     riskTolerance: string,
     tone: string
   ): 'HIGH' | 'MEDIUM' | 'LOW' {
-    if (templateName.includes('CONTRARIAN') && riskTolerance === 'high') return 'HIGH';
-    if (tone === 'provocative') return 'MEDIUM';
+    if (templateName.includes('CONTRARIAN') && riskTolerance === 'high') {
+      return 'HIGH';
+    }
+    if (tone === 'provocative') {
+      return 'MEDIUM';
+    }
     return 'LOW';
   }
 
-  private generateOptimizationTips(templateName: string, goal: string, tone: string): string[] {
+  private generateOptimizationTips(templateName: string, goal: string, _tone: string): string[] {
     const tips: string[] = [
       'First tweet must provide standalone value - many readers stop there',
       'Use line breaks for readability (avoid wall of text)',
@@ -956,23 +968,23 @@ export class TwitterExpert extends BaseSpecialist {
     return strategies;
   }
 
-  private craftValueAddReply(originalTweet: string, brand: string, style: string): string {
+  private craftValueAddReply(_originalTweet: string, brand: string, style: string): string {
     // Simplified implementation - production would analyze tweet deeply
-    const starters = {
+    const starters: Record<string, string> = {
       educational: 'Great point. I\'d add that',
       witty: 'This is spot on. Plus,',
       supportive: 'Love this take. In my experience,',
       challenging: 'Interesting perspective. Have you considered',
     };
 
-    return `${starters[style as keyof typeof starters]} [specific insight based on ${brand}].\n\nThis aligns with what we're seeing in [specific context].`;
+    return `${starters[style] ?? starters['educational']} [specific insight based on ${brand}].\n\nThis aligns with what we're seeing in [specific context].`;
   }
 
-  private craftQuoteTweet(originalTweet: string, brand: string, style: string): string {
+  private craftQuoteTweet(_originalTweet: string, brand: string, _style: string): string {
     return `This 👇\n\n[Adding context]: We've seen this play out across our work with ${brand}.\n\nKey addition: [Your unique angle or data]`;
   }
 
-  private craftConversationStarter(originalTweet: string, style: string): string {
+  private craftConversationStarter(_originalTweet: string, _style: string): string {
     return `Curious - have you found [related question]?\n\nI've been exploring [related topic] and wonder if you've noticed [specific pattern].`;
   }
 
@@ -991,7 +1003,7 @@ export class TwitterExpert extends BaseSpecialist {
     return 'Reply within first hour for optimal reach';
   }
 
-  private planFollowUpStrategy(goal: string, style: string): string {
+  private planFollowUpStrategy(goal: string, _style: string): string {
     if (goal === 'start_conversation') {
       return 'If they reply: Respond within 15 min to keep momentum. Ask clarifying question. Avoid sales pitch.';
     }
@@ -1086,11 +1098,17 @@ export class TwitterExpert extends BaseSpecialist {
     });
 
     // Follower count modifier (more followers = more scrutiny)
-    if (followerCount > 100000) score *= 1.5;
-    if (followerCount > 10000) score *= 1.2;
+    if (followerCount > 100000) {
+      score *= 1.5;
+    }
+    if (followerCount > 10000) {
+      score *= 1.2;
+    }
 
     // Blue check modifier (higher visibility = higher risk)
-    if (hasBlueCheck) score *= 1.3;
+    if (hasBlueCheck) {
+      score *= 1.3;
+    }
 
     return Math.min(Math.round(score), 100);
   }

@@ -294,6 +294,7 @@ export class MarketingManager extends BaseManager {
   }
 
   async initialize(): Promise<void> {
+    await Promise.resolve();
     this.log('INFO', 'Initializing Marketing Manager...');
     this.isInitialized = true;
   }
@@ -439,7 +440,7 @@ export class MarketingManager extends BaseManager {
     }
 
     // Determine content type
-    let contentType = goal.contentType || 'mixed';
+    let contentType = goal.contentType ?? 'mixed';
     if (!goal.contentType) {
       if (messageLower.includes('video')) {
         contentType = 'video';
@@ -452,16 +453,16 @@ export class MarketingManager extends BaseManager {
 
     // Timeline
     const timeline = goal.timeline
-      ? `Launch: ${goal.timeline.launchDate || 'ASAP'}, Duration: ${goal.timeline.duration || 'Ongoing'}`
+      ? `Launch: ${goal.timeline.launchDate ?? 'ASAP'}, Duration: ${goal.timeline.duration ?? 'Ongoing'}`
       : 'ASAP, ongoing until results achieved';
 
     // Budget
     const budget = typeof goal.budget === 'number'
       ? `$${goal.budget.toLocaleString()}`
-      : goal.budget || 'Unspecified';
+      : goal.budget ?? 'Unspecified';
 
     // KPIs
-    const kpis = goal.kpis || this.inferKPIs(objective);
+    const kpis = goal.kpis ?? this.inferKPIs(objective);
 
     return {
       objective,
@@ -484,7 +485,7 @@ export class MarketingManager extends BaseManager {
       leads: ['Lead volume', 'Cost per lead', 'Lead quality score', 'Conversion to SQL'],
     };
 
-    return kpiMap[objective] || ['Impressions', 'Engagement rate'];
+    return kpiMap[objective] ?? ['Impressions', 'Engagement rate'];
   }
 
   /**
@@ -495,36 +496,66 @@ export class MarketingManager extends BaseManager {
     const rationales: string[] = [];
     const budgetAllocation: Record<string, string> = {};
 
-    const message = goal.message?.toLowerCase() || '';
+    const message = goal.message?.toLowerCase() ?? '';
     const audience = analysis.targetAudience.toLowerCase();
     const contentType = analysis.contentType.toLowerCase();
 
     // Check for explicit platform mentions
-    const explicitPlatforms = goal.targetAudience?.platforms || [];
+    const explicitPlatforms = goal.targetAudience?.platforms ?? [];
 
     // TikTok scoring
     let tiktokScore = 0;
-    if (explicitPlatforms.includes('tiktok') || explicitPlatforms.includes('TIKTOK')) tiktokScore += 50;
-    if (message.includes('tiktok') || message.includes('viral') || message.includes('trending')) tiktokScore += 30;
-    if (audience.includes('gen z') || audience.includes('16-34') || audience.includes('young')) tiktokScore += 20;
-    if (contentType.includes('video') || message.includes('video') || message.includes('short form')) tiktokScore += 15;
-    if (message.includes('hook') || message.includes('trending sound')) tiktokScore += 10;
+    if (explicitPlatforms.includes('tiktok') || explicitPlatforms.includes('TIKTOK')) {
+      tiktokScore += 50;
+    }
+    if (message.includes('tiktok') || message.includes('viral') || message.includes('trending')) {
+      tiktokScore += 30;
+    }
+    if (audience.includes('gen z') || audience.includes('16-34') || audience.includes('young')) {
+      tiktokScore += 20;
+    }
+    if (contentType.includes('video') || message.includes('video') || message.includes('short form')) {
+      tiktokScore += 15;
+    }
+    if (message.includes('hook') || message.includes('trending sound')) {
+      tiktokScore += 10;
+    }
 
     // X/Twitter scoring
     let xScore = 0;
-    if (explicitPlatforms.includes('x') || explicitPlatforms.includes('twitter') || explicitPlatforms.includes('X')) xScore += 50;
-    if (message.includes('twitter') || message.includes('tweet') || message.includes(' x ') || message.includes('thread')) xScore += 30;
-    if (audience.includes('b2b') || audience.includes('professional') || audience.includes('business')) xScore += 20;
-    if (message.includes('thought leadership') || message.includes('engage') || message.includes('conversation')) xScore += 15;
-    if (contentType.includes('text') || message.includes('thread')) xScore += 10;
+    if (explicitPlatforms.includes('x') || explicitPlatforms.includes('twitter') || explicitPlatforms.includes('X')) {
+      xScore += 50;
+    }
+    if (message.includes('twitter') || message.includes('tweet') || message.includes(' x ') || message.includes('thread')) {
+      xScore += 30;
+    }
+    if (audience.includes('b2b') || audience.includes('professional') || audience.includes('business')) {
+      xScore += 20;
+    }
+    if (message.includes('thought leadership') || message.includes('engage') || message.includes('conversation')) {
+      xScore += 15;
+    }
+    if (contentType.includes('text') || message.includes('thread')) {
+      xScore += 10;
+    }
 
     // Facebook scoring
     let facebookScore = 0;
-    if (explicitPlatforms.includes('facebook') || explicitPlatforms.includes('fb') || explicitPlatforms.includes('FACEBOOK')) facebookScore += 50;
-    if (message.includes('facebook') || message.includes('fb') || message.includes('meta')) facebookScore += 30;
-    if (audience.includes('45-65') || audience.includes('older') || audience.includes('local')) facebookScore += 20;
-    if (message.includes('ad') || message.includes('retarget') || message.includes('lead gen')) facebookScore += 15;
-    if (analysis.objective === 'leads' || analysis.objective === 'conversions') facebookScore += 10;
+    if (explicitPlatforms.includes('facebook') || explicitPlatforms.includes('fb') || explicitPlatforms.includes('FACEBOOK')) {
+      facebookScore += 50;
+    }
+    if (message.includes('facebook') || message.includes('fb') || message.includes('meta')) {
+      facebookScore += 30;
+    }
+    if (audience.includes('45-65') || audience.includes('older') || audience.includes('local')) {
+      facebookScore += 20;
+    }
+    if (message.includes('ad') || message.includes('retarget') || message.includes('lead gen')) {
+      facebookScore += 15;
+    }
+    if (analysis.objective === 'leads' || analysis.objective === 'conversions') {
+      facebookScore += 10;
+    }
 
     // Select platforms based on scores (threshold: 15)
     if (tiktokScore >= 15) {
@@ -576,9 +607,15 @@ export class MarketingManager extends BaseManager {
    */
   private getTikTokRationale(message: string, audience: string, contentType: string): string {
     const reasons: string[] = [];
-    if (message.includes('viral') || message.includes('trending')) reasons.push('viral potential');
-    if (audience.includes('gen z') || audience.includes('young')) reasons.push('young audience match');
-    if (contentType.includes('video') || message.includes('video')) reasons.push('video-first content');
+    if (message.includes('viral') || message.includes('trending')) {
+      reasons.push('viral potential');
+    }
+    if (audience.includes('gen z') || audience.includes('young')) {
+      reasons.push('young audience match');
+    }
+    if (contentType.includes('video') || message.includes('video')) {
+      reasons.push('video-first content');
+    }
     return reasons.length > 0 ? reasons.join(', ') : 'platform match';
   }
 
@@ -587,21 +624,35 @@ export class MarketingManager extends BaseManager {
    */
   private getXRationale(message: string, audience: string, contentType: string): string {
     const reasons: string[] = [];
-    if (message.includes('thought leadership') || message.includes('b2b')) reasons.push('thought leadership');
-    if (audience.includes('professional') || audience.includes('business')) reasons.push('professional audience');
-    if (message.includes('thread') || contentType.includes('text')) reasons.push('text-based content');
-    if (message.includes('engage') || message.includes('conversation')) reasons.push('engagement focus');
+    if (message.includes('thought leadership') || message.includes('b2b')) {
+      reasons.push('thought leadership');
+    }
+    if (audience.includes('professional') || audience.includes('business')) {
+      reasons.push('professional audience');
+    }
+    if (message.includes('thread') || contentType.includes('text')) {
+      reasons.push('text-based content');
+    }
+    if (message.includes('engage') || message.includes('conversation')) {
+      reasons.push('engagement focus');
+    }
     return reasons.length > 0 ? reasons.join(', ') : 'platform match';
   }
 
   /**
    * Get Facebook selection rationale
    */
-  private getFacebookRationale(message: string, audience: string, contentType: string): string {
+  private getFacebookRationale(message: string, audience: string, _contentType: string): string {
     const reasons: string[] = [];
-    if (message.includes('ad') || message.includes('retarget')) reasons.push('paid advertising');
-    if (audience.includes('older') || audience.includes('local')) reasons.push('demographic match');
-    if (message.includes('lead')) reasons.push('lead generation');
+    if (message.includes('ad') || message.includes('retarget')) {
+      reasons.push('paid advertising');
+    }
+    if (audience.includes('older') || audience.includes('local')) {
+      reasons.push('demographic match');
+    }
+    if (message.includes('lead')) {
+      reasons.push('lead generation');
+    }
     return reasons.length > 0 ? reasons.join(', ') : 'platform match';
   }
 
@@ -688,7 +739,7 @@ export class MarketingManager extends BaseManager {
           specialist: specialistId,
           brief,
           status: delegationStatus,
-          result: report.status === 'COMPLETED' ? (report.data as string | object) : report.errors?.join('; ') || 'Unknown error',
+          result: report.status === 'COMPLETED' ? (report.data as string | object) : report.errors?.join('; ') ?? 'Unknown error',
         });
 
         // Track warnings for GHOST/SHELL specialists
@@ -769,7 +820,7 @@ Deliverables: Ad copy, targeting parameters, creative concepts, conversion optim
     analysis: CampaignAnalysis,
     strategy: PlatformStrategy
   ): AggregatedPlan {
-    const completedDelegations = delegations.filter(d => d.status === 'COMPLETED');
+    const _completedDelegations = delegations.filter(d => d.status === 'COMPLETED');
     const blockedDelegations = delegations.filter(d => d.status === 'BLOCKED');
 
     // Overview

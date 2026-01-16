@@ -16,7 +16,7 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger } from '@/lib/logger/logger';
+import { logger as _logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist
@@ -766,6 +766,7 @@ export class FacebookAdsExpert extends BaseSpecialist {
   }
 
   async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
     this.log('INFO', 'Facebook Ads Expert initialized with audience personas');
   }
@@ -919,30 +920,30 @@ export class FacebookAdsExpert extends BaseSpecialist {
    * Match request to audience persona
    * Returns the full persona object with targeting insights
    */
-  async audience_persona_matching(
+  audience_persona_matching(
     persona: string | AudiencePersona
   ): Promise<AudiencePersona | null> {
     // If already an object, return it
     if (typeof persona === 'object') {
-      return persona;
+      return Promise.resolve(persona);
     }
 
     // Look up in predefined personas
     const personaKey = persona.toLowerCase().replace(/\s+/g, '_');
 
     if (AUDIENCE_PERSONAS[personaKey]) {
-      return AUDIENCE_PERSONAS[personaKey];
+      return Promise.resolve(AUDIENCE_PERSONAS[personaKey]);
     }
 
     // Try partial match
     for (const [key, personaObj] of Object.entries(AUDIENCE_PERSONAS)) {
       if (key.includes(personaKey) || personaKey.includes(key)) {
         this.log('WARN', `Partial match: Using ${key} for ${persona}`);
-        return personaObj;
+        return Promise.resolve(personaObj);
       }
     }
 
-    return null;
+    return Promise.resolve(null);
   }
 
   /**
@@ -993,9 +994,9 @@ export class FacebookAdsExpert extends BaseSpecialist {
     offer: string,
     customConstraints?: AdCreativeRequest['customConstraints']
   ): AdVariation {
-    const maxPrimaryLength = customConstraints?.maxPrimaryTextLength || 450;
-    const maxHeadlineLength = customConstraints?.maxHeadlineLength || 40;
-    const tone = customConstraints?.tone || 'professional';
+    const maxPrimaryLength = customConstraints?.maxPrimaryTextLength ?? 450;
+    const maxHeadlineLength = customConstraints?.maxHeadlineLength ?? 40;
+    const tone = customConstraints?.tone ?? 'professional';
     const useEmojis = customConstraints?.requireEmojis ?? true;
 
     // Generate hook based on framework and persona
@@ -1121,7 +1122,7 @@ export class FacebookAdsExpert extends BaseSpecialist {
     tone: string,
     useEmojis: boolean
   ): string {
-    let text = hook + '\n\n';
+    let text = `${hook}\n\n`;
 
     switch (framework) {
       case 'PAS':
@@ -1163,7 +1164,7 @@ export class FacebookAdsExpert extends BaseSpecialist {
 
     // Ensure within length constraints
     if (text.length > maxLength) {
-      text = text.substring(0, maxLength - 3) + '...';
+      text = `${text.substring(0, maxLength - 3)}...`;
     }
 
     return text;
@@ -1180,8 +1181,8 @@ export class FacebookAdsExpert extends BaseSpecialist {
     offer: string
   ): string {
     const pain = persona.painPoints[0];
-    const consequence = persona.painPoints[1] || 'Things only get worse';
-    const solution = persona.desires[0];
+    const consequence = persona.painPoints[1] ?? 'Things only get worse';
+    const _solution = persona.desires[0];
 
     let copy = `Here's the problem: ${pain.toLowerCase()}.\n\n`;
     copy += `And if you don't address it? ${consequence}.\n\n`;
@@ -1349,7 +1350,7 @@ export class FacebookAdsExpert extends BaseSpecialist {
     ];
 
     // Return the first one that fits
-    return headlines.find(h => h.length <= maxLength) || headlines[0].substring(0, maxLength);
+    return headlines.find(h => h.length <= maxLength) ?? headlines[0].substring(0, maxLength);
   }
 
   /**
@@ -1480,8 +1481,12 @@ export class FacebookAdsExpert extends BaseSpecialist {
 
     // Normalize to high/medium/low
     const getLevel = (score: number): PerformanceLevel => {
-      if (score >= 9) return 'high';
-      if (score >= 7) return 'medium';
+      if (score >= 9) {
+        return 'high';
+      }
+      if (score >= 7) {
+        return 'medium';
+      }
       return 'low';
     };
 
@@ -1573,18 +1578,34 @@ export class FacebookAdsExpert extends BaseSpecialist {
     let score = 0.7; // Base confidence
 
     // Has well-defined persona
-    if (persona.painPoints.length >= 3) score += 0.1;
-    if (persona.desires.length >= 3) score += 0.05;
-    if (persona.languagePatterns.length >= 3) score += 0.05;
+    if (persona.painPoints.length >= 3) {
+      score += 0.1;
+    }
+    if (persona.desires.length >= 3) {
+      score += 0.05;
+    }
+    if (persona.languagePatterns.length >= 3) {
+      score += 0.05;
+    }
 
     // Has strong inputs
-    if (request.usp && request.usp.length > 20) score += 0.05;
-    if (request.socialProof) score += 0.1;
-    if (request.offer && request.offer.length > 10) score += 0.05;
+    if (request.usp && request.usp.length > 20) {
+      score += 0.05;
+    }
+    if (request.socialProof) {
+      score += 0.1;
+    }
+    if (request.offer && request.offer.length > 10) {
+      score += 0.05;
+    }
 
     // Penalties
-    if (warnings.length > 0) score -= warnings.length * 0.05;
-    if (!request.socialProof) score -= 0.05;
+    if (warnings.length > 0) {
+      score -= warnings.length * 0.05;
+    }
+    if (!request.socialProof) {
+      score -= 0.05;
+    }
 
     return Math.max(0.5, Math.min(0.95, score));
   }
@@ -1593,7 +1614,7 @@ export class FacebookAdsExpert extends BaseSpecialist {
   // HELPER FUNCTIONS - Copy micro-strategies
   // ==========================================================================
 
-  private calloutPain(pain: string, persona: AudiencePersona): string {
+  private calloutPain(pain: string, _persona: AudiencePersona): string {
     const patterns = [
       `Tired of ${pain.toLowerCase()}?`,
       `Still ${pain.toLowerCase()}?`,
@@ -1616,19 +1637,26 @@ export class FacebookAdsExpert extends BaseSpecialist {
   }
 
   private shortenDesire(desire: string, maxLength: number): string {
-    if (desire.length <= maxLength) return desire;
+    if (desire.length <= maxLength) {
+      return desire;
+    }
     const words = desire.split(' ');
     let shortened = '';
     for (const word of words) {
-      if ((shortened + word).length > maxLength - 3) break;
-      shortened += (shortened ? ' ' : '') + word;
+      if ((shortened + word).length > maxLength - 3) {
+        break;
+      }
+      shortened += shortened ? ` ${word}` : word;
     }
-    return shortened + '...';
+    return `${shortened}...`;
   }
 
   private urgencyHeadline(offer: string, maxLength: number): string {
     const urgent = `Limited Time: ${offer.split('.')[0]}`;
-    return urgent.length <= maxLength ? urgent : 'Limited Time Offer';
+    if (urgent.length <= maxLength) {
+      return urgent;
+    }
+    return 'Limited Time Offer';
   }
 
   private benefitHeadline(desire: string, maxLength: number): string {
@@ -1637,7 +1665,10 @@ export class FacebookAdsExpert extends BaseSpecialist {
 
   private curiosityHeadline(product: string, maxLength: number): string {
     const headline = `${product} - See Why Everyone's Talking`;
-    return headline.length <= maxLength ? headline : `Discover ${product}`;
+    if (headline.length <= maxLength) {
+      return headline;
+    }
+    return `Discover ${product}`;
   }
 
   private addVideoContext(text: string): string {

@@ -755,6 +755,7 @@ export class TechnographicScout extends BaseSpecialist {
   }
 
   async initialize(): Promise<void> {
+    await Promise.resolve();
     this.isInitialized = true;
     this.log('INFO', 'Technographic Scout initialized');
   }
@@ -833,7 +834,7 @@ export class TechnographicScout extends BaseSpecialist {
     let html = '';
     try {
       const content = await scrapeWebsite(url);
-      html = content.rawHtml || '';
+      html = content.rawHtml ?? '';
 
       if (!html) {
         errors.push('Unable to retrieve page HTML');
@@ -894,7 +895,7 @@ export class TechnographicScout extends BaseSpecialist {
     let matchCount = 0;
     let totalPatterns = 0;
 
-    const lowerHtml = html.toLowerCase();
+    const _lowerHtml = html.toLowerCase();
 
     // Check script patterns
     if (signature.patterns.scripts) {
@@ -970,7 +971,7 @@ export class TechnographicScout extends BaseSpecialist {
     // Build the detected tool object
     const tool: DetectedTool = {
       name: signature.name,
-      category: signature.subcategory || signature.category,
+      category: signature.subcategory ?? signature.category,
       confidence: Math.round(confidence * 100) / 100,
       evidence,
     };
@@ -1029,7 +1030,7 @@ export class TechnographicScout extends BaseSpecialist {
     const hasMarketing = tools.some(t => t.category === 'marketing');
     const hasAnalytics = tools.some(t => t.category === 'analytics');
     const hasSupport = tools.some(t => t.category === 'support');
-    const hasAdvertising = tools.some(t => t.category === 'advertising');
+    const _hasAdvertising = tools.some(t => t.category === 'advertising');
 
     if (toolCount >= 10 && hasMarketing && hasAnalytics && hasSupport) {
       maturity = 'enterprise';
