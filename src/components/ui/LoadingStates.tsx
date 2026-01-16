@@ -106,6 +106,8 @@ export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', color = '#6366f1'
 
   return (
     <div
+      role="status"
+      aria-label="Loading"
       style={{
         width: sizeMap[size],
         height: sizeMap[size],
@@ -134,13 +136,20 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color = '#63
         {progress.toFixed(0)}% Complete
       </div>
     )}
-    <div style={{
-      width: '100%',
-      height: '0.5rem',
-      backgroundColor: '#2a2a2a',
-      borderRadius: '9999px',
-      overflow: 'hidden',
-    }}>
+    <div
+      role="progressbar"
+      aria-valuenow={progress}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${progress.toFixed(0)}% complete`}
+      style={{
+        width: '100%',
+        height: '0.5rem',
+        backgroundColor: '#2a2a2a',
+        borderRadius: '9999px',
+        overflow: 'hidden',
+      }}
+    >
       <div style={{
         width: `${progress}%`,
         height: '100%',
@@ -155,7 +164,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color = '#63
  * Dot loader (animated dots)
  */
 export const DotLoader: React.FC = () => (
-  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+  <div role="status" aria-label="Loading" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
     {[0, 1, 2].map(i => (
       <div
         key={i}
@@ -180,17 +189,22 @@ interface LoadingOverlayProps {
  * Loading overlay
  */
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ message }) => (
-  <div style={{
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '1rem',
-    zIndex: 9999,
-  }}>
+  <div
+    role="alert"
+    aria-busy="true"
+    aria-label={message ?? 'Loading'}
+    style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '1rem',
+      zIndex: 9999,
+    }}
+  >
     <Spinner size="lg" />
     {message && (
       <div style={{ color: '#fff', fontSize: '1.125rem' }}>
