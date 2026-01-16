@@ -12,11 +12,20 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { usePagination } from '@/hooks/usePagination';
-import type { RolePermissions, UserRole } from '@/types/permissions';
-import { ROLE_PERMISSIONS } from '@/types/permissions';
+import { ROLE_PERMISSIONS, type RolePermissions, type UserRole } from '@/types/permissions';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import type { QueryConstraint } from 'firebase/firestore';
-import { where, orderBy as firestoreOrderBy } from 'firebase/firestore';
+import { where, orderBy as firestoreOrderBy, type QueryConstraint, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
+
+interface FirestoreUser {
+  email?: string;
+  displayName?: string;
+  role?: UserRole;
+  title?: string;
+  department?: string;
+  status?: 'active' | 'invited' | 'suspended';
+  createdAt?: { seconds: number } | string;
+  customPermissions?: Partial<RolePermissions>;
+}
 
 interface TeamMember {
   id: number;
@@ -31,7 +40,7 @@ interface TeamMember {
 }
 
 export default function TeamMembersPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
@@ -39,12 +48,12 @@ export default function TeamMembersPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inviteRole, setInviteRole] = useState('member');
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [_showEditModal, setShowEditModal] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
-  const [activePermissionTab, setActivePermissionTab] = useState<'preset' | 'custom'>('preset');
+  const [_activePermissionTab, _setActivePermissionTab] = useState<'preset' | 'custom'>('preset');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
-  const [inviteData, setInviteData] = useState({
+  const [_inviteData, _setInviteData] = useState({
     email: '',
     role: 'employee' as UserRole,
     title: '',
@@ -52,7 +61,7 @@ export default function TeamMembersPage() {
   });
 
   // Fetch function with pagination
-  const fetchUsers = useCallback(async (lastDoc?: any) => {
+  const fetchUsers = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData, DocumentData>) => {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
     const constraints: QueryConstraint[] = [
@@ -79,29 +88,38 @@ export default function TeamMembersPage() {
 
   // Convert Firestore users to TeamMember format
   useEffect(() => {
-    const members: TeamMember[] = (users ?? []).map((u: any, index: number) => {
+    const members: TeamMember[] = (users ?? []).map((u: FirestoreUser, index: number) => {
       const emailUsername = u.email?.split('@')[0];
       const userName = u.displayName ?? (emailUsername ?? 'Unknown');
+      const createdAt = u.createdAt;
+      let joinedDate = 'Unknown';
+      if (createdAt) {
+        if (typeof createdAt === 'object' && 'seconds' in createdAt) {
+          joinedDate = new Date(createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } else if (typeof createdAt === 'string') {
+          joinedDate = new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+      }
       return {
         id: index + 1,
         name: userName,
         email: u.email ?? '',
-        role: (u.role !== '' && u.role != null) ? u.role : 'employee',
+        role: u.role ?? 'employee',
         title: u.title ?? '',
         department: u.department ?? '',
-        status: (u.status !== '' && u.status != null) ? u.status : 'active',
-        joinedDate: u.createdAt ? new Date(u.createdAt.seconds ? u.createdAt.seconds * 1000 : u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
+        status: u.status ?? 'active',
+        joinedDate,
         customPermissions: u.customPermissions,
       };
     });
-    
+
     setTeamMembers(members);
   }, [users]);
 
   // Initial load
   useEffect(() => {
     if (orgId) {
-      refresh();
+      void refresh();
     }
   }, [orgId, refresh]);
 
@@ -114,7 +132,7 @@ export default function TeamMembersPage() {
     { value: 'employee', label: 'Employee', description: 'Can only view and edit assigned records' }
   ];
 
-  const permissionGroups = [
+  const _permissionGroups = [
     {
       name: 'Organization Management',
       permissions: [
@@ -187,7 +205,7 @@ export default function TeamMembersPage() {
     }
   ];
 
-  const openEditModal = (member: TeamMember) => {
+  const _openEditModal = (member: TeamMember) => {
     setEditingMember({
       ...member,
       customPermissions:member.customPermissions ?? {}
@@ -195,13 +213,13 @@ export default function TeamMembersPage() {
     setShowEditModal(true);
   };
 
-  const getEffectivePermissions = (member: TeamMember): RolePermissions => {
+  const _getEffectivePermissions = (member: TeamMember): RolePermissions => {
     const basePermissions = ROLE_PERMISSIONS[member.role];
     if (!member.customPermissions) {return basePermissions;}
     return { ...basePermissions, ...member.customPermissions };
   };
 
-  const updateMemberPermission = (key: keyof RolePermissions, value: boolean) => {
+  const _updateMemberPermission = (key: keyof RolePermissions, value: boolean) => {
     if (!editingMember) {return;}
     setEditingMember({
       ...editingMember,
@@ -212,7 +230,7 @@ export default function TeamMembersPage() {
     });
   };
 
-  const saveMemberChanges = () => {
+  const _saveMemberChanges = () => {
     if (!editingMember) {return;}
     setTeamMembers(teamMembers.map(m => m.id === editingMember.id ? editingMember : m));
     setShowEditModal(false);
@@ -417,7 +435,7 @@ export default function TeamMembersPage() {
               {(hasMore || loading) && (
                 <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                   <button
-                    onClick={loadMore}
+                    onClick={() => void loadMore()}
                     disabled={loading || !hasMore}
                     style={{
                       padding: '0.75rem 1.5rem',
@@ -482,6 +500,7 @@ export default function TeamMembersPage() {
               </button>
               <button
                 onClick={() => {
+                  // eslint-disable-next-line no-alert
                   alert(`Invitation sent to ${inviteEmail}`);
                   setShowInviteModal(false);
                   setInviteEmail('');

@@ -1,9 +1,10 @@
 'use client';
+/* eslint-disable @next/next/no-img-element -- User uploaded images displayed in preview */
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface ThemeConfig {
   // Colors
@@ -112,19 +113,20 @@ export default function ThemeEditorPage() {
         );
         
         if (themeData) {
-          setTheme(themeData as ThemeConfig);
-          if (themeData.branding?.logoUrl) {
-            setLogoPreview(themeData.branding.logoUrl);
+          const typedTheme = themeData as ThemeConfig;
+          setTheme(typedTheme);
+          if (typedTheme.branding?.logoUrl) {
+            setLogoPreview(typedTheme.branding.logoUrl);
           }
-          if (themeData.branding?.favicon) {
-            setFaviconPreview(themeData.branding.favicon);
+          if (typedTheme.branding?.favicon) {
+            setFaviconPreview(typedTheme.branding.favicon);
           }
         } else {
           // Try localStorage as fallback (for migration)
           const savedTheme = localStorage.getItem('appTheme');
           if (savedTheme) {
             try {
-              const parsed = JSON.parse(savedTheme);
+              const parsed = JSON.parse(savedTheme) as ThemeConfig;
               setTheme(parsed);
               if (parsed.branding?.logoUrl) {
                 setLogoPreview(parsed.branding.logoUrl);
@@ -143,7 +145,7 @@ export default function ThemeEditorPage() {
         const savedTheme = localStorage.getItem('appTheme');
         if (savedTheme) {
           try {
-            const parsed = JSON.parse(savedTheme);
+            const parsed = JSON.parse(savedTheme) as ThemeConfig;
             setTheme(parsed);
           } catch (e) {
             logger.error('Failed to load theme:', e, { file: 'page.tsx' });
@@ -151,16 +153,16 @@ export default function ThemeEditorPage() {
         }
       }
     };
-    
-    loadTheme();
+
+    void loadTheme();
   }, [orgId]);
 
   const updateColor = (path: string[], value: string) => {
     setTheme(prev => {
       const newTheme = { ...prev };
-      let current: any = newTheme;
+      let current: Record<string, unknown> = newTheme as unknown as Record<string, unknown>;
       for (let i = 0; i < path.length - 1; i++) {
-        current = current[path[i]];
+        current = current[path[i]] as Record<string, unknown>;
       }
       current[path[path.length - 1]] = value;
       return newTheme;
@@ -270,8 +272,9 @@ export default function ThemeEditorPage() {
       setTimeout(() => {
         window.location.reload();
       }, 1500);
-    } catch (error: any) {
-      setSaveMessage({ type: 'error', message:(error.message !== '' && error.message != null) ? error.message : 'Failed to save theme'});
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to save theme';
+      setSaveMessage({ type: 'error', message: errorMessage });
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(null), 5000);
@@ -318,8 +321,8 @@ export default function ThemeEditorPage() {
               <button onClick={exportTheme} style={{ padding: '0.625rem 1rem', border: '1px solid #333', color: '#999', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}>
                 📥 Export Theme
               </button>
-              <button 
-                onClick={handleSaveAndApply}
+              <button
+                onClick={() => void handleSaveAndApply()}
                 disabled={isSaving}
                 style={{ 
                   padding: '0.625rem 1.5rem', 
@@ -375,7 +378,7 @@ export default function ThemeEditorPage() {
             ].map((section) => (
               <button
                 key={section.id}
-                onClick={() => setActiveSection(section.id as any)}
+                onClick={() => setActiveSection(section.id as typeof activeSection)}
                 style={{
                   width: '100%',
                   textAlign: 'left',
@@ -452,7 +455,7 @@ export default function ThemeEditorPage() {
                     ].map((tab) => (
                       <button
                         key={tab.id}
-                        onClick={() => setActiveColorGroup(tab.id as any)}
+                        onClick={() => setActiveColorGroup(tab.id as typeof activeColorGroup)}
                         style={{
                           padding: '0.625rem 1rem',
                           fontSize: '0.875rem',

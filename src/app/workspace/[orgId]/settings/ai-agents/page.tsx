@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 
 export default function AIAgentsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();

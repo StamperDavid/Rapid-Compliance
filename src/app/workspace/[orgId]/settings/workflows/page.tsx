@@ -1,6 +1,7 @@
 'use client';
+/* eslint-disable no-alert -- Admin UI uses native dialogs */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,25 +9,38 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import WorkflowBuilder from '@/components/workflows/WorkflowBuilder';
 import type { Workflow } from '@/types/workflow';
 
+interface WorkflowItem {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  trigger?: { type?: string };
+  stats?: { totalRuns?: number };
+}
+
+interface WorkflowsResponse {
+  workflows?: WorkflowItem[];
+}
+
+interface WorkflowWithId extends Partial<Workflow> {
+  id: string;
+}
+
 export default function WorkflowsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingWorkflow, setEditingWorkflow] = useState<Partial<Workflow> | null>(null);
-  const [workflowsList, setWorkflowsList] = useState<any[]>([]);
+  const [workflowsList, setWorkflowsList] = useState<WorkflowItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
 
   // Load workflows from API
-  useEffect(() => {
-    loadWorkflows();
-  }, [orgId]);
-
-  async function loadWorkflows() {
+  const loadWorkflows = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -50,16 +64,20 @@ export default function WorkflowsPage() {
         throw new Error('Failed to load workflows');
       }
 
-      const data = await response.json();
+      const data = await response.json() as WorkflowsResponse;
       setWorkflowsList(data.workflows ?? []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading workflows:', error);
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'Failed to load workflows');
       setWorkflowsList([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadWorkflows();
+  }, [loadWorkflows]);
 
   async function toggleWorkflowStatus(workflowId: string, currentStatus: string) {
     try {
@@ -85,13 +103,13 @@ export default function WorkflowsPage() {
       });
 
       if (response.ok) {
-        loadWorkflows(); // Reload to get fresh data
+        void loadWorkflows(); // Reload to get fresh data
       } else {
         throw new Error('Failed to update workflow status');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error toggling workflow status:', error);
-      alert('Failed to update workflow status');
+      alert(`Failed to update workflow status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -138,7 +156,7 @@ export default function WorkflowsPage() {
                 </div>
                 <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '0.5rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#f59e0b', marginBottom: '0.25rem' }}>Getting Started</div>
-                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Click "Create Workflow" to build your first automation</div>
+                  <div style={{ fontSize: '0.875rem', color: '#ccc' }}>Click &quot;Create Workflow&quot; to build your first automation</div>
                 </div>
               </div>
             </div>
@@ -187,17 +205,17 @@ export default function WorkflowsPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid #333' }}>
                       <div style={{ fontSize: '0.875rem', color: '#666' }}>Total runs: <span style={{ color: primaryColor, fontWeight: '600' }}>{runsToday}</span></div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button 
+                        <button
                           onClick={() => {
-                            setEditingWorkflow(workflow);
+                            setEditingWorkflow(workflow as unknown as Partial<Workflow>);
                             setShowBuilder(true);
                           }}
                           style={{ padding: '0.5rem 1rem', backgroundColor: '#222', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
                         >
                           Edit
                         </button>
-                        <button 
-                          onClick={() => toggleWorkflowStatus(workflow.id, workflow.status)}
+                        <button
+                          onClick={() => void toggleWorkflowStatus(workflow.id, workflow.status)}
                           style={{ padding: '0.5rem 1rem', backgroundColor: isActive ? '#4c3d0f' : primaryColor, color: isActive ? '#fbbf24' : '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.875rem' }}
                         >
                           {isActive ? 'Pause' : 'Activate'}
@@ -214,7 +232,7 @@ export default function WorkflowsPage() {
       {showBuilder && (
         <WorkflowBuilder
           workflow={editingWorkflow}
-          onSave={async (workflow) => {
+          onSave={(workflow) => void (async () => {
             try {
               const { getCurrentUser } = await import('@/lib/auth/auth-service');
               const currentUser = getCurrentUser();
@@ -224,9 +242,10 @@ export default function WorkflowsPage() {
               }
 
               const token = await currentUser.getIdToken();
-              const isEditing = editingWorkflow && (editingWorkflow as any).id;
-              const endpoint = isEditing 
-                ? `/api/workflows/${(editingWorkflow as any).id}`
+              const workflowWithId = editingWorkflow as WorkflowWithId | null;
+              const isEditing = workflowWithId?.id;
+              const endpoint = isEditing
+                ? `/api/workflows/${workflowWithId.id}`
                 : '/api/workflows';
               
               const method = isEditing ? 'PUT' : 'POST';
@@ -252,11 +271,11 @@ export default function WorkflowsPage() {
               await loadWorkflows();
               setShowBuilder(false);
               setEditingWorkflow(null);
-            } catch (error: any) {
+            } catch (error: unknown) {
               console.error('Error saving workflow:', error);
-              alert(`Failed to save workflow: ${error.message}`);
+              alert(`Failed to save workflow: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
-          }}
+          })()}
           onCancel={() => {
             setShowBuilder(false);
             setEditingWorkflow(null);

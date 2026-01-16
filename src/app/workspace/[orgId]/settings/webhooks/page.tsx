@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -8,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 export default function WebhooksPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);

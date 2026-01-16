@@ -1,36 +1,81 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 
+interface ChannelUsage {
+  used: number;
+  monthlyLimit: number;
+}
+
+interface OutboundFeature {
+  enabled: boolean;
+  used?: number;
+  monthlyLimit?: number;
+  currentSequences?: number;
+  maxActiveSequences?: number;
+  autonomousMode?: boolean;
+  channels?: {
+    email: ChannelUsage;
+    linkedin: ChannelUsage;
+    sms: ChannelUsage;
+  };
+}
+
+interface SubscriptionData {
+  plan?: string;
+  status?: string;
+  isTrialing?: boolean;
+  trialEndsAt?: string;
+  billing?: {
+    basePrice?: number;
+  };
+  outboundFeatures?: {
+    aiEmailWriter?: OutboundFeature;
+    emailSequences?: OutboundFeature;
+    emailReplyHandler?: OutboundFeature;
+    prospectFinder?: OutboundFeature;
+    multiChannel?: OutboundFeature;
+  };
+}
+
+interface SubscriptionResponse {
+  success: boolean;
+  subscription?: SubscriptionData;
+}
+
+interface ToggleResponse {
+  success: boolean;
+}
+
 export default function SubscriptionPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  
+
   const { theme } = useOrgTheme();
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSubscription();
-  }, []);
-
-  const loadSubscription = async () => {
+  const loadSubscription = useCallback(async () => {
     try {
       const response = await fetch(`/api/subscription?orgId=${orgId}`);
-      const data = await response.json();
+      const data = await response.json() as SubscriptionResponse;
       if (data.success) {
-        setSubscription(data.subscription);
+        setSubscription(data.subscription ?? null);
       }
     } catch (error) {
       logger.error('Failed to load subscription:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadSubscription();
+  }, [loadSubscription]);
 
   const toggleFeature = async (feature: string, enabled: boolean) => {
     try {
@@ -39,10 +84,10 @@ export default function SubscriptionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId, feature, enabled }),
       });
-      
-      const data = await response.json();
+
+      const data = await response.json() as ToggleResponse;
       if (data.success) {
-        loadSubscription(); // Reload
+        void loadSubscription(); // Reload
       }
     } catch (error) {
       logger.error('Failed to toggle feature:', error, { file: 'page.tsx' });
@@ -109,7 +154,7 @@ export default function SubscriptionPage() {
               </div>
             </div>
 
-            {subscription?.isTrialing && (
+            {subscription?.isTrialing && subscription.trialEndsAt && (
               <div style={{ padding: '1rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem' }}>
                 <div style={{ fontSize: '0.875rem', color: '#999', marginBottom: '0.25rem' }}>
                   Trial ends: {new Date(subscription.trialEndsAt).toLocaleDateString()}
@@ -293,7 +338,7 @@ export default function SubscriptionPage() {
                     <p style={{ fontSize: '0.75rem', color: '#999', marginBottom: '0.75rem' }}>
                       LinkedIn + SMS + Email coordination
                     </p>
-                    {subscription?.outboundFeatures?.multiChannel?.enabled && (
+                    {subscription?.outboundFeatures?.multiChannel?.enabled && subscription.outboundFeatures.multiChannel.channels && (
                       <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#666' }}>
                         <div>Email: {subscription.outboundFeatures.multiChannel.channels.email.used}/{subscription.outboundFeatures.multiChannel.channels.email.monthlyLimit}</div>
                         <div>LinkedIn: {subscription.outboundFeatures.multiChannel.channels.linkedin.used}/{subscription.outboundFeatures.multiChannel.channels.linkedin.monthlyLimit}</div>
