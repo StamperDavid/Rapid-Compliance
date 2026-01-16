@@ -4,10 +4,13 @@
  * Used by middleware for fast subdomain resolution
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+
+interface SubdomainData {
+  organizationId?: string;
+}
 
 /**
  * GET /api/website/subdomain/[subdomain]
@@ -37,20 +40,21 @@ export async function GET(
       );
     }
 
-    const data = subdomainDoc.data();
+    const data = subdomainDoc.data() as SubdomainData | undefined;
 
     return NextResponse.json({
       success: true,
       organizationId: data?.organizationId,
       subdomain,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Subdomain lookup error', error, {
       route: '/api/website/subdomain/[subdomain]',
       method: 'GET'
     });
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to lookup subdomain', details: error.message },
+      { error: 'Failed to lookup subdomain', details: message },
       { status: 500 }
     );
   }

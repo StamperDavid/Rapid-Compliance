@@ -3,11 +3,29 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId on every request
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
+
+const getQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+});
+
+const postBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  settings: z.record(z.unknown()).refine((val) => Object.keys(val).length > 0, {
+    message: 'settings object is required',
+  }),
+});
+
+const putBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  settings: z.record(z.unknown()).refine((val) => Object.keys(val).length > 0, {
+    message: 'settings object is required',
+  }),
+});
 
 /**
  * GET /api/website/settings
@@ -18,23 +36,20 @@ export async function GET(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const { searchParams } = request.nextUrl;
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId'),
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'organizationId is required' },
+        { error: queryResult.error.errors[0]?.message ?? 'Invalid query parameters' },
         { status: 400 }
       );
     }
 
-    // User authentication handled by middleware
-    // const user = await verifyAuth(request);
-    // if (!user || user.organizationId !== organizationId) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
+    const { organizationId } = queryResult.data;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
@@ -70,13 +85,14 @@ export async function GET(request: NextRequest) {
       success: true,
       settings,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch website settings', error, {
       route: '/api/website/settings',
       method: 'GET'
     });
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to fetch settings', details: error.message },
+      { error: 'Failed to fetch settings', details: message },
       { status: 500 }
     );
   }
@@ -91,24 +107,18 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
-    const { organizationId, settings } = body;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const body: unknown = await request.json();
+    const bodyResult = postBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
       return NextResponse.json(
-        { error: 'organizationId is required' },
+        { error: bodyResult.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    if (!settings) {
-      return NextResponse.json(
-        { error: 'settings object is required' },
-        { status: 400 }
-      );
-    }
+    const { organizationId, settings } = bodyResult.data;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
@@ -116,7 +126,7 @@ export async function POST(request: NextRequest) {
     );
 
     // CRITICAL: Ensure organizationId is in the data
-    const settingsData = {
+    const settingsData: Record<string, unknown> = {
       ...settings,
       organizationId, // Force correct organizationId
       updatedAt: FieldValue.serverTimestamp(),
@@ -134,13 +144,14 @@ export async function POST(request: NextRequest) {
       success: true,
       settings: settingsData,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update website settings', error, {
       route: '/api/website/settings',
       method: 'POST'
     });
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to update settings', details: error.message },
+      { error: 'Failed to update settings', details: message },
       { status: 500 }
     );
   }
@@ -155,33 +166,18 @@ export async function PUT(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
-    const { organizationId, settings } = body;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const body: unknown = await request.json();
+    const bodyResult = putBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
       return NextResponse.json(
-        { error: 'organizationId is required' },
+        { error: bodyResult.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    if (!settings) {
-      return NextResponse.json(
-        { error: 'settings object is required' },
-        { status: 400 }
-      );
-    }
-
-    // User authentication handled by middleware
-    // const user = await verifyAuth(request);
-    // if (!user || user.organizationId !== organizationId) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
-    // if (!hasPermission(user, 'manage_website')) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
+    const { organizationId, settings } = bodyResult.data;
 
     const settingsRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/settings',
@@ -189,7 +185,7 @@ export async function PUT(request: NextRequest) {
     );
 
     // CRITICAL: Ensure organizationId is in the data
-    const settingsData = {
+    const settingsData: Record<string, unknown> = {
       ...settings,
       organizationId, // Force correct organizationId
       updatedAt: FieldValue.serverTimestamp(),
@@ -207,13 +203,14 @@ export async function PUT(request: NextRequest) {
       success: true,
       settings: settingsData,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update website settings', error, {
       route: '/api/website/settings',
       method: 'PUT'
     });
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to update settings', details: error.message },
+      { error: 'Failed to update settings', details: message },
       { status: 500 }
     );
   }

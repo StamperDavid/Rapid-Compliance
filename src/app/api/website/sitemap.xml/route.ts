@@ -4,13 +4,19 @@
  * CRITICAL: Serves content based on request domain/subdomain
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Page } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
+
+interface WebsiteData {
+  customDomain?: string;
+  customDomainVerified?: boolean;
+  organizationId?: string;
+  subdomain?: string;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,9 +34,9 @@ export async function GET(request: NextRequest) {
     // Check if custom domain (query across all orgs' website settings)
     const domainsSnapshot = await adminDal.getCollectionGroup('website').get();
     for (const doc of domainsSnapshot.docs) {
-      const data = doc.data();
+      const data = doc.data() as WebsiteData;
       if (data.customDomain === host && data.customDomainVerified) {
-        organizationId = data.organizationId;
+        organizationId = data.organizationId ?? null;
         baseUrl = `https://${host}`;
         break;
       }
@@ -42,17 +48,21 @@ export async function GET(request: NextRequest) {
       const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
       const { adminDb } = await import('@/lib/firebase/admin');
 
+      if (!adminDb) {
+        return new NextResponse('Server configuration error', { status: 500 });
+      }
+
       for (const orgDoc of orgsSnapshot.docs) {
         // Use environment-aware subcollection path
         const websitePath = adminDal.getSubColPath('website');
-        const settingsDoc = await adminDb!
+        const settingsDoc = await adminDb
           .collection(orgDoc.ref.path)
           .doc(orgDoc.id)
           .collection(websitePath)
           .doc('settings')
           .get();
 
-        const settingsData = settingsDoc.data();
+        const settingsData = settingsDoc.data() as WebsiteData | undefined;
         if (settingsData?.subdomain === subdomain) {
           organizationId = orgDoc.id;
           baseUrl = `https://${host}`;

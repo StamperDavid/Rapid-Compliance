@@ -4,12 +4,35 @@
  * CRITICAL: Multi-tenant - custom templates scoped to organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+
+const getQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId required'),
+});
+
+const templateCategoryValues = ['business', 'saas', 'ecommerce', 'portfolio', 'agency', 'blog', 'other'] as const;
+
+const postBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId required'),
+  template: z.object({
+    name: z.string().min(1, 'Template name is required'),
+    description: z.string().optional(),
+    category: z.enum(templateCategoryValues).optional(),
+    thumbnail: z.string().optional(),
+    content: z.array(z.record(z.unknown())),
+    isPublic: z.boolean().optional(),
+  }),
+});
+
+const deleteQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId required'),
+  templateId: z.string().min(1, 'templateId required'),
+});
 
 /**
  * GET /api/website/templates
@@ -20,17 +43,20 @@ export async function GET(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const { searchParams } = new URL(request.url);
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId'),
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: queryResult.error.errors[0]?.message ?? 'Invalid query parameters' },
         { status: 400 }
       );
     }
+
+    const { organizationId } = queryResult.data;
 
     // Get custom templates for this org
     const templatesRef = adminDal.getNestedCollection(
@@ -53,7 +79,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ templates });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch templates', error, {
       route: '/api/website/templates',
       method: 'GET'
@@ -74,25 +100,18 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
-    const { organizationId, template } = body;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const body: unknown = await request.json();
+    const bodyResult = postBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: bodyResult.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    // Validate template data
-    if (!template?.name || !template.content) {
-      return NextResponse.json(
-        { error: 'Invalid template data' },
-        { status: 400 }
-      );
-    }
+    const { organizationId, template } = bodyResult.data;
 
     // Create template document
     const templateData: PageTemplate = {
@@ -100,9 +119,9 @@ export async function POST(request: NextRequest) {
       organizationId, // CRITICAL: Set org ownership
       name: template.name,
       description: template.description ?? '',
-      category:(template.category !== '' && template.category != null) ? template.category : 'other',
+      category: template.category ?? 'other',
       thumbnail: template.thumbnail,
-      content: template.content,
+      content: template.content as unknown as PageTemplate['content'],
       isPublic: template.isPublic ?? false,
       isPremium: false,
       createdAt: new Date().toISOString(),
@@ -119,7 +138,7 @@ export async function POST(request: NextRequest) {
     await templateRef.set(templateData);
 
     return NextResponse.json({ template: templateData }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to create template', error, {
       route: '/api/website/templates',
       method: 'POST'
@@ -140,18 +159,21 @@ export async function DELETE(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    const templateId = searchParams.get('templateId');
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId || !templateId) {
+    const { searchParams } = new URL(request.url);
+    const queryResult = deleteQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId'),
+      templateId: searchParams.get('templateId'),
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'organizationId and templateId required' },
+        { error: queryResult.error.errors[0]?.message ?? 'Invalid query parameters' },
         { status: 400 }
       );
     }
+
+    const { organizationId, templateId } = queryResult.data;
 
     // Delete template
     const templateRef = adminDal.getNestedDocRef(
@@ -179,7 +201,7 @@ export async function DELETE(request: NextRequest) {
     await templateRef.delete();
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to delete template', error, {
       route: '/api/website/templates',
       method: 'DELETE'
