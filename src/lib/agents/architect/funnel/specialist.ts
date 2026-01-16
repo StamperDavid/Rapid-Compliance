@@ -572,50 +572,51 @@ export class FunnelPathologist extends BaseSpecialist {
     super(CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
     this.log('INFO', 'Funnel Pathologist initialized - THE SQUEEZE is ready');
+    return Promise.resolve();
   }
 
   /**
    * Main execution entry point - routes to appropriate handler
    */
-  async execute(message: AgentMessage): Promise<AgentReport> {
+  execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
       const payload = message.payload as Record<string, unknown>;
       const action = payload?.action as string;
 
-      this.log('INFO', `Executing action: ${action || 'design_funnel'}`);
+      this.log('INFO', `Executing action: ${action ?? 'design_funnel'}`);
 
       let result: FunnelDesignResult | StageOptimizationResult | ConversionAnalysisResult;
 
       switch (action) {
         case 'optimize_stage':
-          result = await this.optimizeStage(payload as unknown as StageOptimizationRequest);
+          result = this.optimizeStage(payload as unknown as StageOptimizationRequest);
           break;
         case 'analyze_conversions':
-          result = await this.analyzeConversions(payload as unknown as ConversionAnalysisRequest);
+          result = this.analyzeConversions(payload as unknown as ConversionAnalysisRequest);
           break;
         case 'design_funnel':
         default:
-          result = await this.designFunnel(payload as unknown as FunnelDesignRequest);
+          result = this.designFunnel(payload as unknown as FunnelDesignRequest);
           break;
       }
 
-      return this.createReport(taskId, 'COMPLETED', result);
+      return Promise.resolve(this.createReport(taskId, 'COMPLETED', result));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.log('ERROR', `Funnel design failed: ${errorMessage}`);
-      return this.createReport(taskId, 'FAILED', null, [errorMessage]);
+      return Promise.resolve(this.createReport(taskId, 'FAILED', null, [errorMessage]));
     }
   }
 
   /**
    * Handle signals from the Signal Bus
    */
-  async handleSignal(signal: Signal): Promise<AgentReport> {
+  handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
 
     if (signal.payload.type === 'COMMAND') {
@@ -626,14 +627,14 @@ export class FunnelPathologist extends BaseSpecialist {
       // Handle queries about funnel stages or templates
       const query = signal.payload.payload as { type?: string };
       if (query?.type === 'templates') {
-        return this.createReport(taskId, 'COMPLETED', { templates: FUNNEL_TEMPLATES });
+        return Promise.resolve(this.createReport(taskId, 'COMPLETED', { templates: FUNNEL_TEMPLATES }));
       }
       if (query?.type === 'stages') {
-        return this.createReport(taskId, 'COMPLETED', { stages: FUNNEL_STAGES });
+        return Promise.resolve(this.createReport(taskId, 'COMPLETED', { stages: FUNNEL_STAGES }));
       }
     }
 
-    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', { acknowledged: true }));
   }
 
   /**
@@ -664,15 +665,15 @@ export class FunnelPathologist extends BaseSpecialist {
   /**
    * Design a complete sales funnel for a business type
    */
-  async designFunnel(request: FunnelDesignRequest): Promise<FunnelDesignResult> {
+  designFunnel(request: FunnelDesignRequest): FunnelDesignResult {
     const {
       businessType,
-      targetAudience,
+      targetAudience: _targetAudience,
       currentState = 'none',
       budget = 'medium',
       trafficSource,
       existingProducts = [],
-      averageOrderValue,
+      averageOrderValue: _averageOrderValue,
       monthlyTraffic,
       customRequirements = [],
     } = request;
@@ -741,7 +742,7 @@ export class FunnelPathologist extends BaseSpecialist {
   private designFunnelStages(
     businessType: BusinessType,
     budget: 'low' | 'medium' | 'high',
-    existingProducts: string[]
+    _existingProducts: string[]
   ): FunnelStageDesign[] {
     const template = FUNNEL_TEMPLATES[businessType];
     const stages: FunnelStageDesign[] = [];
@@ -820,16 +821,16 @@ export class FunnelPathologist extends BaseSpecialist {
       info_product: ['PDF Guide', 'Email Course'],
     };
 
-    const preferred = preferences[businessType] || ['PDF Guide'];
+    const preferred = preferences[businessType] ?? ['PDF Guide'];
 
     // Find matching type
     for (const pref of preferred) {
       const match = types.find(t => t.name === pref && t.effort === effortFilter);
-      if (match) return match;
+      if (match) { return match; }
     }
 
     // Fallback to first matching effort level
-    return types.find(t => t.effort === effortFilter) || types[0];
+    return types.find(t => t.effort === effortFilter) ?? types[0];
   }
 
   /**
@@ -837,7 +838,7 @@ export class FunnelPathologist extends BaseSpecialist {
    */
   private selectTripwireType(
     businessType: BusinessType,
-    budget: 'low' | 'medium' | 'high'
+    _budget: 'low' | 'medium' | 'high'
   ): (typeof TRIPWIRE_STAGE.types)[number] {
     const types = FUNNEL_STAGES.TRIPWIRE.types;
 
@@ -853,7 +854,7 @@ export class FunnelPathologist extends BaseSpecialist {
     };
 
     const preferred = preferences[businessType];
-    return types.find(t => t.name === preferred) || types[0];
+    return types.find(t => t.name === preferred) ?? types[0];
   }
 
   /**
@@ -874,7 +875,7 @@ export class FunnelPathologist extends BaseSpecialist {
     };
 
     const preferred = preferences[businessType];
-    return types.find(t => t.name === preferred) || types[0];
+    return types.find(t => t.name === preferred) ?? types[0];
   }
 
   /**
@@ -895,7 +896,7 @@ export class FunnelPathologist extends BaseSpecialist {
     };
 
     const preferred = preferences[businessType];
-    return types.find(t => t.name === preferred) || types[0];
+    return types.find(t => t.name === preferred) ?? types[0];
   }
 
   /**
@@ -1121,28 +1122,28 @@ export class FunnelPathologist extends BaseSpecialist {
     const maxScore = 100;
 
     // Business type specified (required)
-    if (request.businessType) score += 30;
+    if (request.businessType) { score += 30; }
 
     // Target audience specified
-    if (request.targetAudience) score += 15;
+    if (request.targetAudience) { score += 15; }
 
     // Current state known
-    if (request.currentState) score += 10;
+    if (request.currentState) { score += 10; }
 
     // Budget known
-    if (request.budget) score += 10;
+    if (request.budget) { score += 10; }
 
     // Traffic source known
-    if (request.trafficSource) score += 10;
+    if (request.trafficSource) { score += 10; }
 
     // Existing products known
-    if (request.existingProducts && request.existingProducts.length > 0) score += 10;
+    if (request.existingProducts && request.existingProducts.length > 0) { score += 10; }
 
     // AOV known
-    if (request.averageOrderValue) score += 5;
+    if (request.averageOrderValue) { score += 5; }
 
     // Monthly traffic known
-    if (request.monthlyTraffic) score += 10;
+    if (request.monthlyTraffic) { score += 10; }
 
     return Math.round((score / maxScore) * 100) / 100;
   }
@@ -1198,12 +1199,12 @@ export class FunnelPathologist extends BaseSpecialist {
   /**
    * Optimize a specific funnel stage
    */
-  async optimizeStage(request: StageOptimizationRequest): Promise<StageOptimizationResult> {
+  optimizeStage(request: StageOptimizationRequest): StageOptimizationResult {
     const { stage, currentMetrics, issues = [], businessType } = request;
 
     this.log('INFO', `Optimizing stage: ${stage}`);
 
-    const stageConfig = FUNNEL_STAGES[stage];
+    const _stageConfig = FUNNEL_STAGES[stage];
 
     // Analyze current issues
     const currentIssues = this.analyzeStageIssues(stage, currentMetrics, issues);
@@ -1238,7 +1239,7 @@ export class FunnelPathologist extends BaseSpecialist {
     metrics?: StageOptimizationRequest['currentMetrics'],
     reportedIssues?: string[]
   ): string[] {
-    const issues: string[] = [...(reportedIssues || [])];
+    const issues: string[] = [...(reportedIssues ?? [])];
 
     if (!metrics) {
       issues.push('No metrics provided - unable to perform data-driven analysis');
@@ -1283,10 +1284,10 @@ export class FunnelPathologist extends BaseSpecialist {
    */
   private generateStageRecommendations(
     stage: FunnelStage,
-    metrics?: StageOptimizationRequest['currentMetrics'],
-    businessType?: BusinessType
+    _metrics?: StageOptimizationRequest['currentMetrics'],
+    _businessType?: BusinessType
   ): StageOptimizationResult['recommendations'] {
-    const recommendations: StageOptimizationResult['recommendations'] = [];
+    const _recommendations: StageOptimizationResult['recommendations'] = [];
 
     const stageRecommendations: Record<FunnelStage, StageOptimizationResult['recommendations']> = {
       LEAD_MAGNET: [
@@ -1395,7 +1396,7 @@ export class FunnelPathologist extends BaseSpecialist {
       ],
     };
 
-    return stageRecommendations[stage] || [];
+    return stageRecommendations[stage] ?? [];
   }
 
   /**
@@ -1405,7 +1406,7 @@ export class FunnelPathologist extends BaseSpecialist {
     stage: FunnelStage,
     currentMetrics?: StageOptimizationRequest['currentMetrics']
   ): StageOptimizationResult['benchmarks'] {
-    const benchmarks: StageOptimizationResult['benchmarks'] = [];
+    const _benchmarks: StageOptimizationResult['benchmarks'] = [];
 
     const stageBenchmarks: Record<FunnelStage, StageOptimizationResult['benchmarks']> = {
       LEAD_MAGNET: [
@@ -1430,13 +1431,13 @@ export class FunnelPathologist extends BaseSpecialist {
       ],
     };
 
-    return stageBenchmarks[stage] || [];
+    return stageBenchmarks[stage] ?? [];
   }
 
   /**
    * Identify quick wins for immediate implementation
    */
-  private identifyQuickWins(stage: FunnelStage, metrics?: StageOptimizationRequest['currentMetrics']): string[] {
+  private identifyQuickWins(stage: FunnelStage, _metrics?: StageOptimizationRequest['currentMetrics']): string[] {
     const quickWins: Record<FunnelStage, string[]> = {
       LEAD_MAGNET: [
         'Add subscriber count social proof ("Join 10,000+ subscribers")',
@@ -1464,7 +1465,7 @@ export class FunnelPathologist extends BaseSpecialist {
       ],
     };
 
-    return quickWins[stage] || [];
+    return quickWins[stage] ?? [];
   }
 
   // ==========================================================================
@@ -1474,8 +1475,8 @@ export class FunnelPathologist extends BaseSpecialist {
   /**
    * Analyze conversion data across funnel stages
    */
-  async analyzeConversions(request: ConversionAnalysisRequest): Promise<ConversionAnalysisResult> {
-    const { funnelData, businessType, timeframe } = request;
+  analyzeConversions(request: ConversionAnalysisRequest): ConversionAnalysisResult {
+    const { funnelData, businessType, timeframe: _timeframe } = request;
 
     this.log('INFO', `Analyzing conversions for ${funnelData.length} stages`);
 
@@ -1508,7 +1509,7 @@ export class FunnelPathologist extends BaseSpecialist {
    */
   private analyzeStageConversions(
     funnelData: ConversionAnalysisRequest['funnelData'],
-    businessType?: BusinessType
+    _businessType?: BusinessType
   ): ConversionAnalysisResult['analysis'] {
     const analysis: ConversionAnalysisResult['analysis'] = [];
 
@@ -1611,7 +1612,7 @@ export class FunnelPathologist extends BaseSpecialist {
   /**
    * Get recommendation for specific bottleneck
    */
-  private getBottleneckRecommendation(stage: FunnelStage, currentRate: number): string {
+  private getBottleneckRecommendation(stage: FunnelStage, _currentRate: number): string {
     const recommendations: Record<FunnelStage, string> = {
       LEAD_MAGNET: 'Test new lead magnet offers and optimize opt-in page headline/CTA',
       TRIPWIRE: 'Add urgency elements and reduce friction in purchase process',
@@ -1631,8 +1632,8 @@ export class FunnelPathologist extends BaseSpecialist {
     const criticalCount = analysis.filter(a => a.status === 'critical').length;
     const needsImprovementCount = analysis.filter(a => a.status === 'needs_improvement').length;
 
-    if (criticalCount > 0) return 'unhealthy';
-    if (needsImprovementCount > 1) return 'moderate';
+    if (criticalCount > 0) { return 'unhealthy'; }
+    if (needsImprovementCount > 1) { return 'moderate'; }
     return 'healthy';
   }
 
@@ -1656,18 +1657,18 @@ export class FunnelPathologist extends BaseSpecialist {
     const maxScore = 100;
 
     // Data completeness
-    if (funnelData.length >= 4) score += 30;
-    else if (funnelData.length >= 2) score += 15;
+    if (funnelData.length >= 4) { score += 30; }
+    else if (funnelData.length >= 2) { score += 15; }
 
     // Data volume
     const totalVisitors = funnelData.reduce((sum, d) => sum + d.visitors, 0);
-    if (totalVisitors > 1000) score += 40;
-    else if (totalVisitors > 100) score += 20;
-    else score += 5;
+    if (totalVisitors > 1000) { score += 40; }
+    else if (totalVisitors > 100) { score += 20; }
+    else { score += 5; }
 
     // Revenue data
     const hasRevenue = funnelData.some(d => d.revenue !== undefined);
-    if (hasRevenue) score += 30;
+    if (hasRevenue) { score += 30; }
 
     return Math.round((score / maxScore) * 100) / 100;
   }

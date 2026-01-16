@@ -58,26 +58,27 @@ export class BuilderManager extends BaseManager {
     super(BUILDER_MANAGER_CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.log('INFO', 'Initializing Builder Manager...');
     this.isInitialized = true;
+    return Promise.resolve();
   }
 
-  async execute(message: AgentMessage): Promise<AgentReport> {
-    return this.createReport(
+  execute(message: AgentMessage): Promise<AgentReport> {
+    return Promise.resolve(this.createReport(
       message.id,
       'BLOCKED',
       { reason: 'BUILDER_MANAGER_IS_SHELL' },
       ['Builder Manager cannot execute - specialists are GHOST']
-    );
+    ));
   }
 
-  async handleSignal(signal: Signal): Promise<AgentReport> {
-    return this.createReport(
+  handleSignal(signal: Signal): Promise<AgentReport> {
+    return Promise.resolve(this.createReport(
       signal.id,
       'BLOCKED',
       { reason: 'Signal handling not implemented' }
-    );
+    ));
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {

@@ -1019,40 +1019,41 @@ export class UXUISpecialist extends BaseSpecialist {
     super(CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
     this.log('INFO', 'UX/UI Specialist initialized with component and color libraries');
+    return Promise.resolve();
   }
 
   /**
    * Main execution entry point
    */
-  async execute(message: AgentMessage): Promise<AgentReport> {
+  execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
       const payload = message.payload as UXDesignRequest;
 
       if (!payload?.pageType) {
-        return this.createReport(taskId, 'FAILED', null, ['No pageType provided in payload']);
+        return Promise.resolve(this.createReport(taskId, 'FAILED', null, ['No pageType provided in payload']));
       }
 
-      this.log('INFO', `Designing ${payload.pageType} page for ${payload.industry || 'general'} industry`);
+      this.log('INFO', `Designing ${payload.pageType} page for ${payload.industry ?? 'general'} industry`);
 
-      const result = await this.designPage(payload);
+      const result = this.designPage(payload);
 
-      return this.createReport(taskId, 'COMPLETED', result);
+      return Promise.resolve(this.createReport(taskId, 'COMPLETED', result));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.log('ERROR', `Page design failed: ${errorMessage}`);
-      return this.createReport(taskId, 'FAILED', null, [errorMessage]);
+      return Promise.resolve(this.createReport(taskId, 'FAILED', null, [errorMessage]));
     }
   }
 
   /**
    * Handle signals from the Signal Bus
    */
-  async handleSignal(signal: Signal): Promise<AgentReport> {
+  handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
 
     if (signal.payload.type === 'COMMAND') {
@@ -1065,25 +1066,25 @@ export class UXUISpecialist extends BaseSpecialist {
       switch (query.action) {
         case 'get_color_palette': {
           const palette = this.generateColorPalette(query.data as { industry: string });
-          return this.createReport(taskId, 'COMPLETED', palette);
+          return Promise.resolve(this.createReport(taskId, 'COMPLETED', palette));
         }
 
         case 'get_components': {
           const components = this.getComponentsForPageType(query.data as { pageType: string });
-          return this.createReport(taskId, 'COMPLETED', components);
+          return Promise.resolve(this.createReport(taskId, 'COMPLETED', components));
         }
 
         case 'audit_accessibility': {
           const audit = this.auditAccessibility(query.data as Record<string, unknown>);
-          return this.createReport(taskId, 'COMPLETED', audit);
+          return Promise.resolve(this.createReport(taskId, 'COMPLETED', audit));
         }
 
         default:
-          return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+          return Promise.resolve(this.createReport(taskId, 'COMPLETED', { acknowledged: true }));
       }
     }
 
-    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', { acknowledged: true }));
   }
 
   /**
@@ -1114,7 +1115,7 @@ export class UXUISpecialist extends BaseSpecialist {
   /**
    * Main page design function
    */
-  async designPage(request: UXDesignRequest): Promise<UXDesignResult> {
+  designPage(request: UXDesignRequest): UXDesignResult {
     const reasoning: string[] = [];
 
     // Step 1: Determine color palette
@@ -1190,7 +1191,7 @@ export class UXUISpecialist extends BaseSpecialist {
   }): ColorPalette {
     const { industry, niche, existingColors } = params;
     const industryLower = industry.toLowerCase();
-    const nicheLower = niche?.toLowerCase() || '';
+    const nicheLower = niche?.toLowerCase() ?? '';
 
     // Find matching color psychology
     let matchedPalette: typeof COLOR_PSYCHOLOGY[keyof typeof COLOR_PSYCHOLOGY] | null = null;
@@ -1206,15 +1207,13 @@ export class UXUISpecialist extends BaseSpecialist {
     }
 
     // Default to tech if no match
-    if (!matchedPalette) {
-      matchedPalette = COLOR_PSYCHOLOGY.tech;
-    }
+    matchedPalette ??= COLOR_PSYCHOLOGY.tech;
 
     // Build full palette
     const fullPalette: ColorPalette = {
-      primary: existingColors?.[0] || matchedPalette.primary,
-      secondary: existingColors?.[1] || matchedPalette.secondary,
-      accent: existingColors?.[2] || matchedPalette.accent,
+      primary: existingColors?.[0] ?? matchedPalette.primary,
+      secondary: existingColors?.[1] ?? matchedPalette.secondary,
+      accent: existingColors?.[2] ?? matchedPalette.accent,
       background: matchedPalette.background,
       text: matchedPalette.text,
       muted: matchedPalette.muted,
@@ -1232,7 +1231,7 @@ export class UXUISpecialist extends BaseSpecialist {
    */
   selectComponents(request: UXDesignRequest): ComponentSelection[] {
     const { pageType, constraints } = request;
-    const pageConfig = PAGE_TYPE_COMPONENTS[pageType] || PAGE_TYPE_COMPONENTS.landing;
+    const pageConfig = PAGE_TYPE_COMPONENTS[pageType] ?? PAGE_TYPE_COMPONENTS.landing;
     const components: ComponentSelection[] = [];
     let position = 0;
 
@@ -1251,7 +1250,7 @@ export class UXUISpecialist extends BaseSpecialist {
     }
 
     // Add recommended components (up to limit)
-    const maxSections = constraints?.maxSections || 8;
+    const maxSections = constraints?.maxSections ?? 8;
     for (const componentType of pageConfig.recommended) {
       if (components.length >= maxSections - 1) {break;} // Save space for footer
       if (constraints?.excludeComponents?.includes(componentType)) {continue;}
@@ -1334,7 +1333,7 @@ export class UXUISpecialist extends BaseSpecialist {
       variant,
       position,
       config: {
-        ...(variantConfig || {}),
+        ...(variantConfig ?? {}),
         industry: request.industry,
         pageType: request.pageType,
       },
@@ -1443,8 +1442,8 @@ export class UXUISpecialist extends BaseSpecialist {
    * Generate typography system
    */
   generateTypography(request: UXDesignRequest): TypographySpec {
-    const tone = request.brand?.tone || 'professional';
-    const industryLower = request.industry?.toLowerCase() || '';
+    const tone = request.brand?.tone ?? 'professional';
+    const industryLower = request.industry?.toLowerCase() ?? '';
 
     // Select typography preset based on tone and industry
     let preset: keyof typeof TYPOGRAPHY_PRESETS = 'modern';

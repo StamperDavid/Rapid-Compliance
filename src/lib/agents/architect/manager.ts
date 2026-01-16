@@ -559,9 +559,10 @@ export class ArchitectManager extends BaseManager {
     super(ARCHITECT_MANAGER_CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.log('INFO', 'Initializing Lead Architect...');
     this.isInitialized = true;
+    return Promise.resolve();
   }
 
   /**
@@ -671,7 +672,7 @@ export class ArchitectManager extends BaseManager {
    */
   analyzeSiteRequirements(input: NicheInput): SiteRequirements {
     const nicheLower = input.niche.toLowerCase();
-    const descriptionLower = (input.description || '').toLowerCase();
+    const descriptionLower = (input.description ?? '').toLowerCase();
     const combined = `${nicheLower} ${descriptionLower}`;
 
     // Detect industry type
@@ -700,31 +701,31 @@ export class ArchitectManager extends BaseManager {
   private detectIndustry(text: string): IndustryType {
     // SaaS indicators
     const saasKeywords = ['saas', 'software', 'app', 'platform', 'tool', 'api', 'cloud', 'subscription', 'startup', 'tech'];
-    if (saasKeywords.some(k => text.includes(k))) return 'saas';
+    if (saasKeywords.some(k => text.includes(k))) { return 'saas'; }
 
     // E-commerce indicators
     const ecomKeywords = ['ecommerce', 'e-commerce', 'store', 'shop', 'products', 'retail', 'merchandise', 'dropship', 'inventory'];
-    if (ecomKeywords.some(k => text.includes(k))) return 'ecommerce';
+    if (ecomKeywords.some(k => text.includes(k))) { return 'ecommerce'; }
 
     // Agency indicators
     const agencyKeywords = ['agency', 'studio', 'consulting', 'consultancy', 'services', 'firm', 'design agency', 'marketing agency'];
-    if (agencyKeywords.some(k => text.includes(k))) return 'agency';
+    if (agencyKeywords.some(k => text.includes(k))) { return 'agency'; }
 
     // Coach indicators
     const coachKeywords = ['coach', 'coaching', 'mentor', 'trainer', 'course', 'program', 'transformation', 'expert', 'speaker', 'author'];
-    if (coachKeywords.some(k => text.includes(k))) return 'coach';
+    if (coachKeywords.some(k => text.includes(k))) { return 'coach'; }
 
     // Local business indicators
     const localKeywords = ['local', 'restaurant', 'salon', 'clinic', 'dental', 'medical', 'repair', 'plumber', 'electrician', 'contractor'];
-    if (localKeywords.some(k => text.includes(k))) return 'local_business';
+    if (localKeywords.some(k => text.includes(k))) { return 'local_business'; }
 
     // Media indicators
     const mediaKeywords = ['media', 'news', 'magazine', 'publication', 'blog', 'content', 'publisher'];
-    if (mediaKeywords.some(k => text.includes(k))) return 'media';
+    if (mediaKeywords.some(k => text.includes(k))) { return 'media'; }
 
     // Nonprofit indicators
     const nonprofitKeywords = ['nonprofit', 'non-profit', 'charity', 'foundation', 'ngo', 'cause', 'donation'];
-    if (nonprofitKeywords.some(k => text.includes(k))) return 'nonprofit';
+    if (nonprofitKeywords.some(k => text.includes(k))) { return 'nonprofit'; }
 
     // Default to agency as most versatile
     return 'agency';
@@ -735,9 +736,9 @@ export class ArchitectManager extends BaseManager {
    */
   private detectFunnelType(input: NicheInput, industry: IndustryType): FunnelType {
     // Explicit objective mapping
-    if (input.objective === 'sales') return 'ecommerce';
-    if (input.objective === 'bookings') return 'service';
-    if (input.objective === 'leads') return 'lead_gen';
+    if (input.objective === 'sales') { return 'ecommerce'; }
+    if (input.objective === 'bookings') { return 'service'; }
+    if (input.objective === 'leads') { return 'lead_gen'; }
 
     // Industry-based defaults
     const industryFunnelMap: Record<IndustryType, FunnelType> = {
@@ -757,7 +758,7 @@ export class ArchitectManager extends BaseManager {
    * Detect target audience from text
    */
   private detectTargetAudience(text: string, explicit?: string): string {
-    if (explicit) return explicit;
+    if (explicit) { return explicit; }
 
     // B2B indicators
     const b2bKeywords = ['b2b', 'business', 'enterprise', 'companies', 'startups', 'founders', 'executives', 'teams'];
@@ -822,18 +823,18 @@ export class ArchitectManager extends BaseManager {
    */
   generateSiteMap(requirements: SiteRequirements): SiteMap {
     // Get industry template
-    const templatePages = INDUSTRY_TEMPLATES[requirements.industry] || INDUSTRY_TEMPLATES.agency;
+    const templatePages = INDUSTRY_TEMPLATES[requirements.industry] ?? INDUSTRY_TEMPLATES.agency;
 
     // Build full page definitions
-    const pages: PageDefinition[] = templatePages.map((template, index) => ({
-      id: template.id!,
-      name: template.name!,
-      path: template.path!,
-      level: template.level!,
-      purpose: template.purpose!,
-      sections: template.sections!,
+    const pages: PageDefinition[] = templatePages.map((template, _index) => ({
+      id: template.id ?? '',
+      name: template.name ?? '',
+      path: template.path ?? '',
+      level: template.level ?? 0,
+      purpose: template.purpose ?? '',
+      sections: template.sections ?? [],
       parent: template.level === 0 ? null : (template.level === 1 ? 'homepage' : this.findParent(template, templatePages)),
-      priority: template.priority!,
+      priority: template.priority ?? 'optional',
     }));
 
     // Build hierarchy
@@ -855,7 +856,7 @@ export class ArchitectManager extends BaseManager {
       if (pathParts.length > 1) {
         const parentPath = `/${pathParts[0]}`;
         const parent = allPages.find(p => p.path === parentPath);
-        return parent?.id || null;
+        return parent?.id ?? null;
       }
     }
     return null;
@@ -870,9 +871,9 @@ export class ArchitectManager extends BaseManager {
     for (const page of pages) {
       const level = `L${page.level}` as keyof SiteHierarchy;
       if (hierarchy[level]) {
-        hierarchy[level]!.push(page.id);
+        hierarchy[level].push(page.id);
       } else {
-        hierarchy.L3 = hierarchy.L3 || [];
+        hierarchy.L3 = hierarchy.L3 ?? [];
         hierarchy.L3.push(page.id);
       }
     }
@@ -1006,7 +1007,7 @@ DELIVERABLES:
   /**
    * Create Funnel specialist brief
    */
-  private createFunnelBrief(funnelFlow: FunnelFlow, siteMap: SiteMap): string {
+  private createFunnelBrief(funnelFlow: FunnelFlow, _siteMap: SiteMap): string {
     const stageList = funnelFlow.stages
       .map(s => `- ${s.name}: ${s.goal} (Pages: ${s.pages.join(', ')})`)
       .join('\n');
@@ -1108,7 +1109,7 @@ DELIVERABLES:
         specialist: specialistId,
         brief,
         status: delegationStatus,
-        result: report.status === 'COMPLETED' ? (report.data as string | object) : report.errors?.join('; ') || 'Unknown error',
+        result: report.status === 'COMPLETED' ? (report.data as string | object) : report.errors?.join('; ') ?? 'Unknown error',
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Delegation failed';

@@ -587,22 +587,23 @@ export class CopySpecialist extends BaseSpecialist {
     super(CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
     this.log('INFO', 'Conversion Copywriter Specialist initialized');
+    return Promise.resolve();
   }
 
   /**
    * Main execution entry point
    */
-  async execute(message: AgentMessage): Promise<AgentReport> {
+  execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
       const payload = message.payload as CopyRequest;
 
       if (!payload?.type) {
-        return this.createReport(taskId, 'FAILED', null, ['No request type provided']);
+        return Promise.resolve(this.createReport(taskId, 'FAILED', null, ['No request type provided']));
       }
 
       this.log('INFO', `Processing copy request: ${payload.type}`);
@@ -611,43 +612,43 @@ export class CopySpecialist extends BaseSpecialist {
 
       switch (payload.type) {
         case 'framework_selection':
-          result = await this.selectFramework(payload);
+          result = this.selectFramework(payload);
           break;
         case 'headline_generation':
-          result = await this.generateHeadlines(payload);
+          result = this.generateHeadlines(payload);
           break;
         case 'cta_optimization':
-          result = await this.optimizeCTA(payload);
+          result = this.optimizeCTA(payload);
           break;
         case 'copy_generation':
-          result = await this.generateFullCopy(payload);
+          result = this.generateFullCopy(payload);
           break;
         case 'ab_variations':
-          result = await this.generateVariations(payload);
+          result = this.generateVariations(payload);
           break;
         default:
-          return this.createReport(taskId, 'FAILED', null, [`Unknown request type: ${payload.type}`]);
+          return Promise.resolve(this.createReport(taskId, 'FAILED', null, [`Unknown request type: ${payload.type}`]));
       }
 
-      return this.createReport(taskId, 'COMPLETED', result);
+      return Promise.resolve(this.createReport(taskId, 'COMPLETED', result));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.log('ERROR', `Copy generation failed: ${errorMessage}`);
-      return this.createReport(taskId, 'FAILED', null, [errorMessage]);
+      return Promise.resolve(this.createReport(taskId, 'FAILED', null, [errorMessage]));
     }
   }
 
   /**
    * Handle signals from the Signal Bus
    */
-  async handleSignal(signal: Signal): Promise<AgentReport> {
+  handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
 
     if (signal.payload.type === 'COMMAND') {
       return this.execute(signal.payload);
     }
 
-    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', { acknowledged: true }));
   }
 
   /**
@@ -678,9 +679,9 @@ export class CopySpecialist extends BaseSpecialist {
   /**
    * Select the best copywriting framework based on context
    */
-  private async selectFramework(request: CopyRequest): Promise<CopyResult> {
-    const awarenessLevel = request.context.awarenessLevel || 'problem-aware';
-    const industry = request.context.industry || 'saas';
+  private selectFramework(request: CopyRequest): CopyResult {
+    const awarenessLevel = request.context.awarenessLevel ?? 'problem-aware';
+    const industry = request.context.industry ?? 'saas';
     const contentType = this.inferContentType(request);
 
     // Score each framework
@@ -760,10 +761,10 @@ export class CopySpecialist extends BaseSpecialist {
    * Infer content type from request context
    */
   private inferContentType(request: CopyRequest): string {
-    if (request.context.offer?.toLowerCase().includes('webinar')) return 'webinar';
-    if (request.context.offer?.toLowerCase().includes('course')) return 'course';
-    if (request.context.offer?.toLowerCase().includes('software')) return 'saas';
-    if (request.context.offer?.toLowerCase().includes('coaching')) return 'coaching';
+    if (request.context.offer?.toLowerCase().includes('webinar')) { return 'webinar'; }
+    if (request.context.offer?.toLowerCase().includes('course')) { return 'course'; }
+    if (request.context.offer?.toLowerCase().includes('software')) { return 'saas'; }
+    if (request.context.offer?.toLowerCase().includes('coaching')) { return 'coaching'; }
     return 'landing page';
   }
 
@@ -774,10 +775,10 @@ export class CopySpecialist extends BaseSpecialist {
     frameworkKey: FrameworkKey,
     request: CopyRequest
   ): { headline: string; subheadline: string; sections: BodyCopySection[] } {
-    const product = request.context.product || 'our solution';
-    const audience = request.context.audience || 'businesses';
-    const painPoints = request.context.painPoints || ['wasting time', 'losing money', 'falling behind'];
-    const benefits = request.context.benefits || ['save time', 'increase revenue', 'get ahead'];
+    const product = request.context.product ?? 'our solution';
+    const audience = request.context.audience ?? 'businesses';
+    const painPoints = request.context.painPoints ?? ['wasting time', 'losing money', 'falling behind'];
+    const benefits = request.context.benefits ?? ['save time', 'increase revenue', 'get ahead'];
 
     switch (frameworkKey) {
       case 'PAS':
@@ -861,12 +862,12 @@ export class CopySpecialist extends BaseSpecialist {
   /**
    * Generate compelling headlines using proven formulas
    */
-  private async generateHeadlines(request: CopyRequest): Promise<CopyResult> {
-    const product = request.context.product || 'Our Solution';
-    const audience = request.context.audience || 'businesses';
-    const benefits = request.context.benefits || ['save time', 'increase revenue'];
-    const painPoints = request.context.painPoints || ['wasting time'];
-    const industry = request.context.industry || 'saas';
+  private generateHeadlines(request: CopyRequest): CopyResult {
+    const product = request.context.product ?? 'Our Solution';
+    const audience = request.context.audience ?? 'businesses';
+    const benefits = request.context.benefits ?? ['save time', 'increase revenue'];
+    const painPoints = request.context.painPoints ?? ['wasting time'];
+    const industry = request.context.industry ?? 'saas';
 
     const headlines: HeadlineResult = {
       primary: '',
@@ -928,13 +929,13 @@ export class CopySpecialist extends BaseSpecialist {
     });
 
     // Select best based on awareness level
-    const awarenessLevel = request.context.awarenessLevel || 'problem-aware';
+    const awarenessLevel = request.context.awarenessLevel ?? 'problem-aware';
     const bestFormulas = this.getBestFormulasForAwareness(awarenessLevel);
 
     // Find primary headline
     const primary = generatedHeadlines.find(h => bestFormulas.includes(h.formula as HeadlineFormulaKey));
-    headlines.primary = primary?.headline || generatedHeadlines[0].headline;
-    headlines.formula = primary?.formula || generatedHeadlines[0].formula;
+    headlines.primary = primary?.headline ?? generatedHeadlines[0].headline;
+    headlines.formula = primary?.formula ?? generatedHeadlines[0].formula;
 
     // Generate variations
     headlines.variations = generatedHeadlines
@@ -1000,9 +1001,9 @@ export class CopySpecialist extends BaseSpecialist {
    * Generate supporting subheadline
    */
   private generateSubheadline(headline: string, request: CopyRequest): string {
-    const product = request.context.product || 'our solution';
-    const audience = request.context.audience || 'businesses';
-    const benefits = request.context.benefits || ['achieve more'];
+    const product = request.context.product ?? 'our solution';
+    const audience = request.context.audience ?? 'businesses';
+    const benefits = request.context.benefits ?? ['achieve more'];
 
     const templates = [
       `${product} helps ${audience} ${benefits[0]} - without the guesswork`,
@@ -1032,12 +1033,12 @@ export class CopySpecialist extends BaseSpecialist {
   /**
    * Generate optimized CTAs
    */
-  private async optimizeCTA(request: CopyRequest): Promise<CopyResult> {
-    const offer = request.context.offer || 'free trial';
+  private optimizeCTA(request: CopyRequest): CopyResult {
+    const offer = request.context.offer ?? 'free trial';
     const deadline = request.context.deadline;
     const spots = request.context.spots;
-    const industry = request.context.industry || 'saas';
-    const awarenessLevel = request.context.awarenessLevel || 'solution-aware';
+    const industry = request.context.industry ?? 'saas';
+    const awarenessLevel = request.context.awarenessLevel ?? 'solution-aware';
 
     // Select CTA category based on context
     const category = this.selectCTACategory(request);
@@ -1046,8 +1047,8 @@ export class CopySpecialist extends BaseSpecialist {
     // Generate primary CTA
     let primaryText = templates[0];
     primaryText = primaryText.replace('{offer}', offer);
-    if (deadline) primaryText = primaryText.replace('{deadline}', deadline);
-    if (spots) primaryText = primaryText.replace('{spots}', String(spots));
+    if (deadline) { primaryText = primaryText.replace('{deadline}', deadline); }
+    if (spots) { primaryText = primaryText.replace('{spots}', String(spots)); }
 
     // Personalize with first person
     primaryText = this.personalizeFirstPerson(primaryText);
@@ -1107,7 +1108,7 @@ export class CopySpecialist extends BaseSpecialist {
    * Select best CTA category based on context
    */
   private selectCTACategory(request: CopyRequest): CTACategory {
-    const awareness = request.context.awarenessLevel || 'solution-aware';
+    const awareness = request.context.awarenessLevel ?? 'solution-aware';
 
     if (request.context.deadline || request.context.spots) {
       return 'urgency';
@@ -1141,7 +1142,7 @@ export class CopySpecialist extends BaseSpecialist {
   /**
    * Generate microcopy for below CTA
    */
-  private generateMicrocopy(category: CTACategory, request: CopyRequest): string {
+  private generateMicrocopy(category: CTACategory, _request: CopyRequest): string {
     const templates = {
       urgency: [
         'No credit card required',
@@ -1192,7 +1193,7 @@ export class CopySpecialist extends BaseSpecialist {
    */
   private generateCTAVariations(request: CopyRequest, primaryCategory: CTACategory): string[] {
     const variations: string[] = [];
-    const offer = request.context.offer || 'free trial';
+    const offer = request.context.offer ?? 'free trial';
 
     // Add variations from other categories
     const categories: CTACategory[] = ['urgency', 'value', 'risk_reversal', 'action'];
@@ -1213,7 +1214,7 @@ export class CopySpecialist extends BaseSpecialist {
    * Generate CTA for a specific framework
    */
   private generateCTAForFramework(frameworkKey: FrameworkKey, request: CopyRequest): CTAResult {
-    const offer = request.context.offer || 'free trial';
+    const offer = request.context.offer ?? 'free trial';
     const deadline = request.context.deadline;
     const spots = request.context.spots;
 
@@ -1282,15 +1283,15 @@ export class CopySpecialist extends BaseSpecialist {
   /**
    * Generate complete copy package
    */
-  private async generateFullCopy(request: CopyRequest): Promise<CopyResult> {
+  private generateFullCopy(request: CopyRequest): CopyResult {
     // First, select the best framework
-    const frameworkResult = await this.selectFramework(request);
+    const frameworkResult = this.selectFramework(request);
 
     // Generate headlines
-    const headlineResult = await this.generateHeadlines(request);
+    const headlineResult = this.generateHeadlines(request);
 
     // Generate optimized CTA
-    const ctaResult = await this.optimizeCTA(request);
+    const ctaResult = this.optimizeCTA(request);
 
     // Combine all elements
     const fullCopy: CopyOutput = {
@@ -1314,8 +1315,8 @@ export class CopySpecialist extends BaseSpecialist {
       metadata: {
         generatedAt: new Date().toISOString(),
         requestType: 'copy_generation',
-        awarenessLevel: request.context.awarenessLevel || 'problem-aware',
-        industry: request.context.industry || 'general',
+        awarenessLevel: request.context.awarenessLevel ?? 'problem-aware',
+        industry: request.context.industry ?? 'general',
       },
     };
   }
@@ -1369,8 +1370,8 @@ export class CopySpecialist extends BaseSpecialist {
     }
 
     // Always include at least these
-    if (!tactics.includes('social_proof')) tactics.push('social_proof');
-    if (!tactics.includes('authority')) tactics.push('authority');
+    if (!tactics.includes('social_proof')) { tactics.push('social_proof'); }
+    if (!tactics.includes('authority')) { tactics.push('authority'); }
 
     return tactics.slice(0, 4);
   }
@@ -1382,9 +1383,9 @@ export class CopySpecialist extends BaseSpecialist {
   /**
    * Generate A/B test variations
    */
-  private async generateVariations(request: CopyRequest): Promise<CopyResult> {
-    const variationCount = request.options?.variationCount || 3;
-    const baseResult = await this.generateFullCopy(request);
+  private generateVariations(request: CopyRequest): CopyResult {
+    const variationCount = request.options?.variationCount ?? 3;
+    const baseResult = this.generateFullCopy(request);
 
     const variations: CopyOutput['variations'] = [];
 
@@ -1412,8 +1413,8 @@ export class CopySpecialist extends BaseSpecialist {
       metadata: {
         generatedAt: new Date().toISOString(),
         requestType: 'ab_variations',
-        awarenessLevel: request.context.awarenessLevel || 'problem-aware',
-        industry: request.context.industry || 'general',
+        awarenessLevel: request.context.awarenessLevel ?? 'problem-aware',
+        industry: request.context.industry ?? 'general',
       },
     };
   }
@@ -1426,9 +1427,9 @@ export class CopySpecialist extends BaseSpecialist {
     request: CopyRequest,
     base: CopyResult
   ): CopyOutput['variations'][0] {
-    const benefits = request.context.benefits || ['save time', 'increase revenue'];
-    const painPoints = request.context.painPoints || ['wasting time'];
-    const audience = request.context.audience || 'businesses';
+    const benefits = request.context.benefits ?? ['save time', 'increase revenue'];
+    const _painPoints = request.context.painPoints ?? ['wasting time'];
+    const audience = request.context.audience ?? 'businesses';
 
     switch (type) {
       case 'emotional':

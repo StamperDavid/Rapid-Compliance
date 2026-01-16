@@ -2,7 +2,6 @@
 // Managers coordinate specialists and handle delegation
 
 import type {
-  AgentIdentity,
   AgentMessage,
   AgentReport,
   ManagerConfig,

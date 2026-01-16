@@ -3,8 +3,7 @@
  * Performs semantic search on knowledge base using vector embeddings
  */
 
-import type { Embedding, EmbeddingResult } from './embeddings-service';
-import { generateEmbedding } from './embeddings-service';
+import { generateEmbedding, type EmbeddingResult } from './embeddings-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 
@@ -13,7 +12,54 @@ export interface SearchResult {
   score: number;
   source: 'document' | 'url' | 'faq' | 'product';
   sourceId: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+// Type definitions for knowledge base data from Firestore
+interface KnowledgeEmbeddingDoc {
+  embedding?: number[];
+  text?: string;
+  source?: 'document' | 'url' | 'faq' | 'product';
+  sourceId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface KnowledgeBaseDocument {
+  id: string;
+  filename?: string;
+  type?: string;
+  extractedContent?: string;
+}
+
+interface KnowledgeBaseUrl {
+  id: string;
+  url?: string;
+  title?: string;
+  extractedContent?: string;
+}
+
+interface KnowledgeBaseFaq {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string;
+}
+
+interface KnowledgeBaseProduct {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  category?: string;
+}
+
+interface KnowledgeBase {
+  documents?: KnowledgeBaseDocument[];
+  urls?: KnowledgeBaseUrl[];
+  faqs?: KnowledgeBaseFaq[];
+  productCatalog?: {
+    products?: KnowledgeBaseProduct[];
+  };
 }
 
 /**
@@ -63,25 +109,25 @@ export async function searchKnowledgeBase(
     }
     
     // Get all embeddings
-    const embeddings = await FirestoreService.getAll(
+    const embeddings: KnowledgeEmbeddingDoc[] = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeEmbeddings`,
       []
     );
-    
+
     // Calculate similarity scores
     const results: SearchResult[] = [];
-    
+
     for (const embeddingDoc of embeddings) {
-      const embedding = embeddingDoc.embedding as number[];
+      const embedding = embeddingDoc.embedding;
       if (!embedding || embedding.length === 0) {continue;}
-      
+
       const score = cosineSimilarity(queryEmbedding.embedding.values, embedding);
-      
+
       // Extract string fields - empty strings are invalid (Explicit Ternary for STRINGS)
       const docText = (embeddingDoc.text !== '' && embeddingDoc.text != null) ? embeddingDoc.text : '';
-      const docSource = (embeddingDoc.source !== '' && embeddingDoc.source != null) ? embeddingDoc.source : 'document';
+      const docSource: 'document' | 'url' | 'faq' | 'product' = embeddingDoc.source ?? 'document';
       const docSourceId = (embeddingDoc.sourceId !== '' && embeddingDoc.sourceId != null) ? embeddingDoc.sourceId : '';
-      
+
       results.push({
         text: docText,
         score,
@@ -110,7 +156,7 @@ export async function storeEmbedding(
   embedding: EmbeddingResult,
   source: 'document' | 'url' | 'faq' | 'product',
   sourceId: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   try {
     const embeddingId = `emb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -143,18 +189,18 @@ export async function indexKnowledgeBase(
 ): Promise<void> {
   try {
     // Get knowledge base
-    const knowledgeBase = await FirestoreService.get(
+    const knowledgeBaseData: KnowledgeBase | null = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
       'current'
     );
-    
-    if (!knowledgeBase) {
+
+    if (!knowledgeBaseData) {
       return;
     }
-    
+
     // Index documents
-    if (knowledgeBase.documents && knowledgeBase.documents.length > 0) {
-      for (const doc of knowledgeBase.documents) {
+    if (knowledgeBaseData.documents && knowledgeBaseData.documents.length > 0) {
+      for (const doc of knowledgeBaseData.documents) {
         if (doc.extractedContent) {
           const embedding = await generateEmbedding(doc.extractedContent, organizationId);
           await storeEmbedding(organizationId, embedding, 'document', doc.id, {
@@ -164,10 +210,10 @@ export async function indexKnowledgeBase(
         }
       }
     }
-    
+
     // Index URLs
-    if (knowledgeBase.urls && knowledgeBase.urls.length > 0) {
-      for (const url of knowledgeBase.urls) {
+    if (knowledgeBaseData.urls && knowledgeBaseData.urls.length > 0) {
+      for (const url of knowledgeBaseData.urls) {
         if (url.extractedContent) {
           const embedding = await generateEmbedding(url.extractedContent, organizationId);
           await storeEmbedding(organizationId, embedding, 'url', url.id, {
@@ -177,10 +223,10 @@ export async function indexKnowledgeBase(
         }
       }
     }
-    
+
     // Index FAQs
-    if (knowledgeBase.faqs && knowledgeBase.faqs.length > 0) {
-      for (const faq of knowledgeBase.faqs) {
+    if (knowledgeBaseData.faqs && knowledgeBaseData.faqs.length > 0) {
+      for (const faq of knowledgeBaseData.faqs) {
         const faqText = `${faq.question} ${faq.answer}`;
         const embedding = await generateEmbedding(faqText, organizationId);
         await storeEmbedding(organizationId, embedding, 'faq', faq.id, {
@@ -189,11 +235,11 @@ export async function indexKnowledgeBase(
         });
       }
     }
-    
+
     // Index products
-    if (knowledgeBase.productCatalog?.products) {
-      for (const product of knowledgeBase.productCatalog.products) {
-        const productText = `${product.name} ${product.description}`;
+    if (knowledgeBaseData.productCatalog?.products) {
+      for (const product of knowledgeBaseData.productCatalog.products) {
+        const productText = `${product.name} ${product.description ?? ''}`;
         const embedding = await generateEmbedding(productText, organizationId);
         await storeEmbedding(organizationId, embedding, 'product', product.id, {
           name: product.name,
