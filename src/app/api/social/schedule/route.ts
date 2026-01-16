@@ -7,8 +7,7 @@
  * Rate Limit: 100 req/min per organization
  */
 
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Validate input
     const validation = schedulePostSchema.safeParse(body);
@@ -115,7 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Failed to schedule post',
+          error: result.error ?? 'Failed to schedule post',
         },
         { status: 500 }
       );
@@ -165,7 +164,7 @@ export async function GET(request: NextRequest) {
     const platform = searchParams.get('platform') as SocialPlatform | null;
 
     // Validate query params
-    const validation = getScheduledSchema.safeParse({ organizationId, platform: platform || undefined });
+    const validation = getScheduledSchema.safeParse({ organizationId, platform: platform ?? undefined });
 
     if (!validation.success) {
       return NextResponse.json(
@@ -229,7 +228,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Validate input
     const validation = cancelPostSchema.safeParse(body);
@@ -262,7 +261,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Failed to cancel post',
+          error: result.error ?? 'Failed to cancel post',
         },
         { status: 404 }
       );

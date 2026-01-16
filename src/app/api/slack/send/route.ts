@@ -7,8 +7,7 @@
  * Cache: No caching (real-time sending)
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
@@ -31,8 +30,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Parse request body
-    const body = await request.json();
-    
+    const body: unknown = await request.json();
+
     // Validate input
     const validation = sendSlackMessageSchema.safeParse(body);
     
@@ -136,16 +135,17 @@ export async function POST(request: NextRequest) {
         permalink: result.permalink,
       });
       
-    } catch (sendError: any) {
+    } catch (sendError: unknown) {
+      const errorMessage = sendError instanceof Error ? sendError.message : 'Unknown error';
       logger.error('Failed to send Slack message', {
         error: sendError,
         messageId,
         workspaceId: workspace.id,
       });
-      
+
       // Update message status
       message.status = 'failed';
-      message.error = sendError.message;
+      message.error = errorMessage;
       
       // Save failed message
       await db
@@ -158,19 +158,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Failed to send message',
-          message: sendError.message,
+          message: errorMessage,
         },
         { status: 500 }
       );
     }
-    
-  } catch (error: any) {
+
+  } catch (error: unknown) {
     logger.error('Failed to process send message request', { error });
-    
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to send message',
+        message: errorMessage,
       },
       { status: 500 }
     );

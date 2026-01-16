@@ -1,6 +1,5 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
-import { sendSMS } from '@/lib/sms/sms-service';
+import { type NextRequest, NextResponse } from 'next/server';
+import { sendSMS, type SMSOptions } from '@/lib/sms/sms-service';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { smsSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -24,13 +23,17 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
+    const body: unknown = await request.json();
     const validation = validateInput(smsSendSchema, body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = formatValidationErrors(validationError);
-      
+      // Convert Zod errors to ValidationErrorDetail format
+      const zodErrors = validation.errors.errors.map(e => ({
+        message: e.message,
+        path: e.path.map(String),
+      }));
+      const errorDetails = formatValidationErrors({ success: false, errors: { errors: zodErrors } });
+
       return errors.validation('Validation failed', errorDetails);
     }
 
@@ -50,11 +53,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Send SMS with type assertion after validation
-    const result = await sendSMS({
-      ...smsData,
+    const smsOptions: SMSOptions = {
+      to: smsData.to,
+      message: smsData.message,
       organizationId,
+      from: smsData.from,
       metadata: { ...smsData.metadata, userId: user.uid },
-    } as any);
+    };
+    const result = await sendSMS(smsOptions);
 
     if (!result.success) {
       return NextResponse.json(
@@ -64,8 +70,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    logger.error('SMS send error', error, { route: '/api/sms/send' });
+  } catch (error: unknown) {
+    logger.error('SMS send error', error instanceof Error ? error : new Error('Unknown error'), { route: '/api/sms/send' });
     return errors.externalService('SMS provider', error instanceof Error ? error : undefined);
   }
 }

@@ -1,8 +1,14 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { RecordCounter } from '@/lib/subscription/record-counter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
+import { z } from 'zod';
+
+// Strict validation schema for capacity check (revenue critical)
+const checkCapacitySchema = z.object({
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  additionalRecords: z.number().int().min(0, 'Additional records must be a non-negative integer'),
+});
 
 /**
  * POST: Check if adding records would exceed tier capacity
@@ -14,15 +20,18 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
-    const { organizationId, additionalRecords } = body;
+    const body: unknown = await request.json();
 
-    if (!organizationId || typeof additionalRecords !== 'number') {
+    // Validate request body with strict typing
+    const validation = checkCapacitySchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: 'Missing required fields', details: validation.error.errors },
         { status: 400 }
       );
     }
+
+    const { organizationId, additionalRecords } = validation.data;
 
     // Check capacity
     const result = await RecordCounter.canAddRecords(
@@ -34,8 +43,8 @@ export async function POST(request: NextRequest) {
       success: true,
       ...result,
     });
-  } catch (error: any) {
-    logger.error('[API] Error checking capacity:', error);
+  } catch (error: unknown) {
+    logger.error('[API] Error checking capacity:', error instanceof Error ? error : new Error('Unknown error'));
     return NextResponse.json(
       { success: false, error: 'Failed to check capacity' },
       { status: 500 }

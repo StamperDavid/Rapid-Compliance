@@ -4,14 +4,20 @@
  * Add or remove subscription add-ons
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AVAILABLE_ADDONS } from '@/types/subscription';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { z } from 'zod';
+
+// Strict validation schema for addon management (revenue critical)
+const addOnRequestSchema = z.object({
+  orgId: z.string().min(1, 'Organization ID is required'),
+  addOnId: z.string().min(1, 'Add-on ID is required'),
+});
 
 /**
  * POST /api/subscription/addon
@@ -28,26 +34,25 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
-    const { orgId, addOnId } = body;
+    const body: unknown = await request.json();
 
-    if (!orgId) {
-      return errors.badRequest('Organization ID required');
+    // Validate request body with strict typing
+    const validation = addOnRequestSchema.safeParse(body);
+    if (!validation.success) {
+      return errors.badRequest(`Invalid request: ${validation.error.errors.map(e => e.message).join(', ')}`);
     }
 
-    if (!addOnId) {
-      return errors.badRequest('Add-on ID required');
-    }
+    const { orgId, addOnId } = validation.data;
 
-    // Validate add-on exists
-    if (!AVAILABLE_ADDONS[addOnId]) {
+    // Validate add-on exists (type-safe check)
+    if (!(addOnId in AVAILABLE_ADDONS)) {
       return NextResponse.json(
         { success: false, error: `Add-on ${addOnId} not found` },
         { status: 404 }
       );
     }
 
-    // Add add-on
+    // Add add-on (now type-safe)
     await FeatureGate.addAddOn(orgId, addOnId);
 
     // Get updated subscription
@@ -58,8 +63,8 @@ export async function POST(request: NextRequest) {
       message: `Add-on ${AVAILABLE_ADDONS[addOnId].name} added`,
       subscription,
     });
-  } catch (error: any) {
-    logger.error('Error adding addon', error, { route: '/api/subscription/addon' });
+  } catch (error: unknown) {
+    logger.error('Error adding addon', error instanceof Error ? error : new Error('Unknown error'), { route: '/api/subscription/addon' });
     return errors.database('Failed to add addon', error instanceof Error ? error : undefined);
   }
 }
@@ -68,14 +73,14 @@ export async function POST(request: NextRequest) {
  * GET /api/subscription/addon
  * List available add-ons
  */
-export async function GET(request: NextRequest) {
+export function GET(_request: NextRequest) {
   try {
     return NextResponse.json({
       success: true,
       addOns: AVAILABLE_ADDONS,
     });
-  } catch (error: any) {
-    logger.error('Error listing addons', error, { route: '/api/subscription/addon' });
+  } catch (error: unknown) {
+    logger.error('Error listing addons', error instanceof Error ? error : new Error('Unknown error'), { route: '/api/subscription/addon' });
     return errors.database('Failed to list addons', error instanceof Error ? error : undefined);
   }
 }

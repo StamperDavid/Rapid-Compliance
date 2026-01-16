@@ -6,14 +6,20 @@
  * Rate Limit: 30 req/min per user
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { updateWorkspaceSettingsSchema } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace } from '@/lib/slack/types';
+import { z } from 'zod';
+
+// Schema for PUT request body
+const putRequestSchema = z.object({
+  workspaceId: z.string().min(1, 'Workspace ID is required'),
+  settings: z.record(z.unknown()),
+});
 
 /**
  * GET /api/slack/settings
@@ -69,13 +75,14 @@ export async function GET(request: NextRequest) {
       },
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get Slack settings', { error });
-    
+    const errorMessage = error instanceof Error ? error.message : 'Failed to get settings';
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to get settings',
+        message: errorMessage,
       },
       { status: 500 }
     );
@@ -96,18 +103,21 @@ export async function PUT(request: NextRequest) {
     }
     
     // Parse request body
-    const body = await request.json();
-    const workspaceId = body.workspaceId;
-    
-    if (!workspaceId) {
+    const body: unknown = await request.json();
+
+    // Validate request structure
+    const bodyValidation = putRequestSchema.safeParse(body);
+    if (!bodyValidation.success) {
       return NextResponse.json(
-        { error: 'Missing workspaceId' },
+        { error: 'Missing workspaceId', details: bodyValidation.error.errors },
         { status: 400 }
       );
     }
-    
+
+    const { workspaceId, settings } = bodyValidation.data;
+
     // Validate settings
-    const validation = updateWorkspaceSettingsSchema.safeParse(body.settings);
+    const validation = updateWorkspaceSettingsSchema.safeParse(settings);
     
     if (!validation.success) {
       return NextResponse.json(
@@ -153,13 +163,14 @@ export async function PUT(request: NextRequest) {
       settings: updatedSettings,
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update Slack settings', { error });
-    
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update settings';
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to update settings',
+        message: errorMessage,
       },
       { status: 500 }
     );

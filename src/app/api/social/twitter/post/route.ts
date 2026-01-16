@@ -6,11 +6,10 @@
  * Requires: Twitter OAuth 2.0 configured for the organization
  */
 
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { createTwitterService, postTweet } from '@/lib/integrations/twitter-service';
+import { createTwitterService } from '@/lib/integrations/twitter-service';
 import { z } from 'zod';
 
 // Request validation schema
@@ -37,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Validate input
     const validation = postTweetSchema.safeParse(body);
@@ -128,7 +127,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Failed to post tweet',
+          error: result.error ?? 'Failed to post tweet',
         },
         { status: 500 }
       );

@@ -8,8 +8,7 @@
  * Rate Limit: 100 req/min per organization
  */
 
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
@@ -54,10 +53,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Check if this is a process queue request
-    if (body.action === 'process') {
+    if (typeof body === 'object' && body !== null && 'action' in body && body.action === 'process') {
       return await processQueue(body);
     }
 
@@ -114,7 +113,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Failed to add to queue',
+          error: result.error ?? 'Failed to add to queue',
         },
         { status: 500 }
       );
@@ -173,7 +172,7 @@ async function processQueue(body: unknown) {
   const agent = await createPostingAgent(data.organizationId);
 
   // Process queue
-  const result = await agent.processQueue(data.maxPosts || 1);
+  const result = await agent.processQueue(data.maxPosts ?? 1);
 
   logger.info('Queue API: Queue processed', {
     organizationId: data.organizationId,
@@ -213,7 +212,7 @@ export async function GET(request: NextRequest) {
     const platform = searchParams.get('platform') as SocialPlatform | null;
 
     // Validate query params
-    const validation = getQueueSchema.safeParse({ organizationId, platform: platform || undefined });
+    const validation = getQueueSchema.safeParse({ organizationId, platform: platform ?? undefined });
 
     if (!validation.success) {
       return NextResponse.json(
@@ -278,7 +277,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Use same schema as add to queue
     const validation = addToQueueSchema.safeParse(body);
@@ -374,7 +373,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Parse request body
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     // Validate input
     const validation = removeFromQueueSchema.safeParse(body);
@@ -407,7 +406,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: result.error || 'Post not found in queue',
+          error: result.error ?? 'Post not found in queue',
         },
         { status: 404 }
       );

@@ -7,8 +7,7 @@
  * Rate Limit: 10 req/min per IP
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
@@ -46,7 +45,7 @@ export async function GET(request: NextRequest) {
     
     // Validate input
     const validation = oauthCallbackSchema.safeParse({ code, state });
-    
+
     if (!validation.success) {
       logger.error('Invalid OAuth callback parameters', {
         errors: validation.error.errors,
@@ -55,9 +54,13 @@ export async function GET(request: NextRequest) {
         `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=invalid_callback`
       );
     }
-    
+
+    // Use validated values (Zod ensures these are non-null strings)
+    const validatedState = validation.data.state;
+    const validatedCode = validation.data.code;
+
     // Verify state token
-    const stateDoc = await db.collection('slack_oauth_states').doc(state!).get();
+    const stateDoc = await db.collection('slack_oauth_states').doc(validatedState).get();
     
     if (!stateDoc.exists) {
       logger.error('Invalid or expired OAuth state', { state });
@@ -71,7 +74,7 @@ export async function GET(request: NextRequest) {
     // Check expiration
     if (oauthState.expiresAt.toMillis() < Date.now()) {
       logger.error('OAuth state expired', { state });
-      await db.collection('slack_oauth_states').doc(state!).delete();
+      await db.collection('slack_oauth_states').doc(validatedState).delete();
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=state_expired`
       );
@@ -81,7 +84,7 @@ export async function GET(request: NextRequest) {
     const slackService = createSlackService();
     const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/slack/oauth/callback`;
     
-    const tokenResponse = await slackService.exchangeOAuthCode(code!, callbackUrl);
+    const tokenResponse = await slackService.exchangeOAuthCode(validatedCode, callbackUrl);
     
     // Test authentication to verify token
     await slackService.testAuth(tokenResponse.access_token);
@@ -145,7 +148,7 @@ export async function GET(request: NextRequest) {
       .set(workspace);
     
     // Delete state token
-    await db.collection('slack_oauth_states').doc(state!).delete();
+    await db.collection('slack_oauth_states').doc(validatedState).delete();
     
     logger.info('Slack workspace connected successfully', {
       workspaceId,
