@@ -5,8 +5,20 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { TimelineGroup, Activity, ActivityInsight, NextBestAction, ActivityStats } from '@/types/activity';
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+interface InsightsData {
+  insights: ActivityInsight[];
+  nextBestAction: NextBestAction | null;
+}
+
+type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefined;
 
 interface ActivityTimelineProps {
   entityType: 'lead' | 'contact' | 'company' | 'deal';
@@ -32,11 +44,7 @@ export default function ActivityTimeline({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, [entityType, entityId, workspaceId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -45,8 +53,8 @@ export default function ActivityTimeline({
       const timelineRes = await fetch(
         `/api/crm/activities/timeline?entityType=${entityType}&entityId=${entityId}&workspaceId=${workspaceId}`
       );
-      const timelineData = await timelineRes.json();
-      
+      const timelineData = await timelineRes.json() as ApiResponse<TimelineGroup[]>;
+
       if (timelineData.success) {
         setTimeline(timelineData.data);
       }
@@ -55,8 +63,8 @@ export default function ActivityTimeline({
       const statsRes = await fetch(
         `/api/crm/activities/stats?entityType=${entityType}&entityId=${entityId}&workspaceId=${workspaceId}`
       );
-      const statsData = await statsRes.json();
-      
+      const statsData = await statsRes.json() as ApiResponse<ActivityStats>;
+
       if (statsData.success) {
         setStats(statsData.data);
       }
@@ -66,20 +74,25 @@ export default function ActivityTimeline({
         const insightsRes = await fetch(
           `/api/crm/activities/insights?entityType=${entityType}&entityId=${entityId}&workspaceId=${workspaceId}`
         );
-        const insightsData = await insightsRes.json();
-        
+        const insightsData = await insightsRes.json() as ApiResponse<InsightsData>;
+
         if (insightsData.success) {
           setInsights(insightsData.data.insights ?? []);
           setNextAction(insightsData.data.nextBestAction);
         }
       }
 
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load activity timeline');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load activity timeline';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [entityType, entityId, workspaceId, showInsights, showNextAction]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const getActivityIcon = (type: Activity['type']): string => {
     const icons: Record<string, string> = {
@@ -134,8 +147,12 @@ export default function ActivityTimeline({
     }
   };
 
-  const formatTime = (timestamp: any): string => {
-    const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+  const formatTime = (timestamp: FirestoreTimestamp): string => {
+    if (!timestamp) { return ''; }
+    const tsWithToDate = timestamp as { toDate?: () => Date };
+    const date = typeof tsWithToDate.toDate === 'function'
+      ? tsWithToDate.toDate()
+      : new Date(timestamp as string | Date);
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 

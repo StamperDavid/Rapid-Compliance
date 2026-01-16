@@ -5,32 +5,109 @@ import Link from 'next/link';
 import type { PageContent } from '@/hooks/usePageContent';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme';
 
+interface StatsItem {
+  value?: string;
+  label?: string;
+}
+
+interface FeatureItem {
+  icon?: string;
+  title?: string;
+  desc?: string;
+}
+
+interface FaqItem {
+  q?: string;
+  a?: string;
+}
+
+interface PricingPlan {
+  name: string;
+  price: string;
+  period: string;
+  features: string[];
+  highlighted?: boolean;
+}
+
+interface TestimonialContent {
+  quote?: string;
+  author?: string;
+  role?: string;
+  company?: string;
+}
+
+interface IconBoxContent {
+  icon?: string;
+  title?: string;
+  text?: string;
+}
+
+interface CounterContent {
+  number?: string;
+  suffix?: string;
+  label?: string;
+}
+
+interface HeroCtaContent {
+  title?: string;
+  subtitle?: string;
+  buttonText?: string;
+  buttonLink?: string;
+}
+
+interface WidgetContent {
+  items?: StatsItem[] | FeatureItem[] | FaqItem[];
+  plans?: PricingPlan[];
+  quote?: string;
+  author?: string;
+  role?: string;
+  company?: string;
+  icon?: string;
+  title?: string;
+  text?: string;
+  number?: string;
+  suffix?: string;
+  label?: string;
+  subtitle?: string;
+  buttonText?: string;
+  buttonLink?: string;
+}
+
+interface WidgetSettings {
+  tag?: string;
+  href?: string;
+  alt?: string;
+}
+
 interface WidgetElement {
   id: string;
   type: string;
-  content?: any;
+  content?: WidgetContent | string;
   children?: WidgetElement[];
   styles?: {
     desktop?: Record<string, string>;
     tablet?: Record<string, string>;
     mobile?: Record<string, string>;
   };
-  settings?: Record<string, any>;
+  settings?: WidgetSettings;
 }
 
 function ElementRenderer({ element }: { element: WidgetElement }) {
   const { theme } = useWebsiteTheme();
   const styles = element.styles?.desktop ?? {};
 
+  // Helper to get content as WidgetContent object
+  const contentObj = typeof element.content === 'object' ? element.content : null;
+
   switch (element.type) {
     case 'heading': {
       const settingsTag = element.settings?.tag;
-      const Tag = ((settingsTag !== '' && settingsTag != null) ? settingsTag : 'h2') as keyof JSX.IntrinsicElements;
-      return <Tag style={styles}>{element.content}</Tag>;
+      const Tag = ((settingsTag !== '' && settingsTag != null) ? settingsTag : 'h2') as keyof React.JSX.IntrinsicElements;
+      return <Tag style={styles}>{typeof element.content === 'string' ? element.content : ''}</Tag>;
     }
 
     case 'text':
-      return <p style={styles}>{element.content}</p>;
+      return <p style={styles}>{typeof element.content === 'string' ? element.content : ''}</p>;
 
     case 'button': {
       const settingsHref = element.settings?.href;
@@ -43,13 +120,14 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
             ...styles,
           }}
         >
-          {element.content}
+          {typeof element.content === 'string' ? element.content : ''}
         </Link>
       );
     }
 
     case 'image':
       return (
+        /* eslint-disable-next-line @next/next/no-img-element -- Dynamic CMS image content */
         <img
           src={typeof element.content === 'string' ? element.content : '/placeholder.jpg'}
           alt={element.settings?.alt ?? ''}
@@ -58,19 +136,20 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       );
 
     case 'icon':
-      return <span style={{ fontSize: '3rem', ...styles }}>{element.content}</span>;
+      return <span style={{ fontSize: '3rem', ...styles }}>{typeof element.content === 'string' ? element.content : ''}</span>;
 
     case 'spacer':
-      return <div style={{ height: styles.height || '40px' }} />;
+      return <div style={{ height: styles.height ?? '40px' }} />;
 
     case 'divider':
       return <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)', margin: '2rem 0', ...styles }} />;
 
     case 'stats':
-      if (element.content?.items) {
+      if (contentObj?.items) {
+        const statsItems = contentObj.items as StatsItem[];
         return (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '4rem', flexWrap: 'wrap', ...styles }}>
-            {element.content.items.map((item: { value: string; label: string }, idx: number) => (
+            {statsItems.map((item, idx) => (
               <div key={idx} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '3rem', fontWeight: 'bold', color: theme.primaryColor }}>{item.value}</div>
                 <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)' }}>{item.label}</div>
@@ -82,20 +161,21 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       return null;
 
     case 'feature-grid':
-      if (element.content?.items) {
+      if (contentObj?.items) {
+        const featureItems = contentObj.items as FeatureItem[];
         return (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '24px',
-            ...styles 
+            ...styles
           }}>
-            {element.content.items.map((item: { icon: string; title: string; desc: string }, idx: number) => (
-              <div 
-                key={idx} 
-                style={{ 
-                  padding: '24px', 
-                  backgroundColor: 'rgba(255,255,255,0.05)', 
+            {featureItems.map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: '24px',
+                  backgroundColor: 'rgba(255,255,255,0.05)',
                   borderRadius: '12px',
                   border: '1px solid rgba(255,255,255,0.1)',
                 }}
@@ -111,15 +191,16 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       return null;
 
     case 'faq':
-      if (element.content?.items) {
+      if (contentObj?.items) {
+        const faqItems = contentObj.items as FaqItem[];
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', ...styles }}>
-            {element.content.items.map((item: { q: string; a: string }, idx: number) => (
-              <div 
-                key={idx} 
-                style={{ 
-                  padding: '24px', 
-                  backgroundColor: 'rgba(255,255,255,0.05)', 
+            {faqItems.map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: '24px',
+                  backgroundColor: 'rgba(255,255,255,0.05)',
                   borderRadius: '12px',
                   border: '1px solid rgba(255,255,255,0.1)',
                 }}
@@ -134,15 +215,15 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       return null;
 
     case 'pricing-table':
-      if (element.content?.plans) {
+      if (contentObj?.plans) {
         return (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: '24px',
-            ...styles 
+            ...styles
           }}>
-            {element.content.plans.map((plan: { name: string; price: string; period: string; features: string[]; highlighted?: boolean }, idx: number) => (
+            {contentObj.plans.map((plan, idx) => (
               <div 
                 key={idx} 
                 style={{ 
@@ -208,22 +289,23 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       return null;
 
     case 'testimonial':
-      if (typeof element.content === 'object') {
+      if (contentObj) {
+        const testimonial = contentObj as TestimonialContent;
         return (
-          <div style={{ 
-            padding: '32px', 
-            backgroundColor: 'rgba(255,255,255,0.05)', 
+          <div style={{
+            padding: '32px',
+            backgroundColor: 'rgba(255,255,255,0.05)',
             borderRadius: '16px',
             border: '1px solid rgba(255,255,255,0.1)',
-            ...styles 
+            ...styles
           }}>
             <p style={{ fontSize: '1.25rem', fontStyle: 'italic', color: '#fff', marginBottom: '16px', lineHeight: '1.6' }}>
-              "{element.content.quote}"
+              &quot;{testimonial.quote}&quot;
             </p>
             <div>
-              <div style={{ fontWeight: 'bold', color: '#fff' }}>{element.content.author}</div>
+              <div style={{ fontWeight: 'bold', color: '#fff' }}>{testimonial.author}</div>
               <div style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>
-                {element.content.role}{element.content.company ? `, ${element.content.company}` : ''}
+                {testimonial.role}{testimonial.company ? `, ${testimonial.company}` : ''}
               </div>
             </div>
           </div>
@@ -232,31 +314,33 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
       return null;
 
     case 'icon-box':
-      if (typeof element.content === 'object') {
+      if (contentObj) {
+        const iconBox = contentObj as IconBoxContent;
         return (
-          <div style={{ 
-            padding: '24px', 
-            backgroundColor: 'rgba(255,255,255,0.05)', 
+          <div style={{
+            padding: '24px',
+            backgroundColor: 'rgba(255,255,255,0.05)',
             borderRadius: '12px',
             border: '1px solid rgba(255,255,255,0.1)',
-            ...styles 
+            ...styles
           }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{element.content.icon}</div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>{element.content.title}</h3>
-            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>{element.content.text}</p>
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{iconBox.icon}</div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>{iconBox.title}</h3>
+            <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.7)', lineHeight: '1.6' }}>{iconBox.text}</p>
           </div>
         );
       }
       return null;
 
     case 'counter':
-      if (typeof element.content === 'object') {
+      if (contentObj) {
+        const counter = contentObj as CounterContent;
         return (
           <div style={{ textAlign: 'center', ...styles }}>
             <div style={{ fontSize: '3rem', fontWeight: 'bold', color: theme.primaryColor }}>
-              {element.content.number}{element.content.suffix}
+              {counter.number}{counter.suffix}
             </div>
-            <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)' }}>{element.content.label}</div>
+            <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.7)' }}>{counter.label}</div>
           </div>
         );
       }
@@ -264,18 +348,19 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
 
     case 'hero':
     case 'cta':
-      if (typeof element.content === 'object') {
+      if (contentObj) {
+        const heroCta = contentObj as HeroCtaContent;
         return (
           <div style={{ textAlign: 'center', ...styles }}>
-            <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '16px' }}>{element.content.title}</h2>
-            {element.content.subtitle && (
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#fff', marginBottom: '16px' }}>{heroCta.title}</h2>
+            {heroCta.subtitle && (
               <p style={{ fontSize: '1.25rem', color: 'rgba(255,255,255,0.8)', marginBottom: '24px', maxWidth: '600px', margin: '0 auto 24px' }}>
-                {element.content.subtitle}
+                {heroCta.subtitle}
               </p>
             )}
-            {element.content.buttonText && (
+            {heroCta.buttonText && (
               <Link
-                href={(element.content.buttonLink !== '' && element.content.buttonLink != null) ? element.content.buttonLink : '/signup'}
+                href={heroCta.buttonLink ?? '/signup'}
                 style={{
                   display: 'inline-block',
                   padding: '16px 32px',
@@ -286,7 +371,7 @@ function ElementRenderer({ element }: { element: WidgetElement }) {
                   textDecoration: 'none',
                 }}
               >
-                {element.content.buttonText}
+                {heroCta.buttonText}
               </Link>
             )}
           </div>

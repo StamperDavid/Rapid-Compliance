@@ -5,7 +5,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefined;
 
 interface FieldRenameHistoryProps {
   organizationId: string;
@@ -17,7 +19,7 @@ interface FieldRenameHistoryProps {
 }
 
 interface RenameRecord {
-  timestamp: any;
+  timestamp: FirestoreTimestamp;
   oldKey: string;
   newKey: string;
   oldLabel: string;
@@ -30,9 +32,21 @@ interface TimelineEntry {
   version: number;
   key: string;
   label: string;
-  timestamp: any;
+  timestamp: FirestoreTimestamp;
   renamedBy: string;
   reason?: string;
+}
+
+interface CurrentFieldInfo {
+  currentKey: string;
+  currentLabel: string;
+}
+
+interface HistoryApiResponse {
+  field: CurrentFieldInfo;
+  history: RenameRecord[];
+  timeline: TimelineEntry[];
+  aliases: string[];
 }
 
 export default function FieldRenameHistory({
@@ -47,15 +61,11 @@ export default function FieldRenameHistory({
   const [history, setHistory] = useState<RenameRecord[]>([]);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [aliases, setAliases] = useState<string[]>([]);
-  const [currentField, setCurrentField] = useState<any>(null);
+  const [currentField, setCurrentField] = useState<CurrentFieldInfo | null>(null);
   const [rolling, setRolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadHistory();
-  }, [organizationId, workspaceId, schemaId, fieldId]);
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -66,20 +76,26 @@ export default function FieldRenameHistory({
         throw new Error('Failed to load rename history');
       }
 
-      const data = await response.json();
+      const data = await response.json() as HistoryApiResponse;
       setCurrentField(data.field);
       setHistory(data.history ?? []);
       setTimeline(data.timeline ?? []);
       setAliases(data.aliases ?? []);
       setError(null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load history';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId, workspaceId, schemaId, fieldId]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   const handleRollback = async (toVersion: number) => {
+    // eslint-disable-next-line no-alert -- User confirmation required for destructive action
     if (!confirm(`Are you sure you want to rollback to version ${toVersion}?`)) {
       return;
     }
@@ -106,23 +122,27 @@ export default function FieldRenameHistory({
 
       // Reload history
       await loadHistory();
-      
+
       // Notify parent
       if (onRollback) {
         onRollback();
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to rollback';
+      setError(message);
     } finally {
       setRolling(false);
     }
   };
 
-  const formatTimestamp = (timestamp: any): string => {
-    if (!timestamp) {return 'Unknown';}
-    
+  const formatTimestamp = (timestamp: FirestoreTimestamp): string => {
+    if (!timestamp) { return 'Unknown'; }
+
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const tsWithToDate = timestamp as { toDate?: () => Date };
+      const date = typeof tsWithToDate.toDate === 'function'
+        ? tsWithToDate.toDate()
+        : new Date(timestamp as string | Date);
       return date.toLocaleString();
     } catch {
       return 'Unknown';
@@ -241,7 +261,7 @@ export default function FieldRenameHistory({
               {idx < timeline.length - 1 && (
                 <div className="flex-shrink-0">
                   <button
-                    onClick={() => handleRollback(entry.version)}
+                    onClick={() => { void handleRollback(entry.version); }}
                     disabled={rolling}
                     className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 disabled:opacity-50 transition-colors"
                   >

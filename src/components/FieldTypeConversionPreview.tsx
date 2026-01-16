@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { FieldType } from '@/types/schema';
 
 interface FieldTypeConversionPreviewProps {
@@ -23,10 +23,29 @@ interface FieldTypeConversionPreviewProps {
 
 interface ConversionPreviewItem {
   recordId: string;
-  before: any;
-  after: any;
+  before: unknown;
+  after: unknown;
   status: 'success' | 'fail' | 'warning';
   message?: string;
+}
+
+interface PreviewApiResponse {
+  isSafe: boolean;
+  preview: ConversionPreviewItem[];
+  totalRecords: number;
+  estimatedSuccess: number;
+  estimatedFailures: number;
+  successRate: number;
+}
+
+interface ConversionResult {
+  successful: number;
+  failed: number;
+  failedRecords?: Array<{
+    recordId: string;
+    oldValue: unknown;
+    error: string;
+  }>;
 }
 
 export default function FieldTypeConversionPreview({
@@ -50,13 +69,9 @@ export default function FieldTypeConversionPreview({
   const [estimatedFailures, setEstimatedFailures] = useState(0);
   const [successRate, setSuccessRate] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [conversionResult, setConversionResult] = useState<any>(null);
+  const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
 
-  useEffect(() => {
-    loadPreview();
-  }, [organizationId, workspaceId, schemaId, fieldId, oldType, newType]);
-
-  const loadPreview = async () => {
+  const loadPreview = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -67,7 +82,7 @@ export default function FieldTypeConversionPreview({
         throw new Error('Failed to load conversion preview');
       }
 
-      const data = await response.json();
+      const data = await response.json() as PreviewApiResponse;
       setIsSafe(data.isSafe);
       setPreview(data.preview ?? []);
       setTotalRecords(data.totalRecords);
@@ -75,14 +90,20 @@ export default function FieldTypeConversionPreview({
       setEstimatedFailures(data.estimatedFailures);
       setSuccessRate(data.successRate);
       setError(null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load preview';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId, workspaceId, schemaId, fieldId, fieldKey, oldType, newType]);
+
+  useEffect(() => {
+    void loadPreview();
+  }, [loadPreview]);
 
   const handleConvert = async () => {
+    // eslint-disable-next-line no-alert -- User confirmation required for destructive action
     if (!confirm(`Convert ${totalRecords} records from ${oldType} to ${newType}?`)) {
       return;
     }
@@ -108,14 +129,15 @@ export default function FieldTypeConversionPreview({
         throw new Error('Failed to convert field type');
       }
 
-      const result = await response.json();
+      const result = await response.json() as ConversionResult;
       setConversionResult(result);
 
       if (onApprove) {
         onApprove();
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to convert';
+      setError(message);
     } finally {
       setConverting(false);
     }
@@ -158,7 +180,7 @@ export default function FieldTypeConversionPreview({
               View Failed Records ({conversionResult.failedRecords.length})
             </summary>
             <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
-              {conversionResult.failedRecords.map((record: any, idx: number) => (
+              {conversionResult.failedRecords.map((record, idx) => (
                 <div key={idx} className="text-xs bg-white p-2 rounded border border-red-200">
                   <div><strong>Record:</strong> {record.recordId}</div>
                   <div><strong>Value:</strong> {JSON.stringify(record.oldValue)}</div>
@@ -186,7 +208,7 @@ export default function FieldTypeConversionPreview({
           {isSafe ? '✓ Safe Conversion' : '⚠️ Complex Conversion'}
         </h3>
         <p className={`text-sm ${isSafe ? 'text-green-700' : 'text-yellow-700'}`}>
-          Converting field <strong>"{fieldLabel}"</strong> from <code className="bg-white px-2 py-1 rounded">{oldType}</code> to <code className="bg-white px-2 py-1 rounded">{newType}</code>
+          Converting field <strong>&quot;{fieldLabel}&quot;</strong> from <code className="bg-white px-2 py-1 rounded">{oldType}</code> to <code className="bg-white px-2 py-1 rounded">{newType}</code>
         </p>
       </div>
 
@@ -278,7 +300,7 @@ export default function FieldTypeConversionPreview({
           Cancel
         </button>
         <button
-          onClick={handleConvert}
+          onClick={() => { void handleConvert(); }}
           disabled={converting}
           className={`px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 ${
             successRate < 50

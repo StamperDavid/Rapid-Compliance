@@ -16,8 +16,12 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface ChatApiResponse {
+  response?: string;
+}
+
 export default function PublicLayout({ children }: PublicLayoutProps) {
-  const { theme, loading } = useWebsiteTheme();
+  const { theme, loading: _loading } = useWebsiteTheme();
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -65,8 +69,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         }),
       });
 
-      const data = await response.json();
-      
+      const data = await response.json() as ChatApiResponse;
+
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',
@@ -103,14 +107,15 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="flex justify-between items-center" style={{ height: `${navHeight}px` }}>
             <Link href="/" className="flex items-center gap-2">
               {theme.logoUrl ? (
-                <img 
-                  src={theme.logoUrl} 
-                  alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'} 
-                  style={{ 
-                    height: `${theme.logoHeight ?? 48}px`, 
-                    width: 'auto', 
+                /* eslint-disable-next-line @next/next/no-img-element -- Dynamic theme logo URL from CMS */
+                <img
+                  src={theme.logoUrl}
+                  alt={(theme.companyName !== '' && theme.companyName != null) ? theme.companyName : 'SalesVelocity.ai'}
+                  style={{
+                    height: `${theme.logoHeight ?? 48}px`,
+                    width: 'auto',
                     objectFit: 'contain',
-                  }} 
+                  }}
                 />
               ) : (
                 <span 
@@ -338,13 +343,13 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyPress={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
                   placeholder="Type a message..."
                   className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-indigo-500"
                   disabled={isTyping}
                 />
                 <button
-                  onClick={sendMessage}
+                  onClick={() => void sendMessage()}
                   disabled={!inputValue.trim() || isTyping}
                   className="px-3 py-2 rounded-xl transition disabled:opacity-50"
                   style={{ backgroundColor: theme.primaryColor ?? '#6366f1', color: '#fff' }}

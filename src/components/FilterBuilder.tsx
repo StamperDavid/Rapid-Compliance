@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { OPERATORS_BY_TYPE, type FilterCondition, type FilterGroup, type ViewFilter, type FilterLogic } from '@/types/filters';
+import { OPERATORS_BY_TYPE, type FilterCondition, type ViewFilter, type FilterOperator } from '@/types/filters';
 
 interface FilterBuilderProps {
   fields: Array<{ key: string; label: string; type: string; options?: string[] }>;
@@ -128,7 +128,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
         </div>
 
         {/* Filter Groups */}
-        {filter.groups.map((group, groupIndex) => (
+        {filter.groups.map((group, _groupIndex) => (
           <div key={group.id} style={{ marginBottom: '1rem' }}>
             {/* Group Logic */}
             {group.conditions.length > 1 && (
@@ -143,7 +143,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
             )}
 
             {/* Conditions */}
-            {group.conditions.map((condition, condIndex) => {
+            {group.conditions.map((condition, _condIndex) => {
               const field = fields.find(f => f.key === condition.field);
               const operators = getOperators(condition.field);
               const needsValue = !['is_empty', 'is_not_empty', 'is_checked', 'is_not_checked'].includes(condition.operator);
@@ -172,7 +172,7 @@ export default function FilterBuilder({ fields, onApply, onClose, initialFilter 
                   {/* Operator Select */}
                   <select
                     value={condition.operator}
-                    onChange={(e) => updateCondition(group.id, condition.id, { operator: e.target.value as any })}
+                    onChange={(e) => updateCondition(group.id, condition.id, { operator: e.target.value as FilterOperator })}
                     style={{ flex: '0 0 150px', padding: '0.5rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                   >
                     {operators.map(op => (

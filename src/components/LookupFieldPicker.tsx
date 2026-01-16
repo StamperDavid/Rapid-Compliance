@@ -4,13 +4,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
+interface LookupRecord {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  title?: string;
+  companyName?: string;
+  email?: string;
+  company?: string;
+}
+
 interface LookupFieldPickerProps {
   organizationId: string;
   workspaceId: string;
   targetEntity: string; // Which entity to look up (e.g., 'contacts', 'deals')
   value: string | null; // Currently selected record ID
-  onChange: (recordId: string | null, record: any | null) => void;
-  label: string;
+  onChange: (recordId: string | null, record: LookupRecord | null) => void;
+  label?: string;
   placeholder?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
@@ -22,73 +33,53 @@ export default function LookupFieldPicker({
   targetEntity,
   value,
   onChange,
-  label,
+  label: _label,
   placeholder = 'Search and select...',
   style,
   disabled = false,
 }: LookupFieldPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [records, setRecords] = useState<any[]>([]);
-  const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+  const [records, setRecords] = useState<LookupRecord[]>([]);
+  const [selectedRecord, setSelectedRecord] = useState<LookupRecord | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load initial selected record
-  useEffect(() => {
-    if (value && !selectedRecord) {
-      loadSelectedRecord(value);
-    }
-  }, [value]);
-
-  // Load records when search changes
-  useEffect(() => {
-    if (isOpen) {
-      loadRecords();
-    }
-  }, [searchTerm, isOpen, targetEntity]);
-
-  const loadSelectedRecord = async (recordId: string) => {
+  const loadSelectedRecord = useCallback(async (recordId: string) => {
     try {
       const path = `organizations/${organizationId}/workspaces/${workspaceId}/entities/${targetEntity}/records`;
-      const record = await FirestoreService.get(path, recordId);
+      const record = await FirestoreService.get<LookupRecord>(path, recordId);
       if (record) {
         setSelectedRecord(record);
       }
     } catch (error) {
       logger.error('Failed to load selected record', error, { recordId, targetEntity });
     }
-  };
+  }, [organizationId, workspaceId, targetEntity]);
 
-  const loadRecords = async () => {
+  const loadRecords = useCallback(async () => {
     try {
       setLoading(true);
       const path = `organizations/${organizationId}/workspaces/${workspaceId}/entities/${targetEntity}/records`;
-      
+
       // Get all records (in production, this should use pagination with a reasonable limit)
-      const allRecords = await FirestoreService.getAll(path, []);
-      
+      const allRecords = await FirestoreService.getAll<LookupRecord>(path, []);
+
       // Filter by search term
       let filtered = allRecords;
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        filtered = allRecords.filter((record: any) => {
-          // Search across common name fields - explicit empty string checks for UI strings
-          const recName = record.name as string | null | undefined;
-          const recFirstName = record.firstName as string | null | undefined;
-          const recLastName = record.lastName as string | null | undefined;
-          const recTitle = record.title as string | null | undefined;
-          const recCompanyName = record.companyName as string | null | undefined;
-          const recId = record.id as string | null | undefined;
-          
-          const name = (recName !== '' && recName != null) ? recName
-            : (recFirstName && recLastName) ? `${recFirstName} ${recLastName}`
-            : (recTitle !== '' && recTitle != null) ? recTitle
-            : (recCompanyName !== '' && recCompanyName != null) ? recCompanyName
-            : recId ?? '';
+        filtered = allRecords.filter((record) => {
+          // Search across common name fields
+          const name = record.name
+            ?? (record.firstName && record.lastName ? `${record.firstName} ${record.lastName}` : null)
+            ?? record.title
+            ?? record.companyName
+            ?? record.id
+            ?? '';
           return name.toLowerCase().includes(searchLower);
         });
       }
-      
+
       // Limit to 50 results
       setRecords(filtered.slice(0, 50));
     } catch (error) {
@@ -97,9 +88,23 @@ export default function LookupFieldPicker({
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId, workspaceId, targetEntity, searchTerm]);
 
-  const handleSelect = (record: any) => {
+  // Load initial selected record
+  useEffect(() => {
+    if (value && !selectedRecord) {
+      void loadSelectedRecord(value);
+    }
+  }, [value, selectedRecord, loadSelectedRecord]);
+
+  // Load records when search changes
+  useEffect(() => {
+    if (isOpen) {
+      void loadRecords();
+    }
+  }, [isOpen, loadRecords]);
+
+  const handleSelect = (record: LookupRecord) => {
     setSelectedRecord(record);
     onChange(record.id, record);
     setIsOpen(false);
@@ -111,22 +116,14 @@ export default function LookupFieldPicker({
     onChange(null, null);
   };
 
-  const getDisplayName = (record: any): string => {
-    if (!record) {return '';}
-    const recName = record.name as string | null | undefined;
-    const recFirstName = record.firstName as string | null | undefined;
-    const recLastName = record.lastName as string | null | undefined;
-    const recTitle = record.title as string | null | undefined;
-    const recCompanyName = record.companyName as string | null | undefined;
-    const recEmail = record.email as string | null | undefined;
-    const recId = record.id as string | null | undefined;
-    
-    if (recName !== '' && recName != null) {return recName;}
-    if (recFirstName && recLastName) {return `${recFirstName} ${recLastName}`;}
-    if (recTitle !== '' && recTitle != null) {return recTitle;}
-    if (recCompanyName !== '' && recCompanyName != null) {return recCompanyName;}
-    if (recEmail !== '' && recEmail != null) {return recEmail;}
-    return recId ?? '';
+  const getDisplayName = (record: LookupRecord | null): string => {
+    if (!record) { return ''; }
+    if (record.name) { return record.name; }
+    if (record.firstName && record.lastName) { return `${record.firstName} ${record.lastName}`; }
+    if (record.title) { return record.title; }
+    if (record.companyName) { return record.companyName; }
+    if (record.email) { return record.email; }
+    return record.id ?? '';
   };
 
   const baseInputStyle = style ?? {

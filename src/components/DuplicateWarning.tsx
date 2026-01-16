@@ -8,6 +8,19 @@
 import { useState } from 'react';
 import type { DuplicateMatch } from '@/lib/crm/duplicate-detection';
 
+interface DuplicateRecord {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+}
+
+interface TypedDuplicateMatch extends Omit<DuplicateMatch, 'record'> {
+  record: DuplicateRecord;
+}
+
 interface DuplicateWarningProps {
   duplicates: DuplicateMatch[];
   entityType: 'lead' | 'contact' | 'company';
@@ -26,17 +39,19 @@ export default function DuplicateWarning({
   const [merging, setMerging] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
-  if (duplicates.length === 0) {return null;}
+  if (duplicates.length === 0) { return null; }
 
-  const highConfidenceMatches = duplicates.filter(d => d.confidence === 'high');
-  const mediumConfidenceMatches = duplicates.filter(d => d.confidence === 'medium');
+  // Cast duplicates to typed version for safe property access
+  const typedDuplicates = duplicates as TypedDuplicateMatch[];
+  const highConfidenceMatches = typedDuplicates.filter(d => d.confidence === 'high');
+  const mediumConfidenceMatches = typedDuplicates.filter(d => d.confidence === 'medium');
 
-  const handleMerge = async (duplicateId: string) => {
-    if (!onMerge || !newRecordId) {return;}
-    
+  const handleMerge = (duplicateId: string) => {
+    if (!onMerge || !newRecordId) { return; }
+
     setMerging(true);
     try {
-      await onMerge(newRecordId, duplicateId);
+      onMerge(newRecordId, duplicateId);
     } finally {
       setMerging(false);
     }
@@ -91,7 +106,7 @@ export default function DuplicateWarning({
                     {match.record.name && ` - ${match.record.name}`}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {(match.record.email || match.record.phone || match.record.company !== '' && match.record.email || match.record.phone || match.record.company != null) ? match.record.email ?? match.record.phone ?? match.record.company: 'No contact info'}
+                    {match.record.email ?? match.record.phone ?? match.record.company ?? 'No contact info'}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -100,7 +115,7 @@ export default function DuplicateWarning({
                   </span>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-1 mb-2">
                 {match.matchReasons.map((reason, idx) => (
                   <span
@@ -115,7 +130,7 @@ export default function DuplicateWarning({
               <div className="flex gap-2">
                 {onMerge && newRecordId && (
                   <button
-                    onClick={() => handleMerge(match.id)}
+                    onClick={() => { handleMerge(match.id); }}
                     disabled={merging}
                     className="px-3 py-1 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50"
                   >
@@ -149,7 +164,7 @@ export default function DuplicateWarning({
                     {match.record.name && ` - ${match.record.name}`}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {(match.record.email || match.record.phone || match.record.company !== '' && match.record.email || match.record.phone || match.record.company != null) ? match.record.email ?? match.record.phone ?? match.record.company: 'No contact info'}
+                    {match.record.email ?? match.record.phone ?? match.record.company ?? 'No contact info'}
                   </div>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getConfidenceColor(match.confidence)}`}>

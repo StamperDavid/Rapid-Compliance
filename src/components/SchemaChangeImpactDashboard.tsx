@@ -5,8 +5,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
+
+type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefined;
 
 interface SchemaChangeImpactDashboardProps {
   organizationId: string;
@@ -26,6 +28,26 @@ interface ImpactSummary {
   recentChanges: SchemaChangeEvent[];
 }
 
+interface WorkflowDetail {
+  workflowId: string;
+  workflowName: string;
+  errorCount: number;
+  warningCount: number;
+  valid: boolean;
+}
+
+interface WorkflowsSummary {
+  valid: number;
+  withWarnings: number;
+  withErrors: number;
+  details?: WorkflowDetail[];
+}
+
+interface ImpactApiResponse {
+  impact: ImpactSummary;
+  workflows: WorkflowsSummary;
+}
+
 export default function SchemaChangeImpactDashboard({
   organizationId,
   workspaceId,
@@ -33,14 +55,10 @@ export default function SchemaChangeImpactDashboard({
 }: SchemaChangeImpactDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [impact, setImpact] = useState<ImpactSummary | null>(null);
-  const [workflows, setWorkflows] = useState<any>(null);
+  const [workflows, setWorkflows] = useState<WorkflowsSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadImpactData();
-  }, [organizationId, workspaceId, schemaId]);
-
-  const loadImpactData = async () => {
+  const loadImpactData = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -51,16 +69,21 @@ export default function SchemaChangeImpactDashboard({
         throw new Error('Failed to load impact data');
       }
 
-      const data = await response.json();
+      const data = await response.json() as ImpactApiResponse;
       setImpact(data.impact);
       setWorkflows(data.workflows);
       setError(null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load impact data';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId, workspaceId, schemaId]);
+
+  useEffect(() => {
+    void loadImpactData();
+  }, [loadImpactData]);
 
   const processUnprocessedEvents = async () => {
     try {
@@ -76,8 +99,9 @@ export default function SchemaChangeImpactDashboard({
 
       // Reload impact data
       await loadImpactData();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to process events';
+      setError(message);
     }
   };
 
@@ -112,7 +136,7 @@ export default function SchemaChangeImpactDashboard({
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Schema Change Impact</h2>
         <button
-          onClick={processUnprocessedEvents}
+          onClick={() => { void processUnprocessedEvents(); }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Process Pending Changes
@@ -193,7 +217,7 @@ export default function SchemaChangeImpactDashboard({
             <div className="mt-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Workflow Details</h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {workflows.details.map((detail: any) => (
+                {workflows.details.map((detail) => (
                   <div
                     key={detail.workflowId}
                     className="flex items-center justify-between p-2 bg-gray-50 rounded"
@@ -313,24 +337,27 @@ function getChangeDescription(change: SchemaChangeEvent): string {
   }
 }
 
-function formatTimestamp(timestamp: any): string {
-  if (!timestamp) {return 'Unknown time';}
-  
+function formatTimestamp(timestamp: FirestoreTimestamp): string {
+  if (!timestamp) { return 'Unknown time'; }
+
   try {
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const tsWithToDate = timestamp as { toDate?: () => Date };
+    const date = typeof tsWithToDate.toDate === 'function'
+      ? tsWithToDate.toDate()
+      : new Date(timestamp as string | Date);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) {return 'Just now';}
-    if (diffMins < 60) {return `${diffMins} minutes ago`;}
-    
+
+    if (diffMins < 1) { return 'Just now'; }
+    if (diffMins < 60) { return `${diffMins} minutes ago`; }
+
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) {return `${diffHours} hours ago`;}
-    
+    if (diffHours < 24) { return `${diffHours} hours ago`; }
+
     const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) {return `${diffDays} days ago`;}
-    
+    if (diffDays < 7) { return `${diffDays} days ago`; }
+
     return date.toLocaleDateString();
   } catch {
     return 'Unknown time';
