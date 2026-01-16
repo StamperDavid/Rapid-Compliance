@@ -1,6 +1,15 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { publishForm, getForm } from '@/lib/forms/form-service';
+import { z } from 'zod';
+import { logger } from '@/lib/logger/logger';
+
+interface RouteContext {
+  params: Promise<{ orgId: string; formId: string }>;
+}
+
+const PublishBodySchema = z.object({
+  workspaceId: z.string().optional(),
+});
 
 /**
  * POST /api/workspace/[orgId]/forms/[formId]/publish
@@ -8,33 +17,40 @@ import { publishForm, getForm } from '@/lib/forms/form-service';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { orgId: string; formId: string } }
+  context: RouteContext
 ) {
   try {
-    const body = await request.json();
-    const workspaceId = body.workspaceId || 'default';
+    const { orgId, formId } = await context.params;
+    const rawBody: unknown = await request.json();
+    const parseResult = PublishBodySchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const workspaceId = parseResult.data.workspaceId ?? 'default';
 
     // Check if form exists
-    const form = await getForm(params.orgId, workspaceId, params.formId);
+    const form = await getForm(orgId, workspaceId, formId);
 
     if (!form) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
     // Publish the form
-    await publishForm(params.orgId, workspaceId, params.formId);
+    await publishForm(orgId, workspaceId, formId);
 
     // Get updated form
-    const updatedForm = await getForm(params.orgId, workspaceId, params.formId);
+    const updatedForm = await getForm(orgId, workspaceId, formId);
 
     return NextResponse.json({
       success: true,
       form: updatedForm,
       message: 'Form published successfully',
     });
-  } catch (error: unknown) {
-    console.error('Failed to publish form:', error);
+  } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to publish form';
+    logger.error('Failed to publish form:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

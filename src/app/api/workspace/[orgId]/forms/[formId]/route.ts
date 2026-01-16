@@ -1,5 +1,4 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getForm, updateForm, deleteForm } from '@/lib/forms/form-service';
 import {
   collection,
@@ -10,7 +9,13 @@ import {
   doc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import type { FormFieldConfig } from '@/lib/forms/types';
+import type { FormFieldConfig, FormDefinition } from '@/lib/forms/types';
+import { z } from 'zod';
+import { logger } from '@/lib/logger/logger';
+
+interface RouteContext {
+  params: Promise<{ orgId: string; formId: string }>;
+}
 
 // Helper to ensure db is available
 function getDb() {
@@ -20,21 +25,33 @@ function getDb() {
   return db;
 }
 
+const UpdateFormBodySchema = z.object({
+  workspaceId: z.string().optional(),
+  form: z.record(z.unknown()).optional(),
+  fields: z.array(z.object({
+    id: z.string(),
+    type: z.string(),
+    label: z.string(),
+    order: z.number(),
+  }).passthrough()).optional(),
+});
+
 /**
  * GET /api/workspace/[orgId]/forms/[formId]
  * Get a single form with its fields
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgId: string; formId: string } }
+  context: RouteContext
 ) {
   try {
+    const { orgId, formId } = await context.params;
     const { searchParams } = new URL(request.url);
     const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = workspaceIdParam || 'default';
+    const workspaceId = workspaceIdParam ?? 'default';
 
     // Get form
-    const form = await getForm(params.orgId, workspaceId, params.formId);
+    const form = await getForm(orgId, workspaceId, formId);
 
     if (!form) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
@@ -42,16 +59,16 @@ export async function GET(
 
     // Get fields
     const firestore = getDb();
-    const fieldsPath = `organizations/${params.orgId}/workspaces/${workspaceId}/forms/${params.formId}/fields`;
+    const fieldsPath = `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/fields`;
     const fieldsRef = collection(firestore, fieldsPath);
     const fieldsQuery = query(fieldsRef, orderBy('order', 'asc'));
     const fieldsSnapshot = await getDocs(fieldsQuery);
-    const fields = fieldsSnapshot.docs.map((doc) => doc.data() as FormFieldConfig);
+    const fields = fieldsSnapshot.docs.map((docSnap) => docSnap.data() as FormFieldConfig);
 
     return NextResponse.json({ form, fields });
-  } catch (error: unknown) {
-    console.error('Failed to fetch form:', error);
+  } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to fetch form';
+    logger.error('Failed to fetch form:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -62,22 +79,29 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { orgId: string; formId: string } }
+  context: RouteContext
 ) {
   try {
-    const body = await request.json();
-    const workspaceId = body.workspaceId || 'default';
-    const { form: formUpdates, fields } = body;
+    const { orgId, formId } = await context.params;
+    const rawBody: unknown = await request.json();
+    const parseResult = UpdateFormBodySchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const { workspaceId: workspaceIdInput, form: formUpdates, fields } = parseResult.data;
+    const workspaceId = workspaceIdInput ?? 'default';
 
     // Update form
     if (formUpdates) {
-      await updateForm(params.orgId, workspaceId, params.formId, formUpdates);
+      await updateForm(orgId, workspaceId, formId, formUpdates as Partial<FormDefinition>);
     }
 
     // Update fields if provided
     if (fields && Array.isArray(fields)) {
       const firestore = getDb();
-      const fieldsPath = `organizations/${params.orgId}/workspaces/${workspaceId}/forms/${params.formId}/fields`;
+      const fieldsPath = `organizations/${orgId}/workspaces/${workspaceId}/forms/${formId}/fields`;
       const batch = writeBatch(firestore);
 
       // Delete existing fields
@@ -88,12 +112,12 @@ export async function PUT(
       });
 
       // Add new fields
-      fields.forEach((field: FormFieldConfig) => {
+      fields.forEach((field) => {
         const fieldRef = doc(firestore, fieldsPath, field.id);
         batch.set(fieldRef, {
           ...field,
-          formId: params.formId,
-          organizationId: params.orgId,
+          formId,
+          organizationId: orgId,
           workspaceId,
           updatedAt: new Date(),
         });
@@ -102,18 +126,18 @@ export async function PUT(
       await batch.commit();
 
       // Update field count on form
-      await updateForm(params.orgId, workspaceId, params.formId, {
+      await updateForm(orgId, workspaceId, formId, {
         fieldCount: fields.length,
       });
     }
 
     // Get updated form
-    const updatedForm = await getForm(params.orgId, workspaceId, params.formId);
+    const updatedForm = await getForm(orgId, workspaceId, formId);
 
     return NextResponse.json({ form: updatedForm, success: true });
-  } catch (error: unknown) {
-    console.error('Failed to update form:', error);
+  } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update form';
+    logger.error('Failed to update form:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -124,19 +148,20 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { orgId: string; formId: string } }
+  context: RouteContext
 ) {
   try {
+    const { orgId, formId } = await context.params;
     const { searchParams } = new URL(request.url);
     const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = workspaceIdParam || 'default';
+    const workspaceId = workspaceIdParam ?? 'default';
 
-    await deleteForm(params.orgId, workspaceId, params.formId);
+    await deleteForm(orgId, workspaceId, formId);
 
     return NextResponse.json({ success: true });
-  } catch (error: unknown) {
-    console.error('Failed to delete form:', error);
+  } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to delete form';
+    logger.error('Failed to delete form:', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,20 +1,23 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { CouponRedemption, MerchantCoupon } from '@/types/pricing';
 
+interface RouteContext {
+  params: Promise<{ orgId: string }>;
+}
+
 /**
  * GET: Get coupon analytics for a merchant
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ orgId: string }> }
+  context: RouteContext
 ) {
   try {
-    const { orgId } = await params;
+    const { orgId } = await context.params;
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -23,24 +26,24 @@ export async function GET(
 
     // Get all coupons
     const couponsPath = getMerchantCouponsCollection(orgId);
-    const coupons = (await FirestoreService.getAll(couponsPath)) as MerchantCoupon[] || [];
+    const coupons = await FirestoreService.getAll<MerchantCoupon>(couponsPath) ?? [];
 
     // Get redemptions for this org
-    const allRedemptions = (await FirestoreService.getAll(COLLECTIONS.COUPON_REDEMPTIONS)) as CouponRedemption[] || [];
+    const allRedemptions = await FirestoreService.getAll<CouponRedemption>(COLLECTIONS.COUPON_REDEMPTIONS) ?? [];
     const redemptions = allRedemptions.filter(
       r => r.organization_id === orgId && r.coupon_type === 'merchant'
     );
 
     // Calculate total discount given
-    const totalDiscountGiven = redemptions.reduce((sum, r) => sum + (r.discount_amount || 0), 0);
+    const totalDiscountGiven = redemptions.reduce((sum, r) => sum + (r.discount_amount ?? 0), 0);
 
     // Calculate top coupons
     const couponStats = new Map<string, { uses: number; revenue_impact: number }>();
     for (const redemption of redemptions) {
-      const current = couponStats.get(redemption.coupon_code) || { uses: 0, revenue_impact: 0 };
+      const current = couponStats.get(redemption.coupon_code) ?? { uses: 0, revenue_impact: 0 };
       couponStats.set(redemption.coupon_code, {
         uses: current.uses + 1,
-        revenue_impact: current.revenue_impact + (redemption.discount_amount || 0),
+        revenue_impact: current.revenue_impact + (redemption.discount_amount ?? 0),
       });
     }
 

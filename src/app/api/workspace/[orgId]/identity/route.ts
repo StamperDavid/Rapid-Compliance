@@ -1,9 +1,45 @@
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
+import { z } from 'zod';
+
+interface RouteContext {
+  params: Promise<{ orgId: string }>;
+}
+
+interface OrgData {
+  brandDNA?: BrandDNA;
+  [key: string]: unknown;
+}
+
+interface BrandDNA {
+  toneOfVoice?: string;
+  [key: string]: unknown;
+}
+
+const IdentitySchema = z.object({
+  workforceName: z.string().min(1, 'Workforce name is required'),
+  tagline: z.string().optional(),
+  personalityArchetype: z.string().optional(),
+  responseStyle: z.string().optional(),
+  proactivityLevel: z.string().optional(),
+  empathyLevel: z.string().optional(),
+  avatarStyle: z.string().optional(),
+  primaryColor: z.string().optional(),
+  voiceEngine: z.string().optional(),
+  voiceId: z.string().optional(),
+  voiceName: z.string().optional(),
+}).passthrough();
+
+const SaveIdentityBodySchema = z.object({
+  identity: IdentitySchema,
+  brandDNA: z.object({
+    toneOfVoice: z.string().optional(),
+  }).passthrough().optional(),
+  userId: z.string().optional(),
+});
 
 /**
  * GET /api/workspace/[orgId]/identity
@@ -11,14 +47,14 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { orgId: string } }
+  context: RouteContext
 ) {
   try {
     if (!adminDal || !adminDb) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    const { orgId } = params;
+    const { orgId } = await context.params;
 
     // Load workforce identity
     const identityDocRef = adminDb.collection('organizations').doc(orgId)
@@ -28,7 +64,7 @@ export async function GET(
     // Load brand DNA from organization
     const orgDocRef = adminDb.collection('organizations').doc(orgId);
     const orgDoc = await orgDocRef.get();
-    const orgData = orgDoc.exists ? orgDoc.data() : null;
+    const orgData = orgDoc.exists ? (orgDoc.data() as OrgData | undefined) : null;
 
     // Load onboarding data for pre-population if needed
     const onboardingDocRef = adminDb.collection('organizations').doc(orgId)
@@ -40,7 +76,7 @@ export async function GET(
       return NextResponse.json({
         success: true,
         identity: identityDoc.data(),
-        brandDNA: orgData?.brandDNA || null,
+        brandDNA: orgData?.brandDNA ?? null,
         onboardingData,
       });
     }
@@ -49,7 +85,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       identity: null,
-      brandDNA: orgData?.brandDNA || null,
+      brandDNA: orgData?.brandDNA ?? null,
       onboardingData,
     });
 
@@ -71,24 +107,26 @@ export async function GET(
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { orgId: string } }
+  context: RouteContext
 ) {
   try {
     if (!adminDb) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    const { orgId } = params;
-    const body = await req.json();
-    const { identity, brandDNA, userId } = body;
+    const { orgId } = await context.params;
+    const rawBody: unknown = await req.json();
+    const parseResult = SaveIdentityBodySchema.safeParse(rawBody);
 
-    // Validate required fields
-    if (!identity?.workforceName) {
+    if (!parseResult.success) {
       return NextResponse.json(
-        { success: false, error: 'Workforce name is required' },
+        { success: false, error: parseResult.error.errors[0]?.message ?? 'Invalid identity data' },
         { status: 400 }
       );
     }
+
+    const { identity, brandDNA, userId } = parseResult.data;
+    const userIdValue = userId ?? 'unknown';
 
     // Start a batch write for atomic updates
     const batch = adminDb.batch();
@@ -100,7 +138,7 @@ export async function POST(
     batch.set(identityDocRef, {
       ...identity,
       updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: userId || 'unknown',
+      updatedBy: userIdValue,
       status: 'active',
     }, { merge: true });
 
@@ -111,7 +149,7 @@ export async function POST(
         brandDNA: {
           ...brandDNA,
           updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: userId || 'unknown',
+          updatedBy: userIdValue,
         },
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -135,7 +173,7 @@ export async function POST(
       name: identity.workforceName,
       tagline: identity.tagline,
       personalityArchetype: identity.personalityArchetype,
-      toneOfVoice: brandDNA?.toneOfVoice || 'professional',
+      toneOfVoice: brandDNA?.toneOfVoice ?? 'professional',
       responseStyle: identity.responseStyle,
       proactivityLevel: identity.proactivityLevel,
       empathyLevel: identity.empathyLevel,
@@ -145,7 +183,7 @@ export async function POST(
       voiceId: identity.voiceId,
       voiceName: identity.voiceName,
       updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: userId || 'unknown',
+      updatedBy: userIdValue,
     }, { merge: true });
 
     // Commit all changes

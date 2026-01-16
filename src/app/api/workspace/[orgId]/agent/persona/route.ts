@@ -1,19 +1,34 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
+import { z } from 'zod';
+
+interface RouteContext {
+  params: Promise<{ orgId: string }>;
+}
+
+const PersonaDataSchema = z.object({
+  name: z.string().optional(),
+  tagline: z.string().optional(),
+  personalityArchetype: z.string().optional(),
+  toneOfVoice: z.string().optional(),
+  responseStyle: z.string().optional(),
+  proactivityLevel: z.string().optional(),
+  empathyLevel: z.string().optional(),
+  version: z.number().optional(),
+}).passthrough();
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { orgId: string } }
+  context: RouteContext
 ) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    const { orgId } = params;
+    const { orgId } = await context.params;
 
     // Try to load existing persona using nested doc reference
     const personaDocRef = adminDal.getNestedDocRef(
@@ -40,7 +55,7 @@ export async function GET(
     // Return empty if neither exists
     return NextResponse.json({ persona: null, onboarding: null });
   } catch (error) {
-    logger.error('Error fetching persona', error, { 
+    logger.error('Error fetching persona', error, {
       route: '/api/workspace/[orgId]/agent/persona',
       method: 'GET'
     });
@@ -53,31 +68,40 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { orgId: string } }
+  context: RouteContext
 ) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    const { orgId } = params;
-    const personaData = await req.json();
+    const { orgId } = await context.params;
+    const rawData: unknown = await req.json();
+    const parseResult = PersonaDataSchema.safeParse(rawData);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ error: 'Invalid persona data' }, { status: 400 });
+    }
+
+    const personaData = parseResult.data;
 
     // Save persona to Firestore using nested doc reference
     const personaDocRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/ai-agents/default/config/persona',
       { orgId }
     );
-    
+
+    const currentVersion = personaData.version ?? 0;
+
     await personaDocRef.set({
       ...personaData,
       updatedAt: FieldValue.serverTimestamp(),
-      version: (personaData.version ?? 0) + 1
+      version: currentVersion + 1
     }, { merge: true });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('Error saving persona', error, { 
+    logger.error('Error saving persona', error, {
       route: '/api/workspace/[orgId]/agent/persona',
       method: 'POST'
     });
@@ -87,4 +111,3 @@ export async function POST(
     );
   }
 }
-

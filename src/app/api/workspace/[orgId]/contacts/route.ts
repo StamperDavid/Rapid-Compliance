@@ -1,12 +1,17 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getContacts } from '@/lib/crm/contact-service';
+import { logger } from '@/lib/logger/logger';
+
+interface RouteContext {
+  params: Promise<{ orgId: string }>;
+}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orgId: string } }
+  context: RouteContext
 ) {
   try {
+    const { orgId } = await context.params;
     const { searchParams } = new URL(request.url);
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
@@ -17,13 +22,14 @@ export async function GET(
     const filters = company ? { company } : undefined;
     const pagination = { pageSize };
 
-    const result = await getContacts(params.orgId, workspaceId, filters, pagination);
+    const result = await getContacts(orgId, workspaceId, filters, pagination);
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('Failed to fetch contacts:', error);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch contacts';
+    logger.error('Failed to fetch contacts:', error);
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to fetch contacts'},
+      { error: message },
       { status: 500 }
     );
   }
