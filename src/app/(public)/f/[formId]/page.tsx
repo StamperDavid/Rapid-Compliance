@@ -416,7 +416,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
             onChange={(e) => onChange(e.target.value)}
             style={{ ...inputStyle, ...styles.select }}
           >
-            <option value="">{field.placeholder || 'Select an option'}</option>
+            <option value="">{field.placeholder ?? 'Select an option'}</option>
             {field.options?.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
@@ -499,7 +499,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
                     type="checkbox"
                     checked={checked}
                     onChange={() => {
-                      const current = Array.isArray(value) ? value : [];
+                      const current: string[] = Array.isArray(value) ? (value as string[]) : [];
                       if (checked) {
                         onChange(current.filter((v: string) => v !== opt.value));
                       } else {
@@ -540,7 +540,7 @@ function FieldRenderer({ field, value, error, onChange }: FieldRendererProps) {
                     type="checkbox"
                     checked={checked}
                     onChange={() => {
-                      const current = Array.isArray(value) ? value : [];
+                      const current: string[] = Array.isArray(value) ? (value as string[]) : [];
                       if (checked) {
                         onChange(current.filter((v: string) => v !== opt.value));
                       } else {
@@ -694,7 +694,9 @@ export default function PublicFormPage() {
 
   // Get fields for current page
   const pageFields = useMemo(() => {
-    if (!formData) return [];
+    if (!formData) {
+      return [];
+    }
     return formData.fields
       .filter((f) => f.pageIndex === currentPage)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -857,7 +859,7 @@ export default function PublicFormPage() {
           <div style={styles.successIcon}>✓</div>
           <h1 style={styles.successTitle}>Thank You!</h1>
           <p style={styles.successMessage}>
-            {formData?.form.settings?.confirmationMessage || 'Your submission has been received.'}
+            {formData?.form.settings?.confirmationMessage ?? 'Your submission has been received.'}
           </p>
           {confirmationNumber && (
             <div style={styles.confirmationNumber}>
@@ -945,7 +947,7 @@ export default function PublicFormPage() {
             ) : (
               <button
                 type="button"
-                onClick={handleSubmit}
+                onClick={() => { void handleSubmit(); }}
                 disabled={formState === 'submitting'}
                 style={{
                   ...styles.button,
@@ -953,7 +955,7 @@ export default function PublicFormPage() {
                   ...(formState === 'submitting' ? styles.buttonDisabled : {}),
                 }}
               >
-                {formState === 'submitting' ? 'Submitting...' : formData?.form.settings?.submitButtonText || 'Submit'}
+                {formState === 'submitting' ? 'Submitting...' : formData?.form.settings?.submitButtonText ?? 'Submit'}
               </button>
             )}
           </div>
