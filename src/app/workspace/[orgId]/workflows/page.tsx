@@ -9,7 +9,7 @@ import { useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
-  Workflow,
+  Workflow as WorkflowIcon,
   Play,
   Pause,
   Settings,
@@ -23,6 +23,8 @@ import {
 import { getWorkflows, setWorkflowStatus, deleteWorkflow } from '@/lib/workflows/workflow-service';
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
+import type { Workflow } from '@/types/workflow';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -52,7 +54,7 @@ export default function WorkflowsPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination using service layer
-  const fetchWorkflows = useCallback(async (lastDoc?: any) => {
+  const fetchWorkflows = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getWorkflows(
       orgId,
       'default',
@@ -68,34 +70,39 @@ export default function WorkflowsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchWorkflows });
+  } = usePagination<Workflow, QueryDocumentSnapshot>({ fetchFn: fetchWorkflows });
 
   // Initial load
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const handleDelete = async (workflowId: string) => {
-    if (!confirm('Delete this workflow?')) {return;}
+    // eslint-disable-next-line no-alert
+    if (!window.confirm('Delete this workflow?')) {
+      return;
+    }
 
     try {
       await deleteWorkflow(orgId, workflowId, 'default');
-      await refresh(); // Refresh pagination after delete
-    } catch (error) {
-      logger.error('Error deleting workflow:', error, { file: 'page.tsx' });
-      alert('Failed to delete workflow');
+      await refresh();
+    } catch (err) {
+      logger.error('Error deleting workflow:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      window.alert('Failed to delete workflow');
     }
   };
 
   const handleToggleStatus = async (workflowId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+    const newStatus: 'active' | 'paused' = currentStatus === 'active' ? 'paused' : 'active';
 
     try {
-      await setWorkflowStatus(orgId, workflowId, newStatus as any, 'default');
-      await refresh(); // Refresh to get updated data
-    } catch (error) {
-      logger.error('Error updating workflow:', error, { file: 'page.tsx' });
-      alert('Failed to update workflow');
+      await setWorkflowStatus(orgId, workflowId, newStatus, 'default');
+      await refresh();
+    } catch (err) {
+      logger.error('Error updating workflow:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      window.alert('Failed to update workflow');
     }
   };
 
@@ -132,7 +139,7 @@ export default function WorkflowsPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/25">
-              <Workflow className="w-6 h-6 text-white" />
+              <WorkflowIcon className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">Workflows</h1>
@@ -173,7 +180,7 @@ export default function WorkflowsPage() {
           className="text-center py-16 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl"
         >
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 flex items-center justify-center border border-fuchsia-500/30">
-            <Workflow className="w-10 h-10 text-fuchsia-400" />
+            <WorkflowIcon className="w-10 h-10 text-fuchsia-400" />
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">No workflows yet</h3>
           <p className="text-gray-400 mb-6">Create your first automation to get started</p>
@@ -196,6 +203,7 @@ export default function WorkflowsPage() {
             animate="visible"
             className="grid gap-4"
           >
+            {/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment -- Workflow type inference affected by upstream type issues */}
             {workflows.map((workflow) => (
               <motion.div
                 key={workflow.id}
@@ -208,7 +216,7 @@ export default function WorkflowsPage() {
                     {/* Title and Status */}
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 flex items-center justify-center border border-fuchsia-500/30">
-                        <Workflow className="w-5 h-5 text-fuchsia-400" />
+                        <WorkflowIcon className="w-5 h-5 text-fuchsia-400" />
                       </div>
                       <h3 className="text-xl font-semibold text-white group-hover:text-fuchsia-300 transition-colors">
                         {workflow.name}
@@ -225,16 +233,16 @@ export default function WorkflowsPage() {
                     <div className="flex items-center gap-6 text-sm text-gray-400 ml-13">
                       <div className="flex items-center gap-2">
                         <Zap className="w-4 h-4" />
-                        <span>Trigger: {workflow.trigger?.type || 'manual'}</span>
+                        <span>Trigger: {workflow.trigger?.type ?? 'manual'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4" />
-                        <span>{workflow.actions?.length || 0} actions</span>
+                        <span>{workflow.actions?.length ?? 0} actions</span>
                       </div>
                       {workflow.stats && (
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4" />
-                          <span>{workflow.stats.totalRuns || 0} runs</span>
+                          <span>{workflow.stats.totalRuns ?? 0} runs</span>
                         </div>
                       )}
                     </div>
@@ -244,7 +252,7 @@ export default function WorkflowsPage() {
                   <div className="flex gap-2 ml-4">
                     {/* Toggle Status Button */}
                     <motion.button
-                      onClick={() => handleToggleStatus(workflow.id, workflow.status)}
+                      onClick={() => void handleToggleStatus(workflow.id, workflow.status)}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all duration-300 ${
                         workflow.status === 'active'
                           ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20'
@@ -290,7 +298,7 @@ export default function WorkflowsPage() {
 
                     {/* Delete Button */}
                     <motion.button
-                      onClick={() => handleDelete(workflow.id)}
+                      onClick={() => void handleDelete(workflow.id)}
                       className="px-4 py-2 bg-red-500/10 text-red-300 border border-red-500/30 rounded-xl hover:bg-red-500/20 text-sm font-semibold flex items-center gap-2 transition-all duration-300"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -302,6 +310,7 @@ export default function WorkflowsPage() {
                 </div>
               </motion.div>
             ))}
+            {/* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */}
           </motion.div>
 
           {/* Pagination */}
@@ -312,7 +321,7 @@ export default function WorkflowsPage() {
               className="mt-8 flex justify-center"
             >
               <motion.button
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="px-8 py-3 bg-black/40 backdrop-blur-xl border border-white/10 text-white rounded-xl hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                 whileHover={{ scale: 1.05 }}

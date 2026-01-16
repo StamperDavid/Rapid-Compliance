@@ -13,8 +13,9 @@ import {
   Edit3,
   Layers
 } from 'lucide-react';
-import { getNurtureCampaigns } from '@/lib/outbound/nurture-service';
+import { getNurtureCampaigns, type NurtureCampaign } from '@/lib/outbound/nurture-service';
 import { usePagination } from '@/hooks/usePagination';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function NurtureCampaignsPage() {
   const params = useParams();
@@ -22,7 +23,7 @@ export default function NurtureCampaignsPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination using service layer
-  const fetchCampaigns = useCallback(async (lastDoc?: any) => {
+  const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getNurtureCampaigns(
       orgId,
       undefined,
@@ -37,11 +38,11 @@ export default function NurtureCampaignsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchCampaigns });
+  } = usePagination<NurtureCampaign, QueryDocumentSnapshot>({ fetchFn: fetchCampaigns });
 
   // Initial load
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   return (
@@ -203,7 +204,7 @@ export default function NurtureCampaignsPage() {
               <motion.button
                 whileHover={{ scale: loading || !hasMore ? 1 : 1.02 }}
                 whileTap={{ scale: loading || !hasMore ? 1 : 0.98 }}
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
               >

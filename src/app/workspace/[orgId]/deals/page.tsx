@@ -14,7 +14,6 @@ import {
   Loader2,
   AlertCircle,
   DollarSign,
-  TrendingUp,
   Target
 } from 'lucide-react';
 
@@ -61,7 +60,7 @@ export default function DealsPage() {
       throw new Error('Failed to fetch deals');
     }
 
-    return response.json();
+    return response.json() as Promise<{ data: Deal[]; lastDoc: unknown; hasMore: boolean }>;
   }, [orgId]);
 
   const {
@@ -74,7 +73,7 @@ export default function DealsPage() {
   } = usePagination<Deal>({ fetchFn: fetchDeals });
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const getDealsByStage = (stage: string) => deals.filter(d => d.stage === stage);
@@ -82,7 +81,7 @@ export default function DealsPage() {
   const totalPipelineValue = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);
 
   const getCompanyName = (deal: Deal) => {
-    return deal.company || deal.companyName || '-';
+    return deal.company ?? deal.companyName ?? '-';
   };
 
   const getStageBadge = (stage: string) => {
@@ -244,7 +243,7 @@ export default function DealsPage() {
           {(hasMore || loading) && (
             <div className="mt-6 flex justify-center">
               <button
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -326,7 +325,7 @@ export default function DealsPage() {
                           {(deal.value ?? 0).toLocaleString()}
                         </span>
                       </td>
-                      <td className="p-4">{getStageBadge(deal.stage || 'prospecting')}</td>
+                      <td className="p-4">{getStageBadge(deal.stage ?? 'prospecting')}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-2 bg-white/10 rounded-full overflow-hidden">
@@ -358,7 +357,7 @@ export default function DealsPage() {
           {(hasMore || loading) && (
             <div className="p-4 border-t border-white/10 flex justify-center">
               <button
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >

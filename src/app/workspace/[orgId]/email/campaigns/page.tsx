@@ -9,9 +9,10 @@ import { useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Mail, Plus, Send, Eye, Trash2, Calendar, TrendingUp } from 'lucide-react';
-import { getCampaigns, deleteCampaign } from '@/lib/email/campaign-service';
+import { getCampaigns, deleteCampaign, type EmailCampaign } from '@/lib/email/campaign-service';
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function EmailCampaignsPage() {
   const params = useParams();
@@ -19,7 +20,7 @@ export default function EmailCampaignsPage() {
   const orgId = params.orgId as string;
 
   // Fetch function with pagination using service layer
-  const fetchCampaigns = useCallback(async (lastDoc?: any) => {
+  const fetchCampaigns = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getCampaigns(
       orgId,
       undefined,
@@ -34,22 +35,26 @@ export default function EmailCampaignsPage() {
     hasMore,
     loadMore,
     refresh
-  } = usePagination({ fetchFn: fetchCampaigns });
+  } = usePagination<EmailCampaign, QueryDocumentSnapshot>({ fetchFn: fetchCampaigns });
 
   // Initial load
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const handleDelete = async (campaignId: string) => {
-    if (!confirm('Delete this campaign?')) {return;}
+    // eslint-disable-next-line no-alert
+    if (!window.confirm('Delete this campaign?')) {
+      return;
+    }
 
     try {
       await deleteCampaign(orgId, campaignId);
-      await refresh(); // Refresh pagination after delete
-    } catch (error) {
-      logger.error('Error deleting campaign:', error, { file: 'page.tsx' });
-      alert('Failed to delete campaign');
+      await refresh();
+    } catch (err) {
+      logger.error('Error deleting campaign:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      window.alert('Failed to delete campaign');
     }
   };
 
@@ -213,7 +218,7 @@ export default function EmailCampaignsPage() {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => handleDelete(campaign.id)}
+                      onClick={() => void handleDelete(campaign.id)}
                       className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-300 rounded-xl hover:bg-red-500/30 text-sm font-semibold flex items-center gap-2 transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -235,7 +240,7 @@ export default function EmailCampaignsPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="px-8 py-3 bg-black/40 backdrop-blur-xl border border-white/10 text-white rounded-xl hover:border-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold"
               >

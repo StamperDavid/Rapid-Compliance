@@ -54,7 +54,7 @@ export default function ContactsPage() {
       throw new Error('Failed to fetch contacts');
     }
 
-    return response.json();
+    return response.json() as Promise<{ data: Contact[]; lastDoc: unknown; hasMore: boolean }>;
   }, [orgId]);
 
   const {
@@ -67,13 +67,15 @@ export default function ContactsPage() {
   } = usePagination<Contact>({ fetchFn: fetchContacts });
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const getContactName = (contact: Contact) => {
-    if (contact.name) return contact.name;
-    if (contact.firstName || contact.lastName) {
-      return `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+    if (contact.name) {
+      return contact.name;
+    }
+    if (contact.firstName ?? contact.lastName) {
+      return `${contact.firstName ?? ''} ${contact.lastName ?? ''}`.trim();
     }
     return 'Unknown';
   };
@@ -85,9 +87,9 @@ export default function ContactsPage() {
 
   const filteredContacts = contacts.filter(c =>
     !searchQuery ||
-    (getContactName(c).toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (c.email?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (c.company?.toLowerCase().includes(searchQuery.toLowerCase()))
+    getContactName(c).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+    (c.company?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
 
   return (
@@ -212,10 +214,10 @@ export default function ContactsPage() {
                   <p className="text-sm text-gray-400 mb-1">{contact.title}</p>
                 )}
 
-                {(contact.company || contact.companyName) && (
+                {(contact.company ?? contact.companyName) && (
                   <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
                     <Building className="w-4 h-4 text-gray-500" />
-                    <span>{contact.company || contact.companyName}</span>
+                    <span>{contact.company ?? contact.companyName}</span>
                   </div>
                 )}
 
@@ -254,7 +256,7 @@ export default function ContactsPage() {
           {(hasMore || loading) && (
             <div className="mt-6 flex justify-center">
               <button
-                onClick={loadMore}
+                onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >

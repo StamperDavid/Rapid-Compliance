@@ -8,7 +8,6 @@ import {
   Users,
   Plus,
   Search,
-  Filter,
   Eye,
   Flame,
   Sun,
@@ -47,7 +46,7 @@ export default function LeadsPage() {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchLeads = useCallback(async (lastDoc?: any) => {
+  const fetchLeads = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
       workspaceId: 'default',
       pageSize: '50',
@@ -58,7 +57,7 @@ export default function LeadsPage() {
     }
 
     if (lastDoc) {
-      searchParams.set('lastDoc', lastDoc);
+      searchParams.set('lastDoc', String(lastDoc));
     }
 
     const response = await fetch(`/api/workspace/${orgId}/leads?${searchParams}`);
@@ -67,7 +66,7 @@ export default function LeadsPage() {
       throw new Error('Failed to fetch leads');
     }
 
-    return response.json();
+    return response.json() as Promise<{ data: Lead[]; lastDoc: unknown; hasMore: boolean }>;
   }, [orgId, filter]);
 
   const {
@@ -80,19 +79,21 @@ export default function LeadsPage() {
   } = usePagination<Lead>({ fetchFn: fetchLeads });
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [filter, refresh]);
 
   const getLeadName = (lead: Lead) => {
-    if (lead.name) return lead.name;
-    if (lead.firstName || lead.lastName) {
-      return `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
+    if (lead.name) {
+      return lead.name;
+    }
+    if (lead.firstName ?? lead.lastName) {
+      return `${lead.firstName ?? ''} ${lead.lastName ?? ''}`.trim();
     }
     return 'Unknown';
   };
 
   const getLeadCompany = (lead: Lead) => {
-    return lead.company || lead.companyName || '-';
+    return lead.company ?? lead.companyName ?? '-';
   };
 
   const getTierBadge = (score: number) => {
@@ -151,11 +152,13 @@ export default function LeadsPage() {
 
   // Filter leads by search query
   const filteredLeads = leads.filter(lead => {
-    if (!searchQuery) return true;
+    if (!searchQuery) {
+      return true;
+    }
     const query = searchQuery.toLowerCase();
     const name = getLeadName(lead).toLowerCase();
     const company = getLeadCompany(lead).toLowerCase();
-    const email = (lead.email || '').toLowerCase();
+    const email = (lead.email ?? '').toLowerCase();
     return name.includes(query) || company.includes(query) || email.includes(query);
   });
 
@@ -291,11 +294,11 @@ export default function LeadsPage() {
                       <span className="font-medium text-white">{getLeadName(lead)}</span>
                     </td>
                     <td className="p-4 text-gray-400">{getLeadCompany(lead)}</td>
-                    <td className="p-4 text-gray-400">{lead.email || '-'}</td>
-                    <td className="p-4 text-gray-400">{lead.phone || '-'}</td>
+                    <td className="p-4 text-gray-400">{lead.email ?? '-'}</td>
+                    <td className="p-4 text-gray-400">{lead.phone ?? '-'}</td>
                     <td className="p-4">{getTierBadge(lead.score ?? 50)}</td>
                     <td className="p-4">{getScoreBadge(lead.score ?? 50)}</td>
-                    <td className="p-4">{getStatusBadge(lead.status || 'new')}</td>
+                    <td className="p-4">{getStatusBadge(lead.status ?? 'new')}</td>
                     <td className="p-4">
                       <button
                         onClick={() => router.push(`/workspace/${orgId}/leads/${lead.id}`)}
@@ -316,7 +319,7 @@ export default function LeadsPage() {
         {(hasMore || loading) && (
           <div className="p-4 border-t border-white/10 flex justify-center">
             <button
-              onClick={loadMore}
+              onClick={() => void loadMore()}
               disabled={loading || !hasMore}
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >

@@ -1,10 +1,10 @@
 /**
  * Reusable Pagination Hook
- * Handles cursor-based pagination for Firestore collections
+ * Handles cursor-based pagination for Firestore collections and API endpoints
+ * Generic cursor type (C) allows for both QueryDocumentSnapshot and string cursors
  */
 
 import { useState, useCallback } from 'react';
-import type { QueryDocumentSnapshot } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 
 export interface PaginationState<T> {
@@ -16,24 +16,24 @@ export interface PaginationState<T> {
   refresh: () => Promise<void>;
 }
 
-interface UsePaginationOptions<T> {
-  fetchFn: (lastDoc?: QueryDocumentSnapshot) => Promise<{
+interface UsePaginationOptions<T, C = unknown> {
+  fetchFn: (lastDoc?: C) => Promise<{
     data: T[];
-    lastDoc: QueryDocumentSnapshot | null;
+    lastDoc: C | null;
     hasMore: boolean;
   }>;
   pageSize?: number;
 }
 
-export function usePagination<T>({
+export function usePagination<T, C = unknown>({
   fetchFn,
-  pageSize = 50,
-}: UsePaginationOptions<T>): PaginationState<T> {
+  pageSize: _pageSize = 50,
+}: UsePaginationOptions<T, C>): PaginationState<T> {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [lastDoc, setLastDoc] = useState<C | null>(null);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) {return;}
@@ -42,13 +42,14 @@ export function usePagination<T>({
       setLoading(true);
       setError(null);
 
-      const result = await fetchFn(lastDoc ?? undefined);
+      const result = await fetchFn(lastDoc as C | undefined);
 
       setData(prev => [...prev, ...result.data]);
       setLastDoc(result.lastDoc);
       setHasMore(result.hasMore);
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to load data');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
+      setError(errorMessage);
       logger.error('Pagination error:', err, { file: 'usePagination.ts' });
     } finally {
       setLoading(false);
@@ -68,8 +69,9 @@ export function usePagination<T>({
       setData(result.data);
       setLastDoc(result.lastDoc);
       setHasMore(result.hasMore);
-    } catch (err: any) {
-      setError((err.message !== '' && err.message != null) ? err.message : 'Failed to refresh data');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh data';
+      setError(errorMessage);
       logger.error('Refresh error:', err, { file: 'usePagination.ts' });
     } finally {
       setLoading(false);

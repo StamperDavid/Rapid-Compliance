@@ -15,8 +15,42 @@ import {
   TrendingDown,
   Activity
 } from 'lucide-react';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
+
+// Analytics data types
+interface RevenueAnalytics {
+  totalRevenue: number;
+  growth: number;
+}
+
+interface PipelineAnalytics {
+  totalValue: number;
+  dealsCount: number;
+  winRate: number;
+  avgDealSize: number;
+}
+
+interface EcommerceAnalytics {
+  totalOrders: number;
+  totalRevenue: number;
+}
+
+interface WorkflowsAnalytics {
+  totalRuns: number;
+  successRate: number;
+}
+
+interface AnalyticsData {
+  revenue: RevenueAnalytics | null;
+  pipeline: PipelineAnalytics | null;
+  ecommerce: EcommerceAnalytics | null;
+  workflows: WorkflowsAnalytics | null;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  analytics: T;
+}
 
 const container = {
   hidden: { opacity: 0 },
@@ -36,39 +70,38 @@ const item = {
 export default function AnalyticsDashboard() {
   const params = useParams();
   const orgId = params.orgId as string;
-  const { theme } = useOrgTheme();
 
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
 
   useEffect(() => {
-    loadAnalytics();
-  }, [selectedPeriod]);
+    const loadAnalytics = async () => {
+      setLoading(true);
+      try {
+        // Load all analytics in parallel
+        const [revenue, pipeline, ecommerce, workflows] = await Promise.all([
+          fetch(`/api/analytics/revenue?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<RevenueAnalytics>>,
+          fetch(`/api/analytics/pipeline?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<PipelineAnalytics>>,
+          fetch(`/api/analytics/ecommerce?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<EcommerceAnalytics>>,
+          fetch(`/api/analytics/workflows?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<WorkflowsAnalytics>>,
+        ]);
 
-  const loadAnalytics = async () => {
-    setLoading(true);
-    try {
-      // Load all analytics in parallel
-      const [revenue, pipeline, ecommerce, workflows] = await Promise.all([
-        fetch(`/api/analytics/revenue?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()),
-        fetch(`/api/analytics/pipeline?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()),
-        fetch(`/api/analytics/ecommerce?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()),
-        fetch(`/api/analytics/workflows?orgId=${orgId}&period=${selectedPeriod}`).then(r => r.json()),
-      ]);
+        setAnalytics({
+          revenue: revenue.success ? revenue.analytics : null,
+          pipeline: pipeline.success ? pipeline.analytics : null,
+          ecommerce: ecommerce.success ? ecommerce.analytics : null,
+          workflows: workflows.success ? workflows.analytics : null,
+        });
+      } catch (error) {
+        logger.error('Failed to load analytics:', error, { file: 'page.tsx' });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setAnalytics({
-        revenue: revenue.success ? revenue.analytics : null,
-        pipeline: pipeline.success ? pipeline.analytics : null,
-        ecommerce: ecommerce.success ? ecommerce.analytics : null,
-        workflows: workflows.success ? workflows.analytics : null,
-      });
-    } catch (error) {
-      logger.error('Failed to load analytics:', error, { file: 'page.tsx' });
-    } finally {
-      setLoading(false);
-    }
-  };
+    void loadAnalytics();
+  }, [orgId, selectedPeriod]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -103,7 +136,7 @@ export default function AnalyticsDashboard() {
       label: 'Total Revenue',
       value: analytics?.revenue?.totalRevenue ? formatCurrency(analytics.revenue.totalRevenue) : '$0',
       change: analytics?.revenue?.growth ? `+${formatPercent(analytics.revenue.growth)} vs previous period` : 'No data',
-      positive: analytics?.revenue?.growth > 0,
+      positive: (analytics?.revenue?.growth ?? 0) > 0,
       icon: DollarSign,
     },
     {

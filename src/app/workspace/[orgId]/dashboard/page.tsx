@@ -5,9 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
 
 interface DashboardStats {
   totalLeads: number;
@@ -42,10 +41,39 @@ interface Task {
   completed: boolean;
 }
 
+interface FirestoreTimestamp {
+  seconds: number;
+  nanoseconds: number;
+}
+
+interface DealData {
+  stage?: string;
+  status?: string;
+  value?: number;
+  amount?: number;
+  name?: string;
+  createdAt?: FirestoreTimestamp;
+}
+
+interface LeadData {
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  createdAt?: FirestoreTimestamp;
+}
+
+interface TaskData {
+  title?: string;
+  name?: string;
+  priority?: string;
+  dueDate?: FirestoreTimestamp;
+  completed?: boolean;
+}
+
 export default function WorkspaceDashboardPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  const { user } = useAuth();
   const { theme } = useOrgTheme();
   
   const [stats, setStats] = useState<DashboardStats>({
@@ -92,7 +120,7 @@ export default function WorkspaceDashboardPage() {
         const stageMap: Record<string, { count: number; value: number }> = {};
 
         dealsSnapshot.forEach((doc) => {
-          const data = doc.data();
+          const data = doc.data() as DealData;
           const stage = (data.stage !== '' && data.stage != null) ? data.stage : ((data.status !== '' && data.status != null) ? data.status : 'Unknown');
           const value = Number(data.value) || Number(data.amount) || 0;
 
@@ -149,7 +177,7 @@ export default function WorkspaceDashboardPage() {
         try {
           const tasksSnapshot = await getDocs(tasksQuery);
           tasksData = tasksSnapshot.docs.map((doc) => {
-            const data = doc.data();
+            const data = doc.data() as TaskData;
             return {
               id: doc.id,
               title: (data.title !== '' && data.title != null) ? data.title : ((data.name !== '' && data.name != null) ? data.name : 'Untitled Task'),
@@ -178,7 +206,7 @@ export default function WorkspaceDashboardPage() {
         try {
           const recentDealsSnapshot = await getDocs(recentDealsQuery);
           recentDealsSnapshot.forEach((doc) => {
-            const data = doc.data();
+            const data = doc.data() as DealData;
             const createdAt = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : new Date();
             activityData.push({
               id: doc.id,
@@ -204,7 +232,7 @@ export default function WorkspaceDashboardPage() {
         try {
           const recentLeadsSnapshot = await getDocs(recentLeadsQuery);
           recentLeadsSnapshot.forEach((doc) => {
-            const data = doc.data();
+            const data = doc.data() as LeadData;
             const createdAt = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : new Date();
             activityData.push({
               id: doc.id,
@@ -243,7 +271,7 @@ export default function WorkspaceDashboardPage() {
       }
     }
 
-    fetchDashboardData();
+    void fetchDashboardData();
   }, [orgId]);
 
   function getTimeAgo(date: Date): string {
@@ -273,7 +301,7 @@ export default function WorkspaceDashboardPage() {
             <div>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>Dashboard</h1>
               <p style={{ color: '#666', marginTop: '0.5rem', fontSize: '0.875rem' }}>
-                Welcome back! Here's what's happening in your workspace.
+                Welcome back! Here&apos;s what&apos;s happening in your workspace.
               </p>
             </div>
             <Link 
@@ -449,7 +477,7 @@ export default function WorkspaceDashboardPage() {
   );
 }
 
-function StatCard({ label, value, icon, color, subtitle }: { label: string; value: string; icon: string; color: string; subtitle?: string }) {
+function StatCard({ label, value, icon, color: _color, subtitle }: { label: string; value: string; icon: string; color: string; subtitle?: string }) {
   return (
     <div style={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '1rem', padding: '1.5rem', position: 'relative', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
