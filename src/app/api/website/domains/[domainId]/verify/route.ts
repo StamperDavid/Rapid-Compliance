@@ -4,11 +4,33 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { promises as dns } from 'dns';
 import { logger } from '@/lib/logger/logger';
+
+interface DNSRecord {
+  type: string;
+  name: string;
+  value: string;
+  status: string;
+}
+
+interface DomainData {
+  organizationId: string;
+  verificationMethod: string;
+  dnsRecords: DNSRecord[];
+}
+
+interface RequestBody {
+  organizationId?: string;
+}
+
+interface VerificationResult {
+  verified: boolean;
+  records: DNSRecord[];
+  errors: string[];
+}
 
 /**
  * POST /api/website/domains/[domainId]/verify
@@ -24,7 +46,7 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = await request.json();
+    const body = await request.json() as RequestBody;
     const { organizationId } = body;
     const domainId = decodeURIComponent(params.domainId);
 
@@ -50,7 +72,7 @@ export async function POST(
       );
     }
 
-    const domainData = doc.data();
+    const domainData = doc.data() as DomainData | undefined;
 
     // CRITICAL: Verify organizationId matches
     if (domainData?.organizationId !== organizationId) {
@@ -61,11 +83,9 @@ export async function POST(
     }
 
     // Verify DNS records
-    const verification = await verifyDNSRecords(
-      domainId,
-      (() => { const v = domainData?.verificationMethod; return (v !== '' && v != null) ? v : 'cname'; })(),
-      domainData?.dnsRecords ?? []
-    );
+    const verificationMethod = domainData.verificationMethod ?? 'cname';
+    const dnsRecords = domainData.dnsRecords ?? [];
+    const verification = await verifyDNSRecords(domainId, verificationMethod, dnsRecords);
 
     const now = new Date().toISOString();
 
@@ -95,13 +115,13 @@ export async function POST(
 
       // Add domain to Vercel and provision SSL
       const { addVercelDomain, provisionSSL } = await import('@/lib/vercel-domains');
-      
+
       try {
         const addResult = await addVercelDomain(domainId);
         if (addResult.success) {
           // Provision SSL certificate
           const sslResult = await provisionSSL(domainId);
-          
+
           if (sslResult.success) {
             await domainRef.update({
               sslStatus: sslResult.status ?? 'pending',
@@ -139,13 +159,13 @@ export async function POST(
         details: verification.errors,
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Domain verification error', error, {
-      route: '/api/website/domains/[domainId]/verify',
-      domainId: error.domainId
+      route: '/api/website/domains/[domainId]/verify'
     });
     return NextResponse.json(
-      { error: 'Failed to verify domain', details: error.message },
+      { error: 'Failed to verify domain', details: message },
       { status: 500 }
     );
   }
@@ -157,24 +177,22 @@ export async function POST(
 async function verifyDNSRecords(
   domain: string,
   method: string,
-  dnsRecords: any[]
-): Promise<{
-  verified: boolean;
-  records: any[];
-  errors: string[];
-}> {
+  dnsRecords: DNSRecord[]
+): Promise<VerificationResult> {
   const errors: string[] = [];
-  const updatedRecords = [...dnsRecords];
+  const updatedRecords: DNSRecord[] = dnsRecords.map(record => ({ ...record }));
 
   try {
     if (method === 'cname') {
       // Verify CNAME record
       try {
         const records = await dns.resolveCname(domain);
-        const expectedValue =(process.env.VERCEL_URL !== '' && process.env.VERCEL_URL != null) ? process.env.VERCEL_URL : 'cname.vercel-dns.com';
-        
+        const expectedValue = (process.env.VERCEL_URL !== '' && process.env.VERCEL_URL != null) ? process.env.VERCEL_URL : 'cname.vercel-dns.com';
+
         if (records.some(r => r.includes('vercel') || r === expectedValue)) {
-          updatedRecords[0].status = 'verified';
+          if (updatedRecords[0]) {
+            updatedRecords[0].status = 'verified';
+          }
           return {
             verified: true,
             records: updatedRecords,
@@ -183,7 +201,7 @@ async function verifyDNSRecords(
         } else {
           errors.push(`CNAME record found but points to ${records[0]} instead of ${expectedValue}`);
         }
-      } catch (err) {
+      } catch (_err) {
         errors.push('CNAME record not found');
       }
     } else if (method === 'a-record') {
@@ -191,15 +209,19 @@ async function verifyDNSRecords(
       try {
         const records = await dns.resolve4(domain);
         const expectedIP = '76.76.21.21'; // Vercel's IP
-        
+
         if (records.includes(expectedIP)) {
-          updatedRecords[0].status = 'verified';
-          
+          if (updatedRecords[0]) {
+            updatedRecords[0].status = 'verified';
+          }
+
           // Also check www CNAME if present
           try {
             const wwwRecords = await dns.resolveCname(`www.${domain}`);
             if (wwwRecords.some(r => r.includes('vercel'))) {
-              updatedRecords[1].status = 'verified';
+              if (updatedRecords[1]) {
+                updatedRecords[1].status = 'verified';
+              }
             }
           } catch {
             // www CNAME is optional
@@ -213,12 +235,13 @@ async function verifyDNSRecords(
         } else {
           errors.push(`A record found but points to ${records[0]} instead of ${expectedIP}`);
         }
-      } catch (err) {
+      } catch (_err) {
         errors.push('A record not found');
       }
     }
-  } catch (error: any) {
-    errors.push(`DNS lookup failed: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    errors.push(`DNS lookup failed: ${errorMessage}`);
   }
 
   return {
@@ -227,4 +250,3 @@ async function verifyDNSRecords(
     errors,
   };
 }
-

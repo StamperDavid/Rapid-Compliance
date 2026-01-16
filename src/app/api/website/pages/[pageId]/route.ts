@@ -3,12 +3,21 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId on every request
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface PageData {
+  organizationId: string;
+  version?: number;
+}
+
+interface RequestBody {
+  organizationId?: string;
+  page?: Record<string, unknown>;
+}
 
 /**
  * GET /api/website/pages/[pageId]
@@ -22,7 +31,7 @@ export async function GET(
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -34,12 +43,6 @@ export async function GET(
         { status: 400 }
       );
     }
-
-    // User authentication handled by middleware
-    // const user = await verifyAuth(request);
-    // if (!user || user.organizationId !== organizationId) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -55,7 +58,7 @@ export async function GET(
       );
     }
 
-    const pageData = doc.data();
+    const pageData = doc.data() as PageData | undefined;
 
     // CRITICAL: Double-check organizationId matches
     if (pageData?.organizationId !== organizationId) {
@@ -76,13 +79,14 @@ export async function GET(
       success: true,
       page: { id: doc.id, ...pageData },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to fetch page', error, {
       route: '/api/website/pages/[pageId]',
       method: 'GET'
     });
     return NextResponse.json(
-      { error: 'Failed to fetch page', details: error.message },
+      { error: 'Failed to fetch page', details: message },
       { status: 500 }
     );
   }
@@ -100,9 +104,9 @@ export async function PUT(
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const params = await context.params;
-    const body = await request.json();
+    const body = await request.json() as RequestBody;
     const { organizationId, page } = body;
 
     // CRITICAL: Validate organizationId
@@ -112,15 +116,6 @@ export async function PUT(
         { status: 400 }
       );
     }
-
-    // User authentication handled by middleware
-    // const user = await verifyAuth(request);
-    // if (!user || user.organizationId !== organizationId) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
-    // if (!hasPermission(user, 'manage_website')) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -136,7 +131,7 @@ export async function PUT(
       );
     }
 
-    const existingData = existingDoc.data();
+    const existingData = existingDoc.data() as PageData | undefined;
 
     if (!existingData) {
       return NextResponse.json(
@@ -178,13 +173,14 @@ export async function PUT(
       success: true,
       page: updatedData,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to update page', error, {
       route: '/api/website/pages/[pageId]',
       method: 'PUT'
     });
     return NextResponse.json(
-      { error: 'Failed to update page', details: error.message },
+      { error: 'Failed to update page', details: message },
       { status: 500 }
     );
   }
@@ -202,7 +198,7 @@ export async function DELETE(
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -214,15 +210,6 @@ export async function DELETE(
         { status: 400 }
       );
     }
-
-    // User authentication handled by middleware
-    // const user = await verifyAuth(request);
-    // if (!user || user.organizationId !== organizationId) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
-    // if (!hasPermission(user, 'manage_website')) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
 
     const pageRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}',
@@ -238,7 +225,7 @@ export async function DELETE(
       );
     }
 
-    const pageData = doc.data();
+    const pageData = doc.data() as PageData | undefined;
 
     // CRITICAL: Verify organizationId matches
     if (pageData?.organizationId !== organizationId) {
@@ -261,15 +248,15 @@ export async function DELETE(
       success: true,
       message: 'Page deleted successfully',
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to delete page', error, {
       route: '/api/website/pages/[pageId]',
       method: 'DELETE'
     });
     return NextResponse.json(
-      { error: 'Failed to delete page', details: error.message },
+      { error: 'Failed to delete page', details: message },
       { status: 500 }
     );
   }
 }
-

@@ -4,12 +4,31 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse} from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface PageData {
+  organizationId: string;
+  version?: number;
+  lastPublishedVersion?: number;
+  title?: string;
+}
+
+interface VersionData {
+  version?: number;
+  content?: unknown[];
+  seo?: Record<string, unknown>;
+  title?: string;
+  slug?: string;
+}
+
+interface RequestBody {
+  organizationId?: string;
+  versionId?: string;
+}
 
 /**
  * GET /api/website/pages/[pageId]/versions
@@ -23,7 +42,7 @@ export async function GET(
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -51,7 +70,7 @@ export async function GET(
       );
     }
 
-    const pageData = pageDoc.data();
+    const pageData = pageDoc.data() as PageData | undefined;
 
     // CRITICAL: Verify organizationId matches
     if (pageData?.organizationId !== organizationId) {
@@ -63,8 +82,12 @@ export async function GET(
 
     // Get all versions (using environment-aware subcollection path)
     const { adminDb } = await import('@/lib/firebase/admin');
+    if (!adminDb) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
+
     const versionsPath = adminDal.getSubColPath('versions');
-    const versionsRef = adminDb!.collection(pageRef.path).doc(params.pageId).collection(versionsPath);
+    const versionsRef = adminDb.collection(pageRef.path).doc(params.pageId).collection(versionsPath);
     const snapshot = await versionsRef.orderBy('version', 'desc').get();
 
     const versions = snapshot.docs.map(doc => ({
@@ -78,13 +101,14 @@ export async function GET(
       currentVersion: pageData.version,
       lastPublishedVersion: pageData.lastPublishedVersion,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to fetch page versions', error, {
       route: '/api/website/pages/[pageId]/versions',
       method: 'GET'
     });
     return NextResponse.json(
-      { error: 'Failed to fetch versions', details: error.message },
+      { error: 'Failed to fetch versions', details: message },
       { status: 500 }
     );
   }
@@ -102,9 +126,9 @@ export async function POST(
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const params = await context.params;
-    const body = await request.json();
+    const body = await request.json() as RequestBody;
     const { organizationId, versionId } = body;
 
     // CRITICAL: Validate organizationId
@@ -136,7 +160,7 @@ export async function POST(
       );
     }
 
-    const pageData = pageDoc.data();
+    const pageData = pageDoc.data() as PageData | undefined;
 
     if (!pageData) {
       return NextResponse.json(
@@ -155,8 +179,12 @@ export async function POST(
 
     // Get the version to restore (using environment-aware subcollection path)
     const { adminDb: db } = await import('@/lib/firebase/admin');
+    if (!db) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
+
     const versionsPath = adminDal.getSubColPath('versions');
-    const versionDoc = await db!.collection(pageRef.path).doc(params.pageId).collection(versionsPath).doc(versionId).get();
+    const versionDoc = await db.collection(pageRef.path).doc(params.pageId).collection(versionsPath).doc(versionId).get();
 
     if (!versionDoc.exists) {
       return NextResponse.json(
@@ -165,7 +193,7 @@ export async function POST(
       );
     }
 
-    const versionData = versionDoc.data();
+    const versionData = versionDoc.data() as VersionData | undefined;
     const now = FieldValue.serverTimestamp();
     const performedBy = await getUserIdentifier();
 
@@ -201,15 +229,15 @@ export async function POST(
       success: true,
       message: `Version ${versionData?.version} restored successfully`,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to restore page version', error, {
       route: '/api/website/pages/[pageId]/versions',
       method: 'POST'
     });
     return NextResponse.json(
-      { error: 'Failed to restore version', details: error.message },
+      { error: 'Failed to restore version', details: message },
       { status: 500 }
     );
   }
 }
-

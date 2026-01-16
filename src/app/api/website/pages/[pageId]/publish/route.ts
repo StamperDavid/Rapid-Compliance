@@ -4,7 +4,7 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId
  */
 
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import {
@@ -15,6 +15,31 @@ import {
   errorResponse,
 } from '@/lib/api-error-handler';
 import { getUserIdentifier } from '@/lib/server-auth';
+
+interface PageData {
+  organizationId?: string;
+  content?: unknown[];
+  seo?: Record<string, unknown>;
+  title?: string;
+  slug?: string;
+  status?: string;
+  version?: number;
+}
+
+interface RequestBody {
+  organizationId?: string;
+  scheduledFor?: string;
+}
+
+interface UpdateData {
+  status: string;
+  updatedAt: FieldValue;
+  lastEditedBy: string;
+  lastPublishedVersion: number;
+  publishedAt?: string;
+  scheduledFor?: string | FieldValue;
+  [key: string]: string | number | FieldValue | undefined;
+}
 
 /**
  * POST /api/website/pages/[pageId]/publish
@@ -28,9 +53,9 @@ export async function POST(
     if (!adminDal) {
       return errorResponse('Server configuration error', 500, 'SERVER_ERROR');
     }
-    
+
     const params = await context.params;
-    const body = await request.json();
+    const body = await request.json() as RequestBody;
     const { organizationId, scheduledFor } = body;
 
     // CRITICAL: Validate organizationId
@@ -47,7 +72,7 @@ export async function POST(
       return errorResponse('Page not found', 404, 'PAGE_NOT_FOUND');
     }
 
-    const pageData = doc.data();
+    const pageData = doc.data() as PageData | undefined;
 
     if (!pageData) {
       return errorResponse('Page data not found', 404, 'PAGE_DATA_NOT_FOUND');
@@ -65,7 +90,7 @@ export async function POST(
     // Create version snapshot before publishing
     const versionRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/pages/items/{pageId}/versions/{version}',
-      { orgId: organizationId, pageId: params.pageId, version: `v${currentVersion}` }
+      { orgId: validOrgId, pageId: params.pageId, version: `v${currentVersion}` }
     );
 
     await versionRef.set({
@@ -80,7 +105,8 @@ export async function POST(
     });
 
     // Update page status
-    const updateData: any = {
+    const updateData: UpdateData = {
+      status: 'draft',
       updatedAt: now,
       lastEditedBy: performedBy,
       lastPublishedVersion: currentVersion,
@@ -128,7 +154,7 @@ export async function POST(
       {
         status: updateData.status,
         publishedAt: updateData.publishedAt,
-        scheduledFor: updateData.scheduledFor,
+        scheduledFor: typeof updateData.scheduledFor === 'string' ? updateData.scheduledFor : undefined,
         version: currentVersion,
       },
       scheduledFor
@@ -136,7 +162,7 @@ export async function POST(
         : 'Page published successfully',
       200
     );
-  } catch (error: any) {
+  } catch (error) {
     return handleAPIError(error, 'Page Publish API');
   }
 }
@@ -153,7 +179,7 @@ export async function DELETE(
     if (!adminDal) {
       return errorResponse('Server configuration error', 500, 'SERVER_ERROR');
     }
-    
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -172,7 +198,7 @@ export async function DELETE(
       return errorResponse('Page not found', 404, 'PAGE_NOT_FOUND');
     }
 
-    const pageData = doc.data();
+    const pageData = doc.data() as PageData | undefined;
 
     if (!pageData) {
       return errorResponse('Page data not found', 404, 'PAGE_DATA_NOT_FOUND');
@@ -210,8 +236,7 @@ export async function DELETE(
     });
 
     return successResponse({}, 'Page unpublished successfully', 200);
-  } catch (error: any) {
+  } catch (error) {
     return handleAPIError(error, 'Page Unpublish API');
   }
 }
-

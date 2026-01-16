@@ -4,11 +4,35 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
+
+interface DomainData {
+  organizationId: string;
+  verified: boolean;
+  verificationMethod: 'cname' | 'a-record';
+  verificationValue: string;
+  dnsRecords: DNSRecord[];
+  sslEnabled: boolean;
+  sslStatus: 'pending' | 'active' | 'failed';
+  status: 'pending' | 'active';
+  createdAt: FieldValue;
+  lastCheckedAt: FieldValue;
+}
+
+interface DNSRecord {
+  type: string;
+  name: string;
+  value: string;
+  status: string;
+}
+
+interface RequestBody {
+  organizationId?: string;
+  domain?: string;
+}
 
 /**
  * GET /api/website/domains
@@ -19,7 +43,7 @@ export async function GET(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
 
@@ -38,8 +62,8 @@ export async function GET(request: NextRequest) {
     const snapshot = await domainsRef.get();
 
     const domains = snapshot.docs.map(doc => {
-      const data = doc.data();
-      
+      const data = doc.data() as DomainData;
+
       // CRITICAL: Verify organizationId matches
       if (data.organizationId !== organizationId) {
         logger.error('[SECURITY] Domain organizationId mismatch!', new Error('Organization mismatch'), {
@@ -61,10 +85,11 @@ export async function GET(request: NextRequest) {
       success: true,
       domains,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Domains API] GET error', error, { route: '/api/website/domains' });
     return NextResponse.json(
-      { error: 'Failed to fetch domains', details: error.message },
+      { error: 'Failed to fetch domains', details: message },
       { status: 500 }
     );
   }
@@ -79,8 +104,8 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
+
+    const body = await request.json() as RequestBody;
     const { organizationId, domain } = body;
 
     // CRITICAL: Validate organizationId
@@ -123,20 +148,20 @@ export async function POST(request: NextRequest) {
 
     // Determine verification method based on domain
     const isApex = !domain.includes('www.');
-    const verificationMethod = isApex ? 'a-record' : 'cname';
+    const verificationMethod: 'cname' | 'a-record' = isApex ? 'a-record' : 'cname';
 
     // Generate DNS records
     const dnsRecords = generateDNSRecords(domain, verificationMethod);
 
-    const domainData = {
+    const domainData: DomainData = {
       organizationId, // CRITICAL: Set ownership
       verified: false,
       verificationMethod,
       verificationValue: generateVerificationToken(),
       dnsRecords,
       sslEnabled: false,
-      sslStatus: 'pending' as const,
-      status: 'pending' as const,
+      sslStatus: 'pending',
+      status: 'pending',
       createdAt: FieldValue.serverTimestamp(),
       lastCheckedAt: FieldValue.serverTimestamp(),
     };
@@ -163,10 +188,11 @@ export async function POST(request: NextRequest) {
         ...domainData,
       },
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Domains API] POST error', error, { route: '/api/website/domains' });
     return NextResponse.json(
-      { error: 'Failed to add domain', details: error.message },
+      { error: 'Failed to add domain', details: message },
       { status: 500 }
     );
   }
@@ -175,13 +201,8 @@ export async function POST(request: NextRequest) {
 /**
  * Generate DNS records for domain verification
  */
-function generateDNSRecords(domain: string, method: 'cname' | 'a-record'): Array<{
-  type: string;
-  name: string;
-  value: string;
-  status: string;
-}> {
-  const vercelDomain =(process.env.VERCEL_URL !== '' && process.env.VERCEL_URL != null) ? process.env.VERCEL_URL : 'cname.vercel-dns.com';
+function generateDNSRecords(domain: string, method: 'cname' | 'a-record'): DNSRecord[] {
+  const vercelDomain = (process.env.VERCEL_URL !== '' && process.env.VERCEL_URL != null) ? process.env.VERCEL_URL : 'cname.vercel-dns.com';
   const vercelIP = '76.76.21.21'; // Vercel's IP address
 
   if (method === 'cname') {
@@ -218,4 +239,3 @@ function generateDNSRecords(domain: string, method: 'cname' | 'a-record'): Array
 function generateVerificationToken(): string {
   return `verify-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 }
-

@@ -4,10 +4,19 @@
  * Used by middleware for routing
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+
+interface GlobalDomainData {
+  organizationId: string;
+}
+
+interface DomainData {
+  organizationId: string;
+  verified: boolean;
+  sslEnabled: boolean;
+}
 
 /**
  * GET /api/website/domain/[domain]
@@ -36,7 +45,7 @@ export async function GET(
       );
     }
 
-    const globalData = globalDomainDoc.data();
+    const globalData = globalDomainDoc.data() as GlobalDomainData | undefined;
     const organizationId = globalData?.organizationId;
 
     if (!organizationId) {
@@ -61,7 +70,7 @@ export async function GET(
       );
     }
 
-    const domainData = domainDoc.data();
+    const domainData = domainDoc.data() as DomainData | undefined;
 
     // Only return if domain is verified
     if (!domainData?.verified) {
@@ -71,25 +80,29 @@ export async function GET(
       );
     }
 
+    const verified: boolean = domainData.verified;
+    const sslEnabled: boolean = domainData.sslEnabled;
+
     return NextResponse.json({
       success: true,
       organizationId,
       domain,
-      verified: domainData.verified,
-      sslEnabled: domainData.sslEnabled,
+      verified,
+      sslEnabled,
     }, {
       headers: {
         // Cache this response at the edge for 1 minute
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
       },
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Domain lookup error', error, {
       route: '/api/website/domain/[domain]',
       method: 'GET'
     });
     return NextResponse.json(
-      { error: 'Failed to lookup domain', details: error.message },
+      { error: 'Failed to lookup domain', details: message },
       { status: 500 }
     );
   }

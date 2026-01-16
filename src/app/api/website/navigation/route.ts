@@ -4,11 +4,15 @@
  * CRITICAL: Multi-tenant - scoped to organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { Navigation } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+
+interface RequestBody {
+  organizationId?: string;
+  navigation?: Partial<Navigation>;
+}
 
 /**
  * GET /api/website/navigation
@@ -19,7 +23,7 @@ export async function GET(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
 
@@ -78,8 +82,8 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
+
+    const body = await request.json() as RequestBody;
     const { organizationId, navigation } = body;
 
     // CRITICAL: Validate organizationId
@@ -104,7 +108,7 @@ export async function POST(request: NextRequest) {
       id: 'navigation',
       organizationId, // CRITICAL: Set org ownership
       updatedAt: new Date().toISOString(),
-    };
+    } as Navigation;
 
     // Save to Firestore
     const navRef = adminDal.getNestedDocRef(
@@ -126,5 +130,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

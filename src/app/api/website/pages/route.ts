@@ -3,12 +3,44 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId on every request
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface PageSEO {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+}
+
+interface PageData {
+  id: string;
+  organizationId: string;
+  title: string;
+  slug: string;
+  status: string;
+  content: unknown[];
+  seo: PageSEO;
+  version: number;
+  createdAt: FieldValue;
+  updatedAt: FieldValue;
+  createdBy: string;
+  lastEditedBy: string;
+}
+
+interface RequestBody {
+  organizationId?: string;
+  page?: {
+    id?: string;
+    title?: string;
+    slug?: string;
+    status?: string;
+    content?: unknown[];
+    seo?: PageSEO;
+  };
+}
 
 /**
  * GET /api/website/pages
@@ -19,7 +51,7 @@ export async function GET(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
     const status = searchParams.get('status'); // Filter by status
@@ -31,12 +63,6 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // User authentication handled by middleware
-    // const user = await verifyAuth(request);
-    // if (!user || user.organizationId !== organizationId) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
 
     const pagesRef = adminDal.getNestedCollection(
       'organizations/{orgId}/website/pages/items',
@@ -65,10 +91,11 @@ export async function GET(request: NextRequest) {
       success: true,
       pages,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Website Pages API] GET error', error, { route: '/api/website/pages' });
     return NextResponse.json(
-      { error: 'Failed to fetch pages', details: error.message },
+      { error: 'Failed to fetch pages', details: message },
       { status: 500 }
     );
   }
@@ -83,8 +110,8 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
+
+    const body = await request.json() as RequestBody;
     const { organizationId, page } = body;
 
     // CRITICAL: Validate organizationId
@@ -110,24 +137,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // User authentication handled by middleware
-    // const user = await verifyAuth(request);
-    // if (!user || user.organizationId !== organizationId) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
-    // if (!hasPermission(user, 'manage_website')) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
-
     const performedBy = await getUserIdentifier();
-    const pageId =(page.id !== '' && page.id != null) ? page.id : `page_${Date.now()}`;
+    const pageId = (page.id !== '' && page.id != null) ? page.id : `page_${Date.now()}`;
 
     // CRITICAL: Force organizationId to match the authenticated org
-    const pageData = {
+    const pageData: PageData = {
       ...page,
       id: pageId,
+      title: page.title,
+      slug: page.slug,
       organizationId, // ← Force correct organizationId
-      status:(page.status !== '' && page.status != null) ? page.status : 'draft',
+      status: (page.status !== '' && page.status != null) ? page.status : 'draft',
       content: page.content ?? [],
       seo: page.seo ?? {},
       version: 1,
@@ -161,12 +181,12 @@ export async function POST(request: NextRequest) {
       success: true,
       page: pageData,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Website Pages API] POST error', error, { route: '/api/website/pages' });
     return NextResponse.json(
-      { error: 'Failed to create page', details: error.message },
+      { error: 'Failed to create page', details: message },
       { status: 500 }
     );
   }
 }
-

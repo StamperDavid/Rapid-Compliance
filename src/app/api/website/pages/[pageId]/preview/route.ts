@@ -4,12 +4,25 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+
+interface PageData {
+  organizationId: string;
+}
+
+interface TokenData {
+  pageId: string;
+  expiresAt: string;
+}
+
+interface RequestBody {
+  organizationId?: string;
+  expiresIn?: number;
+}
 
 /**
  * POST /api/website/pages/[pageId]/preview
@@ -23,9 +36,9 @@ export async function POST(
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const params = await context.params;
-    const body = await request.json();
+    const body = await request.json() as RequestBody;
     const { organizationId, expiresIn } = body; // expiresIn in hours, default 24
 
     // CRITICAL: Validate organizationId
@@ -50,7 +63,7 @@ export async function POST(
       );
     }
 
-    const pageData = doc.data();
+    const pageData = doc.data() as PageData | undefined;
 
     // CRITICAL: Verify organizationId matches
     if (pageData?.organizationId !== organizationId) {
@@ -68,7 +81,7 @@ export async function POST(
 
     // Store preview token
     const createdBy = await getUserIdentifier();
-    
+
     const previewRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/preview-tokens/tokens/{token}',
       { orgId: organizationId, token: previewToken }
@@ -83,7 +96,7 @@ export async function POST(
     });
 
     // Generate preview URL
-    const baseUrl =(process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000';
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000';
     const previewUrl = `${baseUrl}/preview/${previewToken}`;
 
     return NextResponse.json({
@@ -92,13 +105,14 @@ export async function POST(
       previewUrl,
       expiresAt: expiresAt.toISOString(),
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to generate page preview', error, {
       route: '/api/website/pages/[pageId]/preview',
       method: 'POST'
     });
     return NextResponse.json(
-      { error: 'Failed to generate preview', details: error.message },
+      { error: 'Failed to generate preview', details: message },
       { status: 500 }
     );
   }
@@ -116,7 +130,7 @@ export async function GET(
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
+
     const params = await context.params;
     const { searchParams } = request.nextUrl;
     const organizationId = searchParams.get('organizationId');
@@ -152,7 +166,7 @@ export async function GET(
       );
     }
 
-    const tokenData = tokenDoc.data();
+    const tokenData = tokenDoc.data() as TokenData | undefined;
 
     // Check if token matches the page
     if (tokenData?.pageId !== params.pageId) {
@@ -163,7 +177,8 @@ export async function GET(
     }
 
     // Check if token is expired
-    const expiresAt = new Date(tokenData.expiresAt);
+    const expiresAtStr = tokenData.expiresAt;
+    const expiresAt = new Date(expiresAtStr);
     if (expiresAt < new Date()) {
       return NextResponse.json(
         { error: 'Preview token has expired' },
@@ -186,7 +201,7 @@ export async function GET(
       );
     }
 
-    const pageData = doc.data();
+    const pageData = doc.data() as PageData | undefined;
 
     // CRITICAL: Verify organizationId matches
     if (pageData?.organizationId !== organizationId) {
@@ -204,15 +219,15 @@ export async function GET(
       },
       isPreview: true,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to fetch page preview', error, {
       route: '/api/website/pages/[pageId]/preview',
       method: 'GET'
     });
     return NextResponse.json(
-      { error: 'Failed to fetch preview', details: error.message },
+      { error: 'Failed to fetch preview', details: message },
       { status: 500 }
     );
   }
 }
-
