@@ -9,8 +9,7 @@
 
 import type { OnboardingData, BaseModel, KnowledgeBase, AgentPersona } from '@/types/agent-memory';
 import { buildPersonaFromOnboarding } from './persona-builder';
-import type { KnowledgeProcessorOptions } from './knowledge-processor';
-import { processKnowledgeBase } from './knowledge-processor';
+import { processKnowledgeBase, type KnowledgeProcessorOptions } from './knowledge-processor';
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
@@ -47,13 +46,21 @@ export async function processOnboarding(
     const persona = buildPersonaFromOnboarding(onboardingData);
     
     // Step 2: Process knowledge base
+    // Type assertion for optional extended fields that may exist on OnboardingData
+    interface ExtendedOnboardingFields {
+      uploadedDocs?: File[];
+      urls?: string[];
+      faqs?: string; // Manual FAQ text as string
+    }
+    const extendedData = onboardingData as OnboardingData & Partial<ExtendedOnboardingFields>;
+
     const knowledgeOptions: KnowledgeProcessorOptions = {
       organizationId,
-      uploadedFiles: (onboardingData as any).uploadedDocs ?? [],
-      urls: (onboardingData as any).urls ?? [],
+      uploadedFiles: extendedData.uploadedDocs ?? [],
+      urls: extendedData.urls ?? [],
       faqPageUrl: onboardingData.faqPageUrl, // Now properly typed
       socialMediaUrls: onboardingData.socialMediaUrls ?? [], // Now properly typed
-      faqs: (onboardingData as any).faqs,
+      faqs: extendedData.faqs,
       websiteUrl: onboardingData.website,
     };
 
@@ -102,7 +109,7 @@ export async function processOnboarding(
     try {
       const { indexKnowledgeBase } = await import('@/lib/agent/vector-search');
       await indexKnowledgeBase(organizationId);
-    } catch (error) {
+    } catch (_error) {
       // Continue even if indexing fails - not critical for onboarding
     }
     
@@ -115,13 +122,29 @@ export async function processOnboarding(
       knowledgeBase,
       baseModel, // Changed from goldenMaster
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Onboarding Processor] Error:', error, { file: 'onboarding-processor.ts' });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to process onboarding';
     return {
       success: false,
-      error: (error.message !== '' && error.message != null) ? error.message : 'Failed to process onboarding',
+      error: errorMessage,
     };
   }
+}
+
+/** Base model status type for processing */
+type BaseModelStatus = 'draft' | 'training' | 'ready_for_golden_master';
+
+/** Base model record structure */
+interface BaseModelRecord {
+  createdAt: string;
+  status?: BaseModelStatus;
+}
+
+/** Golden master record structure */
+interface GoldenMasterRecord {
+  isActive?: boolean;
+  version?: string;
 }
 
 /**
@@ -132,49 +155,59 @@ export async function getProcessingStatus(organizationId: string): Promise<{
   hasPersona: boolean;
   hasKnowledgeBase: boolean;
   hasBaseModel: boolean;
-  baseModelStatus?: 'draft' | 'training' | 'ready_for_golden_master';
+  baseModelStatus?: BaseModelStatus;
   hasGoldenMaster: boolean;
   goldenMasterVersion?: string;
 }> {
   try {
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-    
-    const persona = await AdminFirestoreService.get(
+
+    const personaResult: unknown = await AdminFirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/agentPersona`,
       'current'
     );
-    
-    const knowledgeBase = await AdminFirestoreService.get(
+
+    const knowledgeBaseResult: unknown = await AdminFirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/knowledgeBase`,
       'current'
     );
-    
+
     // Check for Base Model
-    const baseModels = await AdminFirestoreService.getAll(
+    const baseModelsResult: unknown = await AdminFirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.BASE_MODELS}`
     );
-    
+
+    // Type guard for base models array
+    const baseModels: BaseModelRecord[] = Array.isArray(baseModelsResult)
+      ? (baseModelsResult as BaseModelRecord[])
+      : [];
+
     // Sort and get latest base model
-    const sortedBaseModels = baseModels.sort((a: any, b: any) => 
+    const sortedBaseModels = [...baseModels].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-    
+
     // Check for Golden Master
-    const goldenMasters = await AdminFirestoreService.getAll(
+    const goldenMastersResult: unknown = await AdminFirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.GOLDEN_MASTERS}`
     );
-    
-    const activeGoldenMaster = goldenMasters.find((gm: any) => gm.isActive);
-    
+
+    // Type guard for golden masters array
+    const goldenMasters: GoldenMasterRecord[] = Array.isArray(goldenMastersResult)
+      ? (goldenMastersResult as GoldenMasterRecord[])
+      : [];
+
+    const activeGoldenMaster = goldenMasters.find((gm) => gm.isActive);
+
     return {
-      hasPersona: !!persona,
-      hasKnowledgeBase: !!knowledgeBase,
+      hasPersona: personaResult != null,
+      hasKnowledgeBase: knowledgeBaseResult != null,
       hasBaseModel: sortedBaseModels.length > 0,
       baseModelStatus: sortedBaseModels.length > 0 ? sortedBaseModels[0].status : undefined,
-      hasGoldenMaster: !!activeGoldenMaster,
+      hasGoldenMaster: activeGoldenMaster != null,
       goldenMasterVersion: activeGoldenMaster?.version,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       hasPersona: false,
       hasKnowledgeBase: false,

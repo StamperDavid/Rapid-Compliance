@@ -4,8 +4,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import type { KnowledgeProcessorOptions } from './knowledge-processor';
-import { processKnowledgeBase } from './knowledge-processor';
+import { processKnowledgeBase, type KnowledgeProcessorOptions } from './knowledge-processor';
 import { indexKnowledgeBase } from './vector-search';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 

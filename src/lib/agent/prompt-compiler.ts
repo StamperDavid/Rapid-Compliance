@@ -76,9 +76,9 @@ export interface PromptComponents {
  *
  * SECURITY: Prepends tenant isolation header to enforce data boundaries.
  */
-export async function compileSystemPrompt(
+export function compileSystemPrompt(
   components: PromptComponents
-): Promise<string> {
+): string {
   const { businessContext, agentPersona, behaviorConfig, knowledgeBase, tenantContext } = components;
 
   // Extract business context strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)

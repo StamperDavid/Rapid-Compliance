@@ -171,7 +171,7 @@ export class DiscountToolHandler {
    * - can_negotiate=true: Returns all coupons including 'negotiation' codes (can APPLY)
    * - is_internal_admin=true: Overrides all restrictions
    */
-  async handleGetAuthorizedDiscounts(args: {
+  async handleGetAuthorizedDiscounts(_args: {
     context?: string;
   }): Promise<{
     success: boolean;
@@ -229,7 +229,7 @@ export class DiscountToolHandler {
       const result = await CouponService.validateMerchantCoupon(
         args.coupon_code,
         this.organizationId,
-        args.purchase_amount || 0,
+        args.purchase_amount ?? 0,
         args.product_ids,
         undefined,
         true // isAIRequest
@@ -262,7 +262,7 @@ export class DiscountToolHandler {
         return {
           success: false,
           data: result,
-          message: errorMessages[result.error || 'COUPON_NOT_FOUND'] || 'This coupon cannot be applied.',
+          message: errorMessages[result.error ?? 'COUPON_NOT_FOUND'] ?? 'This coupon cannot be applied.',
         };
       }
     } catch (error) {
@@ -325,7 +325,7 @@ export class DiscountToolHandler {
         const validation = await CouponService.validateMerchantCoupon(
           args.coupon_code,
           this.organizationId,
-          args.customer_context?.cart_value || 0,
+          args.customer_context?.cart_value ?? 0,
           undefined,
           args.customer_context?.customer_id,
           true
@@ -363,7 +363,7 @@ export class DiscountToolHandler {
       // For percentage/fixed discounts, check authorization
       const discountPercentage = args.discount_type === 'percentage'
         ? args.value
-        : (args.value / (args.customer_context?.cart_value || 10000)) * 100;
+        : (args.value / (args.customer_context?.cart_value ?? 10000)) * 100;
 
       const requiresApproval = discountPercentage > authorization.require_human_approval_above;
 
@@ -466,8 +466,16 @@ export class DiscountToolHandler {
       '',
     ];
 
-    // Type assertion to access category field
-    type CouponWithCategory = typeof discounts.available_coupons[0] & { category?: CouponCategory };
+    // Access category field from available coupons
+    interface CouponWithCategory {
+      code: string;
+      discount_type: 'percentage' | 'fixed';
+      value: number;
+      max_discount?: number;
+      description?: string;
+      trigger_keywords?: string[];
+      category?: CouponCategory;
+    }
 
     // Separate coupons by category
     const publicCoupons = discounts.available_coupons.filter(

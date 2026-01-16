@@ -10,6 +10,13 @@ import { where } from 'firebase/firestore';
 /**
  * Schema types that are relevant to AI agent knowledge
  */
+/** Golden Master data structure */
+interface GoldenMasterData {
+  id: string;
+  systemPrompt: string;
+  version: number;
+}
+
 const AGENT_RELEVANT_SCHEMAS = [
   'products',
   'services',
@@ -139,10 +146,10 @@ export async function recompileAgentKnowledge(
     
     // Get current Golden Master
     const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/goldenMasters`;
-    const goldenMasters = await FirestoreService.getAll(goldenMastersPath, [
+    const goldenMasters = await FirestoreService.getAll<GoldenMasterData>(goldenMastersPath, [
       where('status', '==', 'active'),
-    ] as any);
-    
+    ]);
+
     if (goldenMasters.length === 0) {
       logger.warn('[AI Agent Refresh] No active Golden Master found', {
         file: 'knowledge-refresh-service.ts',
@@ -151,12 +158,7 @@ export async function recompileAgentKnowledge(
       return;
     }
     
-    interface GoldenMasterData {
-      id: string;
-      systemPrompt: string;
-      version: number;
-    }
-    const goldenMaster = goldenMasters[0] as GoldenMasterData;
+    const goldenMaster = goldenMasters[0];
     
     // Get all schemas for this workspace
     const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
@@ -165,7 +167,7 @@ export async function recompileAgentKnowledge(
     ]);
     
     // Recompile system prompt with updated schema information
-    const updatedSystemPrompt = await compileSystemPromptWithSchemas(
+    const updatedSystemPrompt = compileSystemPromptWithSchemas(
       goldenMaster.systemPrompt,
       schemas,
       organizationId,
@@ -222,12 +224,12 @@ interface SchemaRecord {
 /**
  * Compile system prompt with current schema information
  */
-async function compileSystemPromptWithSchemas(
+function compileSystemPromptWithSchemas(
   basePrompt: string,
   schemas: SchemaRecord[],
-  organizationId: string,
-  workspaceId: string
-): Promise<string> {
+  _organizationId: string,
+  _workspaceId: string
+): string {
   // Build schema documentation
   const schemaDocumentation = schemas
     .filter(schema => isAgentRelevantSchema(schema.name))
