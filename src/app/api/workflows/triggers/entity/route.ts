@@ -1,13 +1,10 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { handleEntityChange } from '@/lib/workflows/triggers/firestore-trigger';
 import { requireOrganization } from '@/lib/auth/api-auth';
-import { z } from 'zod';
-import { validateInput } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { formatValidationErrors } from '@/lib/validation/error-formatter';
 
 const entityChangeSchema = z.object({
   organizationId: z.string(),
@@ -15,7 +12,7 @@ const entityChangeSchema = z.object({
   schemaId: z.string(),
   changeType: z.enum(['created', 'updated', 'deleted']),
   recordId: z.string(),
-  recordData: z.record(z.any()),
+  recordData: z.record(z.unknown()),
 });
 
 /**
@@ -36,14 +33,12 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate input
-    const body = await request.json();
-    const validation = validateInput(entityChangeSchema, body);
+    const body: unknown = await request.json();
+    const validation = entityChangeSchema.safeParse(body);
 
     if (!validation.success) {
-      const validationError = validation as { success: false; errors: any };
-      const errorDetails = formatValidationErrors(validationError);
-      
-      return errors.validation('Validation failed', errorDetails);
+      const errorMessages = validation.error.errors.map(e => e.message).join(', ');
+      return errors.validation('Validation failed', { errors: errorMessages });
     }
 
     const { organizationId, workspaceId, schemaId, changeType, recordId, recordData } = validation.data;
@@ -70,9 +65,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Entity change processed, workflows triggered',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error processing entity change', error, { route: '/api/workflows/triggers/entity' });
-    return errors.internal('Failed to process entity change', error);
+    return errors.internal('Failed to process entity change', error instanceof Error ? error : undefined);
   }
 }
-

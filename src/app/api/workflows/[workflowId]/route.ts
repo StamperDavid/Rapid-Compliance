@@ -1,9 +1,35 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
+import { z } from 'zod';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { getWorkflow, updateWorkflow, deleteWorkflow, setWorkflowStatus } from '@/lib/workflows/workflow-service';
+
+const paramsSchema = z.object({
+  workflowId: z.string().min(1, 'workflowId is required'),
+});
+
+const getQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  workspaceId: z.string().optional().default('default'),
+});
+
+const putBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  workspaceId: z.string().optional().default('default'),
+  workflow: z.record(z.unknown()),
+});
+
+const patchBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  workspaceId: z.string().optional().default('default'),
+  status: z.enum(['active', 'paused']),
+});
+
+const deleteQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  workspaceId: z.string().optional().default('default'),
+});
 
 /**
  * GET /api/workflows/[workflowId]
@@ -11,7 +37,7 @@ import { getWorkflow, updateWorkflow, deleteWorkflow, setWorkflowStatus } from '
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { workflowId: string } }
+  { params }: { params: Promise<{ workflowId: string }> }
 ) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -29,26 +55,36 @@ export async function GET(
     const token = authHeader.split('Bearer ')[1];
     await getAuth(adminApp).verifyIdToken(token);
 
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid workflowId' }, { status: 400 });
+    }
+    const { workflowId } = paramsResult.data;
 
-    if (!organizationId) {
+    const { searchParams } = new URL(request.url);
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId'),
+      workspaceId: searchParams.get('workspaceId') ?? undefined,
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
     }
 
-    const workflow = await getWorkflow(organizationId, params.workflowId, workspaceId);
+    const { organizationId, workspaceId } = queryResult.data;
+    const workflow = await getWorkflow(organizationId, workflowId, workspaceId);
 
     if (!workflow) {
       return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
     }
 
     return NextResponse.json({ workflow });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get workflow', error);
+    const message = error instanceof Error ? error.message : 'Failed to get workflow';
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get workflow'},
+      { error: message },
       { status: 500 }
     );
   }
@@ -60,7 +96,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { workflowId: string } }
+  { params }: { params: Promise<{ workflowId: string }> }
 ) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -78,29 +114,38 @@ export async function PUT(
     const token = authHeader.split('Bearer ')[1];
     await getAuth(adminApp).verifyIdToken(token);
 
-    const body = await request.json();
-    const { organizationId, workspaceId = 'default', workflow } = body;
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid workflowId' }, { status: 400 });
+    }
+    const { workflowId } = paramsResult.data;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+    const body: unknown = await request.json();
+    const bodyResult = putBodySchema.safeParse(body);
+    if (!bodyResult.success) {
+      const firstError = bodyResult.error.errors[0];
+      return NextResponse.json(
+        { error: firstError?.message ?? 'Invalid request body' },
+        { status: 400 }
+      );
     }
 
-    if (!workflow) {
-      return NextResponse.json({ error: 'workflow data is required' }, { status: 400 });
-    }
+    const { organizationId, workspaceId, workflow } = bodyResult.data;
 
     const updatedWorkflow = await updateWorkflow(
       organizationId,
-      params.workflowId,
+      workflowId,
       workflow,
       workspaceId
     );
 
     return NextResponse.json({ workflow: updatedWorkflow });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update workflow', error);
+    const message = error instanceof Error ? error.message : 'Failed to update workflow';
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to update workflow'},
+      { error: message },
       { status: 500 }
     );
   }
@@ -112,7 +157,7 @@ export async function PUT(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { workflowId: string } }
+  { params }: { params: Promise<{ workflowId: string }> }
 ) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -130,29 +175,38 @@ export async function PATCH(
     const token = authHeader.split('Bearer ')[1];
     await getAuth(adminApp).verifyIdToken(token);
 
-    const body = await request.json();
-    const { organizationId, workspaceId = 'default', status } = body;
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid workflowId' }, { status: 400 });
+    }
+    const { workflowId } = paramsResult.data;
 
-    if (!organizationId) {
-      return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+    const body: unknown = await request.json();
+    const bodyResult = patchBodySchema.safeParse(body);
+    if (!bodyResult.success) {
+      const firstError = bodyResult.error.errors[0];
+      return NextResponse.json(
+        { error: firstError?.message ?? 'valid status (active|paused) is required' },
+        { status: 400 }
+      );
     }
 
-    if (!status || !['active', 'paused'].includes(status)) {
-      return NextResponse.json({ error: 'valid status (active|paused) is required' }, { status: 400 });
-    }
+    const { organizationId, workspaceId, status } = bodyResult.data;
 
     const updatedWorkflow = await setWorkflowStatus(
       organizationId,
-      params.workflowId,
+      workflowId,
       status,
       workspaceId
     );
 
     return NextResponse.json({ workflow: updatedWorkflow });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to update workflow status', error);
+    const message = error instanceof Error ? error.message : 'Failed to update workflow status';
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to update workflow status'},
+      { error: message },
       { status: 500 }
     );
   }
@@ -164,7 +218,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { workflowId: string } }
+  { params }: { params: Promise<{ workflowId: string }> }
 ) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -182,22 +236,32 @@ export async function DELETE(
     const token = authHeader.split('Bearer ')[1];
     await getAuth(adminApp).verifyIdToken(token);
 
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid workflowId' }, { status: 400 });
+    }
+    const { workflowId } = paramsResult.data;
 
-    if (!organizationId) {
+    const { searchParams } = new URL(request.url);
+    const queryResult = deleteQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId'),
+      workspaceId: searchParams.get('workspaceId') ?? undefined,
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
     }
 
-    await deleteWorkflow(organizationId, params.workflowId, workspaceId);
+    const { organizationId, workspaceId } = queryResult.data;
+    await deleteWorkflow(organizationId, workflowId, workspaceId);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete workflow', error);
+    const message = error instanceof Error ? error.message : 'Failed to delete workflow';
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to delete workflow'},
+      { error: message },
       { status: 500 }
     );
   }

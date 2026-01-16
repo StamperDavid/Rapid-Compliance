@@ -4,10 +4,24 @@
  * CRITICAL: Multi-tenant - scoped to organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+
+const getQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+});
+
+const postBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  categories: z.array(z.string()),
+});
+
+interface CategoriesDocData {
+  organizationId?: string;
+  categories?: string[];
+}
 
 /**
  * GET /api/website/blog/categories
@@ -18,17 +32,20 @@ export async function GET(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const { searchParams } = new URL(request.url);
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId'),
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
         { error: 'organizationId required' },
         { status: 400 }
       );
     }
+
+    const { organizationId } = queryResult.data;
 
     // Get categories document
     const categoriesRef = adminDal.getNestedDocRef(
@@ -42,7 +59,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ categories: [] });
     }
 
-    const data = categoriesDoc.data();
+    const data = categoriesDoc.data() as CategoriesDocData | undefined;
 
     // CRITICAL: Double-check organizationId matches
     if (data?.organizationId !== organizationId) {
@@ -53,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ categories: data.categories ?? [] });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch blog categories', error, {
       route: '/api/website/blog/categories',
       method: 'GET'
@@ -74,24 +91,19 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
-    const { organizationId, categories } = body;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const body: unknown = await request.json();
+    const bodyResult = postBodySchema.safeParse(body);
+
+    if (!bodyResult.success) {
+      const firstError = bodyResult.error.errors[0];
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: firstError?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    if (!Array.isArray(categories)) {
-      return NextResponse.json(
-        { error: 'categories must be an array' },
-        { status: 400 }
-      );
-    }
+    const { organizationId, categories } = bodyResult.data;
 
     // Save categories
     const categoriesRef = adminDal.getNestedDocRef(
@@ -100,7 +112,7 @@ export async function POST(request: NextRequest) {
     );
 
     const categoriesData = {
-      organizationId, // CRITICAL: Set org ownership
+      organizationId,
       categories,
       updatedAt: new Date().toISOString(),
     };
@@ -108,7 +120,7 @@ export async function POST(request: NextRequest) {
     await categoriesRef.set(categoriesData);
 
     return NextResponse.json({ categories });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to save blog categories', error, {
       route: '/api/website/blog/categories',
       method: 'POST'
@@ -119,5 +131,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { executeScheduledWorkflows } from '@/lib/workflows/triggers/schedule-trigger';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -19,34 +18,15 @@ export async function POST(request: NextRequest) {
 
     // Verify this is called by Cloud Scheduler (check headers/auth)
     // In production, verify Cloud Scheduler authentication
-    
+
     await executeScheduledWorkflows();
-    
+
     return NextResponse.json({
       success: true,
       message: 'Scheduled workflows executed',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error executing scheduled workflows', error, { route: '/api/workflows/triggers/schedule' });
-    return errors.internal('Failed to execute scheduled workflows', error);
+    return errors.internal('Failed to execute scheduled workflows', error instanceof Error ? error : undefined);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

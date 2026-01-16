@@ -4,13 +4,35 @@
  * CRITICAL: Serves content based on request domain/subdomain
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
+
+interface WebsiteSettingsData {
+  customDomain?: string;
+  customDomainVerified?: boolean;
+  organizationId?: string;
+  subdomain?: string;
+  seo?: {
+    title?: string;
+    description?: string;
+  };
+}
+
+interface BlogPostDocData {
+  organizationId?: string;
+  status?: string;
+  publishedAt?: string;
+  createdAt?: string;
+  slug?: string;
+  title?: string;
+  excerpt?: string;
+  authorName?: string;
+  categories?: string[];
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     // Extract domain or subdomain from request
     const host = request.headers.get('host') ?? '';
-    
+
     // Find organization by custom domain or subdomain
     let organizationId: string | null = null;
     let baseUrl = '';
@@ -30,9 +52,9 @@ export async function GET(request: NextRequest) {
     // Check if custom domain (query across all orgs' website settings)
     const domainsSnapshot = await adminDal.getCollectionGroup('website').get();
     for (const doc of domainsSnapshot.docs) {
-      const data = doc.data();
+      const data = doc.data() as WebsiteSettingsData;
       if (data.customDomain === host && data.customDomainVerified) {
-        organizationId = data.organizationId;
+        organizationId = data.organizationId ?? null;
         baseUrl = `https://${host}`;
         siteTitle = data.seo?.title ?? siteTitle;
         siteDescription = data.seo?.description ?? siteDescription;
@@ -45,18 +67,22 @@ export async function GET(request: NextRequest) {
       const subdomain = host.split('.')[0];
       const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
       const { adminDb } = await import('@/lib/firebase/admin');
-      
+
+      if (!adminDb) {
+        return new NextResponse('Server configuration error', { status: 500 });
+      }
+
       for (const orgDoc of orgsSnapshot.docs) {
         // Use environment-aware subcollection path
         const websitePath = adminDal.getSubColPath('website');
-        const settingsDoc = await adminDb!
+        const settingsDoc = await adminDb
           .collection(orgDoc.ref.path)
           .doc(orgDoc.id)
           .collection(websitePath)
           .doc('settings')
           .get();
-        
-        const settingsData = settingsDoc.data();
+
+        const settingsData = settingsDoc.data() as WebsiteSettingsData | undefined;
         if (settingsData?.subdomain === subdomain) {
           organizationId = orgDoc.id;
           baseUrl = `https://${host}`;
@@ -80,7 +106,7 @@ export async function GET(request: NextRequest) {
 
     const posts: BlogPost[] = [];
     postsSnapshot.forEach((doc) => {
-      const data = doc.data();
+      const data = doc.data() as BlogPostDocData;
       if (data.organizationId === organizationId) {
         posts.push({
           id: doc.id,
@@ -106,7 +132,7 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('RSS feed generation error', error, {
       route: '/api/website/blog/feed.xml',
       method: 'GET'
@@ -122,8 +148,8 @@ function generateRSSXML(posts: BlogPost[], baseUrl: string, siteTitle: string, s
     const description = escapeXML(post.excerpt || '');
     const title = escapeXML(post.title);
     const author = escapeXML((post.authorName !== '' && post.authorName != null) ? post.authorName : 'Unknown');
-    
-    const categories = post.categories.map(cat => 
+
+    const categories = post.categories.map(cat =>
       `    <category>${escapeXML(cat)}</category>`
     ).join('\n');
 
@@ -160,4 +186,3 @@ function escapeXML(str: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
 }
-

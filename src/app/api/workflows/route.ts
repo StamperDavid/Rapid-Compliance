@@ -1,9 +1,40 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
+import { z } from 'zod';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
-import { getWorkflows, createWorkflow } from '@/lib/workflows/workflow-service';
+import { getWorkflows, createWorkflow, type WorkflowFilters } from '@/lib/workflows/workflow-service';
+import type { Workflow } from '@/types/workflow';
+
+const statusValues = ['draft', 'active', 'paused', 'archived'] as const;
+
+const getQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  workspaceId: z.string().optional().default('default'),
+  status: z.enum(statusValues).optional(),
+});
+
+const postBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  workspaceId: z.string().optional().default('default'),
+  workflow: z.object({
+    name: z.string(),
+    description: z.string().optional(),
+    icon: z.string().optional(),
+    folder: z.string().optional(),
+    status: z.enum(statusValues),
+    trigger: z.record(z.unknown()),
+    conditions: z.array(z.record(z.unknown())).optional(),
+    conditionOperator: z.enum(['and', 'or']).optional(),
+    actions: z.array(z.record(z.unknown())),
+    settings: z.record(z.unknown()).optional(),
+    permissions: z.object({
+      canView: z.array(z.string()),
+      canEdit: z.array(z.string()),
+      canExecute: z.array(z.string()),
+    }).optional(),
+  }),
+});
 
 /**
  * GET /api/workflows
@@ -24,19 +55,22 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await getAuth(adminApp).verifyIdToken(token);
+    await getAuth(adminApp).verifyIdToken(token);
 
     const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
-    const status = searchParams.get('status');
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId'),
+      workspaceId: searchParams.get('workspaceId') ?? undefined,
+      status: searchParams.get('status') ?? undefined,
+    });
 
-    if (!organizationId) {
+    if (!queryResult.success) {
       return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
     }
 
-    const filters: any = {};
+    const { organizationId, workspaceId, status } = queryResult.data;
+
+    const filters: WorkflowFilters = {};
     if (status) {
       filters.status = status;
     }
@@ -47,10 +81,11 @@ export async function GET(request: NextRequest) {
       workflows: result.data,
       hasMore: result.hasMore,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get workflows', error);
+    const message = error instanceof Error ? error.message : 'Failed to get workflows';
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to get workflows'},
+      { error: message },
       { status: 500 }
     );
   }
@@ -77,29 +112,34 @@ export async function POST(request: NextRequest) {
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await getAuth(adminApp).verifyIdToken(token);
 
-    const body = await request.json();
-    const { organizationId, workspaceId = 'default', workflow } = body;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'organizationId is required' }, { status: 400 });
+    const body: unknown = await request.json();
+    const bodyResult = postBodySchema.safeParse(body);
+    if (!bodyResult.success) {
+      const firstError = bodyResult.error.errors[0];
+      return NextResponse.json(
+        { error: firstError?.message ?? 'Invalid request body' },
+        { status: 400 }
+      );
     }
 
-    if (!workflow) {
-      return NextResponse.json({ error: 'workflow data is required' }, { status: 400 });
-    }
+    const { organizationId, workspaceId, workflow } = bodyResult.data;
+
+    // Cast to the expected type - the service layer will perform full validation
+    const workflowData = workflow as unknown as Omit<Workflow, 'id' | 'organizationId' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>;
 
     const newWorkflow = await createWorkflow(
       organizationId,
-      workflow,
+      workflowData,
       decodedToken.uid,
       workspaceId
     );
 
     return NextResponse.json({ workflow: newWorkflow }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create workflow', error);
+    const message = error instanceof Error ? error.message : 'Failed to create workflow';
     return NextResponse.json(
-      { error:(error.message !== '' && error.message != null) ? error.message : 'Failed to create workflow'},
+      { error: message },
       { status: 500 }
     );
   }
