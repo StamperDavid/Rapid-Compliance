@@ -246,8 +246,8 @@ Prohibited Topics: ${businessContext.prohibitedTopics}
     // Add customer-specific context if returning customer
     if (customerMemory.totalInteractions > 0) {
       // Extract customer strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
-      const customerName = customerMemory.name || 'Unknown';
-      const customerEmail = customerMemory.email || 'Not provided';
+      const customerName = customerMemory.name ?? 'Unknown';
+      const customerEmail = customerMemory.email ?? 'Not provided';
       const customerBudget = customerMemory.preferences.budget ?? 'Unknown';
       const customerInterests = customerMemory.preferences.interests.join(', ') || 'None recorded';
       const customerPreferredTone = customerMemory.preferences.preferredTone ?? 'Not specified';

@@ -101,7 +101,7 @@ export async function analyzeCompanyKnowledge(
   const crmProducts = await scanCRMForProducts(organizationId, workspaceId);
   const crmServices = await scanCRMForServices(organizationId, workspaceId);
   
-  logger.info('Found ${crmProducts.length} products and ${crmServices.length} services in CRM', { file: 'knowledge-analyzer.ts' });
+  logger.info(`Found ${crmProducts.length} products and ${crmServices.length} services in CRM`, { file: 'knowledge-analyzer.ts' });
 
   // STEP 2: Scrape website for additional company info
   logger.info('Step 2: Scraping website for company information...', { file: 'knowledge-analyzer.ts' });
@@ -228,7 +228,7 @@ async function scrapeWebsite(url: string): Promise<string> {
     const title = (titleText !== '' && titleText != null) ? titleText : '';
     
     return `${title}\n${metaDescription}\n${textContent}`.substring(0, 50000); // Limit to 50k chars
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error scraping website:', error, { file: 'knowledge-analyzer.ts' });
     // Return empty string on error - will be handled by caller
     return '';
@@ -269,16 +269,19 @@ Return ONLY a valid JSON array of products in this format:
 ]`;
 
     const response = await generateText(prompt);
-    
+
     // Parse JSON from response
     const jsonMatch = response.text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
-      const products = JSON.parse(jsonMatch[0]);
-      return products.slice(0, 50); // Limit to 50 products
+      const parsed: unknown = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed)) {
+        const products = parsed as KnowledgeAnalysisResult['products'];
+        return products.slice(0, 50); // Limit to 50 products
+      }
     }
-    
+
     return [];
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error extracting products:', error, { file: 'knowledge-analyzer.ts' });
     return [];
   }
@@ -320,16 +323,19 @@ Return ONLY a valid JSON array of FAQs in this format:
 ]`;
 
     const response = await generateText(prompt);
-    
+
     // Parse JSON from response
     const jsonMatch = response.text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
-      const faqs = JSON.parse(jsonMatch[0]);
-      return faqs.slice(0, 100); // Limit to 100 FAQs
+      const parsed: unknown = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed)) {
+        const faqs = parsed as KnowledgeAnalysisResult['faqs'];
+        return faqs.slice(0, 100); // Limit to 100 FAQs
+      }
     }
-    
+
     return [];
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error extracting FAQs:', error, { file: 'knowledge-analyzer.ts' });
     return [];
   }
@@ -381,20 +387,23 @@ Return ONLY a valid JSON object in this format:
 }`;
 
     const response = await generateText(prompt);
-    
+
     // Parse JSON from response
     const jsonMatch = response.text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const brandVoice = JSON.parse(jsonMatch[0]);
-      return brandVoice;
+      const parsed: unknown = JSON.parse(jsonMatch[0]);
+      if (parsed && typeof parsed === 'object' && 'tone' in parsed) {
+        const brandVoice = parsed as KnowledgeAnalysisResult['brandVoice'];
+        return brandVoice;
+      }
     }
-    
+
     return {
       tone: 'professional',
       keyMessages: [],
       commonPhrases: []
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error analyzing brand voice:', error, { file: 'knowledge-analyzer.ts' });
     return {
       tone: 'professional',

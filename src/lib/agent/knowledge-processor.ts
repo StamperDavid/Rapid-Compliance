@@ -3,7 +3,7 @@
  * Processes uploaded files and URLs to build knowledge base
  */
 
-import type { KnowledgeBase, KnowledgeDocument, KnowledgeURL, FAQ } from '@/types/agent-memory';
+import type { KnowledgeBase, KnowledgeDocument, FAQ } from '@/types/agent-memory';
 import { analyzeCompanyKnowledge } from './knowledge-analyzer'
 import { logger } from '@/lib/logger/logger';
 
@@ -135,7 +135,7 @@ async function processFile(
     const fileId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     let extractedContent = '';
-    let metadata: Record<string, any> = {
+    let metadata: Record<string, unknown> = {
       size: file.size,
       mimeType: file.type,
     };
@@ -276,10 +276,10 @@ function parseManualFAQs(faqsText: string): FAQ[] {
  * Process document content for training materials
  * Simplified version that just extracts text content
  */
-export async function processDocumentContent(
+export function processDocumentContent(
   content: string,
   fileType: string
-): Promise<string> {
+): string {
   try {
     // For now, just return the content as-is
     // In the future, we can add more sophisticated processing
