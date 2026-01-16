@@ -105,7 +105,7 @@ export function useOrgTheme() {
       }
     };
 
-    loadOrgTheme();
+    void loadOrgTheme();
   }, [user?.organizationId]);
 
   // Apply CSS variables whenever theme changes

@@ -10,6 +10,14 @@ import { logger } from '@/lib/logger/logger';
 import { onAuthStateChange } from '@/lib/auth/auth-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
+interface UserProfile {
+  organizationId?: string;
+  displayName?: string;
+  name?: string;
+  role?: string;
+  currentWorkspaceId?: string;
+}
+
 interface AuthContextType {
   user: {
     id: string;
@@ -63,48 +71,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Set up auth state listener with static imports
     try {
-      const unsubscribe = onAuthStateChange(async (authUser) => {
-        if (authUser) {
-          try {
-            const userProfile = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
+      const unsubscribe = onAuthStateChange((authUser) => {
+        void (async () => {
+          if (authUser) {
+            try {
+              const rawProfile: unknown = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
+              const userProfile = rawProfile as UserProfile | null;
 
-            // Use organizationId from user profile (set during account creation)
-            const organizationId = userProfile?.organizationId ?? 'demo';
+              // Use organizationId from user profile (set during account creation)
+              const organizationId = userProfile?.organizationId ?? 'demo';
 
-            // Extract display name with fallback chain
-            let displayName = 'User';
-            if (authUser.displayName !== '' && authUser.displayName != null) {
-              displayName = authUser.displayName;
-            } else if (userProfile?.displayName !== '' && userProfile?.displayName != null) {
-              displayName = userProfile.displayName;
-            } else if (userProfile?.name !== '' && userProfile?.name != null) {
-              displayName = userProfile.name;
+              // Extract display name with fallback chain
+              let displayName = 'User';
+              if (authUser.displayName !== '' && authUser.displayName != null) {
+                displayName = authUser.displayName;
+              } else if (userProfile?.displayName !== '' && userProfile?.displayName != null) {
+                displayName = userProfile.displayName;
+              } else if (userProfile?.name !== '' && userProfile?.name != null) {
+                displayName = userProfile.name;
+              }
+
+              const roleValue = userProfile?.role;
+              setUser({
+                id: authUser.uid,
+                email: authUser.email ?? '',
+                displayName,
+                role: (typeof roleValue === 'string' ? roleValue as UserRole : 'admin'),
+                organizationId,
+                workspaceId: userProfile?.currentWorkspaceId,
+              });
+            } catch (error) {
+              logger.error('Error loading user profile:', error, { file: 'AuthProvider.tsx' });
+              setUser({
+                id: authUser.uid,
+                email: authUser.email ?? '',
+                displayName: (authUser.displayName !== '' && authUser.displayName != null)
+                  ? authUser.displayName
+                  : 'User',
+                role: 'admin',
+                organizationId: 'demo',
+              });
             }
-
-            setUser({
-              id: authUser.uid,
-              email: authUser.email ?? '',
-              displayName,
-              role: (userProfile?.role as UserRole) ?? 'admin',
-              organizationId,
-              workspaceId: userProfile?.currentWorkspaceId,
-            });
-          } catch (error) {
-            logger.error('Error loading user profile:', error, { file: 'AuthProvider.tsx' });
-            setUser({
-              id: authUser.uid,
-              email: authUser.email ?? '',
-              displayName: (authUser.displayName !== '' && authUser.displayName != null)
-                ? authUser.displayName
-                : 'User',
-              role: 'admin',
-              organizationId: 'demo',
-            });
+          } else {
+            setUser(null);
           }
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
+          setLoading(false);
+        })();
       });
 
       unsubscribeRef.current = unsubscribe;

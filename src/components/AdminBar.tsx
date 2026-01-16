@@ -6,11 +6,23 @@ import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useParams } from 'next/navigation'
 import { logger } from '@/lib/logger/logger';
 
+interface LocalTheme {
+  branding?: {
+    companyName?: string;
+    logoUrl?: string;
+  };
+  colors?: {
+    primary?: {
+      main?: string;
+    };
+  };
+}
+
 export default function AdminBar() {
-  const { user, loading } = useAuth();
+  const { user, loading: _loading } = useAuth();
   const params = useParams();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [theme, setTheme] = useState<any>(null);
+  const [theme, setTheme] = useState<LocalTheme | null>(null);
   
   const canAccessSettings = usePermission('canAccessSettings');
   
@@ -27,7 +39,10 @@ export default function AdminBar() {
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme) {
       try {
-        setTheme(JSON.parse(savedTheme));
+        const parsed: unknown = JSON.parse(savedTheme);
+        if (typeof parsed === 'object' && parsed !== null) {
+          setTheme(parsed as LocalTheme);
+        }
       } catch (error) {
         logger.error('Failed to load theme:', error, { file: 'AdminBar.tsx' });
       }
@@ -53,6 +68,7 @@ export default function AdminBar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Link href={`/workspace/${orgId}/dashboard`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}>
             {logoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- Dynamic theme logo URL from CMS */
               <img src={logoUrl} alt={brandName} style={{ maxHeight: '40px', maxWidth: '150px', objectFit: 'contain' }} />
             ) : (
               <>
@@ -98,9 +114,12 @@ export default function AdminBar() {
             </Link>
           )}
           <button
+            /* eslint-disable-next-line no-alert -- Intentional: Simple feedback UI pending backend integration */
             onClick={() => {
+              // eslint-disable-next-line no-alert -- Intentional: Simple feedback UI pending backend integration
               const feedback = prompt('What feedback or feature request would you like to share?');
               if (feedback) {
+                // eslint-disable-next-line no-alert -- Intentional: Simple feedback UI pending backend integration
                 alert('Thank you for your feedback! We\'ll review it shortly.');
                 // TODO: Send feedback to backend
               }
@@ -170,18 +189,20 @@ export default function AdminBar() {
                   </Link>
 
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       // Sign out from Firebase Auth
-                      try {
-                        const { auth } = await import('@/lib/firebase/config');
-                        const { signOut } = await import('firebase/auth');
-                        if (auth) {
-                          await signOut(auth);
+                      void (async () => {
+                        try {
+                          const { auth } = await import('@/lib/firebase/config');
+                          const { signOut } = await import('firebase/auth');
+                          if (auth) {
+                            await signOut(auth);
+                          }
+                        } catch (error) {
+                          logger.error('Error signing out:', error, { file: 'AdminBar.tsx' });
                         }
-                      } catch (error) {
-                        logger.error('Error signing out:', error, { file: 'AdminBar.tsx' });
-                      }
-                      window.location.href = '/';
+                        window.location.href = '/';
+                      })();
                     }}
                     style={{ width: '100%', display: 'block', padding: '0.75rem 1rem', color: '#dc2626', fontSize: '0.875rem', backgroundColor: 'transparent', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#222'}

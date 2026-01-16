@@ -8,7 +8,7 @@
  * Fetches industry, niche, and assistant config from Firestore profile.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { OrchestratorBase, type OrchestratorConfig } from './OrchestratorBase';
 import { FeedbackModal } from './FeedbackModal';
 import { useOrchestratorStore } from '@/lib/stores/orchestrator-store';
@@ -18,8 +18,6 @@ import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getIndustryPersona,
-  generateIntroduction,
-  generateStatusOpener,
   buildPersonaSystemPrompt,
   type IndustryPersona,
 } from '@/lib/ai/persona-mapper';
@@ -57,7 +55,9 @@ export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
   // Fetch system health report for Implementation Guide
   useEffect(() => {
     async function fetchSystemHealth() {
-      if (!orgId) return;
+      if (!orgId) {
+        return;
+      }
       try {
         const report = await SystemHealthService.generateHealthReport(orgId);
         setHealthReport(report);
@@ -65,17 +65,19 @@ export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
         console.error('Error fetching system health:', error);
       }
     }
-    fetchSystemHealth();
+    void fetchSystemHealth();
   }, [orgId]);
 
   // Build Implementation Context once we have profile and health report
   useEffect(() => {
     async function buildImplContext() {
-      if (!orgId || !profile || !healthReport) return;
+      if (!orgId || !profile || !healthReport) {
+        return;
+      }
       try {
         const context = await ImplementationGuide.buildContext(
           orgId,
-          profile.assistantName || 'Assistant',
+          profile.assistantName ?? 'Assistant',
           profile.ownerName,
           profile.industry
         );
@@ -84,18 +86,20 @@ export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
         console.error('Error building implementation context:', error);
       }
     }
-    buildImplContext();
+    void buildImplContext();
   }, [orgId, profile, healthReport]);
 
   // Fetch merchant profile from Firestore
   useEffect(() => {
     async function fetchProfile() {
-      if (!orgId || !db) return;
+      if (!orgId || !db) {
+        return;
+      }
 
       try {
         const orgDoc = await getDoc(doc(db, 'organizations', orgId));
         if (orgDoc.exists()) {
-          const data = orgDoc.data();
+          const data = orgDoc.data() as MerchantProfile;
           setProfile({
             industry: data.industry,
             industryName: data.industryName,
@@ -113,23 +117,25 @@ export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
       }
     }
 
-    fetchProfile();
+    void fetchProfile();
   }, [orgId]);
 
   // Get industry persona for this merchant
-  const industryPersona: IndustryPersona = getIndustryPersona((profile?.industry as IndustryType) || 'custom');
-  const assistantName = profile?.assistantName || 'Assistant';
+  const industryPersona: IndustryPersona = getIndustryPersona((profile?.industry as IndustryType) ?? 'custom');
+  const assistantName = profile?.assistantName ?? 'Assistant';
   const ownerName = profile?.ownerName;
 
   // Generate personalized welcome message - natural dialogue, no menus
   const getWelcomeMessage = (): string => {
-    const displayName = ownerName || 'there';
-    const businessName = profile?.name || 'your business';
+    const displayName = ownerName ?? 'there';
+    const businessName = profile?.name ?? 'your business';
     const industryContext = industryPersona.industryDisplayName;
 
     // Build system status naturally
     const buildSystemContext = (): string => {
-      if (!healthReport) return '';
+      if (!healthReport) {
+        return '';
+      }
 
       const unconfigured = healthReport.features.filter(f => f.status === 'unconfigured');
       if (unconfigured.length === 0) {
@@ -143,7 +149,7 @@ export function MerchantOrchestrator({ orgId }: MerchantOrchestratorProps) {
     // Returning user - brief status update
     if (hasSeenWelcome) {
       const systemContext = buildSystemContext();
-      return `Hey ${displayName}. ${systemContext || `Ready to work on ${businessName}.`} What do you need?`;
+      return `Hey ${displayName}. ${systemContext !== '' ? systemContext : `Ready to work on ${businessName}.`} What do you need?`;
     }
 
     // First contact - natural introduction
@@ -171,9 +177,9 @@ ${recommendation} What would you like to focus on?`;
       }
     }
 
-    const businessName = profile?.name || 'your business';
+    const businessName = profile?.name ?? 'your business';
     const emailConnected = currentHealth?.integrations.find(i => i.id === 'email')?.connected;
-    const recommendation = currentHealth?.recommendations[0]?.title || 'setting up your lead pipeline';
+    const recommendation = currentHealth?.recommendations[0]?.title ?? 'setting up your lead pipeline';
 
     return `Here's where things stand for ${businessName}:
 
@@ -191,7 +197,7 @@ Based on your setup, ${recommendation.toLowerCase()} looks like the next high-im
     let prompt = MERCHANT_ORCHESTRATOR_PROMPT;
 
     // Add industry persona
-    prompt += `\n\n${buildPersonaSystemPrompt(assistantName, ownerName, (profile?.industry as IndustryType) || 'custom', 'client')}`;
+    prompt += `\n\n${buildPersonaSystemPrompt(assistantName, ownerName, (profile?.industry as IndustryType) ?? 'custom', 'client')}`;
 
     // Add Implementation Guide context if available
     if (implContext) {
@@ -254,7 +260,7 @@ When hiding features, use this exact response format:
       <FeedbackModal
         orgId={orgId}
         userId={user?.id}
-        userEmail={user?.email || undefined}
+        userEmail={user?.email ?? undefined}
       />
     </>
   );

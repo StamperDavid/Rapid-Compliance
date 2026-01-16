@@ -22,8 +22,9 @@ import {
   buildNavigationStructure,
   type NavSection,
   type FeatureCategory,
+  type FeatureStatus,
+  type FeatureVisibilitySettings,
 } from '@/lib/orchestrator/feature-toggle-service';
-import type { FeatureStatus, FeatureVisibilitySettings } from '@/lib/orchestrator/feature-toggle-service';
 
 export interface UseFeatureVisibilityResult {
   // Data
@@ -70,7 +71,7 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
   }, [organizationId]);
 
   useEffect(() => {
-    fetchSettings();
+    void fetchSettings();
   }, [fetchSettings]);
 
   // Build filtered navigation
@@ -88,7 +89,9 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
       .map(section => ({
         ...section,
         items: section.items.filter(item => {
-          if (!item.featureId) return true;
+          if (!item.featureId) {
+            return true;
+          }
           const featureSettings = settings.features[item.featureId];
           return featureSettings?.status !== 'hidden';
         }),
@@ -99,14 +102,18 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
 
   // Count hidden features
   const hiddenCount = useMemo(() => {
-    if (!settings) return 0;
+    if (!settings) {
+      return 0;
+    }
     const hiddenFeatures = Object.values(settings.features).filter(f => f.status === 'hidden').length;
     return hiddenFeatures + settings.hiddenCategories.length;
   }, [settings]);
 
   // Toggle a single feature
   const toggleFeature = useCallback(async (featureId: string, hidden: boolean, reason?: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
 
     const status: FeatureStatus = hidden ? 'hidden' : 'unconfigured';
     await FeatureToggleService.toggleFeature(organizationId, featureId, status, user.id, reason);
@@ -151,7 +158,9 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
 
   // Toggle an entire category
   const toggleCategory = useCallback(async (category: FeatureCategory, hidden: boolean) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
 
     await FeatureToggleService.toggleCategory(organizationId, category, hidden, user.id);
 
@@ -182,21 +191,27 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
 
   // Hide multiple features
   const hideFeatures = useCallback(async (featureIds: string[], reason?: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
     await FeatureToggleService.hideFeatures(organizationId, featureIds, user.id, reason);
     await fetchSettings();
   }, [organizationId, user?.id, fetchSettings]);
 
   // Show multiple features
   const showFeatures = useCallback(async (featureIds: string[]) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
     await FeatureToggleService.showFeatures(organizationId, featureIds, user.id);
     await fetchSettings();
   }, [organizationId, user?.id, fetchSettings]);
 
   // Reset to default
   const resetToDefault = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      return;
+    }
     await FeatureToggleService.resetToDefault(organizationId, user.id);
     setSettings({
       organizationId,
@@ -209,13 +224,17 @@ export function useFeatureVisibility(organizationId: string): UseFeatureVisibili
 
   // Check if a feature is hidden
   const isFeatureHidden = useCallback((featureId: string): boolean => {
-    if (!settings) return false;
+    if (!settings) {
+      return false;
+    }
     return settings.features[featureId]?.status === 'hidden';
   }, [settings]);
 
   // Check if a category is hidden
   const isCategoryHidden = useCallback((category: FeatureCategory): boolean => {
-    if (!settings) return false;
+    if (!settings) {
+      return false;
+    }
     return settings.hiddenCategories.includes(category);
   }, [settings]);
 

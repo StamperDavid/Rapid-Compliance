@@ -12,6 +12,14 @@ import { onAuthStateChange, type AuthUser } from '@/lib/auth/auth-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 
+interface UserProfile {
+  organizationId?: string;
+  displayName?: string;
+  name?: string;
+  role?: string;
+  currentWorkspaceId?: string;
+}
+
 export interface AppUser {
   id: string;
   email: string;
@@ -42,47 +50,52 @@ export function useAuth() {
       }
 
       // Firebase is configured - use real auth
-      const unsubscribe = onAuthStateChange(async (authUser: AuthUser | null) => {
-        if (authUser) {
-          try {
-            // Load user profile from Firestore to get role and organization
-            const userProfile = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
-            
-            // Use organizationId from user profile (set during account creation)
-            const userProfileOrgId = userProfile?.organizationId;
-            const organizationId = (userProfileOrgId !== '' && userProfileOrgId != null) ? userProfileOrgId : 'demo';
-            
-            const userProfileName = userProfile?.name;
+      const unsubscribe = onAuthStateChange((authUser: AuthUser | null) => {
+        void (async () => {
+          if (authUser) {
+            try {
+              // Load user profile from Firestore to get role and organization
+              const rawProfile: unknown = await FirestoreService.get(COLLECTIONS.USERS, authUser.uid);
+              const userProfile = rawProfile as UserProfile | null;
+
+              // Use organizationId from user profile (set during account creation)
+              const userProfileOrgId = userProfile?.organizationId;
+              const organizationId = (userProfileOrgId !== '' && userProfileOrgId != null) ? userProfileOrgId : 'demo';
+
+              const userProfileName = userProfile?.name;
+              const userProfileDisplayName = userProfile?.displayName;
+              const roleValue = userProfile?.role;
+              setUser({
+                id: authUser.uid,
+                email: authUser.email ?? '',
+                displayName: authUser.displayName ?? userProfileDisplayName ?? (userProfileName ?? 'User'),
+                role: (typeof roleValue === 'string' ? roleValue as UserRole : 'admin'),
+                organizationId: organizationId,
+                workspaceId: userProfile?.currentWorkspaceId,
+              });
+            } catch (error) {
+              logger.error('Error loading user profile:', error, { file: 'useAuth.ts' });
+              // Fallback to basic user info with admin role
+              setUser({
+                id: authUser.uid,
+                email: authUser.email ?? '',
+                displayName:(authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
+                role: 'admin', // Default to admin so settings are accessible
+                organizationId: 'demo',
+              });
+            }
+          } else {
+            // No auth user - use demo mode
             setUser({
-              id: authUser.uid,
-              email: authUser.email ?? '',
-              displayName: authUser.displayName ?? userProfile?.displayName ?? (userProfileName ?? 'User'),
-              role: (userProfile?.role as UserRole) ?? 'admin',
-              organizationId: organizationId,
-              workspaceId: userProfile?.currentWorkspaceId,
-            });
-          } catch (error) {
-            logger.error('Error loading user profile:', error, { file: 'useAuth.ts' });
-            // Fallback to basic user info with admin role
-            setUser({
-              id: authUser.uid,
-              email: authUser.email ?? '',
-              displayName:(authUser.displayName !== '' && authUser.displayName != null) ? authUser.displayName : 'User',
-              role: 'admin', // Default to admin so settings are accessible
+              id: 'demo-user',
+              email: 'admin@demo.com',
+              displayName: 'Demo Admin',
+              role: 'admin',
               organizationId: 'demo',
             });
           }
-        } else {
-          // No auth user - use demo mode
-          setUser({
-            id: 'demo-user',
-            email: 'admin@demo.com',
-            displayName: 'Demo Admin',
-            role: 'admin',
-            organizationId: 'demo',
-          });
-        }
-        setLoading(false);
+          setLoading(false);
+        })();
       });
 
       return () => unsubscribe();
