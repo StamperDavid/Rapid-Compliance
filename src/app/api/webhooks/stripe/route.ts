@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { RecordCounter } from '@/lib/subscription/record-counter';
 import { updateSubscriptionTier } from '@/lib/billing/stripe-service';
@@ -14,6 +13,36 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+
+// Type definitions for Firestore entities
+interface Organization {
+  id: string;
+  ownerId?: string;
+  name?: string;
+}
+
+interface User {
+  id: string;
+  email?: string;
+  name?: string;
+}
+
+// Type guards
+function isOrganization(value: unknown): value is Organization {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value
+  );
+}
+
+function isUser(value: unknown): value is User {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[Stripe Webhook] Error processing webhook:', error);
     return NextResponse.json(
       { error: 'Webhook processing failed' },
@@ -82,8 +111,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   try {
     const organizationId = session.metadata?.organizationId;
     const metadataWorkspaceId = session.metadata?.workspaceId;
-    const workspaceId = (metadataWorkspaceId !== '' && metadataWorkspaceId != null) ? metadataWorkspaceId : 'default';
-    
+    const workspaceId = metadataWorkspaceId ?? 'default';
+
     if (!organizationId) {
       logger.error('[Stripe Webhook] Missing organizationId in checkout session metadata');
       return;
@@ -95,37 +124,71 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       workspaceId,
     });
 
-    // Parse metadata
+    // Parse metadata with proper types
     const cartId = session.metadata?.cartId;
-    const customerData = session.metadata?.customer ? JSON.parse(session.metadata.customer) : null;
-    const shippingAddress = session.metadata?.shippingAddress ? JSON.parse(session.metadata.shippingAddress) : null;
-    const billingAddress = session.metadata?.billingAddress ? JSON.parse(session.metadata.billingAddress) : null;
+    const customerData = session.metadata?.customer ? JSON.parse(session.metadata.customer) as {
+      email: string;
+      firstName: string;
+      lastName: string;
+      phone?: string;
+    } : null;
+    const shippingAddress = session.metadata?.shippingAddress ? JSON.parse(session.metadata.shippingAddress) as {
+      firstName: string;
+      lastName: string;
+      company?: string;
+      address1: string;
+      address2?: string;
+      city: string;
+      state: string;
+      zip: string;
+      country: string;
+      phone?: string;
+    } : null;
+    const billingAddress = session.metadata?.billingAddress ? JSON.parse(session.metadata.billingAddress) as {
+      firstName: string;
+      lastName: string;
+      company?: string;
+      address1: string;
+      address2?: string;
+      city: string;
+      state: string;
+      zip: string;
+      country: string;
+      phone?: string;
+    } : null;
     const shippingMethodId = session.metadata?.shippingMethodId;
 
-    if (!cartId || !customerData) {
+    if (!cartId || !customerData || (!shippingAddress && !billingAddress)) {
       logger.error('[Stripe Webhook] Missing required data in checkout session metadata', {
-        hasCartId: !!cartId,
-        hasCustomer: !!customerData,
+        hasCartId: Boolean(cartId),
+        hasCustomer: Boolean(customerData),
+        hasAddress: Boolean(shippingAddress ?? billingAddress),
       });
       return;
     }
 
+    // At least one address exists - use it for both if needed
+    const effectiveShippingAddress = shippingAddress ?? billingAddress;
+    const effectiveBillingAddress = billingAddress ?? shippingAddress;
+
+    // TypeScript now knows these can't be null after the validation above
+    if (!effectiveShippingAddress || !effectiveBillingAddress) {
+      return; // Type guard - shouldn't reach here
+    }
+
     // Build checkout data
-    const checkoutData = {
+    const { processCheckout } = await import('@/lib/ecommerce/checkout-service');
+    const order = await processCheckout({
       cartId,
       organizationId,
       workspaceId,
       customer: customerData,
-      shippingAddress:shippingAddress ?? billingAddress,
-      billingAddress:billingAddress ?? shippingAddress,
+      shippingAddress: effectiveShippingAddress,
+      billingAddress: effectiveBillingAddress,
       shippingMethodId,
       paymentMethod: 'card',
       paymentToken: session.payment_intent as string,
-    };
-
-    // Process checkout (creates order, updates inventory, sends email)
-    const { processCheckout } = await import('@/lib/ecommerce/checkout-service');
-    const order = await processCheckout(checkoutData);
+    });
 
     logger.info('[Stripe Webhook] Checkout session completed successfully', {
       sessionId: session.id,
@@ -153,7 +216,7 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
 
     // Count current records
     const recordCount = await RecordCounter.recalculateCount(organizationId);
-    
+
     // Determine appropriate tier
     const requiredTier = getTierForRecordCount(recordCount);
     const tierDetails = VOLUME_TIERS[requiredTier];
@@ -251,6 +314,13 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
     // Log successful payment
     const historyId = `payment_${invoice.id}_${Date.now()}`;
+
+    // Safe access to paid_at - it may be null if payment hasn't transitioned
+    const paidAtTimestamp = invoice.status_transitions?.paid_at;
+    const paidAt = paidAtTimestamp
+      ? new Date(paidAtTimestamp * 1000).toISOString()
+      : new Date().toISOString();
+
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/billing_history`,
       historyId,
@@ -259,7 +329,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         invoiceId: invoice.id,
         amount: invoice.amount_paid,
         currency: invoice.currency,
-        paidAt: new Date(invoice.status_transitions.paid_at! * 1000).toISOString(),
+        paidAt,
         createdAt: new Date().toISOString(),
       },
       false // Don't merge, create new document
@@ -292,7 +362,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
     // Send payment failed email
     await sendPaymentFailedEmail(organizationId, {
-      attemptCount: invoice.attempt_count || 1,
+      attemptCount: invoice.attempt_count ?? 1,
       amount: invoice.amount_due,
     });
 
@@ -318,19 +388,20 @@ async function sendTrialEndEmail(
   try {
     // Get organization owner's email
     const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-    if (!org?.ownerId) {
+    if (!org || !isOrganization(org) || !org.ownerId) {
       logger.warn('[Email] No owner found for organization', { organizationId });
       return;
     }
 
     const owner = await FirestoreService.get(COLLECTIONS.USERS, org.ownerId);
-    if (!owner?.email) {
+    if (!owner || !isUser(owner) || !owner.email) {
       logger.warn('[Email] No email found for organization owner', { organizationId, ownerId: org.ownerId });
       return;
     }
 
     // Format price
     const formattedPrice = (data.price / 100).toFixed(2);
+    const ownerName = owner.name ?? 'there';
 
     // Email HTML content
     const htmlContent = `
@@ -354,10 +425,10 @@ async function sendTrialEndEmail(
       <h1>Your Trial is Ending Soon</h1>
     </div>
     <div class="content">
-      <p>Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},</p>
-      
+      <p>Hi ${ownerName},</p>
+
       <p>Your 14-day free trial ends on <strong>${data.trialEndDate}</strong>.</p>
-      
+
       <div class="tier-box">
         <h2>Your Assigned Tier</h2>
         <p>Based on your current usage of <strong>${data.recordCount} records</strong>, you've been assigned to:</p>
@@ -394,7 +465,7 @@ async function sendTrialEndEmail(
     const textContent = `
 Your Trial is Ending Soon
 
-Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},
+Hi ${ownerName},
 
 Your 14-day free trial ends on ${data.trialEndDate}.
 
@@ -419,13 +490,13 @@ AI Sales Platform | Volume-Based Pricing
 
     // Import and use email service
     const { sendEmail } = await import('@/lib/email/email-service');
-    
+
     const result = await sendEmail({
       to: owner.email,
       subject: `Your trial ends ${data.trialEndDate} - Tier assigned`,
       html: htmlContent,
       text: textContent,
-      from:(process.env.SENDGRID_FROM_EMAIL !== '' && process.env.SENDGRID_FROM_EMAIL != null) ? process.env.SENDGRID_FROM_EMAIL : 'noreply@salesvelocity.ai',
+      from: process.env.SENDGRID_FROM_EMAIL ?? 'noreply@salesvelocity.ai',
       fromName: 'AI Sales Platform',
       metadata: {
         organizationId,
@@ -435,15 +506,15 @@ AI Sales Platform | Volume-Based Pricing
     });
 
     if (result.success) {
-      logger.info('[Email] Trial end email sent successfully', { 
-        organizationId, 
+      logger.info('[Email] Trial end email sent successfully', {
+        organizationId,
         email: owner.email,
-        messageId: result.messageId 
+        messageId: result.messageId
       });
     } else {
-      logger.error('[Email] Failed to send trial end email', new Error(result.error), { 
-        organizationId, 
-        email: owner.email 
+      logger.error('[Email] Failed to send trial end email', new Error(result.error), {
+        organizationId,
+        email: owner.email
       });
     }
   } catch (error) {
@@ -464,19 +535,20 @@ async function sendPaymentFailedEmail(
   try {
     // Get organization owner's email
     const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-    if (!org?.ownerId) {
+    if (!org || !isOrganization(org) || !org.ownerId) {
       logger.warn('[Email] No owner found for organization', { organizationId });
       return;
     }
 
     const owner = await FirestoreService.get(COLLECTIONS.USERS, org.ownerId);
-    if (!owner?.email) {
+    if (!owner || !isUser(owner) || !owner.email) {
       logger.warn('[Email] No email found for organization owner', { organizationId, ownerId: org.ownerId });
       return;
     }
 
     // Format amount
     const formattedAmount = (data.amount / 100).toFixed(2);
+    const ownerName = owner.name ?? 'there';
 
     // Email HTML content
     const htmlContent = `
@@ -497,11 +569,11 @@ async function sendPaymentFailedEmail(
 <body>
   <div class="container">
     <div class="header">
-      <h1>⚠️ Payment Failed</h1>
+      <h1>Payment Failed</h1>
     </div>
     <div class="content">
-      <p>Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},</p>
-      
+      <p>Hi ${ownerName},</p>
+
       <div class="alert-box">
         <h2>We couldn't process your payment</h2>
         <p>Attempted <strong>${data.attemptCount} time(s)</strong></p>
@@ -538,9 +610,9 @@ async function sendPaymentFailedEmail(
 
     // Text version
     const textContent = `
-⚠️ PAYMENT FAILED
+PAYMENT FAILED
 
-Hi ${(owner.name !== '' && owner.name != null) ? owner.name : 'there'},
+Hi ${ownerName},
 
 We couldn't process your payment for your AI Sales Platform subscription.
 
@@ -566,13 +638,13 @@ AI Sales Platform
 
     // Import and use email service
     const { sendEmail } = await import('@/lib/email/email-service');
-    
+
     const result = await sendEmail({
       to: owner.email,
-      subject: `⚠️ Payment Failed - Action Required ($${formattedAmount})`,
+      subject: `Payment Failed - Action Required ($${formattedAmount})`,
       html: htmlContent,
       text: textContent,
-      from:(process.env.SENDGRID_FROM_EMAIL !== '' && process.env.SENDGRID_FROM_EMAIL != null) ? process.env.SENDGRID_FROM_EMAIL : 'billing@salesvelocity.ai',
+      from: process.env.SENDGRID_FROM_EMAIL ?? 'billing@salesvelocity.ai',
       fromName: 'AI Sales Platform Billing',
       metadata: {
         organizationId,
@@ -583,19 +655,18 @@ AI Sales Platform
     });
 
     if (result.success) {
-      logger.info('[Email] Payment failed email sent successfully', { 
-        organizationId, 
+      logger.info('[Email] Payment failed email sent successfully', {
+        organizationId,
         email: owner.email,
-        messageId: result.messageId 
+        messageId: result.messageId
       });
     } else {
-      logger.error('[Email] Failed to send payment failed email', new Error(result.error), { 
-        organizationId, 
-        email: owner.email 
+      logger.error('[Email] Failed to send payment failed email', new Error(result.error), {
+        organizationId,
+        email: owner.email
       });
     }
   } catch (error) {
     logger.error('[Email] Error sending payment failed email:', error);
   }
 }
-

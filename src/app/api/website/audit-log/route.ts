@@ -4,12 +4,23 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
+import type { Query, DocumentData } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
+
+// Audit entry type
+interface AuditEntry {
+  id: string;
+  organizationId?: string;
+  type?: string;
+  pageId?: string;
+  postId?: string;
+  performedAt?: { toDate?: () => Date } | string;
+  [key: string]: unknown;
+}
 
 /**
  * GET /api/website/audit-log
@@ -27,7 +38,7 @@ export async function GET(request: NextRequest) {
     const pageId = searchParams.get('pageId'); // Filter by page
     const postId = searchParams.get('postId'); // Filter by blog post
     const limitParam = searchParams.get('limit');
-    const limit = parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50', 10);
+    const limit = parseInt(limitParam ?? '50', 10);
 
     // CRITICAL: Validate organizationId
     if (!organizationId) {
@@ -41,29 +52,30 @@ export async function GET(request: NextRequest) {
       'organizations/{orgId}/website/audit-log/entries',
       { orgId: organizationId }
     );
-    let query = auditRef.orderBy('performedAt', 'desc');
+    let query: Query<DocumentData> = auditRef.orderBy('performedAt', 'desc');
 
     // Apply filters if specified
     if (type) {
-      query = query.where('type', '==', type) as any;
+      query = query.where('type', '==', type);
     }
     if (pageId) {
-      query = query.where('pageId', '==', pageId) as any;
+      query = query.where('pageId', '==', pageId);
     }
     if (postId) {
-      query = query.where('postId', '==', postId) as any;
+      query = query.where('postId', '==', postId);
     }
 
     // Limit results
-    query = query.limit(limit) as any;
+    query = query.limit(limit);
 
     const snapshot = await query.get();
 
-    const entries = snapshot.docs.map(doc => {
-      const data = doc.data();
-      
+    const entries: AuditEntry[] = [];
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as AuditEntry;
+
       // CRITICAL: Double-check organizationId matches
-      if (data.organizationId !== organizationId) {
+      if (data.organizationId && data.organizationId !== organizationId) {
         logger.error('[SECURITY] Audit log organizationId mismatch', new Error('Audit log cross-org access'), {
           route: '/api/website/audit-log',
           method: 'GET',
@@ -71,33 +83,39 @@ export async function GET(request: NextRequest) {
           actual: data.organizationId,
           entryId: doc.id,
         });
-        return null;
+        continue;
       }
 
-      return {
-        id: doc.id,
+      // Convert Firestore Timestamp to ISO string if needed
+      let performedAt: string | undefined;
+      const performedAtValue = data.performedAt;
+      if (performedAtValue && typeof performedAtValue === 'object' && 'toDate' in performedAtValue && typeof performedAtValue.toDate === 'function') {
+        performedAt = performedAtValue.toDate().toISOString();
+      } else if (typeof performedAtValue === 'string') {
+        performedAt = performedAtValue;
+      }
+
+      entries.push({
         ...data,
-        // Convert Firestore Timestamp to ISO string if needed
-        performedAt: data.performedAt?.toDate
-          ? data.performedAt.toDate().toISOString()
-          : data.performedAt,
-      };
-    }).filter(entry => entry !== null);
+        id: doc.id, // Override data.id with doc.id
+        performedAt,
+      });
+    }
 
     return NextResponse.json({
       success: true,
       entries,
       count: entries.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to fetch audit log', error, {
       route: '/api/website/audit-log',
       method: 'GET'
     });
     return NextResponse.json(
-      { error: 'Failed to fetch audit log', details: error.message },
+      { error: 'Failed to fetch audit log', details: errorMessage },
       { status: 500 }
     );
   }
 }
-

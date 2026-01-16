@@ -10,16 +10,31 @@
  * - Routes to AI Prospector by default
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
+
+// Twilio webhook payload interface
+interface TwilioWebhookPayload {
+  CallSid?: string;
+  From?: string;
+  To?: string;
+  CallStatus?: string;
+  AnsweredBy?: string;
+  data?: {
+    call_control_id?: string;
+    from?: { phone_number?: string };
+    to?: { phone_number?: string };
+    state?: string;
+  };
+}
 
 /**
  * GET /api/voice/twiml
  * Legacy TwiML response - redirects to AI agent
  */
-export async function GET(request: NextRequest) {
+export function GET(request: NextRequest): NextResponse {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('mode') ?? 'ai'; // 'ai' or 'basic'
   const organizationId = searchParams.get('organizationId') ?? 'default';
@@ -60,20 +75,20 @@ export async function POST(request: NextRequest) {
   try {
     // Parse webhook payload
     const contentType = request.headers.get('content-type') ?? '';
-    let payload: Record<string, unknown>;
+    let payload: TwilioWebhookPayload;
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
-      payload = Object.fromEntries(formData.entries()) as Record<string, unknown>;
+      payload = Object.fromEntries(formData.entries()) as TwilioWebhookPayload;
     } else {
-      payload = await request.json();
+      payload = await request.json() as TwilioWebhookPayload;
     }
 
     // Extract call information
-    const callId = String(payload.CallSid ?? (payload.data as any)?.call_control_id ?? `call-${Date.now()}`);
-    const from = String(payload.From ?? (payload.data as any)?.from?.phone_number ?? '');
-    const to = String(payload.To ?? (payload.data as any)?.to?.phone_number ?? '');
-    const callStatus = String(payload.CallStatus ?? (payload.data as any)?.state ?? 'ringing');
+    const callId = String(payload.CallSid ?? payload.data?.call_control_id ?? `call-${Date.now()}`);
+    const from = String(payload.From ?? payload.data?.from?.phone_number ?? '');
+    const to = String(payload.To ?? payload.data?.to?.phone_number ?? '');
+    const callStatus = String(payload.CallStatus ?? payload.data?.state ?? 'ringing');
     const answeredBy = payload.AnsweredBy ? String(payload.AnsweredBy) : undefined;
 
     // Get configuration from query params
@@ -130,7 +145,7 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'text/xml' },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[TwiML] Error generating response:', error, { file: 'twiml/route.ts' });
 
     // Return fallback TwiML

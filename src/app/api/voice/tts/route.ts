@@ -4,8 +4,20 @@
  * GET /api/voice/tts - Get available voices and provider info
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { VoiceEngineFactory, TTSEngineType, TTSSynthesizeRequest } from '@/lib/voice/tts';
+import { type NextRequest, NextResponse } from 'next/server';
+import { VoiceEngineFactory, type TTSEngineType, type TTSSynthesizeRequest } from '@/lib/voice/tts';
+
+interface TTSPostBody {
+  text?: string;
+  organizationId?: string;
+  engine?: TTSEngineType;
+  voiceId?: string;
+  settings?: Record<string, unknown>;
+  action?: 'validate-key' | 'save-config';
+  apiKey?: string;
+  config?: Record<string, unknown>;
+  userId?: string;
+}
 
 /**
  * GET /api/voice/tts
@@ -32,15 +44,15 @@ export async function GET(request: NextRequest) {
 
     // Get cost comparison
     if (action === 'costs') {
-      const textLength = parseInt(searchParams.get('textLength') || '1000');
+      const textLength = parseInt(searchParams.get('textLength') ?? '1000');
       const costs = VoiceEngineFactory.getCostComparison(textLength);
       return NextResponse.json({ success: true, costs });
     }
 
     // Get voices for an engine
     if (orgId) {
-      const voices = await VoiceEngineFactory.listVoices(orgId, engine || undefined);
-      return NextResponse.json({ success: true, voices, engine: engine || 'native' });
+      const voices = await VoiceEngineFactory.listVoices(orgId, engine ?? undefined);
+      return NextResponse.json({ success: true, voices, engine: engine ?? 'native' });
     }
 
     return NextResponse.json({
@@ -63,25 +75,23 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { text, organizationId, engine, voiceId, settings, action } = body;
+    const body = await request.json() as TTSPostBody;
+    const { text, organizationId, engine, voiceId, settings, action, apiKey, config, userId } = body;
 
     // Validate API key
     if (action === 'validate-key') {
-      const { apiKey, engine: engineType } = body;
-      if (!apiKey || !engineType) {
+      if (!apiKey || !engine) {
         return NextResponse.json(
           { success: false, error: 'apiKey and engine are required' },
           { status: 400 }
         );
       }
-      const isValid = await VoiceEngineFactory.validateApiKey(engineType, apiKey);
+      const isValid = await VoiceEngineFactory.validateApiKey(engine, apiKey);
       return NextResponse.json({ success: true, valid: isValid });
     }
 
     // Save org config
     if (action === 'save-config') {
-      const { config, userId } = body;
       if (!organizationId || !config || !userId) {
         return NextResponse.json(
           { success: false, error: 'organizationId, config, and userId are required' },

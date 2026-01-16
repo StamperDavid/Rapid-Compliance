@@ -1,10 +1,20 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import twilio from 'twilio';
+
+interface CallRequestBody {
+  to: string;
+  organizationId: string;
+  contactId?: string;
+}
+
+interface TwilioCallInstance {
+  sid: string;
+  status: string;
+}
 
 /**
  * POST /api/voice/call
@@ -22,7 +32,7 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
+    const body = await request.json() as CallRequestBody;
     const { to, organizationId, contactId } = body;
 
     if (!to || !organizationId) {
@@ -41,7 +51,7 @@ export async function POST(request: NextRequest) {
     const client = twilio(accountSid, authToken);
 
     // Make the call
-    const call = await client.calls.create({
+    const call: TwilioCallInstance = await client.calls.create({
       to: to,
       from: fromNumber,
       url: `${(process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000'}/api/voice/twiml`,
@@ -52,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Save call record to Firestore
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const callId = `call-${Date.now()}`;
-    
+
     await FirestoreService.set(
       `organizations/${organizationId}/workspaces/default/calls`,
       callId,
@@ -82,12 +92,8 @@ export async function POST(request: NextRequest) {
       twilioSid: call.sid,
       status: call.status,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Voice call error', error, { route: '/api/voice/call' });
     return errors.internal('Failed to initiate call', error instanceof Error ? error : undefined);
   }
 }
-
-
-
-

@@ -7,7 +7,7 @@
  * - Includes qualification score, sentiment, and key info
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
 
@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger/logger';
  * POST /api/voice/ai-agent/whisper
  * Generate whisper message for human agent
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export function POST(request: NextRequest): NextResponse {
   try {
     const { searchParams } = new URL(request.url);
     const callId = searchParams.get('callId');
@@ -35,8 +35,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Qualification level
         let qualLevel = 'needs qualification';
-        if (score >= 70) qualLevel = 'highly qualified';
-        else if (score >= 50) qualLevel = 'moderately qualified';
+        if (score >= 70) {
+          qualLevel = 'highly qualified';
+        } else if (score >= 50) {
+          qualLevel = 'moderately qualified';
+        }
 
         // Build message
         whisperMessage = `Incoming transfer. ${name}${company ? ` from ${company}` : ''}. `;
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       headers: { 'Content-Type': 'text/xml' },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[AI-Whisper] Error generating whisper:', error, {
       file: 'ai-agent/whisper/route.ts',
     });
