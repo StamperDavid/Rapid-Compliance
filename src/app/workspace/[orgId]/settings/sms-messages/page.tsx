@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -7,13 +9,21 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSMS } from '@/lib/sms/sms-service';
 
+interface SmsTemplate {
+  id: string;
+  name?: string;
+  message: string;
+  trigger?: string;
+  isCustom?: boolean;
+}
+
 export default function SmsMessagesPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
-  const [smsTemplates, setSmsTemplates] = useState<any[]>([]);
+  const [smsTemplates, setSmsTemplates] = useState<SmsTemplate[]>([]);
   const [selectedSmsTemplate, setSelectedSmsTemplate] = useState<string | null>(null);
   const [showCustomTrigger, setShowCustomTrigger] = useState(false);
   const [smsContent, setSmsContent] = useState('');
@@ -179,7 +189,7 @@ export default function SmsMessagesPage() {
                     
                     {smsTemplates.filter(t => t.isCustom).length === 0 && (
                       <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#666', fontSize: '0.75rem', border: '1px dashed #333', borderRadius: '0.5rem' }}>
-                        No custom triggers yet.<br/>Click "+ New" to create one
+                        No custom triggers yet.<br/>Click &quot;+ New&quot; to create one
                       </div>
                     )}
                   </div>
@@ -262,7 +272,7 @@ export default function SmsMessagesPage() {
                         <strong style={{ display: 'block', marginBottom: '0.5rem' }}>📱 SMS Best Practices:</strong>
                         • Keep messages under 160 characters to avoid extra charges<br/>
                         • Always include your business name<br/>
-                        • Add opt-out: "Reply STOP to unsubscribe"<br/>
+                        • Add opt-out: &quot;Reply STOP to unsubscribe&quot;<br/>
                         • Personalize with customer name when possible<br/>
                         • Only text customers who opted in
                       </div>
@@ -281,31 +291,35 @@ export default function SmsMessagesPage() {
                           style={{ flex: 1, padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.5rem', color: '#fff', fontSize: '0.875rem' }}
                         />
                         <button
-                          onClick={async () => {
-                            if (!testPhoneNumber) {
-                              alert('Please enter a test phone number');
-                              return;
-                            }
-                            setIsSendingTest(true);
-                            setTestSMSResult(null);
-                            try {
-                              const result = await sendSMS({
-                                to: testPhoneNumber,
-                                message: smsContent || 'Test SMS message',
-                                organizationId: 'demo-org',
-                              });
-
-                              if (result.success) {
-                                setTestSMSResult({ success: true, message: `Test SMS sent! Message ID: ${result.messageId}` });
-                                setTestPhoneNumber('');
-                              } else {
-                                setTestSMSResult({ success: false, message:(result.error !== '' && result.error != null) ? result.error : 'Failed to send SMS'});
+                          onClick={() => {
+                            const sendTest = async () => {
+                              if (!testPhoneNumber) {
+                                alert('Please enter a test phone number');
+                                return;
                               }
-                            } catch (error: any) {
-                              setTestSMSResult({ success: false, message:(error.message !== '' && error.message != null) ? error.message : 'Failed to send SMS'});
-                            } finally {
-                              setIsSendingTest(false);
-                            }
+                              setIsSendingTest(true);
+                              setTestSMSResult(null);
+                              try {
+                                const result = await sendSMS({
+                                  to: testPhoneNumber,
+                                  message: smsContent || 'Test SMS message',
+                                  organizationId: 'demo-org',
+                                });
+
+                                if (result.success) {
+                                  setTestSMSResult({ success: true, message: `Test SMS sent! Message ID: ${result.messageId}` });
+                                  setTestPhoneNumber('');
+                                } else {
+                                  setTestSMSResult({ success: false, message: (result.error !== '' && result.error != null) ? result.error : 'Failed to send SMS' });
+                                }
+                              } catch (error) {
+                                const errorMessage = error instanceof Error ? error.message : 'Failed to send SMS';
+                                setTestSMSResult({ success: false, message: errorMessage });
+                              } finally {
+                                setIsSendingTest(false);
+                              }
+                            };
+                            void sendTest();
                           }}
                           disabled={isSendingTest || !testPhoneNumber || !smsContent}
                           style={{
@@ -461,7 +475,7 @@ export default function SmsMessagesPage() {
               <div style={{ padding: '1rem', backgroundColor: '#2e1a1a', border: '1px solid #4a2d2d', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
                 <div style={{ fontSize: '0.75rem', color: '#fca5a5', lineHeight: '1.5' }}>
                   <strong style={{ display: 'block', marginBottom: '0.5rem' }}>⚠️ Important:</strong>
-                  SMS messages require customer consent. Make sure you have permission to text your customers and include opt-out instructions like "Reply STOP to unsubscribe".
+                  SMS messages require customer consent. Make sure you have permission to text your customers and include opt-out instructions like &quot;Reply STOP to unsubscribe&quot;.
                 </div>
               </div>
 

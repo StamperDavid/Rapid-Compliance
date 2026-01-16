@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable no-alert -- Admin UI uses native dialogs for quick user confirmations */
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -7,6 +9,28 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
+
+interface OrganizationFormData {
+  companyName: string;
+  businessType: string;
+  industry: string;
+  website: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  taxId: string;
+  timezone: string;
+  currency: string;
+  fiscalYearStart: string;
+}
+
+interface OrganizationData extends Partial<OrganizationFormData> {
+  name?: string;
+}
 
 export default function OrganizationSettingsPage() {
   const { user } = useAuth();
@@ -37,40 +61,41 @@ export default function OrganizationSettingsPage() {
     // Load organization data from Firestore
     const loadOrganizationData = async () => {
       if (!user?.organizationId) {return;}
-      
+
       try {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const orgData = await FirestoreService.get(
+        const rawData = await FirestoreService.get(
           COLLECTIONS.ORGANIZATIONS,
           user.organizationId
         );
-        
+        const orgData = rawData as OrganizationData | null;
+
         if (orgData) {
           setFormData(prev => ({
             ...prev,
-            companyName:orgData.name ?? orgData.companyName ?? prev.companyName,
-            businessType:orgData.businessType ?? prev.businessType,
-            industry:orgData.industry ?? prev.industry,
-            website:orgData.website ?? prev.website,
-            phone:orgData.phone ?? prev.phone,
-            email:orgData.email ?? prev.email,
-            address:orgData.address ?? prev.address,
-            city:orgData.city ?? prev.city,
-            state:orgData.state ?? prev.state,
-            zipCode:orgData.zipCode ?? prev.zipCode,
-            country:orgData.country ?? prev.country,
-            taxId:orgData.taxId ?? prev.taxId,
-            timezone:orgData.timezone ?? prev.timezone,
-            currency:orgData.currency ?? prev.currency,
-            fiscalYearStart:orgData.fiscalYearStart ?? prev.fiscalYearStart,
+            companyName: orgData.name ?? orgData.companyName ?? prev.companyName,
+            businessType: orgData.businessType ?? prev.businessType,
+            industry: orgData.industry ?? prev.industry,
+            website: orgData.website ?? prev.website,
+            phone: orgData.phone ?? prev.phone,
+            email: orgData.email ?? prev.email,
+            address: orgData.address ?? prev.address,
+            city: orgData.city ?? prev.city,
+            state: orgData.state ?? prev.state,
+            zipCode: orgData.zipCode ?? prev.zipCode,
+            country: orgData.country ?? prev.country,
+            taxId: orgData.taxId ?? prev.taxId,
+            timezone: orgData.timezone ?? prev.timezone,
+            currency: orgData.currency ?? prev.currency,
+            fiscalYearStart: orgData.fiscalYearStart ?? prev.fiscalYearStart,
           }));
         }
       } catch (error) {
         logger.error('Failed to load organization data:', error, { file: 'page.tsx' });
       }
     };
-    
-    loadOrganizationData();
+
+    void loadOrganizationData();
   }, [user?.organizationId]);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
@@ -187,7 +212,7 @@ export default function OrganizationSettingsPage() {
               </Link>
               <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#fff', marginBottom: '0.5rem' }}>Organization Settings</h1>
               <p style={{ color: '#666', fontSize: '0.875rem' }}>
-                Manage your organization's basic information and configuration
+                Manage your organization&apos;s basic information and configuration
               </p>
             </div>
 
@@ -437,7 +462,7 @@ export default function OrganizationSettingsPage() {
                   Cancel
                 </Link>
                 <button
-                  onClick={handleSave}
+                  onClick={() => { void handleSave(); }}
                   disabled={saving}
                   style={{
                     padding: '0.75rem 1.5rem',

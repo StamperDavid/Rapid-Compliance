@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -50,7 +50,7 @@ export default function IntegrationsPage() {
       }
     };
     
-    loadIntegrations();
+    void loadIntegrations();
   }, [user?.organizationId]);
 
   const primaryColor = theme?.colors?.primary?.main || '#6366f1';
@@ -104,7 +104,7 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleUpdate = async (integrationId: string, updates: any) => {
+  const handleUpdate = async (integrationId: string, updates: Partial<ConnectedIntegration>) => {
     if (!user?.organizationId) {return;}
     
     const current = integrations[integrationId];
@@ -361,21 +361,32 @@ export default function IntegrationsPage() {
                     </h2>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
-                    {category.integrations.map(({ id, component: Component }) => (
-                      <Component
-                        key={id}
-                        integration={integrations[id] as any}
-                        onConnect={(integration) => handleConnect(id, integration as Partial<ConnectedIntegration>)}
-                        onDisconnect={() => handleDisconnect(id)}
-                        onUpdate={(updates) => {
-                          if (id === 'quickbooks' || id === 'xero') {
-                            handleUpdate(id, { syncSettings: { ...(integrations[id] as any)?.syncSettings, ...updates } });
-                          } else {
-                            handleUpdate(id, { settings: { ...(integrations[id] as any)?.settings, ...updates } });
-                          }
-                        }}
-                      />
-                    ))}
+                    {category.integrations.map(({ id, component: Component }) => {
+                      const IntegrationComponent = Component as React.ComponentType<{
+                        integration: ConnectedIntegration | null;
+                        onConnect: (integration: Partial<ConnectedIntegration>) => void;
+                        onDisconnect: () => void;
+                        onUpdate: (updates: Record<string, unknown>) => void;
+                      }>;
+                      return (
+                        <IntegrationComponent
+                          key={id}
+                          integration={integrations[id] ?? null}
+                          onConnect={(integration) => { void handleConnect(id, integration); }}
+                          onDisconnect={() => { void handleDisconnect(id); }}
+                          onUpdate={(updates) => {
+                            if (id === 'quickbooks' || id === 'xero') {
+                              const current = integrations[id];
+                              const currentSync = current?.settings ?? {};
+                              void handleUpdate(id, { settings: { ...currentSync, syncSettings: { ...(currentSync.syncSettings as Record<string, unknown> | undefined), ...updates } } });
+                            } else {
+                              const current = integrations[id];
+                              void handleUpdate(id, { settings: { ...current?.settings, ...updates } });
+                            }
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               ))}

@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { MeetingSchedulerConfig } from '@/lib/meetings/scheduler-engine';
 
 export default function MeetingSchedulerConfigPage() {
   const params = useParams();
-  const orgId = params.orgId as string;
-  const [configs, setConfigs] = useState<MeetingSchedulerConfig[]>([]);
+  const _orgId = params.orgId as string;
+  const [_configs, _setConfigs] = useState<MeetingSchedulerConfig[]>([]);
 
   return (
     <div className="p-8">

@@ -1,15 +1,37 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import type { MerchantCoupon, DiscountType, CouponStatus } from '@/types/pricing';
 
+interface CouponsResponse {
+  coupons?: MerchantCoupon[];
+}
+
+interface AnalyticsResponse {
+  analytics?: {
+    totalCoupons: number;
+    activeCoupons: number;
+    totalRedemptions: number;
+    totalDiscountGiven: number;
+    topCoupons: { code: string; uses: number; revenue_impact: number }[];
+  };
+}
+
+interface SaveCouponResponse {
+  coupon: MerchantCoupon;
+}
+
+interface ErrorResponse {
+  error?: string;
+}
+
 type TabType = 'active' | 'all' | 'analytics';
 
 export default function PromotionsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
@@ -30,34 +52,34 @@ export default function PromotionsPage() {
     topCoupons: { code: string; uses: number; revenue_impact: number }[];
   } | null>(null);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
 
-  useEffect(() => {
-    loadData();
-  }, [orgId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load coupons
       const couponsRes = await fetch(`/api/workspace/${orgId}/coupons`);
       if (couponsRes.ok) {
-        const data = await couponsRes.json();
-        setCoupons(data.coupons || []);
+        const data = await couponsRes.json() as CouponsResponse;
+        setCoupons(data.coupons ?? []);
       }
 
       // Load analytics
       const analyticsRes = await fetch(`/api/workspace/${orgId}/coupons/analytics`);
       if (analyticsRes.ok) {
-        const data = await analyticsRes.json();
-        setAnalytics(data.analytics);
+        const data = await analyticsRes.json() as AnalyticsResponse;
+        setAnalytics(data.analytics ?? null);
       }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleCreateNew = () => {
     setEditingCoupon({
@@ -76,7 +98,7 @@ export default function PromotionsPage() {
   };
 
   const handleSaveCoupon = async () => {
-    if (!editingCoupon) return;
+    if (!editingCoupon) { return; }
 
     setSaving(true);
     setMessage({ type: '', text: '' });
@@ -88,7 +110,7 @@ export default function PromotionsPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as SaveCouponResponse;
         setCoupons(prev => {
           const exists = prev.find(c => c.id === data.coupon.id);
           if (exists) {
@@ -99,10 +121,10 @@ export default function PromotionsPage() {
         setShowModal(false);
         setEditingCoupon(null);
         setMessage({ type: 'success', text: 'Coupon saved successfully!' });
-        loadData(); // Refresh analytics
+        void loadData(); // Refresh analytics
       } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save coupon');
+        const errorData = await response.json() as ErrorResponse;
+        throw new Error(errorData.error ?? 'Failed to save coupon');
       }
     } catch (error) {
       setMessage({ type: 'error', text: (error as Error).message });
@@ -213,7 +235,7 @@ export default function PromotionsPage() {
           <CouponsListView
             coupons={activeTab === 'active' ? activeCoupons : coupons}
             onEdit={(coupon) => { setEditingCoupon(coupon); setShowModal(true); }}
-            onToggleStatus={handleToggleStatus}
+            onToggleStatus={(couponId, status) => { void handleToggleStatus(couponId, status); }}
             primaryColor={primaryColor}
           />
         )}
@@ -224,7 +246,7 @@ export default function PromotionsPage() {
             coupon={editingCoupon}
             setCoupon={setEditingCoupon}
             onClose={() => { setShowModal(false); setEditingCoupon(null); }}
-            onSave={handleSaveCoupon}
+            onSave={() => { void handleSaveCoupon(); }}
             saving={saving}
             primaryColor={primaryColor}
           />
@@ -346,7 +368,7 @@ function CouponsListView({
                 {coupon.min_purchase > 0 && (
                   <span>Min: ${(coupon.min_purchase / 100).toFixed(2)}</span>
                 )}
-                <span>{coupon.current_uses} / {coupon.max_uses || '∞'} uses</span>
+                <span>{coupon.current_uses} / {coupon.max_uses ?? '∞'} uses</span>
                 {coupon.valid_until && (
                   <span>Expires: {new Date(coupon.valid_until).toLocaleDateString()}</span>
                 )}
@@ -501,7 +523,7 @@ function CouponEditorModal({
             </label>
             <input
               type="text"
-              value={coupon.code || ''}
+              value={coupon.code ?? ''}
               onChange={(e) => updateField('code', e.target.value.toUpperCase())}
               placeholder="e.g., SUMMER20"
               style={{
@@ -525,7 +547,7 @@ function CouponEditorModal({
                 Discount Type
               </label>
               <select
-                value={coupon.discount_type || 'percentage'}
+                value={coupon.discount_type ?? 'percentage'}
                 onChange={(e) => updateField('discount_type', e.target.value as DiscountType)}
                 style={{
                   width: '100%',
@@ -546,7 +568,7 @@ function CouponEditorModal({
               </label>
               <input
                 type="number"
-                value={coupon.value || 0}
+                value={coupon.value ?? 0}
                 onChange={(e) => updateField('value', parseInt(e.target.value) || 0)}
                 style={{
                   width: '100%',
@@ -568,7 +590,7 @@ function CouponEditorModal({
               </label>
               <input
                 type="number"
-                value={coupon.min_purchase || 0}
+                value={coupon.min_purchase ?? 0}
                 onChange={(e) => updateField('min_purchase', parseInt(e.target.value) || 0)}
                 style={{
                   width: '100%',
@@ -586,7 +608,7 @@ function CouponEditorModal({
               </label>
               <input
                 type="number"
-                value={coupon.max_uses || ''}
+                value={coupon.max_uses ?? ''}
                 onChange={(e) => updateField('max_uses', e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder="Unlimited"
                 style={{
@@ -633,7 +655,7 @@ function CouponEditorModal({
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={coupon.ai_authorized || false}
+                  checked={coupon.ai_authorized ?? false}
                   onChange={(e) => updateField('ai_authorized', e.target.checked)}
                   style={{ width: '1.25rem', height: '1.25rem' }}
                 />
@@ -655,7 +677,7 @@ function CouponEditorModal({
                       type="number"
                       min={0}
                       max={100}
-                      value={coupon.ai_discount_limit || 20}
+                      value={coupon.ai_discount_limit ?? 20}
                       onChange={(e) => updateField('ai_discount_limit', parseInt(e.target.value) || 0)}
                       style={{
                         width: '100%',
@@ -671,7 +693,7 @@ function CouponEditorModal({
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
-                      checked={coupon.ai_auto_apply || false}
+                      checked={coupon.ai_auto_apply ?? false}
                       onChange={(e) => updateField('ai_auto_apply', e.target.checked)}
                     />
                     <div>
@@ -692,7 +714,7 @@ function CouponEditorModal({
               Internal Notes (optional)
             </label>
             <textarea
-              value={coupon.notes || ''}
+              value={coupon.notes ?? ''}
               onChange={(e) => updateField('notes', e.target.value)}
               placeholder="e.g., For email campaign Q1 2024"
               style={{

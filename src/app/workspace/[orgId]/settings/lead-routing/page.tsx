@@ -6,25 +6,24 @@ import type { RoutingRule } from '@/lib/crm/lead-routing';
 
 export default function LeadRoutingPage() {
   const params = useParams();
-  const orgId = params.orgId as string;
+  const _orgId = params.orgId as string;
   const [rules, setRules] = useState<RoutingRule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadRules = () => {
+      try {
+        // Load routing rules from API
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading routing rules:', error);
+        setLoading(false);
+      }
+    };
     loadRules();
   }, []);
 
-  const loadRules = async () => {
-    try {
-      // Load routing rules from API
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading routing rules:', error);
-      setLoading(false);
-    }
-  };
-
-  const toggleRule = async (ruleId: string, enabled: boolean) => {
+  const _toggleRule = (ruleId: string, enabled: boolean) => {
     // Update rule status
     setRules(rules.map(r => r.id === ruleId ? { ...r, enabled } : r));
   };

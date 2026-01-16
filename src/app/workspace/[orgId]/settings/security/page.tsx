@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 
 export default function SecuritySettingsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const [sidebarOpen, setSidebarOpen] = useState(true);

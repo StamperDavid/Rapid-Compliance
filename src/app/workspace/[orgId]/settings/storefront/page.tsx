@@ -119,7 +119,7 @@ export default function StorefrontSettingsPage() {
       }
     };
     
-    loadConfig();
+    void loadConfig();
   }, [user?.organizationId]);
 
   const handleSave = async () => {
@@ -144,20 +144,20 @@ export default function StorefrontSettingsPage() {
     }
   };
 
-  const updateConfig = (path: string[], value: any) => {
+  const updateConfig = (path: string[], value: unknown) => {
     setConfig(prev => {
-      const newConfig = { ...prev };
-      let current: any = newConfig;
+      const newConfig = JSON.parse(JSON.stringify(prev)) as StorefrontConfig;
+      let current: Record<string, unknown> = newConfig as unknown as Record<string, unknown>;
       for (let i = 0; i < path.length - 1; i++) {
-        current = current[path[i]];
+        current = current[path[i]] as Record<string, unknown>;
       }
       current[path[path.length - 1]] = value;
       return newConfig;
     });
   };
 
-  const generateWidgetId = () => {
-    return `widget_${  Math.random().toString(36).substring(2, 15)}`;
+  const _generateWidgetId = () => {
+    return `widget_${Math.random().toString(36).substring(2, 15)}`;
   };
 
   const widgetId = 'demo_store_widget';
@@ -182,7 +182,7 @@ export default function StorefrontSettingsPage() {
   };
 
   const copyCode = (code: string, type: string) => {
-    navigator.clipboard.writeText(code);
+    void navigator.clipboard.writeText(code);
     setCopiedCode(type);
     setTimeout(() => setCopiedCode(null), 2000);
   };
@@ -215,7 +215,7 @@ export default function StorefrontSettingsPage() {
                 </span>
               </label>
               <button
-                onClick={handleSave}
+                onClick={() => { void handleSave(); }}
                 disabled={isSaving}
                 style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', opacity: isSaving ? 0.5 : 1 }}
               >
@@ -604,86 +604,6 @@ export default function StorefrontSettingsPage() {
                       &nbsp;&nbsp;↓<br/>
                       📊 Syncs to Accounting Software (if enabled)
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Theme Tab Removed - Storefront now inherits CRM theme automatically */}
-          {false && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>Storefront Colors</h3>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                  {[
-                    { label: 'Primary Color', path: ['theme', 'primaryColor'], value: config.theme?.primaryColor },
-                    { label: 'Secondary Color', path: ['theme', 'secondaryColor'], value: config.theme?.secondaryColor },
-                    { label: 'Accent Color', path: ['theme', 'accentColor'], value: config.theme?.accentColor },
-                    { label: 'Background Color', path: ['theme', 'backgroundColor'], value: config.theme?.backgroundColor },
-                    { label: 'Text Color', path: ['theme', 'textColor'], value: config.theme?.textColor },
-                  ].map((color) => (
-                    <div key={color.label}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                        {color.label}
-                      </label>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input
-                          type="color"
-                          value={color.value}
-                          onChange={(e) => updateConfig(color.path, e.target.value)}
-                          style={{ width: '60px', height: '40px', border: '1px solid #333', borderRadius: '0.375rem', cursor: 'pointer', backgroundColor: 'transparent' }}
-                        />
-                        <input
-                          type="text"
-                          value={color.value}
-                          onChange={(e) => updateConfig(color.path, e.target.value)}
-                          style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem', fontFamily: 'monospace' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Typography & Layout */}
-              <div style={{ backgroundColor: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '1.5rem' }}>Typography & Layout</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                      Font Family
-                    </label>
-                    <select
-                      value={config.theme?.fontFamily}
-                      onChange={(e) => updateConfig(['theme', 'fontFamily'], e.target.value)}
-                      style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-                    >
-                      <option value="Inter, sans-serif">Inter (Modern)</option>
-                      <option value="Roboto, sans-serif">Roboto (Clean)</option>
-                      <option value="Poppins, sans-serif">Poppins (Friendly)</option>
-                      <option value="Montserrat, sans-serif">Montserrat (Bold)</option>
-                      <option value="Georgia, serif">Georgia (Classic)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem' }}>
-                      Button Border Radius
-                    </label>
-                    <select
-                      value={config.theme?.buttonRadius}
-                      onChange={(e) => updateConfig(['theme', 'buttonRadius'], e.target.value)}
-                      style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
-                    >
-                      <option value="0">Sharp (0px)</option>
-                      <option value="0.25rem">Subtle (4px)</option>
-                      <option value="0.5rem">Rounded (8px)</option>
-                      <option value="0.75rem">Very Rounded (12px)</option>
-                      <option value="9999px">Pill Shape</option>
-                    </select>
                   </div>
                 </div>
               </div>
