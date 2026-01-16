@@ -2,8 +2,8 @@
  * API endpoint to apply an approved Golden Master update
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { applyUpdateRequest } from '@/lib/training/golden-master-updater';
@@ -11,6 +11,13 @@ import type { GoldenMasterUpdateRequest } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+const ApplyUpdateSchema = z.object({
+  updateRequestId: z.string().min(1, 'Update request ID is required'),
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  approved: z.boolean(),
+  reviewNotes: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,13 +31,14 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Parse request
-    const body = await request.json();
-    const { updateRequestId, organizationId, approved, reviewNotes } = body;
-
-    if (!updateRequestId || !organizationId || approved === undefined) {
-      return errors.badRequest('Update request ID, organization ID, and approval status required');
+    // Parse and validate request
+    const body: unknown = await request.json();
+    const parseResult = ApplyUpdateSchema.safeParse(body);
+    if (!parseResult.success) {
+      return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
+    const { updateRequestId, organizationId, approved, reviewNotes } = parseResult.data;
+
 
     // Verify access
     if (user.organizationId !== organizationId) {
@@ -103,7 +111,7 @@ export async function POST(request: NextRequest) {
       message: 'Update applied successfully',
       newGoldenMaster,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error applying update', error, { route: '/api/training/apply-update' });
     return errors.database('Failed to apply update', error instanceof Error ? error : undefined);
   }

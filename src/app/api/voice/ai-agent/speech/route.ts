@@ -8,9 +8,25 @@
  * - Returns TwiML with AI response
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
+
+/** Telnyx speech recognition data structure */
+interface TelnyxSpeechPayload {
+  data?: {
+    payload?: {
+      speech?: {
+        transcript?: string;
+        confidence?: number;
+      };
+    };
+    speech?: {
+      transcript?: string;
+      confidence?: number;
+    };
+  };
+}
 
 /**
  * POST /api/voice/ai-agent/speech
@@ -51,12 +67,12 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Telnyx format
-      const payload = await request.json();
-      const data = payload.data ?? payload;
+      const payload = await request.json() as TelnyxSpeechPayload;
+      const data = payload.data;
 
       // Telnyx provides speech in payload.data.payload.speech
-      speechResult = data.payload?.speech?.transcript ?? data.speech?.transcript ?? '';
-      confidence = data.payload?.speech?.confidence ?? data.speech?.confidence ?? 0;
+      speechResult = data?.payload?.speech?.transcript ?? data?.speech?.transcript ?? '';
+      confidence = data?.payload?.speech?.confidence ?? data?.speech?.confidence ?? 0;
 
       logger.info('[AI-Speech] Telnyx speech received', {
         callId,
@@ -116,7 +132,7 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'text/xml' },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[AI-Speech] Error processing speech:', error, { file: 'ai-agent/speech/route.ts' });
 
     // Return fallback TwiML

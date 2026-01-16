@@ -2,13 +2,18 @@
  * API endpoint to deploy a Golden Master version to production
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { deployGoldenMaster } from '@/lib/training/golden-master-updater';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+const DeployGoldenMasterSchema = z.object({
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  goldenMasterId: z.string().min(1, 'Golden Master ID is required'),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,13 +27,13 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Parse request
-    const body = await request.json();
-    const { organizationId, goldenMasterId } = body;
-
-    if (!organizationId || !goldenMasterId) {
-      return errors.badRequest('Organization ID and Golden Master ID required');
+    // Parse and validate request
+    const body: unknown = await request.json();
+    const parseResult = DeployGoldenMasterSchema.safeParse(body);
+    if (!parseResult.success) {
+      return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
+    const { organizationId, goldenMasterId } = parseResult.data;
 
     // Verify access
     if (user.organizationId !== organizationId) {
@@ -42,7 +47,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Golden Master deployed to production',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error deploying Golden Master', error, { route: '/api/training/deploy-golden-master' });
     return errors.database('Failed to deploy Golden Master', error instanceof Error ? error : undefined);
   }

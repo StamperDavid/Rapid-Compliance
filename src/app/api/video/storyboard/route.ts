@@ -3,32 +3,66 @@
  * POST /api/video/storyboard - Generate storyboard from brief using Director Service
  */
 
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { generateStoryboard } from '@/lib/video/engine/director-service';
 import { logger } from '@/lib/logger/logger';
 import type { DirectorRequest } from '@/lib/video/engine/types';
 
+const ObjectiveValues = ['awareness', 'consideration', 'conversion', 'retention'] as const;
+const PlatformValues = ['youtube', 'tiktok', 'instagram', 'linkedin', 'website'] as const;
+const AspectRatioValues = ['16:9', '9:16', '1:1', '4:3'] as const;
+const ResolutionValues = ['1080p', '720p', '4k'] as const;
+const PacingValues = ['slow', 'medium', 'fast', 'dynamic'] as const;
+
+const BriefSchema = z.object({
+  objective: z.enum(ObjectiveValues).optional(),
+  message: z.string().min(1, 'Video message required'),
+  callToAction: z.string().optional(),
+  targetPlatform: z.enum(PlatformValues).optional(),
+});
+
+const ConstraintsSchema = z.object({
+  maxDuration: z.number().optional(),
+  aspectRatio: z.enum(AspectRatioValues).optional(),
+  resolution: z.enum(ResolutionValues).optional(),
+}).optional();
+
+const CreativeDirectionSchema = z.object({
+  mood: z.string(),
+  pacing: z.enum(PacingValues),
+  visualStyle: z.string(),
+  referenceVideos: z.array(z.string()).optional(),
+}).optional();
+
+const StoryboardRequestSchema = z.object({
+  organizationId: z.string().min(1, 'Organization ID required'),
+  brief: BriefSchema,
+  constraints: ConstraintsSchema,
+  creativeDirection: CreativeDirectionSchema,
+  voiceoverScript: z.string().optional(),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
 
-    const { organizationId, brief, constraints, creativeDirection, voiceoverScript } = body;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    const parseResult = StoryboardRequestSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.errors[0]?.message ?? 'Invalid request body' },
+        { status: 400 }
+      );
     }
 
-    if (!brief?.message) {
-      return NextResponse.json({ error: 'Video message required' }, { status: 400 });
-    }
+    const { organizationId, brief, constraints, creativeDirection, voiceoverScript } = parseResult.data;
 
     // Build Brand DNA snapshot from org settings (simplified for now)
     const brandDNA = {
       companyDescription: 'AI-powered sales platform',
       uniqueValue: 'Autonomous AI workforce that handles sales tasks 24/7',
       targetAudience: 'B2B sales teams and marketing professionals',
-      toneOfVoice: creativeDirection?.mood || 'professional',
+      toneOfVoice: creativeDirection?.mood ?? 'professional',
       communicationStyle: 'direct',
       primaryColor: '#6366f1',
       secondaryColor: '#f59e0b',
@@ -41,17 +75,17 @@ export async function POST(request: NextRequest) {
     const directorRequest: DirectorRequest = {
       organizationId,
       brief: {
-        objective: brief.objective || 'awareness',
+        objective: brief.objective ?? 'awareness',
         message: brief.message,
         callToAction: brief.callToAction,
-        targetPlatform: brief.targetPlatform || 'youtube',
+        targetPlatform: brief.targetPlatform ?? 'youtube',
       },
       constraints: {
-        maxDuration: constraints?.maxDuration || 60,
-        aspectRatio: constraints?.aspectRatio || '16:9',
-        resolution: constraints?.resolution || '1080p',
+        maxDuration: constraints?.maxDuration ?? 60,
+        aspectRatio: constraints?.aspectRatio ?? '16:9',
+        resolution: constraints?.resolution ?? '1080p',
       },
-      voiceoverScript: voiceoverScript || brief.message,
+      voiceoverScript: voiceoverScript ?? brief.message,
       brandDNA,
       creativeDirection: creativeDirection ? {
         mood: creativeDirection.mood,
@@ -73,13 +107,13 @@ export async function POST(request: NextRequest) {
     const storyboard = {
       id: response.storyboard.id,
       title: response.storyboard.title,
-      scenes: response.storyboard.scenes.map((scene, index) => ({
+      scenes: response.storyboard.scenes.map((scene) => ({
         id: scene.id,
         name: scene.name,
-        description: scene.description || '',
+        description: scene.description ?? '',
         duration: scene.duration,
-        shotType: scene.shots[0]?.shotType || 'medium',
-        cameraMotion: scene.shots[0]?.cameraMotion || 'static',
+        shotType: scene.shots[0]?.shotType ?? 'medium',
+        cameraMotion: scene.shots[0]?.cameraMotion ?? 'static',
       })),
       totalDuration: response.storyboard.totalDuration,
       estimatedCost: response.estimatedCost,

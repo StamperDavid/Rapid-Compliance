@@ -2,8 +2,8 @@
  * API endpoint to create a Golden Master update request from training sessions
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { aggregateSuggestions, filterByConfidence } from '@/lib/training/feedback-processor';
@@ -12,6 +12,13 @@ import type { TrainingSession } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+const CreateUpdateRequestSchema = z.object({
+  sessionIds: z.array(z.string().min(1)).min(1, 'At least one session ID is required'),
+  organizationId: z.string().min(1, 'Organization ID is required'),
+  goldenMasterId: z.string().min(1, 'Golden Master ID is required'),
+  minConfidence: z.number().min(0).max(1).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,13 +32,13 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Parse request
-    const body = await request.json();
-    const { sessionIds, organizationId, goldenMasterId, minConfidence } = body;
-
-    if (!sessionIds || !Array.isArray(sessionIds) || !organizationId || !goldenMasterId) {
-      return errors.badRequest('Session IDs, organization ID, and Golden Master ID required');
+    // Parse and validate request
+    const body: unknown = await request.json();
+    const parseResult = CreateUpdateRequestSchema.safeParse(body);
+    if (!parseResult.success) {
+      return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
+    const { sessionIds, organizationId, goldenMasterId, minConfidence } = parseResult.data;
 
     // Verify access
     if (user.organizationId !== organizationId) {
@@ -89,7 +96,7 @@ export async function POST(request: NextRequest) {
       success: true,
       updateRequest,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error creating update request', error, { route: '/api/training/create-update-request' });
     return errors.database('Failed to create update request', error instanceof Error ? error : undefined);
   }

@@ -7,11 +7,26 @@
  * - Preserves conversation context for handoff
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { callTransferService } from '@/lib/voice/call-transfer-service';
 import { aiConversationService } from '@/lib/voice/ai-conversation-service';
 import { logger } from '@/lib/logger/logger';
+
+/** Conversation context from the voice agent handler */
+interface ConversationContext {
+  sentiment: string;
+  qualificationScore: number;
+  turns: Array<{
+    role: string;
+    content: string;
+    timestamp: Date;
+  }>;
+  customerInfo: {
+    name?: string;
+    phone?: string;
+  };
+}
 
 /**
  * Handle fallback request (both GET and POST)
@@ -57,7 +72,7 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
             'Continue conversation from where AI left off',
             context.qualificationScore >= 50 ? 'Lead shows potential' : 'Lead needs more qualification',
           ],
-          conversationHistory: context.turns.map(t => ({
+          conversationHistory: context.turns.map((t) => ({
             role: t.role,
             content: t.content,
             timestamp: t.timestamp,
@@ -79,9 +94,6 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
 
     // Generate transfer TwiML
     const transferNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567';
-    const whisperMessage = context
-      ? `Incoming transfer. Customer ${context.customerInfo.name ?? 'unknown'}. Qualification score ${context.qualificationScore}. Sentiment ${context.sentiment}.`
-      : 'Incoming transfer from AI agent. No context available.';
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -98,7 +110,7 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
       headers: { 'Content-Type': 'text/xml' },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[AI-Fallback] Error in fallback handler:', error, {
       file: 'ai-agent/fallback/route.ts',
     });
@@ -134,7 +146,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 async function logFallback(
   callId: string,
   reason: string,
-  context: any
+  context: ConversationContext | undefined
 ): Promise<void> {
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');

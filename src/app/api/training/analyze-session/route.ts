@@ -2,8 +2,8 @@
  * API endpoint to analyze a training session
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { analyzeTrainingSession } from '@/lib/training/feedback-processor';
@@ -11,6 +11,11 @@ import type { TrainingSession } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+const AnalyzeSessionSchema = z.object({
+  sessionId: z.string().min(1, 'Session ID is required'),
+  organizationId: z.string().min(1, 'Organization ID is required'),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,13 +29,14 @@ export async function POST(request: NextRequest) {
     }
     const { user } = authResult;
 
-    // Parse request
-    const body = await request.json();
-    const { sessionId, organizationId } = body;
-
-    if (!sessionId || !organizationId) {
-      return errors.badRequest('Session ID and organization ID required');
+    // Parse and validate request
+    const body: unknown = await request.json();
+    const parseResult = AnalyzeSessionSchema.safeParse(body);
+    if (!parseResult.success) {
+      return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
+    const { sessionId, organizationId } = parseResult.data;
+
 
     // Verify access
     if (user.organizationId !== organizationId) {
@@ -73,7 +79,7 @@ export async function POST(request: NextRequest) {
       success: true,
       analysis,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error analyzing session', error, { route: '/api/training/analyze-session' });
     return errors.database('Failed to analyze session', error instanceof Error ? error : undefined);
   }

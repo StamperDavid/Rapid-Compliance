@@ -7,11 +7,17 @@
  * - Returns TwiML with speech recognition enabled
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
-import { VoiceProviderFactory } from '@/lib/voice/voice-factory';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
+
+/** Telnyx webhook data structure */
+interface TelnyxWebhookData {
+  call_control_id?: string;
+  from?: { phone_number?: string };
+  to?: { phone_number?: string };
+}
 
 /**
  * POST /api/voice/ai-agent
@@ -32,13 +38,14 @@ export async function POST(request: NextRequest) {
       payload = Object.fromEntries(formData.entries()) as Record<string, unknown>;
     } else {
       // Telnyx or JSON format
-      payload = await request.json();
+      payload = await request.json() as Record<string, unknown>;
     }
 
-    // Extract call information
-    const callId = String(payload.CallSid ?? (payload.data as any)?.call_control_id ?? '');
-    const from = String(payload.From ?? (payload.data as any)?.from?.phone_number ?? '');
-    const to = String(payload.To ?? (payload.data as any)?.to?.phone_number ?? '');
+    // Extract call information (Twilio or Telnyx format)
+    const telnyxData = payload.data as TelnyxWebhookData | undefined;
+    const callId = String(payload.CallSid ?? telnyxData?.call_control_id ?? '');
+    const from = String(payload.From ?? telnyxData?.from?.phone_number ?? '');
+    const to = String(payload.To ?? telnyxData?.to?.phone_number ?? '');
 
     // Get agent config from query params or use defaults
     const { searchParams } = new URL(request.url);
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[AI-Agent] Error starting conversation:', error, { file: 'ai-agent/route.ts' });
 
     // Return fallback TwiML that transfers to human
@@ -113,7 +120,7 @@ export async function POST(request: NextRequest) {
  * GET /api/voice/ai-agent
  * Return agent status or health check
  */
-export async function GET(request: NextRequest) {
+export function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const callId = searchParams.get('callId');
 

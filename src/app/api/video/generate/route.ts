@@ -3,24 +3,29 @@
  * POST /api/video/generate - Start video generation from approved storyboard
  */
 
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 
+const VideoGenerateSchema = z.object({
+  organizationId: z.string().min(1, 'Organization ID required'),
+  storyboardId: z.string().min(1, 'Storyboard ID required'),
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
 
-    const { organizationId, storyboardId } = body;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
+    const parseResult = VideoGenerateSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.errors[0]?.message ?? 'Invalid request body' },
+        { status: 400 }
+      );
     }
 
-    if (!storyboardId) {
-      return NextResponse.json({ error: 'Storyboard ID required' }, { status: 400 });
-    }
+    const { organizationId, storyboardId } = parseResult.data;
 
     logger.info('Video API: Starting video generation', {
       organizationId,
