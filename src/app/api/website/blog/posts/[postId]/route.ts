@@ -4,11 +4,49 @@
  * CRITICAL: Multi-tenant - scoped to organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+
+const paramsSchema = z.object({
+  postId: z.string().min(1, 'postId is required'),
+});
+
+const getQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+});
+
+const pageSEOSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+  ogImage: z.string().optional(),
+  canonical: z.string().optional(),
+  noIndex: z.boolean().optional(),
+  structuredData: z.record(z.unknown()).optional(),
+});
+
+const putBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  post: z.object({
+    title: z.string().optional(),
+    slug: z.string().optional(),
+    excerpt: z.string().optional(),
+    content: z.array(z.unknown()).optional(), // PageSection[] - validated at storage layer
+    featuredImage: z.string().optional(),
+    categories: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
+    author: z.string().optional(),
+    authorName: z.string().optional(),
+    authorAvatar: z.string().optional(),
+    seo: pageSEOSchema.optional(),
+    status: z.enum(['draft', 'published', 'scheduled']).optional(),
+    featured: z.boolean().optional(),
+    readTime: z.number().optional(),
+  }),
+});
 
 /**
  * GET /api/website/blog/posts/:postId
@@ -16,24 +54,33 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    const postId = params.postId;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
+    }
+    const { postId } = paramsResult.data;
+
+    const { searchParams } = new URL(request.url);
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId') ?? undefined,
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: queryResult.error.errors[0]?.message ?? 'organizationId required' },
         { status: 400 }
       );
     }
+
+    const { organizationId } = queryResult.data;
 
     // Get post document
     const postRef = adminDal.getNestedDocRef(
@@ -66,7 +113,7 @@ export async function GET(
         id: postDoc.id,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch blog post', error, {
       route: '/api/website/blog/posts/[postId]',
       method: 'GET'
@@ -84,24 +131,31 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
-    const { organizationId, post } = body;
-    const postId = params.postId;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
+    }
+    const { postId } = paramsResult.data;
+
+    const rawBody: unknown = await request.json();
+    const bodyResult = putBodySchema.safeParse(rawBody);
+
+    if (!bodyResult.success) {
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: bodyResult.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
+
+    const { organizationId, post } = bodyResult.data;
 
     // Get existing post
     const postRef = adminDal.getNestedDocRef(
@@ -118,7 +172,7 @@ export async function PUT(
       );
     }
 
-    const existingData = existingPost.data();
+    const existingData = existingPost.data() as BlogPost | undefined;
 
     // CRITICAL: Verify post belongs to this org
     if (existingData?.organizationId !== organizationId) {
@@ -128,19 +182,33 @@ export async function PUT(
       );
     }
 
-    // Update post
+    // Update post - merge existing with updates
     const updatedPost: BlogPost = {
       ...existingData,
-      ...post,
+      ...(post.title !== undefined && { title: post.title }),
+      ...(post.slug !== undefined && { slug: post.slug }),
+      ...(post.excerpt !== undefined && { excerpt: post.excerpt }),
+      ...(post.content !== undefined && { content: post.content as BlogPost['content'] }),
+      ...(post.featuredImage !== undefined && { featuredImage: post.featuredImage }),
+      ...(post.categories !== undefined && { categories: post.categories }),
+      ...(post.tags !== undefined && { tags: post.tags }),
+      ...(post.author !== undefined && { author: post.author }),
+      ...(post.authorName !== undefined && { authorName: post.authorName }),
+      ...(post.authorAvatar !== undefined && { authorAvatar: post.authorAvatar }),
+      ...(post.seo !== undefined && { seo: post.seo as BlogPost['seo'] }),
+      ...(post.status !== undefined && { status: post.status }),
+      ...(post.featured !== undefined && { featured: post.featured }),
+      ...(post.readTime !== undefined && { readTime: post.readTime }),
       id: postId,
       organizationId, // CRITICAL: Ensure org doesn't change
       updatedAt: new Date().toISOString(),
-    } as BlogPost;
+      lastEditedBy: 'system',
+    };
 
     await postRef.set(updatedPost);
 
     return NextResponse.json({ post: updatedPost });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to update blog post', error, {
       route: '/api/website/blog/posts/[postId]',
       method: 'PUT'
@@ -158,24 +226,33 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    const postId = params.postId;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
+    }
+    const { postId } = paramsResult.data;
+
+    const { searchParams } = new URL(request.url);
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId') ?? undefined,
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: queryResult.error.errors[0]?.message ?? 'organizationId required' },
         { status: 400 }
       );
     }
+
+    const { organizationId } = queryResult.data;
 
     // Get post to verify ownership
     const postRef = adminDal.getNestedDocRef(
@@ -192,7 +269,7 @@ export async function DELETE(
       );
     }
 
-    const postData = postDoc.data();
+    const postData = postDoc.data() as BlogPost | undefined;
 
     // CRITICAL: Verify post belongs to this org
     if (postData?.organizationId !== organizationId) {
@@ -205,7 +282,7 @@ export async function DELETE(
     await postRef.delete();
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to delete blog post', error, {
       route: '/api/website/blog/posts/[postId]',
       method: 'DELETE'
@@ -216,5 +293,3 @@ export async function DELETE(
     );
   }
 }
-
-

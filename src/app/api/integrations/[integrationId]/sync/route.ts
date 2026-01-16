@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { syncIntegration } from '@/lib/integrations/integration-manager';
 import { logger } from '@/lib/logger/logger';
@@ -35,7 +34,7 @@ export async function POST(
       synced: result.synced,
       error: result.error,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error syncing integration', error, { route: '/api/integrations/sync' });
     return errors.externalService('Integration', error instanceof Error ? error : undefined);
   }

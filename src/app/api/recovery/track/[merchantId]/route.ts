@@ -3,7 +3,8 @@
  *
  * Records which channel brought a lead back (recovery source attribution).
  */
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger/logger';
 
 export async function GET(
   request: NextRequest,
@@ -33,7 +34,7 @@ export async function GET(
       const engine = getRecoveryEngine();
       engine.cancelCampaign(merchantId);
 
-      console.log(`[RecoveryTracking] Lead ${merchantId} recovered via ${source}`);
+      logger.info(`[RecoveryTracking] Lead ${merchantId} recovered via ${source}`);
     }
 
     // Redirect to onboarding with recovery context
@@ -44,8 +45,8 @@ export async function GET(
     }
 
     return NextResponse.redirect(redirectUrl);
-  } catch (error) {
-    console.error('[RecoveryTracking] Error:', error);
+  } catch (error: unknown) {
+    logger.error('[RecoveryTracking] Error:', error);
     return NextResponse.redirect(new URL('/onboarding/industry', request.url));
   }
 }

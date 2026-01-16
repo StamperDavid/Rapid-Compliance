@@ -1,23 +1,32 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { CouponRedemption, MerchantCoupon } from '@/types/pricing';
 
-interface RouteContext {
-  params: Promise<{ orgId: string }>;
-}
+const paramsSchema = z.object({
+  orgId: z.string().min(1, 'orgId is required'),
+});
 
 /**
  * GET: Get coupon analytics for a merchant
  */
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    const { orgId } = await context.params;
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid orgId parameter' },
+        { status: 400 }
+      );
+    }
+    const { orgId } = paramsResult.data;
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {

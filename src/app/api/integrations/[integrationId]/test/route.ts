@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import { testIntegration } from '@/lib/integrations/integration-manager';
 import { logger } from '@/lib/logger/logger';
@@ -34,7 +33,7 @@ export async function POST(
       success: result.success,
       error: result.error,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error testing integration', error, { route: '/api/integrations/test' });
     return errors.externalService('Integration', error instanceof Error ? error : undefined);
   }

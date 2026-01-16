@@ -208,7 +208,7 @@ export async function PUT(request: NextRequest) {
         slack: (() => {
           const existing = existingPrefs.channels.slack;
           const update = validatedData.channels?.slack;
-          if (!update || !existing) return existing;
+          if (!update || !existing) { return existing; }
 
           return {
             enabled: update.enabled ?? existing.enabled,
@@ -225,7 +225,7 @@ export async function PUT(request: NextRequest) {
         email: (() => {
           const existing = existingPrefs.channels.email;
           const update = validatedData.channels?.email;
-          if (!update || !existing) return existing;
+          if (!update || !existing) { return existing; }
 
           return {
             enabled: update.enabled ?? existing.enabled,
@@ -237,7 +237,7 @@ export async function PUT(request: NextRequest) {
         webhook: (() => {
           const existing = existingPrefs.channels.webhook;
           const update = validatedData.channels?.webhook;
-          if (!update || !existing) return existing;
+          if (!update || !existing) { return existing; }
 
           return {
             enabled: update.enabled ?? existing.enabled,
@@ -248,7 +248,7 @@ export async function PUT(request: NextRequest) {
         inApp: (() => {
           const existing = existingPrefs.channels.inApp;
           const update = validatedData.channels?.inApp;
-          if (!update || !existing) return existing;
+          if (!update || !existing) { return existing; }
 
           return {
             enabled: update.enabled ?? existing.enabled,

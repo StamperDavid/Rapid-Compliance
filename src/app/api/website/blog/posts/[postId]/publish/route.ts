@@ -4,11 +4,43 @@
  * CRITICAL: Multi-tenant isolation - validates organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
+
+const paramsSchema = z.object({
+  postId: z.string().min(1, 'postId is required'),
+});
+
+const postBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  scheduledFor: z.string().optional(),
+});
+
+const deleteQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+});
+
+interface BlogPostData {
+  organizationId: string;
+  title?: string;
+  status?: string;
+  scheduledFor?: string | null;
+  updatedAt?: string;
+  lastEditedBy?: string;
+  publishedAt?: string;
+}
+
+interface UpdateData {
+  updatedAt: string;
+  lastEditedBy: string;
+  status?: 'draft' | 'published' | 'scheduled';
+  scheduledFor?: string | null;
+  publishedAt?: string;
+  [key: string]: string | null | undefined;
+}
 
 /**
  * POST /api/website/blog/posts/[postId]/publish
@@ -16,28 +48,35 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const params = await context.params;
-    const body = await request.json();
-    const { organizationId, scheduledFor } = body;
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
+    }
+    const { postId } = paramsResult.data;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const rawBody: unknown = await request.json();
+    const bodyResult = postBodySchema.safeParse(rawBody);
+
+    if (!bodyResult.success) {
       return NextResponse.json(
-        { error: 'organizationId is required' },
+        { error: bodyResult.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
+    const { organizationId, scheduledFor } = bodyResult.data;
+
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId: params.postId }
+      { orgId: organizationId, postId }
     );
 
     const doc = await postRef.get();
@@ -49,7 +88,7 @@ export async function POST(
       );
     }
 
-    const postData = doc.data();
+    const postData = doc.data() as BlogPostData | undefined;
 
     if (!postData) {
       return NextResponse.json(
@@ -65,7 +104,7 @@ export async function POST(
         method: 'POST',
         requested: organizationId,
         actual: postData.organizationId,
-        postId: params.postId,
+        postId,
       });
       return NextResponse.json(
         { error: 'Forbidden' },
@@ -77,7 +116,7 @@ export async function POST(
     const performedBy = await getUserIdentifier();
 
     // Update data
-    const updateData: any = {
+    const updateData: UpdateData = {
       updatedAt: now,
       lastEditedBy: performedBy,
     };
@@ -113,8 +152,8 @@ export async function POST(
 
     await auditRef.add({
       type: scheduledFor ? 'blog_post_scheduled' : 'blog_post_published',
-      postId: params.postId,
-      postTitle: postData.title,
+      postId,
+      postTitle: postData.title ?? '',
       scheduledFor: scheduledFor ?? null,
       performedBy,
       performedAt: now,
@@ -130,13 +169,14 @@ export async function POST(
         ? `Post scheduled for ${scheduledFor}`
         : 'Post published successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to publish blog post', error, {
       route: '/api/website/blog/posts/[postId]/publish',
       method: 'POST'
     });
     return NextResponse.json(
-      { error: 'Failed to publish post', details: error.message },
+      { error: 'Failed to publish post', details: errorMessage },
       { status: 500 }
     );
   }
@@ -148,28 +188,37 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
   try {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const params = await context.params;
-    const { searchParams } = request.nextUrl;
-    const organizationId = searchParams.get('organizationId');
+    const resolvedParams = await params;
+    const paramsResult = paramsSchema.safeParse(resolvedParams);
+    if (!paramsResult.success) {
+      return NextResponse.json({ error: 'Invalid postId parameter' }, { status: 400 });
+    }
+    const { postId } = paramsResult.data;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const { searchParams } = request.nextUrl;
+    const queryResult = deleteQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId') ?? undefined,
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'organizationId is required' },
+        { error: queryResult.error.errors[0]?.message ?? 'organizationId is required' },
         { status: 400 }
       );
     }
 
+    const { organizationId } = queryResult.data;
+
     const postRef = adminDal.getNestedDocRef(
       'organizations/{orgId}/website/config/blog-posts/{postId}',
-      { orgId: organizationId, postId: params.postId }
+      { orgId: organizationId, postId }
     );
 
     const doc = await postRef.get();
@@ -181,7 +230,7 @@ export async function DELETE(
       );
     }
 
-    const postData = doc.data();
+    const postData = doc.data() as BlogPostData | undefined;
 
     // CRITICAL: Verify organizationId matches
     if (postData?.organizationId !== organizationId) {
@@ -190,7 +239,7 @@ export async function DELETE(
         method: 'DELETE',
         requested: organizationId,
         actual: postData?.organizationId,
-        postId: params.postId,
+        postId,
       });
       return NextResponse.json(
         { error: 'Forbidden' },
@@ -217,8 +266,8 @@ export async function DELETE(
 
     await auditRef.add({
       type: 'blog_post_unpublished',
-      postId: params.postId,
-      postTitle: postData.title,
+      postId,
+      postTitle: postData?.title ?? '',
       performedBy,
       performedAt: now,
       organizationId,
@@ -228,15 +277,15 @@ export async function DELETE(
       success: true,
       message: 'Post unpublished successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to unpublish blog post', error, {
       route: '/api/website/blog/posts/[postId]/publish',
       method: 'DELETE'
     });
     return NextResponse.json(
-      { error: 'Failed to unpublish post', details: error.message },
+      { error: 'Failed to unpublish post', details: errorMessage },
       { status: 500 }
     );
   }
 }
-

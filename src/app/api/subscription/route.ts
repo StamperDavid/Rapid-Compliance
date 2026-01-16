@@ -4,13 +4,24 @@
  * POST: Update subscription plan
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { FeatureGate } from '@/lib/subscription/feature-gate';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import type { SubscriptionPlan } from '@/types/subscription';
+
+const querySchema = z.object({
+  orgId: z.string().min(1, 'Organization ID required'),
+});
+
+const postBodySchema = z.object({
+  orgId: z.string().min(1, 'Organization ID required'),
+  plan: z.enum(['starter', 'professional', 'enterprise', 'custom']),
+  billingCycle: z.enum(['monthly', 'yearly']).optional().default('monthly'),
+});
 
 /**
  * GET /api/subscription?orgId=xxx
@@ -19,7 +30,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/subscription');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) { return rateLimitResponse; }
 
     // Authentication
     const authResult = await requireAuth(request);
@@ -28,11 +39,15 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId');
+    const queryResult = querySchema.safeParse({
+      orgId: searchParams.get('orgId') ?? undefined,
+    });
 
-    if (!orgId) {
-      return errors.badRequest('Organization ID required');
+    if (!queryResult.success) {
+      return errors.badRequest(queryResult.error.errors[0]?.message ?? 'Invalid query parameters');
     }
+
+    const { orgId } = queryResult.data;
 
     // Get subscription
     const subscription = await FeatureGate.getSubscription(orgId);
@@ -41,7 +56,7 @@ export async function GET(request: NextRequest) {
       success: true,
       subscription,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error getting subscription', error, { route: '/api/subscription' });
     return errors.database('Failed to get subscription', error instanceof Error ? error : undefined);
   }
@@ -59,28 +74,20 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json();
-    const { orgId, plan, billingCycle } = body;
+    const rawBody: unknown = await request.json();
+    const bodyResult = postBodySchema.safeParse(rawBody);
 
-    if (!orgId) {
-      return errors.badRequest('Organization ID required');
+    if (!bodyResult.success) {
+      return errors.badRequest(bodyResult.error.errors[0]?.message ?? 'Invalid request body');
     }
 
-    if (!plan) {
-      return errors.badRequest('Plan required');
-    }
-
-    // Validate plan
-    const validPlans = ['starter', 'professional', 'enterprise', 'custom'];
-    if (!validPlans.includes(plan)) {
-      return errors.badRequest(`Invalid plan. Must be one of: ${validPlans.join(', ')}`);
-    }
+    const { orgId, plan, billingCycle } = bodyResult.data;
 
     // Update subscription
     const subscription = await FeatureGate.updatePlan(
       orgId,
-      plan,
-(billingCycle !== '' && billingCycle != null) ? billingCycle : 'monthly'
+      plan as SubscriptionPlan,
+      billingCycle
     );
 
     return NextResponse.json({
@@ -88,27 +95,8 @@ export async function POST(request: NextRequest) {
       message: `Subscription updated to ${plan} plan`,
       subscription,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error updating subscription', error, { route: '/api/subscription' });
     return errors.database('Failed to update subscription', error instanceof Error ? error : undefined);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -4,11 +4,48 @@
  * CRITICAL: Multi-tenant - scoped to organizationId
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
-import type { BlogPost } from '@/types/website';
+import type { BlogPost, PageSection, PageSEO } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
+
+const getQuerySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  status: z.enum(['draft', 'published', 'scheduled']).optional(),
+  category: z.string().optional(),
+});
+
+const pageSEOSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+  ogImage: z.string().optional(),
+  canonical: z.string().optional(),
+  noIndex: z.boolean().optional(),
+  structuredData: z.record(z.unknown()).optional(),
+});
+
+const postBodySchema = z.object({
+  organizationId: z.string().min(1, 'organizationId is required'),
+  post: z.object({
+    id: z.string().optional(),
+    title: z.string().min(1, 'Post title is required'),
+    slug: z.string().optional(),
+    excerpt: z.string().optional(),
+    content: z.array(z.unknown()).optional(), // PageSection[] - validated at storage layer
+    featuredImage: z.string().optional(),
+    categories: z.array(z.string()).optional().default([]),
+    tags: z.array(z.string()).optional().default([]),
+    author: z.string().optional(), // User ID
+    authorName: z.string().optional(),
+    authorAvatar: z.string().optional(),
+    seo: pageSEOSchema.optional(),
+    status: z.enum(['draft', 'published', 'scheduled']).optional().default('draft'),
+    featured: z.boolean().optional().default(false),
+    readTime: z.number().optional(),
+  }),
+});
 
 /**
  * GET /api/website/blog/posts
@@ -19,19 +56,22 @@ export async function GET(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get('organizationId');
-    const status = searchParams.get('status');
-    const category = searchParams.get('category');
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const { searchParams } = new URL(request.url);
+    const queryResult = getQuerySchema.safeParse({
+      organizationId: searchParams.get('organizationId') ?? undefined,
+      status: searchParams.get('status') ?? undefined,
+      category: searchParams.get('category') ?? undefined,
+    });
+
+    if (!queryResult.success) {
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: queryResult.error.errors[0]?.message ?? 'Invalid query parameters' },
         { status: 400 }
       );
     }
+
+    const { organizationId, status, category } = queryResult.data;
 
     // Get posts collection
     const postsRef = adminDal.getNestedCollection(
@@ -39,23 +79,23 @@ export async function GET(request: NextRequest) {
       { orgId: organizationId }
     );
 
-    // Apply filters
-    let query = postsRef;
-    if (status) {
-      query = query.where('status', '==', status) as any;
-    }
-
-    const snapshot = await query.get();
+    // Get all posts and filter
+    const snapshot = await postsRef.get();
     const posts: BlogPost[] = [];
 
     snapshot.forEach((doc) => {
-      const data = doc.data();
+      const data = doc.data() as BlogPost;
       // CRITICAL: Double-check organizationId matches
       if (data.organizationId === organizationId) {
-        const post = {
-          id: doc.id,
+        // Apply status filter
+        if (status && data.status !== status) {
+          return;
+        }
+
+        const post: BlogPost = {
           ...data,
-        } as BlogPost;
+          id: doc.id,
+        };
 
         // Filter by category if specified
         if (!category || post.categories.includes(category)) {
@@ -68,7 +108,7 @@ export async function GET(request: NextRequest) {
     posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return NextResponse.json({ posts });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to fetch blog posts', error, {
       route: '/api/website/blog/posts',
       method: 'GET'
@@ -89,33 +129,44 @@ export async function POST(request: NextRequest) {
     if (!adminDal) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
-    
-    const body = await request.json();
-    const { organizationId, post } = body;
 
-    // CRITICAL: Validate organizationId
-    if (!organizationId) {
+    const rawBody: unknown = await request.json();
+    const bodyResult = postBodySchema.safeParse(rawBody);
+
+    if (!bodyResult.success) {
       return NextResponse.json(
-        { error: 'organizationId required' },
+        { error: bodyResult.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
-    // Validate post data
-    if (!post?.title) {
-      return NextResponse.json(
-        { error: 'Invalid post data' },
-        { status: 400 }
-      );
-    }
+    const { organizationId, post } = bodyResult.data;
+    const now = new Date().toISOString();
 
-    // Create post document
+    // Create post document matching BlogPost interface
+    const postId = post.id ?? `post_${Date.now()}`;
     const postData: BlogPost = {
-      ...post,
-      id:(post.id !== '' && post.id != null) ? post.id : `post_${Date.now()}`,
-      organizationId, // CRITICAL: Set org ownership
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      id: postId,
+      organizationId,
+      slug: post.slug ?? '',
+      title: post.title,
+      excerpt: post.excerpt ?? '',
+      content: post.content as PageSection[] ?? [],
+      featuredImage: post.featuredImage,
+      author: post.author ?? 'system',
+      authorName: post.authorName,
+      authorAvatar: post.authorAvatar,
+      categories: post.categories,
+      tags: post.tags,
+      featured: post.featured,
+      seo: (post.seo ?? { title: post.title }) as PageSEO,
+      status: post.status,
+      views: 0,
+      readTime: post.readTime,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: 'system',
+      lastEditedBy: 'system',
     };
 
     // Save to Firestore
@@ -127,7 +178,7 @@ export async function POST(request: NextRequest) {
     await postRef.set(postData);
 
     return NextResponse.json({ post: postData }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to create blog post', error, {
       route: '/api/website/blog/posts',
       method: 'POST'
@@ -138,5 +189,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

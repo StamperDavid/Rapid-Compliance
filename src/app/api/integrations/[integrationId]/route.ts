@@ -1,5 +1,5 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireOrganization } from '@/lib/auth/api-auth';
 import {
   getIntegration,
@@ -42,11 +42,18 @@ export async function GET(
       success: true,
       integration,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error fetching integration', error, { route: '/api/integrations' });
     return errors.database('Failed to fetch integration', error instanceof Error ? error : undefined);
   }
 }
+
+const patchBodySchema = z.object({
+  accessToken: z.string().optional(),
+  refreshToken: z.string().optional(),
+  expiresAt: z.string().datetime().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
 
 /**
  * PATCH /api/integrations/[integrationId] - Update integration
@@ -61,20 +68,31 @@ export async function PATCH(
       return authResult;
     }
 
-    const body = await request.json();
+    const rawBody: unknown = await request.json();
+    const bodyResult = patchBodySchema.safeParse(rawBody);
+    if (!bodyResult.success) {
+      return errors.badRequest('Invalid request body');
+    }
+
     const { user } = authResult;
 
     if (!user.organizationId) {
       return errors.badRequest('Organization ID required');
     }
 
-    await updateIntegration(user.organizationId, params.integrationId, body);
+    const updateData = {
+      ...(bodyResult.data.accessToken && { accessToken: bodyResult.data.accessToken }),
+      ...(bodyResult.data.refreshToken && { refreshToken: bodyResult.data.refreshToken }),
+      ...(bodyResult.data.expiresAt && { expiresAt: new Date(bodyResult.data.expiresAt) }),
+      ...(bodyResult.data.metadata && { metadata: bodyResult.data.metadata }),
+    };
+    await updateIntegration(user.organizationId, params.integrationId, updateData);
 
     return NextResponse.json({
       success: true,
       message: 'Integration updated',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error updating integration', error, { route: '/api/integrations' });
     return errors.database('Failed to update integration', error instanceof Error ? error : undefined);
   }
@@ -105,7 +123,7 @@ export async function DELETE(
       success: true,
       message: 'Integration deleted',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error deleting integration', error, { route: '/api/integrations' });
     return errors.database('Failed to delete integration', error instanceof Error ? error : undefined);
   }
