@@ -782,22 +782,23 @@ export class MerchandiserSpecialist extends BaseSpecialist {
     });
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
     this.log('INFO', 'Merchandiser Specialist initialized - Nudge strategies ready');
+    return Promise.resolve();
   }
 
   /**
    * Main execution entry point - routes to appropriate handler
    */
-  async execute(message: AgentMessage): Promise<AgentReport> {
+  execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
       const payload = message.payload as Record<string, unknown>;
       const action = payload?.action as string;
 
-      this.log('INFO', `Executing action: ${action || 'evaluate_nudge'}`);
+      this.log('INFO', `Executing action: ${action ?? 'evaluate_nudge'}`);
 
       let result: unknown;
 
@@ -829,18 +830,18 @@ export class MerchandiserSpecialist extends BaseSpecialist {
           break;
         case 'evaluate_nudge':
         default:
-          result = await this.evaluateNudgeEligibility(
+          result = this.evaluateNudgeEligibility(
             payload.leadId as string,
             payload.history as InteractionHistory
           );
           break;
       }
 
-      return this.createReport(taskId, 'COMPLETED', result);
+      return Promise.resolve(this.createReport(taskId, 'COMPLETED', result));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.log('ERROR', `Merchandiser operation failed: ${errorMessage}`);
-      return this.createReport(taskId, 'FAILED', null, [errorMessage]);
+      return Promise.resolve(this.createReport(taskId, 'FAILED', null, [errorMessage]));
     }
   }
 
@@ -896,10 +897,10 @@ export class MerchandiserSpecialist extends BaseSpecialist {
    * Evaluate if a lead qualifies for a nudge coupon
    * This is the main decision engine
    */
-  async evaluateNudgeEligibility(
+  evaluateNudgeEligibility(
     leadId: string,
     history: InteractionHistory
-  ): Promise<CouponDecision & { coupon?: StripeCouponPayload; roiAnalysis?: ROIAnalysis }> {
+  ): CouponDecision & { coupon?: StripeCouponPayload; roiAnalysis?: ROIAnalysis } {
     this.log('INFO', `Evaluating nudge eligibility for lead: ${leadId}`);
 
     // Step 1: Check constraints first (fail fast)
@@ -1048,7 +1049,7 @@ export class MerchandiserSpecialist extends BaseSpecialist {
    */
   selectNudgeStrategy(
     history: InteractionHistory,
-    segment: InteractionHistory['segment']
+    _segment: InteractionHistory['segment']
   ): NudgeStrategy | null {
     const eligibleStrategies: { strategy: NudgeStrategy; priority: number; matchScore: number }[] = [];
 
@@ -1115,7 +1116,7 @@ export class MerchandiserSpecialist extends BaseSpecialist {
 
     // Sort by priority (lowest first) then by match score
     eligibleStrategies.sort((a, b) => {
-      if (a.priority !== b.priority) return a.priority - b.priority;
+      if (a.priority !== b.priority) {return a.priority - b.priority;}
       return b.matchScore - a.matchScore;
     });
 
@@ -1148,11 +1149,11 @@ export class MerchandiserSpecialist extends BaseSpecialist {
     }
 
     // Calculate redeem_by timestamp
-    const redeemByHours = strategyConfig.couponSettings.redeemBy || 72;
+    const redeemByHours = strategyConfig.couponSettings.redeemBy ?? 72;
     const redeemByTimestamp = Math.floor((timestamp + redeemByHours * 60 * 60 * 1000) / 1000);
 
     // Calculate expected ROI for metadata
-    const expectedROI = strategyConfig.averageROI || 2.0;
+    const expectedROI = strategyConfig.averageROI ?? 2.0;
 
     return {
       id: `NUDGE_${strategy}_${leadId}_${timestamp}`,
@@ -1180,8 +1181,9 @@ export class MerchandiserSpecialist extends BaseSpecialist {
     strategy: NudgeStrategyId,
     leadData: Partial<InteractionHistory>
   ): ROIAnalysis {
-    const segment = leadData.segment || 'smb';
-    const segmentInfo = this.segmentData.get(segment) || this.segmentData.get('smb')!;
+    const segment = leadData.segment ?? 'smb';
+    const segmentInfoResult = this.segmentData.get(segment) ?? this.segmentData.get('smb');
+    const segmentInfo = segmentInfoResult ?? { averageLTV: 3000, averageOrderValue: 250, conversionRate: 0.05, churnRate: 0.12, discountSensitivity: 0.7, segment: 'smb' as const };
     const strategyConfig = NUDGE_STRATEGY[strategy];
 
     // Get segment LTV
@@ -1189,14 +1191,14 @@ export class MerchandiserSpecialist extends BaseSpecialist {
 
     // Get conversion probabilities
     const baselineProb = ROI_PARAMETERS.conversionProbabilities.baseline;
-    const nudgeProb = ROI_PARAMETERS.conversionProbabilities.withNudge[strategy] || baselineProb * 2;
+    const nudgeProb = ROI_PARAMETERS.conversionProbabilities.withNudge[strategy] ?? baselineProb * 2;
 
     // Calculate expected LTV lift
     const conversionLift = nudgeProb - baselineProb;
     const expectedLTVLift = conversionLift * segmentLTV;
 
     // Calculate discount cost
-    const discountPercent = strategyConfig.discountPercent || 10;
+    const discountPercent = strategyConfig.discountPercent ?? 10;
     const discountDecimal = discountPercent / 100;
     const orderValue = segmentInfo.averageOrderValue;
 
@@ -1233,7 +1235,7 @@ export class MerchandiserSpecialist extends BaseSpecialist {
 
     return {
       strategy,
-      leadId: leadData.leadId || 'unknown',
+      leadId: leadData.leadId ?? 'unknown',
       segmentLTV,
       baselineConversionProbability: baselineProb,
       nudgeConversionProbability: nudgeProb,
@@ -1255,7 +1257,7 @@ export class MerchandiserSpecialist extends BaseSpecialist {
    */
   checkCouponConstraints(leadId: string): { passed: boolean; violations: string[] } {
     const violations: string[] = [];
-    const usageHistory = this.couponUsageCache.get(leadId) || [];
+    const usageHistory = this.couponUsageCache.get(leadId) ?? [];
 
     // Check no stacking (no active coupons)
     const activeCoupons = usageHistory.filter(c => c.status === 'issued' && new Date(c.expiresAt) > new Date());
@@ -1303,8 +1305,8 @@ export class MerchandiserSpecialist extends BaseSpecialist {
   // ==========================================================================
 
   private matchesCartAbandonment(history: InteractionHistory): boolean {
-    if (!history.cartHistory.hasAbandonedCart) return false;
-    if (!history.cartHistory.abandonedCartDate) return false;
+    if (!history.cartHistory.hasAbandonedCart) {return false;}
+    if (!history.cartHistory.abandonedCartDate) {return false;}
 
     const hoursSinceAbandonment = this.hoursBetween(
       new Date(history.cartHistory.abandonedCartDate),
@@ -1314,14 +1316,14 @@ export class MerchandiserSpecialist extends BaseSpecialist {
     return (
       hoursSinceAbandonment >= CART_ABANDONMENT.triggerConditions.hoursSinceAbandonment.min &&
       hoursSinceAbandonment <= CART_ABANDONMENT.triggerConditions.hoursSinceAbandonment.max &&
-      (history.cartHistory.abandonedCartValue || 0) >= CART_ABANDONMENT.triggerConditions.cartValue.min &&
-      history.purchaseHistory.totalPurchases <= (CART_ABANDONMENT.triggerConditions.previousPurchases.max || 0)
+      (history.cartHistory.abandonedCartValue ?? 0) >= CART_ABANDONMENT.triggerConditions.cartValue.min &&
+      history.purchaseHistory.totalPurchases <= (CART_ABANDONMENT.triggerConditions.previousPurchases.max ?? 0)
     );
   }
 
   private matchesTrialConversion(history: InteractionHistory): boolean {
-    if (!history.trialUsage.isTrialUser) return false;
-    if (history.trialUsage.trialDay === null) return false;
+    if (!history.trialUsage.isTrialUser) {return false;}
+    if (history.trialUsage.trialDay === null) {return false;}
 
     const trialDay = history.trialUsage.trialDay;
     const usagePercent = history.trialUsage.usagePercentage;
@@ -1337,17 +1339,18 @@ export class MerchandiserSpecialist extends BaseSpecialist {
   }
 
   private matchesWinBack(history: InteractionHistory): boolean {
-    if (history.purchaseHistory.subscriptionStatus !== 'churned') return false;
-    if (!history.purchaseHistory.churnDate) return false;
+    if (history.purchaseHistory.subscriptionStatus !== 'churned') {return false;}
+    if (!history.purchaseHistory.churnDate) {return false;}
 
     const daysSinceChurn = this.daysBetween(
       new Date(history.purchaseHistory.churnDate),
       new Date()
     );
 
-    const hasReturningVisit = history.returnVisits.visitDates.some(
-      date => new Date(date) > new Date(history.purchaseHistory.churnDate!)
-    );
+    const churnDate = history.purchaseHistory.churnDate;
+    const hasReturningVisit = churnDate ? history.returnVisits.visitDates.some(
+      date => new Date(date) > new Date(churnDate)
+    ) : false;
 
     return (
       daysSinceChurn >= WIN_BACK.triggerConditions.daysSinceChurn.min &&
@@ -1357,14 +1360,14 @@ export class MerchandiserSpecialist extends BaseSpecialist {
     );
   }
 
-  private matchesReferral(history: InteractionHistory): boolean {
+  private matchesReferral(_history: InteractionHistory): boolean {
     // This would check referral code in history - simplified for now
     return false; // Referrals handled through separate flow
   }
 
   private matchesEngagementNudge(history: InteractionHistory): boolean {
-    const pricingViews = history.pageViews.find(p => p.page === 'pricing')?.count || 0;
-    const featureViews = history.pageViews.find(p => p.page === 'features')?.count || 0;
+    const pricingViews = history.pageViews.find(p => p.page === 'pricing')?.count ?? 0;
+    const featureViews = history.pageViews.find(p => p.page === 'features')?.count ?? 0;
 
     const firstVisit = history.returnVisits.visitDates[0];
     const daysSinceFirstVisit = firstVisit ? this.daysBetween(new Date(firstVisit), new Date()) : 999;
@@ -1379,11 +1382,11 @@ export class MerchandiserSpecialist extends BaseSpecialist {
   }
 
   private matchesLoyaltyTier(history: InteractionHistory): boolean {
-    if (!history.purchaseHistory.hasPurchased) return false;
-    if (history.purchaseHistory.subscriptionStatus !== 'active') return false;
+    if (!history.purchaseHistory.hasPurchased) {return false;}
+    if (history.purchaseHistory.subscriptionStatus !== 'active') {return false;}
 
     const firstPurchase = history.purchaseHistory.lastPurchaseDate;
-    if (!firstPurchase) return false;
+    if (!firstPurchase) {return false;}
 
     const tenureMonths = this.monthsBetween(new Date(firstPurchase), new Date());
     const lifetimeSpend = history.purchaseHistory.lifetimeValue;
@@ -1396,7 +1399,7 @@ export class MerchandiserSpecialist extends BaseSpecialist {
 
   private determineLoyaltyTier(history: InteractionHistory): { minMonths: number; minSpend: number; discount: number; perks: readonly string[] } | null {
     const firstPurchase = history.purchaseHistory.lastPurchaseDate;
-    if (!firstPurchase) return null;
+    if (!firstPurchase) {return null;}
 
     const tenureMonths = this.monthsBetween(new Date(firstPurchase), new Date());
     const lifetimeSpend = history.purchaseHistory.lifetimeValue;
@@ -1425,7 +1428,7 @@ export class MerchandiserSpecialist extends BaseSpecialist {
 
     switch (strategy) {
       case 'CART_ABANDONMENT':
-        score = Math.min((history.cartHistory.abandonedCartValue || 0) / 100, 100);
+        score = Math.min((history.cartHistory.abandonedCartValue ?? 0) / 100, 100);
         break;
       case 'TRIAL_CONVERSION':
         score = history.trialUsage.usagePercentage;
@@ -1433,10 +1436,11 @@ export class MerchandiserSpecialist extends BaseSpecialist {
       case 'WIN_BACK':
         score = Math.min(history.purchaseHistory.lifetimeValue / 100, 100);
         break;
-      case 'ENGAGEMENT_NUDGE':
-        const pricingViews = history.pageViews.find(p => p.page === 'pricing')?.count || 0;
+      case 'ENGAGEMENT_NUDGE': {
+        const pricingViews = history.pageViews.find(p => p.page === 'pricing')?.count ?? 0;
         score = Math.min(pricingViews * 20, 100);
         break;
+      }
       case 'LOYALTY_TIER':
         score = Math.min(history.purchaseHistory.lifetimeValue / 50, 100);
         break;
@@ -1479,7 +1483,7 @@ export class MerchandiserSpecialist extends BaseSpecialist {
     score += engagement.opened * 3;
     score += engagement.clicked * 8;
     score += engagement.replied * 15;
-    if (engagement.unsubscribed) score -= 20;
+    if (engagement.unsubscribed) {score -= 20;}
     return Math.max(score, 0);
   }
 

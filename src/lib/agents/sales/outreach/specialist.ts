@@ -366,7 +366,7 @@ Helped {similarCompany} fix it. Happy to share the approach.`,
       timeWaste: {
         question: 'How much time does your team spend on {manualTask} each week?',
         agitation: 'That\'s {hoursPerWeek} hours that could be spent on revenue-generating activities',
-        cost: '${annualCost} in lost productivity annually',
+        cost: '{annualCost} in lost productivity annually',
       },
       leadLeakage: {
         question: 'What happens to leads that don\'t respond to your first outreach?',
@@ -444,7 +444,7 @@ Similar to what {companyName} might be facing. Happy to share the details.`,
       metrics: [
         '{percentage}% increase in {metric}',
         '{timeframe} reduction in {process}',
-        '${amount} saved in {area}',
+        '{amount} saved in {area}',
         '{number}x improvement in {kpi}',
       ],
       challenges: [
@@ -895,7 +895,7 @@ export interface CompetitorWeakness {
 export interface PersonalizationContext {
   // Company data
   companyName: string;
-  industry: IndustryKey | string;
+  industry: string;
   employeeRange: string;
   location: string | null;
 
@@ -970,9 +970,10 @@ export class OutreachSpecialist extends BaseSpecialist {
     super(CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
     this.log('INFO', 'Outreach Specialist initialized');
+    return Promise.resolve();
   }
 
   /**
@@ -1049,10 +1050,10 @@ export class OutreachSpecialist extends BaseSpecialist {
    */
   generateMessage(request: MessageRequest): GeneratedMessage {
     // Select framework based on context
-    const framework = request.framework || this.selectFramework(request.context, request.scraperData);
+    const framework = request.framework ?? this.selectFramework(request.context, request.scraperData);
 
     // Select optimal channel
-    const channel = request.channel || this.selectChannel(request.context, framework);
+    const channel = request.channel ?? this.selectChannel(request.context, framework);
 
     // Extract competitor weaknesses if applicable
     const competitorInsights = request.options?.includeCompetitorInsights !== false
@@ -1156,18 +1157,18 @@ export class OutreachSpecialist extends BaseSpecialist {
     let result = template;
 
     // Basic company/contact replacements
-    result = result.replace(/{companyName}/g, context.companyName || 'your company');
-    result = result.replace(/{firstName}/g, context.firstName || 'there');
-    result = result.replace(/{lastName}/g, context.lastName || '');
-    result = result.replace(/{title}/g, context.title || 'professional');
-    result = result.replace(/{industry}/g, context.industry || 'your industry');
-    result = result.replace(/{location}/g, context.location || 'your area');
-    result = result.replace(/{employeeRange}/g, context.employeeRange || 'your team');
+    result = result.replace(/{companyName}/g, context.companyName ?? 'your company');
+    result = result.replace(/{firstName}/g, context.firstName ?? 'there');
+    result = result.replace(/{lastName}/g, context.lastName ?? '');
+    result = result.replace(/{title}/g, context.title ?? 'professional');
+    result = result.replace(/{industry}/g, context.industry ?? 'your industry');
+    result = result.replace(/{location}/g, context.location ?? 'your area');
+    result = result.replace(/{employeeRange}/g, context.employeeRange ?? 'your team');
 
     // Tech stack personalization
     if (context.techStack && context.techStack.length > 0) {
       result = result.replace(/{techStack}/g, context.techStack.slice(0, 3).join(', '));
-      result = result.replace(/{detectedPlatforms}/g, context.techStack[0] || 'your platform');
+      result = result.replace(/{detectedPlatforms}/g, context.techStack[0] ?? 'your platform');
     }
 
     // Competitor personalization
@@ -1200,9 +1201,9 @@ export class OutreachSpecialist extends BaseSpecialist {
     // Industry-specific hooks
     const industryData = INDUSTRY_SPECIFIC_HOOKS[context.industry as IndustryKey];
     if (industryData) {
-      result = result.replace(/{painPoint}/g, industryData.painPoints[0] || 'common challenges');
-      result = result.replace(/{opportunity}/g, industryData.opportunities[0] || 'growth');
-      result = result.replace(/{metric}/g, industryData.metrics[0] || 'results');
+      result = result.replace(/{painPoint}/g, industryData.painPoints[0] ?? 'common challenges');
+      result = result.replace(/{opportunity}/g, industryData.opportunities[0] ?? 'growth');
+      result = result.replace(/{metric}/g, industryData.metrics[0] ?? 'results');
     }
 
     // Clean up any remaining unreplaced variables
@@ -1221,8 +1222,8 @@ export class OutreachSpecialist extends BaseSpecialist {
     const weaknesses: CompetitorWeakness[] = [];
 
     // Get detected tools from scraper data
-    const detectedTools = scraperData?.techSignals?.detectedTools || [];
-    const allCompetitors = [...detectedTools, ...(knownCompetitors || [])];
+    const detectedTools = scraperData?.techSignals?.detectedTools ?? [];
+    const allCompetitors = [...detectedTools, ...(knownCompetitors ?? [])];
 
     // Check each competitor against our weakness database
     const weaknessDb = OUTREACH_FRAMEWORKS.COMPETITOR_DISPLACEMENT.competitorWeaknesses;
@@ -1344,7 +1345,7 @@ export class OutreachSpecialist extends BaseSpecialist {
    */
   selectChannel(context: PersonalizationContext, framework: OutreachFramework): OutreachChannel {
     // Check for channel preferences based on industry
-    const industryChannelPrefs: Partial<Record<IndustryKey | string, OutreachChannel>> = {
+    const industryChannelPrefs: Partial<Record<string, OutreachChannel>> = {
       saas: 'linkedinDM',
       b2b: 'linkedinDM',
       ecommerce: 'email',
@@ -1370,12 +1371,16 @@ export class OutreachSpecialist extends BaseSpecialist {
     let selectedChannel: OutreachChannel = 'email'; // Default
 
     // Framework preference takes priority
-    if (frameworkChannelPrefs[framework]) {
-      selectedChannel = frameworkChannelPrefs[framework]!;
+    const frameworkPreference = frameworkChannelPrefs[framework];
+    if (frameworkPreference) {
+      selectedChannel = frameworkPreference;
     }
     // Then industry preference
-    else if (industryChannelPrefs[context.industry]) {
-      selectedChannel = industryChannelPrefs[context.industry]!;
+    else {
+      const industryPreference = industryChannelPrefs[context.industry];
+      if (industryPreference) {
+        selectedChannel = industryPreference;
+      }
     }
 
     // Override to email if LinkedIn not available and we chose LinkedIn
@@ -1393,10 +1398,10 @@ export class OutreachSpecialist extends BaseSpecialist {
   /**
    * Generate a single message (internal wrapper)
    */
-  private async generateSingleMessage(request: MessageRequest): Promise<OutreachResult> {
+  private generateSingleMessage(request: MessageRequest): Promise<OutreachResult> {
     const message = this.generateMessage(request);
 
-    return {
+    return Promise.resolve({
       messageOutput: message,
       confidence: message.qualityScore,
       metadata: {
@@ -1406,18 +1411,18 @@ export class OutreachSpecialist extends BaseSpecialist {
         channelUsed: message.channel,
         personalizationLevel: this.calculatePersonalizationLevel(request.context),
       },
-    };
+    });
   }
 
   /**
    * Generate a full sequence
    */
-  private async generateSequence(request: MessageRequest): Promise<OutreachResult> {
+  private generateSequence(request: MessageRequest): Promise<OutreachResult> {
     const sequence = this.buildFollowUpSequence(request.context, request.scraperData);
 
     const avgQualityScore = sequence.reduce((acc, m) => acc + m.qualityScore, 0) / sequence.length;
 
-    return {
+    return Promise.resolve({
       messageOutput: sequence,
       confidence: avgQualityScore,
       metadata: {
@@ -1427,7 +1432,7 @@ export class OutreachSpecialist extends BaseSpecialist {
         channelUsed: sequence[0].channel,
         personalizationLevel: this.calculatePersonalizationLevel(request.context),
       },
-    };
+    });
   }
 
   /**
@@ -1465,9 +1470,9 @@ export class OutreachSpecialist extends BaseSpecialist {
       template = emailTemplate.body;
       subject = emailTemplate.subject;
     } else if (channel === 'linkedinDM' && 'linkedinDM' in frameworkData.templates) {
-      template = frameworkData.templates.linkedinDM as string;
+      template = frameworkData.templates.linkedinDM;
     } else if (channel === 'twitterDM' && 'twitterDM' in frameworkData.templates) {
-      template = frameworkData.templates.twitterDM as string;
+      template = frameworkData.templates.twitterDM;
     } else if ('email' in frameworkData.templates) {
       // Fallback to email template body
       const emailTemplate = frameworkData.templates.email as { subject: string; body: string };
@@ -1578,28 +1583,28 @@ export class OutreachSpecialist extends BaseSpecialist {
 
       case 'CASE_STUDY_PROOF':
         enhanced = enhanced.replace(/{similarCompany}/g, this.getSimilarCompanyName(context.industry as IndustryKey));
-        enhanced = enhanced.replace(/{challenge}/g, industryData?.painPoints[0] || 'scaling their operations');
+        enhanced = enhanced.replace(/{challenge}/g, industryData?.painPoints[0] ?? 'scaling their operations');
         enhanced = enhanced.replace(/{headline_result}/g, this.generateSpecificResult(context.industry as IndustryKey));
-        enhanced = enhanced.replace(/{companyPriority}/g, industryData?.opportunities[0] || 'growth');
+        enhanced = enhanced.replace(/{companyPriority}/g, industryData?.opportunities[0] ?? 'growth');
         break;
 
       case 'REFERRAL_WARM':
         if (context.mutualConnections && context.mutualConnections.length > 0) {
-          enhanced = enhanced.replace(/{conversationTopic}/g, context.industry || 'business growth');
+          enhanced = enhanced.replace(/{conversationTopic}/g, context.industry ?? 'business growth');
           enhanced = enhanced.replace(/{contextReason}/g, `${context.companyName} is doing interesting things in ${context.industry}`);
           enhanced = enhanced.replace(/{credibilityStatement}/g,
-            `We've worked with several companies in ${context.industry} to ${industryData?.opportunities[0] || 'achieve their goals'}.`);
+            `We've worked with several companies in ${context.industry} to ${industryData?.opportunities[0] ?? 'achieve their goals'}.`);
           enhanced = enhanced.replace(/{specificGoal}/g, `explore how we might help ${context.companyName}`);
         }
         break;
 
       case 'DIRECT_ASK':
         enhanced = enhanced.replace(/{targetAudience}/g, `${context.industry} companies`);
-        enhanced = enhanced.replace(/{achieveResult}/g, industryData?.opportunities[0] || 'grow faster');
+        enhanced = enhanced.replace(/{achieveResult}/g, industryData?.opportunities[0] ?? 'grow faster');
         enhanced = enhanced.replace(/{socialProofCompanies}/g, this.getSimilarCompanyName(context.industry as IndustryKey));
         enhanced = enhanced.replace(/{specificOutcome}/g, this.generateSpecificResult(context.industry as IndustryKey));
-        enhanced = enhanced.replace(/{relevantTopic}/g, industryData?.painPoints[0] || 'your current challenges');
-        enhanced = enhanced.replace(/{potentialImpact}/g, `help ${context.companyName} ${industryData?.opportunities[0] || 'grow'}`);
+        enhanced = enhanced.replace(/{relevantTopic}/g, industryData?.painPoints[0] ?? 'your current challenges');
+        enhanced = enhanced.replace(/{potentialImpact}/g, `help ${context.companyName} ${industryData?.opportunities[0] ?? 'grow'}`);
         enhanced = enhanced.replace(/{calendarLink}/g, '[Calendar Link]');
         break;
     }
@@ -1624,7 +1629,7 @@ export class OutreachSpecialist extends BaseSpecialist {
       COMPETITOR_DISPLACEMENT: [
         `Question about your current setup`,
         `${context.companyName}'s tech stack`,
-        `Switching from ${context.competitorProducts?.[0] || 'your current solution'}?`,
+        `Switching from ${context.competitorProducts?.[0] ?? 'your current solution'}?`,
       ],
       TRIGGER_EVENT: [
         `Congrats on the growth!`,
@@ -1632,12 +1637,12 @@ export class OutreachSpecialist extends BaseSpecialist {
         `Saw the news about ${context.companyName}`,
       ],
       REFERRAL_WARM: [
-        `${context.mutualConnections?.[0] || 'A friend'} suggested I reach out`,
-        `Introduction from ${context.mutualConnections?.[0] || 'a mutual connection'}`,
-        `${context.mutualConnections?.[0] || 'Someone you know'} thought we should connect`,
+        `${context.mutualConnections?.[0] ?? 'A friend'} suggested I reach out`,
+        `Introduction from ${context.mutualConnections?.[0] ?? 'a mutual connection'}`,
+        `${context.mutualConnections?.[0] ?? 'Someone you know'} thought we should connect`,
       ],
       PAIN_AGITATION: [
-        `The hidden cost of ${INDUSTRY_SPECIFIC_HOOKS[context.industry as IndustryKey]?.painPoints[0] || 'this problem'}`,
+        `The hidden cost of ${INDUSTRY_SPECIFIC_HOOKS[context.industry as IndustryKey]?.painPoints[0] ?? 'this problem'}`,
         `${context.firstName}, is this a challenge for ${context.companyName}?`,
         `Quick question about ${context.industry}`,
       ],
@@ -1673,7 +1678,7 @@ export class OutreachSpecialist extends BaseSpecialist {
 
 Wanted to follow up on my previous message.
 
-In case it's helpful, I put together a quick guide on ${industryData?.opportunities[0] || 'improving efficiency'} that shows what's working for ${context.industry} companies right now.
+In case it's helpful, I put together a quick guide on ${industryData?.opportunities[0] ?? 'improving efficiency'} that shows what's working for ${context.industry} companies right now.
 
 Would this be useful for ${context.companyName}?
 
@@ -1683,7 +1688,7 @@ Best,
 
     return `Hi ${context.firstName},
 
-Following up - thought you might find this useful: a quick guide on ${industryData?.opportunities[0] || 'improving efficiency'} for ${context.industry} companies.
+Following up - thought you might find this useful: a quick guide on ${industryData?.opportunities[0] ?? 'improving efficiency'} for ${context.industry} companies.
 
 Would this be helpful?`;
   }
@@ -1699,7 +1704,7 @@ Would this be helpful?`;
     const industryData = INDUSTRY_SPECIFIC_HOOKS[context.industry as IndustryKey];
     const newInsight = competitorInsights.length > 0
       ? `I noticed ${context.companyName} might be dealing with ${competitorInsights[0].weakness}`
-      : `I've been seeing ${context.industry} companies focus heavily on ${industryData?.opportunities[0] || 'growth'}`;
+      : `I've been seeing ${context.industry} companies focus heavily on ${industryData?.opportunities[0] ?? 'growth'}`;
 
     if (channel === 'email') {
       return `Hi ${context.firstName},
@@ -1708,7 +1713,7 @@ I realize my last message might not have hit the mark.
 
 Let me try a different angle: ${newInsight}
 
-${context.companyName} is in a unique position to ${industryData?.opportunities[0] || 'capitalize on this'} because of your focus on ${industryData?.metrics[0] || 'results'}.
+${context.companyName} is in a unique position to ${industryData?.opportunities[0] ?? 'capitalize on this'} because of your focus on ${industryData?.metrics[0] ?? 'results'}.
 
 Worth a conversation?
 
@@ -1720,7 +1725,7 @@ Best,
 
 Different angle: ${newInsight}
 
-${context.companyName} could really ${industryData?.opportunities[0] || 'benefit here'}. Worth a quick chat?`;
+${context.companyName} could really ${industryData?.opportunities[0] ?? 'benefit here'}. Worth a quick chat?`;
   }
 
   /**
@@ -1736,7 +1741,7 @@ ${context.companyName} could really ${industryData?.opportunities[0] || 'benefit
 
 Quick update - ${similarCompany} just ${result} using our approach.
 
-Given ${context.companyName}'s focus on ${industryData?.opportunities[0] || 'growth'}, thought you'd want to know.
+Given ${context.companyName}'s focus on ${industryData?.opportunities[0] ?? 'growth'}, thought you'd want to know.
 
 Would love to help ${context.companyName} do the same.
 
@@ -1822,19 +1827,19 @@ No worries either way!`;
     let level = 1;
 
     // Level 1: Name + Company (base)
-    if (context.firstName && context.companyName) level = 1;
+    if (context.firstName && context.companyName) {level = 1;}
 
     // Level 2: + Industry + Size
-    if (context.industry && context.employeeRange) level = 2;
+    if (context.industry && context.employeeRange) {level = 2;}
 
     // Level 3: + Tech stack + Competitors
-    if (context.techStack?.length || context.competitorProducts?.length) level = 3;
+    if (context.techStack?.length || context.competitorProducts?.length) {level = 3;}
 
     // Level 4: + Hiring signals + Recent news
-    if (context.isHiring || context.recentFunding || context.recentNews) level = 4;
+    if (context.isHiring || context.recentFunding || context.recentNews) {level = 4;}
 
     // Level 5: + Custom insights + Mutual connections
-    if (context.customInsights?.length || context.mutualConnections?.length) level = 5;
+    if (context.customInsights?.length || context.mutualConnections?.length) {level = 5;}
 
     return level;
   }
@@ -1847,7 +1852,7 @@ No worries either way!`;
 
     if ('characterLimit' in limits) {
       if (body.length > limits.characterLimit) {
-        return body.substring(0, limits.characterLimit - 3) + '...';
+        return `${body.substring(0, limits.characterLimit - 3)  }...`;
       }
     }
 
@@ -1886,7 +1891,7 @@ No worries either way!`;
       drift: 'conversational marketing',
     };
 
-    return useCases[competitor.toLowerCase()] || 'your current workflow';
+    return useCases[competitor.toLowerCase()] ?? 'your current workflow';
   }
 
   /**
@@ -1922,7 +1927,7 @@ No worries either way!`;
       realestate: ['Compass', 'Opendoor', 'Redfin', 'Zillow'],
     };
 
-    const companies = similarCompanies[industry] || ['a similar company'];
+    const companies = similarCompanies[industry] ?? ['a similar company'];
     return companies[Math.floor(Math.random() * companies.length)];
   }
 
@@ -1940,7 +1945,7 @@ No worries either way!`;
       realestate: ['increased lead conversion by 45%', 'reduced time to close by 30%', 'grew referrals by 60%'],
     };
 
-    const industryResults = results[industry] || ['achieved significant results'];
+    const industryResults = results[industry] ?? ['achieved significant results'];
     return industryResults[Math.floor(Math.random() * industryResults.length)];
   }
 
@@ -1958,7 +1963,7 @@ No worries either way!`;
       realestate: 'losing leads to faster-responding competitors',
     };
 
-    return costs[industry] || 'significant opportunity cost';
+    return costs[industry] ?? 'significant opportunity cost';
   }
 
   /**

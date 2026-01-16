@@ -527,10 +527,11 @@ export class RevenueDirector extends BaseManager {
     this.initializeTransitionRules();
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.log('INFO', 'Initializing Revenue Director...');
     this.log('INFO', `Loaded ${this.transitionRules.size} transition rules`);
     this.isInitialized = true;
+    return Promise.resolve();
   }
 
   /**
@@ -576,7 +577,7 @@ export class RevenueDirector extends BaseManager {
           }
           result = this.evaluateTransition(
             payload.leadData.leadId,
-            payload.leadData.currentStage || LeadStage.INTELLIGENCE,
+            payload.leadData.currentStage ?? LeadStage.INTELLIGENCE,
             payload.leadData
           );
           break;
@@ -591,9 +592,9 @@ export class RevenueDirector extends BaseManager {
         case 'BATCH_EVALUATE':
           // For batch evaluation, we'd process multiple leads
           result = this.evaluateTransition(
-            payload.leadData?.leadId || 'batch',
-            payload.leadData?.currentStage || LeadStage.INTELLIGENCE,
-            payload.leadData || { leadId: 'batch' }
+            payload.leadData?.leadId ?? 'batch',
+            payload.leadData?.currentStage ?? LeadStage.INTELLIGENCE,
+            payload.leadData ?? { leadId: 'batch' }
           );
           break;
 
@@ -802,7 +803,7 @@ export class RevenueDirector extends BaseManager {
    * Process lead transition request
    */
   private async processLeadTransition(leadData: LeadData, taskId: string): Promise<PipelineAnalysisOutput> {
-    const currentStage = leadData.currentStage || LeadStage.INTELLIGENCE;
+    const currentStage = leadData.currentStage ?? LeadStage.INTELLIGENCE;
 
     // Evaluate transition eligibility
     const transitionResult = this.evaluateTransition(leadData.leadId, currentStage, leadData);
@@ -814,7 +815,7 @@ export class RevenueDirector extends BaseManager {
     const engagementSignals = this.buildEngagementSignals(leadData);
 
     // Calculate time in stage
-    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt || new Date(), currentStage);
+    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt ?? new Date(), currentStage);
 
     // Generate recommendations
     const recommendedActions = this.getRecommendedActions(leadData);
@@ -893,7 +894,7 @@ export class RevenueDirector extends BaseManager {
         }
 
         // Check time constraints
-        const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt || new Date(), currentStage);
+        const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt ?? new Date(), currentStage);
         if (timeInStage.days < 1) {
           blockers.push('Minimum 24 hours in Intelligence stage not met');
           warnings.push('Allow more time for intelligence gathering');
@@ -967,7 +968,7 @@ export class RevenueDirector extends BaseManager {
     }
 
     // Check time constraints
-    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt || new Date(), LeadStage.INTELLIGENCE);
+    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt ?? new Date(), LeadStage.INTELLIGENCE);
     if (timeInStage.days < 1) {
       return false;
     }
@@ -1004,8 +1005,8 @@ export class RevenueDirector extends BaseManager {
 
     // Time factor adjustment (-10 to +10)
     const timeInStage = this.calculateTimeInStage(
-      leadData.stageEnteredAt || new Date(),
-      leadData.currentStage || LeadStage.INTELLIGENCE
+      leadData.stageEnteredAt ?? new Date(),
+      leadData.currentStage ?? LeadStage.INTELLIGENCE
     );
     const timeFactor = this.calculateTimeFactor(timeInStage);
     score += timeFactor;
@@ -1018,11 +1019,11 @@ export class RevenueDirector extends BaseManager {
    */
   getRecommendedActions(leadData: LeadData): string[] {
     const actions: string[] = [];
-    const currentStage = leadData.currentStage || LeadStage.INTELLIGENCE;
+    const currentStage = leadData.currentStage ?? LeadStage.INTELLIGENCE;
     const bantScore = this.calculateBANTScore(leadData.bantScore);
     const intelligenceStatus = this.buildIntelligenceStatus(leadData);
     const engagementSignals = this.buildEngagementSignals(leadData);
-    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt || new Date(), currentStage);
+    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt ?? new Date(), currentStage);
 
     // Stage-specific recommendations
     switch (currentStage) {
@@ -1034,10 +1035,10 @@ export class RevenueDirector extends BaseManager {
 
       case LeadStage.QUALIFIED:
         actions.push('Complete BANT scoring assessment');
-        if (bantScore.budget < 15) actions.push('Investigate budget authority and timeline');
-        if (bantScore.authority < 15) actions.push('Identify decision makers and influencers');
-        if (bantScore.need < 15) actions.push('Document specific pain points and needs');
-        if (bantScore.timeline < 15) actions.push('Determine purchase timeline and triggers');
+        if (bantScore.budget < 15) {actions.push('Investigate budget authority and timeline');}
+        if (bantScore.authority < 15) {actions.push('Identify decision makers and influencers');}
+        if (bantScore.need < 15) {actions.push('Document specific pain points and needs');}
+        if (bantScore.timeline < 15) {actions.push('Determine purchase timeline and triggers');}
         break;
 
       case LeadStage.INTELLIGENCE:
@@ -1130,7 +1131,7 @@ export class RevenueDirector extends BaseManager {
    * Build intelligence status from lead data
    */
   private buildIntelligenceStatus(leadData: LeadData): IntelligenceStatus {
-    const intel = leadData.intelligenceStatus || {};
+    const intel = leadData.intelligenceStatus ?? {};
 
     const hasScraperData = intel.hasScraperData ?? false;
     const hasCompetitorData = intel.hasCompetitorData ?? false;
@@ -1139,10 +1140,10 @@ export class RevenueDirector extends BaseManager {
 
     // Calculate completeness percentage
     let completeness = 0;
-    if (hasScraperData) completeness += INTELLIGENCE_WEIGHTS.scraperData;
-    if (hasCompetitorData) completeness += INTELLIGENCE_WEIGHTS.competitorData;
-    if (hasSocialProfiles) completeness += INTELLIGENCE_WEIGHTS.socialProfiles;
-    if (hasContactVerified) completeness += INTELLIGENCE_WEIGHTS.contactVerified;
+    if (hasScraperData) {completeness += INTELLIGENCE_WEIGHTS.scraperData;}
+    if (hasCompetitorData) {completeness += INTELLIGENCE_WEIGHTS.competitorData;}
+    if (hasSocialProfiles) {completeness += INTELLIGENCE_WEIGHTS.socialProfiles;}
+    if (hasContactVerified) {completeness += INTELLIGENCE_WEIGHTS.contactVerified;}
 
     return {
       hasScraperData,
@@ -1150,7 +1151,7 @@ export class RevenueDirector extends BaseManager {
       hasSocialProfiles,
       hasContactVerified,
       completeness,
-      lastUpdated: intel.lastUpdated || new Date(),
+      lastUpdated: intel.lastUpdated ?? new Date(),
     };
   }
 
@@ -1158,7 +1159,7 @@ export class RevenueDirector extends BaseManager {
    * Build engagement signals from lead data
    */
   private buildEngagementSignals(leadData: LeadData): EngagementSignals {
-    const signals = leadData.engagementSignals || {};
+    const signals = leadData.engagementSignals ?? {};
 
     const emailOpens = signals.emailOpens ?? 0;
     const websiteVisits = signals.websiteVisits ?? 0;
@@ -1178,7 +1179,7 @@ export class RevenueDirector extends BaseManager {
       websiteVisits,
       contentDownloads,
       demoRequests,
-      lastEngagement: signals.lastEngagement || null,
+      lastEngagement: signals.lastEngagement ?? null,
       engagementScore,
     };
   }
@@ -1235,20 +1236,20 @@ export class RevenueDirector extends BaseManager {
    * Determine next stage based on scores
    */
   private determineNextStage(currentStage: LeadStage, bantScore: BANTScore, readinessScore: number): LeadStage | null {
-    const validTargets = VALID_TRANSITIONS[currentStage];
+    const _validTargets = VALID_TRANSITIONS[currentStage];
 
     switch (currentStage) {
       case LeadStage.DISCOVERY:
-        if (bantScore.total >= 20) return LeadStage.QUALIFIED;
+        if (bantScore.total >= 20) {return LeadStage.QUALIFIED;}
         break;
       case LeadStage.QUALIFIED:
-        if (bantScore.total >= 40) return LeadStage.INTELLIGENCE;
+        if (bantScore.total >= 40) {return LeadStage.INTELLIGENCE;}
         break;
       case LeadStage.INTELLIGENCE:
-        if (readinessScore >= READINESS_THRESHOLD) return LeadStage.OUTREACH;
+        if (readinessScore >= READINESS_THRESHOLD) {return LeadStage.OUTREACH;}
         break;
       case LeadStage.OUTREACH:
-        if (readinessScore >= 80) return LeadStage.NEGOTIATION;
+        if (readinessScore >= 80) {return LeadStage.NEGOTIATION;}
         break;
       case LeadStage.NEGOTIATION:
         return LeadStage.CLOSED;
@@ -1291,14 +1292,14 @@ export class RevenueDirector extends BaseManager {
       let priority = 0;
 
       // High priority keywords
-      if (action.includes('PRIORITY') || action.includes('URGENT')) priority += 100;
-      if (action.includes('WARNING')) priority += 50;
-      if (action.includes('demo')) priority += 40;
+      if (action.includes('PRIORITY') || action.includes('URGENT')) {priority += 100;}
+      if (action.includes('WARNING')) {priority += 50;}
+      if (action.includes('demo')) {priority += 40;}
 
       // Context-based priority
-      if (action.includes('BANT') && bantScore.total < BANT_THRESHOLD_OUTREACH) priority += 30;
-      if (action.includes('intelligence') && intelligenceStatus.completeness < 75) priority += 25;
-      if (engagementSignals.demoRequests > 0 && action.includes('outreach')) priority += 60;
+      if (action.includes('BANT') && bantScore.total < BANT_THRESHOLD_OUTREACH) {priority += 30;}
+      if (action.includes('intelligence') && intelligenceStatus.completeness < 75) {priority += 25;}
+      if (engagementSignals.demoRequests > 0 && action.includes('outreach')) {priority += 60;}
 
       prioritized.push({ action, priority });
     }
@@ -1313,11 +1314,11 @@ export class RevenueDirector extends BaseManager {
    * Get lead status summary
    */
   private getLeadStatus(leadData: LeadData): PipelineAnalysisOutput {
-    const currentStage = leadData.currentStage || LeadStage.INTELLIGENCE;
+    const currentStage = leadData.currentStage ?? LeadStage.INTELLIGENCE;
     const transitionResult = this.evaluateTransition(leadData.leadId, currentStage, leadData);
     const intelligenceStatus = this.buildIntelligenceStatus(leadData);
     const engagementSignals = this.buildEngagementSignals(leadData);
-    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt || new Date(), currentStage);
+    const timeInStage = this.calculateTimeInStage(leadData.stageEnteredAt ?? new Date(), currentStage);
     const recommendedActions = this.getRecommendedActions(leadData);
 
     return {
@@ -1343,10 +1344,10 @@ export class RevenueDirector extends BaseManager {
   /**
    * Prepare delegations based on transition result
    */
-  private async prepareDelegations(
+  private prepareDelegations(
     transitionResult: TransitionResult,
     leadData: LeadData,
-    taskId: string
+    _taskId: string
   ): Promise<DelegationRecommendation[]> {
     const delegations: DelegationRecommendation[] = [...transitionResult.delegations];
 
@@ -1379,7 +1380,7 @@ export class RevenueDirector extends BaseManager {
       });
     }
 
-    return delegations;
+    return Promise.resolve(delegations);
   }
 
   /**

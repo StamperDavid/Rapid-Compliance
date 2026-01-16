@@ -388,7 +388,7 @@ const PHOTO_POST_STRATEGIES = {
 // MAP PACK RANKING FACTORS
 // ============================================================================
 
-const MAP_PACK_FACTORS = {
+const _MAP_PACK_FACTORS = {
   proximity: {
     weight: 0.3,
     controllable: false,
@@ -545,7 +545,7 @@ const LOCAL_KEYWORDS_BY_INDUSTRY: Record<string, string[]> = {
 // POSTING SCHEDULE OPTIMIZATION
 // ============================================================================
 
-const OPTIMAL_POSTING_TIMES = {
+const _OPTIMAL_POSTING_TIMES = {
   localUpdate: {
     weekdays: ['Tuesday 10am', 'Thursday 2pm'],
     weekends: ['Saturday 11am'],
@@ -576,7 +576,7 @@ const OPTIMAL_POSTING_TIMES = {
 // CATEGORY OPTIMIZATION
 // ============================================================================
 
-const CATEGORY_STRATEGY = {
+const _CATEGORY_STRATEGY = {
   primaryCategory: {
     importance: 'CRITICAL',
     rules: [
@@ -621,7 +621,7 @@ const CATEGORY_STRATEGY = {
 // NAP CONSISTENCY RULES
 // ============================================================================
 
-const NAP_CONSISTENCY_RULES = {
+const _NAP_CONSISTENCY_RULES = {
   name: {
     rules: [
       'Exact same across all platforms',
@@ -678,7 +678,7 @@ const NAP_CONSISTENCY_RULES = {
 // COMPETITIVE ANALYSIS FRAMEWORK
 // ============================================================================
 
-const COMPETITIVE_ANALYSIS_METRICS = {
+const _COMPETITIVE_ANALYSIS_METRICS = {
   profileCompleteness: {
     weight: 0.15,
     factors: ['Business description', 'Hours', 'Attributes', 'Photos', 'Categories', 'Website'],
@@ -714,11 +714,12 @@ export class GMBSpecialist extends BaseSpecialist {
     super(config);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.log('INFO', 'Initializing GMB Specialist...');
     this.log('INFO', 'Loading Local SEO algorithms and posting strategies...');
     this.isInitialized = true;
     this.log('INFO', 'GMB Specialist ready for Map Pack domination');
+    return Promise.resolve();
   }
 
   async execute(message: AgentMessage): Promise<AgentReport> {
@@ -754,12 +755,12 @@ export class GMBSpecialist extends BaseSpecialist {
     }
   }
 
-  async handleSignal(signal: Signal): Promise<AgentReport> {
+  handleSignal(signal: Signal): Promise<AgentReport> {
     this.log('INFO', `Received signal: ${signal.type} from ${signal.origin}`);
-    return this.createReport(signal.id, 'COMPLETED', {
+    return Promise.resolve(this.createReport(signal.id, 'COMPLETED', {
       acknowledged: true,
       signalType: signal.type,
-    });
+    }));
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {
@@ -781,7 +782,7 @@ export class GMBSpecialist extends BaseSpecialist {
   // CORE METHODS: LOCAL UPDATE DRAFTING
   // ============================================================================
 
-  private async handleDraftLocalUpdate(
+  private handleDraftLocalUpdate(
     taskId: string,
     business: Business,
     options?: Record<string, unknown>
@@ -791,7 +792,7 @@ export class GMBSpecialist extends BaseSpecialist {
 
     const post = this.draftLocalUpdate(business, updateType, targetKeywords);
 
-    return this.createReport(taskId, 'COMPLETED', {
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       post,
       analysis: {
         localRelevanceScore: post.localRelevance,
@@ -800,7 +801,7 @@ export class GMBSpecialist extends BaseSpecialist {
         targetKeywords: post.targetKeywords,
       },
       recommendations: this.generatePostRecommendations(post),
-    });
+    }));
   }
 
   draftLocalUpdate(business: Business, type: string, keywords: string[]): GMBPost {
@@ -842,14 +843,14 @@ export class GMBSpecialist extends BaseSpecialist {
     template: { pattern: string; keywords: readonly string[]; idealLength: number },
     targetKeywords: string[]
   ): string {
-    const { location, name, category } = business;
+    const { location, name } = business;
 
     // Replace template variables
     let content = template.pattern
       .replace('[Business]', name)
-      .replace('[Area]', location.neighborhood || location.city)
+      .replace('[Area]', location.neighborhood ?? location.city)
       .replace('[City]', location.city)
-      .replace('[Neighborhood]', location.neighborhood || location.city);
+      .replace('[Neighborhood]', location.neighborhood ?? location.city);
 
     // Add seasonal context if applicable
     const season = this.getCurrentSeason();
@@ -873,7 +874,7 @@ export class GMBSpecialist extends BaseSpecialist {
   }
 
   private expandContentWithDetails(content: string, business: Business, targetLength: number): string {
-    if (content.length >= targetLength) return content;
+    if (content.length >= targetLength) {return content;}
 
     const additions: string[] = [];
 
@@ -898,7 +899,7 @@ export class GMBSpecialist extends BaseSpecialist {
     let expandedContent = content;
     for (const addition of additions) {
       if (expandedContent.length + addition.length + 2 < targetLength) {
-        expandedContent += '. ' + addition;
+        expandedContent += `. ${  addition}`;
       } else {
         break;
       }
@@ -935,7 +936,7 @@ export class GMBSpecialist extends BaseSpecialist {
   // CORE METHODS: PHOTO POST DRAFTING
   // ============================================================================
 
-  private async handleDraftPhotoPost(
+  private handleDraftPhotoPost(
     taskId: string,
     business: Business,
     options?: Record<string, unknown>
@@ -943,11 +944,11 @@ export class GMBSpecialist extends BaseSpecialist {
     const photoType = (options?.category as keyof typeof PHOTO_POST_STRATEGIES) || 'product';
     const photoPost = this.draftPhotoPost(business, photoType);
 
-    return this.createReport(taskId, 'COMPLETED', {
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       photoPost,
       uploadGuidelines: this.generatePhotoGuidelines(photoType),
       optimizationTips: this.generatePhotoOptimizationTips(photoType),
-    });
+    }));
   }
 
   draftPhotoPost(business: Business, photoType: keyof typeof PHOTO_POST_STRATEGIES): PhotoPost {
@@ -996,8 +997,8 @@ export class GMBSpecialist extends BaseSpecialist {
     return formula
       .replace('[Business]', business.name)
       .replace('[City]', business.location.city)
-      .replace('[Area]', business.location.neighborhood || business.location.city)
-      .replace('[Neighborhood]', business.location.neighborhood || business.location.city)
+      .replace('[Area]', business.location.neighborhood ?? business.location.city)
+      .replace('[Neighborhood]', business.location.neighborhood ?? business.location.city)
       .replace('[Address]', business.location.address);
   }
 
@@ -1033,10 +1034,8 @@ export class GMBSpecialist extends BaseSpecialist {
     return `${business.name}, ${business.location.address}, ${business.location.city}, ${business.location.state}`;
   }
 
-  private calculateBestPhotoPostTime(photoType: keyof typeof PHOTO_POST_STRATEGIES): Date {
+  private calculateBestPhotoPostTime(_photoType: keyof typeof PHOTO_POST_STRATEGIES): Date {
     const now = new Date();
-    const strategy = PHOTO_POST_STRATEGIES[photoType];
-    const optimalTimes = strategy.optimalTimes;
 
     // For simplicity, schedule for next occurrence of optimal time
     // In production, this would be more sophisticated
@@ -1051,14 +1050,14 @@ export class GMBSpecialist extends BaseSpecialist {
   // CORE METHODS: MAP PACK OPTIMIZATION
   // ============================================================================
 
-  private async handleMapPackOptimization(taskId: string, business: Business): Promise<AgentReport> {
+  private handleMapPackOptimization(taskId: string, business: Business): Promise<AgentReport> {
     const optimization = this.optimizeForMapPack(business);
 
-    return this.createReport(taskId, 'COMPLETED', {
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       optimization,
       quickWins: this.identifyQuickWins(optimization),
       implementationPlan: this.generateImplementationPlan(optimization),
-    });
+    }));
   }
 
   optimizeForMapPack(business: Business): MapPackOptimization {
@@ -1165,8 +1164,8 @@ export class GMBSpecialist extends BaseSpecialist {
     // Adjust based on business age
     if (business.foundedYear) {
       const years = new Date().getFullYear() - business.foundedYear;
-      if (years > 10) score += 0.1;
-      else if (years > 5) score += 0.05;
+      if (years > 10) {score += 0.1;}
+      else if (years > 5) {score += 0.05;}
     }
 
     // Adjust based on profile quality
@@ -1313,7 +1312,7 @@ export class GMBSpecialist extends BaseSpecialist {
   // CORE METHODS: POSTING SCHEDULE GENERATION
   // ============================================================================
 
-  private async handleGenerateSchedule(
+  private handleGenerateSchedule(
     taskId: string,
     business: Business,
     options?: Record<string, unknown>
@@ -1321,10 +1320,10 @@ export class GMBSpecialist extends BaseSpecialist {
     const weeksAhead = (options?.weeks as number) || 4;
     const schedule = this.generatePostingSchedule(business, weeksAhead);
 
-    return this.createReport(taskId, 'COMPLETED', {
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       schedule,
       summary: this.summarizeSchedule(schedule),
-    });
+    }));
   }
 
   generatePostingSchedule(business: Business, weeksAhead: number = 4): PostingSchedule[] {
@@ -1416,22 +1415,22 @@ export class GMBSpecialist extends BaseSpecialist {
   // CORE METHODS: COMPETITOR ANALYSIS
   // ============================================================================
 
-  private async handleCompetitorAnalysis(
+  private handleCompetitorAnalysis(
     taskId: string,
     business: Business,
     options?: Record<string, unknown>
   ): Promise<AgentReport> {
-    const radius = (options?.radius as number) || 5;
-    const competitors = this.analyzeLocalCompetitors(business, business.category, radius);
+    const _radius = (options?.radius as number) || 5;
+    const competitors = this.analyzeLocalCompetitors(business, business.category, _radius);
 
-    return this.createReport(taskId, 'COMPLETED', {
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       competitors,
       gapAnalysis: this.performGapAnalysis(business, competitors),
       actionableInsights: this.generateCompetitiveInsights(competitors),
-    });
+    }));
   }
 
-  analyzeLocalCompetitors(business: Business, category: string, radius: number): CompetitorInsight[] {
+  analyzeLocalCompetitors(business: Business, category: string, _radius: number): CompetitorInsight[] {
     // In production, this would query real GMB data
     // Generate representative competitor data
     return [
@@ -1489,14 +1488,14 @@ export class GMBSpecialist extends BaseSpecialist {
   // CORE METHODS: NAP CONSISTENCY AUDIT
   // ============================================================================
 
-  private async handleNAPAudit(taskId: string, business: Business): Promise<AgentReport> {
+  private handleNAPAudit(taskId: string, business: Business): Promise<AgentReport> {
     const audit = this.auditNAPConsistency(business);
 
-    return this.createReport(taskId, 'COMPLETED', {
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       audit,
       consistencyScore: this.calculateNAPScore(audit),
       prioritizedFixes: this.prioritizeNAPFixes(audit),
-    });
+    }));
   }
 
   private auditNAPConsistency(business: Business): Record<string, unknown> {
@@ -1528,13 +1527,13 @@ export class GMBSpecialist extends BaseSpecialist {
   // CORE METHODS: CATEGORY OPTIMIZATION
   // ============================================================================
 
-  private async handleCategoryOptimization(taskId: string, business: Business): Promise<AgentReport> {
+  private handleCategoryOptimization(taskId: string, business: Business): Promise<AgentReport> {
     const optimization = this.optimizeCategories(business);
 
-    return this.createReport(taskId, 'COMPLETED', {
+    return Promise.resolve(this.createReport(taskId, 'COMPLETED', {
       optimization,
       implementationGuide: this.generateCategoryImplementationGuide(optimization),
-    });
+    }));
   }
 
   private optimizeCategories(business: Business): Record<string, unknown> {
@@ -1563,16 +1562,16 @@ export class GMBSpecialist extends BaseSpecialist {
   // ============================================================================
 
   private generateLocalKeywords(business: Business): string[] {
-    const industryKeywords = LOCAL_KEYWORDS_BY_INDUSTRY[business.category] || [];
+    const industryKeywords = LOCAL_KEYWORDS_BY_INDUSTRY[business.category] ?? [];
     return industryKeywords
       .map(template =>
         template
           .replace('[city]', business.location.city)
           .replace('[City]', business.location.city)
-          .replace('[neighborhood]', business.location.neighborhood || business.location.city)
-          .replace('[Neighborhood]', business.location.neighborhood || business.location.city)
-          .replace('[area]', business.location.neighborhood || business.location.city)
-          .replace('[Area]', business.location.neighborhood || business.location.city)
+          .replace('[neighborhood]', business.location.neighborhood ?? business.location.city)
+          .replace('[Neighborhood]', business.location.neighborhood ?? business.location.city)
+          .replace('[area]', business.location.neighborhood ?? business.location.city)
+          .replace('[Area]', business.location.neighborhood ?? business.location.city)
           .replace('[service]', business.category)
       )
       .slice(0, 8);
@@ -1582,9 +1581,9 @@ export class GMBSpecialist extends BaseSpecialist {
     let score = 0;
 
     // Check for location mentions
-    if (content.includes(business.location.city)) score += 0.3;
-    if (business.location.neighborhood && content.includes(business.location.neighborhood)) score += 0.2;
-    if (content.includes(business.location.state)) score += 0.1;
+    if (content.includes(business.location.city)) {score += 0.3;}
+    if (business.location.neighborhood && content.includes(business.location.neighborhood)) {score += 0.2;}
+    if (content.includes(business.location.state)) {score += 0.1;}
 
     // Check for local keywords
     const localKeywords = this.generateLocalKeywords(business);
@@ -1598,9 +1597,9 @@ export class GMBSpecialist extends BaseSpecialist {
     let score = 0;
 
     // Length score
-    if (content.length >= 200 && content.length <= 1200) score += 0.3;
-    else if (content.length < 200) score += 0.1;
-    else if (content.length > 1500) score += 0.1;
+    if (content.length >= 200 && content.length <= 1200) {score += 0.3;}
+    else if (content.length < 200) {score += 0.1;}
+    else if (content.length > 1500) {score += 0.1;}
 
     // Keyword presence
     const foundKeywords = keywords.filter(kw => content.toLowerCase().includes(kw.toLowerCase()));
@@ -1610,8 +1609,8 @@ export class GMBSpecialist extends BaseSpecialist {
     const sentences = content.split(/[.!?]+/).length;
     const words = content.split(/\s+/).length;
     const avgWordsPerSentence = words / sentences;
-    if (avgWordsPerSentence >= 10 && avgWordsPerSentence <= 20) score += 0.3;
-    else score += 0.15;
+    if (avgWordsPerSentence >= 10 && avgWordsPerSentence <= 20) {score += 0.3;}
+    else {score += 0.15;}
 
     return Math.min(score, 1.0);
   }
@@ -1644,19 +1643,19 @@ export class GMBSpecialist extends BaseSpecialist {
 
   private getCurrentSeason(): string {
     const month = new Date().getMonth();
-    if (month >= 2 && month <= 4) return 'Spring';
-    if (month >= 5 && month <= 7) return 'Summer';
-    if (month >= 8 && month <= 10) return 'Fall';
+    if (month >= 2 && month <= 4) {return 'Spring';}
+    if (month >= 5 && month <= 7) {return 'Summer';}
+    if (month >= 8 && month <= 10) {return 'Fall';}
     return 'Winter';
   }
 
   private truncateGracefully(content: string, maxLength: number): string {
-    if (content.length <= maxLength) return content;
+    if (content.length <= maxLength) {return content;}
 
     const truncated = content.substring(0, maxLength - 3);
     const lastSpace = truncated.lastIndexOf(' ');
 
-    return truncated.substring(0, lastSpace) + '...';
+    return `${truncated.substring(0, lastSpace)  }...`;
   }
 
   private generatePostId(): string {
@@ -1667,7 +1666,10 @@ export class GMBSpecialist extends BaseSpecialist {
     if (!this.postHistory.has(businessId)) {
       this.postHistory.set(businessId, []);
     }
-    this.postHistory.get(businessId)!.push(post);
+    const history = this.postHistory.get(businessId);
+    if (history) {
+      history.push(post);
+    }
   }
 
   private generatePostRecommendations(post: GMBPost): string[] {
@@ -1692,8 +1694,8 @@ export class GMBSpecialist extends BaseSpecialist {
     return recommendations;
   }
 
-  private generatePhotoGuidelines(photoType: keyof typeof PHOTO_POST_STRATEGIES): string[] {
-    const strategy = PHOTO_POST_STRATEGIES[photoType];
+  private generatePhotoGuidelines(_photoType: keyof typeof PHOTO_POST_STRATEGIES): string[] {
+    const strategy = PHOTO_POST_STRATEGIES[_photoType];
     return [
       `Category: ${strategy.description}`,
       `SEO Impact: ${strategy.seoImpact}`,
@@ -1702,7 +1704,7 @@ export class GMBSpecialist extends BaseSpecialist {
     ];
   }
 
-  private generatePhotoOptimizationTips(photoType: keyof typeof PHOTO_POST_STRATEGIES): string[] {
+  private generatePhotoOptimizationTips(_photoType: keyof typeof PHOTO_POST_STRATEGIES): string[] {
     return [
       'Use high-resolution images (minimum 720px width)',
       'Ensure proper lighting and focus',
@@ -1766,7 +1768,7 @@ export class GMBSpecialist extends BaseSpecialist {
     const topCompetitor = competitors[0];
 
     return {
-      reviewGap: topCompetitor.reviewCount - (business.attributes?.length || 0),
+      reviewGap: topCompetitor.reviewCount - (business.attributes?.length ?? 0),
       postingGap: topCompetitor.postingFrequency,
       photoGap: topCompetitor.photoCount,
       opportunityAreas: competitors.flatMap(c => c.strengthsWeaknessesGap.weCanBeat),
@@ -1791,14 +1793,14 @@ export class GMBSpecialist extends BaseSpecialist {
     const addressData = audit.address as { commonIssues: string[] };
     const phoneData = audit.phone as { format: string };
 
-    if (nameData.issues.length === 0) score += 0.1;
-    if (addressData.commonIssues.length === 0) score += 0.1;
-    if (phoneData.format === 'valid') score += 0.1;
+    if (nameData.issues.length === 0) {score += 0.1;}
+    if (addressData.commonIssues.length === 0) {score += 0.1;}
+    if (phoneData.format === 'valid') {score += 0.1;}
 
     return Math.min(score, 1.0);
   }
 
-  private prioritizeNAPFixes(audit: Record<string, unknown>): string[] {
+  private prioritizeNAPFixes(_audit: Record<string, unknown>): string[] {
     return [
       'Standardize business name across all platforms',
       'Verify USPS address format',
@@ -1812,15 +1814,15 @@ export class GMBSpecialist extends BaseSpecialist {
     return [name, `${name} LLC`, `${name} Inc`, `${name} Corp`];
   }
 
-  private identifyNameIssues(name: string): string[] {
+  private identifyNameIssues(_name: string): string[] {
     const issues: string[] = [];
-    if (name.includes('Best') || name.includes('#1')) {
+    if (_name.includes('Best') || _name.includes('#1')) {
       issues.push('Contains promotional keywords');
     }
     return issues;
   }
 
-  private generateNameRecommendations(name: string): string[] {
+  private generateNameRecommendations(_name: string): string[] {
     return ['Use legal business name without keywords', 'Be consistent across all platforms'];
   }
 
@@ -1828,13 +1830,13 @@ export class GMBSpecialist extends BaseSpecialist {
     return address.includes('St') || address.includes('Ave') || address.includes('Rd');
   }
 
-  private identifyAddressIssues(location: Business['location']): string[] {
+  private identifyAddressIssues(_location: Business['location']): string[] {
     const issues: string[] = [];
-    if (!location.zip) issues.push('Missing ZIP code');
+    if (!_location.zip) {issues.push('Missing ZIP code');}
     return issues;
   }
 
-  private generateAddressRecommendations(location: Business['location']): string[] {
+  private generateAddressRecommendations(_location: Business['location']): string[] {
     return ['Use USPS-verified format', 'Include suite/unit number if applicable'];
   }
 
@@ -1842,15 +1844,15 @@ export class GMBSpecialist extends BaseSpecialist {
     return phone.match(/\(\d{3}\) \d{3}-\d{4}/) ? 'valid' : 'needs formatting';
   }
 
-  private isLocalNumber(phone: string, state: string): boolean {
-    return phone.length === 14; // Simplified check
+  private isLocalNumber(_phone: string, _state: string): boolean {
+    return _phone.length === 14; // Simplified check
   }
 
-  private generatePhoneRecommendations(phone: string): string[] {
+  private generatePhoneRecommendations(_phone: string): string[] {
     return ['Use local area code', 'Format consistently: (555) 555-5555'];
   }
 
-  private generateCategoryImplementationGuide(optimization: Record<string, unknown>): string[] {
+  private generateCategoryImplementationGuide(_optimization: Record<string, unknown>): string[] {
     return [
       'Step 1: Research competitor categories in your area',
       'Step 2: Backup current category configuration',

@@ -669,11 +669,12 @@ export class ReputationManager extends BaseManager {
     super(REPUTATION_MANAGER_CONFIG);
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.log('INFO', 'Initializing Reputation Manager...');
     this.log('INFO', `Loaded ${Object.keys(SENTIMENT_THRESHOLDS).length} sentiment levels`);
     this.log('INFO', `Configured ${Object.keys(RESPONSE_STRATEGIES).length} response strategies`);
     this.isInitialized = true;
+    return Promise.resolve();
   }
 
   /**
@@ -700,15 +701,15 @@ export class ReputationManager extends BaseManager {
 
       switch (payload.action) {
         case 'ANALYZE_SENTIMENT':
-          result = await this.performSentimentAnalysis(payload.signals || [], taskId);
+          result = await this.performSentimentAnalysis(payload.signals ?? [], taskId);
           break;
 
         case 'CHECK_BRAND_HEALTH':
-          result = await this.checkBrandHealth(payload.signals || [], taskId);
+          result = await this.checkBrandHealth(payload.signals ?? [], taskId);
           break;
 
         case 'DETERMINE_STRATEGY':
-          result = await this.determineResponseStrategy(payload.signals || [], taskId);
+          result = await this.determineResponseStrategy(payload.signals ?? [], taskId);
           break;
 
         case 'HANDLE_REVIEW':
@@ -758,8 +759,8 @@ export class ReputationManager extends BaseManager {
           payload: {
             action: 'HANDLE_REVIEW',
             reviewData: {
-              platform: reviewData.platform || 'unknown',
-              rating: reviewData.rating || 1,
+              platform: reviewData.platform ?? 'unknown',
+              rating: reviewData.rating ?? 1,
               content: reviewData.content,
               author: reviewData.author,
               url: reviewData.url,
@@ -1066,10 +1067,10 @@ export class ReputationManager extends BaseManager {
    * Classify sentiment level from score
    */
   private classifySentimentLevel(score: number): SentimentLevel {
-    if (score <= SENTIMENT_THRESHOLDS.CRISIS.max) return SentimentLevel.CRISIS;
-    if (score <= SENTIMENT_THRESHOLDS.CONCERN.max) return SentimentLevel.CONCERN;
-    if (score <= SENTIMENT_THRESHOLDS.NEUTRAL.max) return SentimentLevel.NEUTRAL;
-    if (score <= SENTIMENT_THRESHOLDS.POSITIVE.max) return SentimentLevel.POSITIVE;
+    if (score <= SENTIMENT_THRESHOLDS.CRISIS.max) {return SentimentLevel.CRISIS;}
+    if (score <= SENTIMENT_THRESHOLDS.CONCERN.max) {return SentimentLevel.CONCERN;}
+    if (score <= SENTIMENT_THRESHOLDS.NEUTRAL.max) {return SentimentLevel.NEUTRAL;}
+    if (score <= SENTIMENT_THRESHOLDS.POSITIVE.max) {return SentimentLevel.POSITIVE;}
     return SentimentLevel.EXCELLENT;
   }
 
@@ -1096,7 +1097,7 @@ export class ReputationManager extends BaseManager {
     // Average rating
     let averageRating = 0;
     if (reviews.length > 0) {
-      const totalRating = reviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+      const totalRating = reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0);
       averageRating = totalRating / reviews.length;
     }
 
@@ -1151,10 +1152,10 @@ export class ReputationManager extends BaseManager {
   /**
    * Generate specialist delegations
    */
-  private async generateDelegations(
+  private generateDelegations(
     sentiment: SentimentAnalysis,
     signals: SentimentSignal[],
-    taskId: string
+    _taskId: string
   ): Promise<DelegationRecommendation[]> {
     const delegations: DelegationRecommendation[] = [];
 
@@ -1200,7 +1201,7 @@ export class ReputationManager extends BaseManager {
       });
     }
 
-    return delegations;
+    return Promise.resolve(delegations);
   }
 
   /**
@@ -1369,39 +1370,39 @@ export class ReputationManager extends BaseManager {
   /**
    * Route to appropriate department specialist
    */
-  private async routeToDepartmentSpecialist(
+  private routeToDepartmentSpecialist(
     signal: SentimentSignal,
-    taskId: string
+    _taskId: string
   ): Promise<DelegationRecommendation> {
     const isReview = signal.type === 'REVIEW';
     const isGMB = signal.source?.toLowerCase().includes('google') ||
                   signal.platform?.toLowerCase().includes('google');
 
     if (isReview) {
-      return {
+      return Promise.resolve({
         specialist: 'REVIEW_SPECIALIST',
         action: `Handle ${signal.sentiment.toLowerCase()} review from ${signal.source}`,
         priority: signal.sentiment === 'NEGATIVE' ? 'HIGH' : 'NORMAL',
         reason: 'Review requires response',
         status: 'PENDING',
-      };
+      });
     } else if (isGMB) {
-      return {
+      return Promise.resolve({
         specialist: 'GMB_SPECIALIST',
         action: `Handle GMB signal from ${signal.source}`,
         priority: 'NORMAL',
         reason: 'GMB optimization opportunity',
         status: 'PENDING',
-      };
+      });
     }
 
-    return {
+    return Promise.resolve({
       specialist: 'REVIEW_SPECIALIST',
       action: 'Handle general brand mention',
       priority: 'LOW',
       reason: 'General monitoring',
       status: 'PENDING',
-    };
+    });
   }
 
   /**
@@ -1409,7 +1410,7 @@ export class ReputationManager extends BaseManager {
    */
   private detectCrisis(sentiment: SentimentAnalysis, signals: SentimentSignal[]): boolean {
     // Crisis if sentiment in crisis zone
-    if (sentiment.level === SentimentLevel.CRISIS) return true;
+    if (sentiment.level === SentimentLevel.CRISIS) {return true;}
 
     // Crisis if rapid sentiment decline
     if (sentiment.trend === 'DECLINING' && sentiment.currentScore - sentiment.previousScore < -20) {
@@ -1421,7 +1422,7 @@ export class ReputationManager extends BaseManager {
       s => s.sentiment === 'NEGATIVE' &&
       s.timestamp > new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
     );
-    if (recentNegative.length >= 5) return true;
+    if (recentNegative.length >= 5) {return true;}
 
     return false;
   }

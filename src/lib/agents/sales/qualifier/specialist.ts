@@ -18,7 +18,7 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger } from '@/lib/logger/logger';
+import { logger as _logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist
@@ -513,9 +513,10 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     this.scoringWeights = DEFAULT_WEIGHTS;
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     this.isInitialized = true;
     this.log('INFO', 'Lead Qualifier Specialist initialized');
+    return Promise.resolve();
   }
 
   /**
@@ -584,7 +585,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   /**
    * Full lead qualification process
    */
-  async qualifyLead(request: QualificationRequest): Promise<QualificationResult> {
+  qualifyLead(request: QualificationRequest): Promise<QualificationResult> {
     const { lead, scraperIntel, icp = this.defaultICP, customWeights } = request;
 
     // Apply custom weights if provided
@@ -611,7 +612,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     // Build scoring breakdown
     const scoringBreakdown = this.buildScoringBreakdown(lead, scraperIntel);
 
-    return {
+    return Promise.resolve({
       leadId: lead.leadId,
       qualifiedAt: new Date().toISOString(),
       bantScore,
@@ -621,7 +622,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
       insights,
       dataGaps,
       scoringBreakdown,
-    };
+    });
   }
 
   /**
@@ -707,7 +708,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     score += pricingScore;
     if (pricingScore > 0) {
       dataPoints++;
-      signals.push(`Pricing page engagement (${leadData.engagement.pricingPageViews || 0} views) shows purchase intent`);
+      signals.push(`Pricing page engagement (${leadData.engagement.pricingPageViews ?? 0} views) shows purchase intent`);
     }
 
     // 4. Tech Stack Spend Indicators (0-4 points)
@@ -747,11 +748,11 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
       '1-10': 1,
       'unknown': 2,
     };
-    return sizeScores[employeeRange] || 2;
+    return sizeScores[employeeRange] ?? 2;
   }
 
   private scoreFunding(company: LeadCompany): number {
-    if (!company.fundingStage) return 0;
+    if (!company.fundingStage) {return 0;}
 
     const fundingStageScores: Record<string, number> = {
       'IPO': 6, 'Series D': 6, 'Series E': 6,
@@ -763,9 +764,9 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
 
     // Bonus for recent funding amounts
     if (company.fundingAmount) {
-      if (company.fundingAmount >= 50000000) score += 0;  // Already captured in stage
-      else if (company.fundingAmount >= 10000000) score = Math.max(score, 4);
-      else if (company.fundingAmount >= 1000000) score = Math.max(score, 2);
+      if (company.fundingAmount >= 50000000) {score += 0;}  // Already captured in stage
+      else if (company.fundingAmount >= 10000000) {score = Math.max(score, 4);}
+      else if (company.fundingAmount >= 1000000) {score = Math.max(score, 2);}
     }
 
     return Math.min(6, score);
@@ -775,19 +776,19 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     let score = 0;
 
     // Pricing page views
-    const pricingViews = engagement.pricingPageViews || 0;
-    if (pricingViews >= 3) score += 3;
-    else if (pricingViews >= 2) score += 2;
-    else if (pricingViews >= 1) score += 1;
+    const pricingViews = engagement.pricingPageViews ?? 0;
+    if (pricingViews >= 3) {score += 3;}
+    else if (pricingViews >= 2) {score += 2;}
+    else if (pricingViews >= 1) {score += 1;}
 
     // Demo requested is strong signal
-    if (engagement.demoRequested) score += 2;
+    if (engagement.demoRequested) {score += 2;}
 
     // Downloaded pricing-related assets
     const pricingAssets = engagement.downloadedAssets?.filter(
       a => a.toLowerCase().includes('pricing') || a.toLowerCase().includes('quote')
-    ) || [];
-    if (pricingAssets.length > 0) score += 1;
+    ) ?? [];
+    if (pricingAssets.length > 0) {score += 1;}
 
     return Math.min(5, score);
   }
@@ -800,26 +801,26 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     ];
 
     const allTools = [
-      ...(techStack || []),
-      ...(scraperTech?.detectedTools || []),
-      ...(scraperTech?.detectedPlatforms || []),
+      ...(techStack ?? []),
+      ...(scraperTech?.detectedTools ?? []),
+      ...(scraperTech?.detectedPlatforms ?? []),
     ];
 
     const premiumCount = allTools.filter(tool =>
       premiumTools.some(premium => tool.toLowerCase().includes(premium.toLowerCase()))
     ).length;
 
-    if (premiumCount >= 3) return 4;
-    if (premiumCount >= 2) return 3;
-    if (premiumCount >= 1) return 2;
+    if (premiumCount >= 3) {return 4;}
+    if (premiumCount >= 2) {return 3;}
+    if (premiumCount >= 1) {return 2;}
     return 0;
   }
 
   private scoreIndustryBudget(industry: string): number {
-    const multiplier = INDUSTRY_BUDGET_MULTIPLIERS[industry] || 1.0;
-    if (multiplier >= 1.2) return 3;
-    if (multiplier >= 1.1) return 2;
-    if (multiplier >= 1.0) return 1;
+    const multiplier = INDUSTRY_BUDGET_MULTIPLIERS[industry] ?? 1.0;
+    if (multiplier >= 1.2) {return 3;}
+    if (multiplier >= 1.1) {return 2;}
+    if (multiplier >= 1.0) {return 1;}
     return 0;
   }
 
@@ -830,7 +831,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   /**
    * Score decision-making authority based on contact information
    */
-  scoreAuthority(leadData: LeadData, scraperIntel?: ScraperIntelligence): BANTComponentScore {
+  scoreAuthority(leadData: LeadData, _scraperIntel?: ScraperIntelligence): BANTComponentScore {
     const signals: string[] = [];
     const rawFactors: Record<string, number> = {};
     let score = 0;
@@ -891,7 +892,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   }
 
   private scoreTitleAuthority(title: string): number {
-    if (!title) return 0;
+    if (!title) {return 0;}
 
     const lowerTitle = title.toLowerCase();
 
@@ -904,14 +905,14 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     }
 
     // Check for partial matches with common modifiers
-    if (lowerTitle.includes('chief') || lowerTitle.includes('c-level')) return 15;
-    if (lowerTitle.includes('executive')) return 13;
-    if (lowerTitle.includes('vice') || lowerTitle.includes('vp')) return 12;
-    if (lowerTitle.includes('director')) return 10;
-    if (lowerTitle.includes('head')) return 10;
-    if (lowerTitle.includes('manager')) return 7;
-    if (lowerTitle.includes('lead')) return 6;
-    if (lowerTitle.includes('senior')) return 5;
+    if (lowerTitle.includes('chief') || lowerTitle.includes('c-level')) {return 15;}
+    if (lowerTitle.includes('executive')) {return 13;}
+    if (lowerTitle.includes('vice') || lowerTitle.includes('vp')) {return 12;}
+    if (lowerTitle.includes('director')) {return 10;}
+    if (lowerTitle.includes('head')) {return 10;}
+    if (lowerTitle.includes('manager')) {return 7;}
+    if (lowerTitle.includes('lead')) {return 6;}
+    if (lowerTitle.includes('senior')) {return 5;}
 
     return 3; // Default for unknown titles
   }
@@ -925,11 +926,11 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
       'Individual': 1,
       'Unknown': 1,
     };
-    return seniorityScores[seniority || 'Unknown'];
+    return seniorityScores[seniority ?? 'Unknown'];
   }
 
   private scoreEmailAuthority(email: string, companyDomain: string): number {
-    if (!email) return 0;
+    if (!email) {return 0;}
 
     const emailDomain = email.split('@')[1]?.toLowerCase() || '';
     const targetDomain = companyDomain.toLowerCase().replace('www.', '');
@@ -956,8 +957,8 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
       score += 1;
 
       if (contact.linkedinConnections) {
-        if (contact.linkedinConnections >= 500) score += 2;
-        else if (contact.linkedinConnections >= 250) score += 1;
+        if (contact.linkedinConnections >= 500) {score += 2;}
+        else if (contact.linkedinConnections >= 250) {score += 1;}
       }
     }
 
@@ -1045,8 +1046,8 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     // Check engagement for pain point indicators
     const allContent = [
       ...leadData.engagement.pagesViewed,
-      ...leadData.engagement.downloadedAssets || [],
-      ...(scraperIntel?.contentSummary?.topKeywords || []),
+      ...leadData.engagement.downloadedAssets ?? [],
+      ...(scraperIntel?.contentSummary?.topKeywords ?? []),
     ].join(' ').toLowerCase();
 
     const painIndicators = [
@@ -1057,30 +1058,30 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
 
     const matchCount = painIndicators.filter(indicator => allContent.includes(indicator)).length;
 
-    if (matchCount >= 5) score += 4;
-    else if (matchCount >= 3) score += 3;
-    else if (matchCount >= 1) score += 1;
+    if (matchCount >= 5) {score += 4;}
+    else if (matchCount >= 3) {score += 3;}
+    else if (matchCount >= 1) {score += 1;}
 
     // Bonus for solution-specific pages
     const solutionPages = leadData.engagement.pagesViewed.filter(page =>
       page.includes('solution') || page.includes('use-case') || page.includes('product')
     );
-    if (solutionPages.length >= 2) score += 2;
-    else if (solutionPages.length >= 1) score += 1;
+    if (solutionPages.length >= 2) {score += 2;}
+    else if (solutionPages.length >= 1) {score += 1;}
 
     // Bonus for case study engagement
     const caseStudyEngagement = leadData.engagement.downloadedAssets?.some(
       asset => asset.toLowerCase().includes('case study') || asset.toLowerCase().includes('success story')
     );
-    if (caseStudyEngagement) score += 1;
+    if (caseStudyEngagement) {score += 1;}
 
     return Math.min(7, score);
   }
 
   private scoreCompetitorUsage(techStack?: string[], scraperIntel?: ScraperIntelligence): number {
     const allTools = [
-      ...(techStack || []),
-      ...(scraperIntel?.techSignals?.detectedTools || []),
+      ...(techStack ?? []),
+      ...(scraperIntel?.techSignals?.detectedTools ?? []),
     ];
 
     // Define competitor categories
@@ -1100,16 +1101,16 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
       }
     }
 
-    if (competitorMatches >= 3) return 6;
-    if (competitorMatches >= 2) return 4;
-    if (competitorMatches >= 1) return 2;
+    if (competitorMatches >= 3) {return 6;}
+    if (competitorMatches >= 2) {return 4;}
+    if (competitorMatches >= 1) {return 2;}
     return 0;
   }
 
   private scoreTechStackGaps(techStack?: string[], scraperIntel?: ScraperIntelligence): number {
     const allTools = [
-      ...(techStack || []),
-      ...(scraperIntel?.techSignals?.detectedTools || []),
+      ...(techStack ?? []),
+      ...(scraperIntel?.techSignals?.detectedTools ?? []),
     ];
 
     // Define tools that indicate gaps our solution fills
@@ -1127,12 +1128,12 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     let score = 0;
 
     // Score based on missing components
-    if (hasCRM && !hasMarketing) score += 2; // Has CRM but needs marketing automation
-    if (hasMarketing && !hasAnalytics) score += 2; // Has marketing but needs analytics
-    if (!hasCRM && !hasMarketing) score += 3; // Early stage - big opportunity
+    if (hasCRM && !hasMarketing) {score += 2;} // Has CRM but needs marketing automation
+    if (hasMarketing && !hasAnalytics) {score += 2;} // Has marketing but needs analytics
+    if (!hasCRM && !hasMarketing) {score += 3;} // Early stage - big opportunity
 
     // Bonus for explicit gap indicators
-    const contentAnalysis = scraperIntel?.contentSummary?.topKeywords?.join(' ').toLowerCase() || '';
+    const contentAnalysis = scraperIntel?.contentSummary?.topKeywords?.join(' ').toLowerCase() ?? '';
     for (const indicator of gapIndicators) {
       if (contentAnalysis.includes(indicator.pattern)) {
         score += 1;
@@ -1145,7 +1146,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   private scoreIndustryFit(industry: string): number {
     const targetIndustries = this.defaultICP.targetIndustries;
 
-    if (targetIndustries.includes(industry)) return 4;
+    if (targetIndustries.includes(industry)) {return 4;}
 
     // Partial match for related industries
     const relatedIndustries: Record<string, string[]> = {
@@ -1169,20 +1170,20 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     let score = 0;
 
     // Multiple page views indicate research behavior
-    if (engagement.pagesViewed.length >= 5) score += 1;
+    if (engagement.pagesViewed.length >= 5) {score += 1;}
 
     // Form submissions show active interest
-    if (engagement.formSubmissions.length >= 2) score += 1;
+    if (engagement.formSubmissions.length >= 2) {score += 1;}
 
     // Webinar attendance shows commitment
-    if (engagement.webinarAttendance && engagement.webinarAttendance.length > 0) score += 1;
+    if (engagement.webinarAttendance && engagement.webinarAttendance.length > 0) {score += 1;}
 
     // Recent activity indicates current need
     if (engagement.lastActivityDate) {
       const daysSinceActivity = Math.floor(
         (Date.now() - engagement.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24)
       );
-      if (daysSinceActivity <= 7) score += 1;
+      if (daysSinceActivity <= 7) {score += 1;}
     }
 
     return Math.min(3, score);
@@ -1220,7 +1221,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     score += hiringScore;
     if (hiringScore > 0) {
       dataPoints++;
-      signals.push(`Active hiring (${scraperIntel?.businessSignals?.openPositions || 0} positions) indicates growth timeline`);
+      signals.push(`Active hiring (${scraperIntel?.businessSignals?.openPositions ?? 0} positions) indicates growth timeline`);
     }
 
     // 3. Fiscal Year Considerations (0-5 points)
@@ -1265,19 +1266,19 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     let score = 0;
 
     // Demo request is strongest urgency signal
-    if (engagement.demoRequested) score += 4;
+    if (engagement.demoRequested) {score += 4;}
 
     // Multiple pricing page views
-    if ((engagement.pricingPageViews || 0) >= 2) score += 2;
-    else if ((engagement.pricingPageViews || 0) >= 1) score += 1;
+    if ((engagement.pricingPageViews ?? 0) >= 2) {score += 2;}
+    else if ((engagement.pricingPageViews ?? 0) >= 1) {score += 1;}
 
     // Recent activity burst
     if (engagement.lastActivityDate) {
       const daysSinceActivity = Math.floor(
         (Date.now() - engagement.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24)
       );
-      if (daysSinceActivity <= 3) score += 2;
-      else if (daysSinceActivity <= 7) score += 1;
+      if (daysSinceActivity <= 3) {score += 2;}
+      else if (daysSinceActivity <= 7) {score += 1;}
     }
 
     // Chat interactions indicate immediate interest
@@ -1289,17 +1290,17 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   }
 
   private scoreHiringActivity(scraperIntel?: ScraperIntelligence): number {
-    if (!scraperIntel?.businessSignals) return 0;
+    if (!scraperIntel?.businessSignals) {return 0;}
 
     const { isHiring, openPositions } = scraperIntel.businessSignals;
 
-    if (!isHiring) return 0;
+    if (!isHiring) {return 0;}
 
-    if (openPositions >= 20) return 6;
-    if (openPositions >= 10) return 5;
-    if (openPositions >= 5) return 4;
-    if (openPositions >= 3) return 3;
-    if (openPositions >= 1) return 2;
+    if (openPositions >= 20) {return 6;}
+    if (openPositions >= 10) {return 5;}
+    if (openPositions >= 5) {return 4;}
+    if (openPositions >= 3) {return 3;}
+    if (openPositions >= 1) {return 2;}
     return 1;
   }
 
@@ -1308,10 +1309,10 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     const month = now.getMonth(); // 0-11
 
     // Q4 (Oct-Dec) is typically budget planning/spending season
-    if (month >= 9 && month <= 11) return 5;
+    if (month >= 9 && month <= 11) {return 5;}
 
     // Q1 (Jan-Mar) new budgets are approved
-    if (month >= 0 && month <= 2) return 4;
+    if (month >= 0 && month <= 2) {return 4;}
 
     // Q2-Q3 mid-year evaluations
     return 2;
@@ -1324,20 +1325,20 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     const comparisonPages = engagement.pagesViewed.filter(page =>
       page.includes('comparison') || page.includes('vs') || page.includes('alternative')
     );
-    if (comparisonPages.length > 0) score += 2;
+    if (comparisonPages.length > 0) {score += 2;}
 
     // Feature/integration page views
     const featurePages = engagement.pagesViewed.filter(page =>
       page.includes('feature') || page.includes('integration') || page.includes('api')
     );
-    if (featurePages.length >= 3) score += 2;
-    else if (featurePages.length >= 1) score += 1;
+    if (featurePages.length >= 3) {score += 2;}
+    else if (featurePages.length >= 1) {score += 1;}
 
     // ROI calculator or similar tools
     const roiPages = engagement.pagesViewed.filter(page =>
       page.includes('roi') || page.includes('calculator') || page.includes('savings')
     );
-    if (roiPages.length > 0) score += 1;
+    if (roiPages.length > 0) {score += 1;}
 
     return Math.min(4, score);
   }
@@ -1348,7 +1349,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     // Check for migration/switching related content
     const allContent = [
       ...engagement.pagesViewed,
-      ...(scraperIntel?.contentSummary?.topKeywords || []),
+      ...(scraperIntel?.contentSummary?.topKeywords ?? []),
     ].join(' ').toLowerCase();
 
     const switchingIndicators = ['migrate', 'switch', 'replace', 'alternative', 'renewal'];
@@ -1401,8 +1402,8 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
     // Tech stack alignment (15 points)
     maxScore += 15;
     const allTools = [
-      ...(leadData.company.techStack || []),
-      ...(scraperIntel?.techSignals?.detectedTools || []),
+      ...(leadData.company.techStack ?? []),
+      ...(scraperIntel?.techSignals?.detectedTools ?? []),
     ];
     const techOverlap = this.calculateSetOverlap(allTools, icp.targetTechStack);
     score += Math.round(techOverlap * 15);
@@ -1413,7 +1414,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
       const geoMatch = icp.targetGeographies.some(geo =>
         leadData.company.headquarters?.toLowerCase().includes(geo.toLowerCase())
       );
-      if (geoMatch) score += 10;
+      if (geoMatch) {score += 10;}
     }
 
     // Must-have signals (10 points)
@@ -1461,7 +1462,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   }
 
   private checkTitleAlignment(title: string, targetTitles: string[]): number {
-    if (!title) return 0;
+    if (!title) {return 0;}
 
     const lowerTitle = title.toLowerCase();
 
@@ -1480,7 +1481,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   }
 
   private calculateSetOverlap(set1: string[], set2: string[]): number {
-    if (set2.length === 0) return 0;
+    if (set2.length === 0) {return 0;}
 
     const normalizedSet1 = set1.map(s => s.toLowerCase());
     const normalizedSet2 = set2.map(s => s.toLowerCase());
@@ -1508,7 +1509,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
       if (lowerSignal.includes('corporate email')) {
         const emailDomain = leadData.contact.email.split('@')[1]?.toLowerCase();
         const personalDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
-        if (!personalDomains.includes(emailDomain)) matches++;
+        if (!personalDomains.includes(emailDomain)) {matches++;}
       }
 
       if (lowerSignal.includes('hiring') && scraperIntel?.businessSignals?.isHiring) {
@@ -1561,9 +1562,9 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
   private determineQualificationTier(bantTotal: number, icpAlignment: number): QualificationTier {
     const combinedScore = (bantTotal * 0.7) + (icpAlignment * 0.3);
 
-    if (combinedScore >= 75) return 'HOT';
-    if (combinedScore >= 50) return 'WARM';
-    if (combinedScore >= 25) return 'COLD';
+    if (combinedScore >= 75) {return 'HOT';}
+    if (combinedScore >= 50) {return 'WARM';}
+    if (combinedScore >= 25) {return 'COLD';}
     return 'DISQUALIFIED';
   }
 
@@ -1648,7 +1649,7 @@ export class LeadQualifierSpecialist extends BaseSpecialist {
 
     // Add all signals from BANT components
     for (const signal of bantScore.budget.signals) {
-      if (!insights.includes(signal)) insights.push(signal);
+      if (!insights.includes(signal)) {insights.push(signal);}
     }
 
     return insights.slice(0, 8); // Limit to 8 most important insights
