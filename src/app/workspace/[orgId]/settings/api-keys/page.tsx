@@ -6,11 +6,19 @@ import { useParams } from 'next/navigation';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 
-interface APIKey {
-  service: string;
-  key: string;
-  configured: boolean;
-  required: boolean;
+interface APIKeyLoadResponse {
+  success: boolean;
+  keys?: Record<string, string>;
+}
+
+interface APIKeySaveResponse {
+  success: boolean;
+  error?: string;
+}
+
+interface APIKeyTestResponse {
+  success: boolean;
+  error?: string;
 }
 
 export default function APIKeysPage() {
@@ -19,23 +27,24 @@ export default function APIKeysPage() {
   const { theme } = useOrgTheme();
   
   const [keys, setKeys] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<Record<string, any>>({});
+  const [testResults, setTestResults] = useState<Record<string, APIKeyTestResponse>>({});
 
   useEffect(() => {
-    loadKeys();
+    void loadKeys();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- Load keys only once on mount
   }, []);
 
   const loadKeys = async () => {
     try {
       const response = await fetch(`/api/settings/api-keys?orgId=${orgId}`);
-      const data = await response.json();
+      const data = await response.json() as APIKeyLoadResponse;
       if (data.success) {
         setKeys(data.keys ?? {});
       }
-    } catch (error) {
-      logger.error('Failed to load API keys:', error, { file: 'page.tsx' });
+    } catch (_error) {
+      logger.error('Failed to load API keys:', _error, { file: 'page.tsx' });
     }
   };
 
@@ -47,14 +56,17 @@ export default function APIKeysPage() {
         body: JSON.stringify({ orgId, service, key: value }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as APIKeySaveResponse;
       if (data.success) {
         setKeys({ ...keys, [service]: value });
+        // eslint-disable-next-line no-alert -- User feedback
         alert('API key saved successfully!');
       } else {
-        alert(`Failed to save: ${  data.error}`);
+        // eslint-disable-next-line no-alert -- User feedback
+        alert(`Failed to save: ${data.error ?? 'Unknown error'}`);
       }
-    } catch (error) {
+    } catch (_error) {
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Error saving API key');
     }
   };
@@ -63,16 +75,19 @@ export default function APIKeysPage() {
     setTesting(service);
     try {
       const response = await fetch(`/api/settings/api-keys/test?orgId=${orgId}&service=${service}`);
-      const data = await response.json();
-      
+      const data = await response.json() as APIKeyTestResponse;
+
       setTestResults({ ...testResults, [service]: data });
-      
+
       if (data.success) {
-        alert(`✅ ${  service  } is working!`);
+        // eslint-disable-next-line no-alert -- User feedback
+        alert(`✅ ${service} is working!`);
       } else {
-        alert(`❌ ${  service  } test failed: ${  data.error}`);
+        // eslint-disable-next-line no-alert -- User feedback
+        alert(`❌ ${service} test failed: ${data.error ?? 'Unknown error'}`);
       }
-    } catch (error) {
+    } catch (_error) {
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Error testing API key');
     } finally {
       setTesting(null);
@@ -370,9 +385,9 @@ export default function APIKeysPage() {
   ];
 
   // Custom API Keys state
-  const [customKeys, setCustomKeys] = useState<Array<{id: string, name: string, key: string}>>([]);
-  const [showAddCustom, setShowAddCustom] = useState(false);
-  const [newCustomKey, setNewCustomKey] = useState({name: '', key: ''});
+  const [_customKeys, _setCustomKeys] = useState<Array<{id: string, name: string, key: string}>>([]);
+  const [_showAddCustom, _setShowAddCustom] = useState(false);
+  const [_newCustomKey, _setNewCustomKey] = useState({name: '', key: ''});
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#000' }}>
@@ -423,7 +438,7 @@ export default function APIKeysPage() {
             </h3>
             <div style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.6' }}>
               <p style={{ marginBottom: '0.5rem' }}>
-                <strong style={{ color: '#10b981' }}>REQUIRED (AI features won't work without these):</strong>
+                <strong style={{ color: '#10b981' }}>REQUIRED (AI features won&apos;t work without these):</strong>
               </p>
               <ul style={{ marginLeft: '1.5rem', marginBottom: '1rem' }}>
                 <li>OpenAI API Key - Powers all AI features ($10-50/month)</li>
@@ -527,7 +542,7 @@ export default function APIKeysPage() {
                         }}
                       />
                       <button
-                        onClick={() => saveKey(service.id, keys[service.id] || '')}
+                        onClick={() => void saveKey(service.id, keys[service.id] || '')}
                         disabled={!keys[service.id]}
                         style={{
                           padding: '0.75rem 1.5rem',
@@ -543,7 +558,7 @@ export default function APIKeysPage() {
                         Save
                       </button>
                       <button
-                        onClick={() => testKey(service.id)}
+                        onClick={() => void testKey(service.id)}
                         disabled={!keys[service.id] || testing === service.id}
                         style={{
                           padding: '0.75rem 1.5rem',

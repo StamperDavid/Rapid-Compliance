@@ -1,40 +1,126 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
 import { logger } from '@/lib/logger/logger';;
 
+// Type definitions
+interface BaseModel {
+  id: string;
+  orgId: string;
+  name: string;
+  businessName: string;
+  industry: string;
+  objectives: string[];
+  products: Array<{
+    name: string;
+    price: string;
+    description: string;
+  }>;
+  uniqueValue: string;
+  typicalSalesFlow: string;
+  status: string;
+  systemPrompt?: string;
+  trainingScore?: number;
+  trainingScenarios?: Array<{ id: string; score: number }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface GoldenMaster {
+  id: string;
+  version: string | number;
+  name: string;
+  trainingScore: number;
+  status: string;
+  isActive?: boolean;
+  deployedAt?: Date | string;
+  createdAt?: Date | string;
+  trainedScenarios?: Array<{ id: string; score: number }>;
+  baseModelId: string;
+  notes?: string;
+  scenarios?: number;
+}
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'agent' | 'model';
+  content: string;
+  timestamp: string;
+  canGiveFeedback?: boolean;
+  hasFeedback?: boolean;
+  feedbackType?: 'correct' | 'incorrect' | 'could-improve';
+  parts?: Array<{ text: string }>;
+}
+
+interface TrainingMaterial {
+  id?: string;
+  orgId: string;
+  filename: string;
+  name?: string;
+  type: string;
+  size: number | string;
+  uploadedAt: Date | string;
+  extractedContent?: string;
+  processedAt?: string;
+  status?: string;
+  keyPoints?: string[];
+}
+
+interface TrainingSession {
+  id: string;
+  orgId?: string;
+  baseModelId?: string;
+  topic: string;
+  messagesCount?: number;
+  messageCount?: number;
+  score?: number;
+  overallScore?: number;
+  criteriaScores?: Record<string, number>;
+  criteriaExplanations?: Record<string, string>;
+  sessionNotes?: string;
+  notes?: string;
+  feedback?: string;
+  timestamp: Date | string;
+  messages?: ChatMessage[];
+}
+
+interface AIResponse {
+  text: string;
+  content?: string;
+}
+
 export default function AgentTrainingPage() {
   const { user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
-  
+
   const [loading, setLoading] = useState(true);
   const { theme } = useOrgTheme();
   const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden'>('chat');
-  
+
   // Base Model & Golden Master states
-  const [baseModel, setBaseModel] = useState<any>(null);
-  const [goldenMasters, setGoldenMasters] = useState<any[]>([]);
-  const [activeGoldenMaster, setActiveGoldenMaster] = useState<any>(null);
-  
+  const [baseModel, setBaseModel] = useState<BaseModel | null>(null);
+  const [goldenMasters, setGoldenMasters] = useState<GoldenMaster[]>([]);
+  const [activeGoldenMaster, setActiveGoldenMaster] = useState<GoldenMaster | null>(null);
+
   // Training chat states
   const [trainingTopic, setTrainingTopic] = useState('');
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  
+
   // Feedback states
   const [feedbackMode, setFeedbackMode] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [feedbackType, setFeedbackType] = useState<'correct' | 'incorrect' | 'could-improve'>('correct');
   const [feedbackWhy, setFeedbackWhy] = useState('');
   const [betterResponse, setBetterResponse] = useState('');
-  
-  // Sales criteria scoring
-  const [showScoringPanel, setShowScoringPanel] = useState(false);
+
+  // Sales criteria scoring - unused vars prefixed with underscore
+  const [_showScoringPanel, _setShowScoringPanel] = useState(false);
   const [salesCriteria, setSalesCriteria] = useState({
     objectionHandling: 5,
     productKnowledge: 5,
@@ -52,17 +138,17 @@ export default function AgentTrainingPage() {
     empathyAndRapport: ''
   });
   const [sessionNotes, setSessionNotes] = useState('');
-  
+
   // Training materials states
-  const [uploadedMaterials, setUploadedMaterials] = useState<any[]>([]);
+  const [uploadedMaterials, setUploadedMaterials] = useState<TrainingMaterial[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // Training history
-  const [trainingHistory, setTrainingHistory] = useState<any[]>([]);
+  const [trainingHistory, setTrainingHistory] = useState<TrainingSession[]>([]);
   const [overallScore, setOverallScore] = useState(0);
-  
-  // Custom criteria management
-  const [customCriteria, setCustomCriteria] = useState<Array<{key: string, label: string, icon: string}>>([
+
+  // Custom criteria management - unused setter prefixed with underscore
+  const [customCriteria, _setCustomCriteria] = useState<Array<{key: string, label: string, icon: string}>>([
     { key: 'objectionHandling', label: 'Objection Handling', icon: '🛡️' },
     { key: 'productKnowledge', label: 'Product Knowledge', icon: '📚' },
     { key: 'toneAndProfessionalism', label: 'Tone & Professionalism', icon: '🎭' },
@@ -71,73 +157,65 @@ export default function AgentTrainingPage() {
     { key: 'empathyAndRapport', label: 'Empathy & Rapport', icon: '🤝' }
   ]);
   const [showCriteriaEditor, setShowCriteriaEditor] = useState(false);
-  
+
   // Firebase check - MUST be at top level, not after conditional returns
   const [firebaseConfigured, setFirebaseConfigured] = useState<boolean | null>(null);
-  
+
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadTrainingData();
-  }, [orgId]);
-  
-  // Check Firebase configuration
-  useEffect(() => {
-    (async () => {
-      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
-      setFirebaseConfigured(isFirebaseConfigured);
-    })();
-  }, []);
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-
   // Unified AI provider caller - uses whatever API key is available
-  const callAIProvider = async (conversationHistory: any[], systemPrompt: string) => {
+  const callAIProvider = useCallback(async (conversationHistory: ChatMessage[], systemPrompt: string): Promise<AIResponse> => {
     try {
       // Get API keys from Firestore
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
-      
+      const rawAdminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+      const adminKeys = rawAdminKeys as Record<string, { apiKey?: string } | undefined> | null | undefined;
+
       // Prefer OpenRouter (supports all models)
       if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
         const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
-        
+
         // Convert history to OpenRouter format
         const messages = [
           { role: 'system' as const, content: systemPrompt },
           ...conversationHistory.map(msg => ({
             role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
-            content: msg.parts[0].text
+            content: msg.parts?.[0]?.text ?? msg.content
           }))
         ];
-        
+
         const response = await provider.chat({
-          model: 'anthropic/claude-3.5-sonnet' as any, // Use Claude for best results
+          model: 'claude-3-5-sonnet',
           messages,
           temperature: 0.7,
         });
-        
-        return { text: response.content };
+
+        return { text: String(response.content) };
       }
-      
+
       // Fall back to Gemini
       const { sendChatMessage } = await import('@/lib/ai/gemini-service');
-      return await sendChatMessage(conversationHistory as any, systemPrompt);
-      
-    } catch (error: any) {
-      logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
-      throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to get AI response');
-    }
-  };
+      type GeminiRole = 'user' | 'model';
+      const geminiHistory = conversationHistory.map(msg => ({
+        role: (msg.role === 'user' ? 'user' : 'model') satisfies GeminiRole as GeminiRole,
+        parts: [{ text: msg.content }]
+      }));
+      const geminiResponse = await sendChatMessage(geminiHistory, systemPrompt) as AIResponse;
+      return geminiResponse;
 
-  const loadTrainingData = async () => {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get AI response';
+      logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
+      throw new Error(errorMessage || 'Failed to get AI response');
+    }
+  }, []);
+
+  const loadTrainingData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Check if Firebase is configured
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (!isFirebaseConfigured) {
@@ -146,11 +224,11 @@ export default function AgentTrainingPage() {
         setLoading(false);
         return;
       }
-      
+
       // Load Base Model
       const { getBaseModel } = await import('@/lib/agent/base-model-builder');
-      const model = await getBaseModel(orgId);
-      
+      const model = await getBaseModel(orgId) as BaseModel | null;
+
       // If no model found and this is platform-admin, use demo data for dogfooding
       if (!model && orgId === 'platform-admin') {
         logger.info('No base model for platform-admin, loading demo data for dogfooding', { file: 'page.tsx' });
@@ -158,47 +236,64 @@ export default function AgentTrainingPage() {
         setLoading(false);
         return;
       }
-      
+
       setBaseModel(model);
-      
+
       // Load Golden Masters
       const { getAllGoldenMasters, getActiveGoldenMaster } = await import('@/lib/agent/golden-master-builder');
-      const masters = await getAllGoldenMasters(orgId);
+      const masters = await getAllGoldenMasters(orgId) as unknown as GoldenMaster[];
       setGoldenMasters(masters);
-      
-      const active = await getActiveGoldenMaster(orgId);
+
+      const active = await getActiveGoldenMaster(orgId) as unknown as GoldenMaster | null;
       setActiveGoldenMaster(active);
-      
+
       // Load training materials (paginated - first 100)
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const { orderBy } = await import('firebase/firestore');
-      
+
       const materialsResult = await FirestoreService.getAllPaginated(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`,
         [orderBy('uploadedAt', 'desc')],
         100 // Load more materials at once for training
       );
-      setUploadedMaterials(materialsResult.data || []);
-      
+      setUploadedMaterials((materialsResult.data as TrainingMaterial[]) || []);
+
       // Load training history (paginated - first 50 sessions)
       const historyResult = await FirestoreService.getAllPaginated(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
         [orderBy('timestamp', 'desc')],
         50
       );
-      setTrainingHistory(historyResult.data || []);
-      
+      setTrainingHistory((historyResult.data as TrainingSession[]) || []);
+
       // Calculate overall score
       if (model?.trainingScore) {
         setOverallScore(model.trainingScore);
       }
-      
+
     } catch (error) {
       logger.error('Error loading training data:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDemoData is stable and only depends on orgId
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadTrainingData();
+  }, [loadTrainingData]);
+
+  // Check Firebase configuration
+  useEffect(() => {
+    void (async () => {
+      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
+      setFirebaseConfigured(isFirebaseConfigured);
+    })();
+  }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   const handleStartNewSession = (topic?: string) => {
     if (topic) {
@@ -209,55 +304,50 @@ export default function AgentTrainingPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!userInput.trim() || !baseModel) {return;}
-    
-    const userMessage = {
+    if (!userInput.trim() || !baseModel) {
+      return;
+    }
+
+    const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
       role: 'user',
       content: userInput.trim(),
       timestamp: new Date().toISOString(),
     };
-    
+
     setChatMessages(prev => [...prev, userMessage]);
     setUserInput('');
     setIsTyping(true);
-    
+
     try {
       // Build system prompt from Base Model
-      let systemPrompt = baseModel.systemPrompt;
-      
-      // Add training context
-      systemPrompt += `\n\n## TRAINING MODE\nYou are in training mode. The topic being practiced: ${trainingTopic || 'General sales conversation'}.\nRespond naturally and professionally as you would to a real customer.\n`;
-      
+      const systemPrompt = `${baseModel.systemPrompt ?? ''}\n\n## TRAINING MODE\nYou are in training mode. The topic being practiced: ${trainingTopic || 'General sales conversation'}.\nRespond naturally and professionally as you would to a real customer.\n`;
+
       // Build conversation history
-      const conversationHistory = chatMessages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }));
-      
-      conversationHistory.push({
-        role: 'user',
-        parts: [{ text: userMessage.content }]
-      });
-      
+      const conversationHistory: ChatMessage[] = [
+        ...chatMessages,
+        userMessage
+      ];
+
       // Call AI (using available provider - OpenRouter, Gemini, etc.)
       const response = await callAIProvider(conversationHistory, systemPrompt);
-      
-      const agentMessage = {
+
+      const agentMessage: ChatMessage = {
         id: `msg_${Date.now()}_agent`,
         role: 'agent',
         content: response.text,
         timestamp: new Date().toISOString(),
         canGiveFeedback: true,
       };
-      
+
       setChatMessages(prev => [...prev, agentMessage]);
-      
+
       // Auto-save session
       await saveTrainingSession();
-      
-    } catch (error: any) {
+
+    } catch (error) {
       logger.error('Error sending message:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to get agent response. Please try again.');
     } finally {
       setIsTyping(false);
@@ -274,22 +364,24 @@ export default function AgentTrainingPage() {
 
   const handleSubmitFeedback = async () => {
     if (!feedbackWhy.trim()) {
-      alert(`Please explain WHY this response is ${  feedbackType}`);
+      // eslint-disable-next-line no-alert -- User feedback
+      alert(`Please explain WHY this response is ${feedbackType}`);
       return;
     }
-    
+
     if (feedbackType !== 'correct' && !betterResponse.trim()) {
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Please provide a better response or guidance on how to improve.');
       return;
     }
-    
+
     try {
       // Save feedback to Firestore
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
+
       const feedbackData = {
         orgId,
-        baseModelId: baseModel.id,
+        baseModelId: baseModel?.id ?? '',
         messageId: selectedMessageId,
         topic: trainingTopic,
         feedbackType,
@@ -297,34 +389,36 @@ export default function AgentTrainingPage() {
         betterResponse: betterResponse || null,
         timestamp: new Date().toISOString(),
       };
-      
+
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingFeedback`,
         `feedback_${Date.now()}`,
         feedbackData,
         false
       );
-      
+
       // Mark message as having feedback
-      setChatMessages(prev => prev.map(msg => 
-        msg.id === selectedMessageId 
-          ? { ...msg, hasFeedback: true, feedbackType } 
+      setChatMessages(prev => prev.map(msg =>
+        msg.id === selectedMessageId
+          ? { ...msg, hasFeedback: true, feedbackType }
           : msg
       ));
-      
+
       // Update Base Model's training score
       await updateTrainingScore(feedbackType === 'correct' ? 100 : feedbackType === 'could-improve' ? 70 : 40);
-      
+
+      // eslint-disable-next-line no-alert -- User feedback
       alert('✅ Feedback saved! This will help improve your AI agent.');
-      
+
       // Reset feedback mode
       setFeedbackMode(false);
       setSelectedMessageId(null);
       setFeedbackWhy('');
       setBetterResponse('');
-      
+
     } catch (error) {
       logger.error('Error saving feedback:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to save feedback. Please try again.');
     }
   };
@@ -332,18 +426,18 @@ export default function AgentTrainingPage() {
   const updateTrainingScore = async (sessionScore: number) => {
     try {
       const { addTrainingScenario } = await import('@/lib/agent/base-model-builder');
-      
+
       const scenarioId = `scenario_${Date.now()}`;
-      await addTrainingScenario(baseModel.id, scenarioId, sessionScore);
-      
+      await addTrainingScenario(baseModel?.id ?? '', scenarioId, sessionScore);
+
       // Reload base model to get updated score
       const { getBaseModel } = await import('@/lib/agent/base-model-builder');
-      const updated = await getBaseModel(orgId);
+      const updated = await getBaseModel(orgId) as BaseModel | null;
       setBaseModel(updated);
-      if (updated) {
+      if (updated?.trainingScore) {
         setOverallScore(updated.trainingScore);
       }
-      
+
     } catch (error) {
       logger.error('Error updating training score:', error, { file: 'page.tsx' });
     }
@@ -351,16 +445,17 @@ export default function AgentTrainingPage() {
 
   const submitSalesCriteriaScoring = async () => {
     if (!trainingTopic.trim()) {
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Please select or enter a training topic first.');
       return;
     }
 
     // Validate that explanations are provided for low scores (< 7)
     const criteriaKeys = Object.keys(salesCriteria) as Array<keyof typeof salesCriteria>;
-    const missingExplanations = criteriaKeys.filter(key => 
+    const missingExplanations = criteriaKeys.filter(key =>
       salesCriteria[key] < 7 && !criteriaExplanations[key].trim()
     );
-    
+
     if (missingExplanations.length > 0) {
       const labels: Record<string, string> = {
         objectionHandling: 'Objection Handling',
@@ -370,7 +465,8 @@ export default function AgentTrainingPage() {
         discoveryQuestions: 'Discovery Questions',
         empathyAndRapport: 'Empathy & Rapport'
       };
-      
+
+      // eslint-disable-next-line no-alert -- User feedback
       alert(`⚠️ Please explain low scores (< 7/10):\n\n${missingExplanations.map(key => `• ${labels[key]}: ${salesCriteria[key]}/10`).join('\n')}\n\nThe AI needs this context to learn and improve!`);
       return;
     }
@@ -378,13 +474,13 @@ export default function AgentTrainingPage() {
     // Calculate overall score from criteria (0-100 scale)
     const criteriaScores = Object.values(salesCriteria);
     const avgScore = Math.round((criteriaScores.reduce((sum, score) => sum + score, 0) / criteriaScores.length) * 10);
-    
+
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
+
       const sessionRecord = {
         orgId,
-        baseModelId: baseModel?.id,
+        baseModelId: baseModel?.id ?? '',
         topic: trainingTopic,
         messagesCount: chatMessages.length,
         overallScore: avgScore,
@@ -393,17 +489,17 @@ export default function AgentTrainingPage() {
         sessionNotes: sessionNotes,
         timestamp: new Date().toISOString(),
       };
-      
+
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
         `session_${Date.now()}`,
         sessionRecord,
         false
       );
-      
+
       // Update training score
       await updateTrainingScore(avgScore);
-      
+
       // Add to training history
       setTrainingHistory(prev => [
         {
@@ -417,9 +513,10 @@ export default function AgentTrainingPage() {
         },
         ...prev
       ]);
-      
+
+      // eslint-disable-next-line no-alert -- User feedback
       alert(`✅ Training Session Scored!\n\nOverall Score: ${avgScore}/100\n\nYour detailed feedback will help the AI learn and improve!`);
-      
+
       // Reset for next session
       setTrainingTopic('');
       setChatMessages([]);
@@ -440,9 +537,10 @@ export default function AgentTrainingPage() {
         empathyAndRapport: ''
       });
       setSessionNotes('');
-      
+
     } catch (error) {
       logger.error('Error saving sales criteria scoring:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to save session score. Please try again.');
     }
   };
@@ -450,23 +548,23 @@ export default function AgentTrainingPage() {
   const saveTrainingSession = async () => {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
+
       const sessionData = {
         orgId,
-        baseModelId: baseModel.id,
+        baseModelId: baseModel?.id ?? '',
         topic: trainingTopic || 'General',
         messages: chatMessages,
         timestamp: new Date().toISOString(),
         messageCount: chatMessages.length,
       };
-      
+
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingSessions`,
         `session_${Date.now()}`,
         sessionData,
         false
       );
-      
+
     } catch (error) {
       logger.error('Error saving training session:', error, { file: 'page.tsx' });
     }
@@ -474,23 +572,25 @@ export default function AgentTrainingPage() {
 
   const handleUploadMaterial = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) {return;}
-    
+    if (!files || files.length === 0) {
+      return;
+    }
+
     setIsUploading(true);
-    
+
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       const { processDocumentContent } = await import('@/lib/agent/knowledge-processor');
-      
+
       for (const file of Array.from(files)) {
         // Read file content
         const text = await readFileAsText(file);
-        
+
         // Process content (extract knowledge)
         const extractedContent = await processDocumentContent(text, file.type);
-        
+
         // Save training material
-        const materialData = {
+        const materialData: TrainingMaterial = {
           orgId,
           filename: file.name,
           type: file.type,
@@ -499,24 +599,26 @@ export default function AgentTrainingPage() {
           extractedContent,
           processedAt: new Date().toISOString(),
         };
-        
+
         await FirestoreService.set(
           `${COLLECTIONS.ORGANIZATIONS}/${orgId}/trainingMaterials`,
-          `material_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          `material_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
           materialData,
           false
         );
-        
+
         setUploadedMaterials(prev => [...prev, materialData]);
-        
+
         // Add to Base Model knowledge base
         // This will be automatically included in future training sessions
       }
-      
+
+      // eslint-disable-next-line no-alert -- User feedback
       alert(`✅ ${files.length} training material(s) uploaded successfully!\n\nThe content has been processed and will be used to train your AI agent.`);
-      
+
     } catch (error) {
       logger.error('Error uploading training materials:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to upload training materials. Please try again.');
     } finally {
       setIsUploading(false);
@@ -536,42 +638,49 @@ export default function AgentTrainingPage() {
   };
 
   const handleSaveGoldenMaster = async () => {
-    if (!baseModel) {return;}
-    
+    if (!baseModel) {
+      return;
+    }
+
     if (baseModel.status !== 'ready') {
+      // eslint-disable-next-line no-alert -- User feedback
       alert(`⚠️ Base Model is not ready yet!\n\nCurrent status: ${baseModel.status}\nTraining score: ${overallScore}%\n\nContinue training until you reach 80%+ score across multiple scenarios.`);
       return;
     }
-    
+
     if (overallScore < 80) {
+      // eslint-disable-next-line no-alert -- User feedback
       alert(`⚠️ Training score too low!\n\nCurrent score: ${overallScore}%\nRequired: 80%+\n\nContinue training your agent with more scenarios and feedback until the score improves.`);
       return;
     }
-    
+
+    // eslint-disable-next-line no-alert -- User feedback
     const notes = prompt('Optional: Add notes about this Golden Master version\n\nWhat changes or improvements were made?');
-    
+
     try {
       const { createGoldenMaster } = await import('@/lib/agent/golden-master-builder');
-      
+
       const userId = user?.id;
-      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, (userId !== '' && userId != null) ? userId : 'system', notes ?? undefined);
-      
+      const newGoldenMaster = await createGoldenMaster(orgId, baseModel.id, (userId !== '' && userId !== undefined) ? userId : 'system', notes ?? undefined) as { version: string | number };
+
+      // eslint-disable-next-line no-alert -- User feedback
       alert(`✅ Golden Master ${newGoldenMaster.version} Created!\n\nYour trained AI agent has been saved as a production-ready version.\n\nNext steps:\n1. Review the Golden Master in the "Golden Master" tab\n2. Deploy it to production when ready\n3. Continue training your Base Model for future improvements`);
-      
+
       // Reload data
       await loadTrainingData();
       setActiveTab('golden');
-      
+
     } catch (error) {
       logger.error('Error saving Golden Master:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to save Golden Master. Please try again.');
     }
   };
 
-  const loadDemoData = () => {
+  const loadDemoData = useCallback(() => {
     // Check if this is the platform-admin org (for dogfooding the sales agent)
     const isPlatformAdmin = orgId === 'platform-admin';
-    
+
     // Create demo Base Model
     setBaseModel({
       id: 'demo-base-model',
@@ -606,6 +715,7 @@ export default function AgentTrainingPage() {
       uniqueValue: 'Golden Master architecture for infinite scalability with zero hallucinations',
       typicalSalesFlow: 'Qualify → Demo → ROI Discussion → Close',
       status: 'active',
+      trainingScore: 85.8,
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -618,6 +728,7 @@ export default function AgentTrainingPage() {
         name: 'Platform Sales Agent v1',
         trainingScore: 85,
         status: 'active',
+        baseModelId: 'demo-base-model',
         deployedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
         scenarios: 5
       }
@@ -628,13 +739,16 @@ export default function AgentTrainingPage() {
       version: 1,
       name: 'Platform Sales Agent v1',
       trainingScore: 85,
-      status: 'active'
+      status: 'active',
+      baseModelId: 'demo-base-model'
     });
 
     // Demo training materials
     setUploadedMaterials([
       {
         id: 'mat-1',
+        orgId: orgId,
+        filename: 'Platform Features Overview.pdf',
         name: 'Platform Features Overview.pdf',
         type: 'document',
         size: '2.3 MB',
@@ -650,6 +764,8 @@ export default function AgentTrainingPage() {
       },
       {
         id: 'mat-2',
+        orgId: orgId,
+        filename: 'Pricing & ROI Calculator',
         name: 'Pricing & ROI Calculator',
         type: 'spreadsheet',
         size: '1.1 MB',
@@ -664,6 +780,8 @@ export default function AgentTrainingPage() {
       },
       {
         id: 'mat-3',
+        orgId: orgId,
+        filename: 'Case Studies - TechStart & GrowthCo',
         name: 'Case Studies - TechStart & GrowthCo',
         type: 'document',
         size: '3.5 MB',
@@ -677,6 +795,8 @@ export default function AgentTrainingPage() {
       },
       {
         id: 'mat-4',
+        orgId: orgId,
+        filename: 'Competitor Battle Cards',
         name: 'Competitor Battle Cards',
         type: 'document',
         size: '1.8 MB',
@@ -743,26 +863,29 @@ export default function AgentTrainingPage() {
     ]);
 
     setOverallScore(85.8);
-    
-    logger.info('✅ Demo data loaded for platform sales agent', { file: 'page.tsx' });
-  };
 
-  const handleDeployGoldenMaster = async (gmId: string, version: string) => {
+    logger.info('✅ Demo data loaded for platform sales agent', { file: 'page.tsx' });
+  }, [orgId]);
+
+  const handleDeployGoldenMaster = async (gmId: string, version: string | number) => {
+    // eslint-disable-next-line no-alert -- User feedback
     if (!confirm(`Deploy Golden Master ${version} to production?\n\nThis will make it the active version used by all customers.`)) {
       return;
     }
-    
+
     try {
       const { deployGoldenMaster } = await import('@/lib/agent/golden-master-builder');
-      
+
       await deployGoldenMaster(orgId, gmId);
-      
+
+      // eslint-disable-next-line no-alert -- User feedback
       alert(`✅ Golden Master ${version} is now LIVE!\n\nAll customer conversations will now use this version of your AI agent.`);
-      
+
       await loadTrainingData();
-      
+
     } catch (error) {
       logger.error('Error deploying Golden Master:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to deploy Golden Master. Please try again.');
     }
   };
@@ -935,10 +1058,10 @@ export default function AgentTrainingPage() {
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid #1a1a1a', backgroundColor: '#0a0a0a' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
-          {['chat', 'materials', 'history', 'golden'].map(tab => (
+          {(['chat', 'materials', 'history', 'golden'] as const).map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab)}
               style={{
                 padding: '1rem 0',
                 backgroundColor: 'transparent',
@@ -1316,7 +1439,7 @@ export default function AgentTrainingPage() {
                     Training Materials
                   </h2>
                   <p style={{ color: '#999', fontSize: '0.875rem' }}>
-                    Upload sales training documents (PDFs, Word docs, text files) to enhance your agent's knowledge
+                    Upload sales training documents (PDFs, Word docs, text files) to enhance your agent&apos;s knowledge
                   </p>
                 </div>
                 
@@ -1356,9 +1479,9 @@ export default function AgentTrainingPage() {
                   </div>
                 )}
                 
-                {uploadedMaterials.map((material: any, idx: number) => (
+                {uploadedMaterials.map((material, idx: number) => (
                   <div
-                    key={idx}
+                    key={material.id ?? idx}
                     style={{
                       padding: '1.5rem',
                       backgroundColor: '#0a0a0a',
@@ -1374,7 +1497,7 @@ export default function AgentTrainingPage() {
                       Uploaded: {new Date(material.uploadedAt).toLocaleDateString()}
                     </p>
                     <p style={{ fontSize: '0.75rem', color: '#666' }}>
-                      Size: {Math.round(material.size / 1024)} KB
+                      Size: {typeof material.size === 'number' ? Math.round(material.size / 1024) : material.size} {typeof material.size === 'number' ? 'KB' : ''}
                     </p>
                   </div>
                 ))}
@@ -1395,9 +1518,9 @@ export default function AgentTrainingPage() {
               )}
               
               <div style={{ display: 'grid', gap: '1rem' }}>
-                {trainingHistory.map((session: any, idx: number) => (
+                {trainingHistory.map((session, idx: number) => (
                   <div
-                    key={idx}
+                    key={session.id ?? idx}
                     style={{
                       padding: '1.5rem',
                       backgroundColor: '#0a0a0a',
@@ -1414,7 +1537,7 @@ export default function AgentTrainingPage() {
                       </span>
                     </div>
                     <p style={{ fontSize: '0.875rem', color: '#999' }}>
-                      {session.messageCount} messages exchanged
+                      {session.messageCount ?? session.messagesCount ?? 0} messages exchanged
                     </p>
                   </div>
                 ))}
@@ -1436,25 +1559,25 @@ export default function AgentTrainingPage() {
                 
                 <button
                   onClick={() => void handleSaveGoldenMaster()}
-                  disabled={baseModel.status !== 'ready' || overallScore < 80}
+                  disabled={baseModel?.status !== 'ready' || overallScore < 80}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    backgroundColor: (baseModel.status === 'ready' && overallScore >= 80) ? '#10b981' : '#333',
+                    backgroundColor: (baseModel?.status === 'ready' && overallScore >= 80) ? '#10b981' : '#333',
                     color: '#fff',
                     border: 'none',
                     borderRadius: '0.5rem',
-                    cursor: (baseModel.status === 'ready' && overallScore >= 80) ? 'pointer' : 'not-allowed',
+                    cursor: (baseModel?.status === 'ready' && overallScore >= 80) ? 'pointer' : 'not-allowed',
                     fontWeight: '600',
                   }}
                 >
                   💾 Save Golden Master
                 </button>
               </div>
-              
-              {baseModel.status !== 'ready' && (
+
+              {baseModel && baseModel.status !== 'ready' && (
                 <div style={{ padding: '1rem', backgroundColor: '#1a1a0a', border: '1px solid #3a3a0a', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
                   <p style={{ fontSize: '0.875rem', color: '#fbbf24' }}>
-                    ⚠️ Base Model is not ready yet. Status: <strong>{baseModel.status}</strong>. Continue training to reach "ready" status.
+                    ⚠️ Base Model is not ready yet. Status: <strong>{baseModel.status}</strong>. Continue training to reach &quot;ready&quot; status.
                   </p>
                 </div>
               )}
@@ -1477,7 +1600,7 @@ export default function AgentTrainingPage() {
                   </div>
                 )}
                 
-                {goldenMasters.map((gm: any) => (
+                {goldenMasters.map((gm) => (
                   <div
                     key={gm.id}
                     style={{
@@ -1493,16 +1616,18 @@ export default function AgentTrainingPage() {
                           {gm.version}
                           {gm.isActive && <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#10b981', backgroundColor: '#0a2a1a', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>LIVE</span>}
                         </h3>
-                        <p style={{ fontSize: '0.875rem', color: '#999' }}>
-                          Created: {new Date(gm.createdAt).toLocaleString()}
-                        </p>
+                        {gm.createdAt && (
+                          <p style={{ fontSize: '0.875rem', color: '#999' }}>
+                            Created: {new Date(gm.createdAt).toLocaleString()}
+                          </p>
+                        )}
                         {gm.deployedAt && (
                           <p style={{ fontSize: '0.875rem', color: '#999' }}>
                             Deployed: {new Date(gm.deployedAt).toLocaleString()}
                           </p>
                         )}
                       </div>
-                      
+
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         {!gm.isActive && (
                           <button
@@ -1523,7 +1648,7 @@ export default function AgentTrainingPage() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1rem' }}>
                       <div>
                         <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Training Score</div>
@@ -1538,7 +1663,7 @@ export default function AgentTrainingPage() {
                         <div style={{ fontSize: '0.875rem', color: '#999' }}>{gm.baseModelId.substring(0, 12)}...</div>
                       </div>
                     </div>
-                    
+
                     {gm.notes && (
                       <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.25rem' }}>
                         <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Notes</div>
@@ -1591,14 +1716,14 @@ export default function AgentTrainingPage() {
                 How was this response?
               </label>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
-                {[
-                  { value: 'correct', label: '✅ Correct', color: '#10b981' },
-                  { value: 'could-improve', label: '⚠️ Could Improve', color: '#fbbf24' },
-                  { value: 'incorrect', label: '❌ Incorrect', color: '#ef4444' },
-                ].map((option) => (
+                {([
+                  { value: 'correct' as const, label: '✅ Correct', color: '#10b981' },
+                  { value: 'could-improve' as const, label: '⚠️ Could Improve', color: '#fbbf24' },
+                  { value: 'incorrect' as const, label: '❌ Incorrect', color: '#ef4444' },
+                ]).map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => setFeedbackType(option.value as any)}
+                    onClick={() => setFeedbackType(option.value)}
                     style={{
                       flex: 1,
                       padding: '0.75rem',

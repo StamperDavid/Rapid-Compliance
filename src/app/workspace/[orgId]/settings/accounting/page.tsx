@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
 
@@ -86,7 +85,7 @@ export default function AccountingPage() {
   const orgId = params.orgId as string;
   const [config, setConfig] = useState<AccountingConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
-  const [showConnectionModal, setShowConnectionModal] = useState(false);
+  const [_showConnectionModal, setShowConnectionModal] = useState(false);
 
   useEffect(() => {
     if (!user?.organizationId) {return;}
@@ -107,7 +106,7 @@ export default function AccountingPage() {
       }
     };
     
-    loadConfig();
+    void loadConfig();
   }, [user?.organizationId]);
 
   const handleSave = async () => {
@@ -132,29 +131,36 @@ export default function AccountingPage() {
     }
   };
 
-  const updateConfig = (path: string[], value: any) => {
+  const updateConfig = <K extends keyof AccountingConfig>(
+    path: [K] | [K, keyof AccountingConfig[K]],
+    value: K extends 'accountMapping' ? string : AccountingConfig[K]
+  ) => {
     setConfig(prev => {
-      const newConfig = { ...prev };
-      let current: any = newConfig;
-      for (let i = 0; i < path.length - 1; i++) {
-        current = current[path[i]];
+      if (path.length === 1) {
+        return { ...prev, [path[0]]: value };
       }
-      current[path[path.length - 1]] = value;
-      return newConfig;
+      const [section, field] = path as ['accountMapping', keyof AccountingConfig['accountMapping']];
+      return {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: value,
+        },
+      };
     });
   };
 
   const handleConnect = (platformId: string) => {
-    updateConfig(['platform'], platformId);
+    updateConfig(['platform'], platformId as AccountingConfig['platform']);
     updateConfig(['connected'], true);
     setShowConnectionModal(false);
-    handleSave();
+    void handleSave();
   };
 
   const handleDisconnect = () => {
     updateConfig(['platform'], 'none');
     updateConfig(['connected'], false);
-    handleSave();
+    void handleSave();
   };
 
   const selectedPlatform = PLATFORMS.find(p => p.id === config.platform);
@@ -263,7 +269,7 @@ export default function AccountingPage() {
                   </label>
                   <select
                     value={config.syncFrequency}
-                    onChange={(e) => updateConfig(['syncFrequency'], e.target.value)}
+                    onChange={(e) => updateConfig(['syncFrequency'], e.target.value as AccountingConfig['syncFrequency'])}
                     style={{ width: '100%', padding: '0.625rem 0.875rem', backgroundColor: '#1a1a1a', color: '#fff', border: '1px solid #333', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                   >
                     <option value="realtime">⚡ Real-time (instant sync)</option>
@@ -420,7 +426,7 @@ export default function AccountingPage() {
         {/* Save Button */}
         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={isSaving}
             style={{ padding: '0.75rem 2rem', backgroundColor: '#6366f1', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', opacity: isSaving ? 0.5 : 1 }}
           >

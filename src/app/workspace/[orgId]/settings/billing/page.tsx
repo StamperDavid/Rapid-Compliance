@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
@@ -19,45 +19,75 @@ interface SubscriptionData {
   };
 }
 
+interface OrgData {
+  planId?: string;
+  plan?: string;
+  subscriptionStatus?: string;
+  currentPeriodEnd?: string;
+  trialEndsAt?: string;
+  trialEnd?: string;
+  usage?: {
+    records: number;
+    aiConversations: number;
+    emails: number;
+  };
+}
+
+interface SubscribeResponse {
+  success: boolean;
+  clientSecret?: string;
+  error?: string;
+}
+
+interface BillingPortalResponse {
+  success: boolean;
+  url?: string;
+  error?: string;
+}
+
 export default function BillingSettingsPage() {
   const { user } = useAuth();
   const params = useParams();
-  const router = useRouter();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selectedPlan, setSelectedPlan] = useState('professional');
 
-  useEffect(() => {
-
-    // Load organization billing data
-    loadBillingData();
-  }, [orgId]);
-
-  const loadBillingData = async () => {
+  const loadBillingData = useCallback(async () => {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
-      
+      const orgData = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
+      const org = orgData as unknown as OrgData | null;
+
       if (org) {
+        const planValue = (org.planId && org.planId !== '') ? org.planId :
+                         (org.plan && org.plan !== '') ? org.plan : 'starter';
+        const statusValue = (org.subscriptionStatus && org.subscriptionStatus !== '') ?
+                           org.subscriptionStatus : 'trialing';
+        const periodEnd = org.currentPeriodEnd ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const trialEndValue = org.trialEndsAt ?? org.trialEnd ?? null;
+        const usageValue = org.usage ?? { records: 0, aiConversations: 0, emails: 0 };
+
         setSubscription({
-          plan:(org.planId || org.plan !== '' && org.planId || org.plan != null) ? org.planId ?? org.plan: 'starter',
-          status:(org.subscriptionStatus !== '' && org.subscriptionStatus != null) ? org.subscriptionStatus : 'trialing',
-          currentPeriodEnd:org.currentPeriodEnd ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          trialEnd:org.trialEndsAt ?? org.trialEnd ?? null,
-          usage:org.usage ?? { records: 0, aiConversations: 0, emails: 0 },
+          plan: planValue,
+          status: statusValue,
+          currentPeriodEnd: periodEnd,
+          trialEnd: trialEndValue,
+          usage: usageValue,
         });
-        setSelectedPlan((org.planId || org.plan !== '' && org.planId || org.plan != null) ? org.planId ?? org.plan: 'starter');
       }
     } catch (error) {
       logger.error('Failed to load billing data:', error, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgId]);
+
+  useEffect(() => {
+    void loadBillingData();
+  }, [loadBillingData]);
 
   const handleUpgrade = async (planId: string) => {
     if (planId === 'enterprise') {
@@ -79,22 +109,27 @@ export default function BillingSettingsPage() {
         }),
       });
 
-      const data = await response.json();
-      
+      const data = await response.json() as SubscribeResponse;
+
       if (data.success && data.clientSecret) {
         // Redirect to Stripe checkout or open payment modal
         // For now, just show success
+        // eslint-disable-next-line no-alert -- User feedback
         alert('Upgrade initiated! Complete payment to activate your new plan.');
-        loadBillingData();
+        void loadBillingData();
       } else if (data.success) {
+        // eslint-disable-next-line no-alert -- User feedback
         alert('Plan updated successfully!');
-        loadBillingData();
+        void loadBillingData();
       } else {
-        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to upgrade plan');
+        const errorMessage = data.error ?? 'Failed to upgrade plan';
+        throw new Error(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upgrade plan. Please try again.';
       logger.error('Upgrade error:', error, { file: 'page.tsx' });
-      alert((error.message !== '' && error.message != null) ? error.message : 'Failed to upgrade plan. Please try again.');
+      // eslint-disable-next-line no-alert -- User feedback
+      alert(errorMessage);
     } finally {
       setUpgrading(false);
     }
@@ -108,15 +143,17 @@ export default function BillingSettingsPage() {
         body: JSON.stringify({ organizationId: orgId }),
       });
 
-      const data = await response.json();
-      
+      const data = await response.json() as BillingPortalResponse;
+
       if (data.success && data.url) {
         window.location.href = data.url;
       } else {
-        throw new Error((data.error !== '' && data.error != null) ? data.error : 'Failed to open billing portal');
+        const errorMessage = data.error ?? 'Failed to open billing portal';
+        throw new Error(errorMessage);
       }
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Billing portal error:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback
       alert('Billing portal is not available. Please contact support.');
     }
   };
@@ -306,14 +343,14 @@ export default function BillingSettingsPage() {
               }}>
                 <div>
                   <div style={{ fontSize: '1.125rem', fontWeight: '600', color: '#fff', marginBottom: '0.25rem' }}>
-                    🎉 You're on a free trial!
+                    🎉 You&apos;re on a free trial!
                   </div>
                   <div style={{ color: '#93c5fd', fontSize: '0.875rem' }}>
                     {trialDaysLeft} days left on your {currentPlan.name} trial
                   </div>
                 </div>
                 <button
-                  onClick={() => handleUpgrade(subscription?.plan || 'professional')}
+                  onClick={() => void handleUpgrade(subscription?.plan ?? 'professional')}
                   disabled={upgrading}
                   style={{
                     padding: '0.75rem 1.5rem',
@@ -363,7 +400,7 @@ export default function BillingSettingsPage() {
                   </div>
                 </div>
                 <button
-                  onClick={handleManageBilling}
+                  onClick={() => void handleManageBilling()}
                   style={{
                     padding: '0.75rem 1.5rem',
                     backgroundColor: '#222',
@@ -445,7 +482,7 @@ export default function BillingSettingsPage() {
                   💡 Bring Your Own Keys (BYOK)
                 </div>
                 <div style={{ fontSize: '0.875rem', color: '#999', lineHeight: '1.5' }}>
-                  We don't markup AI tokens. Connect your own OpenRouter, OpenAI, or Anthropic API keys to pay raw market rates for compute.
+                  We don&apos;t markup AI tokens. Connect your own OpenRouter, OpenAI, or Anthropic API keys to pay raw market rates for compute.
                 </div>
               </div>
             </div>
@@ -495,7 +532,11 @@ export default function BillingSettingsPage() {
                         )}
                       </ul>
                       <button
-                        onClick={() => !isCurrent && handleUpgrade(plan.id)}
+                        onClick={() => {
+                          if (!isCurrent) {
+                            void handleUpgrade(plan.id);
+                          }
+                        }}
                         disabled={isCurrent || upgrading}
                         style={{
                           width: '100%',

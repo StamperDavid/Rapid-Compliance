@@ -3,18 +3,32 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth'
-import { logger } from '@/lib/logger/logger';;
+import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
+
+interface OnboardingSection {
+  [key: string]: string;
+}
+
+interface OnboardingData {
+  businessBasics: OnboardingSection;
+  businessUnderstanding: OnboardingSection;
+  productsServices: OnboardingSection;
+  productDetails: OnboardingSection;
+  pricingSales: OnboardingSection;
+  agentGoals: OnboardingSection;
+  agentPersonality: OnboardingSection;
+}
 
 export default function BusinessSetupPage() {
-  const { user } = useAuth();
+  const _auth = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState('business-basics');
-  const [onboardingData, setOnboardingData] = useState<any>(null);
+  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Load organization onboarding data
@@ -26,7 +40,7 @@ export default function BusinessSetupPage() {
         const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, orgId);
         
         if (org?.onboardingData) {
-          setOnboardingData(org.onboardingData);
+          setOnboardingData(org.onboardingData as OnboardingData);
         } else {
           // Initialize empty structure
           setOnboardingData({
@@ -46,7 +60,7 @@ export default function BusinessSetupPage() {
       }
     }
 
-    loadOnboardingData();
+    void loadOnboardingData();
   }, [orgId]);
 
   const handleSave = async () => {
@@ -60,23 +74,30 @@ export default function BusinessSetupPage() {
       });
 
       setHasChanges(false);
+      // eslint-disable-next-line no-alert -- User feedback for save operation
       alert('Business setup saved successfully!');
       setSaving(false);
     } catch (error) {
       logger.error('Failed to save:', error, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert -- User feedback for error handling
       alert('Failed to save changes. Please try again.');
       setSaving(false);
     }
   };
 
-  const updateField = (section: string, field: string, value: any) => {
-    setOnboardingData((prev: any) => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
+  const updateField = (section: keyof OnboardingData, field: string, value: string) => {
+    setOnboardingData((prev) => {
+      if (!prev) {
+        return prev;
       }
-    }));
+      return {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: value
+        }
+      };
+    });
     setHasChanges(true);
   };
 
@@ -124,7 +145,7 @@ export default function BusinessSetupPage() {
             </div>
             {hasChanges && (
               <button
-                onClick={handleSave}
+                onClick={() => void handleSave()}
                 disabled={saving}
                 style={{
                   padding: '0.75rem 2rem',
@@ -419,7 +440,7 @@ export default function BusinessSetupPage() {
             {hasChanges && (
               <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid #333' }}>
                 <button
-                  onClick={handleSave}
+                  onClick={() => void handleSave()}
                   disabled={saving}
                   style={{
                     padding: '0.875rem 2.5rem',

@@ -4,8 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import type { CustomTool, CustomToolFormData } from '@/types/custom-tools';
-import { validateToolUrl, COMMON_EMOJI_ICONS } from '@/types/custom-tools';
+import {
+  validateToolUrl,
+  COMMON_EMOJI_ICONS,
+  type CustomTool,
+  type CustomToolFormData,
+} from '@/types/custom-tools';
+
+interface ToolResponse {
+  tool: CustomTool;
+}
+
+interface ToolsListResponse {
+  tools: CustomTool[];
+}
 
 interface ToolModalProps {
   tool: CustomTool | null;
@@ -47,7 +59,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
   const handleUrlChange = (url: string) => {
     setFormData({ ...formData, url });
     const validation = validateToolUrl(url);
-    setUrlError(validation.valid ? '' : (validation.error || ''));
+    setUrlError(validation.valid ? '' : (validation.error ?? ''));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,7 +67,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
 
     const validation = validateToolUrl(formData.url);
     if (!validation.valid) {
-      setUrlError(validation.error || 'Invalid URL');
+      setUrlError(validation.error ?? 'Invalid URL');
       return;
     }
 
@@ -70,7 +82,9 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div style={{
@@ -95,7 +109,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
           {tool ? 'Edit Custom Tool' : 'Add Custom Tool'}
         </h2>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           {/* Name */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', color: '#999', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
@@ -253,7 +267,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
 export default function CustomToolsSettingsPage() {
   const params = useParams();
   const orgId = params.orgId as string;
-  const { user } = useAuth();
+  const _user = useAuth().user;
   const { theme } = useOrgTheme();
   const canManageOrganization = usePermission('canManageOrganization');
 
@@ -263,7 +277,7 @@ export default function CustomToolsSettingsPage() {
   const [editingTool, setEditingTool] = useState<CustomTool | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const primaryColor = theme?.colors?.primary?.main || '#6366f1';
+  const primaryColor = theme?.colors?.primary?.main ?? '#6366f1';
 
   // Fetch tools
   useEffect(() => {
@@ -271,8 +285,8 @@ export default function CustomToolsSettingsPage() {
       try {
         const response = await fetch(`/api/workspace/${orgId}/custom-tools`);
         if (response.ok) {
-          const data = await response.json();
-          setTools(data.tools || []);
+          const data = (await response.json()) as ToolsListResponse;
+          setTools(data.tools ?? []);
         }
       } catch (error) {
         console.error('Error fetching tools:', error);
@@ -281,7 +295,7 @@ export default function CustomToolsSettingsPage() {
       }
     };
 
-    fetchTools();
+    void fetchTools();
   }, [orgId]);
 
   const handleAddTool = () => {
@@ -310,7 +324,7 @@ export default function CustomToolsSettingsPage() {
       throw new Error('Failed to save tool');
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as ToolResponse;
 
     if (editingTool) {
       setTools(tools.map(t => t.id === editingTool.id ? data.tool : t));
@@ -351,7 +365,7 @@ export default function CustomToolsSettingsPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as ToolResponse;
         setTools(tools.map(t => t.id === tool.id ? data.tool : t));
       }
     } catch (error) {
@@ -507,7 +521,7 @@ export default function CustomToolsSettingsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                   {/* Toggle */}
                   <button
-                    onClick={() => handleToggleEnabled(tool)}
+                    onClick={() => void handleToggleEnabled(tool)}
                     title={tool.enabled ? 'Disable' : 'Enable'}
                     style={{
                       width: '36px',
@@ -551,7 +565,7 @@ export default function CustomToolsSettingsPage() {
                   {deleteConfirm === tool.id ? (
                     <div style={{ display: 'flex', gap: '0.25rem' }}>
                       <button
-                        onClick={() => handleDeleteTool(tool.id)}
+                        onClick={() => void handleDeleteTool(tool.id)}
                         style={{
                           padding: '0.5rem 0.75rem',
                           backgroundColor: '#ef4444',
@@ -620,7 +634,7 @@ export default function CustomToolsSettingsPage() {
           <ul style={{ color: '#666', fontSize: '0.875rem', lineHeight: '1.75', paddingLeft: '1.25rem' }}>
             <li>Custom tools are embedded as secure, sandboxed iframes</li>
             <li>Only HTTPS URLs are allowed for security</li>
-            <li>Tools will appear in the sidebar under "Custom Tools" section</li>
+            <li>Tools will appear in the sidebar under &quot;Custom Tools&quot; section</li>
             <li>Disable tools temporarily without deleting them</li>
           </ul>
         </div>

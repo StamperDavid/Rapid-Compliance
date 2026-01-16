@@ -62,8 +62,24 @@ interface TrainingInsight {
   category: 'verbosity' | 'accuracy' | 'brand-alignment' | 'tone';
 }
 
+interface OnboardingData {
+  companyName: string;
+  industry: string;
+  companyDescription: string;
+  products: Array<{ category: string }>;
+  targetCustomer: string;
+  salesMethodology: string;
+  brandVoice: { complexity: number };
+  integrations: Array<{ name: string; permissions: string[]; requiresApproval: boolean }>;
+}
+
+interface PersonaApiResponse {
+  persona?: AgentPersona;
+  onboarding?: OnboardingData;
+}
+
 export default function AgentPersonaPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const params = useParams();
   const orgId = params.orgId as string;
   const { theme } = useOrgTheme();
@@ -122,7 +138,7 @@ export default function AgentPersonaPage() {
         // Load persona from Firestore (or auto-generate from onboarding if first time)
         const response = await fetch(`/api/workspace/${orgId}/agent/persona`);
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as PersonaApiResponse;
           if (data.persona) {
             setPersona(data.persona);
           } else if (data.onboarding) {
@@ -137,8 +153,8 @@ export default function AgentPersonaPage() {
         setLoading(false);
       }
     };
-    
-    loadPersona();
+
+    void loadPersona();
   }, [orgId]);
 
   const handleSave = async () => {
@@ -204,7 +220,7 @@ export default function AgentPersonaPage() {
               </p>
             </div>
             <button
-              onClick={handleSave}
+              onClick={() => void handleSave()}
               disabled={saving}
               style={{
                 padding: '0.75rem 1.5rem',
@@ -254,17 +270,17 @@ export default function AgentPersonaPage() {
           borderBottom: `1px solid ${borderColor}`,
           overflowX: 'auto'
         }}>
-          {[
-            { id: 'core', label: 'Core Identity', icon: '🎯' },
-            { id: 'cognitive', label: 'Reasoning Logic', icon: '🧠' },
-            { id: 'knowledge', label: 'Knowledge & RAG', icon: '📚' },
-            { id: 'learning', label: 'Learning Loops', icon: '🔄' },
-            { id: 'execution', label: 'Execution Rules', icon: '⚡' },
-            { id: 'training', label: 'Training Refinements', icon: '🎓', badge: persona.trainingInsights?.length || 0 }
-          ].map((section) => (
+          {([
+            { id: 'core' as const, label: 'Core Identity', icon: '🎯' },
+            { id: 'cognitive' as const, label: 'Reasoning Logic', icon: '🧠' },
+            { id: 'knowledge' as const, label: 'Knowledge & RAG', icon: '📚' },
+            { id: 'learning' as const, label: 'Learning Loops', icon: '🔄' },
+            { id: 'execution' as const, label: 'Execution Rules', icon: '⚡' },
+            { id: 'training' as const, label: 'Training Refinements', icon: '🎓', badge: persona.trainingInsights?.length || 0 }
+          ]).map((section) => (
             <button
               key={section.id}
-              onClick={() => setActiveSection(section.id as any)}
+              onClick={() => setActiveSection(section.id)}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: 'transparent',
@@ -609,7 +625,7 @@ export default function AgentPersonaPage() {
                 💡 How Training Refines Your Persona
               </div>
               <div style={{ fontSize: '0.875rem', color: '#dbeafe', lineHeight: '1.6' }}>
-                As you train your agent, issues like "too verbose," "inaccurate," or "off-brand" are automatically
+                As you train your agent, issues like &ldquo;too verbose,&rdquo; &ldquo;inaccurate,&rdquo; or &ldquo;off-brand&rdquo; are automatically
                 detected and used to update these settings. Your persona gets smarter with every training session.
               </div>
             </div>
@@ -662,7 +678,7 @@ export default function AgentPersonaPage() {
                       ...persona,
                       verbosityControl: {
                         ...persona.verbosityControl,
-                        conversationalPacing: e.target.value as any
+                        conversationalPacing: e.target.value as 'concise' | 'balanced' | 'detailed'
                       }
                     })}
                     style={{
@@ -943,18 +959,42 @@ function getCategoryColor(category: string): string {
 }
 
 // This would be called when onboarding is complete
-function generatePersonaFromOnboarding(onboarding: any): AgentPersona {
+function generatePersonaFromOnboarding(onboarding: OnboardingData): AgentPersona {
+  const companyName = onboarding.companyName || 'Your Company';
+  const agentName = `${companyName}-AI`;
+  const industry = onboarding.industry || 'Business';
+  const professionalTitle = `Senior ${industry} Consultant`;
+
+  const productCategories = onboarding.products
+    .map((p) => p.category)
+    .join(', ');
+
+  const federatedTags = onboarding.products
+    .map((p) => `DOMAIN: ${p.category.toUpperCase().replace(/ /g, '_')}`);
+
+  const salesMethodology = onboarding.salesMethodology || 'Consultative Selling';
+  const complexityIndex = onboarding.brandVoice?.complexity ?? 7;
+
+  const toolAuth: ToolAuthorization[] = onboarding.integrations.map((i) => {
+    const joinedPermissions = i.permissions.join('/') || 'Read Only';
+    return {
+      tool: i.name,
+      permissions: joinedPermissions,
+      canExecuteAutonomously: !i.requiresApproval,
+    };
+  });
+
   return {
-    agentName: `${onboarding.companyName}-AI` || 'Your AI Agent',
-    professionalTitle: `Senior ${(onboarding.industry !== '' && onboarding.industry != null) ? onboarding.industry : 'Business'} Consultant`,
+    agentName,
+    professionalTitle,
     coreMission: onboarding.companyDescription ?? '',
-    targetKnowledgeDomain: onboarding.products?.map((p: any) => p.category).join(', ') ?? '',
+    targetKnowledgeDomain: productCategories,
     userExpertiseLevel: onboarding.targetCustomer ?? '',
-    reasoningFramework:(onboarding.salesMethodology !== '' && onboarding.salesMethodology != null) ? onboarding.salesMethodology : 'Consultative Selling',
-    responseComplexityIndex: onboarding.brandVoice?.complexity ?? 7,
+    reasoningFramework: salesMethodology,
+    responseComplexityIndex: complexityIndex,
     uncertaintyHandlingProtocol: `Never speculate. If uncertain, state: "I want to ensure 100% accuracy—let me pull the exact information from our knowledge base."`,
     internalThoughtVerification: `Before responding: (1) Does this address a pain point? (2) Am I creating urgency? (3) Is my tone appropriate?`,
-    federatedRAGTags: onboarding.products?.map((p: any) => `DOMAIN: ${p.category.toUpperCase().replace(/ /g, '_')}`) ?? [],
+    federatedRAGTags: federatedTags,
     knowledgeSourceHierarchy: [
       '1. Internal Product Documentation',
       '2. Customer Success Stories',
@@ -967,14 +1007,7 @@ function generatePersonaFromOnboarding(onboarding: any): AgentPersona {
     dynamicToneRegister: 'Start professional. Mirror user style. Adapt based on sentiment.',
     successfulStrategyMemory: 'Log conversation paths that result in qualified opportunities.',
     knowledgeObsolescenceTimer: 'Industry data: 6 months. Technical specs: Real-time.',
-    toolAuthorization: onboarding.integrations?.map((i: any) => {
-      const joinedPermissions = i.permissions?.join('/');
-      return {
-        tool: i.name,
-        permissions: (joinedPermissions !== '' && joinedPermissions != null) ? joinedPermissions : 'Read Only',
-        canExecuteAutonomously: !i.requiresApproval,
-      };
-    }) ?? [],
+    toolAuthorization: toolAuth,
     mandatoryOutputFormatting: 'Use bolded metrics. End with Recommended Next Step. Use bullet points for lists.',
     securityDataFilter: 'NEVER reveal: customer data, pricing discounts to other clients, proprietary details.',
     verbosityControl: {
