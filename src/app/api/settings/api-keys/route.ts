@@ -3,13 +3,26 @@
  * Saves keys to Firestore (encrypted) instead of .env files
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { handleAPIError, errors, successResponse, validateRequired } from '@/lib/api/error-handler';
+import { handleAPIError, errors, validateRequired } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+interface ApiKeysDocument {
+  [service: string]: string | undefined;
+  updatedAt?: string;
+}
+
+interface FirestoreError {
+  code?: string;
+  message?: string;
+}
+
+function isFirestoreError(error: unknown): error is FirestoreError {
+  return typeof error === 'object' && error !== null && 'code' in error;
+}
 
 /**
  * GET - Load API keys for organization
@@ -32,7 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Load keys from Firestore
-    const apiKeys = await FirestoreService.get(
+    const apiKeys = await FirestoreService.get<ApiKeysDocument>(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
       'apiKeys'
     );
@@ -42,9 +55,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (apiKeys) {
       Object.keys(apiKeys).forEach((service) => {
         const key = apiKeys[service];
-        if (key && key.length > 8) {
+        if (typeof key === 'string' && key.length > 8) {
           maskedKeys[service] = '•'.repeat(key.length - 4) + key.slice(-4);
-        } else if (key) {
+        } else if (typeof key === 'string' && key.length > 0) {
           maskedKeys[service] = '•'.repeat(key.length);
         }
       });
@@ -54,20 +67,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       success: true,
       keys: maskedKeys,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('API keys loading error', error, { route: '/api/settings/api-keys' });
 
-    if (error?.code === 'permission-denied') {
+    if (isFirestoreError(error) && error.code === 'permission-denied') {
       return handleAPIError(errors.forbidden('You do not have permission to view API keys'));
     }
 
-    return handleAPIError(error);
+    return handleAPIError(error instanceof Error ? error : new Error('Unknown error'));
   }
 }
 
 /**
  * POST - Save API key
  */
+interface SaveApiKeyBody {
+  orgId: string;
+  service: string;
+  key: string;
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const authResult = await requireAuth(request);
@@ -75,8 +94,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return authResult;
     }
 
-    const body = await request.json();
-    const { orgId, service, key } = body;
+    const body: unknown = await request.json();
 
     // Validate required fields
     const validation = validateRequired(body, ['orgId', 'service', 'key']);
@@ -86,8 +104,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    const { orgId, service, key } = body as SaveApiKeyBody;
+
     // Load existing keys
-    const existingKeys = await FirestoreService.get(
+    const existingKeys: ApiKeysDocument = await FirestoreService.get<ApiKeysDocument>(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}`,
       'apiKeys'
     ) ?? {};
@@ -110,18 +130,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       success: true,
       message: `${service} API key saved successfully`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('API keys saving error', error, { route: '/api/settings/api-keys' });
 
-    if (error?.code === 'permission-denied') {
+    if (isFirestoreError(error) && error.code === 'permission-denied') {
       return handleAPIError(errors.forbidden('You do not have permission to save API keys'));
     }
 
-    if (error?.code === 'not-found') {
+    if (isFirestoreError(error) && error.code === 'not-found') {
       return handleAPIError(errors.notFound('Organization'));
     }
 
-    return handleAPIError(error);
+    return handleAPIError(error instanceof Error ? error : new Error('Unknown error'));
   }
 }
 

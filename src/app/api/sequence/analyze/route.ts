@@ -17,10 +17,9 @@
  * @module api/sequence/analyze
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { 
+import {
   sequenceEngine,
   sequenceAnalysisInputSchema,
   createSequenceAnalyzedEvent,
@@ -29,6 +28,7 @@ import {
   createOptimizationNeededEvent,
   type SequenceAnalysisResponse,
   type SequenceAnalysis,
+  type SequenceAnalysisInput,
 } from '@/lib/sequence';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 
@@ -91,7 +91,7 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number; 
 /**
  * Generate cache key
  */
-function getCacheKey(input: any): string {
+function getCacheKey(input: SequenceAnalysisInput): string {
   return JSON.stringify({
     sequenceId: input.sequenceId,
     sequenceIds: input.sequenceIds,
@@ -168,9 +168,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<SequenceA
     }
     
     // Parse and validate request body
-    const body = await request.json();
-    
-    let validatedInput;
+    const body: unknown = await request.json();
+
+    let validatedInput: SequenceAnalysisInput;
     try {
       validatedInput = sequenceAnalysisInputSchema.parse(body);
     } catch (error) {

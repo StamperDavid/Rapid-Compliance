@@ -6,8 +6,7 @@
  * Rate Limit: 30 req/min per user
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest) {
     const workspaceId = searchParams.get('workspaceId');
     const types = searchParams.get('types')?.split(',');
     const excludeArchived = searchParams.get('excludeArchived') !== 'false';
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
+    const limit = parseInt(searchParams.get('limit') ?? '100', 10);
     const cursor = searchParams.get('cursor') ?? undefined;
     
     // Validate input
@@ -57,7 +56,8 @@ export async function GET(request: NextRequest) {
     }
     
     // Get workspace
-    const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId!).get();
+    const validatedWorkspaceId = validation.data.workspaceId;
+    const workspaceDoc = await db.collection('slack_workspaces').doc(validatedWorkspaceId).get();
     
     if (!workspaceDoc.exists) {
       return NextResponse.json(
@@ -127,13 +127,15 @@ export async function GET(request: NextRequest) {
       nextCursor: result.nextCursor,
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to list Slack channels', { error });
-    
+
+    const errorMessage = error instanceof Error ? error.message : 'Failed to list channels';
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message:(error.message !== '' && error.message != null) ? error.message : 'Failed to list channels',
+        message: errorMessage,
       },
       { status: 500 }
     );

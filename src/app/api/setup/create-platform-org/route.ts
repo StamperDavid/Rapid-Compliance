@@ -1,5 +1,4 @@
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -76,7 +75,7 @@ export async function POST(request: NextRequest) {
       orgId
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error creating platform-admin org', error, { route: '/api/setup/create-platform-org' });
     return errors.database('Failed to create platform organization', error instanceof Error ? error : undefined);
   }
