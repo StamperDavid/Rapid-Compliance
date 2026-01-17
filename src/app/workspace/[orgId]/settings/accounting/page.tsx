@@ -102,7 +102,7 @@ export default function AccountingPage() {
           setConfig(configData as AccountingConfig);
         }
       } catch (error) {
-        logger.error('Failed to load accounting config:', error, { file: 'page.tsx' });
+        logger.error('Failed to load accounting config:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       }
     };
     
@@ -125,7 +125,7 @@ export default function AccountingPage() {
         false
       );
     } catch (error) {
-      logger.error('Failed to save accounting config:', error, { file: 'page.tsx' });
+      logger.error('Failed to save accounting config:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }

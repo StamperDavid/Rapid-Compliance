@@ -79,7 +79,7 @@ export default function BillingSettingsPage() {
         });
       }
     } catch (error) {
-      logger.error('Failed to load billing data:', error, { file: 'page.tsx' });
+      logger.error('Failed to load billing data:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -127,7 +127,7 @@ export default function BillingSettingsPage() {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to upgrade plan. Please try again.';
-      logger.error('Upgrade error:', error, { file: 'page.tsx' });
+      logger.error('Upgrade error:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert(errorMessage);
     } finally {
@@ -152,7 +152,7 @@ export default function BillingSettingsPage() {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      logger.error('Billing portal error:', error, { file: 'page.tsx' });
+      logger.error('Billing portal error:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Billing portal is not available. Please contact support.');
     }

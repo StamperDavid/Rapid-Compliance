@@ -34,7 +34,7 @@ export default function NewNurtureCampaignPage() {
       }, false);
       router.push(`/workspace/${orgId}/nurture`);
     } catch (error) {
-      logger.error('Error saving campaign:', error, { file: 'page.tsx' });
+      logger.error('Error saving campaign:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to save campaign');
     } finally {
       setSaving(false);

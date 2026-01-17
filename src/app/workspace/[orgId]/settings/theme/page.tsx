@@ -135,12 +135,12 @@ export default function ThemeEditorPage() {
                 setFaviconPreview(parsed.branding.favicon);
               }
             } catch (error) {
-              logger.error('Failed to load theme:', error, { file: 'page.tsx' });
+              logger.error('Failed to load theme:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
             }
           }
         }
       } catch (error) {
-        logger.error('Failed to load theme from Firestore:', error, { file: 'page.tsx' });
+        logger.error('Failed to load theme from Firestore:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
         // Fallback to localStorage
         const savedTheme = localStorage.getItem('appTheme');
         if (savedTheme) {
@@ -148,7 +148,7 @@ export default function ThemeEditorPage() {
             const parsed = JSON.parse(savedTheme) as ThemeConfig;
             setTheme(parsed);
           } catch (e) {
-            logger.error('Failed to load theme:', e, { file: 'page.tsx' });
+            logger.error('Failed to load theme:', e instanceof Error ? e : undefined, { file: 'page.tsx' });
           }
         }
       }

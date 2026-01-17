@@ -22,7 +22,7 @@ export default function NurtureCampaignStatsPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/nurtureSequences`, campaignId);
       setCampaign(data);
     } catch (error) {
-      logger.error('Error loading campaign:', error, { file: 'page.tsx' });
+      logger.error('Error loading campaign:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

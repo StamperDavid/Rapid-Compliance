@@ -47,7 +47,7 @@ export default function ProductManagementPage() {
       await deleteProduct(orgId, productId, 'default');
       await refresh(); // Refresh pagination after delete
     } catch (error) {
-      logger.error('Error deleting product:', error, { file: 'page.tsx' });
+      logger.error('Error deleting product:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to delete product');
     }
   };

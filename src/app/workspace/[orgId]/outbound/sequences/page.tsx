@@ -44,7 +44,7 @@ export default function EmailSequencesPage() {
         );
         setEnrollments(enr);
       } catch (error) {
-        logger.error('Error loading sequences:', error, { file: 'page.tsx' });
+        logger.error('Error loading sequences:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       } finally {
         setLoading(false);
       }
@@ -113,7 +113,7 @@ export default function EmailSequencesPage() {
       setSequences([...sequences, newSequence]);
       setShowCreateModal(false);
     } catch (error) {
-      logger.error('Error creating sequence:', error, { file: 'page.tsx' });
+      logger.error('Error creating sequence:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to create sequence');
     }
   };
@@ -130,7 +130,7 @@ export default function EmailSequencesPage() {
         s.id === sequenceId ? { ...s, status: 'active' as const } : s
       ));
     } catch (error) {
-      logger.error('Error activating sequence:', error, { file: 'page.tsx' });
+      logger.error('Error activating sequence:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to activate sequence');
     }
   };
@@ -147,7 +147,7 @@ export default function EmailSequencesPage() {
         s.id === sequenceId ? { ...s, status: 'paused' as const } : s
       ));
     } catch (error) {
-      logger.error('Error pausing sequence:', error, { file: 'page.tsx' });
+      logger.error('Error pausing sequence:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to pause sequence');
     }
   };

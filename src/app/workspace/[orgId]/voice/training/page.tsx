@@ -194,7 +194,7 @@ export default function VoiceAITrainingLabPage() {
       setKnowledgeItems(knowledgeResult.data as KnowledgeItem[] || []);
 
     } catch (error) {
-      logger.error('Error loading voice training data:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error loading voice training data:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -262,7 +262,7 @@ export default function VoiceAITrainingLabPage() {
         setSelectedVoiceId(data.config.voiceId || '');
       }
     } catch (error) {
-      logger.error('Error loading TTS config:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error loading TTS config:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
     }
   };
 
@@ -279,7 +279,7 @@ export default function VoiceAITrainingLabPage() {
         }
       }
     } catch (error) {
-      logger.error('Error loading TTS voices:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error loading TTS voices:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
     } finally {
       setLoadingVoices(false);
     }
@@ -323,7 +323,7 @@ export default function VoiceAITrainingLabPage() {
       const data = await response.json();
       setApiKeyValid(data.valid);
     } catch (error) {
-      logger.error('Error validating API key:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error validating API key:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
       setApiKeyValid(false);
     } finally {
       setValidatingKey(false);
@@ -357,7 +357,7 @@ export default function VoiceAITrainingLabPage() {
         alert(data.error || 'Failed to generate audio');
       }
     } catch (error) {
-      logger.error('Error testing voice:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error testing voice:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
       alert('Failed to test voice. Please try again.');
     } finally {
       setTestingVoice(false);
@@ -387,7 +387,7 @@ export default function VoiceAITrainingLabPage() {
         throw new Error(data.error || 'Failed to save TTS config');
       }
     } catch (error) {
-      logger.error('Error saving TTS config:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error saving TTS config:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
       throw error;
     }
   };
@@ -439,7 +439,7 @@ export default function VoiceAITrainingLabPage() {
       alert('Voice AI settings saved successfully!');
 
     } catch (error) {
-      logger.error('Error saving voice settings:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error saving voice settings:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
       alert('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
@@ -519,7 +519,7 @@ export default function VoiceAITrainingLabPage() {
         );
       }
     } catch (error) {
-      logger.error('Error saving call history:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error saving call history:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
     }
   };
 
@@ -548,7 +548,7 @@ export default function VoiceAITrainingLabPage() {
       };
       setCallMessages(prev => [...prev, agentMessage]);
     } catch (error) {
-      logger.error('Error generating agent response:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error generating agent response:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
     } finally {
       setIsAgentTyping(false);
     }
@@ -604,7 +604,7 @@ export default function VoiceAITrainingLabPage() {
       return result.text;
 
     } catch (error) {
-      logger.error('Error calling AI provider:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error calling AI provider:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
       return 'I understand. Let me help you with that. Could you please provide more details?';
     }
   };
@@ -675,7 +675,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
         );
       }
     } catch (error) {
-      logger.error('Error saving knowledge item:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error saving knowledge item:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
     }
 
     setNewKnowledgeTitle('');
@@ -692,7 +692,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
         await FirestoreService.delete(`${COLLECTIONS.ORGANIZATIONS}/${orgId}/voiceKnowledge`, id);
       }
     } catch (error) {
-      logger.error('Error deleting knowledge item:', error, { file: 'voice-training-page.tsx' });
+      logger.error('Error deleting knowledge item:', error instanceof Error ? error : undefined, { file: 'voice-training-page.tsx' });
     }
   };
 

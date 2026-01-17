@@ -207,7 +207,7 @@ export default function AgentTrainingPage() {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get AI response';
-      logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
+      logger.error('Error calling AI provider:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       throw new Error(errorMessage || 'Failed to get AI response');
     }
   }, []);
@@ -272,7 +272,7 @@ export default function AgentTrainingPage() {
       }
 
     } catch (error) {
-      logger.error('Error loading training data:', error, { file: 'page.tsx' });
+      logger.error('Error loading training data:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -346,7 +346,7 @@ export default function AgentTrainingPage() {
       await saveTrainingSession();
 
     } catch (error) {
-      logger.error('Error sending message:', error, { file: 'page.tsx' });
+      logger.error('Error sending message:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to get agent response. Please try again.');
     } finally {
@@ -417,7 +417,7 @@ export default function AgentTrainingPage() {
       setBetterResponse('');
 
     } catch (error) {
-      logger.error('Error saving feedback:', error, { file: 'page.tsx' });
+      logger.error('Error saving feedback:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to save feedback. Please try again.');
     }
@@ -439,7 +439,7 @@ export default function AgentTrainingPage() {
       }
 
     } catch (error) {
-      logger.error('Error updating training score:', error, { file: 'page.tsx' });
+      logger.error('Error updating training score:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     }
   };
 
@@ -539,7 +539,7 @@ export default function AgentTrainingPage() {
       setSessionNotes('');
 
     } catch (error) {
-      logger.error('Error saving sales criteria scoring:', error, { file: 'page.tsx' });
+      logger.error('Error saving sales criteria scoring:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to save session score. Please try again.');
     }
@@ -566,7 +566,7 @@ export default function AgentTrainingPage() {
       );
 
     } catch (error) {
-      logger.error('Error saving training session:', error, { file: 'page.tsx' });
+      logger.error('Error saving training session:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     }
   };
 
@@ -617,7 +617,7 @@ export default function AgentTrainingPage() {
       alert(`✅ ${files.length} training material(s) uploaded successfully!\n\nThe content has been processed and will be used to train your AI agent.`);
 
     } catch (error) {
-      logger.error('Error uploading training materials:', error, { file: 'page.tsx' });
+      logger.error('Error uploading training materials:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to upload training materials. Please try again.');
     } finally {
@@ -671,7 +671,7 @@ export default function AgentTrainingPage() {
       setActiveTab('golden');
 
     } catch (error) {
-      logger.error('Error saving Golden Master:', error, { file: 'page.tsx' });
+      logger.error('Error saving Golden Master:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to save Golden Master. Please try again.');
     }
@@ -884,7 +884,7 @@ export default function AgentTrainingPage() {
       await loadTrainingData();
 
     } catch (error) {
-      logger.error('Error deploying Golden Master:', error, { file: 'page.tsx' });
+      logger.error('Error deploying Golden Master:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to deploy Golden Master. Please try again.');
     }

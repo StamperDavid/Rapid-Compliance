@@ -44,7 +44,7 @@ export default function APIKeysPage() {
         setKeys(data.keys ?? {});
       }
     } catch (_error) {
-      logger.error('Failed to load API keys:', _error, { file: 'page.tsx' });
+      logger.error('Failed to load API keys:', _error instanceof Error ? _error : undefined, { file: 'page.tsx' });
     }
   };
 

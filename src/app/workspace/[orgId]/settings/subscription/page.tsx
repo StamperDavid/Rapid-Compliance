@@ -67,7 +67,7 @@ export default function SubscriptionPage() {
         setSubscription(data.subscription ?? null);
       }
     } catch (error) {
-      logger.error('Failed to load subscription:', error, { file: 'page.tsx' });
+      logger.error('Failed to load subscription:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function SubscriptionPage() {
         void loadSubscription(); // Reload
       }
     } catch (error) {
-      logger.error('Failed to toggle feature:', error, { file: 'page.tsx' });
+      logger.error('Failed to toggle feature:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     }
   };
 

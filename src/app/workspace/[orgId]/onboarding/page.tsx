@@ -350,7 +350,7 @@ export default function OnboardingWizard() {
         fieldsPrefilledCount: Object.keys(result.fieldConfidences).length,
       });
     } catch (error) {
-      logger.error('Prefill failed', error, { organizationId: orgId });
+      logger.error('Prefill failed', error instanceof Error ? error : undefined, { organizationId: orgId });
       alert('Failed to analyze website. You can still continue with manual entry.');
     } finally {
       setIsPrefilling(false);
