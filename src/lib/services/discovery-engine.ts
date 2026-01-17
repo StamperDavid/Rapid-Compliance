@@ -559,9 +559,9 @@ async function synthesizeLeadObject(
       const content = response.text;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        synthesized = JSON.parse(jsonMatch[0]);
+        synthesized = JSON.parse(jsonMatch[0]) as Partial<DiscoveredCompany>;
       } else {
-        synthesized = JSON.parse(content);
+        synthesized = JSON.parse(content) as Partial<DiscoveredCompany>;
       }
     } catch (parseError) {
       logger.warn('Failed to parse LLM response, using defaults', {
@@ -928,13 +928,14 @@ export async function discoverCompaniesBatch(
       if (result.status === 'fulfilled') {
         results.push(result.value);
       } else {
-        logger.error('Batch discovery failed for domain', result.reason);
+        const errorReason = result.reason as Error | undefined;
+        logger.error('Batch discovery failed for domain', errorReason ?? new Error('Unknown error'));
       }
     }
 
     // Rate limiting delay between batches
     if (i + concurrency < domains.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      await new Promise<void>(resolve => { setTimeout(resolve, delayMs); });
     }
   }
 
@@ -1072,7 +1073,7 @@ export async function discoverPerson(
  */
 async function discoverPersonData(
   email: string,
-  organizationId: string
+  _organizationId: string
 ): Promise<DiscoveredPerson> {
   const controller = createBrowserController({ headless: true });
   const discoveryMethods: string[] = [];
@@ -1274,7 +1275,7 @@ Return ONLY valid JSON, no markdown.`;
       const content = response.text;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        return JSON.parse(jsonMatch[0]) as Partial<DiscoveredPerson>;
       }
     } catch (parseError) {
       logger.debug('Failed to parse LLM person synthesis', {
@@ -1398,13 +1399,14 @@ export async function discoverPeopleBatch(
       if (result.status === 'fulfilled') {
         results.push(result.value);
       } else {
-        logger.error('Batch person discovery failed', result.reason);
+        const errorReason = result.reason as Error | undefined;
+        logger.error('Batch person discovery failed', errorReason ?? new Error('Unknown error'));
       }
     }
 
     // Rate limiting delay between batches
     if (i + concurrency < emails.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      await new Promise<void>(resolve => { setTimeout(resolve, delayMs); });
     }
   }
 

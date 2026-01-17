@@ -31,7 +31,6 @@ import {
   isPlatformActive,
   getHibernatedAgents,
   calculateWorkforceHealth,
-  WORKFORCE_TEMPLATES,
 } from './workforce-templates';
 
 // ============================================================================
@@ -140,7 +139,7 @@ export class WorkforceOrchestrator {
    * Deploy a workforce template to an organization
    */
   async deployWorkforce(options: WorkforceDeploymentOptions): Promise<OrganizationWorkforce> {
-    const { orgId, templateId, agentStateOverrides, platformConnections, templateOverrides, autoActivateOnConnect = true } = options;
+    const { orgId, templateId, agentStateOverrides, platformConnections, templateOverrides, autoActivateOnConnect: _autoActivateOnConnect = true } = options;
 
     // Get the template
     const template = getWorkforceTemplate(templateId);
@@ -748,9 +747,7 @@ export function getWorkforceOrchestrator(
     metadata: Record<string, unknown>;
   }) => Promise<SignalEmissionResult>
 ): WorkforceOrchestrator {
-  if (!orchestratorInstance) {
-    orchestratorInstance = new WorkforceOrchestrator(signalEmitter);
-  }
+  orchestratorInstance ??= new WorkforceOrchestrator(signalEmitter);
   return orchestratorInstance;
 }
 

@@ -166,11 +166,11 @@ class AIConversationService {
   /**
    * Initialize a new conversation
    */
-  async initializeConversation(
+  initializeConversation(
     callId: string,
     customerPhone: string,
     config: ConversationConfig
-  ): Promise<{ greeting: string; context: ConversationContext }> {
+  ): { greeting: string; context: ConversationContext } {
     const context: ConversationContext = {
       callId,
       state: 'GREETING',
@@ -191,7 +191,7 @@ class AIConversationService {
     this.configs.set(callId, config);
 
     // Generate personalized greeting
-    const greeting = await this.generateGreeting(config);
+    const greeting = this.generateGreeting(config);
 
     // Add to conversation history
     context.turns.push({
@@ -212,7 +212,7 @@ class AIConversationService {
   /**
    * Generate opening greeting based on mode
    */
-  private async generateGreeting(config: ConversationConfig): Promise<string> {
+  private generateGreeting(config: ConversationConfig): string {
     const companyName = config.companyName ?? 'our company';
 
     if (config.mode === 'prospector') {
@@ -315,8 +315,8 @@ class AIConversationService {
 
       return response;
 
-    } catch (error: any) {
-      logger.error('[AIConversation] Error generating response:', error, { file: 'ai-conversation-service.ts' });
+    } catch (error: unknown) {
+      logger.error('[AIConversation] Error generating response:', error as Error, { file: 'ai-conversation-service.ts' });
 
       // Graceful fallback - transfer to human
       return this.getFallbackResponse('transfer');
@@ -370,8 +370,8 @@ class AIConversationService {
         confidence: 0.85,
       };
 
-    } catch (error: any) {
-      logger.error('[AIConversation] Stream error:', error, { file: 'ai-conversation-service.ts' });
+    } catch (error: unknown) {
+      logger.error('[AIConversation] Stream error:', error as Error, { file: 'ai-conversation-service.ts' });
       return this.getFallbackResponse('transfer');
     }
   }
@@ -413,7 +413,7 @@ class AIConversationService {
   /**
    * Build chat messages for Gemini
    */
-  private buildChatMessages(context: ConversationContext, config: ConversationConfig): ChatMessage[] {
+  private buildChatMessages(context: ConversationContext, _config: ConversationConfig): ChatMessage[] {
     return context.turns.map(turn => ({
       role: turn.role === 'agent' ? 'model' : 'user',
       parts: [{ text: turn.content }],
@@ -445,7 +445,7 @@ class AIConversationService {
    */
   private buildConversationPrompt(
     context: ConversationContext,
-    config: ConversationConfig,
+    _config: ConversationConfig,
     customerSpeech: string
   ): string {
     const recentHistory = context.turns.slice(-6).map(t =>
@@ -472,7 +472,7 @@ If you detect clear disqualification or the customer wants to end the call, ackn
    */
   private analyzeCustomerInput(
     speech: string,
-    context: ConversationContext
+    _context: ConversationContext
   ): {
     sentiment: 'positive' | 'neutral' | 'negative';
     isObjection: boolean;
@@ -694,7 +694,7 @@ If you detect clear disqualification or the customer wants to end the call, ackn
   /**
    * Generate transfer message
    */
-  private generateTransferMessage(context: ConversationContext, config: ConversationConfig): string {
+  private generateTransferMessage(context: ConversationContext, _config: ConversationConfig): string {
     if (context.qualificationScore >= 70) {
       return `Excellent! Based on what you've shared, I think one of our specialists can really help you. ` +
         `Let me connect you with someone right now who can answer your specific questions and get you started. ` +

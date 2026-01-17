@@ -22,7 +22,7 @@
 
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { Timestamp } from 'firebase-admin/firestore';
 import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS } from '@/lib/sms/sms-service';
 import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
@@ -72,7 +72,7 @@ export interface SequenceStep {
   /** Conditions to check after this step */
   conditions?: SequenceCondition[];
   /** Custom data for the action */
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export interface Sequence {
@@ -122,7 +122,7 @@ export interface SequenceEnrollment {
   completedAt?: Date;
   
   // Metadata
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -207,10 +207,13 @@ export async function getSequence(sequenceId: string): Promise<Sequence | null> 
       return null;
     }
 
+    const dataAny = data as Record<string, unknown>;
+    const createdAtValue = dataAny.createdAt as { toDate?: () => Date } | undefined;
+    const updatedAtValue = dataAny.updatedAt as { toDate?: () => Date } | undefined;
     return {
       ...data,
-      createdAt: data.createdAt?.toDate() ?? new Date(),
-      updatedAt: data.updatedAt?.toDate() ?? new Date(),
+      createdAt: createdAtValue?.toDate?.() ?? new Date(),
+      updatedAt: updatedAtValue?.toDate?.() ?? new Date(),
     } as Sequence;
   } catch (error) {
     logger.error('Failed to get sequence', error, { sequenceId });
@@ -230,7 +233,7 @@ export async function updateSequence(
       throw new Error('Admin DAL not initialized');
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       ...updates,
       updatedAt: Timestamp.now(),
     };
@@ -261,10 +264,13 @@ export async function listSequences(organizationId: string): Promise<Sequence[]>
 
     return snapshot.docs.map((doc) => {
       const data = doc.data();
+      const dataAny = data as Record<string, unknown>;
+      const createdAtValue = dataAny.createdAt as { toDate?: () => Date } | undefined;
+      const updatedAtValue = dataAny.updatedAt as { toDate?: () => Date } | undefined;
       return {
         ...data,
-        createdAt: data.createdAt?.toDate() ?? new Date(),
-        updatedAt: data.updatedAt?.toDate() ?? new Date(),
+        createdAt: createdAtValue?.toDate?.() ?? new Date(),
+        updatedAt: updatedAtValue?.toDate?.() ?? new Date(),
       } as Sequence;
     });
   } catch (error) {
@@ -284,7 +290,7 @@ export async function enrollInSequence(params: {
   sequenceId: string;
   leadId: string;
   organizationId: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }): Promise<SequenceEnrollment> {
   try {
     const { sequenceId, leadId, organizationId, metadata = {} } = params;
@@ -385,11 +391,15 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
       throw new Error(`Enrollment not found: ${enrollmentId}`);
     }
 
+    const enrollmentData = enrollmentDoc.data() as Record<string, unknown>;
+    const enrolledAtValue = enrollmentData?.enrolledAt as Timestamp | undefined;
+    const nextExecValue = enrollmentData?.nextExecutionAt as Timestamp | undefined;
+    const completedAtValue = enrollmentData?.completedAt as Timestamp | undefined;
     const enrollment = {
-      ...enrollmentDoc.data(),
-      enrolledAt: enrollmentDoc.data()?.enrolledAt?.toDate(),
-      nextExecutionAt: enrollmentDoc.data()?.nextExecutionAt?.toDate(),
-      completedAt: enrollmentDoc.data()?.completedAt?.toDate(),
+      ...enrollmentData,
+      enrolledAt: enrolledAtValue?.toDate(),
+      nextExecutionAt: nextExecValue?.toDate(),
+      completedAt: completedAtValue?.toDate(),
     } as SequenceEnrollment;
 
     if (enrollment.status !== 'active') {
@@ -450,7 +460,7 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
     const nextStepIndex = enrollment.currentStepIndex + 1;
     const nextStep = sequence.steps[nextStepIndex];
     
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       executedSteps: [...enrollment.executedSteps, executedStep],
       currentStepIndex: nextStepIndex,
     };
@@ -502,7 +512,7 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
 export async function handleCondition(params: {
   enrollmentId: string;
   conditionType: SequenceConditionType;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }): Promise<void> {
   try {
     if (!adminDal) {
@@ -608,10 +618,11 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
 
     // Get enrollment to update sequence stats
     const enrollmentDoc = await adminDal.safeGetDoc('SEQUENCE_ENROLLMENTS', enrollmentId);
-    const enrollmentData = enrollmentDoc.data();
+    const enrollmentData = enrollmentDoc.data() as Record<string, unknown> | undefined;
     if (enrollmentData) {
-      await adminDal.safeUpdateDoc('SEQUENCES', enrollmentData.sequenceId, {
-        'stats.activeEnrollments': Math.max(0, (enrollmentData.stats?.activeEnrollments ?? 0) - 1),
+      const statsData = enrollmentData.stats as Record<string, number> | undefined;
+      await adminDal.safeUpdateDoc('SEQUENCES', enrollmentData.sequenceId as string, {
+        'stats.activeEnrollments': Math.max(0, (statsData?.activeEnrollments ?? 0) - 1),
       });
     }
 
@@ -619,12 +630,15 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
 
     // Emit sequence.paused signal
     if (enrollmentData) {
+      const enrolledAtVal = enrollmentData.enrolledAt as Timestamp | Date | undefined;
+      const nextExecVal = enrollmentData.nextExecutionAt as Timestamp | Date | undefined;
+      const completedAtVal = enrollmentData.completedAt as Timestamp | Date | undefined;
       const enrollment: SequenceEnrollment = {
         ...enrollmentData,
         id: enrollmentId,
-        enrolledAt: enrollmentData.enrolledAt?.toDate?.() ?? enrollmentData.enrolledAt,
-        nextExecutionAt: enrollmentData.nextExecutionAt?.toDate?.() ?? enrollmentData.nextExecutionAt,
-        completedAt: enrollmentData.completedAt?.toDate?.() ?? enrollmentData.completedAt,
+        enrolledAt: (enrolledAtVal && 'toDate' in enrolledAtVal && typeof enrolledAtVal.toDate === 'function') ? enrolledAtVal.toDate() : enrolledAtVal as Date,
+        nextExecutionAt: (nextExecVal && 'toDate' in nextExecVal && typeof nextExecVal.toDate === 'function') ? nextExecVal.toDate() : nextExecVal as Date | undefined,
+        completedAt: (completedAtVal && 'toDate' in completedAtVal && typeof completedAtVal.toDate === 'function') ? completedAtVal.toDate() : completedAtVal as Date | undefined,
         status: 'stopped',
       } as SequenceEnrollment;
       
@@ -680,10 +694,24 @@ function validateSequenceSteps(steps: SequenceStep[]): void {
 // HELPER FUNCTIONS FOR CHANNEL EXECUTION
 // ============================================================================
 
+interface LeadData {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  companyName?: string;
+  title?: string;
+  linkedInUrl?: string;
+  customFields?: Record<string, string>;
+}
+
 /**
  * Get lead data from Firestore
  */
-async function getLeadData(leadId: string, organizationId: string): Promise<any> {
+async function getLeadData(leadId: string, organizationId: string): Promise<LeadData | null> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -705,21 +733,21 @@ async function getLeadData(leadId: string, organizationId: string): Promise<any>
       
       const leadDoc = await leadRef.get();
       if (leadDoc.exists) {
-        return { id: leadDoc.id, ...leadDoc.data() };
+        return { id: leadDoc.id, ...leadDoc.data() } as LeadData;
       }
-      
+
       // Also check contacts collection
       const contactRef = adminDal.getNestedCollection(
         'organizations/{orgId}/workspaces/{wsId}/entities/contacts/records',
         { orgId: organizationId, wsId: workspaceDoc.id }
       ).doc(leadId);
-      
+
       const contactDoc = await contactRef.get();
       if (contactDoc.exists) {
-        return { id: contactDoc.id, ...contactDoc.data() };
+        return { id: contactDoc.id, ...contactDoc.data() } as LeadData;
       }
     }
-    
+
     return null;
   } catch (error) {
     logger.error('Failed to get lead data', error as Error, { leadId, organizationId });
@@ -727,10 +755,15 @@ async function getLeadData(leadId: string, organizationId: string): Promise<any>
   }
 }
 
+interface TemplateData {
+  id: string;
+  content: string;
+}
+
 /**
  * Load template from Firestore
  */
-async function loadTemplate(templateId: string, organizationId: string): Promise<any> {
+async function loadTemplate(templateId: string, organizationId: string): Promise<TemplateData | null> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -740,13 +773,13 @@ async function loadTemplate(templateId: string, organizationId: string): Promise
       'organizations/{orgId}/templates',
       { orgId: organizationId }
     );
-    
+
     const templateDoc = await templatesRef.doc(templateId).get();
-    
+
     if (templateDoc.exists) {
-      return { id: templateDoc.id, ...templateDoc.data() };
+      return { id: templateDoc.id, ...templateDoc.data() } as TemplateData;
     }
-    
+
     return null;
   } catch (error) {
     logger.error('Failed to load template', error as Error, { templateId, organizationId });
@@ -757,7 +790,7 @@ async function loadTemplate(templateId: string, organizationId: string): Promise
 /**
  * Substitute variables in template
  */
-function substituteVariables(template: string, leadData: any): string {
+function substituteVariables(template: string, leadData: LeadData): string {
   let result = template;
   
   // Common variable substitutions
@@ -791,7 +824,7 @@ function substituteVariables(template: string, leadData: any): string {
  * Execute email action
  */
 async function executeEmailAction(
-  leadData: any,
+  leadData: LeadData,
   messageContent: string,
   step: SequenceStep,
   enrollment: SequenceEnrollment
@@ -799,9 +832,10 @@ async function executeEmailAction(
   if (!leadData.email) {
     throw new Error('Lead has no email address');
   }
-  
-  const subject = (step.data?.subject !== '' && step.data?.subject != null) 
-    ? step.data.subject 
+
+  const subjectVal = step.data?.subject as string | undefined;
+  const subject = (subjectVal !== '' && subjectVal != null)
+    ? subjectVal
     : 'Following up';
   
   // In test mode, just log the action without actually sending
@@ -844,17 +878,17 @@ async function executeEmailAction(
  * Execute LinkedIn action
  */
 async function executeLinkedInAction(
-  leadData: any,
+  leadData: LeadData,
   messageContent: string,
   step: SequenceStep,
   enrollment: SequenceEnrollment
 ): Promise<void> {
   const linkedInIdentifier = leadData.linkedInUrl ?? leadData.email;
-  
+
   if (!linkedInIdentifier) {
     throw new Error('Lead has no LinkedIn URL or email');
   }
-  
+
   // In test mode, just log the action without actually sending
   if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
     logger.info('[TEST MODE] Mock LinkedIn message send', {
@@ -863,9 +897,9 @@ async function executeLinkedInAction(
     });
     return;
   }
-  
+
   // Note: LinkedIn requires access token - this would need to be configured per organization
-  const accessToken = step.data?.linkedInAccessToken ?? '';
+  const accessToken = (step.data?.linkedInAccessToken as string | undefined) ?? '';
   
   const result = await sendLinkedInMessage(
     accessToken,
@@ -890,8 +924,8 @@ async function executeLinkedInAction(
  * Execute SMS action
  */
 async function executeSMSAction(
-  leadData: any,
-  messageContent: string,
+  leadData: LeadData,
+  _messageContent: string,
   step: SequenceStep,
   enrollment: SequenceEnrollment
 ): Promise<void> {
@@ -910,7 +944,7 @@ async function executeSMSAction(
   
   const result = await sendSMS({
     to: leadData.phone,
-    message: messageContent,
+    message: _messageContent,
     organizationId: enrollment.organizationId,
     metadata: {
       sequenceId: enrollment.sequenceId,
@@ -936,15 +970,15 @@ async function executeSMSAction(
  * Execute phone action
  */
 async function executePhoneAction(
-  leadData: any,
-  messageContent: string,
+  leadData: LeadData,
+  _messageContent: string,
   step: SequenceStep,
   enrollment: SequenceEnrollment
 ): Promise<void> {
   if (!leadData.phone) {
     throw new Error('Lead has no phone number');
   }
-  
+
   // In test mode, just log the action without actually making a call
   if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
     logger.info('[TEST MODE] Mock phone call', {
@@ -953,9 +987,9 @@ async function executePhoneAction(
     });
     return;
   }
-  
+
   // Use the organization's AI agent for the call
-  const agentId = step.data?.agentId ?? 'default';
+  const agentId = (step.data?.agentId as string | undefined) ?? 'default';
   
   const call = await initiateCall(
     enrollment.organizationId,
@@ -1202,8 +1236,9 @@ export async function initializeSequencerSignalObservers(
   });
 
   // Observer 1: Auto-enroll qualified leads
-  if (autoEnrollConfig.autoEnrollQualified && autoEnrollConfig.qualifiedLeadSequenceId) {
-    const unsubscribe = await coordinator.observeSignals(
+  const qualifiedSequenceId = autoEnrollConfig.qualifiedLeadSequenceId;
+  if (autoEnrollConfig.autoEnrollQualified && qualifiedSequenceId) {
+    const observeResult = coordinator.observeSignals(
       {
         types: ['lead.qualified'],
         orgId: organizationId,
@@ -1219,7 +1254,7 @@ export async function initializeSequencerSignalObservers(
 
           logger.info('Auto-enrolling qualified lead in sequence', {
             leadId: signal.leadId,
-            sequenceId: autoEnrollConfig.qualifiedLeadSequenceId,
+            sequenceId: qualifiedSequenceId,
             score: signal.metadata.totalScore,
             grade: signal.metadata.grade,
           });
@@ -1227,7 +1262,7 @@ export async function initializeSequencerSignalObservers(
           // Check if already enrolled
           const existing = await adminDal?.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
             ref
-              .where('sequenceId', '==', autoEnrollConfig.qualifiedLeadSequenceId)
+              .where('sequenceId', '==', qualifiedSequenceId)
               .where('leadId', '==', signal.leadId)
               .where('status', '==', 'active')
               .limit(1)
@@ -1235,7 +1270,7 @@ export async function initializeSequencerSignalObservers(
 
           if (!existing || existing.empty) {
             await enrollInSequence({
-              sequenceId: autoEnrollConfig.qualifiedLeadSequenceId!,
+              sequenceId: qualifiedSequenceId,
               leadId: signal.leadId,
               organizationId,
               metadata: {
@@ -1248,15 +1283,18 @@ export async function initializeSequencerSignalObservers(
             });
 
             // Mark signal as processed
-            await coordinator.markSignalProcessed(organizationId, signal.id!, {
-              success: true,
-              action: 'enrolled_in_sequence',
-              module: 'sequencer',
-            });
+            const signalId = signal.id;
+            if (signalId) {
+              await coordinator.markSignalProcessed(organizationId, signalId, {
+                success: true,
+                action: 'enrolled_in_sequence',
+                module: 'sequencer',
+              });
+            }
           } else {
             logger.info('Lead already enrolled in sequence, skipping', {
               leadId: signal.leadId,
-              sequenceId: autoEnrollConfig.qualifiedLeadSequenceId,
+              sequenceId: qualifiedSequenceId,
             });
           }
         } catch (error) {
@@ -1277,12 +1315,16 @@ export async function initializeSequencerSignalObservers(
         }
       }
     );
+    const unsubscribe = typeof observeResult === 'object' && observeResult !== null && 'then' in observeResult
+      ? await (observeResult as Promise<() => void>)
+      : observeResult as () => void;
     unsubscribers.push(unsubscribe);
   }
 
   // Observer 2: Auto-enroll high-intent leads
-  if (autoEnrollConfig.autoEnrollHighIntent && autoEnrollConfig.highIntentSequenceId) {
-    const unsubscribe = await coordinator.observeSignals(
+  const highIntentSequenceId = autoEnrollConfig.highIntentSequenceId;
+  if (autoEnrollConfig.autoEnrollHighIntent && highIntentSequenceId) {
+    const observeResult = coordinator.observeSignals(
       {
         types: ['lead.intent.high'],
         orgId: organizationId,
@@ -1298,7 +1340,7 @@ export async function initializeSequencerSignalObservers(
 
           logger.info('Auto-enrolling high-intent lead in sequence', {
             leadId: signal.leadId,
-            sequenceId: autoEnrollConfig.highIntentSequenceId,
+            sequenceId: highIntentSequenceId,
             intentScore: signal.metadata.intentScore,
             detectedSignals: signal.metadata.detectedSignals,
           });
@@ -1306,7 +1348,7 @@ export async function initializeSequencerSignalObservers(
           // Check if already enrolled
           const existing = await adminDal?.safeQuery('SEQUENCE_ENROLLMENTS', (ref) =>
             ref
-              .where('sequenceId', '==', autoEnrollConfig.highIntentSequenceId)
+              .where('sequenceId', '==', highIntentSequenceId)
               .where('leadId', '==', signal.leadId)
               .where('status', '==', 'active')
               .limit(1)
@@ -1314,7 +1356,7 @@ export async function initializeSequencerSignalObservers(
 
           if (!existing || existing.empty) {
             await enrollInSequence({
-              sequenceId: autoEnrollConfig.highIntentSequenceId!,
+              sequenceId: highIntentSequenceId,
               leadId: signal.leadId,
               organizationId,
               metadata: {
@@ -1328,15 +1370,18 @@ export async function initializeSequencerSignalObservers(
             });
 
             // Mark signal as processed
-            await coordinator.markSignalProcessed(organizationId, signal.id!, {
-              success: true,
-              action: 'enrolled_in_sequence',
-              module: 'sequencer',
-            });
+            const signalId = signal.id;
+            if (signalId) {
+              await coordinator.markSignalProcessed(organizationId, signalId, {
+                success: true,
+                action: 'enrolled_in_sequence',
+                module: 'sequencer',
+              });
+            }
           } else {
             logger.info('Lead already enrolled in sequence, skipping', {
               leadId: signal.leadId,
-              sequenceId: autoEnrollConfig.highIntentSequenceId,
+              sequenceId: highIntentSequenceId,
             });
           }
         } catch (error) {
@@ -1357,6 +1402,9 @@ export async function initializeSequencerSignalObservers(
         }
       }
     );
+    const unsubscribe = typeof observeResult === 'object' && observeResult !== null && 'then' in observeResult
+      ? await (observeResult as Promise<() => void>)
+      : observeResult as () => void;
     unsubscribers.push(unsubscribe);
   }
 

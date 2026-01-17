@@ -4,12 +4,10 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type {
-  SubscriptionTier
-} from '@/types/subscription';
 import {
   getTierForRecordCount,
-  VOLUME_TIERS
+  VOLUME_TIERS,
+  type SubscriptionTier,
 } from '@/types/subscription';
 import { logger } from '@/lib/logger/logger';
 
@@ -30,7 +28,7 @@ export class RecordCounter {
 
       // For each workspace, count all record types
       for (const workspace of workspaces) {
-        const workspaceId = workspace.id;
+        const workspaceId = (workspace as { id: string }).id;
 
         // Count contacts
         const contacts = await FirestoreService.getAll(
@@ -84,11 +82,11 @@ export class RecordCounter {
    */
   static async getCachedRecordCount(organizationId: string): Promise<number> {
     try {
-      const subscription = await FirestoreService.get(
+      const subscription = await FirestoreService.get<{ recordCount?: number }>(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/subscriptions`,
         'current'
       );
-      
+
       return subscription?.recordCount ?? 0;
     } catch (error) {
       logger.error('[RecordCounter] Error getting cached count:', error);

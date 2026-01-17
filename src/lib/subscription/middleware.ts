@@ -3,9 +3,8 @@
  * Protects API routes based on subscription features and usage limits
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from './feature-gate';
-import type { OrganizationSubscription } from '@/types/subscription'
 import { logger } from '@/lib/logger/logger';
 
 /**

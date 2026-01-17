@@ -297,8 +297,8 @@ async function findIdleTasks(
       }
 
       const workflowData = data.workflow as WorkflowState;
-      const updatedAtValue = workflowData.updatedAt;
-      const createdAtValue = data.createdAt;
+      const updatedAtValue = workflowData.updatedAt as Timestamp | string | number | Date;
+      const createdAtValue = data.createdAt as Timestamp | string | number | Date;
 
       tasks.push({
         id: doc.id,
@@ -310,12 +310,12 @@ async function findIdleTasks(
           ...workflowData,
           updatedAt: updatedAtValue instanceof Timestamp
             ? updatedAtValue.toDate()
-            : new Date(updatedAtValue as string | number | Date),
+            : new Date(updatedAtValue),
         },
         priority: data.priority as number | undefined,
         createdAt: createdAtValue instanceof Timestamp
           ? createdAtValue.toDate()
-          : new Date(createdAtValue as string | number | Date),
+          : new Date(createdAtValue),
       });
     }
 
@@ -375,7 +375,7 @@ async function processTasks(
       } else {
         // Promise rejected - create failure result
         const errorReason = result.reason as Error | undefined;
-        const errorMessage = errorReason?.message || 'Unknown error';
+        const errorMessage = errorReason?.message ?? 'Unknown error';
         results.push(createFailureResult(
           {
             code: 'DISPATCHER_ERROR',
@@ -389,7 +389,7 @@ async function processTasks(
 
     // Delay between batches
     if (i + config.concurrency < tasks.length) {
-      await new Promise<void>(resolve => setTimeout(resolve, config.delayMs));
+      await new Promise<void>(resolve => { setTimeout(resolve, config.delayMs); });
     }
   }
   

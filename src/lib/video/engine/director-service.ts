@@ -22,7 +22,6 @@ import type {
   DirectorRequest,
   DirectorResponse,
   BrandDNASnapshot,
-  TrendReport,
   SiteMimicryStyleGuide,
   ShotType,
   CameraMotion,
@@ -74,7 +73,7 @@ const CAMERA_MOTION_PAIRINGS: Record<ShotType, CameraMotion[]> = {
 /**
  * Pacing to timing multipliers
  */
-const PACING_MULTIPLIERS: Record<string, number> = {
+const _PACING_MULTIPLIERS: Record<string, number> = {
   slow: 1.4,
   medium: 1.0,
   fast: 0.7,
@@ -124,7 +123,7 @@ export class DirectorService {
   /**
    * Generate a Master Storyboard from brand DNA and creative brief
    */
-  async generateStoryboard(request: DirectorRequest): Promise<DirectorResponse> {
+  generateStoryboard(request: DirectorRequest): DirectorResponse {
     const startTime = Date.now();
 
     logger.info('Director: Starting storyboard generation', {
@@ -139,8 +138,8 @@ export class DirectorService {
       const creativeAnalysis = this.analyzeCreativeInputs(request);
 
       // Step 2: Generate voiceover script and timing
-      const voiceoverScript = await this.generateVoiceoverScript(
-        request.voiceoverScript || request.brief.message,
+      const voiceoverScript = this.generateVoiceoverScript(
+        request.voiceoverScript ?? request.brief.message,
         request.brandDNA,
         request.constraints.maxDuration
       );
@@ -153,7 +152,7 @@ export class DirectorService {
       );
 
       // Step 4: Generate shots for each scene
-      const scenes = await this.generateScenes(
+      const scenes = this.generateScenes(
         sceneStructure,
         voiceoverScript,
         request,
@@ -265,7 +264,7 @@ export class DirectorService {
       recommendedShots,
       lightingStyles,
       colorPalette,
-      visualStyle: creativeDirection?.visualStyle || this.deriveVisualStyle(brandDNA),
+      visualStyle: creativeDirection?.visualStyle ?? this.deriveVisualStyle(brandDNA),
       platformOptimizations: PLATFORM_DURATIONS[brief.targetPlatform],
     };
   }
@@ -273,20 +272,20 @@ export class DirectorService {
   /**
    * Generate or process voiceover script with timing
    */
-  private async generateVoiceoverScript(
+  private generateVoiceoverScript(
     scriptOrMessage: string,
     brandDNA: BrandDNASnapshot,
-    maxDuration: number
-  ): Promise<VoiceoverScript> {
+    _maxDuration: number
+  ): VoiceoverScript {
     // Estimate words per second (average speaking rate)
     const wordsPerSecond = 2.5;
-    const maxWords = Math.floor(maxDuration * wordsPerSecond);
+    const maxWords = Math.floor(_maxDuration * wordsPerSecond);
 
     // Process the script
     const script = this.processScript(scriptOrMessage, brandDNA, maxWords);
 
     // Split into segments based on natural breaks
-    const segments = this.splitIntoSegments(script, maxDuration);
+    const segments = this.splitIntoSegments(script, _maxDuration);
 
     return {
       fullScript: script,
@@ -334,8 +333,8 @@ export class DirectorService {
   /**
    * Split script into timed segments
    */
-  private splitIntoSegments(script: string, maxDuration: number): VoiceoverSegment[] {
-    const sentences = script.match(/[^.!?]+[.!?]+/g) || [script];
+  private splitIntoSegments(script: string, _maxDuration: number): VoiceoverSegment[] {
+    const sentences = script.match(/[^.!?]+[.!?]+/g) ?? [script];
     const segments: VoiceoverSegment[] = [];
 
     const wordsPerSecond = 2.5;
@@ -401,8 +400,8 @@ export class DirectorService {
    */
   private calculateSceneStructure(
     voiceover: VoiceoverScript,
-    maxDuration: number,
-    pacing: string
+    _maxDuration: number,
+    _pacing: string
   ): SceneStructure[] {
     const scenes: SceneStructure[] = [];
     const segments = voiceover.segments;
@@ -410,7 +409,7 @@ export class DirectorService {
     // Group segments into scenes
     const sceneGroups = new Map<string, VoiceoverSegment[]>();
     for (const segment of segments) {
-      const existing = sceneGroups.get(segment.sceneId) || [];
+      const existing = sceneGroups.get(segment.sceneId) ?? [];
       existing.push(segment);
       sceneGroups.set(segment.sceneId, existing);
     }
@@ -466,12 +465,12 @@ export class DirectorService {
   /**
    * Generate scenes with shots and visual prompts
    */
-  private async generateScenes(
+  private generateScenes(
     sceneStructure: SceneStructure[],
     voiceover: VoiceoverScript,
     request: DirectorRequest,
     analysis: CreativeAnalysis
-  ): Promise<StoryboardScene[]> {
+  ): StoryboardScene[] {
     const scenes: StoryboardScene[] = [];
 
     for (const structure of sceneStructure) {
@@ -628,14 +627,14 @@ export class DirectorService {
 
     if (position < 0.3) {
       // Early shots - wider
-      return recommended.find((s) => ['wide', 'medium-wide', 'medium'].includes(s)) || 'medium';
+      return recommended.find((s) => ['wide', 'medium-wide', 'medium'].includes(s)) ?? 'medium';
     } else if (position < 0.7) {
       // Middle shots - mixed
       return recommended[index % recommended.length];
     } else {
       // Late shots - closer
       return (
-        recommended.find((s) => ['close-up', 'medium-close-up', 'insert'].includes(s)) ||
+        recommended.find((s) => ['close-up', 'medium-close-up', 'insert'].includes(s)) ??
         'medium-close-up'
       );
     }
@@ -689,7 +688,7 @@ export class DirectorService {
     if (isIntro) {
       mainSubject = `${brandDNA.industry} professional environment showcasing ${brandDNA.uniqueValue}`;
     } else if (isOutro) {
-      mainSubject = `Brand logo and call-to-action for ${brief.callToAction || 'engagement'}`;
+      mainSubject = `Brand logo and call-to-action for ${brief.callToAction ?? 'engagement'}`;
     } else {
       mainSubject = this.deriveSubjectFromSegment(segment, brandDNA);
     }
@@ -935,11 +934,11 @@ export class DirectorService {
     analysis?: CreativeAnalysis
   ): VisualStyleConfig {
     // Extract colors from style guide or brand DNA
-    const primaryColor = styleGuide?.colorPalette.primary || brandDNA.primaryColor || '#1a1a1a';
-    const secondaryColor = styleGuide?.colorPalette.secondary || brandDNA.secondaryColor || '#ffffff';
+    const _primaryColor = styleGuide?.colorPalette.primary ?? brandDNA.primaryColor ?? '#1a1a1a';
+    const _secondaryColor = styleGuide?.colorPalette.secondary ?? brandDNA.secondaryColor ?? '#ffffff';
 
     // Determine LUT based on mood
-    const lutId = this.selectLUT(analysis?.mood || 'professional');
+    const lutId = this.selectLUT(analysis?.mood ?? 'professional');
 
     return {
       lutId,
@@ -1005,7 +1004,7 @@ export class DirectorService {
    */
   private calculateEstimatedCost(storyboard: MasterStoryboard): DirectorResponse['estimatedCost'] {
     const totalShots = storyboard.scenes.reduce((acc, s) => acc + s.shots.length, 0);
-    const totalDurationSeconds = storyboard.totalDuration / 1000;
+    const _totalDurationSeconds = storyboard.totalDuration / 1000;
 
     // Rough estimates
     const videoGenerationCredits = totalShots * 10; // 10 credits per shot
@@ -1207,7 +1206,7 @@ export class DirectorService {
     return motionActions[cameraMotion] || 'capturing the moment';
   }
 
-  private deriveEnvironment(brandDNA: BrandDNASnapshot, visualStyle: string): string {
+  private deriveEnvironment(brandDNA: BrandDNASnapshot, _visualStyle: string): string {
     const industryEnvironments: Record<string, string[]> = {
       technology: ['modern office space', 'sleek tech lab', 'minimalist studio'],
       finance: ['executive boardroom', 'modern financial center', 'prestigious office'],
@@ -1247,7 +1246,7 @@ export class DirectorService {
     return baseGrading;
   }
 
-  private selectMusicGenre(mood: string, platform: string): string {
+  private selectMusicGenre(mood: string, _platform: string): string {
     const moodGenres: Record<string, string[]> = {
       warm: ['acoustic', 'soft pop', 'folk'],
       professional: ['corporate', 'ambient', 'light electronic'],
@@ -1307,8 +1306,8 @@ export const directorService = DirectorService.getInstance();
 /**
  * Generate a master storyboard from brand DNA and creative brief
  */
-export async function generateStoryboard(
+export function generateStoryboard(
   request: DirectorRequest
-): Promise<DirectorResponse> {
+): DirectorResponse {
   return directorService.generateStoryboard(request);
 }

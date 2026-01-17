@@ -201,34 +201,35 @@ export class StitcherService {
           storyboard.audioConfig.voiceover.speed,
           storyboard.audioConfig.voiceover.pitch
         );
-        job.voiceoverTrack = voiceoverTrack;
+        Object.assign(job, { voiceoverTrack });
       }
 
       // Step 2: Prepare background music track
       let musicTrack: AudioTrack | undefined;
       if (storyboard.audioConfig.backgroundMusic.enabled) {
         this.updateJobStatus(job, 'preparing', 25, 'Preparing background music');
-        musicTrack = await this.prepareMusicTrack(
+        musicTrack = this.prepareMusicTrack(
           storyboard.audioConfig.backgroundMusic,
           storyboard.totalDuration
         );
-        job.musicTrack = musicTrack;
+        Object.assign(job, { musicTrack });
       }
 
       // Step 3: Apply BPM-aware ducking to music
       if (musicTrack && voiceoverTrack && storyboard.audioConfig.backgroundMusic.duckingConfig.enabled) {
         this.updateJobStatus(job, 'audio-mixing', 35, 'Applying audio ducking');
-        musicTrack = await this.applyDucking(
+        const duckedMusicTrack = this.applyDucking(
           musicTrack,
           voiceoverTrack,
           storyboard.audioConfig.backgroundMusic.duckingConfig
         );
-        job.musicTrack = musicTrack;
+        musicTrack = duckedMusicTrack;
+        Object.assign(job, { musicTrack: duckedMusicTrack });
       }
 
       // Step 4: Stitch video clips in sequence
       this.updateJobStatus(job, 'stitching', 45, 'Stitching video clips');
-      const stitchedVideoUrl = await this.stitchClips(
+      const stitchedVideoUrl = this.stitchClips(
         job.clips,
         storyboard.scenes,
         storyboard.aspectRatio,
@@ -238,7 +239,7 @@ export class StitcherService {
 
       // Step 5: Apply color grading and LUT
       this.updateJobStatus(job, 'color-grading', 65, 'Applying color grading');
-      const colorGradedUrl = await this.applyColorGrading(
+      const colorGradedUrl = this.applyColorGrading(
         stitchedVideoUrl,
         storyboard.visualStyle
       );
@@ -249,7 +250,7 @@ export class StitcherService {
       let overlayAppliedUrl = colorGradedUrl;
       if (storyboard.visualStyle.brandOverlay) {
         this.updateJobStatus(job, 'color-grading', 75, 'Applying brand overlay');
-        overlayAppliedUrl = await this.applyBrandOverlay(
+        overlayAppliedUrl = this.applyBrandOverlay(
           colorGradedUrl,
           storyboard.visualStyle.brandOverlay
         );
@@ -258,7 +259,7 @@ export class StitcherService {
 
       // Step 7: Mix final audio
       this.updateJobStatus(job, 'audio-mixing', 85, 'Mixing final audio');
-      const mixedAudioUrl = await this.mixAudio(
+      const mixedAudioUrl = this.mixAudio(
         voiceoverTrack,
         musicTrack,
         job.sfxTracks,
@@ -268,7 +269,7 @@ export class StitcherService {
 
       // Step 8: Final render - combine video and audio
       this.updateJobStatus(job, 'rendering', 90, 'Rendering final output');
-      const finalUrl = await this.renderFinal(
+      const finalUrl = this.renderFinal(
         overlayAppliedUrl,
         mixedAudioUrl,
         storyboard.aspectRatio,
@@ -278,7 +279,7 @@ export class StitcherService {
 
       // Step 9: Upload and get final URLs
       this.updateJobStatus(job, 'uploading', 95, 'Uploading final video');
-      const uploadResult = await this.uploadFinal(job.id, finalUrl, storyboard.organizationId);
+      const uploadResult = this.uploadFinal(job.id, finalUrl, storyboard.organizationId);
 
       // Update job with results
       job.outputUrl = uploadResult.videoUrl;
@@ -374,7 +375,7 @@ export class StitcherService {
     }
 
     // Combine segments into a single track
-    const combinedAudioUrl = await this.combineVoiceoverSegments(audioSegments, totalDuration);
+    const combinedAudioUrl = this.combineVoiceoverSegments(audioSegments, totalDuration);
 
     return {
       id: uuidv4(),
@@ -420,10 +421,10 @@ export class StitcherService {
   /**
    * Prepare background music track
    */
-  private async prepareMusicTrack(
+  private prepareMusicTrack(
     musicConfig: MasterStoryboard['audioConfig']['backgroundMusic'],
     totalDuration: number
-  ): Promise<AudioTrack> {
+  ): AudioTrack {
     logger.info('Stitcher: Preparing music track', {
       genre: musicConfig.genre,
       mood: musicConfig.mood,
@@ -498,11 +499,11 @@ export class StitcherService {
   /**
    * Apply BPM-aware ducking to music track
    */
-  private async applyDucking(
+  private applyDucking(
     musicTrack: AudioTrack,
     voiceoverTrack: AudioTrack,
     duckingConfig: DuckingConfig
-  ): Promise<AudioTrack> {
+  ): AudioTrack {
     logger.info('Stitcher: Applying audio ducking', {
       duckLevel: duckingConfig.duckLevel,
       attackTime: duckingConfig.attackTime,
@@ -510,7 +511,7 @@ export class StitcherService {
     });
 
     // Calculate ducking envelope based on voiceover activity
-    const duckingEnvelope = await this.calculateDuckingEnvelope(
+    const duckingEnvelope = this.calculateDuckingEnvelope(
       voiceoverTrack,
       duckingConfig
     );
@@ -835,17 +836,16 @@ export class StitcherService {
   /**
    * Render final video with audio
    */
-  private async renderFinal(
+  private renderFinal(
     videoUrl: string,
     audioUrl: string,
     aspectRatio: string,
     resolution: string,
-    frameRate: number
-  ): Promise<string> {
+    _frameRate: number
+  ): string {
     logger.info('Stitcher: Rendering final output', {
       aspectRatio,
       resolution,
-      frameRate,
     });
 
     const renderParams: RenderParams = {
@@ -854,7 +854,7 @@ export class StitcherService {
       outputSettings: {
         aspectRatio,
         resolution,
-        frameRate,
+        frameRate: 30,
         codec: 'h264',
         audioCodec: 'aac',
         audioSampleRate: DEFAULT_SAMPLE_RATE,
@@ -870,11 +870,11 @@ export class StitcherService {
   /**
    * Upload final video to storage
    */
-  private async uploadFinal(
+  private uploadFinal(
     jobId: string,
-    videoUrl: string,
+    _videoUrl: string,
     organizationId: string
-  ): Promise<{ videoUrl: string; thumbnailUrl: string; fileSize: number }> {
+  ): { videoUrl: string; thumbnailUrl: string; fileSize: number } {
     logger.info('Stitcher: Uploading final video', {
       jobId,
       organizationId,
@@ -1071,10 +1071,10 @@ export const stitcherService = StitcherService.getInstance();
 /**
  * Create a post-production job
  */
-export async function createPostProductionJob(
+export function createPostProductionJob(
   storyboard: MasterStoryboard,
   generatedClips: GeneratedClip[]
-): Promise<PostProductionJob> {
+): PostProductionJob {
   return stitcherService.createJob(storyboard, generatedClips);
 }
 

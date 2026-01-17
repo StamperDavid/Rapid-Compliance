@@ -110,9 +110,9 @@ export interface BatchScoringResult {
  * console.log(`Score: ${score.score}, Probability: ${score.closeProbability}%`);
  * ```
  */
-export async function calculateDealScore(
+export function calculateDealScore(
   options: DealScoringOptions
-): Promise<DealScore> {
+): DealScore {
   const startTime = Date.now();
   
   try {
@@ -353,7 +353,8 @@ function calculateDealAgeFactor(deal: Deal): {
   value: number;
   benchmark: number;
 } {
-  const createdAt = new Date(deal.createdAt);
+  const createdAtValue = deal.createdAt as string | number | Date;
+  const createdAt = new Date(createdAtValue);
   const now = new Date();
   const ageInDays = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
   
@@ -406,7 +407,8 @@ function calculateStageVelocityFactor(deal: Deal, template: SalesIndustryTemplat
 } {
   // Mock implementation - in real version, track stage history
   const currentStage =((deal as { stage?: string }).stage !== '' && (deal as { stage?: string }).stage != null) ? (deal as { stage?: string }).stage : 'unknown';
-  const stageEnteredAt = new Date(deal.updatedAt ?? deal.createdAt);
+  const updatedAtValue = (deal.updatedAt ?? deal.createdAt) as string | number | Date;
+  const stageEnteredAt = new Date(updatedAtValue);
   const now = new Date();
   const daysInStage = Math.floor((now.getTime() - stageEnteredAt.getTime()) / (1000 * 60 * 60 * 24));
   
@@ -810,7 +812,8 @@ function predictCloseDate(deal: Deal, factors: ScoringFactor[], template: SalesI
     adjustedCycle *= 1.3; // Slower
   }
   
-  const createdAt = new Date(deal.createdAt);
+  const dealCreatedAt = deal.createdAt as string | number | Date;
+  const createdAt = new Date(dealCreatedAt);
   const predictedDate = new Date(createdAt.getTime() + (adjustedCycle * 24 * 60 * 60 * 1000));
   
   return predictedDate;
@@ -846,17 +849,17 @@ function fetchDeal(orgId: string, _workspaceId: string, dealId: string): Deal {
 /**
  * Batch score multiple deals
  */
-export async function batchScoreDeals(
+export function batchScoreDeals(
   organizationId: string,
   workspaceId: string,
   dealIds: string[],
   templateId?: string
-): Promise<BatchScoringResult> {
+): BatchScoringResult {
   const scores = new Map<string, DealScore>();
   
   for (const dealId of dealIds) {
     try {
-      const score = await calculateDealScore({
+      const score = calculateDealScore({
         organizationId,
         workspaceId,
         dealId,

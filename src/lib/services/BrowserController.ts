@@ -9,8 +9,7 @@
  * for team directories, career portals, and tech stack detection.
  */
 
-import { chromium } from 'playwright';
-import type { LaunchOptions , Browser, Page, BrowserContext } from 'playwright';
+import { chromium, type LaunchOptions, type Browser, type Page, type BrowserContext, type BrowserContextOptions } from 'playwright';
 import { logger } from '@/lib/logger/logger';
 
 export interface ProxyConfig {
@@ -35,8 +34,8 @@ export interface HighValueArea {
 
 export interface ExtractedData {
   type: string;
-  content: string | Record<string, any>;
-  metadata?: Record<string, any>;
+  content: string | Record<string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Link {
@@ -140,7 +139,7 @@ export class BrowserController {
       });
 
       // Create context with stealth settings and proxy
-      const contextOptions: any = {
+      const contextOptions: BrowserContextOptions = {
         userAgent: this.getRandomUserAgent(),
         viewport: { width: 1920, height: 1080 },
         locale: 'en-US',
@@ -183,13 +182,13 @@ export class BrowserController {
         });
 
         // Add chrome object
-        (window as any).chrome = {
+        (window as unknown as { chrome: { runtime: object } }).chrome = {
           runtime: {},
         };
 
         // Override permissions
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters: any) =>
+        const originalQuery = window.navigator.permissions.query.bind(window.navigator.permissions);
+        window.navigator.permissions.query = (parameters: PermissionDescriptor) =>
           parameters.name === 'notifications'
             ? Promise.resolve({ state: 'denied' } as PermissionStatus)
             : originalQuery(parameters);
@@ -226,8 +225,8 @@ export class BrowserController {
               status: response.status(),
               url: response.url(),
             });
-            this.rotateProxy().catch((err) => {
-              logger.error('Failed to rotate proxy', err);
+            this.rotateProxy().catch((err: unknown) => {
+              logger.error('Failed to rotate proxy', err instanceof Error ? err : new Error(String(err)));
             });
           }
         });
@@ -245,8 +244,12 @@ export class BrowserController {
       await this.launch();
     }
 
+    const page = this.page;
+    if (!page) {
+      throw new Error('Browser not launched');
+    }
     try {
-      await this.page!.goto(url, {
+      await page.goto(url, {
         waitUntil: 'networkidle',
         timeout: 30000,
       });

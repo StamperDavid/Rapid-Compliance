@@ -3,10 +3,10 @@
  * Centralized handler that coordinates all system adaptations when schemas change
  */
 
-import type {
-  SchemaChangeEvent} from './schema-change-tracker';
+import type { FieldType } from '@/types/schema';
 import {
   SchemaChangeEventPublisher,
+  type SchemaChangeEvent,
 } from './schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
 
@@ -75,10 +75,10 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
     
     // Check if conversion is safe (auto-convertible)
     const isSafe = FieldTypeConverter.isSafeConversion(
-      event.oldFieldType as any,
-      event.newFieldType as any
+      event.oldFieldType as FieldType,
+      event.newFieldType as FieldType
     );
-    
+
     if (isSafe) {
       // Auto-convert
       logger.info('[Schema Change Handler] Auto-converting field type', {
@@ -87,14 +87,14 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
         oldType: event.oldFieldType,
         newType: event.newFieldType,
       });
-      
+
       await FieldTypeConverter.convertFieldType(
         event.organizationId,
         event.workspaceId,
         event.schemaId,
 event.oldFieldKey ?? event.oldFieldName ?? '',
-        event.oldFieldType as any,
-        event.newFieldType as any
+        event.oldFieldType as FieldType,
+        event.newFieldType as FieldType
       );
     } else {
       // Complex conversion - requires preview and approval
@@ -104,25 +104,25 @@ event.oldFieldKey ?? event.oldFieldName ?? '',
         oldType: event.oldFieldType,
         newType: event.newFieldType,
       });
-      
+
       const preview = await FieldTypeConverter.generateConversionPreview(
         event.organizationId,
         event.workspaceId,
         event.schemaId,
 event.oldFieldKey ?? event.oldFieldName ?? '',
-        event.oldFieldType as any,
-        event.newFieldType as any,
+        event.oldFieldType as FieldType,
+        event.newFieldType as FieldType,
         10 // sample size
       );
-      
+
       await FieldTypeConverter.createConversionApprovalRequest(
         event.organizationId,
         event.workspaceId,
         event.schemaId,
 event.oldFieldKey ?? event.oldFieldName ?? '',
 event.newFieldName ?? event.oldFieldName ?? '',
-        event.oldFieldType as any,
-        event.newFieldType as any,
+        event.oldFieldType as FieldType,
+        event.newFieldType as FieldType,
         preview
       );
     }

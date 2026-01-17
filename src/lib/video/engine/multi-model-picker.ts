@@ -22,7 +22,6 @@ import type {
   StoryboardShot,
   GenerationQueueItem,
   ProviderRoutingDecision,
-  VisualPrompt,
 } from './types';
 
 // ============================================================================
@@ -377,7 +376,7 @@ export class MultiModelPicker {
       queueItems.push(queueItem);
 
       // Track grouping for logging
-      const existing = providerGroups.get(decision.selectedProvider) || [];
+      const existing = providerGroups.get(decision.selectedProvider) ?? [];
       existing.push(shot);
       providerGroups.set(decision.selectedProvider, existing);
     }
@@ -456,7 +455,7 @@ export class MultiModelPicker {
     success: boolean,
     latencyMs?: number
   ): void {
-    const health = this.providerHealth.get(provider) || this.createDefaultHealth(provider);
+    const health = this.providerHealth.get(provider) ?? this.createDefaultHealth(provider);
 
     health.totalRequests++;
 
@@ -532,7 +531,7 @@ export class MultiModelPicker {
       totalCost += cost;
       totalDuration += durationSeconds;
 
-      const existingCost = providerCosts.get(provider) || 0;
+      const existingCost = providerCosts.get(provider) ?? 0;
       providerCosts.set(provider, existingCost + cost);
     }
 

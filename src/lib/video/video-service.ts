@@ -74,8 +74,8 @@ export async function logVideoInterest(
     await addDoc(collection(db, 'organizations', organizationId, 'analytics_events'), {
       event: 'video_feature_interest',
       feature,
-      userId: userId || null,
-      metadata: metadata || {},
+      userId: userId ?? null,
+      metadata: metadata ?? {},
       timestamp: serverTimestamp(),
     });
 
@@ -118,12 +118,12 @@ export async function joinVideoWaitlist(
     const entry: Omit<VideoWaitlistEntry, 'id'> = {
       organizationId,
       email: email.trim().toLowerCase(),
-      name: options?.name || undefined,
-      userId: options?.userId || undefined,
-      company: options?.company || undefined,
-      interests: options?.interests || ['ai-avatars', 'text-to-video'],
-      useCase: options?.useCase || undefined,
-      expectedVolume: options?.expectedVolume || undefined,
+      name: options?.name ?? undefined,
+      userId: options?.userId ?? undefined,
+      company: options?.company ?? undefined,
+      interests: options?.interests ?? ['ai-avatars', 'text-to-video'],
+      useCase: options?.useCase ?? undefined,
+      expectedVolume: options?.expectedVolume ?? undefined,
       status: 'pending',
       createdAt: new Date(),
     };
@@ -380,10 +380,10 @@ export function getVideoServiceStatus(): typeof VIDEO_SERVICE_STATUS {
  * Validate video provider API key is configured
  * @stub Always returns false (not configured)
  */
-export async function isProviderConfigured(
+export function isProviderConfigured(
   _organizationId: string,
   _provider: VideoProvider
-): Promise<boolean> {
+): boolean {
   // Will check API key configuration when service launches
   return false;
 }

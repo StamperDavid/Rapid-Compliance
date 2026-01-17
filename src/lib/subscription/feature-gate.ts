@@ -4,17 +4,15 @@
  * The only limit is record capacity (storage), not feature access
  */
 
-import type {
-  OrganizationSubscription,
-  SubscriptionPlan,
-  SubscriptionTier
-} from '@/types/subscription';
 import {
   PLAN_LIMITS,
   PLAN_PRICING,
   VOLUME_TIERS,
   TIER_PRICING,
-  getTierForRecordCount
+  getTierForRecordCount,
+  type OrganizationSubscription,
+  type SubscriptionPlan,
+  type SubscriptionTier,
 } from '@/types/subscription';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';

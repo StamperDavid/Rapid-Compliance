@@ -19,16 +19,14 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import type { 
-  SalesIndustryTemplate, 
-  SalesStage, 
-  CustomField, 
-  SalesWorkflow 
-} from './industry-templates';
-import { 
-  getTemplateById, 
-  getAllTemplates, 
-  getRecommendedTemplate 
+import {
+  getTemplateById,
+  getAllTemplates,
+  getRecommendedTemplate,
+  type SalesIndustryTemplate,
+  type SalesStage,
+  type CustomField,
+  type SalesWorkflow,
 } from './industry-templates';
 
 // ============================================================================
@@ -178,7 +176,7 @@ export async function applyTemplate(
     
     // 7. Emit Signal Bus event
     try {
-      const coordinator = await getServerSignalCoordinator();
+      const coordinator = getServerSignalCoordinator();
       await coordinator.emitSignal({
         type: 'template.applied',
         orgId: options.organizationId,
@@ -331,14 +329,14 @@ export function validateTemplate(template: SalesIndustryTemplate): TemplateValid
  * 
  * Uses AI and heuristics to recommend the best template.
  */
-export async function getRecommendedTemplateForOrg(
-  organizationId: string,
+export function getRecommendedTemplateForOrg(
+  _organizationId: string,
   businessType?: string,
   industry?: string
-): Promise<SalesIndustryTemplate | null> {
+): SalesIndustryTemplate | null {
   try {
     logger.info('Getting recommended template', {
-      orgId: organizationId,
+      orgId: _organizationId,
       businessType,
       industry
     });
@@ -348,36 +346,36 @@ export async function getRecommendedTemplateForOrg(
       const recommended = getRecommendedTemplate(businessType);
       if (recommended) {
         logger.info('Template recommended by business type', {
-          orgId: organizationId,
+          orgId: _organizationId,
           templateId: recommended.id
         });
         return recommended;
       }
     }
-    
+
     // Strategy 2: Use industry if provided
     if (industry) {
       const recommended = getRecommendedTemplate(industry);
       if (recommended) {
         logger.info('Template recommended by industry', {
-          orgId: organizationId,
+          orgId: _organizationId,
           templateId: recommended.id
         });
         return recommended;
       }
     }
-    
+
     // Strategy 3: Default to SaaS (most common)
     const defaultTemplate = getTemplateById('saas');
     logger.info('Using default template (SaaS)', {
-      orgId: organizationId
+      orgId: _organizationId
     });
-    
+
     return defaultTemplate;
-    
+
   } catch (error) {
     logger.error('Failed to get recommended template', error as Error, {
-      orgId: organizationId
+      orgId: _organizationId
     });
     return null;
   }

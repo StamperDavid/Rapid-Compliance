@@ -131,9 +131,9 @@ export interface ForecastTrend {
  * console.log(`Quota Attainment: ${forecast.quotaAttainment}%`);
  * ```
  */
-export async function generateRevenueForecast(
+export function generateRevenueForecast(
   options: ForecastOptions
-): Promise<RevenueForecast> {
+): RevenueForecast {
   const startTime = Date.now();
   
   try {
@@ -150,7 +150,7 @@ export async function generateRevenueForecast(
     }
     
     // 2. Fetch deals in pipeline (mock for now)
-    const deals = await fetchPipelineDeals(options.organizationId, options.workspaceId, options.period);
+    const deals = fetchPipelineDeals(options.organizationId, options.workspaceId, options.period);
     
     // 3. Calculate stage-weighted revenue
     const byStage = calculateRevenueByStage(deals, template);
@@ -171,7 +171,7 @@ export async function generateRevenueForecast(
     const confidence = calculateForecastConfidence(deals, template);
     
     // 8. Analyze trends
-    const trend = await analyzeTrend(options.organizationId, options.workspaceId, mostLikely);
+    const trend = analyzeTrend(options.organizationId, options.workspaceId, mostLikely);
     
     // 9. Calculate quota metrics
     let quotaAttainment = 0;
@@ -211,8 +211,8 @@ export async function generateRevenueForecast(
     
     // 11. Emit Signal Bus event
     try {
-      const coordinator = await getServerSignalCoordinator();
-      await coordinator.emitSignal({
+      const coordinator = getServerSignalCoordinator();
+      void coordinator.emitSignal({
         type: 'forecast.updated',
         orgId: options.organizationId,
         workspaceId: options.workspaceId,
@@ -329,8 +329,8 @@ function calculateCommitRevenue(
  */
 function calculateBestCase(
   weightedPipeline: number,
-  deals: Deal[],
-  template: SalesIndustryTemplate | null
+  _deals: Deal[],
+  _template: SalesIndustryTemplate | null
 ): number {
   // Best case assumes higher win rates
   // Increase weighted pipeline by 20-30%
@@ -343,8 +343,8 @@ function calculateBestCase(
  */
 function calculateWorstCase(
   weightedPipeline: number,
-  deals: Deal[],
-  template: SalesIndustryTemplate | null
+  _deals: Deal[],
+  _template: SalesIndustryTemplate | null
 ): number {
   // Worst case assumes lower win rates
   // Decrease weighted pipeline by 20-30%
@@ -380,11 +380,11 @@ function calculateForecastConfidence(
 /**
  * Analyze trend compared to previous period
  */
-async function analyzeTrend(
-  orgId: string,
-  workspaceId: string,
+function analyzeTrend(
+  _orgId: string,
+  _workspaceId: string,
   currentForecast: number
-): Promise<ForecastTrend> {
+): ForecastTrend {
   // Mock: simulate previous period forecast
   const previousForecast = currentForecast * (0.8 + Math.random() * 0.4); // 80%-120% of current
   
@@ -439,11 +439,11 @@ function calculateForecastDate(period: ForecastPeriod): Date {
 /**
  * Mock function to fetch pipeline deals
  */
-async function fetchPipelineDeals(
+function fetchPipelineDeals(
   orgId: string,
-  workspaceId: string,
-  period: ForecastPeriod
-): Promise<Deal[]> {
+  _workspaceId: string,
+  _period: ForecastPeriod
+): Deal[] {
   // Mock: generate sample deals
   const dealCount = Math.floor(Math.random() * 20) + 10; // 10-30 deals
   const deals: Deal[] = [];
@@ -474,16 +474,16 @@ async function fetchPipelineDeals(
 /**
  * Calculate quota performance
  */
-export async function calculateQuotaPerformance(
+export function calculateQuotaPerformance(
   organizationId: string,
   workspaceId: string,
   period: ForecastPeriod,
   quota: number,
   templateId?: string
-): Promise<QuotaPerformance> {
+): QuotaPerformance {
   try {
     // Generate forecast
-    const forecast = await generateRevenueForecast({
+    const forecast = generateRevenueForecast({
       organizationId,
       workspaceId,
       period,
@@ -539,17 +539,17 @@ export async function calculateQuotaPerformance(
 /**
  * Compare forecasts across multiple periods
  */
-export async function compareForecastPeriods(
+export function compareForecastPeriods(
   organizationId: string,
   workspaceId: string,
   periods: ForecastPeriod[],
   templateId?: string
-): Promise<Map<ForecastPeriod, RevenueForecast>> {
+): Map<ForecastPeriod, RevenueForecast> {
   const forecasts = new Map<ForecastPeriod, RevenueForecast>();
   
   for (const period of periods) {
     try {
-      const forecast = await generateRevenueForecast({
+      const forecast = generateRevenueForecast({
         organizationId,
         workspaceId,
         period,
@@ -567,17 +567,17 @@ export async function compareForecastPeriods(
 /**
  * Get forecast history for trend analysis
  */
-export async function getForecastHistory(
-  organizationId: string,
-  workspaceId: string,
-  period: ForecastPeriod,
+export function getForecastHistory(
+  _organizationId: string,
+  _workspaceId: string,
+  _period: ForecastPeriod,
   months: number = 6
-): Promise<Array<{
+): Array<{
   date: Date;
   forecast: number;
   actual?: number;
   accuracy?: number;
-}>> {
+}> {
   // Mock implementation - would fetch from historical data
   const history: Array<{ date: Date; forecast: number; actual?: number; accuracy?: number }> = [];
   

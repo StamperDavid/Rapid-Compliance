@@ -80,8 +80,9 @@ const AESTHETIC_PROFILES: Record<string, AestheticProfile> = {
 
 /**
  * Color temperature mapping based on color palette dominance
+ * Reserved for future color analysis features
  */
-const COLOR_TEMPERATURE_MAP: Record<string, number> = {
+const _COLOR_TEMPERATURE_MAP: Record<string, number> = {
   warm: 15,
   neutral: 0,
   cool: -15,
@@ -110,11 +111,11 @@ export class StyleGuideIntegrator {
   /**
    * Extract style guide from a crawled website
    */
-  async extractStyleGuide(
+  extractStyleGuide(
     organizationId: string,
     sourceUrl: string,
     crawledData: CrawledWebsiteData
-  ): Promise<SiteMimicryStyleGuide> {
+  ): SiteMimicryStyleGuide {
     logger.info('StyleGuideIntegrator: Extracting style guide', {
       organizationId,
       sourceUrl,
@@ -307,9 +308,9 @@ export class StyleGuideIntegrator {
   /**
    * Get processed style guide from cache or process new
    */
-  async getProcessedStyleGuide(
+  getProcessedStyleGuide(
     styleGuide: SiteMimicryStyleGuide
-  ): Promise<ProcessedStyleGuide> {
+  ): ProcessedStyleGuide {
     const cached = this.styleGuideCache.get(styleGuide.id);
     if (cached && Date.now() - cached.processedAt.getTime() < this.CACHE_TTL) {
       return cached;
@@ -380,14 +381,14 @@ export class StyleGuideIntegrator {
     const { computedStyles } = crawledData;
 
     return {
-      headingFont: computedStyles.headingFont || 'Inter',
-      bodyFont: computedStyles.bodyFont || 'Inter',
-      headingWeight: computedStyles.headingWeight || 700,
-      bodyWeight: computedStyles.bodyWeight || 400,
+      headingFont: computedStyles.headingFont ?? 'Inter',
+      bodyFont: computedStyles.bodyFont ?? 'Inter',
+      headingWeight: computedStyles.headingWeight ?? 700,
+      bodyWeight: computedStyles.bodyWeight ?? 400,
       headingSizes: {
-        h1: computedStyles.h1Size || 48,
-        h2: computedStyles.h2Size || 36,
-        h3: computedStyles.h3Size || 24,
+        h1: computedStyles.h1Size ?? 48,
+        h2: computedStyles.h2Size ?? 36,
+        h3: computedStyles.h3Size ?? 24,
       },
     };
   }
@@ -892,11 +893,11 @@ export const styleGuideIntegrator = StyleGuideIntegrator.getInstance();
 /**
  * Extract style guide from crawled website data
  */
-export async function extractStyleGuide(
+export function extractStyleGuide(
   organizationId: string,
   sourceUrl: string,
   crawledData: CrawledWebsiteData
-): Promise<SiteMimicryStyleGuide> {
+): SiteMimicryStyleGuide {
   return styleGuideIntegrator.extractStyleGuide(organizationId, sourceUrl, crawledData);
 }
 
