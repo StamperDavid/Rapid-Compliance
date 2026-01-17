@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { where, orderBy, Timestamp } from 'firebase/firestore';
 
 export interface EcommerceAnalytics {
   workspaceId: string;
@@ -73,7 +73,7 @@ export async function getEcommerceAnalytics(
   );
   
   // Calculate sales metrics
-  const totalRevenue = orders.reduce((sum, o: any) => sum + (parseFloat(o.total) || 0), 0);
+  const totalRevenue = orders.reduce((sum, o: OrderRecord) => sum + (parseFloat(String(o.total ?? '0')) || 0), 0);
   const totalOrders = orders.length;
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
   
@@ -107,15 +107,47 @@ export async function getEcommerceAnalytics(
   };
 }
 
+/** Order item structure */
+interface OrderItem {
+  productId: string;
+  productName?: string;
+  quantity?: number;
+  price?: string | number;
+}
+
+/** Order structure */
+interface OrderRecord {
+  items?: OrderItem[];
+  total?: string | number;
+  customerEmail?: string;
+  createdAt?: { toDate?: () => Date } | Date | string;
+}
+
+/** Cart structure */
+interface CartRecord {
+  status?: string;
+  total?: string | number;
+  createdAt?: { toDate?: () => Date } | Date | string;
+}
+
+/** Top product result */
+interface TopProductResult {
+  productId: string;
+  productName: string;
+  revenue: number;
+  units: number;
+  orders: number;
+}
+
 /**
  * Calculate top products
  */
-function calculateTopProducts(orders: any[]): any[] {
+function calculateTopProducts(orders: OrderRecord[]): TopProductResult[] {
   const productMap = new Map<string, { revenue: number; units: number; orders: number; name: string }>();
   
-  orders.forEach((order: any) => {
+  orders.forEach((order: OrderRecord) => {
     const items = order.items ?? [];
-    items.forEach((item: any) => {
+    items.forEach((item: OrderItem) => {
       const productId = item.productId;
       const productName =(item.productName !== '' && item.productName != null) ? item.productName : 'Unknown';
       const quantity = item.quantity ?? 1;
@@ -144,20 +176,31 @@ function calculateTopProducts(orders: any[]): any[] {
     .slice(0, 10); // Top 10
 }
 
+/** Customer metrics result */
+interface CustomerMetricsResult {
+  totalCustomers: number;
+  newCustomers: number;
+  returningCustomers: number;
+  averageOrdersPerCustomer: number;
+}
+
 /**
  * Calculate customer metrics
  */
-function calculateCustomerMetrics(orders: any[], startDate: Date): any {
+function calculateCustomerMetrics(orders: OrderRecord[], startDate: Date): CustomerMetricsResult {
   const customerSet = new Set<string>();
   const newCustomerSet = new Set<string>();
   
-  orders.forEach((order: any) => {
+  orders.forEach((order: OrderRecord) => {
     const email = order.customerEmail;
     if (email) {
       customerSet.add(email);
-      
+
       // Check if this is their first order
-      const orderDate =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
+      const createdAtValue = order.createdAt;
+      const orderDate = createdAtValue && typeof createdAtValue === 'object' && 'toDate' in createdAtValue && typeof createdAtValue.toDate === 'function'
+        ? createdAtValue.toDate()
+        : new Date(createdAtValue as string | Date);
       if (orderDate >= startDate) {
         // Check if they had orders before this period
         // For simplicity, assume all orders in period are from new customers
@@ -180,17 +223,22 @@ function calculateCustomerMetrics(orders: any[], startDate: Date): any {
   };
 }
 
+/** Cart metrics result */
+interface CartMetricsResult {
+  cartAbandonmentRate: number;
+  averageCartValue: number;
+}
+
 /**
  * Calculate cart metrics
  */
-function calculateCartMetrics(carts: any[], orders: any[]): any {
-  const abandonedCarts = carts.filter((c: any) => c.status === 'abandoned' || c.status === 'active');
-  const convertedCarts = carts.filter((c: any) => c.status === 'converted');
-  
+function calculateCartMetrics(carts: CartRecord[], _orders: OrderRecord[]): CartMetricsResult {
+  const abandonedCarts = carts.filter((c: CartRecord) => c.status === 'abandoned' || c.status === 'active');
+
   const totalCarts = carts.length;
   const cartAbandonmentRate = totalCarts > 0 ? (abandonedCarts.length / totalCarts) * 100 : 0;
-  
-  const totalCartValue = carts.reduce((sum, c: any) => sum + (parseFloat(c.total) || 0), 0);
+
+  const totalCartValue = carts.reduce((sum, c: CartRecord) => sum + (parseFloat(String(c.total ?? '0')) || 0), 0);
   const averageCartValue = totalCarts > 0 ? totalCartValue / totalCarts : 0;
   
   return {
@@ -199,14 +247,24 @@ function calculateCartMetrics(carts: any[], orders: any[]): any {
   };
 }
 
+/** Revenue by day result */
+interface RevenueByDayResult {
+  date: Date;
+  revenue: number;
+  orders: number;
+}
+
 /**
  * Calculate revenue by day
  */
-function calculateRevenueByDay(orders: any[], startDate: Date, endDate: Date): any[] {
+function calculateRevenueByDay(orders: OrderRecord[], _startDate: Date, _endDate: Date): RevenueByDayResult[] {
   const dayMap = new Map<string, { revenue: number; orders: number }>();
-  
-  orders.forEach((order: any) => {
-    const createdAt =order.createdAt?.toDate?.() ?? new Date(order.createdAt);
+
+  orders.forEach((order: OrderRecord) => {
+    const createdAtValue = order.createdAt;
+    const createdAt = createdAtValue && typeof createdAtValue === 'object' && 'toDate' in createdAtValue && typeof createdAtValue.toDate === 'function'
+      ? createdAtValue.toDate()
+      : new Date(createdAtValue as string | Date);
     const dayKey = createdAt.toISOString().split('T')[0];
     const revenue = parseFloat(order.total) || 0;
     

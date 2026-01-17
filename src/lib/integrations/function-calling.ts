@@ -3,8 +3,7 @@
  * Allows AI agent to call integration functions
  */
 
-import type { FunctionCallRequest, FunctionCallResponse } from '@/types/integrations';
-import { INTEGRATION_PROVIDERS } from '@/types/integrations';
+import { INTEGRATION_PROVIDERS, type FunctionCallRequest, type FunctionCallResponse } from '@/types/integrations';
 
 // Import integration executors
 import { executeStripeFunction } from './payment/stripe';
@@ -51,7 +50,7 @@ export async function executeFunctionCall(
     }
     
     // Route to the appropriate executor
-    let result: any;
+    let result: unknown;
     
     switch (integration.providerId) {
       case 'stripe':
@@ -198,9 +197,10 @@ export async function executeFunctionCall(
       executionTime: Date.now() - startTime,
       timestamp: new Date().toISOString(),
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     logger.error('[Function Calling] Error:', error, { file: 'function-calling.ts' });
-    
+
     // Log the error
     await logIntegrationAction({
       organizationId: request.organizationId,
@@ -208,20 +208,33 @@ export async function executeFunctionCall(
       functionName: request.functionName,
       parameters: request.parameters,
       success: false,
-      error: error.message,
+      error: errorMessage,
       conversationId: request.conversationId,
       customerId: request.customerId,
       executionTime: Date.now() - startTime,
     });
-    
+
     return {
       success: false,
-      error: error.message,
-      humanReadableResult: `Sorry, I encountered an error: ${error.message}`,
+      error: errorMessage,
+      humanReadableResult: `Sorry, I encountered an error: ${errorMessage}`,
       executionTime: Date.now() - startTime,
       timestamp: new Date().toISOString(),
     };
   }
+}
+
+interface IntegrationLog {
+  organizationId: string;
+  integrationId: string;
+  functionName: string;
+  parameters: Record<string, unknown>;
+  success: boolean;
+  result?: unknown;
+  error?: string;
+  conversationId?: string;
+  customerId?: string;
+  executionTime: number;
 }
 
 /**
@@ -230,15 +243,15 @@ export async function executeFunctionCall(
 async function getConnectedIntegration(
   organizationId: string,
   integrationId: string
-): Promise<any> {
+): Promise<unknown> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     const integration = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
       integrationId
     );
-    
+
     return integration;
   } catch (error) {
     logger.error('[Function Calling] Error fetching integration:', error, { file: 'function-calling.ts' });
@@ -249,10 +262,10 @@ async function getConnectedIntegration(
 /**
  * Log an integration action
  */
-async function logIntegrationAction(log: any): Promise<void> {
+async function logIntegrationAction(log: IntegrationLog): Promise<void> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    
+
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${log.organizationId}/integrationLogs`,
       `log_${Date.now()}`,
@@ -268,48 +281,84 @@ async function logIntegrationAction(log: any): Promise<void> {
   }
 }
 
+interface ResultWithUrl {
+  url?: string;
+}
+
+interface ResultWithScheduledTime {
+  scheduledTime?: string;
+}
+
+interface ResultWithName {
+  name?: string;
+}
+
+interface ResultWithTitle {
+  title?: string;
+  price?: number;
+  description?: string;
+}
+
+interface ResultWithId {
+  id?: string;
+  paymentId?: string;
+  receiptUrl?: string;
+  joinUrl?: string;
+  approvalUrl?: string;
+}
+
+interface TimeSlot {
+  time: string;
+}
+
 /**
  * Format result for AI to understand
  */
-function formatResultForAI(functionName: string, result: any): string {
+function formatResultForAI(functionName: string, result: unknown): string {
   // Stripe
   if (functionName === 'createStripeCheckout') {
-    return `I've created a secure checkout link for you: ${result.url}. Click here to complete your payment.`;
+    const typedResult = result as ResultWithUrl;
+    return `I've created a secure checkout link for you: ${typedResult.url ?? ''}. Click here to complete your payment.`;
   }
   if (functionName === 'createStripePaymentLink') {
-    return `Here's your payment link: ${result.url}`;
+    const typedResult = result as ResultWithUrl;
+    return `Here's your payment link: ${typedResult.url ?? ''}`;
   }
-  
+
   // Calendly
   if (functionName === 'checkCalendlyAvailability') {
-    const slots = result.map((s: any) => s.time).join(', ');
+    const slots = Array.isArray(result) ? result.map((s: TimeSlot) => s.time).join(', ') : '';
     return `Available times: ${slots}`;
   }
   if (functionName === 'bookCalendlyAppointment') {
-    return `Great! I've booked your appointment for ${result.scheduledTime}. You'll receive a confirmation email shortly.`;
+    const typedResult = result as ResultWithScheduledTime;
+    return `Great! I've booked your appointment for ${typedResult.scheduledTime ?? ''}. You'll receive a confirmation email shortly.`;
   }
   
   // Shopify
   if (functionName === 'checkShopifyInventory') {
-    return result > 0
-      ? `Yes, we have ${result} in stock!`
+    const inventory = typeof result === 'number' ? result : 0;
+    return inventory > 0
+      ? `Yes, we have ${inventory} in stock!`
       : `Sorry, that item is currently out of stock.`;
   }
   if (functionName === 'addToShopifyCart') {
     return `Added to your cart! You can checkout whenever you're ready.`;
   }
   if (functionName === 'getShopifyProduct') {
-    return `${result.title} - $${result.price}. ${result.description}`;
+    const typedResult = result as ResultWithTitle;
+    return `${typedResult.title ?? 'Product'} - $${typedResult.price ?? 0}. ${typedResult.description ?? ''}`;
   }
-  
+
   // Salesforce/HubSpot
   if (functionName === 'createSalesforceLead' || functionName === 'createHubSpotContact') {
     return `I've saved your information. Our sales team will reach out to you shortly!`;
   }
-  
+
   // Gmail
   if (functionName === 'sendEmail') {
-    return `Email sent successfully to ${result.id ? 'recipient' : 'the contact'}!`;
+    const typedResult = result as ResultWithId;
+    return `Email sent successfully to ${typedResult.id ? 'recipient' : 'the contact'}!`;
   }
   if (functionName === 'searchEmails') {
     return `Found ${Array.isArray(result) ? result.length : 0} emails matching your search.`;
@@ -317,7 +366,7 @@ function formatResultForAI(functionName: string, result: any): string {
   if (functionName === 'getEmail') {
     return `Retrieved email successfully.`;
   }
-  
+
   // Outlook
   if (functionName === 'getCalendar') {
     return `Found ${Array.isArray(result) ? result.length : 0} calendar events.`;
@@ -325,24 +374,25 @@ function formatResultForAI(functionName: string, result: any): string {
   if (functionName === 'createCalendarEvent') {
     return `Calendar event created successfully!`;
   }
-  
+
   // Slack
   if (functionName === 'sendMessage') {
     return `Message sent to Slack channel successfully!`;
   }
   if (functionName === 'createChannel') {
-    const channelName = (result.name !== '' && result.name != null) ? result.name : 'new channel';
+    const typedResult = result as ResultWithName;
+    const channelName = (typedResult.name !== '' && typedResult.name != null) ? typedResult.name : 'new channel';
     return `Slack channel "${channelName}" created successfully!`;
   }
   if (functionName === 'listChannels') {
     return `Found ${Array.isArray(result) ? result.length : 0} Slack channels.`;
   }
-  
+
   // Teams
   if (functionName === 'listTeams') {
     return `Found ${Array.isArray(result) ? result.length : 0} teams.`;
   }
-  
+
   // QuickBooks
   if (functionName === 'createInvoice') {
     return `Invoice created successfully in QuickBooks!`;
@@ -353,34 +403,38 @@ function formatResultForAI(functionName: string, result: any): string {
   if (functionName === 'getCustomer') {
     return `Found ${Array.isArray(result) ? result.length : 0} customers in QuickBooks.`;
   }
-  
+
   // Xero
   if (functionName === 'listInvoices') {
     return `Found ${Array.isArray(result) ? result.length : 0} invoices in Xero.`;
   }
-  
+
   // PayPal
   if (functionName === 'createPayment') {
-    const approvalUrl = (result.approvalUrl !== '' && result.approvalUrl != null) ? result.approvalUrl : 'Payment initiated';
+    const typedResult = result as ResultWithId;
+    const approvalUrl = (typedResult.approvalUrl !== '' && typedResult.approvalUrl != null) ? typedResult.approvalUrl : 'Payment initiated';
     return `Payment link created: ${approvalUrl}`;
   }
   if (functionName === 'getTransaction') {
-    const transactionId = (result.id !== '' && result.id != null) ? result.id : 'ID';
+    const typedResult = result as ResultWithId;
+    const transactionId = (typedResult.id !== '' && typedResult.id != null) ? typedResult.id : 'ID';
     return `Retrieved transaction details for order ${transactionId}.`;
   }
-  
+
   // Square
   if (functionName === 'processPayment') {
-    const receiptUrl = (result.receiptUrl !== '' && result.receiptUrl != null) ? result.receiptUrl : `Payment ID: ${result.paymentId}`;
+    const typedResult = result as ResultWithId;
+    const receiptUrl = (typedResult.receiptUrl !== '' && typedResult.receiptUrl != null) ? typedResult.receiptUrl : `Payment ID: ${typedResult.paymentId ?? ''}`;
     return `Payment processed successfully! Receipt: ${receiptUrl}`;
   }
   if (functionName === 'createCustomer') {
     return `Customer created successfully in Square!`;
   }
-  
+
   // Zoom
   if (functionName === 'createMeeting') {
-    return `Zoom meeting created! Join URL: ${result.joinUrl}`;
+    const typedResult = result as ResultWithId;
+    return `Zoom meeting created! Join URL: ${typedResult.joinUrl ?? ''}`;
   }
   if (functionName === 'getRecordings') {
     return `Found ${Array.isArray(result) ? result.length : 0} Zoom recordings.`;
@@ -388,33 +442,48 @@ function formatResultForAI(functionName: string, result: any): string {
   if (functionName === 'cancelMeeting') {
     return `Zoom meeting cancelled successfully.`;
   }
-  
+
   // Default
   return `Done! ${JSON.stringify(result)}`;
+}
+
+interface AIFunctionParameter {
+  type: string;
+  description: string;
+}
+
+interface AIFunction {
+  name: string;
+  description: string;
+  parameters: {
+    type: string;
+    properties: Record<string, AIFunctionParameter>;
+    required: string[];
+  };
 }
 
 /**
  * Get available functions for AI agent
  * These are passed to the AI model so it knows what it can call
  */
-export async function getAvailableFunctions(organizationId: string): Promise<any[]> {
-  const functions: any[] = [];
-  
+export async function getAvailableFunctions(organizationId: string): Promise<AIFunction[]> {
+  const functions: AIFunction[] = [];
+
   try {
     // Get connected integrations for this org
     const { listConnectedIntegrations } = await import('./integration-manager');
     const connectedIntegrations = await listConnectedIntegrations(organizationId);
-    
+
     // Only return functions for connected integrations (credentials exist = active)
     const activeProviderIds = connectedIntegrations
       .map(i => i.integrationId);
-    
+
     for (const provider of Object.values(INTEGRATION_PROVIDERS)) {
       // Skip if not connected
       if (!activeProviderIds.includes(provider.id)) {
         continue;
       }
-      
+
       for (const capability of provider.capabilities) {
         functions.push({
           name: capability.functionName,
@@ -427,7 +496,7 @@ export async function getAvailableFunctions(organizationId: string): Promise<any
                 description: param.description,
               };
               return acc;
-            }, {} as Record<string, any>),
+            }, {} as Record<string, AIFunctionParameter>),
             required: capability.parameters
               .filter(p => p.required)
               .map(p => p.name),
@@ -435,8 +504,8 @@ export async function getAvailableFunctions(organizationId: string): Promise<any
         });
       }
     }
-    
-    logger.info('Function Calling functions.length} functions available for org organizationId}', { file: 'function-calling.ts' });
+
+    logger.info(`Function Calling ${functions.length} functions available for org ${organizationId}`, { file: 'function-calling.ts' });
     return functions;
   } catch (error) {
     logger.error('[Function Calling] Error getting functions:', error, { file: 'function-calling.ts' });

@@ -41,9 +41,7 @@ import type {
   BestPractice,
   CoachingRecommendation,
   TrainingSuggestion,
-  ActionItem,
-  TeamCoachingInsights,
-  TeamPerformanceSummary
+  ActionItem
 } from './types';
 
 // ============================================================================

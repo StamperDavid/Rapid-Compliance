@@ -30,29 +30,36 @@ export async function checkContentSafety(
   direction: 'input' | 'output',
   model: string = 'gpt-4-turbo'
 ): Promise<SafetyCheckResult> {
-  const checks = await Promise.all([
-    checkForProfanity(content),
-    checkForHateSpeech(content, model),
-    checkForPII(content),
-    direction === 'input' ? checkForPromptInjection(content, model) : Promise.resolve(null),
-  ]);
-  
+  // Run async checks in parallel
+  const hateSpeechResult = await checkForHateSpeech(content, model);
+
+  // Run sync checks
+  const profanityResult = checkForProfanity(content);
+  const piiResult = checkForPII(content);
+  const injectionResult = direction === 'input' ? checkForPromptInjection(content) : null;
+
+  const checks = [
+    profanityResult,
+    hateSpeechResult,
+    piiResult,
+    injectionResult,
+  ];
+
   const flags: SafetyCheckResult['flags'] = [];
-  
+
   // Aggregate results
   checks.forEach(check => {
     if (check && check.flags.length > 0) {
       flags.push(...check.flags);
     }
   });
-  
+
   // Determine if should block
   const hasCritical = flags.some(f => f.severity === 'critical');
   const hasHigh = flags.some(f => f.severity === 'high');
-  
-  // Check for PII and sanitize
-  const piiCheck = await checkForPII(content);
-  const sanitizedContent = piiCheck.sanitizedContent || content;
+
+  // Use already-computed PII check result
+  const sanitizedContent = piiResult.sanitizedContent || content;
   
   return {
     isSafe: !hasCritical && !hasHigh,
@@ -67,7 +74,7 @@ export async function checkContentSafety(
 /**
  * Check for profanity
  */
-async function checkForProfanity(content: string): Promise<SafetyCheckResult> {
+function checkForProfanity(content: string): SafetyCheckResult {
   const profanityList = [
     // Common profanity patterns
     /\b(fuck|shit|damn|bitch|ass|bastard|crap)\b/i,
@@ -99,13 +106,24 @@ async function checkForProfanity(content: string): Promise<SafetyCheckResult> {
 /**
  * Check for hate speech using AI
  */
+/** Parsed safety result from AI moderation */
+interface ParsedSafetyResult {
+  isSafe: boolean;
+  confidence: number;
+  flags: Array<{
+    category: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    description: string;
+  }>;
+}
+
 async function checkForHateSpeech(
   content: string,
   model: string
 ): Promise<SafetyCheckResult> {
   try {
     const request: ChatRequest = {
-      model: model as any,
+      model: model as 'gpt-4-turbo' | 'gpt-4' | 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
@@ -131,15 +149,22 @@ Return JSON:
     
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const result = JSON.parse(jsonMatch[0]);
+      const result = JSON.parse(jsonMatch[0]) as ParsedSafetyResult;
+      const typedFlags: SafetyCheckResult['flags'] = result.flags.map((f) => ({
+        category: f.category as SafetyCheckResult['flags'][0]['category'],
+        severity: f.severity,
+        description: f.description,
+      }));
       return {
-        ...result,
-        shouldBlock: result.flags.some((f: any) => f.severity === 'critical'),
-        shouldWarn: result.flags.some((f: any) => f.severity === 'high'),
+        isSafe: result.isSafe,
+        confidence: result.confidence,
+        flags: typedFlags,
+        shouldBlock: typedFlags.some((f) => f.severity === 'critical'),
+        shouldWarn: typedFlags.some((f) => f.severity === 'high'),
       };
     }
-  } catch (error) {
-    logger.error('[Safety] Hate speech check error:', error, { file: 'content-filter.ts' });
+  } catch (error: unknown) {
+    logger.error('[Safety] Hate speech check error:', error instanceof Error ? error : new Error(String(error)), { file: 'content-filter.ts' });
   }
   
   return {
@@ -154,7 +179,7 @@ Return JSON:
 /**
  * Check for PII (Personally Identifiable Information)
  */
-async function checkForPII(content: string): Promise<SafetyCheckResult & { sanitizedContent: string }> {
+function checkForPII(content: string): SafetyCheckResult & { sanitizedContent: string } {
   const flags: SafetyCheckResult['flags'] = [];
   let sanitized = content;
   
@@ -219,10 +244,9 @@ async function checkForPII(content: string): Promise<SafetyCheckResult & { sanit
 /**
  * Check for prompt injection attempts
  */
-async function checkForPromptInjection(
-  content: string,
-  model: string
-): Promise<SafetyCheckResult> {
+function checkForPromptInjection(
+  content: string
+): SafetyCheckResult {
   // Pattern-based detection
   const injectionPatterns = [
     /ignore (previous|above|all) instructions/i,
@@ -264,7 +288,7 @@ export async function checkForBias(
 ): Promise<SafetyCheckResult> {
   try {
     const request: ChatRequest = {
-      model: model as any,
+      model: model as 'gpt-4-turbo' | 'gpt-4' | 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
@@ -288,15 +312,22 @@ export async function checkForBias(
     
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const result = JSON.parse(jsonMatch[0]);
+      const result = JSON.parse(jsonMatch[0]) as ParsedSafetyResult;
+      const typedFlags: SafetyCheckResult['flags'] = result.flags.map((f) => ({
+        category: f.category as SafetyCheckResult['flags'][0]['category'],
+        severity: f.severity,
+        description: f.description,
+      }));
       return {
-        ...result,
+        isSafe: result.isSafe,
+        confidence: result.confidence,
+        flags: typedFlags,
         shouldBlock: false, // Bias is a warning, not a block
-        shouldWarn: result.flags.length > 0,
+        shouldWarn: typedFlags.length > 0,
       };
     }
-  } catch (error) {
-    logger.error('[Safety] Bias check error:', error, { file: 'content-filter.ts' });
+  } catch (error: unknown) {
+    logger.error('[Safety] Bias check error:', error instanceof Error ? error : new Error(String(error)), { file: 'content-filter.ts' });
   }
   
   return {

@@ -137,7 +137,7 @@ export async function getSalesForecast(
     byRep[item.repId] = item.forecastedRevenue;
   });
 
-  const byProductArray = await calculateForecastByProduct(workspaceId, openDeals);
+  const byProductArray = calculateForecastByProduct(workspaceId, openDeals);
   const byProduct: Record<string, number> = {};
   byProductArray.forEach(item => {
     byProduct[item.productId] = item.forecastedRevenue;
@@ -837,7 +837,7 @@ interface ForecastByProductItem {
   forecastedUnits: number;
 }
 
-async function calculateForecastByProduct(workspaceId: string, deals: DealRecord[]): Promise<ForecastByProductItem[]> {
+function calculateForecastByProduct(_workspaceId: string, deals: DealRecord[]): ForecastByProductItem[] {
   const productMap = new Map<string, { forecast: number; units: number; name: string }>();
   
   deals.forEach(deal => {

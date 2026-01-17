@@ -4,24 +4,63 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { where, orderBy, Timestamp } from 'firebase/firestore';
+
+// Core data structure interfaces
+interface WorkflowData {
+  id: string;
+  name?: string;
+  status?: string;
+}
+
+interface FirestoreTimestamp {
+  toDate?: () => Date;
+}
+
+interface ActionResult {
+  actionType?: string;
+  status?: string;
+  duration?: number;
+}
+
+interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  status?: string;
+  startedAt: Timestamp | FirestoreTimestamp | Date;
+  completedAt?: Timestamp | FirestoreTimestamp | Date;
+  actionResults?: ActionResult[];
+}
+
+interface ActionBreakdownStats {
+  count: number;
+  success: number;
+  totalTime: number;
+  times: number[];
+}
+
+interface DayStats {
+  count: number;
+  success: number;
+  failed: number;
+}
 
 export interface WorkflowAnalytics {
   workflowId: string;
   workflowName: string;
   period: string;
-  
+
   // Execution metrics
   totalExecutions: number;
   successfulExecutions: number;
   failedExecutions: number;
   successRate: number;
-  
+
   // Performance metrics
   averageExecutionTime: number; // milliseconds
   totalActionsExecuted: number;
   averageActionsPerExecution: number;
-  
+
   // Action breakdown
   actionBreakdown: Array<{
     actionType: string;
@@ -29,7 +68,7 @@ export interface WorkflowAnalytics {
     successRate: number;
     averageTime: number;
   }>;
-  
+
   // Trends
   executionsByDay: Array<{
     date: Date;
@@ -37,6 +76,19 @@ export interface WorkflowAnalytics {
     success: number;
     failed: number;
   }>;
+}
+
+/**
+ * Convert Firestore timestamp to Date
+ */
+function toDate(timestamp: Timestamp | FirestoreTimestamp | Date): Date {
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  if ('toDate' in timestamp && typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  return new Date(timestamp as unknown as string);
 }
 
 /**
@@ -50,17 +102,19 @@ export async function getWorkflowAnalytics(
   endDate: Date
 ): Promise<WorkflowAnalytics> {
   // Get workflow
-  const workflow = await FirestoreService.get(
+  const workflowDoc = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
     workflowId
   );
-  
-  if (!workflow) {
+
+  if (!workflowDoc) {
     throw new Error('Workflow not found');
   }
-  
+
+  const workflow = workflowDoc as WorkflowData;
+
   // Get executions in period
-  const executions = await FirestoreService.getAll(
+  const executionDocs = await FirestoreService.getAll(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
     [
       where('workflowId', '==', workflowId),
@@ -69,44 +123,48 @@ export async function getWorkflowAnalytics(
       orderBy('startedAt', 'desc'),
     ]
   );
-  
+
+  const executions = executionDocs as WorkflowExecution[];
+
   // Calculate metrics
   const totalExecutions = executions.length;
-  const successfulExecutions = executions.filter((e: any) => e.status === 'completed').length;
-  const failedExecutions = executions.filter((e: any) => e.status === 'failed').length;
+  const successfulExecutions = executions.filter((e) => e.status === 'completed').length;
+  const failedExecutions = executions.filter((e) => e.status === 'failed').length;
   const successRate = totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 0;
-  
+
   // Calculate average execution time
   const executionTimes = executions
-    .filter((e: any) => e.completedAt && e.startedAt)
-    .map((e: any) => {
-      const started =e.startedAt.toDate?.() ?? new Date(e.startedAt);
-      const completed =e.completedAt.toDate?.() ?? new Date(e.completedAt);
+    .filter((e) => e.completedAt && e.startedAt)
+    .map((e) => {
+      const started = toDate(e.startedAt);
+      // We know completedAt exists because of the filter above
+      const completedAt = e.completedAt as Timestamp | FirestoreTimestamp | Date;
+      const completed = toDate(completedAt);
       return completed.getTime() - started.getTime();
     });
-  
+
   const averageExecutionTime = executionTimes.length > 0
     ? executionTimes.reduce((sum, t) => sum + t, 0) / executionTimes.length
     : 0;
-  
+
   // Calculate action breakdown
   const actionBreakdown = calculateActionBreakdown(executions);
-  
+
   // Calculate total actions
-  const totalActionsExecuted = executions.reduce((sum, e: any) => {
+  const totalActionsExecuted = executions.reduce((sum, e) => {
     return sum + (e.actionResults?.length ?? 0);
   }, 0);
-  
+
   const averageActionsPerExecution = totalExecutions > 0
     ? totalActionsExecuted / totalExecutions
     : 0;
-  
+
   // Calculate trends
   const executionsByDay = calculateExecutionsByDay(executions, startDate, endDate);
-  
+
   return {
     workflowId,
-    workflowName:((workflow as any).name !== '' && (workflow as any).name != null) ? (workflow as any).name : 'Unknown',
+    workflowName: workflow.name ?? 'Unknown',
     period: `${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`,
     totalExecutions,
     successfulExecutions,
@@ -123,15 +181,20 @@ export async function getWorkflowAnalytics(
 /**
  * Calculate action breakdown
  */
-function calculateActionBreakdown(executions: any[]): any[] {
-  const actionMap = new Map<string, { count: number; success: number; totalTime: number; times: number[] }>();
-  
-  executions.forEach((execution: any) => {
+function calculateActionBreakdown(executions: WorkflowExecution[]): Array<{
+  actionType: string;
+  count: number;
+  successRate: number;
+  averageTime: number;
+}> {
+  const actionMap = new Map<string, ActionBreakdownStats>();
+
+  executions.forEach((execution) => {
     const results = execution.actionResults ?? [];
-    results.forEach((result: any) => {
-      const actionType =(result.actionType !== '' && result.actionType != null) ? result.actionType : 'unknown';
+    results.forEach((result) => {
+      const actionType = result.actionType ?? 'unknown';
       const existing = actionMap.get(actionType) ?? { count: 0, success: 0, totalTime: 0, times: [] };
-      
+
       actionMap.set(actionType, {
         count: existing.count + 1,
         success: existing.success + (result.status === 'success' ? 1 : 0),
@@ -140,7 +203,7 @@ function calculateActionBreakdown(executions: any[]): any[] {
       });
     });
   });
-  
+
   return Array.from(actionMap.entries()).map(([actionType, data]) => ({
     actionType,
     count: data.count,
@@ -154,13 +217,22 @@ function calculateActionBreakdown(executions: any[]): any[] {
 /**
  * Calculate executions by day
  */
-function calculateExecutionsByDay(executions: any[], startDate: Date, endDate: Date): any[] {
-  const dayMap = new Map<string, { count: number; success: number; failed: number }>();
-  
-  executions.forEach((execution: any) => {
-    const started =execution.startedAt.toDate?.() ?? new Date(execution.startedAt);
+function calculateExecutionsByDay(
+  executions: WorkflowExecution[],
+  _startDate: Date,
+  _endDate: Date
+): Array<{
+  date: Date;
+  count: number;
+  success: number;
+  failed: number;
+}> {
+  const dayMap = new Map<string, DayStats>();
+
+  executions.forEach((execution) => {
+    const started = toDate(execution.startedAt);
     const dayKey = started.toISOString().split('T')[0];
-    
+
     const existing = dayMap.get(dayKey) ?? { count: 0, success: 0, failed: 0 };
     dayMap.set(dayKey, {
       count: existing.count + 1,
@@ -168,7 +240,7 @@ function calculateExecutionsByDay(executions: any[], startDate: Date, endDate: D
       failed: existing.failed + (execution.status === 'failed' ? 1 : 0),
     });
   });
-  
+
   return Array.from(dayMap.entries())
     .map(([dateKey, data]) => ({
       date: new Date(dateKey),
@@ -189,15 +261,17 @@ export async function getAllWorkflowsAnalytics(
   endDate: Date
 ): Promise<Array<{ workflowId: string; workflowName: string; executions: number; successRate: number }>> {
   // Get all workflows
-  const workflows = await FirestoreService.getAll(
+  const workflowDocs = await FirestoreService.getAll(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
     [where('status', '==', 'active')]
   );
-  
+
+  const workflows = workflowDocs as WorkflowData[];
+
   // Get analytics for each
   const analytics = await Promise.all(
-    workflows.map(async (workflow: any) => {
-      const executions = await FirestoreService.getAll(
+    workflows.map(async (workflow) => {
+      const executionDocs = await FirestoreService.getAll(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/workflowExecutions`,
         [
           where('workflowId', '==', workflow.id),
@@ -205,19 +279,20 @@ export async function getAllWorkflowsAnalytics(
           where('startedAt', '<=', Timestamp.fromDate(endDate)),
         ]
       );
-      
-      const successful = executions.filter((e: any) => e.status === 'completed').length;
+
+      const executions = executionDocs as WorkflowExecution[];
+      const successful = executions.filter((e) => e.status === 'completed').length;
       const successRate = executions.length > 0 ? (successful / executions.length) * 100 : 0;
-      
+
       return {
         workflowId: workflow.id,
-        workflowName:(workflow.name !== '' && workflow.name != null) ? workflow.name : 'Unknown',
+        workflowName: workflow.name ?? 'Unknown',
         executions: executions.length,
         successRate,
       };
     })
   );
-  
+
   return analytics.sort((a, b) => b.executions - a.executions);
 }
 

@@ -276,7 +276,7 @@ export async function checkRecordCapacity(
     };
   }
 
-  const subscription = await getSubscription(org.subscriptionId as string);
+  const subscription = await getSubscription(org.subscriptionId);
   const currentTierId = (subscription.metadata?.tierId as SubscriptionTier) || 'tier1';
   const currentTier = STRIPE_TIERS[currentTierId];
   
@@ -359,7 +359,7 @@ export async function recordUsage(
 
   // Get current usage
   const org = await FirestoreService.get<OrganizationWithBilling>(COLLECTIONS.ORGANIZATIONS, organizationId);
-  const currentUsage = (org?.usage?.[metric] as number | undefined) ?? 0;
+  const currentUsage = (org?.usage?.[metric] as number) ?? 0;
 
   // Update usage
   await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, {

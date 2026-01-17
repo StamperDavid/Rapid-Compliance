@@ -70,13 +70,20 @@ export abstract class BaseSpecialist {
   }
 
   protected log(level: 'INFO' | 'WARN' | 'ERROR', message: string): void {
-    const prefix = `[${this.identity.name}][${level}]`;
+    const formattedMessage = `[${this.identity.name}] ${message}`;
     if (level === 'ERROR') {
-      console.error(`${prefix} ${message}`);
+      // Using dynamic import to avoid sync logger dependency
+      void import('@/lib/logger/logger').then(({ logger }) => {
+        logger.error(formattedMessage, new Error(message), { agent: this.identity.id });
+      });
     } else if (level === 'WARN') {
-      console.warn(`${prefix} ${message}`);
+      void import('@/lib/logger/logger').then(({ logger }) => {
+        logger.warn(formattedMessage, { agent: this.identity.id });
+      });
     } else {
-      console.log(`${prefix} ${message}`);
+      void import('@/lib/logger/logger').then(({ logger }) => {
+        logger.info(formattedMessage, { agent: this.identity.id });
+      });
     }
   }
 

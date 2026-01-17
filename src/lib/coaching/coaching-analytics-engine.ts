@@ -35,11 +35,64 @@ import type {
   SkillScores,
   PerformanceComparison,
   PerformanceTier,
-  TeamPerformanceSummary,
   TimePeriod,
   CustomDateRange
 } from './types';
 import { logger } from '@/lib/logger/logger';
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+interface DealData {
+  id: string;
+  status?: string;
+  stage?: string;
+  value?: number;
+  healthScore?: number;
+  createdAt?: { toDate?: () => Date } | Date | string;
+  closedAt?: { toDate?: () => Date } | Date | string;
+  firstContactAt?: { toDate?: () => Date } | Date | string;
+  proposalSentAt?: { toDate?: () => Date } | Date | string;
+  winProbability?: number;
+}
+
+interface EmailData {
+  type?: string;
+  replied?: boolean;
+  sentAt?: { toDate?: () => Date } | Date | string;
+  repliedAt?: { toDate?: () => Date } | Date | string;
+  customInstructions?: string;
+  isFollowUp?: boolean;
+}
+
+interface ActivityData {
+  type?: string;
+  completed?: boolean;
+}
+
+interface TeamMetrics {
+  overallScore: number;
+  winRate: number;
+  revenue: number;
+  activityPerDay: number;
+  efficiency: number;
+}
+
+interface RepMetricsForComparison {
+  overallScore: number;
+  deals: DealPerformanceMetrics;
+  communication: CommunicationMetrics;
+  activity: ActivityMetrics;
+  revenue: RevenueMetrics;
+  efficiency: EfficiencyMetrics;
+}
+
+interface UserData {
+  name?: string;
+  email?: string;
+  quota?: number;
+}
 
 // ============================================================================
 // ANALYTICS ENGINE CLASS
@@ -68,11 +121,11 @@ export class CoachingAnalyticsEngine {
         throw new Error(`Rep not found: ${repId}`);
       }
       
-      const repData = repDoc.data();
+      const repData = repDoc.data() as UserData | undefined;
       const repDataName = repData?.name;
       const repName = (repDataName !== '' && repDataName != null) ? repDataName : 'Unknown';
       const repEmail = repData?.email ?? '';
-      
+
       // Fetch all metrics in parallel
       const [
         deals,
@@ -171,23 +224,18 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      const deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DealData));
       
       const totalDeals = deals.length;
-      const activeDeals = deals.filter((d: any) => !['won', 'lost', 'closed'].includes(d.status ?? '')).length;
-      const dealsWon = deals.filter((d: any) => d.status === 'won').length;
-      const dealsLost = deals.filter((d: any) => d.status === 'lost').length;
+      const activeDeals = deals.filter((d: DealData) => !['won', 'lost', 'closed'].includes(d.status ?? '')).length;
+      const dealsWon = deals.filter((d: DealData) => d.status === 'won').length;
+      const dealsLost = deals.filter((d: DealData) => d.status === 'lost').length;
       const closedDeals = dealsWon + dealsLost;
       const winRate = closedDeals > 0 ? dealsWon / closedDeals : 0;
       
       // Calculate average deal size
-      const wonDeals = deals.filter((d: any) => d.status === 'won');
-      interface DealData {
-        value?: number;
-        createdAt?: { toDate?: () => Date } | Date | string;
-        closedAt?: { toDate?: () => Date } | Date | string;
-      }
-      
+      const wonDeals = deals.filter((d: DealData) => d.status === 'won');
+
       const totalValue = wonDeals.reduce((sum: number, d: DealData) => sum + (d.value ?? 0), 0);
       const averageDealSize = wonDeals.length > 0 ? totalValue / wonDeals.length : 0;
       
@@ -195,14 +243,17 @@ export class CoachingAnalyticsEngine {
       const cycleTimes = wonDeals
         .filter((d: DealData) => d.createdAt && d.closedAt)
         .map((d: DealData) => {
-          const createdAt = d.createdAt!;
-          const closedAt = d.closedAt!;
-          const created = typeof createdAt === 'object' && createdAt !== null && 'toDate' in createdAt && typeof createdAt.toDate === 'function'
-            ? createdAt.toDate()
-            : (createdAt instanceof Date ? createdAt : new Date(createdAt as string));
-          const closed = typeof closedAt === 'object' && closedAt !== null && 'toDate' in closedAt && typeof closedAt.toDate === 'function'
-            ? closedAt.toDate()
-            : (closedAt instanceof Date ? closedAt : new Date(closedAt as string));
+          const createdAtValue = d.createdAt;
+          const closedAtValue = d.closedAt;
+          if (!createdAtValue || !closedAtValue) {
+            return 0;
+          }
+          const created = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue && typeof createdAtValue.toDate === 'function'
+            ? createdAtValue.toDate()
+            : (createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string));
+          const closed = typeof closedAtValue === 'object' && closedAtValue !== null && 'toDate' in closedAtValue && typeof closedAtValue.toDate === 'function'
+            ? closedAtValue.toDate()
+            : (closedAtValue instanceof Date ? closedAtValue : new Date(closedAtValue as string));
           return (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
         });
       const averageCycleDays = cycleTimes.length > 0
@@ -214,15 +265,15 @@ export class CoachingAnalyticsEngine {
       const dealVelocity = periodDays > 0 ? (totalDeals / periodDays) * 7 : 0;
       
       // Count at-risk deals (using deal scoring data if available)
-      const atRiskDeals = deals.filter((d: any) => 
+      const atRiskDeals = deals.filter((d: DealData) =>
         d.healthScore !== undefined && d.healthScore < 50
       ).length;
-      
+
       // Health distribution
       const healthDistribution = {
-        healthy: deals.filter((d: any) => d.healthScore >= 70).length,
-        warning: deals.filter((d: any) => d.healthScore >= 50 && d.healthScore < 70).length,
-        critical: deals.filter((d: any) => d.healthScore < 50).length
+        healthy: deals.filter((d: DealData) => d.healthScore !== undefined && d.healthScore >= 70).length,
+        warning: deals.filter((d: DealData) => d.healthScore !== undefined && d.healthScore >= 50 && d.healthScore < 70).length,
+        critical: deals.filter((d: DealData) => d.healthScore !== undefined && d.healthScore < 50).length
       };
       
       return {
@@ -286,22 +337,31 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const emails = snapshot.docs.map(doc => doc.data() as any);
-      
-      const emailsGenerated = emails.filter((e: any) => e.type === 'generated').length;
-      const emailsSent = emails.filter((e: any) => e.type === 'sent').length;
-      
+      const emails = snapshot.docs.map(doc => doc.data() as EmailData);
+
+      const emailsGenerated = emails.filter((e: EmailData) => e.type === 'generated').length;
+      const emailsSent = emails.filter((e: EmailData) => e.type === 'sent').length;
+
       // Calculate response rate
-      const sentEmails = emails.filter((e: any) => e.type === 'sent');
-      const repliedEmails = sentEmails.filter((e: any) => e.replied === true).length;
+      const sentEmails = emails.filter((e: EmailData) => e.type === 'sent');
+      const repliedEmails = sentEmails.filter((e: EmailData) => e.replied === true).length;
       const emailResponseRate = sentEmails.length > 0 ? repliedEmails / sentEmails.length : 0;
       
       // Calculate average response time (hours)
       const responseTimes = emails
-        .filter((e: any) => e.sentAt && e.repliedAt)
-        .map((e: any) => {
-          const sent = e.sentAt.toDate ? e.sentAt.toDate() : new Date(e.sentAt);
-          const replied = e.repliedAt.toDate ? e.repliedAt.toDate() : new Date(e.repliedAt);
+        .filter((e: EmailData) => e.sentAt && e.repliedAt)
+        .map((e: EmailData) => {
+          const sentAtValue = e.sentAt;
+          const repliedAtValue = e.repliedAt;
+          if (!sentAtValue || !repliedAtValue) {
+            return 0;
+          }
+          const sent = typeof sentAtValue === 'object' && sentAtValue !== null && 'toDate' in sentAtValue && typeof sentAtValue.toDate === 'function'
+            ? sentAtValue.toDate()
+            : (sentAtValue instanceof Date ? sentAtValue : new Date(sentAtValue as string));
+          const replied = typeof repliedAtValue === 'object' && repliedAtValue !== null && 'toDate' in repliedAtValue && typeof repliedAtValue.toDate === 'function'
+            ? repliedAtValue.toDate()
+            : (repliedAtValue instanceof Date ? repliedAtValue : new Date(repliedAtValue as string));
           return (replied.getTime() - sent.getTime()) / (1000 * 60 * 60);
         });
       const averageResponseTime = responseTimes.length > 0
@@ -312,11 +372,11 @@ export class CoachingAnalyticsEngine {
       const aiEmailUsageRate = emailsSent > 0 ? emailsGenerated / emailsSent : 0;
       
       // Personalization score (based on custom instructions usage)
-      const personalizedEmails = emails.filter((e: any) => e.customInstructions && e.customInstructions.length > 10).length;
+      const personalizedEmails = emails.filter((e: EmailData) => e.customInstructions && e.customInstructions.length > 10).length;
       const personalizationScore = emailsSent > 0 ? (personalizedEmails / emailsSent) * 100 : 0;
-      
+
       // Follow-up consistency (percentage of emails that are follow-ups)
-      const followUpEmails = emails.filter((e: any) => e.isFollowUp === true).length;
+      const followUpEmails = emails.filter((e: EmailData) => e.isFollowUp === true).length;
       const followUpConsistency = emailsSent > 0 ? (followUpEmails / emailsSent) * 100 : 0;
       
       return {
@@ -373,16 +433,16 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const activities = snapshot.docs.map(doc => doc.data() as any);
-      
+      const activities = snapshot.docs.map(doc => doc.data() as ActivityData);
+
       const totalActivities = activities.length;
       const periodDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
       const activitiesPerDay = periodDays > 0 ? totalActivities / periodDays : 0;
-      
-      const callsMade = activities.filter((a: any) => a.type === 'call').length;
-      const meetingsHeld = activities.filter((a: any) => a.type === 'meeting').length;
-      const tasksCompleted = activities.filter((a: any) => a.type === 'task' && a.completed).length;
-      const totalTasks = activities.filter((a: any) => a.type === 'task').length;
+
+      const callsMade = activities.filter((a: ActivityData) => a.type === 'call').length;
+      const meetingsHeld = activities.filter((a: ActivityData) => a.type === 'meeting').length;
+      const tasksCompleted = activities.filter((a: ActivityData) => a.type === 'task' && a.completed).length;
+      const totalTasks = activities.filter((a: ActivityData) => a.type === 'task').length;
       const taskCompletionRate = totalTasks > 0 ? tasksCompleted / totalTasks : 0;
       
       // Query workflow executions (reuse prefix from above)
@@ -395,7 +455,7 @@ export class CoachingAnalyticsEngine {
       const workflowsTriggered = workflowSnapshot.size;
       
       // CRM updates (deal updates + contact updates)
-      const crmUpdates = activities.filter((a: any) => 
+      const crmUpdates = activities.filter((a: ActivityData) =>
         ['deal_update', 'contact_update', 'note_added'].includes(a.type ?? '')
       ).length;
       
@@ -441,17 +501,17 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const deals = snapshot.docs.map(doc => doc.data() as any);
-      
+      const deals = snapshot.docs.map(doc => doc.data() as DealData);
+
       // Count deals at each stage
-      const leadCount = deals.filter((d: any) => d.stage === 'lead' || d.stage === 'prospecting').length;
-      const opportunityCount = deals.filter((d: any) => 
+      const leadCount = deals.filter((d: DealData) => d.stage === 'lead' || d.stage === 'prospecting').length;
+      const opportunityCount = deals.filter((d: DealData) =>
         ['qualification', 'needs_analysis', 'discovery'].includes(d.stage ?? '')
       ).length;
-      const proposalCount = deals.filter((d: any) => 
+      const proposalCount = deals.filter((d: DealData) =>
         ['proposal', 'negotiation'].includes(d.stage ?? '')
       ).length;
-      const closedCount = deals.filter((d: any) => d.status === 'won').length;
+      const closedCount = deals.filter((d: DealData) => d.status === 'won').length;
       
       // Calculate conversion rates
       const totalLeads = leadCount + opportunityCount + proposalCount + closedCount;
@@ -516,30 +576,35 @@ export class CoachingAnalyticsEngine {
         .where('ownerId', '==', repId)
         .get();
       
-      const allDeals = snapshot.docs.map(doc => doc.data() as any);
-      
+      const allDeals = snapshot.docs.map(doc => doc.data() as DealData);
+
       // Total revenue (won deals in period)
-      const wonDeals = allDeals.filter((d: any) => 
-        d.status === 'won' && 
-        d.closedAt &&
-        new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) >= startDate &&
-        new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) <= endDate
-      );
-      const totalRevenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+      const wonDeals = allDeals.filter((d: DealData) => {
+        if (d.status !== 'won' || !d.closedAt) {
+          return false;
+        }
+        const closedAt = d.closedAt;
+        const closedDate = typeof closedAt === 'object' && closedAt !== null && 'toDate' in closedAt && typeof closedAt.toDate === 'function'
+          ? closedAt.toDate()
+          : (closedAt instanceof Date ? closedAt : new Date(closedAt as string));
+        return closedDate >= startDate && closedDate <= endDate;
+      });
+      const totalRevenue = wonDeals.reduce((sum: number, d: DealData) => sum + (d.value ?? 0), 0);
       
       // Get quota from user profile
       const repDoc = await this.adminDal.getCollection('USERS').doc(repId).get();
-      const quota = repDoc.data()?.quota ?? 0;
+      const repQuotaData = repDoc.data() as UserData | undefined;
+      const quota = repQuotaData?.quota ?? 0;
       const quotaAttainment = quota > 0 ? totalRevenue / quota : 0;
       
       // Pipeline value (active deals)
-      const activeDeals = allDeals.filter((d: any) => 
+      const activeDeals = allDeals.filter((d: DealData) =>
         !['won', 'lost', 'closed'].includes(d.status ?? '')
       );
-      const pipelineValue = activeDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
-      
+      const pipelineValue = activeDeals.reduce((sum: number, d: DealData) => sum + (d.value ?? 0), 0);
+
       // Weighted pipeline (value * probability)
-      const weightedPipeline = activeDeals.reduce((sum: number, d: any) => {
+      const weightedPipeline = activeDeals.reduce((sum: number, d: DealData) => {
         const value = d.value ?? 0;
         const probability = d.winProbability ?? 0.5;
         return sum + (value * probability);
@@ -554,13 +619,17 @@ export class CoachingAnalyticsEngine {
       // Growth rate (compare to previous period)
       const previousPeriodStart = new Date(startDate);
       previousPeriodStart.setTime(startDate.getTime() - (endDate.getTime() - startDate.getTime()));
-      const previousWonDeals = allDeals.filter((d: any) =>
-        d.status === 'won' &&
-        d.closedAt &&
-        new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) >= previousPeriodStart &&
-        new Date(d.closedAt.toDate ? d.closedAt.toDate() : d.closedAt) < startDate
-      );
-      const previousRevenue = previousWonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+      const previousWonDeals = allDeals.filter((d: DealData) => {
+        if (d.status !== 'won' || !d.closedAt) {
+          return false;
+        }
+        const closedAt = d.closedAt;
+        const closedDate = typeof closedAt === 'object' && closedAt !== null && 'toDate' in closedAt && typeof closedAt.toDate === 'function'
+          ? closedAt.toDate()
+          : (closedAt instanceof Date ? closedAt : new Date(closedAt as string));
+        return closedDate >= previousPeriodStart && closedDate < startDate;
+      });
+      const previousRevenue = previousWonDeals.reduce((sum: number, d: DealData) => sum + (d.value ?? 0), 0);
       const growthRate = previousRevenue > 0 ? (totalRevenue - previousRevenue) / previousRevenue : 0;
       
       return {
@@ -621,14 +690,23 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const deals = snapshot.docs.map(doc => doc.data() as any);
-      
+      const deals = snapshot.docs.map(doc => doc.data() as DealData);
+
       // Time to first contact
       const firstContactTimes = deals
-        .filter((d: any) => d.createdAt && d.firstContactAt)
-        .map((d: any) => {
-          const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
-          const contacted = d.firstContactAt.toDate ? d.firstContactAt.toDate() : new Date(d.firstContactAt);
+        .filter((d: DealData) => d.createdAt && d.firstContactAt)
+        .map((d: DealData) => {
+          const createdAtValue = d.createdAt;
+          const firstContactAtValue = d.firstContactAt;
+          if (!createdAtValue || !firstContactAtValue) {
+            return 0;
+          }
+          const created = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue && typeof createdAtValue.toDate === 'function'
+            ? createdAtValue.toDate()
+            : (createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string));
+          const contacted = typeof firstContactAtValue === 'object' && firstContactAtValue !== null && 'toDate' in firstContactAtValue && typeof firstContactAtValue.toDate === 'function'
+            ? firstContactAtValue.toDate()
+            : (firstContactAtValue instanceof Date ? firstContactAtValue : new Date(firstContactAtValue as string));
           return (contacted.getTime() - created.getTime()) / (1000 * 60 * 60);
         });
       const timeToFirstContact = firstContactTimes.length > 0
@@ -637,10 +715,19 @@ export class CoachingAnalyticsEngine {
       
       // Time to proposal
       const proposalTimes = deals
-        .filter((d: any) => d.createdAt && d.proposalSentAt)
-        .map((d: any) => {
-          const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
-          const proposal = d.proposalSentAt.toDate ? d.proposalSentAt.toDate() : new Date(d.proposalSentAt);
+        .filter((d: DealData) => d.createdAt && d.proposalSentAt)
+        .map((d: DealData) => {
+          const createdAtValue = d.createdAt;
+          const proposalSentAtValue = d.proposalSentAt;
+          if (!createdAtValue || !proposalSentAtValue) {
+            return 0;
+          }
+          const created = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue && typeof createdAtValue.toDate === 'function'
+            ? createdAtValue.toDate()
+            : (createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string));
+          const proposal = typeof proposalSentAtValue === 'object' && proposalSentAtValue !== null && 'toDate' in proposalSentAtValue && typeof proposalSentAtValue.toDate === 'function'
+            ? proposalSentAtValue.toDate()
+            : (proposalSentAtValue instanceof Date ? proposalSentAtValue : new Date(proposalSentAtValue as string));
           return (proposal.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
         });
       const timeToProposal = proposalTimes.length > 0
@@ -649,10 +736,19 @@ export class CoachingAnalyticsEngine {
       
       // Time to close
       const closeTimes = deals
-        .filter((d: any) => d.createdAt && d.closedAt && d.status === 'won')
-        .map((d: any) => {
-          const created = d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
-          const closed = d.closedAt.toDate ? d.closedAt.toDate() : new Date(d.closedAt);
+        .filter((d: DealData) => d.createdAt && d.closedAt && d.status === 'won')
+        .map((d: DealData) => {
+          const createdAtValue = d.createdAt;
+          const closedAtValue = d.closedAt;
+          if (!createdAtValue || !closedAtValue) {
+            return 0;
+          }
+          const created = typeof createdAtValue === 'object' && createdAtValue !== null && 'toDate' in createdAtValue && typeof createdAtValue.toDate === 'function'
+            ? createdAtValue.toDate()
+            : (createdAtValue instanceof Date ? createdAtValue : new Date(createdAtValue as string));
+          const closed = typeof closedAtValue === 'object' && closedAtValue !== null && 'toDate' in closedAtValue && typeof closedAtValue.toDate === 'function'
+            ? closedAtValue.toDate()
+            : (closedAtValue instanceof Date ? closedAtValue : new Date(closedAtValue as string));
           return (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
         });
       const timeToClose = closeTimes.length > 0
@@ -667,12 +763,12 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '<=', endDate)
         .get();
       
-      const activities = activitiesSnapshot.docs.map(doc => doc.data() as any);
-      const meetingsPerDeal = deals.length > 0 
-        ? activities.filter((a: any) => a.type === 'meeting').length / deals.length 
+      const activities = activitiesSnapshot.docs.map(doc => doc.data() as ActivityData);
+      const meetingsPerDeal = deals.length > 0
+        ? activities.filter((a: ActivityData) => a.type === 'meeting').length / deals.length
         : 0;
       const emailsPerDeal = deals.length > 0
-        ? activities.filter((a: any) => a.type === 'email').length / deals.length
+        ? activities.filter((a: ActivityData) => a.type === 'email').length / deals.length
         : 0;
       const touchPointsPerDeal = meetingsPerDeal + emailsPerDeal;
       
@@ -693,7 +789,7 @@ export class CoachingAnalyticsEngine {
         .where('createdAt', '>=', startDate)
         .where('createdAt', '<=', endDate)
         .get();
-      const aiEmails = emailActivities.docs.filter(doc => (doc.data() as any).type === 'generated').length;
+      const aiEmails = emailActivities.docs.filter(doc => (doc.data() as EmailData).type === 'generated').length;
       const hoursSaved = (workflowExecutions * 5 + aiEmails * 10) / 60;
       
       return {
@@ -792,10 +888,26 @@ export class CoachingAnalyticsEngine {
     const { deals, revenue, skills } = metrics;
     
     // Weighted score components
+    const skillScores = [
+      skills.prospecting,
+      skills.discovery,
+      skills.needsAnalysis,
+      skills.presentation,
+      skills.objectionHandling,
+      skills.negotiation,
+      skills.closing,
+      skills.relationshipBuilding,
+      skills.productKnowledge,
+      skills.crmHygiene,
+      skills.timeManagement,
+      skills.aiToolAdoption
+    ];
+    const averageSkillScore = skillScores.reduce((sum, score) => sum + score, 0) / skillScores.length;
+
     const components = [
       { value: revenue.quotaAttainment * 100, weight: 0.30 }, // Quota attainment: 30%
       { value: deals.winRate * 100, weight: 0.20 },           // Win rate: 20%
-      { value: Object.values(skills).reduce((a, b) => a + b, 0) / 12, weight: 0.30 }, // Skills avg: 30%
+      { value: averageSkillScore, weight: 0.30 }, // Skills avg: 30%
       { value: Math.min(deals.dealVelocity * 20, 100), weight: 0.10 }, // Velocity: 10%
       { value: Math.min(revenue.growthRate * 50 + 50, 100), weight: 0.10 } // Growth: 10%
     ];
@@ -840,31 +952,32 @@ export class CoachingAnalyticsEngine {
    * Gets team average metrics for benchmarking
    */
   private async getTeamAverageMetrics(
-    startDate: Date,
-    endDate: Date
-  ): Promise<any> {
+    _startDate: Date,
+    _endDate: Date
+  ): Promise<TeamMetrics> {
     try {
       // Query all users with sales role
       const usersRef = this.adminDal.getCollection('USERS');
       const snapshot = await usersRef
         .where('role', '==', 'sales')
         .get();
-      
+
       const userIds = snapshot.docs.map(doc => doc.id);
-      
+
       if (userIds.length === 0) {
         return this.getDefaultTeamMetrics();
       }
-      
+
       // Calculate metrics for all reps (simplified - in production, would cache these)
-      const metrics = {
+      // TODO: In future, use startDate and endDate for time-based calculations
+      const metrics: TeamMetrics = {
         overallScore: 65,
         winRate: 0.45,
         revenue: 50000,
         activityPerDay: 12,
         efficiency: 0.6
       };
-      
+
       return metrics;
     } catch (error) {
       logger.error('Error getting team average metrics', { error });
@@ -875,7 +988,7 @@ export class CoachingAnalyticsEngine {
   /**
    * Returns default team metrics
    */
-  private getDefaultTeamMetrics() {
+  private getDefaultTeamMetrics(): TeamMetrics {
     return {
       overallScore: 60,
       winRate: 0.40,
@@ -889,8 +1002,8 @@ export class CoachingAnalyticsEngine {
    * Calculates comparison to team average
    */
   private calculateTeamComparison(
-    repMetrics: any,
-    teamMetrics: any
+    repMetrics: RepMetricsForComparison,
+    teamMetrics: TeamMetrics
   ): PerformanceComparison {
     const overallScoreDelta = repMetrics.overallScore - teamMetrics.overallScore;
     const winRateDelta = repMetrics.deals.winRate - teamMetrics.winRate;

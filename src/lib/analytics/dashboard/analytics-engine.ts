@@ -57,17 +57,22 @@ const analyticsCache = new Map<string, { data: DashboardOverview; timestamp: Dat
 // UTILITY FUNCTIONS
 // ============================================================================
 
+/** Firestore Timestamp-like object */
+interface FirestoreTimestamp {
+  toDate: () => Date;
+}
+
 /**
  * Convert Firestore Timestamp or Date-like object to Date
  */
-function toDate(value: any): Date {
+function toDate(value: Date | FirestoreTimestamp | string | number): Date {
   if (value instanceof Date) {
     return value;
   }
-  if (value && typeof value.toDate === 'function') {
+  if (value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
     return value.toDate();
   }
-  return new Date(value);
+  return new Date(value as string | number);
 }
 
 // ============================================================================
@@ -119,13 +124,15 @@ export async function getDashboardAnalytics(
   const previousDateRange = calculatePreviousDateRange(dateRange.start, dateRange.end);
   
   // Aggregate data from all sources in parallel
-  const [workflows, emails, deals, revenue, team] = await Promise.all([
+  const [workflows, deals, revenue, team] = await Promise.all([
     getWorkflowMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange),
-    getEmailMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange),
     getDealMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange),
     getRevenueMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange),
     getTeamMetrics(organizationId, workspaceId, dateRange.start, dateRange.end),
   ]);
+
+  // Get email metrics synchronously (no async DB calls)
+  const emails = getEmailMetrics(organizationId, workspaceId, dateRange.start, dateRange.end, previousDateRange);
   
   const dashboard: DashboardOverview = {
     period,
@@ -241,7 +248,7 @@ async function getWorkflowMetrics(
   const topWorkflows = calculateTopWorkflows(workflows, executions);
   
   // Get executions by day
-  const executionsByDay = generateTimeSeries(executions, startDate, endDate, (e: WorkflowExecution) => 1);
+  const executionsByDay = generateTimeSeries(executions, startDate, endDate, (_e: WorkflowExecution) => 1);
   
   // Get action breakdown
   const actionBreakdown = calculateActionBreakdown(executions, totalActionsExecuted);
@@ -275,11 +282,16 @@ function calculateTopWorkflows(
   
   // Group executions by workflow
   executions.forEach((execution: WorkflowExecution) => {
+    const foundWorkflow = workflows.find((w: Workflow) => w.id === execution.workflowId);
+    if (!foundWorkflow) {
+      return;
+    }
+
     const existing = workflowMap.get(execution.workflowId) ?? {
-      workflow: workflows.find((w: Workflow) => w.id === execution.workflowId)!,
+      workflow: foundWorkflow,
       executions: [],
     };
-    
+
     if (existing.workflow) {
       existing.executions.push(execution);
       workflowMap.set(execution.workflowId, existing);
@@ -327,6 +339,13 @@ function calculateTopWorkflows(
 /**
  * Calculate action type breakdown
  */
+/** Action execution result structure */
+interface ActionExecutionResult {
+  actionType?: string;
+  status?: string;
+  duration?: number;
+}
+
 function calculateActionBreakdown(
   executions: WorkflowExecution[],
   totalActions: number
@@ -336,17 +355,17 @@ function calculateActionBreakdown(
     success: number;
     times: number[];
   }>();
-  
+
   executions.forEach((execution: WorkflowExecution) => {
-    const results = execution.actionsExecuted ?? [];
-    results.forEach((result: any) => {
+    const results = (execution.actionsExecuted ?? []) as ActionExecutionResult[];
+    results.forEach((result: ActionExecutionResult) => {
       const actionType = result.actionType ?? 'unknown';
       const existing = actionMap.get(actionType) ?? {
         count: 0,
         success: 0,
         times: [],
       };
-      
+
       actionMap.set(actionType, {
         count: existing.count + 1,
         success: existing.success + (result.status === 'success' ? 1 : 0),
@@ -375,13 +394,13 @@ function calculateActionBreakdown(
 /**
  * Get email analytics metrics
  */
-async function getEmailMetrics(
+function getEmailMetrics(
   organizationId: string,
   workspaceId: string,
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
-): Promise<EmailOverviewMetrics> {
+): EmailOverviewMetrics {
   if (!adminDal) {
     return {
       totalGenerated: 0,
@@ -396,14 +415,14 @@ async function getEmailMetrics(
   }
 
   // Get email generation events from Signal Bus or email writer logs
-  const emails = await adminDal.getEmailGenerations(
+  const emails = adminDal.getEmailGenerations(
     organizationId,
     workspaceId,
     startDate,
     endDate
   );
-  
-  const previousEmails = await adminDal.getEmailGenerations(
+
+  const previousEmails = adminDal.getEmailGenerations(
     organizationId,
     workspaceId,
     previousDateRange.start,
@@ -411,12 +430,13 @@ async function getEmailMetrics(
   );
   
   const totalGenerated = emails.length;
-  const totalSent = emails.filter((e: any) => e.sent).length;
-  
   interface EmailData {
     generationTime?: number;
     type?: string;
+    sent?: boolean;
   }
+
+  const totalSent = emails.filter((e: EmailData) => e.sent).length;
   
   // Calculate average generation time
   const generationTimes = emails
@@ -463,13 +483,20 @@ async function getEmailMetrics(
   };
 }
 
+/** Email record structure for analytics */
+interface EmailRecord {
+  type?: string;
+  generationTime?: number;
+  dealTier?: string;
+}
+
 /**
  * Calculate emails by type
  */
-function calculateEmailsByType(emails: any[], total: number): EmailTypeMetrics[] {
+function calculateEmailsByType(emails: EmailRecord[], total: number): EmailTypeMetrics[] {
   const typeMap = new Map<string, { count: number; times: number[] }>();
-  
-  emails.forEach((email: any) => {
+
+  emails.forEach((email: EmailRecord) => {
     const type = email.type ?? 'unknown';
     const existing = typeMap.get(type) ?? { count: 0, times: [] };
     
@@ -494,10 +521,10 @@ function calculateEmailsByType(emails: any[], total: number): EmailTypeMetrics[]
 /**
  * Calculate emails by tier
  */
-function calculateEmailsByTier(emails: any[], total: number): TierDistribution[] {
+function calculateEmailsByTier(emails: EmailRecord[], total: number): TierDistribution[] {
   const tierMap = new Map<string, number>();
-  
-  emails.forEach((email: any) => {
+
+  emails.forEach((email: EmailRecord) => {
     const tier = email.dealTier ?? 'unknown';
     tierMap.set(tier, (tierMap.get(tier) ?? 0) + 1);
   });
@@ -549,12 +576,23 @@ async function getDealMetrics(
   );
   
   const totalActiveDeals = deals.length;
-  const totalValue = deals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+  interface DealRecord {
+    value?: number;
+    tier?: string;
+    stage?: string;
+    timeInStage?: number;
+    score?: number;
+    createdAt?: Date | FirestoreTimestamp | string;
+    closedAt?: Date | FirestoreTimestamp | string;
+    status?: string;
+  }
+
+  const totalValue = deals.reduce((sum: number, d: DealRecord) => sum + (d.value ?? 0), 0);
   const averageValue = totalActiveDeals > 0 ? totalValue / totalActiveDeals : 0;
-  
+
   // Count hot and at-risk deals
-  const hotDeals = deals.filter((d: any) => d.tier === 'hot').length;
-  const atRiskDeals = deals.filter((d: any) => d.tier === 'at-risk').length;
+  const hotDeals = deals.filter((d: DealRecord) => d.tier === 'hot').length;
+  const atRiskDeals = deals.filter((d: DealRecord) => d.tier === 'at-risk').length;
   
   // Calculate trend
   const dealsTrend = previousDeals.length > 0
@@ -577,7 +615,7 @@ async function getDealMetrics(
   const averageVelocity = calculateAverageVelocity(closedDeals);
   
   // Get pipeline by day
-  const pipelineByDay = await generateDealPipelineTimeSeries(
+  const pipelineByDay = generateDealPipelineTimeSeries(
     organizationId,
     workspaceId,
     startDate,
@@ -598,17 +636,28 @@ async function getDealMetrics(
   };
 }
 
+/** Deal record for stage/tier calculations */
+interface DealAnalyticsRecord {
+  stage?: string;
+  tier?: string;
+  value?: number;
+  timeInStage?: number;
+  score?: number;
+  createdAt?: Date | FirestoreTimestamp | string;
+  closedAt?: Date | FirestoreTimestamp | string;
+}
+
 /**
  * Calculate deals by stage
  */
-function calculateDealsByStage(deals: any[]): StageMetrics[] {
+function calculateDealsByStage(deals: DealAnalyticsRecord[]): StageMetrics[] {
   const stageMap = new Map<string, {
     count: number;
     value: number;
     times: number[];
   }>();
-  
-  deals.forEach((deal: any) => {
+
+  deals.forEach((deal: DealAnalyticsRecord) => {
     const stage = deal.stage ?? 'unknown';
     const existing = stageMap.get(stage) ?? { count: 0, value: 0, times: [] };
     
@@ -637,14 +686,14 @@ function calculateDealsByStage(deals: any[]): StageMetrics[] {
 /**
  * Calculate deals by tier
  */
-function calculateDealsByTier(deals: any[]): TierMetrics[] {
+function calculateDealsByTier(deals: DealAnalyticsRecord[]): TierMetrics[] {
   const tierMap = new Map<string, {
     count: number;
     value: number;
     scores: number[];
   }>();
-  
-  deals.forEach((deal: any) => {
+
+  deals.forEach((deal: DealAnalyticsRecord) => {
     const tier = deal.tier ?? 'unknown';
     const existing = tierMap.get(tier) ?? { count: 0, value: 0, scores: [] };
     
@@ -676,10 +725,10 @@ function calculateDealsByTier(deals: any[]): TierMetrics[] {
 /**
  * Calculate average deal velocity (days to close)
  */
-function calculateAverageVelocity(closedDeals: any[]): number {
+function calculateAverageVelocity(closedDeals: DealAnalyticsRecord[]): number {
   const velocities = closedDeals
-    .filter((d: any) => d.createdAt && d.closedAt)
-    .map((d: any) => {
+    .filter((d: DealAnalyticsRecord) => d.createdAt && d.closedAt)
+    .map((d: DealAnalyticsRecord) => {
       const created = toDate(d.createdAt);
       const closed = toDate(d.closedAt);
       const days = (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
@@ -694,12 +743,12 @@ function calculateAverageVelocity(closedDeals: any[]): number {
 /**
  * Generate deal pipeline time series
  */
-async function generateDealPipelineTimeSeries(
-  organizationId: string,
-  workspaceId: string,
-  startDate: Date,
-  endDate: Date
-): Promise<TimeSeriesDataPoint[]> {
+function generateDealPipelineTimeSeries(
+  _organizationId: string,
+  _workspaceId: string,
+  _startDate: Date,
+  _endDate: Date
+): TimeSeriesDataPoint[] {
   // For now, return empty array - would need historical snapshots
   // This could be enhanced with deal history tracking
   return [];
@@ -749,8 +798,8 @@ async function getRevenueMetrics(
     previousDateRange.end
   );
   
-  const totalRevenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
-  const previousRevenue = previousWonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+  const totalRevenue = wonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
+  const previousRevenue = previousWonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
   
   // Get quota (would come from workspace settings)
   const quota = 100000; // TODO: Get from workspace settings
@@ -769,7 +818,7 @@ async function getRevenueMetrics(
     wonDeals,
     startDate,
     endDate,
-    (d: any) => d.value ?? 0
+    (d: DealAnalyticsRecord) => d.value ?? 0
   );
   
   // Calculate win rate
@@ -825,18 +874,26 @@ async function getTeamMetrics(
   // Get all reps (users with role 'sales')
   const reps = await dal.getSalesReps(organizationId, workspaceId);
   
+  /** Sales rep record */
+  interface RepRecord {
+    id: string;
+    name?: string;
+    email?: string;
+    quota?: number;
+  }
+
   // Get deals for each rep
   const repDeals = await Promise.all(
-    reps.map((rep: any) =>
+    reps.map((rep: RepRecord) =>
       dal.getRepDeals(organizationId, workspaceId, rep.id, startDate, endDate)
     )
   );
-  
+
   // Calculate rep performance
-  const repPerformance: RepPerformanceSummary[] = reps.map((rep: any, index: number) => {
-    const deals = repDeals[index] ?? [];
-    const wonDeals = deals.filter((d: any) => d.status === 'won');
-    const revenue = wonDeals.reduce((sum: number, d: any) => sum + (d.value ?? 0), 0);
+  const repPerformance: RepPerformanceSummary[] = reps.map((rep: RepRecord, index: number) => {
+    const deals = (repDeals[index] ?? []) as DealAnalyticsRecord[];
+    const wonDeals = deals.filter((d: DealAnalyticsRecord) => d.status === 'won');
+    const revenue = wonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
     const quota = rep.quota ?? 100000;
     
     return {
@@ -959,7 +1016,7 @@ function generateTimeSeries<T>(
   }
   
   // Add item values
-  items.forEach((item: any) => {
+  items.forEach((item: T & { createdAt?: Date | FirestoreTimestamp | string; startedAt?: Date | FirestoreTimestamp | string; date?: Date | FirestoreTimestamp | string }) => {
     const date = item.createdAt ?? item.startedAt ?? item.date;
     if (date) {
       const dateObj = toDate(date);

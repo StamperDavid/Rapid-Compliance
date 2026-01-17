@@ -343,7 +343,7 @@ class CRMVoiceActivityLogger {
         throw new Error('Failed to fetch activities');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { activities?: VoiceActivity[] };
       return data.activities ?? [];
     } catch (error) {
       logger.error('[CRMVoiceActivity] Get activities failed:', error, { file: 'crm-voice-activity.ts' });
@@ -378,7 +378,7 @@ class CRMVoiceActivityLogger {
         throw new Error('Failed to fetch activity stats');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { stats: ActivityStats };
       return data.stats;
     } catch (error) {
       logger.error('[CRMVoiceActivity] Get stats failed:', error, { file: 'crm-voice-activity.ts' });
@@ -419,7 +419,12 @@ class CRMVoiceActivityLogger {
         return {};
       }
 
-      const data = await response.json();
+      const data = await response.json() as {
+        contactId?: string;
+        leadId?: string;
+        dealId?: string;
+        companyId?: string;
+      };
       return {
         contactId: data.contactId,
         leadId: data.leadId,

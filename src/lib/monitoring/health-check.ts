@@ -55,18 +55,15 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   const [
     databaseHealth,
     cacheHealth,
-    aiHealth,
-    paymentsHealth,
-    integrationsHealth,
   ] = await Promise.all([
     checkDatabase(),
     checkCache(),
-    checkAI(),
-    checkPayments(),
-    checkIntegrations(),
   ]);
-  
-  const metrics = await gatherMetrics();
+
+  const aiHealth = checkAI();
+  const paymentsHealth = checkPayments();
+  const integrationsHealth = checkIntegrations();
+  const metrics = gatherMetrics();
   
   // Determine overall status
   const allChecks = [

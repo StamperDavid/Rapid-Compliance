@@ -54,7 +54,7 @@ export function handleAPIError(error: unknown): NextResponse<ErrorResponse> {
 
   // Handle Firebase errors
   if (error && typeof error === 'object' && 'code' in error) {
-    const firebaseError = error as any;
+    const firebaseError = error as { code: string; message?: string };
     const statusCode = getFirebaseErrorStatus(firebaseError.code);
     return NextResponse.json(
       {
@@ -124,7 +124,7 @@ function getFirebaseErrorStatus(code: string): number {
  * Validate required fields in request body
  */
 export function validateRequired(
-  data: any,
+  data: Record<string, unknown>,
   fields: string[]
 ): { valid: boolean; missing?: string[] } {
   const missing = fields.filter((field) => {
@@ -143,9 +143,9 @@ export function validateRequired(
  * Wrap an API handler with error handling
  */
 export function withErrorHandling<T>(
-  handler: (...args: any[]) => Promise<NextResponse<T>>
+  handler: (...args: unknown[]) => Promise<NextResponse<T>>
 ) {
-  return async (...args: any[]): Promise<NextResponse<T | ErrorResponse>> => {
+  return async (...args: unknown[]): Promise<NextResponse<T | ErrorResponse>> => {
     try {
       return await handler(...args);
     } catch (error) {
@@ -167,7 +167,7 @@ export const errors = {
   forbidden: (message = 'Access denied') =>
     new APIError(message, 403, 'FORBIDDEN'),
 
-  badRequest: (message: string, details?: any) =>
+  badRequest: (message: string, details?: Record<string, unknown>) =>
     new APIError(message, 400, 'BAD_REQUEST', details),
 
   conflict: (message: string) =>
@@ -187,7 +187,7 @@ export const errors = {
       { service }
     ),
 
-  externalServiceError: (service: string, originalError?: any) =>
+  externalServiceError: (service: string, originalError?: { message?: string }) =>
     new APIError(
       `Failed to communicate with ${service}`,
       502,
@@ -199,7 +199,7 @@ export const errors = {
 /**
  * Validate authentication from request
  */
-export async function validateAuth(request: Request): Promise<string> {
+export function validateAuth(request: Request): string {
   // For now, get orgId from query params or headers
   // In production, this would validate JWT token
   const url = new URL(request.url);

@@ -206,8 +206,8 @@ export async function verifyCount(
       expectedCount: request.expectedCount,
       discrepancy,
     };
-  } catch (error: any) {
-    logger.error('Count verification error', error, {
+  } catch (error: unknown) {
+    logger.error('Count verification error', error instanceof Error ? error : new Error(String(error)), {
       collection: request.collection,
       orgId: request.orgId,
       file: 'tenant-context-wrapper.ts',
@@ -235,8 +235,8 @@ export async function verifyCount(
  * @returns The admin tenant context
  */
 export function buildJasperContext(
-  adminEmail: string,
-  platformStats?: {
+  _adminEmail: string,
+  _platformStats?: {
     totalOrgs?: number;
     totalUsers?: number;
     totalAgents?: number;
@@ -324,7 +324,7 @@ Remember:
 // EXPORTS
 // ============================================================================
 
-export default {
+const tenantContextWrapper = {
   buildTenantIsolationHeader,
   wrapPromptWithTenantContext,
   buildTenantContext,
@@ -333,3 +333,5 @@ export default {
   buildJasperStatisticsContext,
   buildClientAgentContext,
 };
+
+export default tenantContextWrapper;

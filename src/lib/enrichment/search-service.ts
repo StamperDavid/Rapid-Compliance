@@ -381,9 +381,9 @@ export async function detectTechStack(domain: string): Promise<string[]> {
       if (serverHeader.includes('Apache')) {techStack.push('Apache');}
       if (serverHeader.includes('cloudflare')) {techStack.push('Cloudflare');}
     }
-    
+
     return [...new Set(techStack)]; // Remove duplicates
-  } catch (error) {
+  } catch (_error) {
     return [];
   }
 }

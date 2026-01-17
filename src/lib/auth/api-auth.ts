@@ -10,7 +10,7 @@ import type { Auth } from 'firebase-admin/auth';
 
 // Firebase Admin SDK (optional - only if configured)
 let adminAuth: Auth | null = null;
-let adminInitialized = false;
+let initPromise: Promise<Auth | null> | null = null;
 
 interface UserProfileData {
   role?: string;
@@ -18,62 +18,70 @@ interface UserProfileData {
 }
 
 async function initializeAdminAuth(): Promise<Auth | null> {
-  if (adminInitialized) {
+  // Return cached instance if already initialized
+  if (adminAuth) {
     return adminAuth;
+  }
+
+  // Return ongoing initialization if in progress
+  if (initPromise) {
+    return initPromise;
   }
 
   if (typeof window !== 'undefined') {
     return null; // Client-side, skip
   }
 
-  try {
-    // Dynamically import firebase-admin (only if available)
-    const admin = await import('firebase-admin');
+  // Start initialization
+  initPromise = (async () => {
+    try {
+      // Dynamically import firebase-admin (only if available)
+      const admin = await import('firebase-admin');
 
-    // Check if already initialized
-    const existingApps = admin.apps;
-    if (existingApps.length > 0 && existingApps[0]) {
-      const authInstance = admin.auth(existingApps[0]);
+      // Check if already initialized
+      const existingApps = admin.apps;
+      if (existingApps.length > 0 && existingApps[0]) {
+        const authInstance = admin.auth(existingApps[0]);
+        adminAuth = authInstance;
+        logger.info('[API Auth] Using existing Firebase Admin app', { file: 'api-auth.ts' });
+        return authInstance;
+      }
+
+      // Get project ID from env
+      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        ?? process.env.FIREBASE_PROJECT_ID
+        ?? 'ai-sales-platform-dev';
+
+      // Initialize with service account or project ID
+      const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      const serviceAccount = serviceAccountKey
+        ? (JSON.parse(serviceAccountKey) as Record<string, unknown>)
+        : undefined;
+
+      let app;
+      if (serviceAccount) {
+        logger.info('[API Auth] Initializing Firebase Admin with service account', { file: 'api-auth.ts' });
+        app = admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+        });
+      } else {
+        // Initialize with just project ID (works for emulator and some GCP scenarios)
+        logger.info('[API Auth] Initializing Firebase Admin with project ID', { file: 'api-auth.ts', projectId });
+        app = admin.initializeApp({
+          projectId,
+        });
+      }
+
+      const authInstance = admin.auth(app);
       adminAuth = authInstance;
-      adminInitialized = true;
-      logger.info('[API Auth] Using existing Firebase Admin app', { file: 'api-auth.ts' });
       return authInstance;
+    } catch (error) {
+      logger.error('Failed to initialize Firebase Admin:', error, { file: 'api-auth.ts' });
+      return null;
     }
+  })();
 
-    // Get project ID from env
-    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      ?? process.env.FIREBASE_PROJECT_ID
-      ?? 'ai-sales-platform-dev';
-
-    // Initialize with service account or project ID
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    const serviceAccount = serviceAccountKey
-      ? (JSON.parse(serviceAccountKey) as Record<string, unknown>)
-      : undefined;
-
-    let app;
-    if (serviceAccount) {
-      logger.info('[API Auth] Initializing Firebase Admin with service account', { file: 'api-auth.ts' });
-      app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-    } else {
-      // Initialize with just project ID (works for emulator and some GCP scenarios)
-      logger.info('[API Auth] Initializing Firebase Admin with project ID', { file: 'api-auth.ts', projectId });
-      app = admin.initializeApp({
-        projectId,
-      });
-    }
-
-    const authInstance = admin.auth(app);
-    adminAuth = authInstance;
-    adminInitialized = true;
-    return authInstance;
-  } catch (error) {
-    logger.error('Failed to initialize Firebase Admin:', error, { file: 'api-auth.ts' });
-    adminInitialized = true; // Mark as initialized to prevent retries
-    return null;
-  }
+  return initPromise;
 }
 
 export interface AuthenticatedUser {
@@ -116,16 +124,23 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
     logger.debug('[API Auth] Verifying ID token...', { file: 'api-auth.ts' });
     const decodedToken = await auth.verifyIdToken(token);
     logger.debug('[API Auth] Token verified', { file: 'api-auth.ts', email: decodedToken.email });
+
+    // Extract custom claims with proper type checking
+    const customClaims = decodedToken as Record<string, unknown>;
+    const roleFromClaims = typeof customClaims.role === 'string' ? customClaims.role : undefined;
+    const orgIdFromClaims = typeof customClaims.organizationId === 'string' ? customClaims.organizationId : undefined;
+    const adminFromClaims = customClaims.admin === true;
+
     logger.debug('[API Auth] Token claims', {
       file: 'api-auth.ts',
-      role: decodedToken.role,
-      organizationId: decodedToken.organizationId,
-      admin: decodedToken.admin,
+      role: roleFromClaims,
+      organizationId: orgIdFromClaims,
+      admin: adminFromClaims,
     });
 
     // First try to get role from token claims (set via Firebase Auth custom claims)
-    let role = decodedToken.role as string | undefined;
-    let organizationId = decodedToken.organizationId as string | undefined;
+    let role = roleFromClaims;
+    let organizationId = orgIdFromClaims;
 
     // If no role in claims, try to fetch from Firestore
     if (!role) {
@@ -151,10 +166,11 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
         logger.debug('[API Auth] Admin SDK Firestore failed', { file: 'api-auth.ts', error: errorMessage });
         // Try client SDK as last resort
         try {
-          const userProfile = await FirestoreService.get('users', decodedToken.uid) as UserProfileData | null;
+          const userProfile = await FirestoreService.get('users', decodedToken.uid);
           if (userProfile) {
-            role = userProfile.role;
-            organizationId = organizationId ?? userProfile.organizationId;
+            const profileData = userProfile as UserProfileData;
+            role = profileData.role;
+            organizationId = organizationId ?? profileData.organizationId;
             logger.debug('[API Auth] User profile loaded via client SDK', { file: 'api-auth.ts', role, organizationId });
           }
         } catch (clientError) {

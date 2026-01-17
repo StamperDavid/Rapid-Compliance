@@ -33,11 +33,13 @@ import type {
   PerformanceTier,
   BestPractice,
   SkillScores,
-  GenerateTeamCoachingRequest
+  GenerateTeamCoachingRequest,
+  TimePeriod
 } from './types';
 import type { CoachingAnalyticsEngine } from './coaching-analytics-engine';
 import { createTeamInsightsGeneratedEvent } from './events';
-import type { SignalCoordinator } from '../orchestration/SignalCoordinator';
+import type { SignalCoordinator, SalesSignal } from '../orchestration/SignalCoordinator';
+import { logger } from '../logger/logger';
 
 // ============================================================================
 // TEAM COACHING ENGINE
@@ -97,7 +99,7 @@ export class TeamCoachingEngine {
     
     const cached = this.insightsCache.get(cacheKey);
     if (cached && this.isCacheValid(cached.cachedAt)) {
-      console.log('[TeamCoachingEngine] Returning cached team insights');
+      logger.info('[TeamCoachingEngine] Returning cached team insights');
       return cached.insights;
     }
     
@@ -108,7 +110,7 @@ export class TeamCoachingEngine {
     );
     
     // Generate individual rep insights in parallel
-    console.log(`[TeamCoachingEngine] Generating insights for ${teamMemberIds.length} team members`);
+    logger.info(`[TeamCoachingEngine] Generating insights for ${teamMemberIds.length} team members`);
     const repInsights = await this.generateRepInsights(
       teamMemberIds,
       request.period,
@@ -177,11 +179,16 @@ export class TeamCoachingEngine {
         'gpt-4o',
         processingTimeMs
       );
-      // Signal coordinator expects the full event object
-      await this.signalCoordinator.emitSignal(event as any);
+      // Convert the coaching event to a SalesSignal format
+      const signalData: Omit<SalesSignal, 'id' | 'createdAt' | 'processed' | 'processedAt' | 'ttl'> = {
+        type: 'coaching.team.insights.generated',
+        orgId: teamInsights.teamId,
+        metadata: event.data
+      };
+      await this.signalCoordinator.emitSignal(signalData);
     }
-    
-    console.log(`[TeamCoachingEngine] Team insights generated in ${processingTimeMs}ms`);
+
+    logger.info(`[TeamCoachingEngine] Team insights generated in ${processingTimeMs}ms`);
     return teamInsights;
   }
   
@@ -198,27 +205,27 @@ export class TeamCoachingEngine {
    */
   private async generateRepInsights(
     repIds: string[],
-    period: string,
+    period: TimePeriod,
     dateRange: { startDate: Date; endDate: Date }
   ): Promise<RepPerformanceMetrics[]> {
     // Generate insights in parallel (with concurrency limit to avoid overwhelming API)
     const BATCH_SIZE = 5;
     const results: RepPerformanceMetrics[] = [];
-    
+
     for (let i = 0; i < repIds.length; i += BATCH_SIZE) {
       const batch = repIds.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
         batch.map(repId =>
           this.analyticsEngine.analyzeRepPerformance(
             repId,
-            period as any,
+            period,
             dateRange
           )
         )
       );
       results.push(...batchResults);
     }
-    
+
     return results;
   }
   
@@ -849,6 +856,6 @@ export class TeamCoachingEngine {
    */
   clearCache(): void {
     this.insightsCache.clear();
-    console.log('[TeamCoachingEngine] Cache cleared');
+    logger.info('[TeamCoachingEngine] Cache cleared');
   }
 }

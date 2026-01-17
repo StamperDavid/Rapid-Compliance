@@ -3,9 +3,8 @@
  * Business logic layer for contact management
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
-import { where, orderBy } from 'firebase/firestore';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
 export interface Contact {
@@ -34,10 +33,10 @@ export interface Contact {
   tags?: string[];
   notes?: string;
   ownerId?: string;
-  customFields?: Record<string, any>;
-  lastContactedAt?: any;
-  createdAt: any;
-  updatedAt?: any;
+  customFields?: Record<string, unknown>;
+  lastContactedAt?: Date | Timestamp;
+  createdAt: Date | Timestamp;
+  updatedAt?: Date | Timestamp;
 }
 
 export interface ContactFilters {
@@ -100,9 +99,10 @@ export async function getContacts(
     });
 
     return result;
-  } catch (error: any) {
-    logger.error('Failed to get contacts', error, { organizationId, filters });
-    throw new Error(`Failed to retrieve contacts: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to get contacts', error instanceof Error ? error : undefined, { organizationId, filters });
+    throw new Error(`Failed to retrieve contacts: ${errorMessage}`);
   }
 }
 
@@ -127,9 +127,10 @@ export async function getContact(
 
     logger.info('Contact retrieved', { organizationId, contactId });
     return contact;
-  } catch (error: any) {
-    logger.error('Failed to get contact', error, { organizationId, contactId });
-    throw new Error(`Failed to retrieve contact: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to get contact', error instanceof Error ? error : undefined, { organizationId, contactId });
+    throw new Error(`Failed to retrieve contact: ${errorMessage}`);
   }
 }
 
@@ -171,9 +172,10 @@ export async function createContact(
     });
 
     return contact;
-  } catch (error: any) {
-    logger.error('Failed to create contact', error, { organizationId, data });
-    throw new Error(`Failed to create contact: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to create contact', error instanceof Error ? error : undefined, { organizationId, data });
+    throw new Error(`Failed to create contact: ${errorMessage}`);
   }
 }
 
@@ -210,9 +212,10 @@ export async function updateContact(
     }
 
     return contact;
-  } catch (error: any) {
-    logger.error('Failed to update contact', error, { organizationId, contactId });
-    throw new Error(`Failed to update contact: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to update contact', error instanceof Error ? error : undefined, { organizationId, contactId });
+    throw new Error(`Failed to update contact: ${errorMessage}`);
   }
 }
 
@@ -231,9 +234,10 @@ export async function deleteContact(
     );
 
     logger.info('Contact deleted', { organizationId, contactId });
-  } catch (error: any) {
-    logger.error('Failed to delete contact', error, { organizationId, contactId });
-    throw new Error(`Failed to delete contact: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to delete contact', error instanceof Error ? error : undefined, { organizationId, contactId });
+    throw new Error(`Failed to delete contact: ${errorMessage}`);
   }
 }
 
@@ -251,9 +255,10 @@ export async function markAsVIP(
     logger.info('Contact marked as VIP', { organizationId, contactId });
 
     return contact;
-  } catch (error: any) {
-    logger.error('Failed to mark contact as VIP', error, { organizationId, contactId });
-    throw new Error(`Failed to mark as VIP: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to mark contact as VIP', error instanceof Error ? error : undefined, { organizationId, contactId });
+    throw new Error(`Failed to mark as VIP: ${errorMessage}`);
   }
 }
 
@@ -285,9 +290,10 @@ export async function addTags(
     });
 
     return updated;
-  } catch (error: any) {
-    logger.error('Failed to add tags', error, { organizationId, contactId, newTags });
-    throw new Error(`Failed to add tags: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to add tags', error instanceof Error ? error : undefined, { organizationId, contactId, newTags });
+    throw new Error(`Failed to add tags: ${errorMessage}`);
   }
 }
 
@@ -324,9 +330,10 @@ export async function searchContacts(
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  } catch (error: any) {
-    logger.error('Contact search failed', error, { organizationId, searchTerm });
-    throw new Error(`Search failed: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Contact search failed', error instanceof Error ? error : undefined, { organizationId, searchTerm });
+    throw new Error(`Search failed: ${errorMessage}`);
   }
 }
 
@@ -337,7 +344,7 @@ export async function recordInteraction(
   organizationId: string,
   contactId: string,
   type: 'email' | 'call' | 'meeting' | 'note',
-  details: Record<string, any>,
+  details: Record<string, unknown>,
   workspaceId: string = 'default'
 ): Promise<void> {
   try {
@@ -363,9 +370,10 @@ export async function recordInteraction(
       contactId,
       interactionType: type,
     });
-  } catch (error: any) {
-    logger.error('Failed to record interaction', error, { organizationId, contactId, type });
-    throw new Error(`Failed to record interaction: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    logger.error('Failed to record interaction', error instanceof Error ? error : undefined, { organizationId, contactId, type });
+    throw new Error(`Failed to record interaction: ${errorMessage}`);
   }
 }
 

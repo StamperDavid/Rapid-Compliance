@@ -157,7 +157,7 @@ export class NotificationService {
     }
 
     // Render content for each channel
-    const content = await this.renderContent(template, variables, preferences);
+    const content = this.renderContent(template, variables, preferences);
 
     // Create notification record
     const now = Timestamp.now();
@@ -329,7 +329,7 @@ export class NotificationService {
                    '#notifications'; // Default channel
 
     // Send message
-    const response = await sendMessage(accessToken, {
+    const response: unknown = await sendMessage(accessToken, {
       channel,
       text: slackContent.text,
       blocks: slackContent.blocks,
@@ -609,7 +609,7 @@ export class NotificationService {
         templateId
       );
       return template as NotificationTemplate;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -627,7 +627,7 @@ export class NotificationService {
       if (prefs) {
         return prefs as NotificationPreferences;
       }
-    } catch (error) {
+    } catch (_error) {
       // Preferences not found, return defaults
     }
 
@@ -699,8 +699,8 @@ export class NotificationService {
       'system',
     ];
 
-    const preferences: any = {};
-    
+    const preferences: Record<NotificationCategory, { enabled: boolean; minPriority: NotificationPriority }> = {} as Record<NotificationCategory, { enabled: boolean; minPriority: NotificationPriority }>;
+
     categories.forEach((category) => {
       preferences[category] = {
         enabled: true,
@@ -731,7 +731,7 @@ export class NotificationService {
    * Initialize delivery attempts map
    */
   private initializeDeliveryAttempts(channels: NotificationChannel[]): Record<string, number> {
-    const attempts: any = {};
+    const attempts: Record<string, number> = {};
     channels.forEach((channel) => {
       attempts[channel] = 0;
     });
@@ -742,7 +742,7 @@ export class NotificationService {
    * Initialize delivery timestamps map
    */
   private initializeDeliveryTimestamps(channels: NotificationChannel[]): Record<string, null> {
-    const timestamps: any = {};
+    const timestamps: Record<string, null> = {};
     channels.forEach((channel) => {
       timestamps[channel] = null;
     });
@@ -753,7 +753,7 @@ export class NotificationService {
    * Initialize delivery errors map
    */
   private initializeDeliveryErrors(channels: NotificationChannel[]): Record<string, null> {
-    const errors: any = {};
+    const errors: Record<string, null> = {};
     channels.forEach((channel) => {
       errors[channel] = null;
     });
@@ -763,8 +763,8 @@ export class NotificationService {
   /**
    * Initialize delivery responses map
    */
-  private initializeDeliveryResponses(channels: NotificationChannel[]): Record<string, any> {
-    const responses: any = {};
+  private initializeDeliveryResponses(channels: NotificationChannel[]): Record<string, Record<string, unknown>> {
+    const responses: Record<string, Record<string, unknown>> = {};
     channels.forEach((channel) => {
       responses[channel] = {};
     });
@@ -840,7 +840,7 @@ export class NotificationService {
   private async storeDeliveryResponse(
     notificationId: string,
     channel: NotificationChannel,
-    response: any
+    response: unknown
   ): Promise<void> {
     await FirestoreService.update(
       `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
@@ -859,7 +859,10 @@ export class NotificationService {
 
     if (attempts >= notification.retry.maxAttempts) {
       // Max retries reached, mark as failed
-      await this.updateDeliveryStatus(notification.id!, channel, 'failed');
+      if (!notification.id) {
+        throw new Error('Notification ID is required for marking as failed');
+      }
+      await this.updateDeliveryStatus(notification.id, channel, 'failed');
       return;
     }
 
@@ -867,9 +870,13 @@ export class NotificationService {
     const backoffMs = Math.pow(notification.retry.backoffMultiplier, attempts) * 60000; // Start at 1 minute
     const nextRetry = new Date(Date.now() + backoffMs);
 
+    if (!notification.id) {
+      throw new Error('Notification ID is required for scheduling retry');
+    }
+
     await FirestoreService.update(
       `${COLLECTIONS.ORGANIZATIONS}/${this.orgId}/notifications`,
-      notification.id!,
+      notification.id,
       {
         status: 'retrying',
         'retry.nextRetryAt': Timestamp.fromDate(nextRetry),

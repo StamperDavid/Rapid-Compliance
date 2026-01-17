@@ -3,17 +3,40 @@
  * Core logic for managing and executing email sequences
  */
 
-import type { 
+import type {
   OutboundSequence,
   ProspectEnrollment,
   SequenceStep,
-  StepAction} from '@/types/outbound-sequence';
-import {
-  EnrollmentStatus,
-  StepActionStatus 
+  StepAction
 } from '@/types/outbound-sequence';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+
+interface ProspectData {
+  email?: string;
+  name?: string;
+  linkedInUrl?: string;
+  phone?: string;
+}
+
+interface OrgData {
+  emailProvider?: string;
+  fromEmail?: string;
+}
+
+interface IntegrationData {
+  service?: string;
+  accessToken?: string;
+}
+
+interface StepStats {
+  totalExecutions: number;
+  successCount: number;
+  failedCount: number;
+  skippedCount: number;
+  successRate?: number;
+  updatedAt?: Date;
+}
 
 export class SequenceEngine {
   /**
@@ -141,7 +164,7 @@ export class SequenceEngine {
     }
 
     // Check step conditions
-    if (!(await this.checkStepConditions(enrollment, currentStep))) {
+    if (!this.checkStepConditions(enrollment, currentStep)) {
       
       await this.skipStep(enrollment, currentStep, organizationId);
       return;
@@ -232,8 +255,9 @@ export class SequenceEngine {
       });
 
       
-    } catch (error: any) {
-      logger.error('[Sequence Engine] Error executing step:', error, { file: 'sequence-engine.ts' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[Sequence Engine] Error executing step:', error instanceof Error ? error : undefined, { file: 'sequence-engine.ts' });
 
       // Record failed action
       const failedAction: StepAction = {
@@ -241,7 +265,7 @@ export class SequenceEngine {
         stepOrder: step.order,
         scheduledFor:enrollment.nextStepAt ?? new Date().toISOString(),
         status: 'failed',
-        error: error.message,
+        error: errorMessage,
         retryCount: 0,
         createdAt: new Date().toISOString(),
       };
@@ -264,7 +288,7 @@ export class SequenceEngine {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     
     // Get prospect email from CRM
-    const prospect = await FirestoreService.get(
+    const prospect: ProspectData | null = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/leads`,
       enrollment.prospectId
     );
@@ -274,12 +298,12 @@ export class SequenceEngine {
     }
 
     // Get organization settings to determine email provider
-    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-    const emailProvider = (org?.emailProvider !== '' && org?.emailProvider != null) 
-      ? org.emailProvider 
+    const orgData: OrgData | null = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
+    const emailProvider = (orgData?.emailProvider !== '' && orgData?.emailProvider != null)
+      ? orgData.emailProvider
       : 'gmail'; // Default to Gmail
-    const fromEmail = (org?.fromEmail !== '' && org?.fromEmail != null) 
-      ? org.fromEmail 
+    const fromEmail = (orgData?.fromEmail !== '' && orgData?.fromEmail != null)
+      ? orgData.fromEmail
       : process.env.FROM_EMAIL;
 
     if (!fromEmail) {
@@ -305,8 +329,9 @@ export class SequenceEngine {
 
       logger.info('Sequence Engine Email sent via Gmail to prospect.email}', { file: 'sequence-engine.ts' });
       return;
-    } catch (gmailError: any) {
-      logger.warn('[Sequence Engine] Gmail send failed, trying fallback', { error: gmailError.message, file: 'sequence-engine.ts' });
+    } catch (gmailError) {
+      const gmailErrorMessage = gmailError instanceof Error ? gmailError.message : 'Unknown Gmail error';
+      logger.warn('[Sequence Engine] Gmail send failed, trying fallback', { error: gmailErrorMessage, file: 'sequence-engine.ts' });
       
       // Fallback to SendGrid if Gmail fails
       if (emailProvider === 'sendgrid') {
@@ -360,33 +385,33 @@ export class SequenceEngine {
     
     
     // Get prospect details
-    const prospect = await FirestoreService.get(
+    const prospect: ProspectData | null = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
       enrollment.prospectId
     );
-    
+
     if (!prospect) {
       throw new Error(`Prospect ${enrollment.prospectId} not found`);
     }
-    
+
     // Get LinkedIn integration credentials
-    const integrations = await FirestoreService.getAll(
+    const integrations: IntegrationData[] = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`
     );
-    const integration = integrations.filter((i: any) => i.service === 'linkedin');
-    
+    const integration = integrations.filter((i) => i.service === 'linkedin');
+
     if (!integration || integration.length === 0) {
       throw new Error('LinkedIn integration not configured');
     }
-    
-    const linkedInToken = integration[0].accessToken;
-    
+
+    const linkedInToken = integration[0].accessToken ?? '';
+
     // Send LinkedIn message via RapidAPI or LinkedIn API
     const { sendLinkedInMessage } = await import('@/lib/integrations/linkedin-messaging');
-    
+
     await sendLinkedInMessage(
       linkedInToken,
-      prospect.linkedInUrl ?? prospect.email,
+      prospect.linkedInUrl ?? prospect.email ?? '',
       step.content ?? '',
       organizationId
     );
@@ -406,11 +431,11 @@ export class SequenceEngine {
     
     
     // Get prospect details
-    const prospect = await FirestoreService.get(
+    const prospect: ProspectData | null = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
       enrollment.prospectId
     );
-    
+
     if (!prospect?.phone) {
       throw new Error(`Prospect ${enrollment.prospectId} has no phone number`);
     }
@@ -469,15 +494,15 @@ export class SequenceEngine {
     
     
     // Get prospect details
-    const prospect = await FirestoreService.get(
+    const prospect: ProspectData | null = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/prospects`,
       enrollment.prospectId
     );
-    
+
     if (!prospect) {
       throw new Error(`Prospect ${enrollment.prospectId} not found`);
     }
-    
+
     // Calculate task due date
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + (step.taskDueDays ?? 1));
@@ -548,19 +573,18 @@ export class SequenceEngine {
       
       // Update step statistics
       const statsId = `step-${stepId}`;
-      const currentStats = await FirestoreService.get(
+      const currentStats: StepStats | null = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/sequenceStepStats`,
         statsId
       );
-      
-      const stats = currentStats ?? {
-        stepId,
+
+      const stats: StepStats = currentStats ?? {
         totalExecutions: 0,
         successCount: 0,
         failedCount: 0,
         skippedCount: 0,
       };
-      
+
       stats.totalExecutions = (stats.totalExecutions ?? 0) + 1;
       if (status === 'success') {stats.successCount = (stats.successCount ?? 0) + 1;}
       if (status === 'failed') {stats.failedCount = (stats.failedCount ?? 0) + 1;}
@@ -604,10 +628,10 @@ export class SequenceEngine {
   /**
    * Check if step conditions are met
    */
-  private static async checkStepConditions(
+  private static checkStepConditions(
     enrollment: ProspectEnrollment,
     step: SequenceStep
-  ): Promise<boolean> {
+  ): boolean {
     if (!step.conditions || step.conditions.length === 0) {
       return true; // No conditions, always proceed
     }
@@ -653,7 +677,7 @@ export class SequenceEngine {
   private static async skipStep(
     enrollment: ProspectEnrollment,
     step: SequenceStep,
-    organizationId: string
+    _organizationId: string
   ): Promise<void> {
     const skippedAction: StepAction = {
       stepId: step.id,
@@ -769,10 +793,11 @@ export class SequenceEngine {
 
     // Increment analytics
     if (updates && sequence.analytics) {
+      const analytics = sequence.analytics as Record<string, number | undefined>;
       Object.keys(updates).forEach((key) => {
         const value = updates[key as keyof typeof updates];
-        if (typeof value === 'number' && sequence.analytics) {
-          (sequence.analytics as any)[key] = ((sequence.analytics as any)[key] ?? 0) + value;
+        if (typeof value === 'number') {
+          analytics[key] = (analytics[key] ?? 0) + value;
         }
       });
 
@@ -892,11 +917,11 @@ export class SequenceEngine {
    * Schedule a step for execution
    */
   private static async scheduleStep(
-    enrollment: ProspectEnrollment,
-    step: SequenceStep
+    _enrollment: ProspectEnrollment,
+    _step: SequenceStep
   ): Promise<void> {
     // In production, this would add to a job queue
-    
+    await Promise.resolve();
   }
 }
 

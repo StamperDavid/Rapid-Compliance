@@ -944,7 +944,7 @@ export async function discoverCompetitorsBatch(
       if (result.status === 'fulfilled') {
         results.push(result.value);
       } else {
-        logger.error('Batch competitor discovery failed', result.reason);
+        logger.error('Batch competitor discovery failed', result.reason instanceof Error ? result.reason : new Error(String(result.reason)));
       }
     }
 

@@ -473,7 +473,7 @@ export async function getUserTasks(
 
     return tasks;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get user tasks', error, { userId });
     return [];
   }
@@ -500,7 +500,7 @@ export async function completeTask(
 
     logger.info('Task completed', { taskId });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to complete task', error, { taskId });
     throw error;
   }

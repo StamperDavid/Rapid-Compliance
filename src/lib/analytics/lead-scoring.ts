@@ -36,7 +36,7 @@ export interface LeadScoringFactors {
   socialEngagement?: number;
   
   // Custom fields
-  customFields?: Record<string, any>;
+  customFields?: Record<string, string | number | boolean | Date | null>;
 }
 
 export interface LeadScore {

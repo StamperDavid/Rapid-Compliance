@@ -5,8 +5,7 @@
 
 import { OpenAIProvider } from './providers/openai-provider';
 import { AnthropicProvider } from './providers/anthropic-provider';
-import type { ChatMessage as GeminiChatMessage } from './gemini-service';
-import { sendChatMessage, streamChatMessage } from './gemini-service';
+import { sendChatMessage, streamChatMessage, type ChatMessage as GeminiChatMessage } from './gemini-service';
 
 export interface UnifiedChatMessage {
   role: 'user' | 'assistant' | 'system';

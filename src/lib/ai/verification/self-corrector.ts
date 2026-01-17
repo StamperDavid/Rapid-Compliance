@@ -42,7 +42,7 @@ export async function verifyResponse(params: {
   
   try {
     const request: ChatRequest = {
-      model: model as any,
+      model,
       messages: [
         {
           role: 'system',
@@ -76,16 +76,16 @@ Provide your analysis in JSON format:
       temperature: 0.2, // Low temperature for verification
       maxTokens: 800,
     };
-    
+
     const verificationResponse = await sendChatRequest(request);
-    
+
     // Parse the response
     const jsonMatch = verificationResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const result = JSON.parse(jsonMatch[0]);
+      const result = JSON.parse(jsonMatch[0]) as VerificationResult;
       return result;
     }
-    
+
     // Fallback if JSON parsing fails
     return {
       isAccurate: true,
@@ -93,15 +93,16 @@ Provide your analysis in JSON format:
       issues: [],
       reasoning: 'Unable to parse verification result',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Self-Correction] Verification error:', error, { file: 'self-corrector.ts' });
-    
+
     // Fallback on error
     return {
       isAccurate: true, // Assume accurate if verification fails
       confidence: 60,
       issues: [],
-      reasoning: `Verification error: ${error.message}`,
+      reasoning: `Verification error: ${errorMessage}`,
     };
   }
 }
@@ -133,7 +134,7 @@ export async function correctResponse(params: {
       .join('\n');
     
     const request: ChatRequest = {
-      model: model as any,
+      model,
       messages: [
         {
           role: 'system',
@@ -180,8 +181,8 @@ Corrected Response:`,
       corrections,
       confidence: 85,
     };
-  } catch (error: any) {
-    logger.error('[Self-Correction] Correction error:', error, { file: 'self-corrector.ts' });
+  } catch (error: unknown) {
+    logger.error('[Self-Correction] Correction error:', error instanceof Error ? error : new Error(String(error)), { file: 'self-corrector.ts' });
     
     // Return original if correction fails
     return {
@@ -213,7 +214,7 @@ export async function selfCorrect(params: {
   
   let currentResponse = response;
   let attempts = 0;
-  const allCorrections: any[] = [];
+  const allCorrections: CorrectedResponse['corrections'] = [];
   
   while (attempts < maxAttempts) {
     attempts++;
@@ -273,7 +274,7 @@ export async function selfCorrect(params: {
 /**
  * Quick fact check (faster, less thorough)
  */
-export async function quickFactCheck(params: {
+export function quickFactCheck(params: {
   response: string;
   knowledgeBase: string;
 }): Promise<boolean> {

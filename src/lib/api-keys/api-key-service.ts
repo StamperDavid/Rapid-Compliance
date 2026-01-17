@@ -6,6 +6,62 @@
 import type { APIKeysConfig, APIKeyValidationResult, APIServiceName } from '../../types/api-keys'
 import { logger } from '../logger/logger';
 
+// Type for Firestore document data (raw data before conversion)
+interface FirestoreKeysData {
+  id?: string;
+  organizationId?: string;
+  firebase?: Record<string, unknown>;
+  googleCloud?: Record<string, unknown>;
+  ai?: {
+    openrouterApiKey?: string;
+    openaiApiKey?: string;
+    anthropicApiKey?: string;
+    geminiApiKey?: string;
+  };
+  payments?: Record<string, unknown>;
+  email?: Record<string, unknown>;
+  sms?: Record<string, unknown>;
+  storage?: Record<string, unknown>;
+  analytics?: Record<string, unknown>;
+  integrations?: Record<string, unknown>;
+  stripe?: Record<string, unknown>;
+  sendgrid?: Record<string, unknown>;
+  resend?: Record<string, unknown>;
+  twilio?: Record<string, unknown>;
+  openrouter?: {
+    apiKey?: string;
+  };
+  openai?: {
+    apiKey?: string;
+  };
+  anthropic?: {
+    apiKey?: string;
+  };
+  gemini?: {
+    apiKey?: string;
+  };
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  updatedBy?: string;
+  isEncrypted?: boolean;
+}
+
+// Type for service keys that may have nested structures
+type ServiceKeyResult = string | Record<string, unknown> | null;
+
+// Type for validation input - can be a string key or a key object
+interface StripeKeys {
+  secretKey?: string;
+  publicKey?: string;
+  webhookSecret?: string;
+}
+
+interface SendgridKeys {
+  apiKey?: string;
+  fromEmail?: string;
+  fromName?: string;
+}
+
 class APIKeyService {
   private static instance: APIKeyService;
   private keysCache: APIKeysConfig | null = null;
@@ -13,7 +69,7 @@ class APIKeyService {
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   private constructor() {
-    console.log('[APIKeyService] Initialized. Ready to fetch keys from Firestore.');
+    logger.info('[APIKeyService] Initialized. Ready to fetch keys from Firestore.', { file: 'api-key-service.ts' });
   }
 
   static getInstance(): APIKeyService {
@@ -57,7 +113,7 @@ class APIKeyService {
    * Get specific API key for a service
    * OpenRouter is used as universal fallback for ALL AI services
    */
-  async getServiceKey(organizationId: string, service: APIServiceName): Promise<any> {
+  async getServiceKey(organizationId: string, service: APIServiceName): Promise<ServiceKeyResult> {
     const keys = await this.getKeys(organizationId);
     if (!keys) {return null;}
 
@@ -160,21 +216,22 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
   /**
    * Validate API key for a specific service
    */
-  async validateKey(service: APIServiceName, key: any): Promise<APIKeyValidationResult> {
+  validateKey(service: APIServiceName, key: string | StripeKeys | SendgridKeys): APIKeyValidationResult {
     try {
       switch (service) {
         case 'stripe':
-          return await this.validateStripeKey(key);
+          return this.validateStripeKey(key as StripeKeys);
         case 'gemini':
-          return await this.validateGeminiKey(key);
+          return this.validateGeminiKey(key as string);
         case 'sendgrid':
-          return await this.validateSendgridKey(key);
+          return this.validateSendgridKey(key as SendgridKeys);
         // Add more validators as needed
         default:
           return { valid: true }; // Assume valid if no validator
       }
-    } catch (error: any) {
-      return { valid: false, error: error.message };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
+      return { valid: false, error: errorMessage };
     }
   }
 
@@ -200,11 +257,11 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     // Special case: platform-level orgs use global platform API keys
     const platformOrgIds = ['platform', 'platform-admin', 'admin', 'default'];
     if (platformOrgIds.includes(organizationId)) {
-      console.log('[APIKeyService] Using platform keys for org:', organizationId);
+      logger.info('[APIKeyService] Using platform keys for org:', { organizationId, file: 'api-key-service.ts' });
       try {
         // Prefer admin SDK to bypass security rules
         const { adminDb } = await import('../firebase/admin');
-        let platformKeys: any = null;
+        let platformKeys: FirestoreKeysData | null = null;
         
         if (adminDb) {
           const doc = await adminDb.collection('admin').doc('platform-api-keys').get();
@@ -218,14 +275,17 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         }
         
         if (platformKeys) {
-          console.log('[APIKeyService] Platform keys found:', Object.keys(platformKeys));
+          logger.info('[APIKeyService] Platform keys found:', { keys: Object.keys(platformKeys), file: 'api-key-service.ts' });
 
           // Extract OpenRouter key from various possible locations
           const openrouterKey = platformKeys.ai?.openrouterApiKey
-            || platformKeys.openrouter?.apiKey
-            || null;
+            ?? platformKeys.openrouter?.apiKey
+            ?? null;
 
-          console.log('[APIKeyService] OpenRouter key found:', openrouterKey ? `${openrouterKey.slice(0, 12)  }...` : 'NOT FOUND');
+          logger.info('[APIKeyService] OpenRouter key found:', {
+            keyPreview: openrouterKey ? `${openrouterKey.slice(0, 12)}...` : 'NOT FOUND',
+            file: 'api-key-service.ts'
+          });
 
           // Convert platform keys format to APIKeysConfig format
           return {
@@ -235,9 +295,9 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
             googleCloud: platformKeys.googleCloud ?? {},
             ai: {
               openrouterApiKey: openrouterKey,
-              openaiApiKey: platformKeys.ai?.openaiApiKey || platformKeys.openai?.apiKey || null,
-              anthropicApiKey: platformKeys.ai?.anthropicApiKey || platformKeys.anthropic?.apiKey || null,
-              geminiApiKey: platformKeys.ai?.geminiApiKey || platformKeys.gemini?.apiKey || null,
+              openaiApiKey: platformKeys.ai?.openaiApiKey ?? platformKeys.openai?.apiKey ?? null,
+              anthropicApiKey: platformKeys.ai?.anthropicApiKey ?? platformKeys.anthropic?.apiKey ?? null,
+              geminiApiKey: platformKeys.ai?.geminiApiKey ?? platformKeys.gemini?.apiKey ?? null,
             },
             payments:platformKeys.stripe ?? {},
             email:platformKeys.sendgrid ?? platformKeys.resend ?? {},
@@ -267,7 +327,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
           .doc(organizationId)
           .get();
         if (snap.exists) {
-          const keysData = snap.data() as any;
+          const keysData = snap.data() as FirestoreKeysData;
           return {
             ...keysData,
             createdAt: keysData.createdAt ? new Date(keysData.createdAt) : new Date(),
@@ -292,8 +352,16 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
 
       return {
         ...keysData,
-        createdAt: keysData.createdAt ? new Date(keysData.createdAt) : new Date(),
-        updatedAt: keysData.updatedAt ? new Date(keysData.updatedAt) : new Date(),
+        createdAt: keysData.createdAt instanceof Date
+          ? keysData.createdAt
+          : keysData.createdAt
+            ? new Date(String(keysData.createdAt))
+            : new Date(),
+        updatedAt: keysData.updatedAt instanceof Date
+          ? keysData.updatedAt
+          : keysData.updatedAt
+            ? new Date(String(keysData.updatedAt))
+            : new Date(),
       } as APIKeysConfig;
     } catch (error) {
       logger.error('Error fetching API keys from Firestore:', error, { file: 'api-key-service.ts' });
@@ -333,7 +401,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
 
   // Service-specific validators
 
-  private async validateStripeKey(keys: any): Promise<APIKeyValidationResult> {
+  private validateStripeKey(keys: StripeKeys): APIKeyValidationResult {
     // In production, make actual API call to Stripe
     if (!keys?.secretKey?.startsWith('sk_')) {
       return { valid: false, error: 'Invalid Stripe secret key format' };
@@ -341,7 +409,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     return { valid: true };
   }
 
-  private async validateGeminiKey(apiKey: string): Promise<APIKeyValidationResult> {
+  private validateGeminiKey(apiKey: string): APIKeyValidationResult {
     // In production, make test API call to Gemini
     if (!apiKey || apiKey.length < 20) {
       return { valid: false, error: 'Invalid Gemini API key format' };
@@ -349,7 +417,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     return { valid: true };
   }
 
-  private async validateSendgridKey(keys: any): Promise<APIKeyValidationResult> {
+  private validateSendgridKey(keys: SendgridKeys): APIKeyValidationResult {
     // In production, make test API call to SendGrid
     if (!keys?.apiKey?.startsWith('SG.')) {
       return { valid: false, error: 'Invalid SendGrid API key format' };

@@ -1,19 +1,19 @@
 /**
  * Admin Data Access Layer (Admin DAL)
  * Safe wrapper for all Firebase Admin SDK Firestore operations
- * 
+ *
  * CRITICAL FEATURES:
  * - Automatic environment-aware collection naming
  * - Dry-run mode for testing
  * - Audit logging for compliance
  * - Production delete protection
  * - Organization-scoped access verification (coming soon)
- * 
+ *
  * IMPORTANT: This is for server-side (API routes) only!
  * For client-side operations, use @/lib/firebase/dal
  */
 
-import type { 
+import type {
   Firestore,
   CollectionReference,
   DocumentReference,
@@ -21,11 +21,8 @@ import type {
   WriteResult,
   DocumentSnapshot,
   QuerySnapshot} from 'firebase-admin/firestore';
-import {
-  FieldValue,
-} from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS, getCollection, getOrgSubCollection, getPrefix } from './collections';
+import { COLLECTIONS, getOrgSubCollection, getPrefix } from './collections';
 import { logger } from '@/lib/logger/logger';
 
 interface WriteOptions {
@@ -41,18 +38,18 @@ interface WriteOptions {
 
 export class FirestoreAdminDAL {
   private db: Firestore;
-  
+
   constructor(firestoreInstance: Firestore) {
     if (!firestoreInstance) {
       throw new Error('FirestoreAdminDAL requires a valid Firestore instance. Make sure Firebase Admin is initialized.');
     }
     this.db = firestoreInstance;
   }
-  
+
   // ========================================
   // COLLECTION REFERENCES
   // ========================================
-  
+
   /**
    * Get a collection reference with environment-aware naming
    * Usage: adminDal.getCollection('ORGANIZATIONS')
@@ -61,7 +58,7 @@ export class FirestoreAdminDAL {
     const name = COLLECTIONS[collectionName];
     return this.db.collection(name);
   }
-  
+
   /**
    * Get an organization sub-collection reference
    * Usage: adminDal.getOrgCollection('org123', 'records')
@@ -70,7 +67,7 @@ export class FirestoreAdminDAL {
     const path = getOrgSubCollection(orgId, subCollection);
     return this.db.collection(path);
   }
-  
+
   /**
    * Get a workspace sub-collection reference
    * Usage: adminDal.getWorkspaceCollection('org123', 'workspace456', 'schemas')
@@ -80,7 +77,7 @@ export class FirestoreAdminDAL {
     const prefix = getPrefix();
     return this.db.collection(`${orgCollection}/${orgId}/${prefix}workspaces/${workspaceId}/${prefix}${subCollection}`);
   }
-  
+
   /**
    * Get a nested collection reference with a custom path
    * Usage: adminDal.getNestedCollection('organizations/{orgId}/ai-agents/default/config/persona', { orgId: 'org123' })
@@ -88,34 +85,34 @@ export class FirestoreAdminDAL {
    */
   getNestedCollection(pathTemplate: string, params?: Record<string, string>): CollectionReference {
     let path = pathTemplate;
-    
+
     // Replace parameters in path
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         path = path.replace(`{${key}}`, value);
       }
     }
-    
+
     return this.db.collection(path);
   }
-  
+
   /**
    * Get a nested document reference with a custom path
    * Usage: adminDal.getNestedDocRef('organizations/{orgId}/ai-agents/default/config/persona', { orgId: 'org123' })
    */
   getNestedDocRef(pathTemplate: string, params?: Record<string, string>): DocumentReference {
     let path = pathTemplate;
-    
+
     // Replace parameters in path
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         path = path.replace(`{${key}}`, value);
       }
     }
-    
+
     return this.db.doc(path);
   }
-  
+
   /**
    * Get a collection group reference (queries across all organizations)
    * Usage: adminDal.getCollectionGroup('website')
@@ -124,14 +121,14 @@ export class FirestoreAdminDAL {
   getCollectionGroup(collectionId: string) {
     return this.db.collectionGroup(collectionId);
   }
-  
+
   /**
    * Get an environment-aware subcollection name
    * Helper method to apply prefix to any subcollection
-   * 
+   *
    * @param subCollectionName - Base subcollection name
    * @returns Prefixed subcollection name based on environment
-   * 
+   *
    * @example
    * adminDal.getSubColPath('website') // 'test_website' in dev, 'website' in prod
    */
@@ -139,14 +136,14 @@ export class FirestoreAdminDAL {
     const prefix = getPrefix();
     return `${prefix}${subCollectionName}`;
   }
-  
+
   // ========================================
   // SAFE WRITE OPERATIONS
   // ========================================
-  
+
   /**
    * Safe setDoc with environment awareness and audit logging
-   * 
+   *
    * @example
    * await adminDal.safeSetDoc('ORGANIZATIONS', 'org123', {
    *   name: 'Acme Inc',
@@ -160,7 +157,7 @@ export class FirestoreAdminDAL {
     options?: WriteOptions & { merge?: boolean }
   ): Promise<WriteResult | void> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode - log without executing
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would write to Firestore (Admin)', {
@@ -172,14 +169,14 @@ export class FirestoreAdminDAL {
       });
       return;
     }
-    
+
     // TODO: Add organization-scoped access check
     // if (options?.organizationId) {
     //   await this.verifyOrgAccess(options.userId, options.organizationId);
     // }
-    
+
     const docRef = this.db.collection(collectionRef).doc(docId);
-    
+
     logger.info('✍️ Writing to Firestore (Admin)', {
       collection: collectionRef,
       docId,
@@ -187,21 +184,21 @@ export class FirestoreAdminDAL {
       userId: options?.userId,
       file: 'admin-dal.ts'
     });
-    
-    const writeResult = options?.merge 
+
+    const writeResult = options?.merge
       ? await docRef.set(data, { merge: true })
       : await docRef.set(data);
-    
+
     if (options?.audit) {
-      await this.logAudit('CREATE', collectionRef, docId, data, options?.userId);
+      this.logAudit('CREATE', collectionRef, docId, data as Record<string, unknown>, options?.userId);
     }
-    
+
     return writeResult;
   }
-  
+
   /**
    * Safe updateDoc with environment awareness and audit logging
-   * 
+   *
    * @example
    * await adminDal.safeUpdateDoc('ORGANIZATIONS', 'org123', {
    *   name: 'Updated Name',
@@ -215,7 +212,7 @@ export class FirestoreAdminDAL {
     options?: WriteOptions
   ): Promise<WriteResult | void> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would update Firestore (Admin)', {
@@ -226,9 +223,9 @@ export class FirestoreAdminDAL {
       });
       return;
     }
-    
+
     const docRef = this.db.collection(collectionRef).doc(docId);
-    
+
     logger.info('📝 Updating Firestore (Admin)', {
       collection: collectionRef,
       docId,
@@ -236,19 +233,19 @@ export class FirestoreAdminDAL {
       userId: options?.userId,
       file: 'admin-dal.ts'
     });
-    
+
     const writeResult = await docRef.update(data);
-    
+
     if (options?.audit) {
-      await this.logAudit('UPDATE', collectionRef, docId, data, options?.userId);
+      this.logAudit('UPDATE', collectionRef, docId, data as Record<string, unknown>, options?.userId);
     }
-    
+
     return writeResult;
   }
-  
+
   /**
    * Safe deleteDoc with environment awareness and production protection
-   * 
+   *
    * @example
    * await adminDal.safeDeleteDoc('ORGANIZATIONS', 'org123', {
    *   audit: true,
@@ -261,7 +258,7 @@ export class FirestoreAdminDAL {
     options?: WriteOptions
   ): Promise<WriteResult | void> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would delete from Firestore (Admin)', {
@@ -271,7 +268,7 @@ export class FirestoreAdminDAL {
       });
       return;
     }
-    
+
     // CRITICAL: Production delete protection
     if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_PROD_DELETES) {
       throw new Error(
@@ -279,9 +276,9 @@ export class FirestoreAdminDAL {
         'This is a safety measure to prevent accidental data loss.'
       );
     }
-    
+
     const docRef = this.db.collection(collectionRef).doc(docId);
-    
+
     logger.warn('🗑️ Deleting from Firestore (Admin)', {
       collection: collectionRef,
       docId,
@@ -289,19 +286,19 @@ export class FirestoreAdminDAL {
       userId: options?.userId,
       file: 'admin-dal.ts'
     });
-    
+
     const writeResult = await docRef.delete();
-    
+
     if (options?.audit) {
-      await this.logAudit('DELETE', collectionRef, docId, {}, options?.userId);
+      this.logAudit('DELETE', collectionRef, docId, {}, options?.userId);
     }
-    
+
     return writeResult;
   }
-  
+
   /**
    * Safe addDoc (auto-generated ID)
-   * 
+   *
    * @example
    * const docRef = await adminDal.safeAddDoc('LEADS', {
    *   email: 'john@example.com',
@@ -314,7 +311,7 @@ export class FirestoreAdminDAL {
     options?: WriteOptions
   ): Promise<DocumentReference> {
     const collectionRef = COLLECTIONS[collectionName];
-    
+
     // Dry run mode
     if (options?.dryRun) {
       logger.info('[DRY RUN] Would add to Firestore (Admin)', {
@@ -325,29 +322,29 @@ export class FirestoreAdminDAL {
       // Return a fake doc ref in dry run mode
       return this.db.collection(collectionRef).doc('dry-run-doc-id');
     }
-    
+
     const colRef = this.db.collection(collectionRef);
-    
+
     logger.info('➕ Adding to Firestore (Admin)', {
       collection: collectionRef,
       env: process.env.NODE_ENV,
       userId: options?.userId,
       file: 'admin-dal.ts'
     });
-    
+
     const docRef = await colRef.add(data);
-    
+
     if (options?.audit) {
-      await this.logAudit('CREATE', collectionRef, docRef.id, data, options?.userId);
+      this.logAudit('CREATE', collectionRef, docRef.id, data as Record<string, unknown>, options?.userId);
     }
-    
+
     return docRef;
   }
-  
+
   // ========================================
   // SAFE READ OPERATIONS
   // ========================================
-  
+
   /**
    * Safe getDoc with logging
    */
@@ -357,24 +354,24 @@ export class FirestoreAdminDAL {
   ): Promise<DocumentSnapshot<T>> {
     const collectionRef = COLLECTIONS[collectionName];
     const docRef = this.db.collection(collectionRef).doc(docId);
-    
+
     logger.debug('📖 Reading from Firestore (Admin)', {
       collection: collectionRef,
       docId,
       file: 'admin-dal.ts'
     });
-    
+
     return await docRef.get() as DocumentSnapshot<T>;
   }
-  
+
   /**
    * Safe getDocs with query support
-   * 
+   *
    * @example
    * const snapshot = await adminDal.safeGetDocs('ORGANIZATIONS');
-   * 
+   *
    * @example with query
-   * const snapshot = await adminDal.safeGetDocs('ORGANIZATIONS', (ref) => 
+   * const snapshot = await adminDal.safeGetDocs('ORGANIZATIONS', (ref) =>
    *   ref.where('status', '==', 'active').limit(10)
    * );
    */
@@ -384,23 +381,23 @@ export class FirestoreAdminDAL {
   ): Promise<QuerySnapshot<T>> {
     const collectionRef = COLLECTIONS[collectionName];
     const colRef = this.db.collection(collectionRef);
-    
+
     logger.debug('📚 Querying Firestore (Admin)', {
       collection: collectionRef,
       hasQuery: !!queryFn,
       file: 'admin-dal.ts'
     });
-    
+
     const query = queryFn ? queryFn(colRef) : colRef;
     return await query.get() as QuerySnapshot<T>;
   }
-  
+
   /**
    * Safe query with direct query builder
    * Use this when you need more control over the query
-   * 
+   *
    * @example
-   * const snapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref) => 
+   * const snapshot = await adminDal.safeQuery('ORGANIZATIONS', (ref) =>
    *   ref.where('tier', '==', 'tier1')
    *      .where('status', '==', 'active')
    *      .orderBy('createdAt', 'desc')
@@ -413,14 +410,14 @@ export class FirestoreAdminDAL {
   ): Promise<QuerySnapshot<T>> {
     return this.safeGetDocs<T>(collectionName, queryFn);
   }
-  
+
   // ========================================
   // BATCH OPERATIONS
   // ========================================
-  
+
   /**
    * Get a batch writer for multiple operations
-   * 
+   *
    * @example
    * const batch = adminDal.batch();
    * batch.set(adminDal.getCollection('ORGANIZATIONS').doc('org1'), { name: 'Org 1' });
@@ -430,15 +427,15 @@ export class FirestoreAdminDAL {
   batch() {
     return this.db.batch();
   }
-  
+
   /**
    * Run a transaction
-   * 
+   *
    * @example
    * await adminDal.runTransaction(async (transaction) => {
    *   const orgRef = adminDal.getCollection('ORGANIZATIONS').doc('org123');
    *   const orgDoc = await transaction.get(orgRef);
-   *   
+   *
    *   if (orgDoc.exists) {
    *     transaction.update(orgRef, { count: orgDoc.data().count + 1 });
    *   }
@@ -449,22 +446,22 @@ export class FirestoreAdminDAL {
   ) {
     return this.db.runTransaction(updateFunction);
   }
-  
+
   // ========================================
   // AUDIT LOGGING
   // ========================================
-  
+
   /**
    * Log an audit trail entry
    * In a production system, this would write to an audit log collection
    */
-  private async logAudit(
+  private logAudit(
     action: 'CREATE' | 'UPDATE' | 'DELETE',
     collection: string,
     docId: string,
-    data: any,
+    data: Record<string, unknown>,
     userId?: string
-  ): Promise<void> {
+  ): void {
     const auditEntry = {
       action,
       collection,
@@ -475,47 +472,47 @@ export class FirestoreAdminDAL {
       // Only log data preview for sensitive operations
       dataPreview: action === 'DELETE' ? null : Object.keys(data).join(', ')
     };
-    
+
     logger.info('📋 Audit Log (Admin)', auditEntry);
-    
+
     // TODO: Implement actual audit log storage
     // await this.db.collection(COLLECTIONS.AUDIT_LOGS).add(auditEntry);
   }
-  
+
   // ========================================
   // ACCESS CONTROL (Coming Soon)
   // ========================================
-  
+
   /**
    * Verify that a user has access to an organization
    * This will be implemented as part of the security enhancement
    */
-  private async verifyOrgAccess(
-    userId: string | undefined,
-    organizationId: string
-  ): Promise<void> {
+  private verifyOrgAccess(
+    _userId: string | undefined,
+    _organizationId: string
+  ): void {
     // TODO: Implement organization-scoped access control
     // For now, just log the check
     logger.debug('🔒 Verifying org access (Admin)', {
-      userId,
-      organizationId,
+      userId: _userId,
+      organizationId: _organizationId,
       file: 'admin-dal.ts'
     });
   }
-  
+
   // ========================================
   // ANALYTICS QUERY METHODS
   // ========================================
-  
+
   /**
    * Get all workflows for an organization workspace
    */
-  async getAllWorkflows(organizationId: string, workspaceId: string): Promise<any[]> {
+  async getAllWorkflows(organizationId: string, workspaceId: string): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'workflows');
     const snapshot = await colRef.get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
-  
+
   /**
    * Get workflow executions in a date range
    */
@@ -524,7 +521,7 @@ export class FirestoreAdminDAL {
     workspaceId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<any[]> {
+  ): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'workflowExecutions');
     const snapshot = await colRef
       .where('startedAt', '>=', startDate)
@@ -532,45 +529,45 @@ export class FirestoreAdminDAL {
       .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
-  
+
   /**
    * Get email generations in a date range
    */
-  async getEmailGenerations(
-    organizationId: string,
-    workspaceId: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<any[]> {
+  getEmailGenerations(
+    _organizationId: string,
+    _workspaceId: string,
+    _startDate: Date,
+    _endDate: Date
+  ): Array<Record<string, unknown>> {
     // TODO: Query from email generation logs or Signal Bus events
     // For now, return empty array
     return [];
   }
-  
+
   /**
    * Get all active deals
    */
-  async getActiveDeals(organizationId: string, workspaceId: string): Promise<any[]> {
+  async getActiveDeals(organizationId: string, workspaceId: string): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
     const snapshot = await colRef
       .where('status', 'in', ['active', 'open', 'in_progress'])
       .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
-  
+
   /**
    * Get deals snapshot at a specific date (for trend comparison)
    */
   async getDealsSnapshot(
     organizationId: string,
     workspaceId: string,
-    snapshotDate: Date
-  ): Promise<any[]> {
+    _snapshotDate: Date
+  ): Promise<Array<Record<string, unknown>>> {
     // This would require historical snapshots
     // For now, return current active deals
     return this.getActiveDeals(organizationId, workspaceId);
   }
-  
+
   /**
    * Get closed deals in a date range
    */
@@ -579,7 +576,7 @@ export class FirestoreAdminDAL {
     workspaceId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<any[]> {
+  ): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
     const snapshot = await colRef
       .where('status', 'in', ['won', 'lost', 'closed'])
@@ -588,7 +585,7 @@ export class FirestoreAdminDAL {
       .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
-  
+
   /**
    * Get won deals in a date range
    */
@@ -597,7 +594,7 @@ export class FirestoreAdminDAL {
     workspaceId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<any[]> {
+  ): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
     const snapshot = await colRef
       .where('status', '==', 'won')
@@ -606,27 +603,27 @@ export class FirestoreAdminDAL {
       .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
-  
+
   /**
    * Get revenue forecast
    */
-  async getRevenueForecast(organizationId: string, workspaceId: string): Promise<any> {
+  async getRevenueForecast(organizationId: string, workspaceId: string): Promise<Record<string, unknown> | null> {
     const docRef = this.getWorkspaceCollection(organizationId, workspaceId, 'forecasts').doc('current');
     const snapshot = await docRef.get();
-    return snapshot.exists ? snapshot.data() : null;
+    return snapshot.exists ? (snapshot.data() as Record<string, unknown>) : null;
   }
-  
+
   /**
    * Get sales reps for an organization
    */
-  async getSalesReps(organizationId: string, workspaceId: string): Promise<any[]> {
+  async getSalesReps(organizationId: string, workspaceId: string): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'users');
     const snapshot = await colRef
       .where('role', '==', 'sales')
       .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
-  
+
   /**
    * Get deals for a specific rep in a date range
    */
@@ -636,7 +633,7 @@ export class FirestoreAdminDAL {
     repId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<any[]> {
+  ): Promise<Array<Record<string, unknown>>> {
     const colRef = this.getWorkspaceCollection(organizationId, workspaceId, 'deals');
     const snapshot = await colRef
       .where('ownerId', '==', repId)
@@ -654,7 +651,7 @@ export class FirestoreAdminDAL {
 /**
  * Singleton Admin DAL instance
  * Import this in your API routes: import { adminDal } from '@/lib/firebase/admin-dal'
- * 
+ *
  * IMPORTANT: Only use this on the server-side (API routes, server actions)
  * For client-side operations, use @/lib/firebase/dal
  */

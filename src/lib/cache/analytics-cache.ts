@@ -18,7 +18,7 @@ interface CacheEntry<T> {
 }
 
 class AnalyticsCache {
-  private cache: Map<string, CacheEntry<any>> = new Map();
+  private cache: Map<string, CacheEntry<unknown>> = new Map();
   private readonly defaultTTL = 5 * 60 * 1000; // 5 minutes
 
   // TTL configuration per query type (in milliseconds)
@@ -35,7 +35,7 @@ class AnalyticsCache {
   /**
    * Generate cache key
    */
-  private getCacheKey(namespace: string, key: string, params?: Record<string, any>): string {
+  private getCacheKey(namespace: string, key: string, params?: Record<string, unknown>): string {
     const paramString = params ? JSON.stringify(params) : '';
     return `${namespace}:${key}:${paramString}`;
   }
@@ -43,7 +43,7 @@ class AnalyticsCache {
   /**
    * Check if cache entry is valid
    */
-  private isValid(entry: CacheEntry<any>): boolean {
+  private isValid(entry: CacheEntry<unknown>): boolean {
     const now = Date.now();
     return now - entry.timestamp < entry.ttl;
   }
@@ -51,7 +51,7 @@ class AnalyticsCache {
   /**
    * Get from cache
    */
-  get<T>(namespace: string, key: string, params?: Record<string, any>): T | null {
+  get<T>(namespace: string, key: string, params?: Record<string, unknown>): T | null {
     const cacheKey = this.getCacheKey(namespace, key, params);
     const entry = this.cache.get(cacheKey);
 
@@ -64,7 +64,7 @@ class AnalyticsCache {
       return null;
     }
 
-    logger.info('Cache HIT: namespace}:key}', { file: 'analytics-cache.ts' });
+    logger.info(`Cache HIT: ${namespace}:${key}`, { file: 'analytics-cache.ts' });
     return entry.data as T;
   }
 
@@ -72,10 +72,10 @@ class AnalyticsCache {
    * Set cache value
    */
   set<T>(
-    namespace: string, 
-    key: string, 
-    data: T, 
-    params?: Record<string, any>,
+    namespace: string,
+    key: string,
+    data: T,
+    params?: Record<string, unknown>,
     customTTL?: number
   ): void {
     const cacheKey = this.getCacheKey(namespace, key, params);
@@ -87,18 +87,18 @@ class AnalyticsCache {
       ttl,
     });
 
-    logger.info('Cache SET: namespace}:key} (TTL: ttl}ms)', { file: 'analytics-cache.ts' });
+    logger.info(`Cache SET: ${namespace}:${key} (TTL: ${ttl}ms)`, { file: 'analytics-cache.ts' });
   }
 
   /**
    * Invalidate specific cache entry
    */
-  invalidate(namespace: string, key: string, params?: Record<string, any>): void {
+  invalidate(namespace: string, key: string, params?: Record<string, unknown>): void {
     const cacheKey = this.getCacheKey(namespace, key, params);
     const deleted = this.cache.delete(cacheKey);
-    
+
     if (deleted) {
-      logger.info('Cache INVALIDATED: namespace}:key}', { file: 'analytics-cache.ts' });
+      logger.info(`Cache INVALIDATED: ${namespace}:${key}`, { file: 'analytics-cache.ts' });
     }
   }
 
@@ -107,7 +107,7 @@ class AnalyticsCache {
    */
   invalidateNamespace(namespace: string): void {
     let count = 0;
-    
+
     for (const key of this.cache.keys()) {
       if (key.startsWith(`${namespace}:`)) {
         this.cache.delete(key);
@@ -115,7 +115,7 @@ class AnalyticsCache {
       }
     }
 
-    logger.info('Cache INVALIDATED count} entries for namespace: namespace}', { file: 'analytics-cache.ts' });
+    logger.info(`Cache INVALIDATED ${count} entries for namespace: ${namespace}`, { file: 'analytics-cache.ts' });
   }
 
   /**
@@ -132,7 +132,7 @@ class AnalyticsCache {
     }
 
     if (cleaned > 0) {
-      logger.info('Cache CLEANED UP cleaned} expired entries', { file: 'analytics-cache.ts' });
+      logger.info(`Cache CLEANED UP ${cleaned} expired entries`, { file: 'analytics-cache.ts' });
     }
 
     return cleaned;
@@ -172,7 +172,7 @@ class AnalyticsCache {
   clear(): void {
     const size = this.cache.size;
     this.cache.clear();
-    logger.info('Cache CLEARED all size} entries', { file: 'analytics-cache.ts' });
+    logger.info(`Cache CLEARED all ${size} entries`, { file: 'analytics-cache.ts' });
   }
 }
 
@@ -194,7 +194,7 @@ export async function withCache<T>(
   organizationId: string,
   queryType: string,
   fetchFn: () => Promise<T>,
-  params?: Record<string, any>,
+  params?: Record<string, unknown>,
   customTTL?: number
 ): Promise<T> {
   // Try cache first
@@ -204,7 +204,7 @@ export async function withCache<T>(
   }
 
   // Cache miss - fetch data
-  logger.info('Cache MISS: organizationId}:queryType} - fetching...', { file: 'analytics-cache.ts' });
+  logger.info(`Cache MISS: ${organizationId}:${queryType} - fetching...`, { file: 'analytics-cache.ts' });
   const data = await fetchFn();
 
   // Store in cache
@@ -246,7 +246,7 @@ if (typeof setInterval !== 'undefined') {
     const cleaned = analyticsCache.cleanupExpired();
     if (cleaned > 0) {
       const stats = analyticsCache.getStats();
-      logger.info('Cache Automatic cleanup: cleaned} expired, stats.validEntries} active', { file: 'analytics-cache.ts' });
+      logger.info(`Cache Automatic cleanup: ${cleaned} expired, ${stats.validEntries} active`, { file: 'analytics-cache.ts' });
     }
   }, 10 * 60 * 1000); // Every 10 minutes
 }

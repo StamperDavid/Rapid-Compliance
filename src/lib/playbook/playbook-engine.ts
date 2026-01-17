@@ -68,7 +68,7 @@ export async function extractPatterns(
     });
     
     // 1. Get conversation analyses to extract from
-    const analyses = await getConversationAnalyses(request, fullConfig);
+    const analyses = getConversationAnalyses(request, fullConfig);
     
     if (analyses.length < fullConfig.minSampleSize) {
       throw new Error(
@@ -140,9 +140,9 @@ export async function extractPatterns(
     const processingTime = Date.now() - startTime;
     
     // 4. Emit signal
-    const coordinator = await getServerSignalCoordinator();
-    await coordinator.emitSignal({
-      type: 'playbook.patterns_extracted' as any,
+    const coordinator = getServerSignalCoordinator();
+    void coordinator.emitSignal({
+      type: 'playbook.patterns_extracted',
       orgId: request.organizationId,
       workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       priority: 'Medium',
@@ -218,8 +218,9 @@ async function extractConversationPatterns(
           avgSentimentChange: 0,
         });
       }
-      
-      const candidate = patternCandidates.get(patternKey)!;
+
+      const candidate = patternCandidates.get(patternKey);
+      if (!candidate) { continue; }
       candidate.occurrences.push({
         conversationId: analysis.conversation.id,
         repId: analysis.conversation.repId,
@@ -228,12 +229,12 @@ async function extractConversationPatterns(
         sentimentScore: analysis.analysis.sentiment.overall.score,
       });
     }
-    
+
     // Extract patterns from coaching insights
     for (const insight of analysis.analysis.coachingInsights) {
       if (insight.whatWentWell) {
         const patternKey = `coaching_${insight.category}_${insight.skillArea}`;
-        
+
         if (!patternCandidates.has(patternKey)) {
           patternCandidates.set(patternKey, {
             key: patternKey,
@@ -244,8 +245,9 @@ async function extractConversationPatterns(
             avgSentimentChange: 0,
           });
         }
-        
-        const candidate = patternCandidates.get(patternKey)!;
+
+        const candidate = patternCandidates.get(patternKey);
+        if (!candidate) { continue; }
         candidate.occurrences.push({
           conversationId: analysis.conversation.id,
           repId: analysis.conversation.repId,
@@ -351,7 +353,8 @@ async function extractTalkTracks(
         });
       }
       
-      const candidate = talkTrackCandidates.get(trackKey)!;
+      const candidate = talkTrackCandidates.get(trackKey);
+      if (!candidate) { continue; }
       candidate.examples.push({
         conversationId: analysis.conversation.id,
         repId: analysis.conversation.repId,
@@ -447,7 +450,8 @@ async function extractObjectionResponses(
         });
       }
       
-      const candidate = responseMap.get(responseKey)!;
+      const candidate = responseMap.get(responseKey);
+      if (!candidate) { continue; }
       candidate.examples.push({
         conversationId: analysis.conversation.id,
         repId: analysis.conversation.repId,
@@ -547,7 +551,8 @@ async function extractBestPractices(
         });
       }
       
-      const candidate = practiceMap.get(practiceKey)!;
+      const candidate = practiceMap.get(practiceKey);
+      if (!candidate) { continue; }
       candidate.examples.push({
         conversationId: analysis.conversation.id,
         repId: analysis.conversation.repId,
@@ -690,9 +695,9 @@ export async function generatePlaybook(
     }
     
     // 5. Emit signal
-    const coordinator = await getServerSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
-      type: 'playbook.generated' as any,
+      type: 'playbook.generated' as const,
       orgId: request.organizationId,
       workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       priority: 'Medium',
@@ -758,13 +763,13 @@ export async function generatePlaybook(
 /**
  * Get conversation analyses based on request criteria
  */
-async function getConversationAnalyses(
-  request: ExtractPatternsRequest,
-  config: PlaybookEngineConfig
-): Promise<ConversationAnalysisWithConversation[]> {
+function getConversationAnalyses(
+  _request: ExtractPatternsRequest,
+  _config: PlaybookEngineConfig
+): ConversationAnalysisWithConversation[] {
   // TODO: Implement actual Firestore queries
   // For now, return mock data structure
-  
+
   // This would query:
   // 1. Conversations collection filtered by:
   //    - organizationId
@@ -775,7 +780,7 @@ async function getConversationAnalyses(
   // 3. Filter by minPerformanceScore
   // 4. If repIds specified, filter by those reps
   // 5. Otherwise, get top performers based on topPerformerPercentile
-  
+
   return [];
 }
 
@@ -790,8 +795,8 @@ function generatePatternKey(moment: KeyMoment): string {
  * Extract key phrases from transcript
  */
 function extractKeyPhrasesFromTranscript(
-  transcript: string,
-  analysis: ConversationAnalysis
+  _transcript: string,
+  _analysis: ConversationAnalysis
 ): KeyPhrase[] {
   // TODO: Implement NLP-based key phrase extraction
   // For now, return empty array
@@ -801,7 +806,7 @@ function extractKeyPhrasesFromTranscript(
 /**
  * Get rep name from analyses
  */
-function getRepName(repId: string, analyses: ConversationAnalysisWithConversation[]): string {
+function getRepName(repId: string, _analyses: ConversationAnalysisWithConversation[]): string {
   // TODO: Get actual rep name from user database
   return `Rep ${repId.slice(0, 8)}`;
 }
@@ -842,7 +847,7 @@ function generateExtractionSummary(
   talkTracks: TalkTrack[],
   objectionResponses: ObjectionResponse[],
   bestPractices: PlaybookBestPractice[],
-  config: PlaybookEngineConfig
+  _config: PlaybookEngineConfig
 ): ExtractionSummary {
   const highConfidencePatterns = patterns.filter(p => p.confidence >= 80).length;
   
@@ -903,6 +908,7 @@ function calculateSuccessMetrics(extraction: PatternExtractionResult): SuccessMe
  */
 async function savePlaybook(playbook: Playbook): Promise<void> {
   // TODO: Implement Firestore save
+  await Promise.resolve();
   logger.info('Saving playbook to Firestore', { playbookId: playbook.id });
 }
 

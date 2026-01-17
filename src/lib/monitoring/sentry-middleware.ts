@@ -11,11 +11,11 @@ import { logger } from '@/lib/logger/logger';
 /**
  * Extract user information from request for Sentry context
  */
-async function extractUserContext(request: NextRequest): Promise<{
+function extractUserContext(request: NextRequest): {
   id?: string;
   email?: string;
   organizationId?: string;
-}> {
+} {
   try {
     // Try to get user from auth header
     const authHeader = request.headers.get('authorization');
@@ -51,7 +51,7 @@ function getRequestMetadata(request: NextRequest) {
  * - User context
  * - Request metadata
  */
-export function withSentryMonitoring<T = any>(
+export function withSentryMonitoring<T = Record<string, unknown>>(
   handler: (request: NextRequest, context?: T) => Promise<NextResponse>,
   options: {
     routeName?: string;
@@ -65,7 +65,7 @@ export function withSentryMonitoring<T = any>(
 
     try {
       // Extract and set user context
-      const userContext = await extractUserContext(request);
+      const userContext = extractUserContext(request);
       if (userContext.id || userContext.email) {
         Sentry.setUser({
           id: userContext.id,
@@ -152,7 +152,7 @@ export function withSentryMonitoring<T = any>(
  */
 export function trackEvent(
   eventName: string,
-  data?: Record<string, any>,
+  data?: Record<string, unknown>,
   level: 'info' | 'warning' | 'error' = 'info'
 ) {
   Sentry.captureMessage(eventName, {
@@ -169,7 +169,7 @@ export function trackEvent(
 export function trackPerformance(
   operationName: string,
   duration: number,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) {
   Sentry.addBreadcrumb({
     category: 'performance',
@@ -189,15 +189,21 @@ export function trackPerformance(
   }
 }
 
+interface SentrySpan {
+  setData: (key: string, value: unknown) => void;
+  setStatus: (status: string) => void;
+  finish: () => void;
+}
+
 /**
  * Start a Sentry span for a specific operation
  * Use this to track performance of specific code blocks
  * Note: In Sentry v8+, use the span() function directly for better performance tracking
  */
 export function startSpan(
-  operation: string,
-  description?: string
-): any {
+  _operation: string,
+  _description?: string
+): SentrySpan {
   // For Sentry v8+, this is a simplified wrapper
   // Real spans should be created using Sentry.startSpan() or Sentry.withActiveSpan()
   return {
@@ -221,8 +227,8 @@ export async function trackDatabaseQuery<T>(
     const result = await queryFn();
     const duration = Date.now() - start;
 
-    span?.setData('duration', duration);
-    span?.setStatus('ok');
+    span.setData('duration', duration);
+    span.setStatus('ok');
 
     if (duration > 500) {
       logger.warn('Slow database query', {
@@ -233,11 +239,11 @@ export async function trackDatabaseQuery<T>(
 
     return result;
   } catch (error) {
-    span?.setStatus('internal_error');
+    span.setStatus('internal_error');
     logger.error(`Database query failed: ${queryName}`, error as Error);
     throw error;
   } finally {
-    span?.finish();
+    span.finish();
   }
 }
 
@@ -256,9 +262,9 @@ export async function trackExternalCall<T>(
     const result = await callFn();
     const duration = Date.now() - start;
 
-    span?.setData('duration', duration);
-    span?.setData('service', serviceName);
-    span?.setStatus('ok');
+    span.setData('duration', duration);
+    span.setData('service', serviceName);
+    span.setStatus('ok');
 
     if (duration > 2000) {
       logger.warn('Slow external API call', {
@@ -270,7 +276,7 @@ export async function trackExternalCall<T>(
 
     return result;
   } catch (error) {
-    span?.setStatus('internal_error');
+    span.setStatus('internal_error');
     logger.error(`External API call failed: ${serviceName}.${operationName}`, error as Error);
 
     Sentry.captureException(error, {
@@ -283,7 +289,7 @@ export async function trackExternalCall<T>(
 
     throw error;
   } finally {
-    span?.finish();
+    span.finish();
   }
 }
 

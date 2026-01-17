@@ -22,12 +22,6 @@ import type { SalesSignal } from '@/lib/orchestration';
 import type {
   ConversationAnalysis,
   Conversation,
-  CoachingInsight,
-  RedFlag,
-  CompetitorMention,
-  ObjectionAnalysis,
-  PositiveSignal,
-  FollowUpAction,
 } from './types';
 
 // ============================================================================
@@ -686,16 +680,25 @@ export async function emitConversationEvents(
   conversation: Conversation
 ): Promise<void> {
   const { getServerSignalCoordinator } = await import('@/lib/orchestration/coordinator-factory-server');
+  const { logger } = await import('@/lib/logger/logger');
   const coordinator = getServerSignalCoordinator();
-  
+
   const events = createAllConversationEvents(analysis, conversation);
-  
+
   // Emit each event
   for (const event of events) {
     try {
       await coordinator.emitSignal(event);
     } catch (error) {
-      console.error(`Failed to emit event ${event.type}:`, error);
+      logger.error(
+        `Failed to emit event ${event.type}`,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          eventType: event.type,
+          conversationId: conversation.id,
+          organizationId: analysis.organizationId,
+        }
+      );
     }
   }
 }

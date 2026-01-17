@@ -67,7 +67,7 @@ export function initializeNotificationHandlers(orgId: string): void {
 /**
  * Deal Risk Predictor Signal Handlers
  */
-function registerDealRiskHandlers(service: NotificationService): void {
+function registerDealRiskHandlers(_service: NotificationService): void {
   // TODO: Subscribe to Signal Bus
   // For now, export handler functions to be called by Signal Bus
 }
@@ -86,8 +86,8 @@ export async function handleDealRiskCritical(signal: SalesSignal): Promise<void>
     dealStage: signal.metadata.dealStage as string,
     riskLevel: signal.metadata.riskLevel as string,
     riskProbability: signal.metadata.probability as number,
-    riskFactors: signal.metadata.factors as any[],
-    interventions: signal.metadata.interventions as any[],
+    riskFactors: signal.metadata.factors as unknown[],
+    interventions: signal.metadata.interventions as unknown[],
     userId: signal.metadata.ownerId as string,
   };
 
@@ -130,7 +130,7 @@ export async function handleDealRiskHigh(signal: SalesSignal): Promise<void> {
 /**
  * Conversation Intelligence Signal Handlers
  */
-function registerConversationHandlers(service: NotificationService): void {
+function registerConversationHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -147,7 +147,7 @@ export async function handleConversationLowScore(signal: SalesSignal): Promise<v
     repName: signal.metadata.repName as string,
     score: signal.metadata.score as number,
     issues: signal.metadata.issues as string[],
-    coaching: signal.metadata.coaching as any[],
+    coaching: signal.metadata.coaching as unknown[],
     userId: signal.metadata.repId as string,
   };
 
@@ -243,7 +243,7 @@ export async function handlePositiveSignal(signal: SalesSignal): Promise<void> {
 /**
  * Coaching Signal Handlers
  */
-function registerCoachingHandlers(service: NotificationService): void {
+function registerCoachingHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -260,7 +260,7 @@ export async function handleCoachingInsightsGenerated(signal: SalesSignal): Prom
     performanceTier: signal.metadata.performanceTier as string,
     strengths: signal.metadata.strengths as string[],
     weaknesses: signal.metadata.weaknesses as string[],
-    recommendations: signal.metadata.recommendations as any[],
+    recommendations: signal.metadata.recommendations as unknown[],
     userId: signal.metadata.repId as string,
   };
 
@@ -277,7 +277,7 @@ export async function handleCoachingInsightsGenerated(signal: SalesSignal): Prom
 /**
  * Performance Analytics Signal Handlers
  */
-function registerPerformanceHandlers(service: NotificationService): void {
+function registerPerformanceHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -336,7 +336,7 @@ export async function handleImprovementOpportunity(signal: SalesSignal): Promise
 /**
  * Playbook Builder Signal Handlers
  */
-function registerPlaybookHandlers(service: NotificationService): void {
+function registerPlaybookHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -393,7 +393,7 @@ export async function handlePatternIdentified(signal: SalesSignal): Promise<void
 /**
  * Sequence Intelligence Signal Handlers
  */
-function registerSequenceHandlers(service: NotificationService): void {
+function registerSequenceHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -409,7 +409,7 @@ export async function handleSequenceUnderperforming(signal: SalesSignal): Promis
     sequenceName: signal.metadata.sequenceName as string,
     replyRate: signal.metadata.replyRate as number,
     baselineReplyRate: signal.metadata.baselineReplyRate as number,
-    recommendations: signal.metadata.recommendations as any[],
+    recommendations: signal.metadata.recommendations as unknown[],
     userId: signal.metadata.ownerId as string,
   };
 
@@ -452,7 +452,7 @@ export async function handleOptimizationNeeded(signal: SalesSignal): Promise<voi
 /**
  * Lead Routing Signal Handlers
  */
-function registerRoutingHandlers(service: NotificationService): void {
+function registerRoutingHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -485,7 +485,7 @@ export async function handleLeadRouted(signal: SalesSignal): Promise<void> {
 /**
  * Email Writer Signal Handlers
  */
-function registerEmailWriterHandlers(service: NotificationService): void {
+function registerEmailWriterHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -516,7 +516,7 @@ export async function handleEmailGenerated(signal: SalesSignal): Promise<void> {
 /**
  * Workflow Automation Signal Handlers
  */
-function registerWorkflowHandlers(service: NotificationService): void {
+function registerWorkflowHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
@@ -548,14 +548,14 @@ export async function handleWorkflowExecuted(signal: SalesSignal): Promise<void>
 /**
  * Analytics Signal Handlers
  */
-function registerAnalyticsHandlers(service: NotificationService): void {
+function registerAnalyticsHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 
 /**
  * Forecasting Signal Handlers
  */
-function registerForecastingHandlers(service: NotificationService): void {
+function registerForecastingHandlers(_service: NotificationService): void {
   // Handlers registered via Signal Bus
 }
 

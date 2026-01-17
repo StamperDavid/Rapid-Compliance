@@ -227,14 +227,12 @@ export function applyRefinementsToPersona(
 }
 
 function applyVerbosityRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.verbosityControl) {
-    persona.verbosityControl = {
-      maxResponseLength: 500,
-      preferBulletPoints: false,
-      avoidRepetition: false,
-      conversationalPacing: 'balanced'
-    };
-  }
+  persona.verbosityControl ??= {
+    maxResponseLength: 500,
+    preferBulletPoints: false,
+    avoidRepetition: false,
+    conversationalPacing: 'balanced'
+  };
 
   if (refinement.adjustment.includes('maxResponseLength')) {
     const match = refinement.adjustment.match(/(\d+) words/);
@@ -261,9 +259,7 @@ function applyVerbosityRefinement(persona: PersonaWithTraining, refinement: Pers
 }
 
 function applyAccuracyRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.accuracyRules) {
-    persona.accuracyRules = [];
-  }
+  persona.accuracyRules ??= [];
 
   const ruleMatch = refinement.adjustment.match(/Add accuracy rule: "(.+)"/);
   if (ruleMatch) {
@@ -276,9 +272,7 @@ function applyAccuracyRefinement(persona: PersonaWithTraining, refinement: Perso
 }
 
 function applyBrandAlignmentRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.brandAlignmentNotes) {
-    persona.brandAlignmentNotes = '';
-  }
+  persona.brandAlignmentNotes ??= '';
 
   const note = refinement.adjustment;
   if (!persona.brandAlignmentNotes.includes(note)) {
@@ -288,9 +282,7 @@ function applyBrandAlignmentRefinement(persona: PersonaWithTraining, refinement:
 }
 
 function applyToneRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
-  if (!persona.dynamicToneRegister) {
-    persona.dynamicToneRegister = '';
-  }
+  persona.dynamicToneRegister ??= '';
 
   const toneAdjustment = refinement.adjustment;
   if (!persona.dynamicToneRegister.includes(toneAdjustment)) {

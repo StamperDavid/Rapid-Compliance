@@ -179,7 +179,7 @@ async function incrementalSync(
         calendarId,
         syncToken,
         pageToken,
-      });
+      }) as { data: { items?: calendar_v3.Schema$Event[]; nextPageToken?: string | null; nextSyncToken?: string | null } };
 
       if (response.data.items) {
         for (const event of response.data.items) {
@@ -270,7 +270,7 @@ function parseCalendarEvent(event: calendar_v3.Schema$Event, calendarId: string)
         responseStatus: (a.responseStatus ?? 'needsAction') as 'needsAction' | 'declined' | 'tentative' | 'accepted',
       };
     }),
-    organizer: event.organizer && event.organizer.email ? {
+    organizer: event.organizer?.email ? {
       email: event.organizer.email,
       displayName: event.organizer.displayName ?? undefined,
     } : undefined,
@@ -293,7 +293,7 @@ async function saveEventToCRM(organizationId: string, event: CalendarEvent): Pro
     if (event.attendees) {
       for (const attendee of event.attendees) {
         const contact = await findContactByEmail(organizationId, attendee.email);
-        if (contact && contact.id) {
+        if (contact?.id) {
           contactIds.push(contact.id);
         }
       }
@@ -486,7 +486,7 @@ async function findContactByEmail(organizationId: string, email: string): Promis
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
     );
     const contactsFiltered = contacts.filter((c: unknown): c is ContactWithId => {
-      if (typeof c !== 'object' || c === null) return false;
+      if (typeof c !== 'object' || c === null) {return false;}
       const contact = c as Record<string, unknown>;
       return typeof contact.email === 'string' && contact.email === email;
     });

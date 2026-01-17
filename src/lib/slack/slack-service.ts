@@ -299,8 +299,8 @@ export class SlackService {
   ): Promise<{ ts: string; channel: string; permalink: string }> {
     try {
       // Check rate limit
-      await this.checkRateLimit(workspace.id);
-      
+      this.checkRateLimit(workspace.id);
+
       // Build message payload
       const payload: Record<string, unknown> = {
         channel: message.channelId,
@@ -346,7 +346,7 @@ export class SlackService {
       );
       
       // Track rate limit
-      await this.trackRateLimit(workspace.id);
+      this.trackRateLimit(workspace.id);
       
       // Get permalink
       const permalink = await this.getPermalink(
@@ -743,12 +743,12 @@ export class SlackService {
     isBot: boolean;
   }> {
     try {
-      const response = await this.makeAPICall<SlackAPIResponse & { user: any }>(
+      const response = await this.makeAPICall<SlackAPIResponse & { user: SlackUserData }>(
         'users.info',
         { user: userId },
         token
       );
-      
+
       const user = response.user;
       
       return {
@@ -835,9 +835,9 @@ export class SlackService {
   /**
    * Check if rate limit allows sending
    */
-  private async checkRateLimit(workspaceId: string): Promise<void> {
+  private checkRateLimit(workspaceId: string): void {
     const limit = this.rateLimitCache.get(workspaceId);
-    
+
     if (!limit) {
       // Initialize rate limit tracking
       this.rateLimitCache.set(workspaceId, {
@@ -852,27 +852,27 @@ export class SlackService {
       });
       return;
     }
-    
+
     const now = Date.now();
-    
+
     // Reset minute counter if window expired
     if (limit.minuteResetAt.toMillis() <= now) {
       limit.messagesThisMinute = 0;
       limit.minuteResetAt = Timestamp.fromMillis(now + 60000);
     }
-    
+
     // Reset hour counter if window expired
     if (limit.hourResetAt.toMillis() <= now) {
       limit.messagesThisHour = 0;
       limit.hourResetAt = Timestamp.fromMillis(now + 3600000);
     }
-    
+
     // Check if rate limited
     if (limit.messagesThisMinute >= limit.maxPerMinute) {
       const waitMs = limit.minuteResetAt.toMillis() - now;
       throw new Error(`Rate limited: wait ${Math.ceil(waitMs / 1000)}s before sending`);
     }
-    
+
     if (limit.messagesThisHour >= limit.maxPerHour) {
       const waitMs = limit.hourResetAt.toMillis() - now;
       throw new Error(`Hourly rate limit exceeded: wait ${Math.ceil(waitMs / 60000)}m before sending`);
@@ -882,9 +882,9 @@ export class SlackService {
   /**
    * Track message sent for rate limiting
    */
-  private async trackRateLimit(workspaceId: string): Promise<void> {
+  private trackRateLimit(workspaceId: string): void {
     const limit = this.rateLimitCache.get(workspaceId);
-    
+
     if (limit) {
       limit.messagesThisMinute++;
       limit.messagesThisHour++;
@@ -936,7 +936,7 @@ export class SlackService {
     try {
       return await this.makeAPICall<T>(method, params, token);
       
-    } catch (error: any) {
+    } catch (error) {
       const slackError = error as SlackAPIError;
       
       // Don't retry if max attempts reached
@@ -968,7 +968,7 @@ export class SlackService {
       });
       
       // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      await new Promise<void>(resolve => { setTimeout(resolve, retryDelay); });
       
       // Retry
       return this.makeAPICallWithRetry<T>(method, params, token, attempt + 1);

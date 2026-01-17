@@ -256,7 +256,18 @@ function parseClassificationResponse(
       throw new Error('No JSON found in AI response');
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    interface ParsedClassification {
+      intent?: ReplyIntent;
+      sentiment?: 'positive' | 'neutral' | 'negative';
+      sentimentScore?: number;
+      entities?: ExtractedEntities;
+      confidence?: number;
+      suggestedAction?: ReplyAction;
+      requiresHumanReview?: boolean;
+      reasoning?: string;
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as ParsedClassification;
 
     return {
       intent:(parsed.intent !== '' && parsed.intent != null) ? parsed.intent : 'other',
@@ -393,8 +404,8 @@ export async function sendReplyEmail(
   to: string,
   subject: string,
   body: string,
-  inReplyTo?: string,
-  threadId?: string
+  _inReplyTo?: string,
+  _threadId?: string
 ): Promise<{ success: boolean; error?: string }> {
   const { sendEmail } = await import('@/lib/email/sendgrid-service');
   

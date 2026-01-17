@@ -18,7 +18,7 @@ export interface AuthenticatedUser {
  */
 export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
   try {
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const sessionCookie = cookieStore.get('session');
 
     if (!sessionCookie?.value) {
@@ -27,11 +27,11 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
 
     // Verify the session cookie
     const decodedClaims = await auth.verifySessionCookie(sessionCookie.value, true);
-    
+
     return {
       uid: decodedClaims.uid,
       email: decodedClaims.email ?? null,
-      displayName:decodedClaims.name ?? decodedClaims.email ?? null,
+      displayName: (decodedClaims.name as string | undefined) ?? decodedClaims.email ?? null,
     };
   } catch (error) {
     console.error('[Server Auth] Error verifying user:', error);

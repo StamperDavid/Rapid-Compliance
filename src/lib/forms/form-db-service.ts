@@ -1093,7 +1093,7 @@ export async function createFormFromTemplate(
 
   const template = templateSnap.data() as FormTemplate;
 
-  return await runTransaction(getDb(), async (transaction) => {
+  return runTransaction(getDb(), (transaction) => {
     // Create form
     const formsRef = collection(getDb(), PATHS.forms(orgId, workspaceId));
     const formDoc = doc(formsRef);
@@ -1252,8 +1252,8 @@ function extractIndexedFields(responses: FieldResponse[]): {
         indexed.indexedName = response.value;
       } else if (typeof response.value === 'object' && response.value) {
         // Composite name field
-        const { firstName, lastName } = response.value;
-        indexed.indexedName = `${firstName || ''} ${lastName || ''}`.trim();
+        const { firstName, lastName } = response.value as { firstName?: string; lastName?: string };
+        indexed.indexedName = `${firstName ?? ''} ${lastName ?? ''}`.trim();
       }
     }
 

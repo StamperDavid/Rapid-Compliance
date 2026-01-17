@@ -3,8 +3,10 @@
  * Handles automated lead nurturing sequences, segmentation, and lifecycle management
  */
 
-import { sendEmail } from '@/lib/email/email-service';
-import { calculateLeadScore, LeadScoringFactors } from './lead-scoring'
+// Reserved for future use: sendEmail for nurture email delivery
+// import { sendEmail } from '@/lib/email/email-service';
+// Reserved for future use: lead scoring integration
+// import { calculateLeadScore, LeadScoringFactors } from './lead-scoring'
 import { logger } from '@/lib/logger/logger';
 
 export interface LeadNurtureSequence {
@@ -38,7 +40,7 @@ export interface LeadNurtureSequence {
     industry?: string[];
     companySize?: { min?: number; max?: number };
     location?: string[];
-    customFields?: Record<string, any>;
+    customFields?: Record<string, unknown>;
   };
   
   // Status
@@ -150,7 +152,7 @@ export interface LeadActivity {
   activityType: 'email_sent' | 'email_opened' | 'email_clicked' | 'form_submitted' | 
                 'page_viewed' | 'download' | 'meeting_booked' | 'call' | 'note_added';
   timestamp: Date;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   source?: string;
   attributedTo?: string; // Campaign, sequence, or manual
 }
@@ -159,12 +161,16 @@ export interface LeadActivity {
  * Create lead nurture sequence
  */
 export async function createNurtureSequence(sequence: Partial<LeadNurtureSequence>): Promise<LeadNurtureSequence> {
+  if (!sequence.organizationId) {
+    throw new Error('organizationId is required to create a nurture sequence');
+  }
+
   const sequenceId = `nurture_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   const fullSequence: LeadNurtureSequence = {
     id: sequenceId,
-    name:(sequence.name !== '' && sequence.name != null) ? sequence.name : 'Untitled Sequence',
-    organizationId: sequence.organizationId!,
+    name: (sequence.name !== '' && sequence.name != null) ? sequence.name : 'Untitled Sequence',
+    organizationId: sequence.organizationId,
     workspaceId: sequence.workspaceId,
     trigger: sequence.trigger ?? 'new_lead',
     triggerConditions: sequence.triggerConditions,
@@ -217,8 +223,8 @@ export async function enrollLeadInSequence(
 
   const sequence: LeadNurtureSequence = {
     ...sequenceData,
-    createdAt: new Date(sequenceData.createdAt),
-    updatedAt: new Date(sequenceData.updatedAt),
+    createdAt: new Date(sequenceData.createdAt as string | number | Date),
+    updatedAt: new Date(sequenceData.updatedAt as string | number | Date),
   } as LeadNurtureSequence;
 
   if (sequence.status !== 'active') {
@@ -236,7 +242,7 @@ export async function enrollLeadInSequence(
   if (firstEmail) {
     // In production, would schedule email via job queue
     // For now, just mark as enrolled
-    logger.info('Lead ${leadId} enrolled in sequence ${sequenceId}, first email scheduled', { file: 'lead-nurturing.ts' });
+    logger.info(`Lead ${leadId} enrolled in sequence ${sequenceId}, first email scheduled`, { file: 'lead-nurturing.ts' });
   }
 
   // Update sequence stats
@@ -341,7 +347,7 @@ export interface LeadLifecycleAnalysis {
   riskFactors: string[];
 }
 
-export async function analyzeLeadLifecycle(leadId: string): Promise<LeadLifecycleAnalysis | null> {
+export function analyzeLeadLifecycle(leadId: string): LeadLifecycleAnalysis | null {
   // In production, would:
   // 1. Load all lifecycle stages for lead
   // 2. Calculate time in each stage
@@ -382,10 +388,10 @@ export interface LeadAttribution {
   attributionModel: 'first_touch' | 'last_touch' | 'linear' | 'time_decay' | 'u_shaped';
 }
 
-export async function getLeadAttribution(
+export function getLeadAttribution(
   leadId: string,
   model: LeadAttribution['attributionModel'] = 'linear'
-): Promise<LeadAttribution | null> {
+): LeadAttribution | null {
   // In production, would:
   // 1. Load all touchpoints for lead
   // 2. Apply attribution model
@@ -418,19 +424,23 @@ export interface LeadSegment {
     industry?: string[];
     companySize?: { min?: number; max?: number };
     lastActivityDays?: number;
-    customFields?: Record<string, any>;
+    customFields?: Record<string, unknown>;
   };
   leadCount: number;
   createdAt: Date;
 }
 
 export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<LeadSegment> {
+  if (!segment.organizationId) {
+    throw new Error('organizationId is required to create a lead segment');
+  }
+
   const segmentId = `segment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   const fullSegment: LeadSegment = {
     id: segmentId,
-    name:(segment.name !== '' && segment.name != null) ? segment.name : 'Untitled Segment',
-    organizationId: segment.organizationId!,
+    name: (segment.name !== '' && segment.name != null) ? segment.name : 'Untitled Segment',
+    organizationId: segment.organizationId,
     criteria: segment.criteria ?? {},
     leadCount: 0,
     createdAt: new Date(),
@@ -448,12 +458,12 @@ export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<
       },
       false
     );
-  } catch (error) {
-    logger.error('Failed to save lead segment to Firestore:', error, { file: 'lead-nurturing.ts' });
+  } catch (error: unknown) {
+    logger.error('Failed to save lead segment to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'lead-nurturing.ts' });
     // Fallback to localStorage if Firestore fails (development only)
     if (typeof window !== 'undefined') {
       const segmentsJson = localStorage.getItem('leadSegments') ?? '[]';
-      const segments = JSON.parse(segmentsJson);
+      const segments: LeadSegment[] = JSON.parse(segmentsJson) as LeadSegment[];
       segments.push(fullSegment);
       localStorage.setItem('leadSegments', JSON.stringify(segments));
     }
@@ -465,7 +475,7 @@ export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<
 /**
  * Get leads matching segment criteria
  */
-export async function getLeadsInSegment(segmentId: string): Promise<string[]> {
+export function getLeadsInSegment(_segmentId: string): string[] {
   // In production, would:
   // 1. Load segment criteria
   // 2. Query database for matching leads

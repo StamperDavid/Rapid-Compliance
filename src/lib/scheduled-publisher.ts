@@ -82,13 +82,13 @@ export async function processScheduledPages(): Promise<{
         postsSnapshot.forEach(doc => {
           const data = doc.data();
           if (data.scheduledFor) {
-            const scheduledDate = new Date(data.scheduledFor);
+            const scheduledDate = new Date(data.scheduledFor as string | number | Date);
             if (scheduledDate <= now) {
               items.push({
                 id: doc.id,
                 organizationId,
-                scheduledFor: data.scheduledFor,
-                title:(data.title !== '' && data.title != null) ? data.title : 'Untitled',
+                scheduledFor: data.scheduledFor as string,
+                title: data.title !== '' && data.title != null ? (data.title as string) : 'Untitled',
                 type: 'blog-post',
               });
             }
@@ -100,21 +100,21 @@ export async function processScheduledPages(): Promise<{
       }
     }
 
-    console.log(`[Scheduled Publisher] Found ${items.length} items ready to publish`);
+    // Found items ready to publish
 
     // Publish each item
     for (const item of items) {
       try {
         await publishScheduledItem(item);
         processed++;
-        console.log(`[Scheduled Publisher] Published ${item.type} "${item.title}" for org ${item.organizationId}`);
+        // Published item
       } catch (publishError) {
         console.error(`[Scheduled Publisher] Error publishing ${item.type} ${item.id}:`, publishError);
         errors++;
       }
     }
 
-    console.log(`[Scheduled Publisher] Complete. Processed: ${processed}, Errors: ${errors}`);
+    // Processing complete
   } catch (error) {
     console.error('[Scheduled Publisher] Fatal error:', error);
     errors++;
@@ -150,15 +150,15 @@ async function publishScheduledItem(item: ScheduledItem): Promise<void> {
     const pageData = pageDoc.data();
 
     // Create version snapshot
-    const currentVersion = pageData?.version ?? 1;
+    const currentVersion = (pageData?.version as number | undefined) ?? 1;
     const versionRef = pageRef.collection('versions').doc(`v${currentVersion}`);
 
     await versionRef.set({
       version: currentVersion,
-      content: pageData?.content,
-      seo: pageData?.seo,
-      title: pageData?.title,
-      slug: pageData?.slug,
+      content: pageData?.content as unknown,
+      seo: pageData?.seo as unknown,
+      title: pageData?.title as string | undefined,
+      slug: pageData?.slug as string | undefined,
       status: 'scheduled',
       createdAt: now,
       createdBy: 'scheduled-publisher',

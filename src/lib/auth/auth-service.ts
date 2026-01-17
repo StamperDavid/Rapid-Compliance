@@ -3,10 +3,6 @@
  * Handles all authentication operations using Firebase Auth
  */
 
-import type {
-  User,
-  UserCredential
-} from 'firebase/auth';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -17,7 +13,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   OAuthProvider,
-  onAuthStateChanged
+  onAuthStateChanged,
+  type User,
+  type UserCredential
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
 import { dal } from '@/lib/firebase/dal';
@@ -226,11 +224,14 @@ export function onAuthStateChange(
       // Load user profile from Firestore using DAL
       void dal.safeGetDoc('USERS', user.uid).then((userDoc) => {
         const userProfile = userDoc.exists() ? userDoc.data() : null;
+        const displayNameFromProfile = userProfile && typeof userProfile === 'object' && 'displayName' in userProfile
+          ? String(userProfile.displayName)
+          : null;
 
         callback({
           uid: user.uid,
           email: user.email,
-          displayName:user.displayName ?? userProfile?.displayName ?? null,
+          displayName: user.displayName ?? displayNameFromProfile ?? null,
           photoURL: user.photoURL,
           emailVerified: user.emailVerified,
         });

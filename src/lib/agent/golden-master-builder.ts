@@ -145,7 +145,7 @@ export async function buildGoldenMaster(
   const behaviorConfig = buildBehaviorConfigFromOnboarding(onboardingData) as unknown as BehaviorConfig;
   
   // Compile system prompt
-  const systemPrompt = await compileSystemPrompt({
+  const systemPrompt = compileSystemPrompt({
     businessContext,
     agentPersona,
     behaviorConfig,

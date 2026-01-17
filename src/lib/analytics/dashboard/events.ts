@@ -6,6 +6,7 @@
 
 import { getServerSignalCoordinator } from '@/lib/orchestration';
 import type { DashboardOverview, TimePeriod } from './types';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // EVENT TYPES
@@ -157,8 +158,8 @@ export async function emitDashboardViewed(
   userId?: string
 ): Promise<void> {
   try {
-    const coordinator = await getServerSignalCoordinator();
-    
+    const coordinator = getServerSignalCoordinator();
+
     const payload: DashboardViewedPayload = {
       organizationId,
       workspaceId,
@@ -166,16 +167,16 @@ export async function emitDashboardViewed(
       userId,
       timestamp: new Date(),
     };
-    
+
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.DASHBOARD_VIEWED as any,
+      type: ANALYTICS_EVENTS.DASHBOARD_VIEWED,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as any,
+      metadata: payload as Record<string, unknown>,
     });
-  } catch (error) {
-    console.error('Failed to emit dashboard viewed event:', error);
+  } catch (error: unknown) {
+    logger.error('Failed to emit dashboard viewed event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
   }
 }
 
@@ -191,7 +192,7 @@ export async function emitDashboardGenerated(
   data: DashboardOverview
 ): Promise<void> {
   try {
-    const coordinator = await getServerSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
     
     const payload: DashboardGeneratedPayload = {
       organizationId,
@@ -209,14 +210,14 @@ export async function emitDashboardGenerated(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.DASHBOARD_GENERATED as any,
+      type: ANALYTICS_EVENTS.DASHBOARD_GENERATED,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as any,
+      metadata: payload as Record<string, unknown>,
     });
-  } catch (error) {
-    console.error('Failed to emit dashboard generated event:', error);
+  } catch (error: unknown) {
+    logger.error('Failed to emit dashboard generated event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
   }
 }
 
@@ -228,7 +229,7 @@ export async function emitCacheCleared(
   userId?: string
 ): Promise<void> {
   try {
-    const coordinator = await getServerSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
     
     const payload: CacheClearedPayload = {
       reason,
@@ -237,14 +238,14 @@ export async function emitCacheCleared(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.CACHE_CLEARED as any,
+      type: ANALYTICS_EVENTS.CACHE_CLEARED,
       orgId: 'system',
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as any,
+      metadata: payload as Record<string, unknown>,
     });
-  } catch (error) {
-    console.error('Failed to emit cache cleared event:', error);
+  } catch (error: unknown) {
+    logger.error('Failed to emit cache cleared event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
   }
 }
 
@@ -258,7 +259,7 @@ export async function emitExportRequested(
   userId?: string
 ): Promise<void> {
   try {
-    const coordinator = await getServerSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
     
     const payload: ExportRequestedPayload = {
       organizationId,
@@ -269,14 +270,14 @@ export async function emitExportRequested(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.EXPORT_REQUESTED as any,
+      type: ANALYTICS_EVENTS.EXPORT_REQUESTED,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as any,
+      metadata: payload as Record<string, unknown>,
     });
-  } catch (error) {
-    console.error('Failed to emit export requested event:', error);
+  } catch (error: unknown) {
+    logger.error('Failed to emit export requested event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
   }
 }
 
@@ -291,7 +292,7 @@ export async function emitAnalyticsError(
   context?: Record<string, unknown>
 ): Promise<void> {
   try {
-    const coordinator = await getServerSignalCoordinator();
+    const coordinator = getServerSignalCoordinator();
     
     const payload: ErrorOccurredPayload = {
       error,
@@ -303,14 +304,14 @@ export async function emitAnalyticsError(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.ERROR_OCCURRED as any,
-      orgId:(organizationId !== '' && organizationId != null) ? organizationId : 'system',
+      type: ANALYTICS_EVENTS.ERROR_OCCURRED,
+      orgId: (organizationId !== '' && organizationId != null) ? organizationId : 'system',
       confidence: 1.0,
       priority: 'Medium',
-      metadata: payload as any,
+      metadata: payload as Record<string, unknown>,
     });
-  } catch (err) {
-    console.error('Failed to emit analytics error event:', err);
+  } catch (err: unknown) {
+    logger.error('Failed to emit analytics error event:', err instanceof Error ? err : new Error(String(err)), { file: 'events.ts' });
   }
 }
 
@@ -322,19 +323,20 @@ export async function emitAnalyticsError(
  * Example handler for dashboard viewed events
  * Can be used for usage tracking, analytics, etc.
  */
-export async function handleDashboardViewed(payload: DashboardViewedPayload): Promise<void> {
-  // Example: Log to analytics service
-  console.log('Dashboard viewed:', {
+export function handleDashboardViewed(payload: DashboardViewedPayload): void {
+  // Log to analytics service
+  logger.info('Dashboard viewed', {
     org: payload.organizationId,
     workspace: payload.workspaceId,
     period: payload.period,
     user: payload.userId,
+    file: 'events.ts',
   });
-  
-  // Example: Track in usage analytics
+
+  // Track in usage analytics
   // await trackUsage('dashboard_view', payload);
-  
-  // Example: Update user activity
+
+  // Update user activity
   // await updateUserActivity(payload.userId, 'dashboard_view');
 }
 
@@ -342,24 +344,25 @@ export async function handleDashboardViewed(payload: DashboardViewedPayload): Pr
  * Example handler for dashboard generated events
  * Can be used for performance monitoring
  */
-export async function handleDashboardGenerated(payload: DashboardGeneratedPayload): Promise<void> {
-  // Example: Log performance metrics
-  console.log('Dashboard generated:', {
+export function handleDashboardGenerated(payload: DashboardGeneratedPayload): void {
+  // Log performance metrics
+  logger.info('Dashboard generated', {
     org: payload.organizationId,
     generationTime: payload.generationTime,
     cached: payload.cached,
     summary: payload.summary,
+    file: 'events.ts',
   });
-  
-  // Example: Track performance
+
+  // Track performance
   // await trackPerformance('dashboard_generation', {
   //   duration: payload.generationTime,
   //   cached: payload.cached,
   // });
-  
-  // Example: Alert if generation is slow
+
+  // Alert if generation is slow
   if (payload.generationTime > 5000 && !payload.cached) {
-    console.warn('Slow dashboard generation:', payload.generationTime, 'ms');
+    logger.warn('Slow dashboard generation', { generationTime: payload.generationTime, file: 'events.ts' });
     // await sendAlert('slow_dashboard_generation', payload);
   }
 }
@@ -368,22 +371,22 @@ export async function handleDashboardGenerated(payload: DashboardGeneratedPayloa
  * Example handler for analytics errors
  * Can be used for error tracking and alerting
  */
-export async function handleAnalyticsError(payload: ErrorOccurredPayload): Promise<void> {
-  // Example: Log error
-  console.error('Analytics error:', {
-    error: payload.error,
+export function handleAnalyticsError(payload: ErrorOccurredPayload): void {
+  // Log error
+  logger.error('Analytics error', new Error(payload.error), {
     code: payload.code,
     org: payload.organizationId,
     workspace: payload.workspaceId,
+    file: 'events.ts',
   });
-  
-  // Example: Send to error tracking service
+
+  // Send to error tracking service
   // await captureError(payload.error, {
   //   code: payload.code,
   //   context: payload.context,
   // });
-  
-  // Example: Alert on critical errors
+
+  // Alert on critical errors
   if (payload.code === 'INTERNAL_ERROR') {
     // await sendCriticalAlert('analytics_internal_error', payload);
   }

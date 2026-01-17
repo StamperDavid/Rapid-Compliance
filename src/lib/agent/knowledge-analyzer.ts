@@ -179,8 +179,8 @@ export async function analyzeCompanyKnowledge(
     analysisId,
     analysisResult,
     false
-  ).catch((error) => {
-    logger.error('Failed to save knowledge analysis to Firestore:', error, { file: 'knowledge-analyzer.ts' });
+  ).catch((error: unknown) => {
+    logger.error('Failed to save knowledge analysis to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
     // Don't fail the analysis if storage fails
   });
 

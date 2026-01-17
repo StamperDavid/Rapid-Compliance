@@ -5,8 +5,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import type { QueryConstraint, QueryDocumentSnapshot} from 'firebase/firestore';
-import { where, orderBy } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot} from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type {
   Activity,
@@ -146,7 +145,7 @@ export async function getActivities(
       filteredData = filteredData.filter(activity => {
         const occurredAt = toDate(activity.occurredAt);
         const dateRange = filters.dateRange;
-        if (!dateRange) return true;
+        if (!dateRange) {return true;}
         return occurredAt >= dateRange.start && occurredAt <= dateRange.end;
       });
     }

@@ -8,9 +8,8 @@
  * @version 1.0.0
  */
 
-import type {
-  QueryDocumentSnapshot} from 'firebase/firestore';
 import {
+  type QueryDocumentSnapshot,
   collection,
   doc,
   getDoc,
@@ -620,7 +619,7 @@ function generateResumeToken(): string {
  * Get public form URL
  */
 export function getPublicFormUrl(formId: string, baseUrl?: string): string {
-  const base = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+  const base = baseUrl ?? (typeof window !== 'undefined' ? window.location.origin : '');
   return `${base}/forms/${formId}`;
 }
 
@@ -628,7 +627,7 @@ export function getPublicFormUrl(formId: string, baseUrl?: string): string {
  * Get embed code for form
  */
 export function getFormEmbedCode(formId: string, options?: { width?: string; height?: string }): string {
-  const { width = '100%', height = '600px' } = options || {};
+  const { width = '100%', height = '600px' } = options ?? {};
   const url = getPublicFormUrl(formId);
   return `<iframe src="${url}" width="${width}" height="${height}" frameborder="0" allowfullscreen></iframe>`;
 }

@@ -4,8 +4,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
-import { where, orderBy } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
 interface Condition {
@@ -267,7 +266,7 @@ export async function setNurtureCampaignStatus(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to change nurture campaign status', error, { organizationId, campaignId, status });
-    throw new Error(`Failed to change campaign status: ${error.message}`);
+    throw new Error(`Failed to change campaign status: ${errorMessage}`);
   }
 }
 
@@ -319,7 +318,7 @@ export async function enrollLead(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to enroll lead', error, { organizationId, campaignId, leadId });
-    throw new Error(`Failed to enroll lead: ${error.message}`);
+    throw new Error(`Failed to enroll lead: ${errorMessage}`);
   }
 }
 
@@ -342,11 +341,15 @@ export async function getCampaignStats(
       []
     );
 
+    interface EnrollmentStatus {
+      status: string;
+    }
+
     const stats = {
       enrolled: enrollments.length,
-      active: enrollments.filter((e: any) => e.status === 'active').length,
-      completed: enrollments.filter((e: any) => e.status === 'completed').length,
-      dropped: enrollments.filter((e: any) => e.status === 'dropped').length,
+      active: enrollments.filter((e: EnrollmentStatus) => e.status === 'active').length,
+      completed: enrollments.filter((e: EnrollmentStatus) => e.status === 'completed').length,
+      dropped: enrollments.filter((e: EnrollmentStatus) => e.status === 'dropped').length,
     };
 
     logger.info('Campaign stats calculated', {
@@ -359,7 +362,7 @@ export async function getCampaignStats(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to get campaign stats', error, { organizationId, campaignId });
-    throw new Error(`Failed to get campaign stats: ${error.message}`);
+    throw new Error(`Failed to get campaign stats: ${errorMessage}`);
   }
 }
 
