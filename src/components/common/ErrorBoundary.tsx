@@ -50,8 +50,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to monitoring service
     logger.error(`Error in ${this.props.componentName ?? 'component'}`, error, {
-      componentStack: errorInfo.componentStack,
-      errorInfo
+      componentStack: errorInfo.componentStack ?? 'unknown'
     });
 
     // Call optional error handler

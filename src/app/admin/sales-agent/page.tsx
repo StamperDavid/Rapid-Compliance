@@ -73,6 +73,15 @@ export default function AdminSalesAgentPage() {
     );
   }
 
+  // Null guard for TypeScript - ensures goldenMaster is defined before render
+  if (!goldenMaster) {
+    return (
+      <div style={{ padding: '2rem', backgroundColor: '#000', minHeight: '100vh', color: '#fff' }}>
+        <div style={{ color: '#f87171' }}>Failed to load sales agent configuration</div>
+      </div>
+    );
+  }
+
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';
   const primaryColor = '#6366f1';

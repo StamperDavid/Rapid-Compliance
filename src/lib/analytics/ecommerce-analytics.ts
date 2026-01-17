@@ -151,7 +151,7 @@ function calculateTopProducts(orders: OrderRecord[]): TopProductResult[] {
       const productId = item.productId;
       const productName =(item.productName !== '' && item.productName != null) ? item.productName : 'Unknown';
       const quantity = item.quantity ?? 1;
-      const price = parseFloat(item.price) || 0;
+      const price = parseFloat(String(item.price ?? '0')) || 0;
       const revenue = quantity * price;
       
       const existing = productMap.get(productId) ?? { revenue: 0, units: 0, orders: 0, name: productName };
@@ -266,7 +266,7 @@ function calculateRevenueByDay(orders: OrderRecord[], _startDate: Date, _endDate
       ? createdAtValue.toDate()
       : new Date(createdAtValue as string | Date);
     const dayKey = createdAt.toISOString().split('T')[0];
-    const revenue = parseFloat(order.total) || 0;
+    const revenue = parseFloat(String(order.total ?? '0')) || 0;
     
     const existing = dayMap.get(dayKey) ?? { revenue: 0, orders: 0 };
     dayMap.set(dayKey, {

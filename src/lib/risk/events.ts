@@ -9,12 +9,12 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import type { SignalType } from '@/lib/orchestration/types';
 import type { Deal } from '@/lib/crm/deal-service';
 import type {
   DealRiskPrediction,
   Intervention,
   RiskLevel,
-  _RiskFactor,
 } from './types';
 
 // ============================================================================
@@ -210,22 +210,22 @@ export async function emitRiskAssessed(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.assessed' as unknown,
+      type: 'risk.assessed' as SignalType,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.debug('Risk assessed signal emitted', {
       dealId: prediction.dealId,
       riskLevel: prediction.riskLevel,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit risk assessed signal', error, {
+    logger.error('Failed to emit risk assessed signal', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,
     });
   }
@@ -253,23 +253,23 @@ export async function emitRiskDetected(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.detected' as unknown,
+      type: 'risk.detected' as SignalType,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.info('Risk detected signal emitted', {
       dealId: prediction.dealId,
       riskLevel: prediction.riskLevel,
       slippageProbability: prediction.slippageProbability,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit risk detected signal', error, {
+    logger.error('Failed to emit risk detected signal', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,
     });
   }
@@ -311,24 +311,24 @@ export async function emitRiskLevelChanged(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.level.changed' as unknown,
+      type: 'risk.level.changed' as SignalType,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 0.9,
       priority: newLevel === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.info('Risk level changed signal emitted', {
       dealId,
       previousLevel,
       newLevel,
       changeDirection,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit risk level changed signal', error, { dealId });
+    logger.error('Failed to emit risk level changed signal', error instanceof Error ? error : new Error(String(error)), { dealId });
   }
 }
 
@@ -372,23 +372,23 @@ export async function emitCriticalRisk(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.critical' as unknown,
+      type: 'risk.critical' as SignalType,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.warn('Critical risk signal emitted', {
       dealId: prediction.dealId,
       slippageProbability: prediction.slippageProbability,
       criticalRisks: criticalRiskFactors.length,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit critical risk signal', error, {
+    logger.error('Failed to emit critical risk signal', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,
     });
   }
@@ -424,23 +424,23 @@ export async function emitInterventionRecommended(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.intervention.recommended' as unknown,
+      type: 'risk.intervention.recommended' as SignalType,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 0.85,
       priority: intervention.priority === 'critical' ? 'High' : 'Medium',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.debug('Intervention recommended signal emitted', {
       dealId,
       interventionId: intervention.id,
       interventionType: intervention.type,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit intervention recommended signal', error, {
+    logger.error('Failed to emit intervention recommended signal', error instanceof Error ? error : new Error(String(error)), {
       dealId,
       interventionId: intervention.id,
     });
@@ -472,23 +472,23 @@ export async function emitInterventionStarted(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.intervention.started' as unknown,
+      type: 'risk.intervention.started' as SignalType,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 1.0,
       priority: 'Medium',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.info('Intervention started signal emitted', {
       dealId,
       interventionId,
       startedBy,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit intervention started signal', error, {
+    logger.error('Failed to emit intervention started signal', error instanceof Error ? error : new Error(String(error)), {
       dealId,
       interventionId,
     });
@@ -526,24 +526,24 @@ export async function emitInterventionCompleted(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.intervention.completed' as unknown,
+      type: 'risk.intervention.completed' as SignalType,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.info('Intervention completed signal emitted', {
       dealId,
       interventionId,
       outcome,
       impactRealized,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit intervention completed signal', error, {
+    logger.error('Failed to emit intervention completed signal', error instanceof Error ? error : new Error(String(error)), {
       dealId,
       interventionId,
     });
@@ -581,23 +581,23 @@ export async function emitSlippagePredicted(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.slippage.predicted' as unknown,
+      type: 'risk.slippage.predicted' as SignalType,
       leadId: deal.contactId,
       orgId: prediction.organizationId,
       workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.warn('Slippage predicted signal emitted', {
       dealId: prediction.dealId,
       daysUntilSlippage: prediction.daysUntilSlippage,
       slippageProbability: prediction.slippageProbability,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit slippage predicted signal', error, {
+    logger.error('Failed to emit slippage predicted signal', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,
     });
   }
@@ -636,24 +636,24 @@ export async function emitRiskMitigated(
     };
     
     await coordinator.emitSignal({
-      type: 'risk.mitigated' as unknown,
+      type: 'risk.mitigated' as SignalType,
       leadId: contactId,
       orgId: organizationId,
       workspaceId,
       confidence: 0.9,
       priority: 'Low',
-      metadata: metadata as unknown,
+      metadata: metadata as unknown as Record<string, unknown>,
     });
-    
+
     logger.info('Risk mitigated signal emitted', {
       dealId,
       previousLevel: previousRiskLevel,
       newLevel: newRiskLevel,
       riskReduction,
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit risk mitigated signal', error, { dealId });
+    logger.error('Failed to emit risk mitigated signal', error instanceof Error ? error : new Error(String(error)), { dealId });
   }
 }
 
@@ -715,13 +715,13 @@ export async function emitRiskPredictionSignals(
     
     logger.info('All risk prediction signals emitted', {
       dealId: prediction.dealId,
-      signalsEmitted: 2 + (prediction.riskLevel === 'critical' ? 1 : 0) + 
+      signalsEmitted: 2 + (prediction.riskLevel === 'critical' ? 1 : 0) +
                       (prediction.predictedSlippageDate ? 1 : 0) +
                       Math.min(3, prediction.interventions.length),
     });
-    
+
   } catch (error) {
-    logger.error('Failed to emit risk prediction signals', error, {
+    logger.error('Failed to emit risk prediction signals', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,
     });
   }

@@ -48,7 +48,7 @@ async function getApiKey(organizationId?: string): Promise<string> {
       } catch (error) {
         logger.warn('[Gemini] Could not fetch org-specific key, falling back to platform key', {
           organizationId,
-          error,
+          errorMessage: error instanceof Error ? error.message : String(error),
           file: 'gemini-service.ts'
         });
       }

@@ -202,7 +202,7 @@ export async function getBaseModel(orgId: string): Promise<BaseModel | null> {
     ]);
     
     logger.info('[getBaseModel] Found base models', { count: baseModels.length, file: 'base-model-builder.ts' });
-    return baseModels.length > 0 ? (baseModels[0] as BaseModel) : null;
+    return baseModels.length > 0 ? (baseModels[0] as unknown as BaseModel) : null;
   } else {
     // Client-side: Use DAL
     const { dal } = await import('@/lib/firebase/dal');

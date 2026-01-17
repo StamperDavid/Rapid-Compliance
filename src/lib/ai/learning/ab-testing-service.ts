@@ -330,10 +330,12 @@ export async function evaluateABTest(
     }
   );
   
-  logger.info(`[A/B Testing] Test ${testId} evaluated`, { 
-    testId, 
-    results,
-    file: 'ab-testing-service.ts' 
+  logger.info(`[A/B Testing] Test ${testId} evaluated`, {
+    testId,
+    winner: results.winner ?? 'none',
+    conversionLift: results.conversionLift.toFixed(2),
+    confidenceLevel: results.confidenceLevel.toFixed(2),
+    file: 'ab-testing-service.ts'
   });
   
   return results;

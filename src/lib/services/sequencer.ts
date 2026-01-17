@@ -182,7 +182,7 @@ export async function createSequence(params: {
 
     return sequence;
   } catch (error) {
-    logger.error('Failed to create sequence', error);
+    logger.error('Failed to create sequence', error as Error);
     throw new Error(`Failed to create sequence: ${error instanceof Error ? error.message : 'Unknown'}`);
   }
 }
@@ -216,7 +216,7 @@ export async function getSequence(sequenceId: string): Promise<Sequence | null> 
       updatedAt: updatedAtValue?.toDate?.() ?? new Date(),
     } as Sequence;
   } catch (error) {
-    logger.error('Failed to get sequence', error, { sequenceId });
+    logger.error('Failed to get sequence', error as Error);
     throw error;
   }
 }
@@ -242,7 +242,7 @@ export async function updateSequence(
 
     logger.info('Sequence updated', { sequenceId });
   } catch (error) {
-    logger.error('Failed to update sequence', error, { sequenceId });
+    logger.error('Failed to update sequence', error as Error);
     throw error;
   }
 }
@@ -274,7 +274,7 @@ export async function listSequences(organizationId: string): Promise<Sequence[]>
       } as Sequence;
     });
   } catch (error) {
-    logger.error('Failed to list sequences', error, { organizationId });
+    logger.error('Failed to list sequences', error as Error);
     throw error;
   }
 }
@@ -371,7 +371,7 @@ export async function enrollInSequence(params: {
 
     return enrollment;
   } catch (error) {
-    logger.error('Failed to enroll in sequence', error, params);
+    logger.error('Failed to enroll in sequence', error as Error);
     throw error;
   }
 }
@@ -440,10 +440,7 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
       success = true;
     } catch (actionError) {
       error = actionError instanceof Error ? actionError.message : 'Unknown error';
-      logger.error('Channel action failed', actionError, {
-        enrollmentId,
-        stepIndex: enrollment.currentStepIndex,
-      });
+      logger.error('Channel action failed', actionError as Error);
     }
 
     // Record execution
@@ -501,7 +498,7 @@ export async function executeSequenceStep(enrollmentId: string): Promise<void> {
       hasMoreSteps: !!nextStep,
     });
   } catch (error) {
-    logger.error('Failed to execute sequence step', error, { enrollmentId });
+    logger.error('Failed to execute sequence step', error as Error);
     throw error;
   }
 }
@@ -596,7 +593,7 @@ export async function handleCondition(params: {
       },
     });
   } catch (error) {
-    logger.error('Failed to handle condition', error, params);
+    logger.error('Failed to handle condition', error as Error);
     throw error;
   }
 }
@@ -652,7 +649,7 @@ export async function stopEnrollment(enrollmentId: string, reason?: string): Pro
       });
     }
   } catch (error) {
-    logger.error('Failed to stop enrollment', error, { enrollmentId });
+    logger.error('Failed to stop enrollment', error as Error);
     throw error;
   }
 }
@@ -808,7 +805,7 @@ function substituteVariables(template: string, leadData: LeadData): string {
   // Also substitute any custom fields
   if (leadData.customFields) {
     Object.keys(leadData.customFields).forEach(key => {
-      substitutions[`{{${key}}}`] = leadData.customFields[key];
+      substitutions[`{{${key}}}`] = leadData.customFields?.[key] ?? '';
     });
   }
   
@@ -1133,9 +1130,7 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
         await executeSequenceStep(doc.id);
         processed++;
       } catch (error) {
-        logger.error('Failed to execute sequence step', error, {
-          enrollmentId: doc.id,
-        });
+        logger.error('Failed to execute sequence step', error as Error);
       }
     }
 
@@ -1147,7 +1142,7 @@ export async function processDueSequenceSteps(organizationId: string): Promise<n
 
     return processed;
   } catch (error) {
-    logger.error('Failed to process due sequence steps', error, { organizationId });
+    logger.error('Failed to process due sequence steps', error as Error);
     throw error;
   }
 }
@@ -1198,10 +1193,7 @@ async function emitSequenceSignal(params: {
     });
   } catch (error) {
     // Don't fail sequence execution if signal emission fails
-    logger.error('Failed to emit sequence signal', error, {
-      type: params.type,
-      leadId: params.leadId,
-    });
+    logger.error('Failed to emit sequence signal', error as Error);
   }
 }
 
@@ -1232,7 +1224,7 @@ export async function initializeSequencerSignalObservers(
 
   logger.info('Initializing sequencer signal observers', {
     organizationId,
-    autoEnrollConfig,
+    autoEnrollConfig: JSON.stringify(autoEnrollConfig),
   });
 
   // Observer 1: Auto-enroll qualified leads
@@ -1255,8 +1247,8 @@ export async function initializeSequencerSignalObservers(
           logger.info('Auto-enrolling qualified lead in sequence', {
             leadId: signal.leadId,
             sequenceId: qualifiedSequenceId,
-            score: signal.metadata.totalScore,
-            grade: signal.metadata.grade,
+            score: signal.metadata?.totalScore as string | number | undefined ?? 0,
+            grade: signal.metadata?.grade as string | undefined ?? 'unknown',
           });
 
           // Check if already enrolled
@@ -1298,10 +1290,7 @@ export async function initializeSequencerSignalObservers(
             });
           }
         } catch (error) {
-          logger.error('Failed to auto-enroll qualified lead', error, {
-            leadId: signal.leadId,
-            signalId: signal.id,
-          });
+          logger.error('Failed to auto-enroll qualified lead', error as Error);
 
           // Mark signal processing as failed
           if (signal.id) {
@@ -1341,8 +1330,8 @@ export async function initializeSequencerSignalObservers(
           logger.info('Auto-enrolling high-intent lead in sequence', {
             leadId: signal.leadId,
             sequenceId: highIntentSequenceId,
-            intentScore: signal.metadata.intentScore,
-            detectedSignals: signal.metadata.detectedSignals,
+            intentScore: signal.metadata?.intentScore as string | number | undefined ?? 0,
+            detectedSignals: (signal.metadata?.detectedSignals as string[] | undefined ?? []).join(','),
           });
 
           // Check if already enrolled
@@ -1385,10 +1374,7 @@ export async function initializeSequencerSignalObservers(
             });
           }
         } catch (error) {
-          logger.error('Failed to auto-enroll high-intent lead', error, {
-            leadId: signal.leadId,
-            signalId: signal.id,
-          });
+          logger.error('Failed to auto-enroll high-intent lead', error as Error);
 
           // Mark signal processing as failed
           if (signal.id) {

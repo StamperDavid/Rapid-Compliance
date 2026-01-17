@@ -3,7 +3,7 @@
  * Allows AI agent to call integration functions
  */
 
-import { INTEGRATION_PROVIDERS, type FunctionCallRequest, type FunctionCallResponse } from '@/types/integrations';
+import { INTEGRATION_PROVIDERS, type FunctionCallRequest, type FunctionCallResponse, type ConnectedIntegration } from '@/types/integrations';
 
 // Import integration executors
 import { executeStripeFunction } from './payment/stripe';
@@ -199,7 +199,7 @@ export async function executeFunctionCall(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    logger.error('[Function Calling] Error:', error, { file: 'function-calling.ts' });
+    logger.error('[Function Calling] Error:', error instanceof Error ? error : undefined, { file: 'function-calling.ts' });
 
     // Log the error
     await logIntegrationAction({
@@ -243,7 +243,7 @@ interface IntegrationLog {
 async function getConnectedIntegration(
   organizationId: string,
   integrationId: string
-): Promise<unknown> {
+): Promise<ConnectedIntegration | null> {
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
@@ -252,9 +252,9 @@ async function getConnectedIntegration(
       integrationId
     );
 
-    return integration;
+    return integration as ConnectedIntegration | null;
   } catch (error) {
-    logger.error('[Function Calling] Error fetching integration:', error, { file: 'function-calling.ts' });
+    logger.error('[Function Calling] Error fetching integration:', error instanceof Error ? error : undefined, { file: 'function-calling.ts' });
     return null;
   }
 }
@@ -277,7 +277,7 @@ async function logIntegrationAction(log: IntegrationLog): Promise<void> {
       false
     );
   } catch (error) {
-    logger.error('[Function Calling] Error logging action:', error, { file: 'function-calling.ts' });
+    logger.error('[Function Calling] Error logging action:', error instanceof Error ? error : undefined, { file: 'function-calling.ts' });
   }
 }
 
@@ -508,7 +508,7 @@ export async function getAvailableFunctions(organizationId: string): Promise<AIF
     logger.info(`Function Calling ${functions.length} functions available for org ${organizationId}`, { file: 'function-calling.ts' });
     return functions;
   } catch (error) {
-    logger.error('[Function Calling] Error getting functions:', error, { file: 'function-calling.ts' });
+    logger.error('[Function Calling] Error getting functions:', error instanceof Error ? error : undefined, { file: 'function-calling.ts' });
     // Fallback: return empty array
     return [];
   }

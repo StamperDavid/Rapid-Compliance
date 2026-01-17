@@ -120,9 +120,9 @@ class APIKeyService {
     // Navigate to the specific service key
     switch (service) {
       case 'firebase':
-        return keys.firebase;
+        return keys.firebase ?? null;
       case 'googleCloud':
-        return keys.googleCloud;
+        return keys.googleCloud ?? null;
       
       // AI Services - OpenRouter can provide ALL of these
       case 'gemini':
@@ -136,45 +136,45 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       
       // Payment Services
       case 'stripe':
-        return keys.payments?.stripe;
+        return keys.payments?.stripe ?? null;
       case 'square':
-        return keys.payments?.square;
+        return keys.payments?.square ?? null;
       case 'paypal':
-        return keys.payments?.paypal;
-      
+        return keys.payments?.paypal ?? null;
+
       // Email Services
       case 'sendgrid':
-        return keys.email?.sendgrid;
+        return keys.email?.sendgrid ?? null;
       case 'resend':
-        return keys.email?.resend;
+        return keys.email?.resend ?? null;
       case 'smtp':
-        return keys.email?.smtp;
-      
+        return keys.email?.smtp ?? null;
+
       // SMS Services (also used for Voice/VoIP)
       case 'twilio':
-        return keys.sms?.twilio;
+        return keys.sms?.twilio ?? null;
       case 'telnyx':
-        return keys.sms?.telnyx;
+        return keys.sms?.telnyx ?? null;
       case 'vonage':
-        return keys.sms?.vonage;
-      
+        return keys.sms?.vonage ?? null;
+
       // Storage Services
       case 'cloudStorage':
-        return keys.storage?.cloudStorage;
+        return keys.storage?.cloudStorage ?? null;
       case 's3':
-        return keys.storage?.s3;
-      
+        return keys.storage?.s3 ?? null;
+
       // Analytics
       case 'googleAnalytics':
-        return keys.analytics?.googleAnalytics;
+        return keys.analytics?.googleAnalytics ?? null;
       case 'mixpanel':
-        return keys.analytics?.mixpanel;
-      
+        return keys.analytics?.mixpanel ?? null;
+
       // Integrations
       case 'slack':
-        return keys.integrations?.slack;
+        return keys.integrations?.slack ?? null;
       case 'zapier':
-        return keys.integrations?.zapier;
+        return keys.integrations?.zapier ?? null;
       
       default:
         return null;
@@ -266,7 +266,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         if (adminDb) {
           const doc = await adminDb.collection('admin').doc('platform-api-keys').get();
           if (doc.exists) {
-            platformKeys = doc.data();
+            platformKeys = (doc.data() as FirestoreKeysData) ?? null;
           }
         } else {
           // Fallback to client SDK
@@ -312,7 +312,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
           } as APIKeysConfig;
         }
       } catch (error) {
-        logger.error('[API Key Service] Error fetching platform API keys:', error, { file: 'api-key-service.ts' });
+        logger.error('[API Key Service] Error fetching platform API keys:', error instanceof Error ? error : undefined, { file: 'api-key-service.ts' });
       }
     }
 
@@ -336,7 +336,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         }
       }
     } catch (error) {
-      logger.error('Error fetching API keys via admin SDK:', error, { file: 'api-key-service.ts' });
+      logger.error('Error fetching API keys via admin SDK:', error instanceof Error ? error : undefined, { file: 'api-key-service.ts' });
     }
 
     try {
@@ -364,7 +364,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
             : new Date(),
       } as APIKeysConfig;
     } catch (error) {
-      logger.error('Error fetching API keys from Firestore:', error, { file: 'api-key-service.ts' });
+      logger.error('Error fetching API keys from Firestore:', error instanceof Error ? error : undefined, { file: 'api-key-service.ts' });
       return null;
     }
   }

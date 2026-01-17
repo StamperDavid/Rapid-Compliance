@@ -131,7 +131,7 @@ export async function* streamUnifiedChatMessage(
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
 
     yield* provider.chatStream({
-      model,
+      model: model as import('@/types/ai-models').ModelName,
       messages: chatMessages,
       temperature,
       maxTokens,
@@ -142,7 +142,7 @@ export async function* streamUnifiedChatMessage(
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
 
     yield* provider.chatStream({
-      model,
+      model: model as import('@/types/ai-models').ModelName,
       messages: chatMessages,
       temperature,
       maxTokens,
@@ -170,7 +170,7 @@ async function sendOpenAIMessage(
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
 
   const response = await provider.chat({
-    model,
+    model: model as import('@/types/ai-models').ModelName,
     messages: chatMessages,
     temperature: config?.temperature,
     maxTokens: config?.maxTokens,
@@ -200,7 +200,7 @@ async function sendAnthropicMessage(
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
 
   const response = await provider.chat({
-    model,
+    model: model as import('@/types/ai-models').ModelName,
     messages: chatMessages,
     temperature: _config?.temperature,
     maxTokens: _config?.maxTokens,

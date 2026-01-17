@@ -5,6 +5,7 @@
  */
 
 import { getServerSignalCoordinator } from '@/lib/orchestration';
+import type { SignalType } from '@/lib/orchestration/types';
 import type { DashboardOverview, TimePeriod } from './types';
 import { logger } from '@/lib/logger/logger';
 
@@ -169,11 +170,11 @@ export async function emitDashboardViewed(
     };
 
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.DASHBOARD_VIEWED,
+      type: ANALYTICS_EVENTS.DASHBOARD_VIEWED as SignalType,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as Record<string, unknown>,
+      metadata: payload as unknown as Record<string, unknown>,
     });
   } catch (error: unknown) {
     logger.error('Failed to emit dashboard viewed event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
@@ -210,11 +211,11 @@ export async function emitDashboardGenerated(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.DASHBOARD_GENERATED,
+      type: ANALYTICS_EVENTS.DASHBOARD_GENERATED as SignalType,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as Record<string, unknown>,
+      metadata: payload as unknown as Record<string, unknown>,
     });
   } catch (error: unknown) {
     logger.error('Failed to emit dashboard generated event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
@@ -238,11 +239,11 @@ export async function emitCacheCleared(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.CACHE_CLEARED,
+      type: ANALYTICS_EVENTS.CACHE_CLEARED as SignalType,
       orgId: 'system',
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as Record<string, unknown>,
+      metadata: payload as unknown as Record<string, unknown>,
     });
   } catch (error: unknown) {
     logger.error('Failed to emit cache cleared event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
@@ -270,11 +271,11 @@ export async function emitExportRequested(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.EXPORT_REQUESTED,
+      type: ANALYTICS_EVENTS.EXPORT_REQUESTED as SignalType,
       orgId: organizationId,
       confidence: 1.0,
       priority: 'Low',
-      metadata: payload as Record<string, unknown>,
+      metadata: payload as unknown as Record<string, unknown>,
     });
   } catch (error: unknown) {
     logger.error('Failed to emit export requested event:', error instanceof Error ? error : new Error(String(error)), { file: 'events.ts' });
@@ -304,11 +305,11 @@ export async function emitAnalyticsError(
     };
     
     await coordinator.emitSignal({
-      type: ANALYTICS_EVENTS.ERROR_OCCURRED,
+      type: ANALYTICS_EVENTS.ERROR_OCCURRED as SignalType,
       orgId: (organizationId !== '' && organizationId != null) ? organizationId : 'system',
       confidence: 1.0,
       priority: 'Medium',
-      metadata: payload as Record<string, unknown>,
+      metadata: payload as unknown as Record<string, unknown>,
     });
   } catch (err: unknown) {
     logger.error('Failed to emit analytics error event:', err instanceof Error ? err : new Error(String(err)), { file: 'events.ts' });
@@ -350,7 +351,10 @@ export function handleDashboardGenerated(payload: DashboardGeneratedPayload): vo
     org: payload.organizationId,
     generationTime: payload.generationTime,
     cached: payload.cached,
-    summary: payload.summary,
+    totalWorkflows: payload.summary.totalWorkflows,
+    totalExecutions: payload.summary.totalExecutions,
+    totalDeals: payload.summary.totalDeals,
+    totalRevenue: payload.summary.totalRevenue,
     file: 'events.ts',
   });
 

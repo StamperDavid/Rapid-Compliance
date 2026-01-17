@@ -195,48 +195,48 @@ async function getWorkflowMetrics(
     };
   }
 
-  // Get all workflows
-  const workflows = await adminDal.getAllWorkflows(organizationId, workspaceId);
-  const activeWorkflows = workflows.filter((w: Workflow) => w.status === 'active');
-  
-  // Get executions in current period
+  // Get all workflows - cast from DAL's Record<string, unknown>[] to typed array
+  const workflows = await adminDal.getAllWorkflows(organizationId, workspaceId) as unknown as Workflow[];
+  const activeWorkflows = workflows.filter((w) => w.status === 'active');
+
+  // Get executions in current period - cast from DAL's Record<string, unknown>[] to typed array
   const executions = await adminDal.getWorkflowExecutions(
     organizationId,
     workspaceId,
     startDate,
     endDate
-  );
-  
-  // Get executions in previous period (for trend)
+  ) as unknown as WorkflowExecution[];
+
+  // Get executions in previous period (for trend) - cast from DAL's Record<string, unknown>[] to typed array
   const previousExecutions = await adminDal.getWorkflowExecutions(
     organizationId,
     workspaceId,
     previousDateRange.start,
     previousDateRange.end
-  );
+  ) as unknown as WorkflowExecution[];
   
   // Calculate basic metrics
   const totalExecutions = executions.length;
-  const successfulExecutions = executions.filter((e: WorkflowExecution) => e.status === 'completed').length;
-  const failedExecutions = executions.filter((e: WorkflowExecution) => e.status === 'failed').length;
+  const successfulExecutions = executions.filter((e) => e.status === 'completed').length;
+  const failedExecutions = executions.filter((e) => e.status === 'failed').length;
   const successRate = totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 0;
-  
+
   // Calculate average execution time
   const executionTimes = executions
-    .filter((e: WorkflowExecution) => e.completedAt && e.startedAt)
-    .map((e: WorkflowExecution) => {
-      const start = toDate(e.startedAt);
-      const end = toDate(e.completedAt);
+    .filter((e) => e.completedAt && e.startedAt)
+    .map((e) => {
+      const start = toDate(e.startedAt!);
+      const end = toDate(e.completedAt!);
       return end.getTime() - start.getTime();
     });
-  
+
   const averageExecutionTime = executionTimes.length > 0
     ? executionTimes.reduce((sum, t) => sum + t, 0) / executionTimes.length
     : 0;
-  
+
   // Calculate total actions
-  const totalActionsExecuted = executions.reduce((sum, e: WorkflowExecution) => {
-    return sum + (e.actionsExecuted?.length || 0);
+  const totalActionsExecuted = executions.reduce((sum, e) => {
+    return sum + (e.actionsExecuted?.length ?? 0);
   }, 0);
   
   // Calculate trend
@@ -246,10 +246,10 @@ async function getWorkflowMetrics(
   
   // Get top workflows
   const topWorkflows = calculateTopWorkflows(workflows, executions);
-  
+
   // Get executions by day
-  const executionsByDay = generateTimeSeries(executions, startDate, endDate, (_e: WorkflowExecution) => 1);
-  
+  const executionsByDay = generateTimeSeries(executions, startDate, endDate, () => 1);
+
   // Get action breakdown
   const actionBreakdown = calculateActionBreakdown(executions, totalActionsExecuted);
   
@@ -309,8 +309,8 @@ function calculateTopWorkflows(
       const executionTimes = data.executions
         .filter(e => e.completedAt && e.startedAt)
         .map(e => {
-          const start = toDate(e.startedAt);
-          const end = toDate(e.completedAt);
+          const start = toDate(e.startedAt!);
+          const end = toDate(e.completedAt!);
           return end.getTime() - start.getTime();
         });
       
@@ -727,10 +727,10 @@ function calculateDealsByTier(deals: DealAnalyticsRecord[]): TierMetrics[] {
  */
 function calculateAverageVelocity(closedDeals: DealAnalyticsRecord[]): number {
   const velocities = closedDeals
-    .filter((d: DealAnalyticsRecord) => d.createdAt && d.closedAt)
-    .map((d: DealAnalyticsRecord) => {
-      const created = toDate(d.createdAt);
-      const closed = toDate(d.closedAt);
+    .filter((d) => d.createdAt && d.closedAt)
+    .map((d) => {
+      const created = toDate(d.createdAt!);
+      const closed = toDate(d.closedAt!);
       const days = (closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
       return days;
     });
@@ -832,13 +832,16 @@ async function getRevenueMetrics(
     ? totalRevenue / wonDeals.length
     : 0;
   
+  // Safely extract forecast values - forecast might be empty object or have different structure
+  const forecastData = forecast as { optimistic?: number; realistic?: number; pessimistic?: number } | null;
+
   return {
     totalRevenue,
     quota,
     quotaAttainment,
-    forecastOptimistic: forecast?.optimistic ?? 0,
-    forecastRealistic: forecast?.realistic ?? 0,
-    forecastPessimistic: forecast?.pessimistic ?? 0,
+    forecastOptimistic: forecastData?.optimistic ?? 0,
+    forecastRealistic: forecastData?.realistic ?? 0,
+    forecastPessimistic: forecastData?.pessimistic ?? 0,
     revenueTrend,
     revenueByDay,
     winRate,
@@ -871,9 +874,6 @@ async function getTeamMetrics(
 
   const dal = adminDal; // Type narrowing for callbacks
 
-  // Get all reps (users with role 'sales')
-  const reps = await dal.getSalesReps(organizationId, workspaceId);
-  
   /** Sales rep record */
   interface RepRecord {
     id: string;
@@ -882,23 +882,27 @@ async function getTeamMetrics(
     quota?: number;
   }
 
+  // Get all reps (users with role 'sales') - cast from DAL's Record<string, unknown>[] to typed array
+  const reps = await dal.getSalesReps(organizationId, workspaceId) as unknown as RepRecord[];
+
   // Get deals for each rep
   const repDeals = await Promise.all(
-    reps.map((rep: RepRecord) =>
+    reps.map((rep) =>
       dal.getRepDeals(organizationId, workspaceId, rep.id, startDate, endDate)
     )
-  );
+  ) as unknown as DealAnalyticsRecord[][];
 
   // Calculate rep performance
-  const repPerformance: RepPerformanceSummary[] = reps.map((rep: RepRecord, index: number) => {
-    const deals = (repDeals[index] ?? []) as DealAnalyticsRecord[];
-    const wonDeals = deals.filter((d: DealAnalyticsRecord) => d.status === 'won');
-    const revenue = wonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
+  const repPerformance: RepPerformanceSummary[] = reps.map((rep, index) => {
+    const deals = repDeals[index] ?? [];
+    type DealWithStatus = DealAnalyticsRecord & { status?: string };
+    const wonDeals = (deals as DealWithStatus[]).filter((d) => d.status === 'won');
+    const revenue = wonDeals.reduce((sum, d) => sum + (d.value ?? 0), 0);
     const quota = rep.quota ?? 100000;
-    
+
     return {
       repId: rep.id,
-      repName: rep.name ?? rep.email,
+      repName: rep.name ?? rep.email ?? 'Unknown',
       deals: deals.length,
       revenue,
       quotaAttainment: quota > 0 ? (revenue / quota) * 100 : 0,
@@ -1016,13 +1020,14 @@ function generateTimeSeries<T>(
   }
   
   // Add item values
-  items.forEach((item: T & { createdAt?: Date | FirestoreTimestamp | string; startedAt?: Date | FirestoreTimestamp | string; date?: Date | FirestoreTimestamp | string }) => {
+  type ItemWithDate = T & { createdAt?: Date | FirestoreTimestamp | string; startedAt?: Date | FirestoreTimestamp | string; date?: Date | FirestoreTimestamp | string };
+  (items as ItemWithDate[]).forEach((item) => {
     const date = item.createdAt ?? item.startedAt ?? item.date;
     if (date) {
       const dateObj = toDate(date);
       const key = dateObj.toISOString().split('T')[0];
       const existing = dayMap.get(key) ?? 0;
-      dayMap.set(key, existing + valueExtractor(item));
+      dayMap.set(key, existing + valueExtractor(item as T));
     }
   });
   

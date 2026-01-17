@@ -199,7 +199,7 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
       updatedAt: fullSequence.updatedAt.toISOString(),
     });
   } catch (error) {
-    logger.error('Failed to save nurture sequence to Firestore:', error, { file: 'lead-nurturing.ts' });
+    logger.error('Failed to save nurture sequence to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'lead-nurturing.ts' });
   }
 
   return fullSequence;
@@ -301,7 +301,7 @@ export async function enrichLead(
       enrichedAt: enrichment.enrichedAt.toISOString(),
     });
   } catch (error) {
-    logger.error('Failed to save lead enrichment to Firestore:', error, { file: 'lead-nurturing.ts' });
+    logger.error('Failed to save lead enrichment to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'lead-nurturing.ts' });
   }
 
   return enrichment;
@@ -330,7 +330,7 @@ export async function trackLeadActivity(activity: LeadActivity): Promise<void> {
       false
     );
   } catch (error) {
-    logger.error('Failed to save lead activity to Firestore:', error, { file: 'lead-nurturing.ts' });
+    logger.error('Failed to save lead activity to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'lead-nurturing.ts' });
   }
 }
 

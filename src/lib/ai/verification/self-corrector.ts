@@ -42,7 +42,7 @@ export async function verifyResponse(params: {
   
   try {
     const request: ChatRequest = {
-      model,
+      model: model as import('@/types/ai-models').ModelName,
       messages: [
         {
           role: 'system',
@@ -134,7 +134,7 @@ export async function correctResponse(params: {
       .join('\n');
     
     const request: ChatRequest = {
-      model,
+      model: model as import('@/types/ai-models').ModelName,
       messages: [
         {
           role: 'system',
@@ -277,9 +277,9 @@ export async function selfCorrect(params: {
 export function quickFactCheck(params: {
   response: string;
   knowledgeBase: string;
-}): Promise<boolean> {
+}): boolean {
   const { response, knowledgeBase } = params;
-  
+
   // Simple keyword matching
   const responseWords = new Set(
     response.toLowerCase().split(/\s+/).filter(w => w.length > 4)
@@ -287,18 +287,18 @@ export function quickFactCheck(params: {
   const knowledgeWords = new Set(
     knowledgeBase.toLowerCase().split(/\s+/).filter(w => w.length > 4)
   );
-  
+
   let matchCount = 0;
   for (const word of responseWords) {
     if (knowledgeWords.has(word)) {
       matchCount++;
     }
   }
-  
-  const matchRatio = responseWords.size > 0 
-    ? matchCount / responseWords.size 
+
+  const matchRatio = responseWords.size > 0
+    ? matchCount / responseWords.size
     : 0;
-  
+
   // If less than 20% match, likely hallucination
   return matchRatio >= 0.2;
 }

@@ -34,7 +34,10 @@ export async function processAndIndexKnowledgeBase(
   try {
     await indexKnowledgeBase(options.organizationId);
   } catch (error) {
-    logger.warn('Failed to index knowledge base', { error, file: 'knowledge-processor-enhanced.ts' });
+    logger.warn('Failed to index knowledge base', {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      file: 'knowledge-processor-enhanced.ts'
+    });
     // Continue even if indexing fails
   }
   

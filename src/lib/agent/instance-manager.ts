@@ -33,7 +33,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
     // 1. Get active Golden Master
     const goldenMaster = await this.getActiveGoldenMaster(orgId);
     if (!goldenMaster) {
-      logger.error('No active Golden Master found', { orgId });
+      logger.error('No active Golden Master found', new Error('No active Golden Master found'), { orgId });
       throw new Error('No active Golden Master found. Please deploy a Golden Master first.');
     }
     
@@ -616,9 +616,9 @@ ${this.summarizeRecentConversations(customerMemory)}
           return active ?? null;
         }
       } catch (adminError) {
-        logger.warn('[Instance Manager] Admin SDK failed, falling back to client SDK', { 
-          error: adminError,
-          file: 'instance-manager.ts' 
+        logger.warn('[Instance Manager] Admin SDK failed, falling back to client SDK', {
+          errorMessage: adminError instanceof Error ? adminError.message : String(adminError),
+          file: 'instance-manager.ts'
         });
       }
       

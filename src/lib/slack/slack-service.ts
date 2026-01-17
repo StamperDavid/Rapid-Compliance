@@ -171,7 +171,8 @@ export class SlackService {
     
     logger.info('SlackService initialized', {
       scopes: config.scopes,
-      rateLimit: config.rateLimit,
+      maxPerMinute: config.rateLimit.maxPerMinute,
+      maxPerHour: config.rateLimit.maxPerHour,
     });
   }
   
@@ -231,7 +232,7 @@ export class SlackService {
       return data;
       
     } catch (error) {
-      logger.error('OAuth token exchange failed', { error });
+      logger.error('OAuth token exchange failed', error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }
@@ -258,9 +259,9 @@ export class SlackService {
       }
       
       logger.info('OAuth token revoked successfully');
-      
+
     } catch (error) {
-      logger.error('Token revocation failed', { error });
+      logger.error('Token revocation failed', error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }
@@ -277,9 +278,9 @@ export class SlackService {
       );
       
       return response;
-      
+
     } catch (error) {
-      logger.error('Auth test failed', { error });
+      logger.error('Auth test failed', error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }
@@ -367,10 +368,9 @@ export class SlackService {
         channel: response.channel,
         permalink,
       };
-      
+
     } catch (error) {
-      logger.error('Failed to send Slack message', {
-        error,
+      logger.error('Failed to send Slack message', error instanceof Error ? error : new Error(String(error)), {
         workspaceId: workspace.id,
         channelId: message.channelId,
         category: message.category,
@@ -420,10 +420,9 @@ export class SlackService {
         channelId,
         ts,
       });
-      
+
     } catch (error) {
-      logger.error('Failed to update Slack message', {
-        error,
+      logger.error('Failed to update Slack message', error instanceof Error ? error : new Error(String(error)), {
         channelId,
         ts,
       });
@@ -453,10 +452,9 @@ export class SlackService {
         channelId,
         ts,
       });
-      
+
     } catch (error) {
-      logger.error('Failed to delete Slack message', {
-        error,
+      logger.error('Failed to delete Slack message', error instanceof Error ? error : new Error(String(error)), {
         channelId,
         ts,
       });
@@ -483,10 +481,9 @@ export class SlackService {
       );
       
       return response.permalink;
-      
+
     } catch (error) {
-      logger.error('Failed to get message permalink', {
-        error,
+      logger.error('Failed to get message permalink', error instanceof Error ? error : new Error(String(error)), {
         channelId,
         messageTs,
       });
@@ -581,9 +578,9 @@ export class SlackService {
         channels,
         nextCursor: response.response_metadata?.next_cursor,
       };
-      
+
     } catch (error) {
-      logger.error('Failed to list Slack channels', { error });
+      logger.error('Failed to list Slack channels', error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }
@@ -635,10 +632,9 @@ export class SlackService {
         purpose: channel.purpose?.value,
         memberCount: channel.num_members,
       };
-      
+
     } catch (error) {
-      logger.error('Failed to get Slack channel', {
-        error,
+      logger.error('Failed to get Slack channel', error instanceof Error ? error : new Error(String(error)), {
         channelId,
       });
       throw error;
@@ -657,10 +653,9 @@ export class SlackService {
       );
       
       logger.info('Joined Slack channel', { channelId });
-      
+
     } catch (error) {
-      logger.error('Failed to join Slack channel', {
-        error,
+      logger.error('Failed to join Slack channel', error instanceof Error ? error : new Error(String(error)), {
         channelId,
       });
       throw error;
@@ -721,9 +716,9 @@ export class SlackService {
         users,
         nextCursor: response.response_metadata?.next_cursor,
       };
-      
+
     } catch (error) {
-      logger.error('Failed to list Slack users', { error });
+      logger.error('Failed to list Slack users', error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }
@@ -759,10 +754,9 @@ export class SlackService {
         realName: user.profile.real_name,
         isBot:user.is_bot ?? user.is_app_user,
       };
-      
+
     } catch (error) {
-      logger.error('Failed to get Slack user', {
-        error,
+      logger.error('Failed to get Slack user', error instanceof Error ? error : new Error(String(error)), {
         userId,
       });
       throw error;
@@ -821,9 +815,9 @@ export class SlackService {
       }
       
       return isValid;
-      
+
     } catch (error) {
-      logger.error('Webhook signature verification failed', { error });
+      logger.error('Webhook signature verification failed', error instanceof Error ? error : new Error(String(error)));
       return false;
     }
   }

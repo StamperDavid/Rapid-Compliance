@@ -164,7 +164,10 @@ Return JSON format:
         }
       }
     } catch (e) {
-      logger.warn('Failed to parse JSON from AI response', { error: e, file: 'pdf-parser.ts' });
+      logger.warn('Failed to parse JSON from AI response', {
+        errorMessage: e instanceof Error ? e.message : String(e),
+        file: 'pdf-parser.ts'
+      });
     }
 
     return {};

@@ -81,7 +81,7 @@ export async function syncGmailMessages(
     // Full sync (first time)
     return await fullSync(gmail, organizationId, maxResults);
   } catch (error) {
-    logger.error('[Gmail Sync] Error:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error:', error as Error, { file: 'gmail-sync-service.ts' });
     throw error;
   }
 }
@@ -143,7 +143,7 @@ async function fullSync(
               historyId = fullMessage.data.historyId;
             }
           } catch (err) {
-            logger.error('[Gmail Sync] Error processing message ${msg.id}:', err, { file: 'gmail-sync-service.ts' });
+            logger.error('[Gmail Sync] Error processing message ${msg.id}:', err as Error, { file: 'gmail-sync-service.ts' });
             errors++;
           }
         })
@@ -163,7 +163,7 @@ async function fullSync(
     
     return status;
   } catch (error) {
-    logger.error('[Gmail Sync] Full sync error:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Full sync error:', error as Error, { file: 'gmail-sync-service.ts' });
     throw error;
   }
 }
@@ -213,7 +213,7 @@ async function incrementalSync(
             await saveMessageToCRM(organizationId, parsed);
             messagesSynced++;
           } catch (err) {
-            logger.error('[Gmail Sync] Error processing added message:', err, { file: 'gmail-sync-service.ts' });
+            logger.error('[Gmail Sync] Error processing added message:', err as Error, { file: 'gmail-sync-service.ts' });
             errors++;
           }
         }
@@ -225,7 +225,7 @@ async function incrementalSync(
           try {
             await deleteMessageFromCRM(organizationId, msgDeleted.message!.id!);
           } catch (err) {
-            logger.error('[Gmail Sync] Error deleting message:', err, { file: 'gmail-sync-service.ts' });
+            logger.error('[Gmail Sync] Error deleting message:', err as Error, { file: 'gmail-sync-service.ts' });
             errors++;
           }
         }
@@ -247,7 +247,7 @@ async function incrementalSync(
             
             await updateMessageLabels(organizationId, messageId, fullMessage.data.labelIds ?? []);
           } catch (err) {
-            logger.error('[Gmail Sync] Error updating labels:', err, { file: 'gmail-sync-service.ts' });
+            logger.error('[Gmail Sync] Error updating labels:', err as Error, { file: 'gmail-sync-service.ts' });
             errors++;
           }
         }
@@ -266,7 +266,7 @@ async function incrementalSync(
     
     return status;
   } catch (error) {
-    logger.error('[Gmail Sync] Incremental sync error:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Incremental sync error:', error as Error, { file: 'gmail-sync-service.ts' });
     throw error;
   }
 }
@@ -399,7 +399,7 @@ async function saveMessageToCRM(organizationId: string, message: GmailMessage): 
       );
     }
   } catch (error) {
-    logger.error('[Gmail Sync] Error saving message to CRM:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error saving message to CRM:', error as Error, { file: 'gmail-sync-service.ts' });
     throw error;
   }
 }
@@ -414,7 +414,7 @@ async function deleteMessageFromCRM(organizationId: string, messageId: string): 
       messageId
     );
   } catch (error) {
-    logger.error('[Gmail Sync] Error deleting message:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error deleting message:', error as Error, { file: 'gmail-sync-service.ts' });
   }
 }
 
@@ -433,7 +433,7 @@ async function updateMessageLabels(organizationId: string, messageId: string, la
       }
     );
   } catch (error) {
-    logger.error('[Gmail Sync] Error updating labels:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error updating labels:', error as Error, { file: 'gmail-sync-service.ts' });
   }
 }
 
@@ -446,10 +446,10 @@ async function findContactByEmail(organizationId: string, email: string): Promis
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
     );
     const contactsFiltered = contacts.filter((c: any) => c.email === email);
-    
+
     return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
   } catch (error) {
-    logger.error('[Gmail Sync] Error finding contact:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error finding contact:', error as Error, { file: 'gmail-sync-service.ts' });
     return null;
   }
 }
@@ -480,7 +480,7 @@ async function saveSyncStatus(status: GmailSyncStatus): Promise<void> {
       status
     );
   } catch (error) {
-    logger.error('[Gmail Sync] Error saving sync status:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error saving sync status:', error as Error, { file: 'gmail-sync-service.ts' });
   }
 }
 
@@ -501,10 +501,10 @@ export async function setupGmailPushNotifications(
         labelIds: ['INBOX', 'SENT'],
       },
     });
-    
+
     logger.info('[Gmail Sync] Push notifications enabled', { file: 'gmail-sync-service.ts' });
   } catch (error) {
-    logger.error('[Gmail Sync] Error setting up push notifications:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error setting up push notifications:', error as Error, { file: 'gmail-sync-service.ts' });
     throw error;
   }
 }
@@ -519,10 +519,10 @@ export async function stopGmailPushNotifications(accessToken: string): Promise<v
     await gmail.users.stop({
       userId: 'me',
     });
-    
+
     logger.info('[Gmail Sync] Push notifications disabled', { file: 'gmail-sync-service.ts' });
   } catch (error) {
-    logger.error('[Gmail Sync] Error stopping push notifications:', error, { file: 'gmail-sync-service.ts' });
+    logger.error('[Gmail Sync] Error stopping push notifications:', error as Error, { file: 'gmail-sync-service.ts' });
     throw error;
   }
 }

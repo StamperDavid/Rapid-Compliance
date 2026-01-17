@@ -202,7 +202,7 @@ export class CoachingAnalyticsEngine {
         vsTeamAverage
       };
     } catch (error) {
-      logger.error('Error analyzing rep performance', { repId, error });
+      logger.error('Error analyzing rep performance', error instanceof Error ? error : new Error(String(error)), { repId });
       throw error;
     }
   }
@@ -289,7 +289,7 @@ export class CoachingAnalyticsEngine {
         healthDistribution
       };
     } catch (error) {
-      logger.error('Error analyzing deal metrics', { repId, error });
+      logger.error('Error analyzing deal metrics', error instanceof Error ? error : new Error(String(error)), { repId });
       // Return zero metrics on error
       return {
         totalDeals: 0,
@@ -389,7 +389,7 @@ export class CoachingAnalyticsEngine {
         followUpConsistency
       };
     } catch (error) {
-      logger.error('Error analyzing communication metrics', { repId, error });
+      logger.error('Error analyzing communication metrics', error instanceof Error ? error : new Error(String(error)), { repId });
       return {
         emailsGenerated: 0,
         emailsSent: 0,
@@ -470,7 +470,7 @@ export class CoachingAnalyticsEngine {
         crmUpdates
       };
     } catch (error) {
-      logger.error('Error analyzing activity metrics', { repId, error });
+      logger.error('Error analyzing activity metrics', error instanceof Error ? error : new Error(String(error)), { repId });
       return {
         totalActivities: 0,
         activitiesPerDay: 0,
@@ -550,7 +550,7 @@ export class CoachingAnalyticsEngine {
         dropOffPoints
       };
     } catch (error) {
-      logger.error('Error analyzing conversion metrics', { repId, error });
+      logger.error('Error analyzing conversion metrics', error instanceof Error ? error : new Error(String(error)), { repId });
       return {
         leadToOpportunity: 0,
         opportunityToProposal: 0,
@@ -643,7 +643,7 @@ export class CoachingAnalyticsEngine {
         growthRate
       };
     } catch (error) {
-      logger.error('Error analyzing revenue metrics', { repId, error });
+      logger.error('Error analyzing revenue metrics', error instanceof Error ? error : new Error(String(error)), { repId });
       return {
         totalRevenue: 0,
         quota: 0,
@@ -803,7 +803,7 @@ export class CoachingAnalyticsEngine {
         hoursSaved
       };
     } catch (error) {
-      logger.error('Error analyzing efficiency metrics', { repId, error });
+      logger.error('Error analyzing efficiency metrics', error instanceof Error ? error : new Error(String(error)), { repId });
       return {
         timeToFirstContact: 0,
         timeToProposal: 0,
@@ -980,7 +980,7 @@ export class CoachingAnalyticsEngine {
 
       return metrics;
     } catch (error) {
-      logger.error('Error getting team average metrics', { error });
+      logger.error('Error getting team average metrics', error instanceof Error ? error : new Error(String(error)));
       return this.getDefaultTeamMetrics();
     }
   }

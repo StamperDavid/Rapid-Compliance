@@ -119,7 +119,7 @@ async function emitSignal(
  */
 function createSubmissionSignal(
   submission: FormSubmission,
-  _form: FormDefinition
+  form: FormDefinition
 ): Omit<OrchestratorSignal, 'id'> {
   return {
     type: 'lead.discovered',
@@ -156,7 +156,7 @@ function createSubmissionSignal(
 async function _executeEmitSignal(
   action: OrchestratorAction,
   submission: FormSubmission,
-  _form: FormDefinition
+  form: FormDefinition
 ): Promise<ActionExecutionResult> {
   const result: ActionExecutionResult = {
     actionId: action.type,
@@ -168,6 +168,7 @@ async function _executeEmitSignal(
   try {
     const signalType = action.details?.signalType ?? 'lead.discovered';
     const signalPriority = action.details?.signalPriority ?? 'Medium';
+    const signalMetadata = (action.details?.signalMetadata ?? {}) as Record<string, unknown>;
 
     const signalId = await emitSignal({
       type: signalType as string,
@@ -180,7 +181,7 @@ async function _executeEmitSignal(
       metadata: {
         source: 'form_submission',
         formName: form.name,
-        ...action.details?.signalMetadata,
+        ...signalMetadata,
         responses: submission.responses.reduce((acc, r) => {
           acc[r.fieldName] = r.value;
           return acc;
@@ -196,7 +197,7 @@ async function _executeEmitSignal(
     result.result = { signalId };
   } catch (error) {
     result.error = String(error);
-    logger.error('Failed to emit signal', { error, action });
+    logger.error('Failed to emit signal', error instanceof Error ? error : new Error(String(error)));
   }
 
   return result;
@@ -231,7 +232,7 @@ async function executeTriggerSequence(
     // Import sequence service dynamically
     const { enrollInSequence } = await import('@/lib/sequences/sequence-service');
 
-    const enrollmentId = await enrollInSequence({
+    const enrollmentId = String(await enrollInSequence({
       sequenceId,
       leadId: submission.linkedLeadId || submission.id,
       email,
@@ -239,13 +240,13 @@ async function executeTriggerSequence(
       workspaceId: submission.workspaceId,
       source: 'form_submission',
       sourceId: submission.id,
-    });
+    }));
 
     result.success = true;
     result.result = { enrollmentId, sequenceId };
   } catch (error) {
     result.error = String(error);
-    logger.error('Failed to trigger sequence', { error, action });
+    logger.error('Failed to trigger sequence', error instanceof Error ? error : new Error(String(error)));
   }
 
   return result;
@@ -293,7 +294,7 @@ async function _executeRouteLead(
     result.result = { routed: true };
   } catch (error) {
     result.error = String(error);
-    logger.error('Failed to route lead', { error, action });
+    logger.error('Failed to route lead', error instanceof Error ? error : new Error(String(error)));
   }
 
   return result;
@@ -305,7 +306,7 @@ async function _executeRouteLead(
 async function executeNotifySlack(
   action: OrchestratorAction,
   submission: FormSubmission,
-  _form: FormDefinition
+  form: FormDefinition
 ): Promise<ActionExecutionResult> {
   const result: ActionExecutionResult = {
     actionId: action.type,
@@ -315,13 +316,14 @@ async function executeNotifySlack(
   };
 
   try {
-    const channelId = action.details?.slackChannelId;
+    const channelId = action.details?.slackChannelId as string | undefined;
     if (!channelId) {
       throw new Error('Slack channel ID not specified');
     }
 
     // Build message with placeholders
-    let message = action.details?.slackMessage ||
+    const slackMessage = action.details?.slackMessage as string | undefined;
+    let message = slackMessage ||
       `New form submission: ${form.name}\n` +
       `Confirmation: ${submission.confirmationNumber}\n` +
       `Email: ${submission.indexedEmail || 'N/A'}\n` +
@@ -347,7 +349,7 @@ async function executeNotifySlack(
     result.result = { channelId, messageSent: true };
   } catch (error) {
     result.error = String(error);
-    logger.error('Failed to notify Slack', { error, action });
+    logger.error('Failed to notify Slack', error instanceof Error ? error : new Error(String(error)));
   }
 
   return result;
@@ -369,13 +371,13 @@ async function _executeSendWebhook(
   };
 
   try {
-    const webhookUrl = action.details?.webhookUrl;
+    const webhookUrl = action.details?.webhookUrl as string | undefined;
     if (!webhookUrl) {
       throw new Error('Webhook URL not specified');
     }
 
-    const method = action.details?.webhookMethod || 'POST';
-    const headers = action.details?.webhookHeaders || {};
+    const method = (action.details?.webhookMethod as string | undefined) || 'POST';
+    const headers = (action.details?.webhookHeaders as Record<string, string> | undefined) || {};
 
     // Build payload
     let payload: WebhookPayload | Record<string, unknown>;
@@ -384,7 +386,7 @@ async function _executeSendWebhook(
       // Custom payload template
       payload = JSON.parse(
         replacePlaceholders(action.details.webhookPayload as string, submission)
-      );
+      ) as Record<string, unknown>;
     } else {
       // Default payload
       payload = {
@@ -397,7 +399,7 @@ async function _executeSendWebhook(
           acc[r.fieldName] = r.value;
           return acc;
         }, {} as Record<string, unknown>),
-        metadata: submission.metadata,
+        metadata: submission.metadata as Record<string, unknown>,
       };
     }
 
@@ -422,7 +424,7 @@ async function _executeSendWebhook(
     };
   } catch (error) {
     result.error = String(error);
-    logger.error('Failed to send webhook', { error, action });
+    logger.error('Failed to send webhook', error instanceof Error ? error : new Error(String(error)));
   }
 
   return result;
@@ -485,7 +487,7 @@ async function executeWorkflow(
     result.result = { workflowId, inputs };
   } catch (error) {
     result.error = String(error);
-    logger.error('Failed to execute workflow', { error, action });
+    logger.error('Failed to execute workflow', error instanceof Error ? error : new Error(String(error)));
   }
 
   return result;
@@ -518,7 +520,7 @@ async function executeCRMUpdate(
     result.result = syncResult;
   } catch (error) {
     result.error = error instanceof Error ? error.message : String(error);
-    logger.error('Failed to update CRM', { error, action });
+    logger.error('Failed to update CRM', error instanceof Error ? error : new Error(String(error)));
   }
 
   return result;
@@ -583,7 +585,7 @@ export async function triggerOrchestratorActions(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     result.errors.push(`Failed to emit default signal: ${errorMessage}`);
-    logger.error('Failed to emit default submission signal', { error });
+    logger.error('Failed to emit default submission signal', error instanceof Error ? error : new Error(String(error)));
   }
 
   // Get configured actions (if any)
@@ -705,11 +707,12 @@ export async function onFormSubmit(
 /**
  * Register form submission handler with signal coordinator
  */
-export function registerFormSubmissionHandler(
+export async function registerFormSubmissionHandler(
   orgId: string,
   workspaceId: string
 ): Promise<void> {
   // This can be called during workspace initialization
   // to set up signal handlers for form-related events
   logger.info('Form submission handler registered', { orgId, workspaceId });
+  return Promise.resolve();
 }

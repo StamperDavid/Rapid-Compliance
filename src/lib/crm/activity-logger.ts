@@ -4,9 +4,29 @@
  * Call these from AI agents, email sequences, workflows, etc.
  */
 
+import { Timestamp } from 'firebase/firestore';
 import { createActivity } from './activity-service';
 import type { CreateActivityInput, RelatedEntityType } from '@/types/activity';
 import { logger } from '@/lib/logger/logger';
+
+/**
+ * Converts unknown values to string representation for metadata
+ */
+function toMetadataString(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
 
 /**
  * Log AI chat conversation
@@ -39,7 +59,7 @@ export async function logAIChat(params: {
       }],
       createdBy: params.userId,
       createdByName:(params.userName !== '' && params.userName != null) ? params.userName : 'AI Agent',
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         conversationId: params.conversationId,
         messageCount: params.messageCount,
@@ -57,7 +77,8 @@ export async function logAIChat(params: {
 
     logger.info('AI chat activity logged', { conversationId: params.conversationId });
   } catch (error) {
-    logger.error('Failed to log AI chat activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log AI chat activity', err);
   }
 }
 
@@ -96,7 +117,7 @@ export async function logEmailSent(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         emailId: params.emailId,
         fromEmail: params.fromEmail,
@@ -118,7 +139,8 @@ export async function logEmailSent(params: {
 
     logger.info('Email sent activity logged', { emailId: params.emailId });
   } catch (error) {
-    logger.error('Failed to log email sent activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log email sent activity', err);
   }
 }
 
@@ -143,7 +165,7 @@ export async function logEmailOpened(params: {
         entityType: params.relatedEntityType,
         entityId: params.relatedEntityId,
       }],
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         emailId: params.emailId,
       },
@@ -157,7 +179,8 @@ export async function logEmailOpened(params: {
 
     logger.info('Email opened activity logged', { emailId: params.emailId });
   } catch (error) {
-    logger.error('Failed to log email opened activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log email opened activity', err);
   }
 }
 
@@ -191,7 +214,7 @@ export async function logCall(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         callDuration: params.duration,
         callOutcome: params.outcome,
@@ -208,7 +231,8 @@ export async function logCall(params: {
 
     logger.info('Call activity logged', { outcome: params.outcome, duration: params.duration });
   } catch (error) {
-    logger.error('Failed to log call activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log call activity', err);
   }
 }
 
@@ -231,7 +255,7 @@ export async function logMeeting(params: {
   userName?: string;
 }): Promise<void> {
   try {
-    const type = 
+    const type =
       params.meetingType === 'scheduled' ? 'meeting_scheduled' :
       params.meetingType === 'no_show' ? 'meeting_no_show' :
       'meeting_completed';
@@ -248,7 +272,7 @@ export async function logMeeting(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         meetingDuration: params.duration,
         meetingAttendees: params.attendees,
@@ -265,7 +289,8 @@ export async function logMeeting(params: {
 
     logger.info('Meeting activity logged', { type: params.meetingType });
   } catch (error) {
-    logger.error('Failed to log meeting activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log meeting activity', err);
   }
 }
 
@@ -285,16 +310,19 @@ export async function logStatusChange(params: {
   userName?: string;
 }): Promise<void> {
   try {
-    const type = 
+    const type =
       params.relatedEntityType === 'deal' ? 'deal_stage_changed' :
       params.relatedEntityType === 'lead' ? 'lead_status_changed' :
       'field_updated';
 
+    const previousValueStr = toMetadataString(params.previousValue);
+    const newValueStr = toMetadataString(params.newValue);
+
     const activityData: CreateActivityInput = {
       type,
       direction: 'internal',
-      subject: `${params.fieldChanged}: ${params.previousValue} → ${params.newValue}`,
-      summary: `Updated ${params.fieldChanged} from "${params.previousValue}" to "${params.newValue}"`,
+      subject: `${params.fieldChanged}: ${previousValueStr} → ${newValueStr}`,
+      summary: `Updated ${params.fieldChanged} from "${previousValueStr}" to "${newValueStr}"`,
       relatedTo: [{
         entityType: params.relatedEntityType,
         entityId: params.relatedEntityId,
@@ -302,11 +330,11 @@ export async function logStatusChange(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         fieldChanged: params.fieldChanged,
-        previousValue: params.previousValue,
-        newValue: params.newValue,
+        previousValue: previousValueStr,
+        newValue: newValueStr,
       },
     };
 
@@ -318,7 +346,8 @@ export async function logStatusChange(params: {
 
     logger.info('Status change activity logged', { field: params.fieldChanged });
   } catch (error) {
-    logger.error('Failed to log status change activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log status change activity', err);
   }
 }
 
@@ -347,7 +376,7 @@ export async function logWorkflow(params: {
         entityName: params.relatedEntityName,
       }],
       createdByName: 'System',
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         workflowId: params.workflowId,
         workflowName: params.workflowName,
@@ -362,7 +391,8 @@ export async function logWorkflow(params: {
 
     logger.info('Workflow activity logged', { workflowId: params.workflowId });
   } catch (error) {
-    logger.error('Failed to log workflow activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log workflow activity', err);
   }
 }
 
@@ -393,7 +423,7 @@ export async function logSequenceChange(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
       metadata: {
         sequenceId: params.sequenceId,
         sequenceName: params.sequenceName,
@@ -408,7 +438,8 @@ export async function logSequenceChange(params: {
 
     logger.info('Sequence change activity logged', { action: params.action, sequenceId: params.sequenceId });
   } catch (error) {
-    logger.error('Failed to log sequence change activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log sequence change activity', err);
   }
 }
 
@@ -440,7 +471,7 @@ export async function logNote(params: {
       }],
       createdBy: params.userId,
       createdByName: params.userName,
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
     };
 
     await createActivity(
@@ -451,7 +482,8 @@ export async function logNote(params: {
 
     logger.info('Note activity logged');
   } catch (error) {
-    logger.error('Failed to log note activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log note activity', err);
   }
 }
 
@@ -478,7 +510,7 @@ export async function logEnrichment(params: {
         entityName: params.relatedEntityName,
       }],
       createdByName: 'System',
-      occurredAt: new Date(),
+      occurredAt: Timestamp.fromDate(new Date()),
     };
 
     await createActivity(
@@ -489,7 +521,8 @@ export async function logEnrichment(params: {
 
     logger.info('Enrichment activity logged', { dataPoints: params.dataPointsFound });
   } catch (error) {
-    logger.error('Failed to log enrichment activity', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to log enrichment activity', err);
   }
 }
 
