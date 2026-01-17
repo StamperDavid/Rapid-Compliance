@@ -179,7 +179,7 @@ export default function SequenceAnalyticsPage() {
           setRecentExecutions(executionsData.executions ?? []);
         }
       } catch (error) {
-        logger.error('Error loading analytics:', error instanceof Error ? error : undefined, { file: 'analytics/page.tsx' });
+        logger.error('Error loading analytics:', error instanceof Error ? error : new Error(String(error)), { file: 'analytics/page.tsx' });
       } finally {
         setLoading(false);
       }
@@ -201,7 +201,7 @@ export default function SequenceAnalyticsPage() {
           setRecentExecutions(executionsData.executions ?? []);
         }
       } catch (error) {
-        logger.error('Error refreshing executions:', error instanceof Error ? error : undefined, { file: 'analytics/page.tsx' });
+        logger.error('Error refreshing executions:', error instanceof Error ? error : new Error(String(error)), { file: 'analytics/page.tsx' });
       }
     }, 30000);
 

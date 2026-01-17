@@ -79,7 +79,7 @@ export async function generateEmbedding(
       model: 'text-embedding-004',
     };
   } catch (error: unknown) {
-    logger.error('Error generating embedding:', error, { file: 'embeddings-service.ts' });
+    logger.error('Error generating embedding:', error instanceof Error ? error : new Error(String(error)), { file: 'embeddings-service.ts' });
     // Fallback to simple hash-based embedding for now
     return generateEmbeddingFallback(text);
   }

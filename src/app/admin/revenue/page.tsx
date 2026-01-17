@@ -40,8 +40,7 @@ export default function RevenueAdminPage() {
 
       setMetrics(metricsData);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Failed to load metrics:', err, { file: 'page.tsx' });
+      logger.error('Failed to load metrics', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       // Set empty metrics instead of null to show "No data" state
       setMetrics(null);
     } finally {

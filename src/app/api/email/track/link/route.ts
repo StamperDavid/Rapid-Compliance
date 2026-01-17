@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error storing tracked link', error instanceof Error ? error : undefined, { route: '/api/email/track/link' });
+    logger.error('Error storing tracked link', error instanceof Error ? error : new Error(String(error)), { route: '/api/email/track/link' });
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

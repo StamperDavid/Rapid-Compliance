@@ -103,7 +103,7 @@ export async function GET(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to fetch page versions', error instanceof Error ? error : undefined, {
+    logger.error('Failed to fetch page versions', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/pages/[pageId]/versions',
       method: 'GET'
     });
@@ -231,7 +231,7 @@ export async function POST(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to restore page version', error instanceof Error ? error : undefined, {
+    logger.error('Failed to restore page version', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/pages/[pageId]/versions',
       method: 'POST'
     });

@@ -127,8 +127,7 @@ export default function AdminLoginPage() {
       router.push('/admin');
       
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      logger.error('Login error:', error, { file: 'page.tsx' });
+      logger.error('Login error', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       const firebaseError = err as FirebaseError;
       
       // Map Firebase error codes to user-friendly messages

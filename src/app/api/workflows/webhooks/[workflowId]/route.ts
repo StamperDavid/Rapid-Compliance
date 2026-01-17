@@ -52,7 +52,7 @@ export async function POST(
       message: 'Webhook received and processed',
     });
   } catch (error: unknown) {
-    logger.error('Error handling webhook', error instanceof Error ? error : undefined, { route: '/api/workflows/webhooks' });
+    logger.error('Error handling webhook', error instanceof Error ? error : new Error(String(error)), { route: '/api/workflows/webhooks' });
     return errors.internal('Failed to process webhook', error instanceof Error ? error : undefined);
   }
 }

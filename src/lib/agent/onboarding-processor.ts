@@ -123,7 +123,7 @@ export async function processOnboarding(
       baseModel, // Changed from goldenMaster
     };
   } catch (error: unknown) {
-    logger.error('[Onboarding Processor] Error:', error, { file: 'onboarding-processor.ts' });
+    logger.error('[Onboarding Processor] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'onboarding-processor.ts' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to process onboarding';
     return {
       success: false,

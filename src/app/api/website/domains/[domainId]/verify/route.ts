@@ -132,7 +132,7 @@ export async function POST(
           }
         }
       } catch (vercelError) {
-        logger.error('Vercel integration error during domain verification', vercelError instanceof Error ? vercelError : undefined, {
+        logger.error('Vercel integration error during domain verification', vercelError instanceof Error ? vercelError : new Error(String(vercelError)), {
           route: '/api/website/domains/[domainId]/verify',
           domainId,
           organizationId
@@ -161,7 +161,7 @@ export async function POST(
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Domain verification error', error instanceof Error ? error : undefined, {
+    logger.error('Domain verification error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/domains/[domainId]/verify'
     });
     return NextResponse.json(

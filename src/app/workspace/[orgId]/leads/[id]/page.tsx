@@ -32,7 +32,7 @@ export default function LeadDetailPage() {
       // Load intelligence features
       loadIntelligence(data);
     } catch (error: unknown) {
-      logger.error('Error loading lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ export default function LeadDetailPage() {
       const quality = calculateLeadDataQuality(leadData);
       setDataQuality(quality);
     } catch (error: unknown) {
-      logger.error('Error loading intelligence:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading intelligence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoadingIntelligence(false);
     }
@@ -266,7 +266,7 @@ export default function LeadDetailPage() {
                     alert('Lead converted to deal!');
                     router.push(`/workspace/${orgId}/deals/${dealId}`);
                   } catch (error: unknown) {
-                    logger.error('Error converting lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+                    logger.error('Error converting lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
                     alert('Failed to convert lead');
                   }
                 }}

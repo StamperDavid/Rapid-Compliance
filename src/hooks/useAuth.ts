@@ -74,7 +74,7 @@ export function useAuth() {
                 workspaceId: userProfile?.currentWorkspaceId,
               });
             } catch (error) {
-              logger.error('Error loading user profile:', error instanceof Error ? error : undefined, { file: 'useAuth.ts' });
+              logger.error('Error loading user profile:', error instanceof Error ? error : new Error(String(error)), { file: 'useAuth.ts' });
               // Fallback to basic user info with admin role
               setUser({
                 id: authUser.uid,
@@ -100,7 +100,7 @@ export function useAuth() {
 
       return () => unsubscribe();
     }).catch((error: unknown) => {
-      logger.error('Error checking Firebase config:', error as Error, { file: 'useAuth.ts' });
+      logger.error('Error checking Firebase config:', error instanceof Error ? error : new Error(String(error)), { file: 'useAuth.ts' });
       // Fallback to demo mode
       setUser({
         id: 'demo-user',

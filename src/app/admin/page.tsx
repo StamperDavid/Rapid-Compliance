@@ -155,7 +155,7 @@ export default function AdminDashboard() {
 
         setLoading(false);
       } catch (error) {
-        const err = error instanceof Error ? error : new Error('Unknown error');
+        const err = error instanceof Error ? error : new Error(String(error));
         logger.error('❌ Failed to load dashboard data:', err, { file: 'page.tsx' });
 
         // Handle auth errors

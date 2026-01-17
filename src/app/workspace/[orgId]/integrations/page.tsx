@@ -114,7 +114,7 @@ export default function IntegrationsPage() {
       await refresh(); // Refresh pagination
       alert(`${INTEGRATION_PROVIDERS[providerId].name} connected successfully!`);
     } catch (error: unknown) {
-      logger.error('Failed to save integration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to save integration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to connect integration');
     }
   };
@@ -132,7 +132,7 @@ export default function IntegrationsPage() {
       );
       await refresh(); // Refresh pagination
     } catch (error: unknown) {
-      logger.error('Failed to disconnect integration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to disconnect integration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to disconnect integration');
     }
   };

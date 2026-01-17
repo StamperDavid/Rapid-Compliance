@@ -123,8 +123,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ executions });
 
-  } catch (error) {
-    logger.error('[Executions API] Error fetching executions', error instanceof Error ? error : undefined);
+  } catch (error: unknown) {
+    logger.error('[Executions API] Error fetching executions', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: 'Failed to fetch executions' },
       { status: 500 }
@@ -296,8 +296,8 @@ async function getRecentExecutions(
     executions.sort((a, b) => b.executedAt.getTime() - a.executedAt.getTime());
     return executions.slice(0, limit);
 
-  } catch (error) {
-    logger.error('[Executions] Error fetching executions', error instanceof Error ? error : undefined);
+  } catch (error: unknown) {
+    logger.error('[Executions] Error fetching executions', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }

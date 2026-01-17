@@ -99,8 +99,7 @@ export default function AdminGrowthPage() {
         }
       }
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('[AdminGrowth] Load data failed:', err, { file: 'growth/page.tsx' });
+      logger.error('[AdminGrowth] Load data failed', error instanceof Error ? error : new Error(String(error)), { file: 'growth/page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -117,8 +116,7 @@ export default function AdminGrowthPage() {
         logger.info('[AdminGrowth] SEO settings saved successfully', { file: 'growth/page.tsx' });
       }
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('[AdminGrowth] Save SEO failed:', err, { file: 'growth/page.tsx' });
+      logger.error('[AdminGrowth] Save SEO failed', error instanceof Error ? error : new Error(String(error)), { file: 'growth/page.tsx' });
     }
   }
 
@@ -145,8 +143,7 @@ export default function AdminGrowthPage() {
         setContentTopic('');
       }
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('[AdminGrowth] Generate content failed:', err, { file: 'growth/page.tsx' });
+      logger.error('[AdminGrowth] Generate content failed', error instanceof Error ? error : new Error(String(error)), { file: 'growth/page.tsx' });
     } finally {
       setGenerating(false);
     }
@@ -173,8 +170,7 @@ export default function AdminGrowthPage() {
         setScraperUrl('');
       }
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('[AdminGrowth] Start scraper failed:', err, { file: 'growth/page.tsx' });
+      logger.error('[AdminGrowth] Start scraper failed', error instanceof Error ? error : new Error(String(error)), { file: 'growth/page.tsx' });
     }
   }
 

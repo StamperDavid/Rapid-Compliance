@@ -302,11 +302,11 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
-    logger.error('Playbook generation failed', error instanceof Error ? error : undefined, {
+
+    logger.error('Playbook generation failed', error instanceof Error ? error : new Error(String(error)), {
       processingTime,
     });
-    
+
     return NextResponse.json(
       {
         success: false,

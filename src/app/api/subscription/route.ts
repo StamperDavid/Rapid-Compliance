@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       subscription,
     });
   } catch (error: unknown) {
-    logger.error('Error getting subscription', error instanceof Error ? error : undefined, { route: '/api/subscription' });
+    logger.error('Error getting subscription', error instanceof Error ? error : new Error(String(error)), { route: '/api/subscription' });
     return errors.database('Failed to get subscription', error instanceof Error ? error : undefined);
   }
 }
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       subscription,
     });
   } catch (error: unknown) {
-    logger.error('Error updating subscription', error instanceof Error ? error : undefined, { route: '/api/subscription' });
+    logger.error('Error updating subscription', error instanceof Error ? error : new Error(String(error)), { route: '/api/subscription' });
     return errors.database('Failed to update subscription', error instanceof Error ? error : undefined);
   }
 }

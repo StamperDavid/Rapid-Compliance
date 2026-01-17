@@ -165,7 +165,7 @@ export default function SocialMediaTrainingPage() {
       setKnowledgeItems(knowledgeResult.data as KnowledgeItem[] || []);
 
     } catch (error) {
-      logger.error('Error loading social training settings:', error instanceof Error ? error : undefined, { file: 'social/training/page.tsx' });
+      logger.error('Error loading social training settings:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -267,7 +267,7 @@ export default function SocialMediaTrainingPage() {
       alert('Settings saved successfully!');
 
     } catch (error) {
-      logger.error('Error saving social training settings:', error instanceof Error ? error : undefined, { file: 'social/training/page.tsx' });
+      logger.error('Error saving social training settings:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
       alert('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
@@ -369,7 +369,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
       setGeneratedPost(newPost);
 
     } catch (error) {
-      logger.error('Error generating sample post:', error instanceof Error ? error : undefined, { file: 'social/training/page.tsx' });
+      logger.error('Error generating sample post:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
       alert('Failed to generate post. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -415,7 +415,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
 
       alert('Saved to history!');
     } catch (error) {
-      logger.error('Error saving to history:', error instanceof Error ? error : undefined, { file: 'social/training/page.tsx' });
+      logger.error('Error saving to history:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
     }
   };
 

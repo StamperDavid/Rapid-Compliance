@@ -20,7 +20,7 @@ export default function NewFineTuningPage() {
       await FirestoreService.set(`organizations/${orgId}/fineTuningJobs`, jobId, { ...job, id: jobId, status: 'pending', createdAt: Timestamp.now() }, false);
       router.push(`/workspace/${orgId}/ai/fine-tuning`);
     } catch (error: unknown) {
-      logger.error('Error creating job:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error creating job:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to create fine-tuning job');
     } finally {
       setCreating(false);

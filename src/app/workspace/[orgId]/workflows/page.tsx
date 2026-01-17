@@ -87,7 +87,7 @@ export default function WorkflowsPage() {
       await deleteWorkflow(orgId, workflowId, 'default');
       await refresh();
     } catch (err) {
-      logger.error('Error deleting workflow:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+      logger.error('Error deleting workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       // eslint-disable-next-line no-alert
       window.alert('Failed to delete workflow');
     }
@@ -100,7 +100,7 @@ export default function WorkflowsPage() {
       await setWorkflowStatus(orgId, workflowId, newStatus, 'default');
       await refresh();
     } catch (err) {
-      logger.error('Error updating workflow:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+      logger.error('Error updating workflow:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       // eslint-disable-next-line no-alert
       window.alert('Failed to update workflow');
     }

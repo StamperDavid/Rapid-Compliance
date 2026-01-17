@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       settings,
     });
   } catch (error: unknown) {
-    logger.error('Failed to fetch website settings', error instanceof Error ? error : undefined, {
+    logger.error('Failed to fetch website settings', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/settings',
       method: 'GET'
     });
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       settings: settingsData,
     });
   } catch (error: unknown) {
-    logger.error('Failed to update website settings', error instanceof Error ? error : undefined, {
+    logger.error('Failed to update website settings', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/settings',
       method: 'POST'
     });
@@ -204,7 +204,7 @@ export async function PUT(request: NextRequest) {
       settings: settingsData,
     });
   } catch (error: unknown) {
-    logger.error('Failed to update website settings', error instanceof Error ? error : undefined, {
+    logger.error('Failed to update website settings', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/settings',
       method: 'PUT'
     });

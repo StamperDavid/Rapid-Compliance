@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       message: 'Golden Master deployed to production',
     });
   } catch (error: unknown) {
-    logger.error('Error deploying Golden Master', error instanceof Error ? error : undefined, { route: '/api/training/deploy-golden-master' });
+    logger.error('Error deploying Golden Master', error instanceof Error ? error : new Error(String(error)), { route: '/api/training/deploy-golden-master' });
     return errors.database('Failed to deploy Golden Master', error instanceof Error ? error : undefined);
   }
 }

@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       message: 'Post added to queue successfully',
     });
   } catch (error: unknown) {
-    logger.error('Queue API: Unexpected error', error as Error);
+    logger.error('Queue API: Unexpected error', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/queue' });
 
     return NextResponse.json(
       {
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
       total: queue.length,
     });
   } catch (error: unknown) {
-    logger.error('Queue API: Get queue failed', error as Error);
+    logger.error('Queue API: Get queue failed', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/queue' });
 
     return NextResponse.json(
       {
@@ -348,7 +348,7 @@ export async function PUT(request: NextRequest) {
       })),
     });
   } catch (error: unknown) {
-    logger.error('Queue API: Immediate post failed', error as Error);
+    logger.error('Queue API: Immediate post failed', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/queue' });
 
     return NextResponse.json(
       {
@@ -423,7 +423,7 @@ export async function DELETE(request: NextRequest) {
       postId: data.postId,
     });
   } catch (error: unknown) {
-    logger.error('Queue API: Remove from queue failed', error as Error);
+    logger.error('Queue API: Remove from queue failed', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/queue' });
 
     return NextResponse.json(
       {

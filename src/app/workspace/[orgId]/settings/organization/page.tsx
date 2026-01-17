@@ -91,7 +91,7 @@ export default function OrganizationSettingsPage() {
           }));
         }
       } catch (error) {
-        logger.error('Failed to load organization data:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+        logger.error('Failed to load organization data:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       }
     };
 
@@ -119,7 +119,7 @@ export default function OrganizationSettingsPage() {
       
       alert('Organization settings saved successfully!');
     } catch (error) {
-      logger.error('Failed to save organization settings:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to save organization settings:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to save settings');
     } finally {
       setSaving(false);

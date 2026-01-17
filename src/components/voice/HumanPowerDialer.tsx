@@ -155,7 +155,7 @@ export default function HumanPowerDialer({
         setVoicemailDrops(data.drops ?? []);
       }
     } catch (error) {
-      logger.error('Failed to load voicemail drops:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Failed to load voicemail drops:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -244,7 +244,7 @@ export default function HumanPowerDialer({
         );
       }, config.abandonTimeout);
     } catch (error) {
-      logger.error('Dial error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Dial error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -264,7 +264,7 @@ export default function HumanPowerDialer({
         )
       );
     } catch (error) {
-      logger.error('Answer error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Answer error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -295,7 +295,7 @@ export default function HumanPowerDialer({
         setTimeout(() => dialNext(), config.dialDelay);
       }
     } catch (error) {
-      logger.error('End call error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('End call error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -315,7 +315,7 @@ export default function HumanPowerDialer({
         )
       );
     } catch (error) {
-      logger.error('Hold error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Hold error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -333,7 +333,7 @@ export default function HumanPowerDialer({
         )
       );
     } catch (error) {
-      logger.error('Mute error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Mute error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -362,7 +362,7 @@ export default function HumanPowerDialer({
       setShowTransfer(false);
       setTransferTarget('');
     } catch (error) {
-      logger.error('Transfer error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Transfer error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -385,7 +385,7 @@ export default function HumanPowerDialer({
       setStats(prev => ({ ...prev, voicemails: prev.voicemails + 1 }));
       await endCall(callId);
     } catch (error) {
-      logger.error('Voicemail drop error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Voicemail drop error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 
@@ -427,7 +427,7 @@ export default function HumanPowerDialer({
 
       await endCall(selectedCall.id);
     } catch (error) {
-      logger.error('Save disposition error:', error, { file: 'HumanPowerDialer.tsx' });
+      logger.error('Save disposition error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
   };
 

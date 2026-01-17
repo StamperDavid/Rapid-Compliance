@@ -21,11 +21,11 @@ export function GET(_request: NextRequest) {
       pendingCount: debouncer.getPendingCount(),
     });
     
-  } catch (error) {
-    logger.error('[Debouncer API] GET failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Debouncer API] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to get debouncer status' },
       { status: 500 }
@@ -84,11 +84,11 @@ export async function POST(request: NextRequest) {
         );
     }
     
-  } catch (error) {
-    logger.error('[Debouncer API] POST failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Debouncer API] POST failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to control debouncer' },
       { status: 500 }

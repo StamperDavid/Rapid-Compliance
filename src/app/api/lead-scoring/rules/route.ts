@@ -111,9 +111,9 @@ export async function GET(req: NextRequest) {
       success: true,
       rules,
     });
-  } catch (error) {
-    logger.error('Failed to list scoring rules', error instanceof Error ? error : undefined);
-    
+  } catch (error: unknown) {
+    logger.error('Failed to list scoring rules', error instanceof Error ? error : new Error(String(error)));
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: errorMessage },
@@ -223,9 +223,9 @@ export async function POST(req: NextRequest) {
       success: true,
       rules,
     });
-  } catch (error) {
-    logger.error('Failed to create scoring rules', error instanceof Error ? error : undefined);
-    
+  } catch (error: unknown) {
+    logger.error('Failed to create scoring rules', error instanceof Error ? error : new Error(String(error)));
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: errorMessage },
@@ -314,9 +314,9 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({
       success: true,
     });
-  } catch (error) {
-    logger.error('Failed to update scoring rules', error instanceof Error ? error : undefined);
-    
+  } catch (error: unknown) {
+    logger.error('Failed to update scoring rules', error instanceof Error ? error : new Error(String(error)));
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: errorMessage },
@@ -380,9 +380,9 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       success: true,
     });
-  } catch (error) {
-    logger.error('Failed to delete scoring rules', error instanceof Error ? error : undefined);
-    
+  } catch (error: unknown) {
+    logger.error('Failed to delete scoring rules', error instanceof Error ? error : new Error(String(error)));
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: errorMessage },

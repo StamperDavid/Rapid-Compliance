@@ -282,8 +282,8 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('Error generating team coaching insights', error instanceof Error ? error : undefined);
-    
+    logger.error('Error generating team coaching insights', error instanceof Error ? error : new Error(String(error)));
+
     // Emit error signal
     try {
       const coordinator = getServerSignalCoordinator();
@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
         }
       } as unknown as Parameters<typeof coordinator.emitSignal>[0]);
     } catch (signalError) {
-      logger.error('Failed to emit error signal', signalError instanceof Error ? signalError : undefined);
+      logger.error('Failed to emit error signal', signalError instanceof Error ? signalError : new Error(String(signalError)));
     }
     
     return NextResponse.json(

@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: unknown) {
-    logger.error('Failed to list Slack mappings', isError(error) ? error : undefined);
+    logger.error('Failed to list Slack mappings', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error: unknown) {
-    logger.error('Failed to create Slack mapping', isError(error) ? error : undefined);
+    logger.error('Failed to create Slack mapping', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {
@@ -315,7 +315,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    logger.error('Failed to update Slack mapping', isError(error) ? error : undefined);
+    logger.error('Failed to update Slack mapping', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {
@@ -391,7 +391,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    logger.error('Failed to delete Slack mapping', isError(error) ? error : undefined);
+    logger.error('Failed to delete Slack mapping', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {

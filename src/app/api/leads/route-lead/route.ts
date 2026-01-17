@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
       data: routingResult,
     });
 
-  } catch (error) {
-    logger.error('Lead routing API failed', error instanceof Error ? error : undefined);
+  } catch (error: unknown) {
+    logger.error('Lead routing API failed', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
       { success: false, error: errorMessage },

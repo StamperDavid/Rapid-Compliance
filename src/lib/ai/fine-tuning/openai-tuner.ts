@@ -200,8 +200,8 @@ function monitorFineTuningJob(
         if (jobData.status === 'running' || jobData.status === 'validating_files') {
           setTimeout(checkStatus, 30000);
         }
-      } catch (error) {
-        logger.error('[OpenAI Fine-Tuning] Monitoring error:', error, { file: 'openai-tuner.ts' });
+      } catch (error: unknown) {
+        logger.error('[OpenAI Fine-Tuning] Monitoring error:', error instanceof Error ? error : new Error(String(error)), { file: 'openai-tuner.ts' });
       }
     })();
   };

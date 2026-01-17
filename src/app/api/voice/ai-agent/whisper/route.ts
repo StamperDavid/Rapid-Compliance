@@ -84,7 +84,7 @@ export function POST(request: NextRequest): NextResponse {
     });
 
   } catch (error: unknown) {
-    logger.error('[AI-Whisper] Error generating whisper:', error instanceof Error ? error : undefined, {
+    logger.error('[AI-Whisper] Error generating whisper:', error instanceof Error ? error : new Error(String(error)), {
       file: 'ai-agent/whisper/route.ts',
     });
 

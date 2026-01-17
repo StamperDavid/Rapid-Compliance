@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       
     } catch (sendError: unknown) {
       const errorMessage = sendError instanceof Error ? sendError.message : 'Unknown error';
-      logger.error('Failed to send Slack message', sendError instanceof Error ? sendError : undefined, {
+      logger.error('Failed to send Slack message', sendError instanceof Error ? sendError : new Error(String(sendError)), {
         messageId,
         workspaceId: workspace.id,
       });
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       // Update message status
       message.status = 'failed';
       message.error = errorMessage;
-      
+
       // Save failed message
       await db
         .collection('organizations')
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
         .collection('slack_messages')
         .doc(messageId)
         .set(message);
-      
+
       return NextResponse.json(
         {
           error: 'Failed to send message',
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: unknown) {
-    logger.error('Failed to process send message request', error instanceof Error ? error : undefined, {});
+    logger.error('Failed to process send message request', error instanceof Error ? error : new Error(String(error)), {});
     const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
 
     return NextResponse.json(

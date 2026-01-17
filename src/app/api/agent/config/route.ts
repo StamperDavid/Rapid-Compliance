@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
       updatedAt: agentConfigRaw.updatedAt,
     });
   } catch (error) {
-    logger.error('Error loading agent config', error as Error, {
+    logger.error('Error loading agent config', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/agent/config'
     });
     return errors.database(
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       message: 'AI configuration saved successfully',
     });
   } catch (error) {
-    logger.error('Error saving agent config', error as Error, {
+    logger.error('Error saving agent config', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/agent/config'
     });
     return errors.database(

@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
       default:
         return errors.badRequest('Invalid action');
     }
-  } catch (error) {
-    logger.error('Lead nurture error', error instanceof Error ? error : undefined, { route: '/api/leads/nurture' });
-    return errors.database('Failed to process nurture request', error instanceof Error ? error : undefined);
+  } catch (error: unknown) {
+    logger.error('Lead nurture error', error instanceof Error ? error : new Error(String(error)), { route: '/api/leads/nurture' });
+    return errors.database('Failed to process nurture request', error instanceof Error ? error : new Error(String(error)));
   }
 }

@@ -74,7 +74,7 @@ export async function GET(
       analytics,
     });
   } catch (error: unknown) {
-    logger.error('[Workspace] Error fetching coupon analytics:', error instanceof Error ? error : undefined);
+    logger.error('[Workspace] Error fetching coupon analytics', error instanceof Error ? error : new Error(String(error)), {});
     return NextResponse.json(
       { success: false, error: 'Failed to fetch analytics' },
       { status: 500 }

@@ -45,11 +45,11 @@ export async function GET(request: NextRequest) {
       workflows: workflowSummary,
     });
     
-  } catch (error) {
-    logger.error('[Schema Change Impact API] GET failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Schema Change Impact API] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to get impact analysis' },
       { status: 500 }

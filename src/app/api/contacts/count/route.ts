@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('Error counting contacts', error instanceof Error ? error : undefined, {
+    logger.error('Error counting contacts', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/contacts/count',
     });
 

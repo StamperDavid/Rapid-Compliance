@@ -81,7 +81,7 @@ export default function WorkflowBuilderPage() {
       
       router.push(`/workspace/${orgId}/workflows`);
     } catch (error) {
-      logger.error('Error saving workflow:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error saving workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to save workflow');
     } finally {
       setSaving(false);

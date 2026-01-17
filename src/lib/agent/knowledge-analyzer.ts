@@ -229,7 +229,7 @@ async function scrapeWebsite(url: string): Promise<string> {
     
     return `${title}\n${metaDescription}\n${textContent}`.substring(0, 50000); // Limit to 50k chars
   } catch (error: unknown) {
-    logger.error('Error scraping website:', error, { file: 'knowledge-analyzer.ts' });
+    logger.error('Error scraping website:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
     // Return empty string on error - will be handled by caller
     return '';
   }
@@ -282,7 +282,7 @@ Return ONLY a valid JSON array of products in this format:
 
     return [];
   } catch (error: unknown) {
-    logger.error('Error extracting products:', error, { file: 'knowledge-analyzer.ts' });
+    logger.error('Error extracting products:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -336,7 +336,7 @@ Return ONLY a valid JSON array of FAQs in this format:
 
     return [];
   } catch (error: unknown) {
-    logger.error('Error extracting FAQs:', error, { file: 'knowledge-analyzer.ts' });
+    logger.error('Error extracting FAQs:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -404,7 +404,7 @@ Return ONLY a valid JSON object in this format:
       commonPhrases: []
     };
   } catch (error: unknown) {
-    logger.error('Error analyzing brand voice:', error, { file: 'knowledge-analyzer.ts' });
+    logger.error('Error analyzing brand voice:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
     return {
       tone: 'professional',
       keyMessages: [],
@@ -468,7 +468,7 @@ async function scanCRMForProducts(
       };
     });
   } catch (error) {
-    logger.error('Error querying CRM for products:', error, { file: 'knowledge-analyzer.ts' });
+    logger.error('Error querying CRM for products:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -525,7 +525,7 @@ async function scanCRMForServices(
       };
     });
   } catch (error) {
-    logger.error('Error querying CRM for services:', error, { file: 'knowledge-analyzer.ts' });
+    logger.error('Error querying CRM for services:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
     return [];
   }
 }
@@ -640,7 +640,7 @@ export async function buildKnowledgeBase(
       false
     );
   } catch (error) {
-    logger.error('Error saving knowledge base:', error, { file: 'knowledge-analyzer.ts' });
+    logger.error('Error saving knowledge base:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
   }
   
   // TODO: In future, create vector embeddings using Vertex AI Embeddings API

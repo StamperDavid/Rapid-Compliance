@@ -51,7 +51,7 @@ export default function ProductDetailPage() {
       );
       setProduct(productData as Product);
     } catch (error) {
-      logger.error('Error loading product:', error, { file: 'page.tsx' });
+      logger.error('Error loading product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export default function ProductDetailPage() {
       alert('Added to cart!');
       router.push(`/store/${orgId}/cart`);
     } catch (error) {
-      logger.error('Error adding to cart:', error, { file: 'page.tsx' });
+      logger.error('Error adding to cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to add to cart');
     } finally {
       setAdding(false);

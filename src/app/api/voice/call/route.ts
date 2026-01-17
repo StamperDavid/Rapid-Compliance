@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       status: call.status,
     });
   } catch (error: unknown) {
-    logger.error('Voice call error', error instanceof Error ? error : undefined, { route: '/api/voice/call' });
+    logger.error('Voice call error', error instanceof Error ? error : new Error(String(error)), { route: '/api/voice/call' });
     return errors.internal('Failed to initiate call', error instanceof Error ? error : undefined);
   }
 }

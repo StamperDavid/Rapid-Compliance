@@ -162,8 +162,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${redirectUrl}?success=slack_connected`);
     
   } catch (error) {
-    logger.error('Failed to handle Slack OAuth callback', error instanceof Error ? error : undefined, {});
-    
+    logger.error('Failed to handle Slack OAuth callback', error instanceof Error ? error : new Error(String(error)), {});
+
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=oauth_failed`
     );

@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       { status: 403 }
     );
   } catch (error: unknown) {
-    logger.error('Preview token validation error', error instanceof Error ? error : undefined, {
+    logger.error('Preview token validation error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/preview/validate',
       method: 'GET'
     });

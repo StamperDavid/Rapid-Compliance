@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       count: results.length,
     });
   } catch (error: unknown) {
-    logger.error('Search error', error instanceof Error ? error : undefined, { route: '/api/search' });
+    logger.error('Search error', error instanceof Error ? error : new Error(String(error)), { route: '/api/search' });
     return errors.database('Failed to search workspace', error instanceof Error ? error : undefined);
   }
 }

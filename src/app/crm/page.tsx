@@ -65,7 +65,7 @@ function CRMContent() {
           setConfig(configData);
         }
       } catch (error) {
-        logger.error('Failed to load CRM config:', error, { file: 'page.tsx' });
+        logger.error('Failed to load CRM config:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         // Continue with null config (defaults will be used)
       }
     };

@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    logger.error('[AI-Speech] Error processing speech:', error instanceof Error ? error : undefined, { file: 'ai-agent/speech/route.ts' });
+    logger.error('[AI-Speech] Error processing speech:', error instanceof Error ? error : new Error(String(error)), { file: 'ai-agent/speech/route.ts' });
 
     // Return fallback TwiML
     return new NextResponse(generateFallbackTwiML(), {

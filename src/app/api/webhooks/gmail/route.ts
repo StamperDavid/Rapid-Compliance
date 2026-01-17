@@ -158,8 +158,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    logger.error('Gmail webhook error', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
-    return errors.internal('Internal error', error instanceof Error ? error : undefined);
+    logger.error('Gmail webhook error', error instanceof Error ? error : new Error(String(error)), { route: '/api/webhooks/gmail' });
+    return errors.internal('Internal error', error instanceof Error ? error : new Error(String(error)));
   }
 }
 
@@ -267,7 +267,7 @@ async function findIntegrationByEmail(email: string): Promise<GmailIntegration |
 
     return matchedIntegration && isGmailIntegration(matchedIntegration) ? matchedIntegration : null;
   } catch (error) {
-    logger.error('Error finding integration', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
+    logger.error('Error finding integration', error instanceof Error ? error : new Error(String(error)), { route: '/api/webhooks/gmail' });
     return null;
   }
 }
@@ -376,7 +376,7 @@ async function processNewEmail(
         await saveForReview(organizationId, emailData, classification);
     }
   } catch (error) {
-    logger.error('Error processing Gmail email', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
+    logger.error('Error processing Gmail email', error instanceof Error ? error : new Error(String(error)), { route: '/api/webhooks/gmail' });
   }
 }
 
@@ -439,7 +439,7 @@ async function unenrollProspectFromSequences(
       });
     }
   } catch (error) {
-    logger.error('Error unenrolling prospect', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
+    logger.error('Error unenrolling prospect', error instanceof Error ? error : new Error(String(error)), { route: '/api/webhooks/gmail' });
   }
 }
 
@@ -498,7 +498,7 @@ async function pauseProspectSequences(
       });
     }
   } catch (error) {
-    logger.error('Error pausing sequences', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
+    logger.error('Error pausing sequences', error instanceof Error ? error : new Error(String(error)), { route: '/api/webhooks/gmail' });
   }
 }
 

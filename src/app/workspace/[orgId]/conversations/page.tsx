@@ -104,7 +104,7 @@ export default function ConversationsPage() {
       await ChatSessionService.requestTakeover(orgId, conversationId, user.id, 'Manual takeover');
       alert(`Taking over conversation. You are now connected to the customer chat.`);
     } catch (err: unknown) {
-      logger.error('Failed to take over:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+      logger.error('Failed to take over:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       alert('Failed to take over conversation. Please try again.');
     }
   };
@@ -120,7 +120,7 @@ export default function ConversationsPage() {
 
       alert(`Conversation sent to Training Center for improvement.`);
     } catch (err: unknown) {
-      logger.error('Failed to flag for training:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+      logger.error('Failed to flag for training:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       alert('Failed to send to training. Please try again.');
     }
   };

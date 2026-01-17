@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       profile,
     });
   } catch (error) {
-    logger.error('API: Failed to discover competitor', error instanceof Error ? error : undefined);
+    logger.error('API: Failed to discover competitor', error instanceof Error ? error : new Error(String(error)));
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

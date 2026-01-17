@@ -434,7 +434,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       
       logger.info(`Instance Manager Added messages to memory for customer ${customerId}`, { file: 'instance-manager.ts' });
     } catch (error) {
-      logger.error('[Instance Manager] Error adding message to memory:', error, { file: 'instance-manager.ts' });
+      logger.error('[Instance Manager] Error adding message to memory:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
       // Don't throw - we don't want to fail the API call if memory update fails
     }
   }
@@ -632,7 +632,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       const active = goldenMasters.find((gm) => gm.isActive === true);
       return active ?? null;
     } catch (error) {
-      logger.error('[Instance Manager] Error fetching Golden Master:', error, { file: 'instance-manager.ts' });
+      logger.error('[Instance Manager] Error fetching Golden Master:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
       return null;
     }
   }
@@ -666,7 +666,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         customerId
       );
     } catch (error) {
-      logger.error('Error fetching customer memory:', error, { file: 'instance-manager.ts' });
+      logger.error('Error fetching customer memory:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
       return null;
     }
   }
@@ -749,7 +749,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         true
       );
     } catch (error) {
-      logger.error('Error saving customer memory:', error, { file: 'instance-manager.ts' });
+      logger.error('Error saving customer memory:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
       throw error;
     }
   }
@@ -769,7 +769,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         true
       );
     } catch (error) {
-      logger.error('Error storing active instance:', error, { file: 'instance-manager.ts' });
+      logger.error('Error storing active instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
     }
   }
   
@@ -781,7 +781,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       // In production, maintain a lookup table or use Redis with instanceId as key
       return Promise.resolve(null);
     } catch (error) {
-      logger.error('Error getting active instance:', error, { file: 'instance-manager.ts' });
+      logger.error('Error getting active instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
       return Promise.resolve(null);
     }
   }
@@ -793,7 +793,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       logger.info('[Instance Manager] Removing active instance', { instanceId, file: 'instance-manager.ts' });
       return Promise.resolve();
     } catch (error) {
-      logger.error('Error removing active instance:', error, { file: 'instance-manager.ts' });
+      logger.error('Error removing active instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
       return Promise.resolve();
     }
   }
@@ -811,7 +811,7 @@ ${this.summarizeRecentConversations(customerMemory)}
         false
       );
     } catch (error) {
-      logger.error('Error archiving instance:', error, { file: 'instance-manager.ts' });
+      logger.error('Error archiving instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
     }
   }
   

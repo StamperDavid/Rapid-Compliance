@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
       fetchedAt: new Date().toISOString()
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Admin organizations fetch error', error instanceof Error ? error : new Error(String(error)), { route: '/api/admin/organizations' });
     return createErrorResponse(
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
       settings,
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Admin organization create error', error instanceof Error ? error : new Error(String(error)), { route: '/api/admin/organizations' });
     return createErrorResponse(

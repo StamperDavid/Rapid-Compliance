@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
     const enrichment = await enrichLead(leadId, organizationId, sources ?? {});
 
     return NextResponse.json({ success: true, enrichment });
-  } catch (error) {
-    logger.error('Lead enrichment error', error instanceof Error ? error : undefined, { route: '/api/leads/enrich' });
-    return errors.externalService('Enrichment service', error instanceof Error ? error : undefined);
+  } catch (error: unknown) {
+    logger.error('Lead enrichment error', error instanceof Error ? error : new Error(String(error)), { route: '/api/leads/enrich' });
+    return errors.externalService('Enrichment service', error instanceof Error ? error : new Error(String(error)));
   }
 }

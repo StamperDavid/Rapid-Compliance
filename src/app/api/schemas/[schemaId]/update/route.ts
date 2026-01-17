@@ -98,7 +98,7 @@ export async function POST(
     });
     
   } catch (error: unknown) {
-    logger.error('Failed to update schema', error instanceof Error ? error : undefined, {
+    logger.error('Failed to update schema', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/schemas/[schemaId]/update',
       method: 'POST'
     });

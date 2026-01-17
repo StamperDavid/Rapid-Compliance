@@ -86,12 +86,12 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('Failed to apply template', error as Error);
-    
+    logger.error('Failed to apply template', error instanceof Error ? error : new Error(String(error)), { route: '/api/templates/apply' });
+
     return NextResponse.json({
       success: false,
       error: 'Failed to apply template',
-      message: (error as Error).message
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

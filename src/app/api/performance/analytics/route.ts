@@ -247,11 +247,11 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
-    logger.error('Failed to generate performance analytics', error instanceof Error ? error : undefined, {
+
+    logger.error('Failed to generate performance analytics', error instanceof Error ? error : new Error(String(error)), {
       processingTime,
     });
-    
+
     // Handle specific errors
     if (error instanceof Error) {
       if (error.message.includes('No conversation analyses found')) {
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      
+
       if (error.message.includes('No reps meet minimum conversation threshold')) {
         return NextResponse.json(
           {
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    
+
     return NextResponse.json(
       {
         success: false,

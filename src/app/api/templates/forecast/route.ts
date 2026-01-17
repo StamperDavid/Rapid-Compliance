@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('Failed to generate revenue forecast', error as Error);
-    
+    logger.error('Failed to generate revenue forecast', error instanceof Error ? error : new Error(String(error)));
+
     return NextResponse.json({
       success: false,
       error: 'Failed to generate revenue forecast',

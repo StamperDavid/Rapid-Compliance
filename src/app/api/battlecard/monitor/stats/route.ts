@@ -34,7 +34,7 @@ export function GET(request: NextRequest) {
       stats,
     });
   } catch (error) {
-    logger.error('API: Failed to get monitoring stats', error instanceof Error ? error : undefined);
+    logger.error('API: Failed to get monitoring stats', error instanceof Error ? error : new Error(String(error)));
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

@@ -44,7 +44,7 @@ export default function NewProductPage() {
       
       router.push(`/workspace/${orgId}/products`);
     } catch (error) {
-      logger.error('Error creating product:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error creating product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to create product');
     } finally {
       setSaving(false);

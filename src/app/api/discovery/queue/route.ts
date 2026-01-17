@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       message: `Discovery task queued for ${body.type}: ${body.target}`,
     });
   } catch (error: unknown) {
-    logger.error('[API] Failed to queue discovery task', error instanceof Error ? error : undefined);
+    logger.error('[API] Failed to queue discovery task', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {
@@ -169,7 +169,7 @@ export async function PUT(request: NextRequest) {
       ),
     });
   } catch (error: unknown) {
-    logger.error('[API] Failed to batch queue discovery tasks', error instanceof Error ? error : undefined);
+    logger.error('[API] Failed to batch queue discovery tasks', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {

@@ -43,7 +43,7 @@ export async function GET(
       data: recommendations,
     });
   } catch (error) {
-    logger.error('Failed to generate recommendations', error instanceof Error ? error : undefined, {
+    logger.error('Failed to generate recommendations', error instanceof Error ? error : new Error(String(error)), {
       dealId: params.dealId,
     });
 

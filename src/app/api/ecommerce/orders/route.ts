@@ -82,9 +82,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    logger.error('Error listing orders', error instanceof Error ? error : undefined, {
+    logger.error('Error listing orders', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/ecommerce/orders',
     });
-    return errors.database('Failed to list orders', error instanceof Error ? error : undefined);
+    return errors.database('Failed to list orders', error instanceof Error ? error : new Error(String(error)));
   }
 }

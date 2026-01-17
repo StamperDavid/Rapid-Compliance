@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('[Analytics API] Error fetching analytics', error instanceof Error ? error : undefined);
+    logger.error('[Analytics API] Error fetching analytics', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: 'Failed to fetch analytics' },
       { status: 500 }
@@ -357,7 +357,7 @@ async function getSequencePerformance(
     return buildLegacySequencePerformance(sequenceId, legacyData);
 
   } catch (error) {
-    logger.error('[Analytics] Error fetching sequence performance', error instanceof Error ? error : undefined, { sequenceId });
+    logger.error('[Analytics] Error fetching sequence performance', error instanceof Error ? error : new Error(String(error)), { sequenceId });
     throw error;
   }
 }
@@ -410,7 +410,7 @@ async function getAllSequencePerformances(
     return performances;
 
   } catch (error) {
-    logger.error('[Analytics] Error fetching all performances', error instanceof Error ? error : undefined);
+    logger.error('[Analytics] Error fetching all performances', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -683,7 +683,7 @@ async function getAnalyticsSummary(
     };
 
   } catch (error) {
-    logger.error('[Analytics] Error building summary', error instanceof Error ? error : undefined);
+    logger.error('[Analytics] Error building summary', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }

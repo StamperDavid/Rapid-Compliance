@@ -116,7 +116,7 @@ export function useRecords<T = Record<string, unknown>>(
       setAllRecords(data as T[]);
       paginateRecords(data as T[]);
     } catch (err) {
-      logger.error('Error loading records:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
+      logger.error('Error loading records:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
       setError(err as Error);
     } finally {
       setLoading(false);
@@ -175,7 +175,7 @@ export function useRecords<T = Record<string, unknown>>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        logger.error('Error creating record:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
+        logger.error('Error creating record:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
         throw err;
       }
     },
@@ -197,7 +197,7 @@ export function useRecords<T = Record<string, unknown>>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        logger.error('Error updating record:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
+        logger.error('Error updating record:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
         throw err;
       }
     },
@@ -218,7 +218,7 @@ export function useRecords<T = Record<string, unknown>>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        logger.error('Error deleting record:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
+        logger.error('Error deleting record:', err instanceof Error ? err : new Error(String(err)), { file: 'useRecords.ts' });
         throw err;
       }
     },

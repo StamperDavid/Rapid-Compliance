@@ -81,7 +81,7 @@ export async function GET(
 
     return NextResponse.json({ workflow });
   } catch (error: unknown) {
-    logger.error('Failed to get workflow', error instanceof Error ? error : undefined);
+    logger.error('Failed to get workflow', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to get workflow';
     return NextResponse.json(
       { error: message },
@@ -142,7 +142,7 @@ export async function PUT(
 
     return NextResponse.json({ workflow: updatedWorkflow });
   } catch (error: unknown) {
-    logger.error('Failed to update workflow', error instanceof Error ? error : undefined);
+    logger.error('Failed to update workflow', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to update workflow';
     return NextResponse.json(
       { error: message },
@@ -203,7 +203,7 @@ export async function PATCH(
 
     return NextResponse.json({ workflow: updatedWorkflow });
   } catch (error: unknown) {
-    logger.error('Failed to update workflow status', error instanceof Error ? error : undefined);
+    logger.error('Failed to update workflow status', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to update workflow status';
     return NextResponse.json(
       { error: message },
@@ -258,7 +258,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    logger.error('Failed to delete workflow', error instanceof Error ? error : undefined);
+    logger.error('Failed to delete workflow', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to delete workflow';
     return NextResponse.json(
       { error: message },

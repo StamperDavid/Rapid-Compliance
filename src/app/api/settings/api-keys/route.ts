@@ -68,7 +68,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       keys: maskedKeys,
     });
   } catch (error: unknown) {
-    logger.error('API keys loading error', error instanceof Error ? error : undefined, { route: '/api/settings/api-keys' });
+    logger.error('API keys loading error', error instanceof Error ? error : new Error(String(error)), { route: '/api/settings/api-keys' });
 
     if (isFirestoreError(error) && error.code === 'permission-denied') {
       return handleAPIError(errors.forbidden('You do not have permission to view API keys'));
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       message: `${service} API key saved successfully`,
     });
   } catch (error: unknown) {
-    logger.error('API keys saving error', error instanceof Error ? error : undefined, { route: '/api/settings/api-keys' });
+    logger.error('API keys saving error', error instanceof Error ? error : new Error(String(error)), { route: '/api/settings/api-keys' });
 
     if (isFirestoreError(error) && error.code === 'permission-denied') {
       return handleAPIError(errors.forbidden('You do not have permission to save API keys'));

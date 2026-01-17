@@ -69,8 +69,7 @@ export default function EditOrganizationPage() {
         }
         setLoading(false);
       } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        logger.error('Failed to load organization:', err, { file: 'page.tsx' });
+        logger.error('Failed to load organization', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         setLoading(false);
       }
     }
@@ -104,8 +103,7 @@ export default function EditOrganizationPage() {
       setSaving(false);
       router.push(`/admin/organizations/${orgId}`);
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Failed to save organization:', err, { file: 'page.tsx' });
+      logger.error('Failed to save organization', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       setSaving(false);
       // eslint-disable-next-line no-alert
       alert('Failed to save organization. Please try again.');

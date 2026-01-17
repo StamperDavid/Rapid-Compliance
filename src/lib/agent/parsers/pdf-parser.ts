@@ -79,7 +79,7 @@ export async function parsePDF(file: File | Buffer): Promise<PDFParseResult> {
       },
     };
   } catch (error: unknown) {
-    logger.error('Error parsing PDF:', error, { file: 'pdf-parser.ts' });
+    logger.error('Error parsing PDF:', error instanceof Error ? error : new Error(String(error)), { file: 'pdf-parser.ts' });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to parse PDF: ${errorMessage}`);
   }
@@ -169,7 +169,7 @@ Return JSON format:
 
     return {};
   } catch (error) {
-    logger.error('Error extracting structured data from PDF:', error, { file: 'pdf-parser.ts' });
+    logger.error('Error extracting structured data from PDF:', error instanceof Error ? error : new Error(String(error)), { file: 'pdf-parser.ts' });
     return {};
   }
 }

@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ templates });
   } catch (error: unknown) {
-    logger.error('Failed to fetch templates', error instanceof Error ? error : undefined, {
+    logger.error('Failed to fetch templates', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/templates',
       method: 'GET'
     });
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ template: templateData }, { status: 201 });
   } catch (error: unknown) {
-    logger.error('Failed to create template', error instanceof Error ? error : undefined, {
+    logger.error('Failed to create template', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/templates',
       method: 'POST'
     });
@@ -202,7 +202,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    logger.error('Failed to delete template', error instanceof Error ? error : undefined, {
+    logger.error('Failed to delete template', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/templates',
       method: 'DELETE'
     });

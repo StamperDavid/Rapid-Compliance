@@ -99,7 +99,7 @@ export function useOrgTheme() {
           setTheme({ ...DEFAULT_THEME, ...themeData } as ThemeConfig);
         }
       } catch (error) {
-        logger.error('Failed to load organization theme:', error instanceof Error ? error : undefined, { file: 'useOrgTheme.ts' });
+        logger.error('Failed to load organization theme:', error instanceof Error ? error : new Error(String(error)), { file: 'useOrgTheme.ts' });
       } finally {
         setLoading(false);
       }

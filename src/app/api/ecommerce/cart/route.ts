@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       cart,
     });
   } catch (error: unknown) {
-    logger.error('Error getting cart', error instanceof Error ? error : undefined, { route: '/api/ecommerce/cart' });
+    logger.error('Error getting cart', error instanceof Error ? error : new Error(String(error)), { route: '/api/ecommerce/cart' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to get cart';
     return NextResponse.json(
       { success: false, error: errorMessage },
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       cart,
     });
   } catch (error: unknown) {
-    logger.error('Error adding to cart', error instanceof Error ? error : undefined, { route: '/api/ecommerce/cart' });
+    logger.error('Error adding to cart', error instanceof Error ? error : new Error(String(error)), { route: '/api/ecommerce/cart' });
     return errors.database('Failed to add to cart', error instanceof Error ? error : undefined);
   }
 }
@@ -183,7 +183,7 @@ export async function PATCH(request: NextRequest) {
       cart,
     });
   } catch (error: unknown) {
-    logger.error('Error updating cart', error instanceof Error ? error : undefined, { route: '/api/ecommerce/cart' });
+    logger.error('Error updating cart', error instanceof Error ? error : new Error(String(error)), { route: '/api/ecommerce/cart' });
     return errors.database('Failed to update cart', error instanceof Error ? error : undefined);
   }
 }
@@ -220,7 +220,7 @@ export async function DELETE(request: NextRequest) {
       cart,
     });
   } catch (error: unknown) {
-    logger.error('Error removing from cart', error instanceof Error ? error : undefined, { route: '/api/ecommerce/cart' });
+    logger.error('Error removing from cart', error instanceof Error ? error : new Error(String(error)), { route: '/api/ecommerce/cart' });
     return errors.database('Failed to remove from cart', error instanceof Error ? error : undefined);
   }
 }

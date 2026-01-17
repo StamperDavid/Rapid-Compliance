@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
       authUrl,
     });
   } catch (error: unknown) {
-    logger.error('Teams auth error', error instanceof Error ? error : undefined, { route: '/api/integrations/teams/auth' });
-    return errors.internal('Failed to initiate Teams auth', error instanceof Error ? error : undefined);
+    logger.error('Teams auth error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/teams/auth' });
+    return errors.internal('Failed to initiate Teams auth', error instanceof Error ? error : new Error(String(error)));
   }
 }
 

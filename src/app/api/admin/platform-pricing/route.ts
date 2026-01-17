@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
       plans: defaultPlans,
       isDefault: true,
     });
-  } catch (error) {
-    logger.error('[Admin] Error fetching platform pricing:', error instanceof Error ? error : new Error(String(error)));
+  } catch (error: unknown) {
+    logger.error('[Admin] Error fetching platform pricing', error instanceof Error ? error : new Error(String(error)), {});
     return NextResponse.json(
       { success: false, error: 'Failed to fetch pricing plans' },
       { status: 500 }
@@ -118,8 +118,8 @@ export async function POST(request: NextRequest) {
       plan: planData,
       message: existingPlan ? 'Plan updated successfully' : 'Plan created successfully',
     });
-  } catch (error) {
-    logger.error('[Admin] Error saving platform pricing plan:', error instanceof Error ? error : new Error(String(error)));
+  } catch (error: unknown) {
+    logger.error('[Admin] Error saving platform pricing plan', error instanceof Error ? error : new Error(String(error)), {});
     return NextResponse.json(
       { success: false, error: 'Failed to save pricing plan' },
       { status: 500 }

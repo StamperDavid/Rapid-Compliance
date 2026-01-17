@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       newGoldenMaster,
     });
   } catch (error: unknown) {
-    logger.error('Error applying update', error instanceof Error ? error : undefined, { route: '/api/training/apply-update' });
+    logger.error('Error applying update', error instanceof Error ? error : new Error(String(error)), { route: '/api/training/apply-update' });
     return errors.database('Failed to apply update', error instanceof Error ? error : undefined);
   }
 }

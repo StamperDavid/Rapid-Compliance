@@ -104,7 +104,7 @@ function DashboardContent() {
           }
         }
       } catch (error) {
-        logger.error('Failed to load reports:', error, { file: 'page.tsx' });
+        logger.error('Failed to load reports:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         // Fallback to empty array
         setReports([]);
       }
@@ -349,7 +349,7 @@ function DashboardContent() {
       }
       setShowReportBuilder(false);
     } catch (error) {
-      logger.error('Failed to save report:', error, { file: 'page.tsx' });
+      logger.error('Failed to save report:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       // Still update UI even if Firestore save fails
     }
   };
@@ -371,7 +371,7 @@ function DashboardContent() {
         const updated = reports.filter(r => r.id !== reportId);
         setReports(updated);
       } catch (error) {
-        logger.error('Failed to delete report:', error, { file: 'page.tsx' });
+        logger.error('Failed to delete report:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         // Still update UI even if Firestore delete fails
         const updated = reports.filter(r => r.id !== reportId);
         setReports(updated);

@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error: unknown) {
-    logger.error('[API] Error checking capacity:', error instanceof Error ? error : new Error('Unknown error'));
+    logger.error('[API] Error checking capacity:', error instanceof Error ? error : new Error(String(error)), { route: '/api/subscription/check-capacity' });
     return NextResponse.json(
       { success: false, error: 'Failed to check capacity' },
       { status: 500 }

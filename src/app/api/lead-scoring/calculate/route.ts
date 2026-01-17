@@ -123,9 +123,9 @@ export async function POST(req: NextRequest) {
       success: true,
       score,
     });
-  } catch (error) {
-    logger.error('Lead scoring API error', error instanceof Error ? error : undefined);
-    
+  } catch (error: unknown) {
+    logger.error('Lead scoring API error', error instanceof Error ? error : new Error(String(error)));
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: errorMessage },

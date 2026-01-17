@@ -82,7 +82,7 @@ async function getApiKey(organizationId?: string): Promise<string> {
 
     return apiKey;
   } catch (error: unknown) {
-    logger.error('Error fetching Gemini API key:', error, { file: 'gemini-service.ts' });
+    logger.error('Error fetching Gemini API key:', error instanceof Error ? error : new Error(String(error)), { file: 'gemini-service.ts' });
     throw new Error('Failed to fetch Gemini API key from settings');
   }
 }
@@ -154,7 +154,7 @@ export async function sendChatMessage(
       },
     };
   } catch (error: unknown) {
-    logger.error('Error calling Gemini API:', error, { file: 'gemini-service.ts' });
+    logger.error('Error calling Gemini API:', error instanceof Error ? error : new Error(String(error)), { file: 'gemini-service.ts' });
     // Extract error message to avoid empty error message (Explicit Ternary for STRING)
     const errObj = error as { message?: string };
     const errorMsg = (errObj.message !== '' && errObj.message != null) ? errObj.message : 'Failed to get response from AI';
@@ -194,7 +194,7 @@ export async function generateText(
       },
     };
   } catch (error: unknown) {
-    logger.error('Error generating text with Gemini:', error, { file: 'gemini-service.ts' });
+    logger.error('Error generating text with Gemini:', error instanceof Error ? error : new Error(String(error)), { file: 'gemini-service.ts' });
     // Extract error message (Explicit Ternary for STRING)
     const errObj = error as { message?: string };
     const errorMsg = (errObj.message !== '' && errObj.message != null) ? errObj.message : 'Failed to generate text';
@@ -233,7 +233,7 @@ export async function* streamChatMessage(
       yield chunkText;
     }
   } catch (error: unknown) {
-    logger.error('Error streaming from Gemini:', error, { file: 'gemini-service.ts' });
+    logger.error('Error streaming from Gemini:', error instanceof Error ? error : new Error(String(error)), { file: 'gemini-service.ts' });
     // Extract error message (Explicit Ternary for STRING)
     const errObj = error as { message?: string };
     const errorMsg = (errObj.message !== '' && errObj.message != null) ? errObj.message : 'Failed to stream response';

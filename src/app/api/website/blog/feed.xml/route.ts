@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    logger.error('RSS feed generation error', error instanceof Error ? error : undefined, {
+    logger.error('RSS feed generation error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/blog/feed.xml',
       method: 'GET'
     });

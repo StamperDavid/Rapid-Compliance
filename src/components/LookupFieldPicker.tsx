@@ -52,7 +52,7 @@ export default function LookupFieldPicker({
         setSelectedRecord(record);
       }
     } catch (error) {
-      logger.error('Failed to load selected record', error, { recordId, targetEntity });
+      logger.error('Failed to load selected record', error instanceof Error ? error : new Error(String(error)), { recordId, targetEntity });
     }
   }, [organizationId, workspaceId, targetEntity]);
 
@@ -83,7 +83,7 @@ export default function LookupFieldPicker({
       // Limit to 50 results
       setRecords(filtered.slice(0, 50));
     } catch (error) {
-      logger.error('Failed to load lookup records', error, { targetEntity });
+      logger.error('Failed to load lookup records', error instanceof Error ? error : new Error(String(error)), { targetEntity });
       setRecords([]);
     } finally {
       setLoading(false);

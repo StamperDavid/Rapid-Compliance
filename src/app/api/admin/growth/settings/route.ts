@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
       content: [],
       scraperJobs: [],
     });
-  } catch (error) {
-    logger.error('[AdminGrowthSettings] GET failed:', error instanceof Error ? error : new Error(String(error)), { file: 'settings/route.ts' });
+  } catch (error: unknown) {
+    logger.error('[AdminGrowthSettings] GET failed', error instanceof Error ? error : new Error(String(error)), { file: 'settings/route.ts' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

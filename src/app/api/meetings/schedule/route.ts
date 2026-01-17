@@ -88,8 +88,8 @@ export async function POST(request: NextRequest) {
       data: meeting,
     });
 
-  } catch (error) {
-    logger.error('Meeting scheduling API failed', error instanceof Error ? error : undefined);
+  } catch (error: unknown) {
+    logger.error('Meeting scheduling API failed', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
       { success: false, error: errorMessage },

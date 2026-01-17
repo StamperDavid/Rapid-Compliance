@@ -198,7 +198,7 @@ async function processFile(
     
     return document;
   } catch (error) {
-    logger.error('Error processing file:', error, { file: 'knowledge-processor.ts' });
+    logger.error('Error processing file:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-processor.ts' });
     return null;
   }
 }
@@ -300,7 +300,7 @@ export function processDocumentContent(
     
     return processedContent;
   } catch (error) {
-    logger.error('Error processing document content:', error, { file: 'knowledge-processor.ts' });
+    logger.error('Error processing document content:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-processor.ts' });
     return content; // Return original content if processing fails
   }
 }

@@ -36,7 +36,7 @@ export default function AgentConfigurationPage() {
         alert('Please complete onboarding first to configure your AI agent.');
       }
     } catch (error) {
-      logger.error('Error loading base model:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading base model:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export default function AgentConfigurationPage() {
       // eslint-disable-next-line no-alert -- User feedback
       alert('✅ Configuration saved successfully!\n\nYour Base Model has been updated. Changes will take effect in training and future Golden Masters.');
     } catch (error) {
-      logger.error('Error saving configuration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error saving configuration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback
       alert('Failed to save configuration. Please try again.');
     } finally {

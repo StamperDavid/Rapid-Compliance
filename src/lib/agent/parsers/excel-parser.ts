@@ -105,7 +105,7 @@ export async function parseExcel(file: File | Buffer): Promise<ExcelParseResult>
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error parsing Excel:', error, { file: 'excel-parser.ts' });
+    logger.error('Error parsing Excel:', error instanceof Error ? error : new Error(String(error)), { file: 'excel-parser.ts' });
     throw new Error(`Failed to parse Excel: ${errorMessage}`);
   }
 }

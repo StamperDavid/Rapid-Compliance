@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       });
     }
   } catch (error: unknown) {
-    logger.error('Campaign fetch error', error instanceof Error ? error : undefined, { route: '/api/email/campaigns' });
+    logger.error('Campaign fetch error', error instanceof Error ? error : new Error(String(error)), { route: '/api/email/campaigns' });
     return errors.database('Failed to fetch campaigns', error instanceof Error ? error : undefined);
   }
 }
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     return errors.badRequest('Invalid action. Use: create or send');
   } catch (error: unknown) {
-    logger.error('Campaign processing error', error instanceof Error ? error : undefined, { route: '/api/email/campaigns' });
+    logger.error('Campaign processing error', error instanceof Error ? error : new Error(String(error)), { route: '/api/email/campaigns' });
     return errors.database('Failed to process campaign', error instanceof Error ? error : undefined);
   }
 }

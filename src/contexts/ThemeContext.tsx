@@ -73,7 +73,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(savedTheme);
         setTheme({ ...DEFAULT_THEME, ...parsed });
       } catch (error) {
-        logger.error('Failed to load theme:', error, { file: 'ThemeContext.tsx' });
+        logger.error('Failed to load theme:', error instanceof Error ? error : new Error(String(error)), { file: 'ThemeContext.tsx' });
       }
     }
     setIsLoaded(true);

@@ -24,7 +24,7 @@ export default function EditDealPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId);
       setDeal(data);
     } catch (error: unknown) {
-      logger.error('Error loading deal:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function EditDealPage() {
       await FirestoreService.update(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId, { ...deal, updatedAt: Timestamp.now() });
       router.push(`/workspace/${orgId}/deals/${dealId}`);
     } catch (error: unknown) {
-      logger.error('Error updating deal:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to update deal');
     } finally {
       setSaving(false);

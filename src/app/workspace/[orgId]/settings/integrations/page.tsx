@@ -46,7 +46,7 @@ export default function IntegrationsPage() {
           setIntegrations(integrationsData as Record<string, ConnectedIntegration | null>);
         }
       } catch (error) {
-        logger.error('Failed to load integrations:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+        logger.error('Failed to load integrations:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       }
     };
     
@@ -77,7 +77,7 @@ export default function IntegrationsPage() {
         false
       );
     } catch (error) {
-      logger.error('Failed to save integration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to save integration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
   };
 
@@ -100,7 +100,7 @@ export default function IntegrationsPage() {
         false
       );
     } catch (error) {
-      logger.error('Failed to disconnect integration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to disconnect integration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
   };
 
@@ -125,7 +125,7 @@ export default function IntegrationsPage() {
           false
         );
       } catch (error) {
-        logger.error('Failed to update integration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+        logger.error('Failed to update integration:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       }
     }
   };

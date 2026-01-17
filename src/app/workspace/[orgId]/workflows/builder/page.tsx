@@ -108,7 +108,7 @@ export default function WorkflowBuilderPage() {
         });
       }
     } catch (error) {
-      logger.error('Error loading workflow:', error instanceof Error ? error : undefined, { file: 'builder/page.tsx' });
+      logger.error('Error loading workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'builder/page.tsx' });
     } finally {
       setIsLoading(false);
     }
@@ -285,7 +285,7 @@ export default function WorkflowBuilderPage() {
 
       router.push(`/workspace/${orgId}/workflows`);
     } catch (error) {
-      logger.error('Error saving workflow:', error instanceof Error ? error : undefined, { file: 'builder/page.tsx' });
+      logger.error('Error saving workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'builder/page.tsx' });
       alert('Failed to save workflow');
     } finally {
       setIsSaving(false);

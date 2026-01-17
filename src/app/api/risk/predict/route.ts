@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
     // Emit signals (non-blocking)
     if (deal) {
       emitRiskPredictionSignals(prediction, deal).catch(error => {
-        logger.error('Failed to emit risk signals', error instanceof Error ? error : undefined, {
+        logger.error('Failed to emit risk signals', error instanceof Error ? error : new Error(String(error)), {
           dealId: validatedRequest.dealId,
         });
       });
@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
     );
     
   } catch (error: unknown) {
-    logger.error('Risk prediction API error', error instanceof Error ? error : undefined);
+    logger.error('Risk prediction API error', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {
@@ -387,7 +387,7 @@ async function handleBatchRequest(
     );
     
   } catch (error: unknown) {
-    logger.error('Batch risk prediction API error', error instanceof Error ? error : undefined);
+    logger.error('Batch risk prediction API error', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {
@@ -457,7 +457,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: prediction, cached: false });
     
   } catch (error: unknown) {
-    logger.error('Risk prediction GET error', error instanceof Error ? error : undefined);
+    logger.error('Risk prediction GET error', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {

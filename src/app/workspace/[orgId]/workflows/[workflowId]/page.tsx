@@ -25,7 +25,7 @@ export default function WorkflowEditPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/workflows`, workflowId);
       setWorkflow(data);
     } catch (error) {
-      logger.error('Error loading workflow:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -40,7 +40,7 @@ export default function WorkflowEditPage() {
       });
       router.push(`/workspace/${orgId}/workflows`);
     } catch (error) {
-      logger.error('Error saving workflow:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error saving workflow:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to save workflow');
     } finally {
       setSaving(false);

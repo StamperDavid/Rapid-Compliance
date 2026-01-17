@@ -60,7 +60,7 @@ export default function EntityTablePage() {
           setSchemaList(data.schemas ?? []);
         }
       } catch (err: unknown) {
-        logger.error('Error loading schemas for entity page', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+        logger.error('Error loading schemas for entity page', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       } finally {
         // no-op
       }
@@ -191,7 +191,7 @@ export default function EntityTablePage() {
       setIsAdding(false);
       setFormData(getDefaultFormData());
     } catch (err: unknown) {
-      logger.error('Error creating record:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+      logger.error('Error creating record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       alert('Failed to create record.');
     }
   };
@@ -214,7 +214,7 @@ export default function EntityTablePage() {
       setEditingId(null);
       setFormData(getDefaultFormData());
     } catch (err: unknown) {
-      logger.error('Error updating record:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+      logger.error('Error updating record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
       alert('Failed to update record.');
     }
   };
@@ -224,7 +224,7 @@ export default function EntityTablePage() {
       try {
         await deleteRecord(id);
       } catch (err: unknown) {
-        logger.error('Error deleting record:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
+        logger.error('Error deleting record:', err instanceof Error ? err : new Error(String(err)), { file: 'page.tsx' });
         alert('Failed to delete record.');
       }
     }

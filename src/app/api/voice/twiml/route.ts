@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    logger.error('[TwiML] Error generating response:', error instanceof Error ? error : undefined, { file: 'twiml/route.ts' });
+    logger.error('[TwiML] Error generating response:', error instanceof Error ? error : new Error(String(error)), { file: 'twiml/route.ts' });
 
     // Return fallback TwiML
     return generateFallbackTwiML();

@@ -89,7 +89,7 @@ export default function LivingLedgerPage() {
 
         setLoading(false);
       } catch (error: unknown) {
-        logger.error('Failed to load deals', error instanceof Error ? error : undefined);
+        logger.error('Failed to load deals', error instanceof Error ? error : new Error(String(error)));
         setLoading(false);
       }
     };
@@ -118,7 +118,7 @@ export default function LivingLedgerPage() {
           setHealthScores(new Map(healthScores.set(selectedDealId, data.data)));
         }
       } catch (error: unknown) {
-        logger.error('Failed to load health score', error instanceof Error ? error : undefined, { dealId: selectedDealId });
+        logger.error('Failed to load health score', error instanceof Error ? error : new Error(String(error)), { dealId: selectedDealId });
       }
     };
 
@@ -146,7 +146,7 @@ export default function LivingLedgerPage() {
           setRecommendations(data.data);
         }
       } catch (error: unknown) {
-        logger.error('Failed to load recommendations', error instanceof Error ? error : undefined, { dealId: selectedDealId });
+        logger.error('Failed to load recommendations', error instanceof Error ? error : new Error(String(error)), { dealId: selectedDealId });
       }
     };
 
@@ -175,7 +175,7 @@ export default function LivingLedgerPage() {
         logger.info('Deal monitoring started');
       }
     } catch (error: unknown) {
-      logger.error('Failed to start monitoring', error instanceof Error ? error : undefined);
+      logger.error('Failed to start monitoring', error instanceof Error ? error : new Error(String(error)));
     }
   };
 
@@ -197,7 +197,7 @@ export default function LivingLedgerPage() {
         logger.info('Health check complete', data.data);
       }
     } catch (error: unknown) {
-      logger.error('Failed to run health check', error instanceof Error ? error : undefined);
+      logger.error('Failed to run health check', error instanceof Error ? error : new Error(String(error)));
     }
   };
 

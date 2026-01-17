@@ -58,7 +58,7 @@ export async function GET(
       coupons: coupons ?? [],
     });
   } catch (error: unknown) {
-    logger.error('[Workspace] Error fetching merchant coupons:', error instanceof Error ? error : undefined);
+    logger.error('[Workspace] Error fetching merchant coupons', error instanceof Error ? error : new Error(String(error)), {});
     return NextResponse.json(
       { success: false, error: 'Failed to fetch coupons' },
       { status: 500 }
@@ -166,7 +166,7 @@ export async function POST(
       message: isNew ? 'Coupon created successfully' : 'Coupon updated successfully',
     });
   } catch (error: unknown) {
-    logger.error('[Workspace] Error saving merchant coupon:', error instanceof Error ? error : undefined);
+    logger.error('[Workspace] Error saving merchant coupon', error instanceof Error ? error : new Error(String(error)), {});
     return NextResponse.json(
       { success: false, error: 'Failed to save coupon' },
       { status: 500 }

@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Email generation error', error instanceof Error ? error : undefined, { route: '/api/outbound/email/generate' });
-    return errors.externalService('AI email generation', error instanceof Error ? error : undefined);
+    logger.error('Email generation error', error instanceof Error ? error : new Error(String(error)), { route: '/api/outbound/email/generate' });
+    return errors.externalService('AI email generation', error instanceof Error ? error : new Error(String(error)));
   }
 }

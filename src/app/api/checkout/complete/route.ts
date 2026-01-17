@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       status: 'completed',
     });
   } catch (error) {
-    logger.error('Checkout completion error', error instanceof Error ? error : undefined, { route: '/api/checkout/complete' });
+    logger.error('Checkout completion error', error instanceof Error ? error : new Error(String(error)), { route: '/api/checkout/complete' });
     return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }
 }

@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         logger.debug('Creating new organization during onboarding', { organizationId, userId: user.uid, route: '/api/agent/process-onboarding' });
       }
     } catch (error: unknown) {
-      logger.error('Error checking organization access', error instanceof Error ? error : undefined, { route: '/api/agent/process-onboarding' });
+      logger.error('Error checking organization access', error instanceof Error ? error : new Error(String(error)), { route: '/api/agent/process-onboarding' });
       // If we can't verify, allow it (onboarding scenario)
     }
 
@@ -211,8 +211,8 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error: unknown) {
-    logger.error('Onboarding processing error', error instanceof Error ? error : undefined, { route: '/api/agent/process-onboarding' });
-    return errors.internal('Failed to process onboarding', error instanceof Error ? error : undefined);
+    logger.error('Onboarding processing error', error instanceof Error ? error : new Error(String(error)), { route: '/api/agent/process-onboarding' });
+    return errors.internal('Failed to process onboarding', error instanceof Error ? error : new Error(String(error)));
   }
 }
 

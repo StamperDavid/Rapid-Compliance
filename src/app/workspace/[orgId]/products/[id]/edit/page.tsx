@@ -24,7 +24,7 @@ export default function EditProductPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/products/records`, productId);
       setProduct(data);
     } catch (error) {
-      logger.error('Error loading product:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function EditProductPage() {
       await FirestoreService.update(`organizations/${orgId}/workspaces/default/entities/products/records`, productId, { ...product, updatedAt: Timestamp.now() });
       router.push(`/workspace/${orgId}/products`);
     } catch (error) {
-      logger.error('Error updating product:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error updating product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to update product');
     } finally {
       setSaving(false);

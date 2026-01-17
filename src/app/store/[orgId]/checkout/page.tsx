@@ -50,7 +50,7 @@ export default function CheckoutPage() {
       
       setCart(cartData);
     } catch (error) {
-      logger.error('Error loading cart:', error, { file: 'page.tsx' });
+      logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -100,7 +100,7 @@ export default function CheckoutPage() {
       localStorage.removeItem('cartSessionId');
       router.push(`/store/${orgId}/checkout/success?orderId=${order.id}`);
     } catch (error: any) {
-      logger.error('Checkout error:', error, { file: 'page.tsx' });
+      logger.error('Checkout error:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert((error.message !== '' && error.message != null) ? error.message : 'Checkout failed. Please try again.');
     } finally {
       setProcessing(false);

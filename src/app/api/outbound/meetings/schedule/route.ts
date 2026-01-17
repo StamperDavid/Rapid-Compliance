@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Meeting scheduler error', error instanceof Error ? error : undefined, { route: '/api/outbound/meetings/schedule' });
+    logger.error('Meeting scheduler error', error instanceof Error ? error : new Error(String(error)), { route: '/api/outbound/meetings/schedule' });
     return errors.externalService('Calendar service', error instanceof Error ? error : undefined);
   }
 }

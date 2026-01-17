@@ -114,8 +114,8 @@ export default function StorefrontSettingsPage() {
         if (configData) {
           setConfig(configData as StorefrontConfig);
         }
-      } catch (error) {
-        logger.error('Failed to load storefront config', error as Error);
+      } catch (error: unknown) {
+        logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)), {});
       }
     };
     
@@ -137,8 +137,8 @@ export default function StorefrontSettingsPage() {
         },
         false
       );
-    } catch (error) {
-      logger.error('Failed to save storefront config', error as Error);
+    } catch (error: unknown) {
+      logger.error('Failed to save storefront config', error instanceof Error ? error : new Error(String(error)), {});
     } finally {
       setTimeout(() => setIsSaving(false), 1000);
     }

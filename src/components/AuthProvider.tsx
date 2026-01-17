@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 workspaceId: userProfile?.currentWorkspaceId,
               });
             } catch (error) {
-              logger.error('Error loading user profile:', error, { file: 'AuthProvider.tsx' });
+              logger.error('Error loading user profile:', error instanceof Error ? error : new Error(String(error)), { file: 'AuthProvider.tsx' });
               setUser({
                 id: authUser.uid,
                 email: authUser.email ?? '',
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       unsubscribeRef.current = unsubscribe;
     } catch (error) {
-      logger.error('Error setting up auth listener:', error, { file: 'AuthProvider.tsx' });
+      logger.error('Error setting up auth listener:', error instanceof Error ? error : new Error(String(error)), { file: 'AuthProvider.tsx' });
       // Fall back to demo mode on error
       setUser({
         id: 'demo-user',

@@ -92,11 +92,11 @@ export async function GET(
       aliases,
     });
     
-  } catch (error) {
-    logger.error('[Rename History API] GET failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Rename History API] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to get rename history' },
       { status: 500 }
@@ -139,11 +139,11 @@ export async function POST(
       message: `Field rolled back to version ${toVersion}`,
     });
     
-  } catch (error) {
-    logger.error('[Rename History API] POST failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Rename History API] POST failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to rollback field' },
       { status: 500 }

@@ -328,9 +328,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 400 }
     );
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('[AdminSocialPost] Unexpected error', err, {
+  } catch (error: unknown) {
+    logger.error('[AdminSocialPost] Unexpected error', error instanceof Error ? error : new Error(String(error)), {
       file: 'admin/social/post/route.ts',
     });
 
@@ -383,9 +382,8 @@ export async function GET(request: NextRequest) {
       recentPosts: [],
       scheduledPosts: [],
     });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('[AdminSocialPost] GET failed', err, {
+  } catch (error: unknown) {
+    logger.error('[AdminSocialPost] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'admin/social/post/route.ts',
     });
 

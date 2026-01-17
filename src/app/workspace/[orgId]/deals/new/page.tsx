@@ -21,7 +21,7 @@ export default function NewDealPage() {
       await FirestoreService.set(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId, { ...deal, id: dealId, createdAt: Timestamp.now() }, false);
       router.push(`/workspace/${orgId}/deals`);
     } catch (error: unknown) {
-      logger.error('Error creating deal:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error creating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to create deal');
     } finally {
       setSaving(false);

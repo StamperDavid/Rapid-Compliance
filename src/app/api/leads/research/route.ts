@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
       savings: (leads.length * 0.75) - totalCost,
     });
   } catch (error) {
-    logger.error('Lead research error', error instanceof Error ? error : undefined, { route: '/api/leads/research' });
-    return errors.externalService('Lead research service', error instanceof Error ? error : undefined);
+    logger.error('Lead research error', error instanceof Error ? error : new Error(String(error)), { route: '/api/leads/research' });
+    return errors.externalService('Lead research service', error instanceof Error ? error : new Error(String(error)));
   }
 }
 

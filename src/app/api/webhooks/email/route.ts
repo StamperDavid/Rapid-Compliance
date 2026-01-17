@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       failed,
     });
   } catch (error: unknown) {
-    logger.error('Email webhook processing error', error instanceof Error ? error : undefined, { route: '/api/webhooks/email' });
+    logger.error('Email webhook processing error', error instanceof Error ? error : new Error(String(error)), { route: '/api/webhooks/email' });
     return errors.internal('Failed to process webhook', error instanceof Error ? error : undefined);
   }
 }

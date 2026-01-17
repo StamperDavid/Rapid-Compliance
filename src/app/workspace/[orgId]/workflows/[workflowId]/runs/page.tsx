@@ -22,7 +22,7 @@ export default function WorkflowRunsPage() {
       const data = await getWorkflowExecutions(workflowId, orgId, 'default');
       setExecutions(data);
     } catch (error) {
-      logger.error('Error loading executions:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading executions:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

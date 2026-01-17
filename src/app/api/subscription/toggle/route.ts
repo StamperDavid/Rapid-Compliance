@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error toggling feature', error instanceof Error ? error : undefined, { route: '/api/subscription/toggle'  });
+    logger.error('Error toggling feature', error instanceof Error ? error : new Error(String(error)), { route: '/api/subscription/toggle'  });
     return errors.database('Failed to toggle feature', error instanceof Error ? error : undefined);
   }
 }

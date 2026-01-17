@@ -95,7 +95,7 @@ Provide your analysis in JSON format:
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Self-Correction] Verification error:', error, { file: 'self-corrector.ts' });
+    logger.error('[Self-Correction] Verification error:', error instanceof Error ? error : new Error(String(error)), { file: 'self-corrector.ts' });
 
     // Fallback on error
     return {

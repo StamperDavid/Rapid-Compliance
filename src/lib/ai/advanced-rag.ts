@@ -123,7 +123,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
     const data = await response.json() as _OpenAIEmbeddingResponse;
     return data.data[0].embedding;
   } catch (error: unknown) {
-    logger.error('[RAG] Embedding error:', error, { file: 'advanced-rag.ts' });
+    logger.error('[RAG] Embedding error:', error instanceof Error ? error : new Error(String(error)), { file: 'advanced-rag.ts' });
     // Fallback to simple keyword matching if embeddings fail
     return [];
   }
@@ -170,7 +170,7 @@ async function semanticSearch(
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
       .slice(0, topK);
   } catch (error: unknown) {
-    logger.error('[RAG] Semantic search error:', error, { file: 'advanced-rag.ts' });
+    logger.error('[RAG] Semantic search error:', error instanceof Error ? error : new Error(String(error)), { file: 'advanced-rag.ts' });
     return [];
   }
 }
@@ -211,7 +211,7 @@ async function rerankChunks(
     // Fallback: Use GPT-4 for reranking
     return await rerankWithGPT4(query, chunks);
   } catch (error: unknown) {
-    logger.error('[RAG] Reranking error:', error, { file: 'advanced-rag.ts' });
+    logger.error('[RAG] Reranking error:', error instanceof Error ? error : new Error(String(error)), { file: 'advanced-rag.ts' });
     // Return original order if reranking fails
     return chunks;
   }
@@ -251,7 +251,7 @@ async function rerankWithCohere(
       relevanceScore: result.relevance_score,
     }));
   } catch (error: unknown) {
-    logger.error('[RAG] Cohere reranking error:', error, { file: 'advanced-rag.ts' });
+    logger.error('[RAG] Cohere reranking error:', error instanceof Error ? error : new Error(String(error)), { file: 'advanced-rag.ts' });
     return chunks;
   }
 }
@@ -294,7 +294,7 @@ Scores:`;
       }))
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
   } catch (error: unknown) {
-    logger.error('[RAG] GPT-4 reranking error:', error, { file: 'advanced-rag.ts' });
+    logger.error('[RAG] GPT-4 reranking error:', error instanceof Error ? error : new Error(String(error)), { file: 'advanced-rag.ts' });
     return chunks;
   }
 }

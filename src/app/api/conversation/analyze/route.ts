@@ -348,7 +348,7 @@ export async function POST(request: NextRequest) {
     );
     
   } catch (error) {
-    logger.error('Conversation analysis API error', error instanceof Error ? error : undefined, {
+    logger.error('Conversation analysis API error', error instanceof Error ? error : new Error(String(error)), {
       path: '/api/conversation/analyze',
       method: 'POST',
     });

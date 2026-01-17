@@ -53,7 +53,7 @@ export default function ShoppingCartPage() {
       const cartData = await getOrCreateCart(sessionId, 'default', orgId);
       setCart(cartData as unknown as Cart);
     } catch (error) {
-      logger.error('Error loading cart:', error, { file: 'page.tsx' });
+      logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export default function ShoppingCartPage() {
       await updateCartItemQuantity(sessionId, 'default', orgId, itemId, newQuantity);
       await loadCart();
     } catch (error) {
-      logger.error('Error updating quantity:', error, { file: 'page.tsx' });
+      logger.error('Error updating quantity:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to update quantity');
     } finally {
       setUpdating(false);
@@ -84,7 +84,7 @@ export default function ShoppingCartPage() {
       await removeFromCart(sessionId, 'default', orgId, itemId);
       await loadCart();
     } catch (error) {
-      logger.error('Error removing item:', error, { file: 'page.tsx' });
+      logger.error('Error removing item:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to remove item');
     } finally {
       setUpdating(false);

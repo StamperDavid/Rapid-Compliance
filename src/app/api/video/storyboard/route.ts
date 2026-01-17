@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Video storyboard API failed', error instanceof Error ? error : undefined);
+    logger.error('Video storyboard API failed', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

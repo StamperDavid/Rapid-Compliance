@@ -42,7 +42,7 @@ export async function getAllPlans(): Promise<PlanDetails[]> {
     
     return (plans as unknown as PlanDetails[]).sort((a, b) => a.displayOrder - b.displayOrder);
   } catch (error) {
-    logger.error('[Subscription Manager] Error fetching plans:', error, { file: 'subscription-manager.ts' });
+    logger.error('[Subscription Manager] Error fetching plans:', error instanceof Error ? error : new Error(String(error)), { file: 'subscription-manager.ts' });
     return [];
   }
 }
@@ -164,7 +164,7 @@ export async function getAllCustomers(): Promise<AdminCustomer[]> {
     
     return customers;
   } catch (error) {
-    logger.error('[Subscription Manager] Error fetching customers:', error, { file: 'subscription-manager.ts' });
+    logger.error('[Subscription Manager] Error fetching customers:', error instanceof Error ? error : new Error(String(error)), { file: 'subscription-manager.ts' });
     return [];
   }
 }
@@ -432,7 +432,7 @@ export async function calculateRevenueMetrics(
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    logger.error('[Subscription Manager] Error calculating metrics:', error, { file: 'subscription-manager.ts' });
+    logger.error('[Subscription Manager] Error calculating metrics:', error instanceof Error ? error : new Error(String(error)), { file: 'subscription-manager.ts' });
     throw error;
   }
 }

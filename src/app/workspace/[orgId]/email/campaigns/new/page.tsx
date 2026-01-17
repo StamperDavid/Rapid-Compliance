@@ -34,7 +34,7 @@ export default function NewCampaignPage() {
       
       router.push(`/workspace/${orgId}/email/campaigns`);
     } catch (error: unknown) {
-      logger.error('Error creating campaign:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error creating campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to create campaign');
     } finally {
       setCreating(false);

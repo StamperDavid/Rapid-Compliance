@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       stats,
     });
   } catch (error) {
-    logger.error('API: Failed to start competitive monitoring', error instanceof Error ? error : undefined);
+    logger.error('API: Failed to start competitive monitoring', error instanceof Error ? error : new Error(String(error)));
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

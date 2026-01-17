@@ -78,7 +78,7 @@ export function useAdminAuth() {
               setAdminUser(null);
             }
           } catch (error) {
-            logger.error('Error verifying admin status:', error instanceof Error ? error : undefined, { file: 'useAdminAuth.ts' });
+            logger.error('Error verifying admin status:', error instanceof Error ? error : new Error(String(error)), { file: 'useAdminAuth.ts' });
             setAdminUser(null);
           }
         } else {

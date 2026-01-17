@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(analytics);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Revenue analytics error', error instanceof Error ? error : undefined, { route: '/api/analytics/revenue' });
+    logger.error('Revenue analytics error', error instanceof Error ? error : new Error(String(error)), { route: '/api/analytics/revenue' });
     return errors.internal('Failed to generate revenue analytics', error instanceof Error ? error : new Error(message));
   }
 }

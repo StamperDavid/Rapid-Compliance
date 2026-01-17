@@ -63,7 +63,7 @@ export function usePageContent(pageId: string) {
           }
         }
       } catch (error) {
-        logger.error('Failed to load page content:', error instanceof Error ? error : undefined, { file: 'usePageContent.ts' });
+        logger.error('Failed to load page content:', error instanceof Error ? error : new Error(String(error)), { file: 'usePageContent.ts' });
       } finally {
         setLoading(false);
       }

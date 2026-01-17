@@ -146,7 +146,7 @@ export default function SEOTrainingPage() {
       setKnowledge((knowledgeResult.data || []) as KnowledgeItem[]);
 
     } catch (error) {
-      logger.error('Error loading SEO training data:', error instanceof Error ? error : undefined, { file: 'seo/training/page.tsx' });
+      logger.error('Error loading SEO training data:', error instanceof Error ? error : new Error(String(error)), { file: 'seo/training/page.tsx' });
       loadDemoData();
     } finally {
       setLoading(false);
@@ -240,7 +240,7 @@ export default function SEOTrainingPage() {
       alert('SEO training settings saved successfully!');
 
     } catch (error) {
-      logger.error('Error saving SEO settings:', error instanceof Error ? error : undefined, { file: 'seo/training/page.tsx' });
+      logger.error('Error saving SEO settings:', error instanceof Error ? error : new Error(String(error)), { file: 'seo/training/page.tsx' });
       alert('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
@@ -297,7 +297,7 @@ export default function SEOTrainingPage() {
       await saveToHistory(testTopic, type, seoScore.overall);
 
     } catch (error) {
-      logger.error('Error generating SEO content:', error instanceof Error ? error : undefined, { file: 'seo/training/page.tsx' });
+      logger.error('Error generating SEO content:', error instanceof Error ? error : new Error(String(error)), { file: 'seo/training/page.tsx' });
       alert('Failed to generate content. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -456,7 +456,7 @@ export default function SEOTrainingPage() {
       }, ...prev]);
 
     } catch (error) {
-      logger.error('Error saving to history:', error instanceof Error ? error : undefined, { file: 'seo/training/page.tsx' });
+      logger.error('Error saving to history:', error instanceof Error ? error : new Error(String(error)), { file: 'seo/training/page.tsx' });
     }
   };
 

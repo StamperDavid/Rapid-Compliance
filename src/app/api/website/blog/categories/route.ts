@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ categories: data.categories ?? [] });
   } catch (error: unknown) {
-    logger.error('Failed to fetch blog categories', error instanceof Error ? error : undefined, {
+    logger.error('Failed to fetch blog categories', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/blog/categories',
       method: 'GET'
     });
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ categories });
   } catch (error: unknown) {
-    logger.error('Failed to save blog categories', error instanceof Error ? error : undefined, {
+    logger.error('Failed to save blog categories', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/blog/categories',
       method: 'POST'
     });

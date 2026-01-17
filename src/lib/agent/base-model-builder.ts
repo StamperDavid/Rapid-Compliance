@@ -64,7 +64,7 @@ export async function buildBaseModel(params: {
         });
       }
     } catch (error) {
-      logger.error('[buildBaseModel] Failed to load/mutate template', error, {
+      logger.error('[buildBaseModel] Failed to load/mutate template', error instanceof Error ? error : new Error(String(error)), {
         templateId: industryTemplateId
       });
       // Continue without template - fallback to basic onboarding

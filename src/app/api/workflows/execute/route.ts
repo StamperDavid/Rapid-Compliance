@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const duration = Date.now() - startTime;
 
-    logger.error('Unexpected error in workflow execution endpoint', error instanceof Error ? error : undefined, {
+    logger.error('Unexpected error in workflow execution endpoint', error instanceof Error ? error : new Error(String(error)), {
       durationMs: duration,
     });
 

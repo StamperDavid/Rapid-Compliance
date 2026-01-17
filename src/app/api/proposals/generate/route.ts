@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('Proposal generation API failed', error instanceof Error ? error : undefined);
+    logger.error('Proposal generation API failed', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: message },

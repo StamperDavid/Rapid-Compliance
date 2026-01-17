@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(analytics);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error getting lead scoring analytics', error instanceof Error ? error : undefined, { route: '/api/analytics/lead-scoring' });
+    logger.error('Error getting lead scoring analytics', error instanceof Error ? error : new Error(String(error)), { route: '/api/analytics/lead-scoring' });
     return errors.database('Failed to get lead scoring analytics', error instanceof Error ? error : new Error(message));
   }
 }

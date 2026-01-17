@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    logger.error('[AI-Agent] Error starting conversation:', error instanceof Error ? error : undefined, { file: 'ai-agent/route.ts' });
+    logger.error('[AI-Agent] Error starting conversation:', error instanceof Error ? error : new Error(String(error)), { file: 'ai-agent/route.ts' });
 
     // Return fallback TwiML that transfers to human
     const fallbackTwiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -233,6 +233,6 @@ async function logConversationData(
       false
     );
   } catch (error) {
-    logger.error('[AI-Agent] Failed to log conversation data:', error instanceof Error ? error : undefined, { file: 'ai-agent/route.ts' });
+    logger.error('[AI-Agent] Failed to log conversation data:', error instanceof Error ? error : new Error(String(error)), { file: 'ai-agent/route.ts' });
   }
 }

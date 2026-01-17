@@ -70,9 +70,9 @@ export async function GET(request: NextRequest) {
     // Redirect to Slack authorization page
     return NextResponse.redirect(authUrl);
     
-  } catch (error) {
-    logger.error('Failed to start Slack OAuth flow', error instanceof Error ? error : undefined, {});
-    
+  } catch (error: unknown) {
+    logger.error('Failed to start Slack OAuth flow', error instanceof Error ? error : new Error(String(error)), {});
+
     return NextResponse.json(
       {
         error: 'Internal server error',

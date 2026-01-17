@@ -48,7 +48,7 @@ export async function GET(
       subdomain,
     });
   } catch (error: unknown) {
-    logger.error('Subdomain lookup error', error instanceof Error ? error : undefined, {
+    logger.error('Subdomain lookup error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/subdomain/[subdomain]',
       method: 'GET'
     });

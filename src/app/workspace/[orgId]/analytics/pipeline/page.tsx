@@ -27,7 +27,7 @@ export default function PipelineAnalyticsPage() {
         setAnalytics(data.analytics);
       }
     } catch (error: unknown) {
-      logger.error('Failed to load analytics:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to load analytics:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

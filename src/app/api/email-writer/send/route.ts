@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
 
-    logger.error('Unexpected error in send email endpoint', error instanceof Error ? error : undefined, {
+    logger.error('Unexpected error in send email endpoint', error instanceof Error ? error : new Error(String(error)), {
       duration,
     });
 

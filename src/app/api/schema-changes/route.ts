@@ -63,11 +63,11 @@ export async function GET(request: NextRequest) {
       count: events.length,
     });
     
-  } catch (error) {
-    logger.error('[Schema Changes API] GET failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Schema Changes API] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to get schema changes' },
       { status: 500 }
@@ -128,11 +128,11 @@ export async function POST(request: NextRequest) {
       });
     }
     
-  } catch (error) {
-    logger.error('[Schema Changes API] POST failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Schema Changes API] POST failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to process schema changes' },
       { status: 500 }

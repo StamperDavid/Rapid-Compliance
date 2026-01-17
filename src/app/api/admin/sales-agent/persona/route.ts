@@ -25,7 +25,7 @@ export async function GET(_req: NextRequest) {
     }
 
     return NextResponse.json(personaDoc.data());
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error fetching platform sales agent persona', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/admin/sales-agent/persona',
       method: 'GET'
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     }, { merge: true });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Error saving platform sales agent persona', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/admin/sales-agent/persona',
       method: 'POST'

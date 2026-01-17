@@ -73,8 +73,8 @@ export async function POST(
     });
     
   } catch (error) {
-    logger.error('Failed to calculate deal score', error as Error);
-    
+    logger.error('Failed to calculate deal score', error instanceof Error ? error : new Error(String(error)));
+
     return NextResponse.json({
       success: false,
       error: 'Failed to calculate deal score',

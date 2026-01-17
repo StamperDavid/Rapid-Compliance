@@ -143,7 +143,7 @@ export async function searchKnowledgeBase(
       .slice(0, limit)
       .filter(r => r.score > 0.3); // Minimum similarity threshold
   } catch (error) {
-    logger.error('Error searching knowledge base:', error, { file: 'vector-search.ts' });
+    logger.error('Error searching knowledge base:', error instanceof Error ? error : new Error(String(error)), { file: 'vector-search.ts' });
     return [];
   }
 }
@@ -176,7 +176,7 @@ export async function storeEmbedding(
       false
     );
   } catch (error) {
-    logger.error('Error storing embedding:', error, { file: 'vector-search.ts' });
+    logger.error('Error storing embedding:', error instanceof Error ? error : new Error(String(error)), { file: 'vector-search.ts' });
     throw error;
   }
 }
@@ -249,7 +249,7 @@ export async function indexKnowledgeBase(
       }
     }
   } catch (error) {
-    logger.error('Error indexing knowledge base:', error, { file: 'vector-search.ts' });
+    logger.error('Error indexing knowledge base:', error instanceof Error ? error : new Error(String(error)), { file: 'vector-search.ts' });
     throw error;
   }
 }

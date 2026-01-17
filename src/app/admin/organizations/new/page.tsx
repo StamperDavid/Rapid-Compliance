@@ -71,8 +71,7 @@ export default function NewOrganizationPage() {
         setLoading(false);
       }
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Failed to create organization', err, { file: 'page.tsx' });
+      logger.error('Failed to create organization', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       setError('An error occurred while creating the organization');
       setLoading(false);
     }

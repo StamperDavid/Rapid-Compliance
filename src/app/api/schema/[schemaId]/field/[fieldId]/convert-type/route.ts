@@ -72,11 +72,11 @@ export async function GET(
         : 0,
     });
     
-  } catch (error) {
-    logger.error('[Type Conversion API] GET failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Type Conversion API] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
       { error: 'Failed to generate conversion preview' },
       { status: 500 }
@@ -228,13 +228,13 @@ export async function POST(
       failedRecords: failedRecords.slice(0, 10), // Return first 10 failures
     });
     
-  } catch (error) {
-    logger.error('[Type Conversion] Execution failed', error instanceof Error ? error : undefined, {
+  } catch (error: unknown) {
+    logger.error('[Type Conversion] Execution failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
     });
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Conversion failed',
         message: error instanceof Error ? error.message : 'Unknown error'
       },

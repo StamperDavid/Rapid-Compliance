@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Sitemap generation error', error instanceof Error ? error : undefined, {
+    logger.error('Sitemap generation error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/sitemap.xml',
       method: 'GET'
     });

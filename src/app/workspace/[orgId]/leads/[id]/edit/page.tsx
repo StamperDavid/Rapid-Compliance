@@ -24,7 +24,7 @@ export default function EditLeadPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/leads/records`, leadId);
       setLead(data);
     } catch (error: unknown) {
-      logger.error('Error loading lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function EditLeadPage() {
       await FirestoreService.update(`organizations/${orgId}/workspaces/default/entities/leads/records`, leadId, { ...lead, updatedAt: Timestamp.now() });
       router.push(`/workspace/${orgId}/leads/${leadId}`);
     } catch (error: unknown) {
-      logger.error('Error updating lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error updating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to update lead');
     } finally {
       setSaving(false);

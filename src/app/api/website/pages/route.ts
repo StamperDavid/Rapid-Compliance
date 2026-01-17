@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Website Pages API] GET error', error instanceof Error ? error : undefined, { route: '/api/website/pages' });
+    logger.error('[Website Pages API] GET error', error instanceof Error ? error : new Error(String(error)), { route: '/api/website/pages' });
     return NextResponse.json(
       { error: 'Failed to fetch pages', details: message },
       { status: 500 }
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Website Pages API] POST error', error instanceof Error ? error : undefined, { route: '/api/website/pages' });
+    logger.error('[Website Pages API] POST error', error instanceof Error ? error : new Error(String(error)), { route: '/api/website/pages' });
     return NextResponse.json(
       { error: 'Failed to create page', details: message },
       { status: 500 }

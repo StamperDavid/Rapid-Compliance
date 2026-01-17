@@ -85,7 +85,7 @@ export default function ProfilePage() {
       setSaveMessage('Profile updated successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
-      logger.error('Failed to save profile:', error, { file: 'page.tsx' });
+      logger.error('Failed to save profile:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       setSaveMessage('Failed to save profile');
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {

@@ -44,7 +44,7 @@ export default function AdminBar() {
           setTheme(parsed as LocalTheme);
         }
       } catch (error) {
-        logger.error('Failed to load theme:', error, { file: 'AdminBar.tsx' });
+        logger.error('Failed to load theme:', error instanceof Error ? error : new Error(String(error)), { file: 'AdminBar.tsx' });
       }
     }
   }, []);
@@ -199,7 +199,7 @@ export default function AdminBar() {
                             await signOut(auth);
                           }
                         } catch (error) {
-                          logger.error('Error signing out:', error, { file: 'AdminBar.tsx' });
+                          logger.error('Error signing out:', error instanceof Error ? error : new Error(String(error)), { file: 'AdminBar.tsx' });
                         }
                         window.location.href = '/';
                       })();

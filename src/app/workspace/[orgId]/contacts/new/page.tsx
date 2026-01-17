@@ -21,7 +21,7 @@ export default function NewContactPage() {
       await FirestoreService.set(`organizations/${orgId}/workspaces/default/entities/contacts/records`, contactId, { ...contact, id: contactId, createdAt: Timestamp.now() }, false);
       router.push(`/workspace/${orgId}/contacts`);
     } catch (error: unknown) {
-      logger.error('Error creating contact:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error creating contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to create contact');
     } finally {
       setSaving(false);

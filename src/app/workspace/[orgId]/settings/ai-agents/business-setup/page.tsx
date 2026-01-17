@@ -55,7 +55,7 @@ export default function BusinessSetupPage() {
         }
         setLoading(false);
       } catch (error) {
-        logger.error('Failed to load onboarding data:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+        logger.error('Failed to load onboarding data:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         setLoading(false);
       }
     }
@@ -78,7 +78,7 @@ export default function BusinessSetupPage() {
       alert('Business setup saved successfully!');
       setSaving(false);
     } catch (error) {
-      logger.error('Failed to save:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to save:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       // eslint-disable-next-line no-alert -- User feedback for error handling
       alert('Failed to save changes. Please try again.');
       setSaving(false);

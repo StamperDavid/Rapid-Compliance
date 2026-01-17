@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       message: `Post scheduled for ${scheduledAt.toLocaleString()}`,
     });
   } catch (error: unknown) {
-    logger.error('Schedule API: Unexpected error', error as Error);
+    logger.error('Schedule API: Unexpected error', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/schedule' });
 
     return NextResponse.json(
       {
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
       total: scheduledPosts.length,
     });
   } catch (error: unknown) {
-    logger.error('Schedule API: Get scheduled failed', error as Error);
+    logger.error('Schedule API: Get scheduled failed', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/schedule' });
 
     return NextResponse.json(
       {
@@ -278,7 +278,7 @@ export async function DELETE(request: NextRequest) {
       postId: data.postId,
     });
   } catch (error: unknown) {
-    logger.error('Schedule API: Cancel failed', error as Error);
+    logger.error('Schedule API: Cancel failed', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/schedule' });
 
     return NextResponse.json(
       {

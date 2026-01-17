@@ -24,7 +24,7 @@ export default function EditContactPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/contacts/records`, contactId);
       setContact(data);
     } catch (error: unknown) {
-      logger.error('Error loading contact:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ export default function EditContactPage() {
       await FirestoreService.update(`organizations/${orgId}/workspaces/default/entities/contacts/records`, contactId, { ...contact, updatedAt: Timestamp.now() });
       router.push(`/workspace/${orgId}/contacts/${contactId}`);
     } catch (error: unknown) {
-      logger.error('Error updating contact:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error updating contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to update contact');
     } finally {
       setSaving(false);

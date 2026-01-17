@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Tasks GET API failed', error instanceof Error ? error : undefined, {});
+    logger.error('Tasks GET API failed', error instanceof Error ? error : new Error(String(error)), {});
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Task POST API failed', error instanceof Error ? error : undefined, {});
+    logger.error('Task POST API failed', error instanceof Error ? error : new Error(String(error)), {});
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

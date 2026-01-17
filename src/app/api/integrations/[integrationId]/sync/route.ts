@@ -35,7 +35,7 @@ export async function POST(
       error: result.error,
     });
   } catch (error: unknown) {
-    logger.error('Error syncing integration', error instanceof Error ? error : undefined, { route: '/api/integrations/sync' });
+    logger.error('Error syncing integration', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/sync' });
     return errors.externalService('Integration', error instanceof Error ? error : undefined);
   }
 }

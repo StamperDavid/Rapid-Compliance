@@ -156,7 +156,7 @@ export default function LeadResearchPage() {
         }),
       });
     } catch (error: unknown) {
-      logger.error('Failed to save feedback:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Failed to save feedback:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
   };
 

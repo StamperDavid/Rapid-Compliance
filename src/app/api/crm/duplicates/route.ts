@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('Duplicate detection API failed', error instanceof Error ? error : undefined);
+    logger.error('Duplicate detection API failed', error instanceof Error ? error : new Error(String(error)));
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       { success: false, error: errorMessage },

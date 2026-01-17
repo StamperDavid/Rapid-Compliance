@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       `${process.env.NEXT_PUBLIC_APP_URL}/workspace/${organizationId}/settings/integrations?success=teams_connected`
     );
   } catch (error: unknown) {
-    logger.error('Teams callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/teams/callback' });
+    logger.error('Teams callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/teams/callback' });
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/workspace/default/settings/integrations?error=teams_callback_failed`
     );

@@ -519,14 +519,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the FULL error to the terminal for debugging
-    logger.error('[Jasper] OpenRouter API FAILED', structuredError instanceof Error ? structuredError : undefined, {
+    logger.error('[Jasper] OpenRouter API FAILED', structuredError instanceof Error ? structuredError : new Error(String(structuredError)), {
       message: structuredError.message,
       openRouterDetails: openRouterDetails ? JSON.stringify(openRouterDetails) : undefined,
       stack: structuredError.stack,
       name: structuredError.name,
       cause: structuredError.cause ? String(structuredError.cause) : undefined,
     });
-    logger.error('[Jasper] Chat error', structuredError instanceof Error ? structuredError : undefined, {
+    logger.error('[Jasper] Chat error', structuredError instanceof Error ? structuredError : new Error(String(structuredError)), {
       route: '/api/orchestrator/chat',
       openRouterDetails: openRouterDetails ? JSON.stringify(openRouterDetails) : undefined,
     });

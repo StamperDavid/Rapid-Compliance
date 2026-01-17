@@ -87,9 +87,9 @@ export async function handleSchemaChangeForAgent(
         changeType: event.changeType,
       });
     }
-    
+
   } catch (error) {
-    logger.error('[AI Agent Refresh] Failed to handle schema change', error, {
+    logger.error('[AI Agent Refresh] Failed to handle schema change', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
       eventId: event.id,
     });
@@ -193,9 +193,9 @@ export async function recompileAgentKnowledge(
       goldenMasterId: goldenMaster.id,
       newVersion: goldenMaster.version + 1,
     });
-    
+
   } catch (error) {
-    logger.error('[AI Agent Refresh] Failed to recompile knowledge', error, {
+    logger.error('[AI Agent Refresh] Failed to recompile knowledge', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
       organizationId,
       workspaceId,
@@ -308,9 +308,9 @@ async function notifySchemaChange(
       file: 'knowledge-refresh-service.ts',
       notificationId,
     });
-    
+
   } catch (error) {
-    logger.error('[AI Agent Refresh] Failed to send notification', error, {
+    logger.error('[AI Agent Refresh] Failed to send notification', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
     });
   }
@@ -405,13 +405,13 @@ export async function getSchemaChangeImpactOnAgent(
       impactLevel,
       description,
     };
-    
+
   } catch (error) {
-    logger.error('[AI Agent Refresh] Failed to assess impact', error, {
+    logger.error('[AI Agent Refresh] Failed to assess impact', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
       eventId: event.id,
     });
-    
+
     return {
       affectsAgent: false,
       requiresRecompilation: false,
@@ -440,12 +440,12 @@ export async function manuallyRefreshAgentKnowledge(
       message: 'AI agent knowledge refreshed successfully',
     };
   } catch (error) {
-    logger.error('[AI Agent Refresh] Manual refresh failed', error, {
+    logger.error('[AI Agent Refresh] Manual refresh failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'knowledge-refresh-service.ts',
       organizationId,
       workspaceId,
     });
-    
+
     return {
       success: false,
       message: `Failed to refresh agent knowledge: ${error}`,

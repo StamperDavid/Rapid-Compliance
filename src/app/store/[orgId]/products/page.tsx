@@ -56,7 +56,7 @@ export default function ProductCatalogPage() {
       );
       setCategories(uniqueCategories as string[]);
     } catch (error) {
-      logger.error('Error loading products:', error, { file: 'page.tsx' });
+      logger.error('Error loading products:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

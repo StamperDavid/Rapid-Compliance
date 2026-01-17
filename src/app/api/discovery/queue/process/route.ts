@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       })),
     });
   } catch (error) {
-    logger.error('[API] Discovery queue processing failed', error instanceof Error ? error : undefined);
+    logger.error('[API] Discovery queue processing failed', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json(
       {

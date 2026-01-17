@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     } catch (parseError: unknown) {
       const errorMessage = parseError instanceof Error ? parseError.message : 'Invalid JSON';
-      logger.error('[Admin] Failed to parse request body:', parseError instanceof Error ? parseError : undefined);
+      logger.error('[Admin] Failed to parse request body:', parseError instanceof Error ? parseError : new Error(String(parseError)));
       return NextResponse.json<UpdateAgentPricingError>(
         { success: false, error: `Invalid request body: ${errorMessage}` },
         { status: 400 }
@@ -252,7 +252,7 @@ ${tierDescriptions}
       orgs = await FirestoreService.getAll<OrganizationDocument>(COLLECTIONS.ORGANIZATIONS, []);
     } catch (fetchError: unknown) {
       const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
-      logger.error('[Admin] Failed to fetch organizations:', fetchError instanceof Error ? fetchError : undefined);
+      logger.error('[Admin] Failed to fetch organizations:', fetchError instanceof Error ? fetchError : new Error(String(fetchError)));
       return NextResponse.json<UpdateAgentPricingError>(
         { success: false, error: `Failed to fetch organizations: ${errorMessage}` },
         { status: 500 }
@@ -306,7 +306,7 @@ ${tierDescriptions}
       organizationsUpdated: successCount,
     });
   } catch (error: unknown) {
-    logger.error('[Admin] Error updating agent pricing knowledge:', error instanceof Error ? error : undefined);
+    logger.error('[Admin] Error updating agent pricing knowledge:', error instanceof Error ? error : new Error(String(error)));
 
     return NextResponse.json<UpdateAgentPricingError>(
       { success: false, error: 'Failed to update agent knowledge' },

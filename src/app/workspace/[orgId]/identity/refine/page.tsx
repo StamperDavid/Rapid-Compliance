@@ -198,7 +198,7 @@ export default function IdentityRefinementPage() {
       }
 
     } catch (error: unknown) {
-      logger.error('Error loading identity data:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
+      logger.error('Error loading identity data:', error instanceof Error ? error : new Error(String(error)), { file: 'identity-refine-page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -234,7 +234,7 @@ export default function IdentityRefinementPage() {
         }
       }
     } catch (error: unknown) {
-      logger.error('Error loading voices:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
+      logger.error('Error loading voices:', error instanceof Error ? error : new Error(String(error)), { file: 'identity-refine-page.tsx' });
     } finally {
       setLoadingVoices(false);
     }
@@ -268,7 +268,7 @@ export default function IdentityRefinementPage() {
         alert(data.error || 'Failed to generate audio');
       }
     } catch (error: unknown) {
-      logger.error('Error testing voice:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
+      logger.error('Error testing voice:', error instanceof Error ? error : new Error(String(error)), { file: 'identity-refine-page.tsx' });
       alert('Failed to test voice');
     } finally {
       setTestingVoice(false);
@@ -374,7 +374,7 @@ export default function IdentityRefinementPage() {
       router.push(`/workspace/${orgId}/dashboard`);
 
     } catch (error: unknown) {
-      logger.error('Error saving identity:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
+      logger.error('Error saving identity:', error instanceof Error ? error : new Error(String(error)), { file: 'identity-refine-page.tsx' });
       alert('Failed to save. Please try again.');
     } finally {
       setSaving(false);

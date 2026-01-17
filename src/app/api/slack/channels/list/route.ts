@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: unknown) {
-    logger.error('Failed to list Slack channels', error instanceof Error ? error : undefined, {});
+    logger.error('Failed to list Slack channels', error instanceof Error ? error : new Error(String(error)), {});
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to list channels';
 

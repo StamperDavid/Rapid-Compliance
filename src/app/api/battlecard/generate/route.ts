@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       competitorProfile,
     });
   } catch (error) {
-    logger.error('API: Failed to generate battlecard', error instanceof Error ? error : undefined);
+    logger.error('API: Failed to generate battlecard', error instanceof Error ? error : new Error(String(error)));
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

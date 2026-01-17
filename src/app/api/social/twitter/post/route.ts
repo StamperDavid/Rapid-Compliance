@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       rateLimitRemaining: result.rateLimitRemaining,
     });
   } catch (error: unknown) {
-    logger.error('Twitter Post API: Unexpected error', error as Error);
+    logger.error('Twitter Post API: Unexpected error', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/twitter/post' });
 
     return NextResponse.json(
       {
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
       user: userInfo,
     });
   } catch (error: unknown) {
-    logger.error('Twitter Post API: Status check failed', error as Error);
+    logger.error('Twitter Post API: Status check failed', error instanceof Error ? error : new Error(String(error)), { route: '/api/social/twitter/post' });
 
     return NextResponse.json(
       {

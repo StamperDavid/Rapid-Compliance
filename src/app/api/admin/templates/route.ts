@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
       count: options.length,
     });
   } catch (error) {
-    logger.error('Error listing templates', error instanceof Error ? error : undefined);
-    
+    logger.error('Error listing templates', error instanceof Error ? error : new Error(String(error)));
+
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
       templateId: validation.data.id,
     });
   } catch (error) {
-    logger.error('Error saving template', error instanceof Error ? error : undefined);
-    
+    logger.error('Error saving template', error instanceof Error ? error : new Error(String(error)));
+
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
@@ -149,8 +149,8 @@ export async function DELETE(request: NextRequest) {
       templateId,
     });
   } catch (error) {
-    logger.error('Error deleting template', error instanceof Error ? error : undefined);
-    
+    logger.error('Error deleting template', error instanceof Error ? error : new Error(String(error)));
+
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },

@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('Failed to list templates', error as Error);
-    
+    logger.error('Failed to list templates', error instanceof Error ? error : new Error(String(error)));
+
     return NextResponse.json({
       success: false,
       error: 'Failed to list templates',

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to apply discount code';
-    logger.error('Error applying discount', error instanceof Error ? error : undefined, { route: '/api/ecommerce/cart/discount' });
+    logger.error('Error applying discount', error instanceof Error ? error : new Error(String(error)), { route: '/api/ecommerce/cart/discount' });
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }
@@ -105,7 +105,7 @@ export async function DELETE(request: NextRequest) {
       cart,
     });
   } catch (error: unknown) {
-    logger.error('Error removing discount', error instanceof Error ? error : undefined, { route: '/api/ecommerce/cart/discount' });
+    logger.error('Error removing discount', error instanceof Error ? error : new Error(String(error)), { route: '/api/ecommerce/cart/discount' });
     return errors.database('Failed to remove discount', error instanceof Error ? error : undefined);
   }
 }

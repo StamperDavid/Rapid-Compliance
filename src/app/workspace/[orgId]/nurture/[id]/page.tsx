@@ -24,7 +24,7 @@ export default function EditNurtureCampaignPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/nurtureSequences`, campaignId);
       setCampaign(data);
     } catch (error) {
-      logger.error('Error loading campaign:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error loading campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ export default function EditNurtureCampaignPage() {
       await FirestoreService.update(`organizations/${orgId}/nurtureSequences`, campaignId, { ...campaign, updatedAt: Timestamp.now() });
       router.push(`/workspace/${orgId}/nurture`);
     } catch (error) {
-      logger.error('Error saving campaign:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error saving campaign:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to save campaign');
     } finally {
       setSaving(false);

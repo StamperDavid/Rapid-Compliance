@@ -52,7 +52,7 @@ export default function NewLeadPage() {
         setDuplicateResult(data.data);
       }
     } catch (error: unknown) {
-      logger.error('Error checking duplicates:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error checking duplicates:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setCheckingDuplicates(false);
     }
@@ -64,7 +64,7 @@ export default function NewLeadPage() {
       const quality = calculateLeadDataQuality(lead);
       setDataQuality(quality);
     } catch (error: unknown) {
-      logger.error('Error calculating quality:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error calculating quality:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
   };
 
@@ -95,7 +95,7 @@ export default function NewLeadPage() {
       
       router.push(`/workspace/${orgId}/leads`);
     } catch (error: unknown) {
-      logger.error('Error creating lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error creating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       alert('Failed to create lead');
     } finally {
       setSaving(false);
@@ -118,7 +118,7 @@ export default function NewLeadPage() {
         router.push(`/workspace/${orgId}/leads/${mergeId}`);
       }
     } catch (error: unknown) {
-      logger.error('Error merging:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
+      logger.error('Error merging:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     }
   };
 

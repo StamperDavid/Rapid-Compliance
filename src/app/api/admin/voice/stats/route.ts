@@ -167,8 +167,8 @@ export async function GET(request: NextRequest) {
         }
       } catch (dbError) {
         logger.warn('[AdminVoiceStats] Failed to fetch from Firestore, using mock data', {
-          error: dbError instanceof Error ? dbError.message : 'Unknown error',
           file: 'admin/voice/stats/route.ts',
+          error: dbError instanceof Error ? dbError.message : String(dbError),
         });
       }
     }
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
       isDemo: true,
     });
   } catch (error) {
-    logger.error('[AdminVoiceStats] GET failed', error instanceof Error ? error : undefined, {
+    logger.error('[AdminVoiceStats] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'admin/voice/stats/route.ts',
     });
 
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
           settings: defaultSettings,
         });
       } catch (dbError) {
-        logger.error('[AdminVoiceStats] Failed to save to Firestore', dbError instanceof Error ? dbError : undefined, {
+        logger.error('[AdminVoiceStats] Failed to save to Firestore', dbError instanceof Error ? dbError : new Error(String(dbError)), {
           file: 'admin/voice/stats/route.ts',
         });
 
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
       isDemo: true,
     });
   } catch (error) {
-    logger.error('[AdminVoiceStats] POST failed', error instanceof Error ? error : undefined, {
+    logger.error('[AdminVoiceStats] POST failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'admin/voice/stats/route.ts',
     });
 

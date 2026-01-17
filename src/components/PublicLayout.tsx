@@ -80,7 +80,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
 
       setChatMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      logger.error('Chat error:', error, { file: 'PublicLayout.tsx' });
+      logger.error('Chat error:', error instanceof Error ? error : new Error(String(error)), { file: 'PublicLayout.tsx' });
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',

@@ -86,9 +86,9 @@ export async function GET(request: NextRequest) {
     logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', orgId });
 
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?success=gmail'));
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Google OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/google/callback' });
+    logger.error('Google OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/google/callback' });
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=oauth_failed'));
   }
 }
