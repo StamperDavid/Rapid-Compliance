@@ -7,6 +7,50 @@ import Tooltip from '@/components/Tooltip';
 import type { Organization } from '@/types/organization'
 import { logger } from '@/lib/logger/logger';
 
+interface ApiOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  planLimits: unknown;
+  billingEmail: string;
+  branding?: Record<string, unknown>;
+  settings: unknown;
+  createdAt: string | number;
+  updatedAt: string | number;
+  createdBy: string;
+  status: string;
+  trialEndsAt?: string | number;
+  isTest?: boolean;
+}
+
+interface ApiResponse {
+  organizations?: ApiOrganization[];
+  pagination?: {
+    hasMore?: boolean;
+    nextCursor?: string | null;
+  };
+}
+
+interface ApiErrorResponse {
+  error?: string;
+}
+
+// Helper to safely convert various date formats to Date
+function toDate(value: unknown): Date {
+  if (!value) {return new Date();}
+  if (value instanceof Date) {return value;}
+  if (typeof value === 'string' || typeof value === 'number') {return new Date(value);}
+  // Handle Firestore Timestamp-like objects
+  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  if (typeof value === 'object' && value !== null && 'seconds' in value) {
+    return new Date((value as { seconds: number }).seconds * 1000);
+  }
+  return new Date();
+}
+
 export default function OrganizationsPage() {
   const { hasPermission } = useAdminAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -28,15 +72,15 @@ export default function OrganizationsPage() {
       const { auth } = await import('@/lib/firebase/config');
       
       if (!auth) {
-        logger.error('Firebase auth not initialized', { file: 'page.tsx' });
+        logger.error('Firebase auth not initialized', undefined, { file: 'page.tsx' });
         setAuthError('NOT_LOGGED_IN');
         setLoading(false);
         return;
       }
 
       const currentUser = auth.currentUser;
-      let orgs: any[] = [];
-      
+      let orgs: ApiOrganization[] = [];
+
       if (!currentUser) {
         logger.warn('🔍 No authenticated user', { file: 'page.tsx' });
         setAuthError('NOT_LOGGED_IN');
@@ -60,14 +104,14 @@ export default function OrganizationsPage() {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as ApiResponse;
         orgs = data.organizations ?? [];
         setHasMore(data.pagination?.hasMore ?? false);
         setNextCursor(data.pagination?.nextCursor ?? null);
-        logger.info('🔍 Organizations loaded via API', { 
-          count: orgs.length, 
-          hasMore: data.pagination?.hasMore,
-          file: 'page.tsx' 
+        logger.info('🔍 Organizations loaded via API', {
+          count: orgs.length,
+          hasMore: data.pagination?.hasMore ?? false,
+          file: 'page.tsx'
         });
       } else if (response.status === 403) {
         logger.error('🔍 Not authorized as super_admin', new Error('🔍 Not authorized as super_admin'), { file: 'page.tsx' });
@@ -79,39 +123,41 @@ export default function OrganizationsPage() {
         logger.error('🔍 API error', new Error(errorText), { status: response.status, file: 'page.tsx' });
       }
       
-      // Convert to Organization type
-      const organizations = orgs.map((org: any) => ({
+      // Convert to Organization type with proper type casting
+      const convertedOrgs: Organization[] = orgs.map((org) => ({
         id: org.id,
         name: org.name,
         slug: org.slug,
-        plan: org.plan,
-        planLimits: org.planLimits,
+        plan: org.plan === 'free' || org.plan === 'pro' || org.plan === 'enterprise' ? org.plan : 'free',
+        planLimits: org.planLimits as Organization['planLimits'],
         billingEmail: org.billingEmail,
-        branding: org.branding ?? {},
-        settings: org.settings,
-        createdAt: org.createdAt,
-        updatedAt: org.updatedAt,
+        branding: (org.branding ?? {}) as Organization['branding'],
+        settings: org.settings as Organization['settings'],
+        createdAt: org.createdAt as unknown as Organization['createdAt'],
+        updatedAt: org.updatedAt as unknown as Organization['updatedAt'],
         createdBy: org.createdBy,
-        status: org.status,
-        trialEndsAt: org.trialEndsAt,
+        status: org.status as Organization['status'],
+        trialEndsAt: org.trialEndsAt as unknown as Organization['trialEndsAt'],
         isTest: org.isTest ?? false,
       }));
-      
+
       if (append) {
-        setOrganizations(prev => [...prev, ...organizations]);
+        setOrganizations(prev => [...prev, ...convertedOrgs]);
       } else {
-        setOrganizations(organizations);
+        setOrganizations(convertedOrgs);
       }
       setLoading(false);
     } catch (error) {
-      logger.error('Failed to load organizations:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to load organizations:', err, { file: 'page.tsx' });
       setOrganizations([]);
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadOrganizations();
+    void loadOrganizations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredOrgs = organizations.filter(org => {
@@ -120,14 +166,14 @@ export default function OrganizationsPage() {
       (org.billingEmail || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || org.status === filterStatus;
     const matchesPlan = filterPlan === 'all' || org.plan === filterPlan;
-    const matchesTestFilter = showTestOrgs || !(org as any).isTest;
+    const matchesTestFilter = showTestOrgs || !(org.isTest ?? false);
     return matchesSearch && matchesStatus && matchesPlan && matchesTestFilter;
   });
 
   const handleNextPage = () => {
     if (hasMore && nextCursor) {
       setCurrentPage(prev => prev + 1);
-      loadOrganizations(nextCursor);
+      void loadOrganizations(nextCursor);
     }
   };
 
@@ -137,26 +183,29 @@ export default function OrganizationsPage() {
     // A more sophisticated solution would cache previous cursors
     if (currentPage > 1) {
       setCurrentPage(1);
-      loadOrganizations();
+      void loadOrganizations();
     }
   };
 
   const handleDeleteOrganization = async (orgId: string, orgName: string) => {
+    // eslint-disable-next-line no-alert
     if (!confirm(`Are you sure you want to DELETE "${orgName}"?\n\nThis will permanently delete:\n- The organization\n- All its workspaces\n- All its data\n- All its users\n\nThis action CANNOT be undone!`)) {
       return;
     }
 
     try {
       const { auth } = await import('@/lib/firebase/config');
-      
+
       if (!auth) {
+        // eslint-disable-next-line no-alert
         alert('Firebase auth not initialized');
         return;
       }
 
       const token = await auth.currentUser?.getIdToken();
-      
+
       if (!token) {
+        // eslint-disable-next-line no-alert
         alert('Not authenticated');
         return;
       }
@@ -169,15 +218,18 @@ export default function OrganizationsPage() {
       });
 
       if (response.ok) {
+        // eslint-disable-next-line no-alert
         alert(`Successfully deleted "${orgName}"`);
         // Reload organizations
-        loadOrganizations();
+        void loadOrganizations();
       } else {
-        const error = await response.json();
+        const error = await response.json() as ApiErrorResponse;
+        // eslint-disable-next-line no-alert
         alert(`Failed to delete organization: ${(error.error !== '' && error.error != null) ? error.error : 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Delete organization error:', error);
+      // eslint-disable-next-line no-alert
       alert('Error deleting organization');
     }
   };
@@ -286,7 +338,7 @@ export default function OrganizationsPage() {
         <Tooltip content="Filter organizations by their current status: Active (paid), Trial (free trial period), or Suspended">
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as any)}
+            onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'trial' | 'suspended')}
             style={{
               padding: '0.625rem 1rem',
               backgroundColor: bgPaper,
@@ -305,7 +357,7 @@ export default function OrganizationsPage() {
         <Tooltip content="Filter organizations by their subscription plan: Free, Pro ($99/month), or Enterprise ($499/month)">
           <select
             value={filterPlan}
-            onChange={(e) => setFilterPlan(e.target.value as any)}
+            onChange={(e) => setFilterPlan(e.target.value as 'all' | 'free' | 'pro' | 'enterprise')}
             style={{
               padding: '0.625rem 1rem',
               backgroundColor: bgPaper,
@@ -390,15 +442,15 @@ export default function OrganizationsPage() {
               </thead>
               <tbody>
                 {filteredOrgs.map((org) => (
-                  <tr key={org.id} style={{ 
+                  <tr key={org.id} style={{
                     borderBottom: `1px solid ${borderColor}`,
-                    backgroundColor: (org as any).isTest ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
+                    backgroundColor: (org.isTest ?? false) ? 'rgba(251, 191, 36, 0.05)' : 'transparent'
                   }}>
                     <td style={{ padding: '1rem' }}>
                       <div>
                         <div style={{ fontWeight: '600', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           {org.name}
-                          {(org as any).isTest && (
+                          {(org.isTest ?? false) && (
                             <span style={{
                               fontSize: '0.625rem',
                               padding: '0.125rem 0.375rem',
@@ -441,12 +493,12 @@ export default function OrganizationsPage() {
                       </span>
                       {org.trialEndsAt && (
                         <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
-                          Trial ends: {new Date(org.trialEndsAt as any).toLocaleDateString()}
+                          Trial ends: {toDate(org.trialEndsAt).toLocaleDateString()}
                         </div>
                       )}
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
-                      {new Date(org.createdAt as any).toLocaleDateString()}
+                      {toDate(org.createdAt).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#999' }}>
                       {org.billingEmail}
@@ -490,7 +542,7 @@ export default function OrganizationsPage() {
                         {hasPermission('canDeleteOrganizations') && (
                           <Tooltip content={`Delete ${org.name} permanently. This cannot be undone!`}>
                             <button
-                              onClick={() => handleDeleteOrganization(org.id, org.name)}
+                              onClick={() => void handleDeleteOrganization(org.id, org.name)}
                               style={{
                                 padding: '0.375rem 0.75rem',
                                 backgroundColor: 'transparent',

@@ -96,7 +96,8 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      logger.error('Chat error:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Chat error:', err, { file: 'page.tsx' });
       const fallbackMessage: ChatMessage = {
         id: `msg_${Date.now()}`,
         role: 'assistant',

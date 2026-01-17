@@ -6,6 +6,24 @@ import Link from 'next/link';
 import Tooltip from '@/components/Tooltip';
 import type { PlatformMetrics, SystemHealth } from '@/types/admin'
 import { logger } from '@/lib/logger/logger';
+import type { Timestamp } from 'firebase/firestore';
+
+// Define types for API responses
+interface Organization {
+  id: string;
+  status: 'active' | 'trial' | 'suspended';
+  plan: 'starter' | 'professional' | 'enterprise';
+  name: string;
+  createdAt: Date;
+}
+
+interface User {
+  id: string;
+  email: string;
+  role: string;
+  organizationId: string;
+  createdAt: Date;
+}
 
 export default function AdminDashboard() {
   useAdminAuth();
@@ -21,16 +39,16 @@ export default function AdminDashboard() {
         const { auth } = await import('@/lib/firebase/config');
         
         if (!auth) {
-          logger.error('Firebase auth not initialized', { file: 'page.tsx' });
+          logger.error('Firebase auth not initialized', new Error('Firebase auth not initialized'), { file: 'page.tsx' });
           return;
         }
 
         // Check auth state and get token
         const currentUser = auth.currentUser;
         logger.info('📊 Current auth user', { email: (currentUser?.email !== '' && currentUser?.email != null) ? currentUser.email : 'NOT LOGGED IN', file: 'page.tsx' });
-        
-        let orgs: any[] = [];
-        let users: any[] = [];
+
+        let orgs: Organization[] = [];
+        let users: User[] = [];
         
         if (currentUser) {
           // Use API routes to fetch data (bypasses Firestore rules)
@@ -47,7 +65,7 @@ export default function AdminDashboard() {
           ]);
           
           if (orgsResponse.ok) {
-            const data = await orgsResponse.json();
+            const data = await orgsResponse.json() as { organizations?: Organization[] };
             orgs = data.organizations ?? [];
             logger.info('📊 Organizations fetched via API', { count: orgs.length, file: 'page.tsx' });
           } else {
@@ -58,9 +76,9 @@ export default function AdminDashboard() {
               throw new Error('NOT_SUPER_ADMIN');
             }
           }
-          
+
           if (usersResponse.ok) {
-            const data = await usersResponse.json();
+            const data = await usersResponse.json() as { users?: User[] };
             users = data.users ?? [];
             logger.info('📊 Users fetched via API', { count: users.length, file: 'page.tsx' });
           } else {
@@ -73,9 +91,9 @@ export default function AdminDashboard() {
         
         // Calculate metrics from actual data
         const totalOrganizations = orgs.length;
-        const activeOrganizations = orgs.filter((o: any) => o.status === 'active').length;
-        const trialOrganizations = orgs.filter((o: any) => o.status === 'trial').length;
-        const suspendedOrganizations = orgs.filter((o: any) => o.status === 'suspended').length;
+        const activeOrganizations = orgs.filter((o) => o.status === 'active').length;
+        const trialOrganizations = orgs.filter((o) => o.status === 'trial').length;
+        const suspendedOrganizations = orgs.filter((o) => o.status === 'suspended').length;
         
         const totalUsers = users.length;
         
@@ -85,10 +103,10 @@ export default function AdminDashboard() {
           professional: 299,
           enterprise: 999,
         };
-        
+
         const mrr = orgs
-          .filter((o: any) => o.status === 'active')
-          .reduce((sum: number, o: any) => sum + (planPrices[o.plan] || 0), 0);
+          .filter((o) => o.status === 'active')
+          .reduce((sum: number, o) => sum + (planPrices[o.plan] || 0), 0);
         
         const arr = mrr * 12;
 
@@ -112,19 +130,19 @@ export default function AdminDashboard() {
           churnRate: 0, // Would need historical data
           growthRate: 0, // Would need historical data
           conversionRate: trialOrganizations > 0 ? (activeOrganizations / (activeOrganizations + trialOrganizations)) * 100 : 0,
-          updatedAt: new Date() as any,
+          updatedAt: new Date() as unknown as Timestamp,
         });
 
         setSystemHealth({
           status: 'healthy',
-          timestamp: new Date() as any,
+          timestamp: new Date() as unknown as Timestamp,
           services: {
-            database: { status: 'healthy', responseTime: 12, lastChecked: new Date() as any },
-            storage: { status: 'healthy', responseTime: 45, lastChecked: new Date() as any },
-            ai: { status: 'healthy', responseTime: 234, lastChecked: new Date() as any },
-            email: { status: 'healthy', responseTime: 89, lastChecked: new Date() as any },
-            sms: { status: 'healthy', responseTime: 156, lastChecked: new Date() as any },
-            api: { status: 'healthy', responseTime: 23, lastChecked: new Date() as any },
+            database: { status: 'healthy', responseTime: 12, lastChecked: new Date() as unknown as Timestamp },
+            storage: { status: 'healthy', responseTime: 45, lastChecked: new Date() as unknown as Timestamp },
+            ai: { status: 'healthy', responseTime: 234, lastChecked: new Date() as unknown as Timestamp },
+            email: { status: 'healthy', responseTime: 89, lastChecked: new Date() as unknown as Timestamp },
+            sms: { status: 'healthy', responseTime: 156, lastChecked: new Date() as unknown as Timestamp },
+            api: { status: 'healthy', responseTime: 23, lastChecked: new Date() as unknown as Timestamp },
           },
           performance: {
             averageResponseTime: 89,
@@ -136,16 +154,17 @@ export default function AdminDashboard() {
         });
 
         setLoading(false);
-      } catch (error: any) {
-        logger.error('❌ Failed to load dashboard data:', error, { file: 'page.tsx' });
-        
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error('Unknown error');
+        logger.error('❌ Failed to load dashboard data:', err, { file: 'page.tsx' });
+
         // Handle auth errors
-        if (error.message === 'NOT_LOGGED_IN') {
+        if (err.message === 'NOT_LOGGED_IN') {
           setAuthError('NOT_LOGGED_IN');
           setLoading(false);
           return;
         }
-        if (error.message === 'NOT_SUPER_ADMIN') {
+        if (err.message === 'NOT_SUPER_ADMIN') {
           setAuthError('NOT_SUPER_ADMIN');
           setLoading(false);
           return;
@@ -172,13 +191,13 @@ export default function AdminDashboard() {
           churnRate: 0,
           growthRate: 0,
           conversionRate: 0,
-          updatedAt: new Date() as any,
+          updatedAt: new Date() as unknown as Timestamp,
         });
         setLoading(false);
       }
     }
 
-    loadDashboardData();
+    void loadDashboardData();
   }, []);
 
   // Show auth error screen

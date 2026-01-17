@@ -59,10 +59,11 @@ export default function LoginPage() {
       // Redirect to workspace dashboard
       router.push(`/workspace/${orgId}/dashboard`);
     } catch (err) {
-      const error = err as FirebaseError;
+      const error = err instanceof Error ? err : new Error(String(err));
       logger.error('Login error:', error, { file: 'page.tsx' });
 
       // User-friendly error messages
+      const firebaseError = err as FirebaseError;
       const errorMessages: Record<string, string> = {
         'auth/user-not-found': 'No account found with this email.',
         'auth/wrong-password': 'Incorrect password.',
@@ -72,7 +73,7 @@ export default function LoginPage() {
         'auth/network-request-failed': 'Network error. Please check your connection.',
       };
 
-      setError(errorMessages[error.code] ?? error.message ?? 'Login failed');
+      setError(errorMessages[firebaseError.code] ?? firebaseError.message ?? 'Login failed');
     } finally {
       setLoading(false);
     }

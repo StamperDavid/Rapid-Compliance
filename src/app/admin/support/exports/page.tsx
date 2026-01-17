@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { BulkOperation } from '@/types/admin'
+import type { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
 export default function DataExportsPage() {
@@ -18,13 +19,13 @@ export default function DataExportsPage() {
       <div style={{ padding: '2rem', color: '#fff' }}>
         <div style={{ padding: '1.5rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', color: '#fff' }}>
           <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Access Denied</div>
-          <div style={{ fontSize: '0.875rem' }}>You don't have permission to export data.</div>
+          <div style={{ fontSize: '0.875rem' }}>You don&apos;t have permission to export data.</div>
         </div>
       </div>
     );
   }
 
-  const handleExport = async () => {
+  const handleExport = () => {
     setLoading(true);
     try {
       // In production, this would trigger a background job
@@ -37,25 +38,27 @@ export default function DataExportsPage() {
           organizationIds: selectedOrgs,
           format,
         },
+        format,
         totalItems: 0,
         processedItems: 0,
         successCount: 0,
         errorCount: 0,
         createdBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '',
-        createdAt: new Date() as any,
+        createdAt: new Date().toISOString() as unknown as Timestamp,
       };
       setExports([newExport, ...exports]);
-      
+
       // Simulate processing
       setTimeout(() => {
-        setExports(exports.map(e => 
-          e.id === newExport.id 
+        setExports(exports.map(e =>
+          e.id === newExport.id
             ? { ...e, status: 'completed', totalItems: 100, processedItems: 100, successCount: 100, downloadUrl: '/exports/export-123.json' }
             : e
         ));
       }, 2000);
     } catch (error) {
-      logger.error('Export failed:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Export failed:', err, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,7 @@ export default function DataExportsPage() {
             </label>
             <select
               value={exportType}
-              onChange={(e) => setExportType(e.target.value as any)}
+              onChange={(e) => setExportType(e.target.value as 'organizations' | 'users' | 'data' | 'audit')}
               style={{
                 width: '100%',
                 padding: '0.625rem 1rem',
@@ -117,7 +120,7 @@ export default function DataExportsPage() {
                     type="radio"
                     value={fmt}
                     checked={format === fmt}
-                    onChange={(e) => setFormat(e.target.value as any)}
+                    onChange={(e) => setFormat(e.target.value as 'json' | 'csv' | 'xlsx')}
                     style={{ cursor: 'pointer' }}
                   />
                   <span style={{ fontSize: '0.875rem', textTransform: 'uppercase' }}>{fmt}</span>
@@ -192,10 +195,10 @@ export default function DataExportsPage() {
               >
                 <div>
                   <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>
-                    {exp.resourceType} Export ({((exp as any).format !== '' && (exp as any).format != null) ? (exp as any).format : 'json'})
+                    {exp.resourceType} Export ({exp.format ?? 'json'})
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                    Created: {new Date(exp.createdAt as any).toLocaleString()}
+                    Created: {new Date(exp.createdAt as unknown as string).toLocaleString()}
                   </div>
                   {exp.status === 'processing' && (
                     <div style={{ fontSize: '0.875rem', color: '#f59e0b', marginTop: '0.25rem' }}>

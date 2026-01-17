@@ -4,15 +4,27 @@ import React, { useState, useEffect } from 'react';
 
 import { useAuth } from '@/hooks/useAuth'
 import { logger } from '@/lib/logger/logger';
+import type { PlanDetails } from '@/types/subscription';
+
+interface PlanLimits {
+  agents?: number | null;
+  conversationsPerMonth?: number | null;
+  crmRecords?: number | null;
+  users?: number | null;
+  workspaces?: number | null;
+  apiCallsPerMonth?: number | null;
+  storageGB?: number | null;
+  [key: string]: number | null | undefined;
+}
 
 export default function SubscriptionsAdminPage() {
   useAuth();
-  const [plans, setPlans] = useState<any[]>([]);
+  const [plans, setPlans] = useState<PlanDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [editingPlan, setEditingPlan] = useState<PlanDetails | null>(null);
 
   useEffect(() => {
-    loadPlans();
+    void loadPlans();
   }, []);
 
   const loadPlans = async () => {
@@ -22,7 +34,8 @@ export default function SubscriptionsAdminPage() {
       const plansData = await getAllPlans();
       setPlans(plansData);
     } catch (error) {
-      logger.error('Failed to load plans:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to load plans:', err, { file: 'page.tsx' });
     } finally {
       setIsLoading(false);
     }
@@ -30,21 +43,24 @@ export default function SubscriptionsAdminPage() {
 
   const handleSavePlan = async () => {
     if (!editingPlan) {return;}
-    
+
     try {
       const { savePlan } = await import('@/lib/admin/subscription-manager');
       await savePlan(editingPlan);
       await loadPlans();
       setEditingPlan(null);
+      // eslint-disable-next-line no-alert
       alert('Plan saved successfully!');
     } catch (error) {
-      logger.error('Failed to save plan:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to save plan:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
       alert('Failed to save plan');
     }
   };
 
   const handleCreatePlan = () => {
-    setEditingPlan({
+    const newPlan: PlanDetails = {
       id: `plan_${Date.now()}`,
       name: '',
       description: '',
@@ -64,7 +80,8 @@ export default function SubscriptionsAdminPage() {
       displayOrder: plans.length,
       isPopular: false,
       isActive: true,
-    });
+    };
+    setEditingPlan(newPlan);
   };
 
   const bgPaper = '#1a1a1a';
@@ -174,13 +191,13 @@ export default function SubscriptionsAdminPage() {
 
               <div style={{ marginBottom: '1rem' }}>
                 <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Limits:</div>
-                {Object.entries(plan.limits).map(([key, value]) => (
+                {Object.entries(plan.limits as PlanLimits).map(([key, value]) => (
                   <div key={key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
                     <span style={{ color: '#999', textTransform: 'capitalize' }}>
                       {key.replace(/([A-Z])/g, ' $1').trim()}:
                     </span>
                     <span style={{ color: '#fff', fontWeight: '600' }}>
-                      {value === null ? 'Unlimited' : (value as number).toLocaleString()}
+                      {value === null || value === undefined ? 'Unlimited' : value.toLocaleString()}
                     </span>
                   </div>
                 ))}
@@ -250,7 +267,7 @@ export default function SubscriptionsAdminPage() {
               padding: '1.5rem'
             }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#fff', margin: 0 }}>
-                {editingPlan.id.startsWith('plan_') ? 'Create Plan' : 'Edit Plan'}
+                {String(editingPlan.id).startsWith('plan_') ? 'Create Plan' : 'Edit Plan'}
               </h2>
             </div>
 
@@ -261,7 +278,7 @@ export default function SubscriptionsAdminPage() {
                 </label>
                 <input
                   type="text"
-                  value={editingPlan.name}
+                  value={editingPlan.name ?? ''}
                   onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
                   style={{
                     width: '100%',
@@ -281,7 +298,7 @@ export default function SubscriptionsAdminPage() {
                   Description
                 </label>
                 <textarea
-                  value={editingPlan.description}
+                  value={editingPlan.description ?? ''}
                   onChange={(e) => setEditingPlan({ ...editingPlan, description: e.target.value })}
                   style={{
                     width: '100%',
@@ -305,7 +322,7 @@ export default function SubscriptionsAdminPage() {
                   <input
                     type="number"
                     value={editingPlan.monthlyPrice ?? ''}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, monthlyPrice: parseFloat(e.target.value) ?? null })}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, monthlyPrice: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
                     style={{
                       width: '100%',
                       padding: '0.625rem',
@@ -325,7 +342,7 @@ export default function SubscriptionsAdminPage() {
                   <input
                     type="number"
                     value={editingPlan.yearlyPrice ?? ''}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, yearlyPrice: parseFloat(e.target.value) ?? null })}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, yearlyPrice: e.target.value === '' ? undefined : parseFloat(e.target.value) })}
                     style={{
                       width: '100%',
                       padding: '0.625rem',
@@ -343,21 +360,24 @@ export default function SubscriptionsAdminPage() {
               <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: '1rem', marginBottom: '1rem' }}>
                 <h3 style={{ color: '#fff', fontWeight: '600', marginBottom: '1rem', fontSize: '1rem' }}>Plan Limits</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  {Object.entries(editingPlan.limits).map(([key, value]) => (
+                  {Object.entries(editingPlan.limits as PlanLimits).map(([key, value]) => (
                     <div key={key}>
                       <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
                         {key.replace(/([A-Z])/g, ' $1').trim()}
                       </label>
                       <input
                         type="number"
-                        value={value === null ? '' : (value as number | string)}
-                        onChange={(e) => setEditingPlan({
-                          ...editingPlan,
-                          limits: {
-                            ...editingPlan.limits,
-                            [key]: e.target.value === '' ? null : parseInt(e.target.value)
-                          }
-                        })}
+                        value={value === null || value === undefined ? '' : String(value)}
+                        onChange={(e) => {
+                          const limits = editingPlan.limits as PlanLimits;
+                          setEditingPlan({
+                            ...editingPlan,
+                            limits: {
+                              ...limits,
+                              [key]: e.target.value === '' ? null : parseInt(e.target.value, 10)
+                            }
+                          });
+                        }}
                         style={{
                           width: '100%',
                           padding: '0.625rem',
@@ -378,7 +398,7 @@ export default function SubscriptionsAdminPage() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    checked={editingPlan.isPopular}
+                    checked={editingPlan.isPopular ?? false}
                     onChange={(e) => setEditingPlan({ ...editingPlan, isPopular: e.target.checked })}
                     style={{ width: '1rem', height: '1rem' }}
                   />
@@ -387,7 +407,7 @@ export default function SubscriptionsAdminPage() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    checked={editingPlan.isActive}
+                    checked={editingPlan.isActive ?? false}
                     onChange={(e) => setEditingPlan({ ...editingPlan, isActive: e.target.checked })}
                     style={{ width: '1rem', height: '1rem' }}
                   />
@@ -421,7 +441,7 @@ export default function SubscriptionsAdminPage() {
                 Cancel
               </button>
               <button
-                onClick={handleSavePlan}
+                onClick={() => { void handleSavePlan(); }}
                 style={{
                   padding: '0.625rem 1.5rem',
                   backgroundColor: primaryColor,

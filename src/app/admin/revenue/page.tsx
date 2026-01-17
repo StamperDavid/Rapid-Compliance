@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import type { RevenueMetrics } from '@/types/subscription'
 import { logger } from '@/lib/logger/logger';
@@ -13,11 +13,7 @@ export default function RevenueAdminPage() {
     endDate: new Date().toISOString().split('T')[0],
   });
 
-  useEffect(() => {
-    loadMetrics();
-  }, [dateRange]);
-
-  const loadMetrics = async () => {
+  const loadMetrics = useCallback(async () => {
     setIsLoading(true);
     try {
       const { calculateRevenueMetrics } = await import('@/lib/admin/subscription-manager');
@@ -25,7 +21,7 @@ export default function RevenueAdminPage() {
         dateRange.startDate,
         dateRange.endDate
       );
-      
+
       // Ensure all numeric fields have default values to prevent .toFixed() crashes
       if (metricsData) {
         metricsData.mrr = metricsData.mrr ?? 0;
@@ -41,16 +37,21 @@ export default function RevenueAdminPage() {
         metricsData.averageRevenuePerCustomer = metricsData.averageRevenuePerCustomer ?? 0;
         metricsData.revenueByPlan = metricsData.revenueByPlan ?? [];
       }
-      
+
       setMetrics(metricsData);
     } catch (error) {
-      logger.error('Failed to load metrics:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to load metrics:', err, { file: 'page.tsx' });
       // Set empty metrics instead of null to show "No data" state
       setMetrics(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateRange.startDate, dateRange.endDate]);
+
+  useEffect(() => {
+    void loadMetrics();
+  }, [loadMetrics]);
 
   const bgPaper = '#1a1a1a';
   const borderColor = '#333';

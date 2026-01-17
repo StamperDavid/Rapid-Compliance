@@ -5,6 +5,97 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link'
 import { logger } from '@/lib/logger/logger';
 
+// Type definitions
+interface Theme {
+  colors?: {
+    primary?: {
+      main?: string;
+    };
+  };
+}
+
+interface Product {
+  name: string;
+  price: string;
+  description: string;
+}
+
+interface BaseModel {
+  id: string;
+  orgId: string;
+  name: string;
+  businessName: string;
+  industry: string;
+  objectives: string[];
+  products: Product[];
+  uniqueValue: string;
+  typicalSalesFlow: string;
+  status: string;
+  systemPrompt: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface GoldenMaster {
+  id: string;
+  version: number;
+  name: string;
+  trainingScore: number;
+  status: string;
+  isActive: boolean;
+  deployedAt?: Date | string;
+  trainedScenarios: string[];
+  baseModelId: string;
+  createdAt: Date | string;
+  notes?: string;
+  updatedAt?: string;
+}
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'agent';
+  content: string;
+  timestamp: string;
+  canGiveFeedback?: boolean;
+  hasFeedback?: boolean;
+  feedbackType?: 'correct' | 'incorrect' | 'could-improve';
+}
+
+interface TrainingMaterial {
+  id: string;
+  filename: string;
+  type: string;
+  size: number;
+  uploadedAt: Date;
+  status: string;
+}
+
+interface TrainingSession {
+  id: string;
+  topic: string;
+  messageCount: number;
+  score: number;
+  timestamp: Date;
+}
+
+interface SalesCriteria {
+  objectionHandling: number;
+  productKnowledge: number;
+  toneAndProfessionalism: number;
+  closingSkills: number;
+  discoveryQuestions: number;
+  empathyAndRapport: number;
+}
+
+interface CriteriaExplanations {
+  objectionHandling: string;
+  productKnowledge: string;
+  toneAndProfessionalism: string;
+  closingSkills: string;
+  discoveryQuestions: string;
+  empathyAndRapport: string;
+}
+
 /**
  * Admin Platform Sales Agent Training Center
  * This is the platform's own training center for the sales agent that sells the CRM
@@ -15,31 +106,31 @@ export default function AdminSalesAgentTrainingPage() {
 
   // Platform admin uses a special org ID for its own data
   const orgId = 'platform-admin';
-  
+
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<any>(null);
+  const [theme, setTheme] = useState<Theme | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden'>('chat');
-  
+
   // Base Model & Golden Master states
-  const [baseModel, setBaseModel] = useState<any>(null);
-  const [goldenMasters, setGoldenMasters] = useState<any[]>([]);
-  const [_activeGoldenMaster, setActiveGoldenMaster] = useState<any>(null);
-  
+  const [baseModel, setBaseModel] = useState<BaseModel | null>(null);
+  const [goldenMasters, setGoldenMasters] = useState<GoldenMaster[]>([]);
+  const [_activeGoldenMaster, setActiveGoldenMaster] = useState<GoldenMaster | null>(null);
+
   // Training chat states
   const [trainingTopic, setTrainingTopic] = useState('');
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  
+
   // Feedback states
   const [feedbackMode, setFeedbackMode] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [feedbackType, setFeedbackType] = useState<'correct' | 'incorrect' | 'could-improve'>('correct');
   const [feedbackWhy, setFeedbackWhy] = useState('');
   const [betterResponse, setBetterResponse] = useState('');
-  
+
   // Sales criteria scoring
-  const [salesCriteria, setSalesCriteria] = useState({
+  const [salesCriteria, setSalesCriteria] = useState<SalesCriteria>({
     objectionHandling: 5,
     productKnowledge: 5,
     toneAndProfessionalism: 5,
@@ -47,7 +138,7 @@ export default function AdminSalesAgentTrainingPage() {
     discoveryQuestions: 5,
     empathyAndRapport: 5
   });
-  const [criteriaExplanations, setCriteriaExplanations] = useState({
+  const [criteriaExplanations, setCriteriaExplanations] = useState<CriteriaExplanations>({
     objectionHandling: '',
     productKnowledge: '',
     toneAndProfessionalism: '',
@@ -56,13 +147,13 @@ export default function AdminSalesAgentTrainingPage() {
     empathyAndRapport: ''
   });
   const [_sessionNotes, setSessionNotes] = useState('');
-  
+
   // Training materials states
-  const [uploadedMaterials, setUploadedMaterials] = useState<any[]>([]);
+  const [uploadedMaterials, setUploadedMaterials] = useState<TrainingMaterial[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // Training history
-  const [trainingHistory, setTrainingHistory] = useState<any[]>([]);
+  const [trainingHistory, setTrainingHistory] = useState<TrainingSession[]>([]);
   const [overallScore, setOverallScore] = useState(0);
   
   // Custom criteria management
@@ -83,63 +174,81 @@ export default function AdminSalesAgentTrainingPage() {
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme) {
       try {
-        setTheme(JSON.parse(savedTheme));
+        setTheme(JSON.parse(savedTheme) as Theme);
       } catch (error) {
-        logger.error('Failed to load theme:', error, { file: 'page.tsx' });
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Failed to load theme:', err, { file: 'page.tsx' });
       }
     }
     loadTrainingData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
+  // Gemini-compatible message format
+  interface GeminiMessage {
+    role: 'user' | 'model' | 'system';
+    parts: Array<{ text: string }>;
+  }
+
   // Unified AI provider caller
-  const callAIProvider = async (conversationHistory: any[], systemPrompt: string) => {
+  const callAIProvider = async (
+    conversationHistory: GeminiMessage[],
+    systemPrompt: string
+  ): Promise<{ text: string }> => {
     try {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
-      
+      const rawAdminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+      const adminKeys = rawAdminKeys as { openrouter?: { apiKey?: string } } | null;
+
       if (adminKeys?.openrouter?.apiKey) {
         const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
         const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
-        
+
         const messages = [
           { role: 'system' as const, content: systemPrompt },
           ...conversationHistory.map(msg => ({
             role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
-            content: msg.parts[0].text
+            content: msg.parts[0]?.text ?? ''
           }))
         ];
-        
+
         const response = await provider.chat({
-          model: 'anthropic/claude-3.5-sonnet' as any,
+          model: 'openrouter/anthropic/claude-3.5-sonnet',
           messages,
           temperature: 0.7,
         });
-        
+
         return { text: response.content };
       }
-      
+
       const { sendChatMessage } = await import('@/lib/ai/gemini-service');
-      return await sendChatMessage(conversationHistory as any, systemPrompt);
-      
-    } catch (error: any) {
-      logger.error('Error calling AI provider:', error, { file: 'page.tsx' });
-      throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to get AI response');
+      const result = await sendChatMessage(
+        conversationHistory,
+        systemPrompt
+      );
+      return result;
+
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Error calling AI provider:', err, { file: 'page.tsx' });
+      throw new Error(err.message || 'Failed to get AI response');
     }
   };
 
-  const loadTrainingData = async () => {
+  const loadTrainingData = () => {
     try {
       setLoading(true);
-      
+
       // For platform admin, always load demo/platform data
       loadPlatformData();
-      
+
     } catch (error) {
-      logger.error('Error loading training data:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Error loading training data:', err, { file: 'page.tsx' });
       loadPlatformData();
     } finally {
       setLoading(false);
@@ -226,7 +335,11 @@ Always be helpful, professional, and focused on understanding the prospect's nee
       version: 1,
       name: 'Platform Sales Agent v1',
       trainingScore: 85,
-      status: 'active'
+      status: 'active',
+      isActive: true,
+      trainedScenarios: ['pricing', 'competitors', 'demo-request'],
+      baseModelId: 'platform-sales-agent-base',
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     });
 
     setUploadedMaterials([
@@ -293,54 +406,55 @@ Always be helpful, professional, and focused on understanding the prospect's nee
 
   const handleSendMessage = async () => {
     if (!userInput.trim() || !baseModel) {return;}
-    
-    const userMessage = {
+
+    const userMessage: ChatMessage = {
       id: `msg_${Date.now()}`,
       role: 'user',
       content: userInput.trim(),
       timestamp: new Date().toISOString(),
     };
-    
+
     setChatMessages(prev => [...prev, userMessage]);
     setUserInput('');
     setIsTyping(true);
-    
+
     try {
       let systemPrompt = baseModel.systemPrompt;
       systemPrompt += `\n\n## TRAINING MODE\nYou are in training mode. The topic being practiced: ${trainingTopic || 'General sales conversation'}.\nRespond naturally and professionally as you would to a real customer.\n`;
-      
-      const conversationHistory = chatMessages.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
+
+      const conversationHistory: GeminiMessage[] = chatMessages.map(msg => ({
+        role: msg.role === 'user' ? ('user' as const) : ('model' as const),
         parts: [{ text: msg.content }]
       }));
-      
+
       conversationHistory.push({
-        role: 'user',
+        role: 'user' as const,
         parts: [{ text: userMessage.content }]
       });
-      
+
       const response = await callAIProvider(conversationHistory, systemPrompt);
       
-      const agentMessage = {
+      const agentMessage: ChatMessage = {
         id: `msg_${Date.now()}_agent`,
         role: 'agent',
         content: response.text,
         timestamp: new Date().toISOString(),
         canGiveFeedback: true,
       };
-      
+
       setChatMessages(prev => [...prev, agentMessage]);
-      
-    } catch (error: any) {
-      logger.error('Error sending message:', error, { file: 'page.tsx' });
+
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Error sending message:', err, { file: 'page.tsx' });
       
       // Fallback response for demo purposes
-      const fallbackMessage = {
+      const fallbackMessage: ChatMessage = {
         id: `msg_${Date.now()}_agent`,
         role: 'agent',
-        content: `Thank you for your interest! I'd be happy to help you learn more about our AI Sales Platform. 
+        content: `Thank you for your interest! I'd be happy to help you learn more about our AI Sales Platform.
 
-Based on your question, I can see you're interested in ${trainingTopic || 'our platform'}. 
+Based on your question, I can see you're interested in ${trainingTopic || 'our platform'}.
 
 Our solution helps businesses like yours automate their sales process with AI agents that never sleep, never forget, and scale infinitely.
 
@@ -348,7 +462,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
         timestamp: new Date().toISOString(),
         canGiveFeedback: true,
       };
-      
+
       setChatMessages(prev => [...prev, fallbackMessage]);
     } finally {
       setIsTyping(false);
@@ -363,43 +477,47 @@ Would you like me to walk you through a specific feature, or would you prefer to
     setBetterResponse('');
   };
 
-  const handleSubmitFeedback = async () => {
+  const handleSubmitFeedback = () => {
     if (!feedbackWhy.trim()) {
-      alert(`Please explain WHY this response is ${  feedbackType}`);
+      // eslint-disable-next-line no-alert
+      alert(`Please explain WHY this response is ${feedbackType}`);
       return;
     }
-    
+
     if (feedbackType !== 'correct' && !betterResponse.trim()) {
+      // eslint-disable-next-line no-alert
       alert('Please provide a better response or guidance on how to improve.');
       return;
     }
-    
+
     // Mark message as having feedback
-    setChatMessages(prev => prev.map(msg => 
-      msg.id === selectedMessageId 
-        ? { ...msg, hasFeedback: true, feedbackType } 
+    setChatMessages(prev => prev.map(msg =>
+      msg.id === selectedMessageId
+        ? { ...msg, hasFeedback: true, feedbackType }
         : msg
     ));
-    
+
+    // eslint-disable-next-line no-alert
     alert('✅ Feedback saved! This will help improve your AI agent.');
-    
+
     setFeedbackMode(false);
     setSelectedMessageId(null);
     setFeedbackWhy('');
     setBetterResponse('');
   };
 
-  const submitSalesCriteriaScoring = async () => {
+  const submitSalesCriteriaScoring = () => {
     if (!trainingTopic.trim()) {
+      // eslint-disable-next-line no-alert
       alert('Please select or enter a training topic first.');
       return;
     }
 
-    const criteriaKeys = Object.keys(salesCriteria) as Array<keyof typeof salesCriteria>;
-    const missingExplanations = criteriaKeys.filter(key => 
+    const criteriaKeys = Object.keys(salesCriteria) as Array<keyof SalesCriteria>;
+    const missingExplanations = criteriaKeys.filter(key =>
       salesCriteria[key] < 7 && !criteriaExplanations[key].trim()
     );
-    
+
     if (missingExplanations.length > 0) {
       const labels: Record<string, string> = {
         objectionHandling: 'Objection Handling',
@@ -409,30 +527,31 @@ Would you like me to walk you through a specific feature, or would you prefer to
         discoveryQuestions: 'Discovery Questions',
         empathyAndRapport: 'Empathy & Rapport'
       };
-      
+
+      // eslint-disable-next-line no-alert
       alert(`⚠️ Please explain low scores (< 7/10):\n\n${missingExplanations.map(key => `• ${labels[key]}: ${salesCriteria[key]}/10`).join('\n')}\n\nThe AI needs this context to learn and improve!`);
       return;
     }
 
-    const criteriaScores = Object.values(salesCriteria);
+    const criteriaScores = criteriaKeys.map(key => salesCriteria[key]);
     const avgScore = Math.round((criteriaScores.reduce((sum, score) => sum + score, 0) / criteriaScores.length) * 10);
-    
+
     // Add to training history
-    setTrainingHistory(prev => [
-      {
-        id: `session_${Date.now()}`,
-        topic: trainingTopic,
-        messageCount: chatMessages.length,
-        score: avgScore,
-        timestamp: new Date()
-      },
-      ...prev
-    ]);
-    
+    const newSession: TrainingSession = {
+      id: `session_${Date.now()}`,
+      topic: trainingTopic,
+      messageCount: chatMessages.length,
+      score: avgScore,
+      timestamp: new Date()
+    };
+
+    setTrainingHistory(prev => [newSession, ...prev]);
+
     setOverallScore(Math.round((overallScore + avgScore) / 2));
-    
+
+    // eslint-disable-next-line no-alert
     alert(`✅ Training Session Scored!\n\nOverall Score: ${avgScore}/100\n\nYour detailed feedback will help the AI learn and improve!`);
-    
+
     // Reset for next session
     setTrainingTopic('');
     setChatMessages([]);
@@ -455,12 +574,12 @@ Would you like me to walk you through a specific feature, or would you prefer to
     setSessionNotes('');
   };
 
-  const handleUploadMaterial = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadMaterial = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) {return;}
-    
+
     setIsUploading(true);
-    
+
     // Simulate upload
     setTimeout(() => {
       for (const file of Array.from(files)) {
@@ -473,10 +592,11 @@ Would you like me to walk you through a specific feature, or would you prefer to
           status: 'processed'
         }]);
       }
-      
+
+      // eslint-disable-next-line no-alert
       alert(`✅ ${files.length} training material(s) uploaded successfully!`);
       setIsUploading(false);
-      
+
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -485,30 +605,33 @@ Would you like me to walk you through a specific feature, or would you prefer to
 
   const handleSaveGoldenMaster = async () => {
     if (overallScore < 80) {
+      // eslint-disable-next-line no-alert
       alert(`⚠️ Training score too low!\n\nCurrent score: ${overallScore}%\nRequired: 80%+\n\nContinue training your agent with more scenarios and feedback.`);
       return;
     }
-    
+
+    // eslint-disable-next-line no-alert
     const notes = prompt('Optional: Add notes about this Golden Master version');
-    
+
+    if (!baseModel) {
+      return;
+    }
+
     const newVersion = goldenMasters.length + 1;
     const now = new Date();
-    const newGM = {
+    const newGM: GoldenMaster = {
       id: `gm-platform-${newVersion}`,
       version: newVersion,
       name: `Platform Sales Agent v${newVersion}`,
       trainingScore: overallScore,
       status: 'ready',
       isActive: false,
-      trainedScenarios: trainingHistory.map((h: any) => h.topic),
+      trainedScenarios: trainingHistory.map(h => h.topic),
       baseModelId: baseModel.id,
       notes: notes ?? undefined,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-      // Spread the base model fields at top level for instance manager
-      ...baseModel
+      createdAt: now.toISOString()
     };
-    
+
     try {
       // Save to Firestore
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -520,15 +643,19 @@ Would you like me to walk you through a specific feature, or would you prefer to
       );
 
       setGoldenMasters(prev => [...prev, newGM]);
+      // eslint-disable-next-line no-alert
       alert(`✅ Golden Master v${newVersion} Created and saved to Firestore!\n\nYour trained AI agent is ready to deploy.`);
       setActiveTab('golden');
-    } catch (error: any) {
-      logger.error('Error saving golden master:', error, { file: 'page.tsx' });
-      alert(`❌ Error saving Golden Master: ${error.message}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Error saving golden master:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      alert(`❌ Error saving Golden Master: ${err.message}`);
     }
   };
 
   const handleDeployGoldenMaster = async (gmId: string, version: number) => {
+    // eslint-disable-next-line no-alert
     if (!confirm(`Deploy Golden Master v${version} to production?`)) {return;}
 
     try {
@@ -560,12 +687,16 @@ Would you like me to walk you through a specific feature, or would you prefer to
         deployedAt: gm.id === gmId ? now.toISOString() : gm.deployedAt
       })));
 
-      setActiveGoldenMaster(goldenMasters.find(gm => gm.id === gmId));
+      const activatedMaster = goldenMasters.find(gm => gm.id === gmId);
+      setActiveGoldenMaster(activatedMaster ?? null);
 
+      // eslint-disable-next-line no-alert
       alert(`✅ Golden Master v${version} is now LIVE in Firestore!`);
-    } catch (error: any) {
-      logger.error('Error deploying golden master:', error, { file: 'page.tsx' });
-      alert(`❌ Error deploying: ${error.message}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Error deploying golden master:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      alert(`❌ Error deploying: ${err.message}`);
     }
   };
 
@@ -614,7 +745,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
           🎓 Platform Sales Agent Training Center
         </h1>
         <p style={{ color: '#666', fontSize: '0.875rem' }}>
-          Train your platform's sales agent through conversations, feedback, and scoring
+          Train your platform&apos;s sales agent through conversations, feedback, and scoring
         </p>
       </div>
 
@@ -640,10 +771,10 @@ Would you like me to walk you through a specific feature, or would you prefer to
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', borderBottom: '1px solid #333', paddingBottom: '1rem' }}>
-        {['chat', 'materials', 'history', 'golden'].map(tab => (
+        {(['chat', 'materials', 'history', 'golden'] as const).map(tab => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab)}
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: activeTab === tab ? primaryColor : 'transparent',
@@ -716,47 +847,56 @@ Would you like me to walk you through a specific feature, or would you prefer to
                 </div>
               )}
               
-              {chatMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  style={{
-                    marginBottom: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
-                  }}
-                >
-                  <div style={{
-                    maxWidth: '80%',
-                    padding: '0.75rem 1rem',
-                    backgroundColor: msg.role === 'user' ? primaryColor : '#1a1a1a',
-                    borderRadius: '0.75rem',
-                    fontSize: '0.875rem',
-                    lineHeight: '1.5'
-                  }}>
-                    {msg.content}
+              {chatMessages.map((msg) => {
+                const msgId = msg.id;
+                const msgRole = msg.role;
+                const msgContent = msg.content;
+                const msgCanGiveFeedback = msg.canGiveFeedback;
+                const msgHasFeedback = msg.hasFeedback;
+                const msgFeedbackType = msg.feedbackType;
+
+                return (
+                  <div
+                    key={msgId}
+                    style={{
+                      marginBottom: '1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: msgRole === 'user' ? 'flex-end' : 'flex-start'
+                    }}
+                  >
+                    <div style={{
+                      maxWidth: '80%',
+                      padding: '0.75rem 1rem',
+                      backgroundColor: msgRole === 'user' ? primaryColor : '#1a1a1a',
+                      borderRadius: '0.75rem',
+                      fontSize: '0.875rem',
+                      lineHeight: '1.5'
+                    }}>
+                      {msgContent}
+                    </div>
+
+                    {msgCanGiveFeedback && msgRole === 'agent' && (
+                      <button
+                        onClick={() => handleGiveFeedback(msgId)}
+                        disabled={msgHasFeedback}
+                        style={{
+                          marginTop: '0.5rem',
+                          padding: '0.25rem 0.75rem',
+                          backgroundColor: msgHasFeedback ? '#0a0a0a' : '#1a1a1a',
+                          border: '1px solid #333',
+                          borderRadius: '0.25rem',
+                          color: msgHasFeedback ? '#666' : '#999',
+                          cursor: msgHasFeedback ? 'default' : 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        {msgHasFeedback ? (msgFeedbackType === 'correct' ? '✅ Good' : '⚠️ Feedback given') : '💬 Give Feedback'}
+                      </button>
+                    )}
                   </div>
-                  
-                  {msg.canGiveFeedback && msg.role === 'agent' && (
-                    <button
-                      onClick={() => handleGiveFeedback(msg.id)}
-                      disabled={msg.hasFeedback}
-                      style={{
-                        marginTop: '0.5rem',
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: msg.hasFeedback ? '#0a0a0a' : '#1a1a1a',
-                        border: '1px solid #333',
-                        borderRadius: '0.25rem',
-                        color: msg.hasFeedback ? '#666' : '#999',
-                        cursor: msg.hasFeedback ? 'default' : 'pointer',
-                        fontSize: '0.75rem'
-                      }}
-                    >
-                      {msg.hasFeedback ? (msg.feedbackType === 'correct' ? '✅ Good' : '⚠️ Feedback given') : '💬 Give Feedback'}
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
               
               {isTyping && (
                 <div style={{ padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.75rem', display: 'inline-block' }}>
@@ -813,46 +953,56 @@ Would you like me to walk you through a specific feature, or would you prefer to
             <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem' }}>📊 Score This Session</h3>
             
             <div style={{ maxHeight: '350px', overflowY: 'auto', marginBottom: '1rem' }}>
-              {customCriteria.map(({ key, label, icon }) => (
-                <div key={key} style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#999' }}>{icon} {label}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: salesCriteria[key as keyof typeof salesCriteria] >= 7 ? '#10b981' : '#fbbf24' }}>
-                      {salesCriteria[key as keyof typeof salesCriteria]}/10
-                    </span>
+              {customCriteria.map(({ key, label, icon }) => {
+                const criteriaKey = key as keyof SalesCriteria;
+                const criteriaValue = salesCriteria[criteriaKey];
+                const explanationValue = criteriaExplanations[criteriaKey];
+
+                return (
+                  <div key={key} style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#999' }}>{icon} {label}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: criteriaValue >= 7 ? '#10b981' : '#fbbf24' }}>
+                        {criteriaValue}/10
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={criteriaValue}
+                      onChange={(e) => setSalesCriteria(prev => ({ ...prev, [criteriaKey]: parseInt(e.target.value) }))}
+                      style={{ width: '100%', marginBottom: '0.5rem' }}
+                    />
+                    <textarea
+                      value={explanationValue}
+                      onChange={(e) => setCriteriaExplanations(prev => ({ ...prev, [criteriaKey]: e.target.value }))}
+                      placeholder="Why this score?"
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '0.25rem',
+                        color: '#fff',
+                        fontSize: '0.7rem',
+                        minHeight: '40px',
+                        resize: 'vertical'
+                      }}
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={salesCriteria[key as keyof typeof salesCriteria]}
-                    onChange={(e) => setSalesCriteria(prev => ({ ...prev, [key]: parseInt(e.target.value) }))}
-                    style={{ width: '100%', marginBottom: '0.5rem' }}
-                  />
-                  <textarea
-                    value={criteriaExplanations[key as keyof typeof criteriaExplanations]}
-                    onChange={(e) => setCriteriaExplanations(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder="Why this score?"
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
-                      borderRadius: '0.25rem',
-                      color: '#fff',
-                      fontSize: '0.7rem',
-                      minHeight: '40px',
-                      resize: 'vertical'
-                    }}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             <div style={{ padding: '0.75rem', backgroundColor: '#1a1a1a', borderRadius: '0.5rem', marginBottom: '1rem', textAlign: 'center' }}>
               <div style={{ fontSize: '0.75rem', color: '#666' }}>Session Score</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#10b981' }}>
-                {Math.round((Object.values(salesCriteria).reduce((sum, score) => sum + score, 0) / customCriteria.length) * 10)}/100
+                {(() => {
+                  const keys = Object.keys(salesCriteria) as Array<keyof SalesCriteria>;
+                  const scores = keys.map(key => salesCriteria[key]);
+                  return Math.round((scores.reduce((sum, score) => sum + score, 0) / customCriteria.length) * 10);
+                })()}/100
               </div>
             </div>
             
@@ -881,7 +1031,7 @@ Would you like me to walk you through a specific feature, or would you prefer to
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Training Materials</h2>
-              <p style={{ color: '#666', fontSize: '0.875rem' }}>Upload documents to enhance your agent's knowledge</p>
+              <p style={{ color: '#666', fontSize: '0.875rem' }}>Upload documents to enhance your agent&apos;s knowledge</p>
             </div>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -902,13 +1052,19 @@ Would you like me to walk you through a specific feature, or would you prefer to
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-            {uploadedMaterials.map((mat) => (
-              <div key={mat.id} style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📄</div>
-                <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.875rem' }}>{mat.filename}</div>
-                <div style={{ fontSize: '0.75rem', color: '#666' }}>{Math.round(mat.size / 1024)} KB</div>
-              </div>
-            ))}
+            {uploadedMaterials.map((mat) => {
+              const matId = mat.id;
+              const matFilename = mat.filename;
+              const matSize = mat.size;
+
+              return (
+                <div key={matId} style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem' }}>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📄</div>
+                  <div style={{ fontWeight: '600', marginBottom: '0.25rem', fontSize: '0.875rem' }}>{matFilename}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#666' }}>{Math.round(matSize / 1024)} KB</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -922,15 +1078,23 @@ Would you like me to walk you through a specific feature, or would you prefer to
             <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>No training sessions yet.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {trainingHistory.map((session) => (
-                <div key={session.id} style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{session.topic}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#666' }}>{session.messageCount} messages • {new Date(session.timestamp).toLocaleDateString()}</div>
+              {trainingHistory.map((session) => {
+                const sessionId = session.id;
+                const sessionTopic = session.topic;
+                const sessionMessageCount = session.messageCount;
+                const sessionTimestamp = session.timestamp;
+                const sessionScore = session.score;
+
+                return (
+                  <div key={sessionId} style={{ padding: '1rem', backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{sessionTopic}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#666' }}>{sessionMessageCount} messages • {new Date(sessionTimestamp).toLocaleDateString()}</div>
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: sessionScore >= 80 ? '#10b981' : '#fbbf24' }}>{sessionScore}%</div>
                   </div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: session.score >= 80 ? '#10b981' : '#fbbf24' }}>{session.score}%</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -968,36 +1132,44 @@ Would you like me to walk you through a specific feature, or would you prefer to
           )}
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {goldenMasters.map((gm) => (
-              <div key={gm.id} style={{ padding: '1.5rem', backgroundColor: '#1a1a1a', border: gm.isActive ? `2px solid ${primaryColor}` : '1px solid #333', borderRadius: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                      v{gm.version}
-                      {gm.isActive && <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#10b981', backgroundColor: '#0a2a1a', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>LIVE</span>}
+            {goldenMasters.map((gm) => {
+              const gmId = gm.id;
+              const gmVersion = gm.version;
+              const gmIsActive = gm.isActive;
+              const gmTrainingScore = gm.trainingScore;
+              const gmCreatedAt = gm.createdAt;
+
+              return (
+                <div key={gmId} style={{ padding: '1.5rem', backgroundColor: '#1a1a1a', border: gmIsActive ? `2px solid ${primaryColor}` : '1px solid #333', borderRadius: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                    <div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
+                        v{gmVersion}
+                        {gmIsActive && <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#10b981', backgroundColor: '#0a2a1a', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>LIVE</span>}
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#666' }}>Score: {gmTrainingScore}% • Created: {new Date(gmCreatedAt).toLocaleDateString()}</div>
                     </div>
-                    <div style={{ fontSize: '0.875rem', color: '#666' }}>Score: {gm.trainingScore}% • Created: {new Date(gm.createdAt).toLocaleDateString()}</div>
+                    {!gmIsActive && (
+                      <button
+                        onClick={() => void handleDeployGoldenMaster(gmId, gmVersion)}
+                        style={{
+                          padding: '0.5rem 1rem',
+                          backgroundColor: primaryColor,
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        🚀 Deploy
+                      </button>
+                    )}
                   </div>
-                  {!gm.isActive && (
-                    <button
-                      onClick={() => void handleDeployGoldenMaster(gm.id, gm.version)}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: primaryColor,
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      🚀 Deploy
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1033,14 +1205,14 @@ Would you like me to walk you through a specific feature, or would you prefer to
             <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Feedback</h2>
             
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-              {[
-                { value: 'correct', label: '✅ Good', color: '#10b981' },
-                { value: 'could-improve', label: '⚠️ Could Improve', color: '#fbbf24' },
-                { value: 'incorrect', label: '❌ Wrong', color: '#ef4444' }
-              ].map((option) => (
+              {([
+                { value: 'correct' as const, label: '✅ Good', color: '#10b981' },
+                { value: 'could-improve' as const, label: '⚠️ Could Improve', color: '#fbbf24' },
+                { value: 'incorrect' as const, label: '❌ Wrong', color: '#ef4444' }
+              ]).map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => setFeedbackType(option.value as any)}
+                  onClick={() => setFeedbackType(option.value)}
                   style={{
                     flex: 1,
                     padding: '0.75rem',

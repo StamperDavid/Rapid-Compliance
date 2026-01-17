@@ -3,15 +3,36 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { logger } from '@/lib/logger/logger';
+import type { AdminCustomer, CustomerSubscription, OrganizationSubscription } from '@/types/subscription';
+
+// Helper to safely extract subscription display values
+function getSubscriptionDisplay(sub: CustomerSubscription | OrganizationSubscription) {
+  // Check if it's a CustomerSubscription (has planId)
+  if ('planId' in sub) {
+    return {
+      planName: sub.planId ?? 'Unknown',
+      billingCycle: sub.billingCycle ?? 'monthly',
+      amount: sub.amount ?? sub.mrr ?? 0,
+      status: sub.status,
+    };
+  }
+  // OrganizationSubscription
+  return {
+    planName: sub.tier ?? sub.plan ?? 'Unknown',
+    billingCycle: sub.billingCycle ?? 'monthly',
+    amount: 0, // OrganizationSubscription doesn't have amount
+    status: sub.status,
+  };
+}
 
 export default function CustomersAdminPage() {
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   useEffect(() => {
-    loadCustomers();
+    void loadCustomers();
   }, []);
 
   const loadCustomers = async () => {
@@ -21,7 +42,8 @@ export default function CustomersAdminPage() {
       const customersData = await getAllCustomers();
       setCustomers(customersData);
     } catch (error) {
-      logger.error('Failed to load customers:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to load customers:', err, { file: 'page.tsx' });
     } finally {
       setIsLoading(false);
     }
@@ -112,9 +134,10 @@ export default function CustomersAdminPage() {
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {filteredCustomers.map((customer) => {
-                  const mrr = customer.subscription.billingCycle === 'monthly'
-                    ? customer.subscription.amount
-                    : customer.subscription.amount / 12;
+                  const subDisplay = getSubscriptionDisplay(customer.subscription);
+                  const mrr = subDisplay.billingCycle === 'monthly'
+                    ? subDisplay.amount
+                    : subDisplay.amount / 12;
 
                   return (
                     <tr key={customer.id} className="hover:bg-gray-700/50 transition">
@@ -123,8 +146,8 @@ export default function CustomersAdminPage() {
                         <div className="text-sm text-gray-400">{customer.primaryContact.email}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-white">{customer.subscription.planName}</div>
-                        <div className="text-xs text-gray-400">{customer.subscription.billingCycle}</div>
+                        <div className="text-white">{subDisplay.planName}</div>
+                        <div className="text-xs text-gray-400">{subDisplay.billingCycle}</div>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${

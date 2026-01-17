@@ -5,8 +5,9 @@ import { useParams } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 
-import type { Organization, PlanLimits } from '@/types/organization'
-import { logger } from '@/lib/logger/logger';;
+import type { Organization, PlanLimits } from '@/types/organization';
+import type { Timestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
 
 // Default plan limits for organizations missing this data
 const DEFAULT_PLAN_LIMITS: PlanLimits = {
@@ -31,6 +32,21 @@ const DEFAULT_SETTINGS = {
 };
 
 // Organization data loaded from Firestore
+
+// Helper function to safely convert Firestore Timestamp to Date
+function timestampToDate(timestamp: Timestamp | Date | string | number): Date {
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+    return new Date(timestamp);
+  }
+  // Firestore Timestamp has toDate() method
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp && typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  return new Date();
+}
 
 export default function OrganizationDetailPage() {
   const params = useParams();
@@ -59,13 +75,14 @@ export default function OrganizationDetailPage() {
         setOrganization(org);
         setLoading(false);
       } catch (error) {
-        logger.error('Failed to load organization:', error, { file: 'page.tsx' });
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Failed to load organization:', err, { file: 'page.tsx' });
         setOrganization(null);
         setLoading(false);
       }
     }
-    
-    loadOrganization();
+
+    void loadOrganization();
   }, [orgId]);
 
   const bgPaper = '#1a1a1a';
@@ -90,7 +107,7 @@ export default function OrganizationDetailPage() {
             Organization Not Found
           </h2>
           <p style={{ color: '#666', marginBottom: '2rem' }}>
-            The organization you're looking for doesn't exist.
+            The organization you&apos;re looking for doesn&apos;t exist.
           </p>
           <Link
             href="/admin/organizations"
@@ -226,12 +243,12 @@ export default function OrganizationDetailPage() {
               <InfoRow label="ID" value={organization.id} />
               <InfoRow label="Slug" value={organization.slug} />
               <InfoRow label="Billing Email" value={organization.billingEmail} />
-              <InfoRow label="Created" value={new Date(organization.createdAt as any).toLocaleString()} />
-              <InfoRow label="Last Updated" value={new Date(organization.updatedAt as any).toLocaleString()} />
+              <InfoRow label="Created" value={timestampToDate(organization.createdAt).toLocaleString()} />
+              <InfoRow label="Last Updated" value={timestampToDate(organization.updatedAt).toLocaleString()} />
               {organization.trialEndsAt && (
-                <InfoRow 
-                  label="Trial Ends" 
-                  value={new Date(organization.trialEndsAt as any).toLocaleDateString()} 
+                <InfoRow
+                  label="Trial Ends"
+                  value={timestampToDate(organization.trialEndsAt).toLocaleDateString()}
                 />
               )}
             </InfoCard>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { BulkOperation } from '@/types/admin'
 import { logger } from '@/lib/logger/logger';
+import { Timestamp } from 'firebase/firestore';
 
 export default function BulkOperationsPage() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -11,7 +12,7 @@ export default function BulkOperationsPage() {
   const [loading, setLoading] = useState(false);
   const [operationType, setOperationType] = useState<'update' | 'delete' | 'suspend'>('update');
   const [targetOrgs, setTargetOrgs] = useState<string[]>([]);
-  const [parameters, setParameters] = useState<Record<string, any>>({});
+  const [parameters, setParameters] = useState<Record<string, unknown>>({});
 
   // This page is intentionally disabled - too dangerous for production
   const isDisabled = true;
@@ -37,14 +38,15 @@ export default function BulkOperationsPage() {
       <div style={{ padding: '2rem', color: '#fff' }}>
         <div style={{ padding: '1.5rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', color: '#fff' }}>
           <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Access Denied</div>
-          <div style={{ fontSize: '0.875rem' }}>You don't have permission to perform bulk operations.</div>
+          <div style={{ fontSize: '0.875rem' }}>You don&apos;t have permission to perform bulk operations.</div>
         </div>
       </div>
     );
   }
 
-  const handleBulkOperation = async () => {
+  const handleBulkOperation = () => {
     if (!targetOrgs.length) {
+      // eslint-disable-next-line no-alert
       alert('Please select at least one organization');
       return;
     }
@@ -63,20 +65,21 @@ export default function BulkOperationsPage() {
         successCount: 0,
         errorCount: 0,
         createdBy: (adminUser?.id !== '' && adminUser?.id != null) ? adminUser.id : '',
-        createdAt: new Date() as any,
+        createdAt: Timestamp.now(),
       };
       setOperations([newOp, ...operations]);
-      
+
       // Simulate processing
       setTimeout(() => {
-        setOperations(operations.map(o => 
-          o.id === newOp.id 
+        setOperations(operations.map(o =>
+          o.id === newOp.id
             ? { ...o, status: 'completed', processedItems: targetOrgs.length, successCount: targetOrgs.length }
             : o
         ));
       }, 2000);
     } catch (error) {
-      logger.error('Bulk operation failed:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Bulk operation failed:', err, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -129,7 +132,12 @@ export default function BulkOperationsPage() {
             </label>
             <select
               value={operationType}
-              onChange={(e) => setOperationType(e.target.value as any)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'update' || value === 'delete' || value === 'suspend') {
+                  setOperationType(value);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '0.625rem 1rem',
@@ -176,7 +184,8 @@ export default function BulkOperationsPage() {
                 value={JSON.stringify(parameters, null, 2)}
                 onChange={(e) => {
                   try {
-                    setParameters(JSON.parse(e.target.value));
+                    const parsed = JSON.parse(e.target.value) as Record<string, unknown>;
+                    setParameters(parsed);
                   } catch (_err) {
                     // Invalid JSON, ignore
                   }
@@ -241,7 +250,7 @@ export default function BulkOperationsPage() {
                       {op.type.toUpperCase()} - {op.resourceType}
                     </div>
                     <div style={{ fontSize: '0.875rem', color: '#666' }}>
-                      {op.organizationIds?.length ?? 0} organizations • Created: {new Date(op.createdAt as any).toLocaleString()}
+                      {op.organizationIds?.length ?? 0} organizations • Created: {op.createdAt.toDate().toLocaleString()}
                     </div>
                   </div>
                   <span style={{

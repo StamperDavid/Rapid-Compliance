@@ -20,6 +20,60 @@ interface OrgAPIHealth {
   };
 }
 
+interface FirestoreOrgDoc {
+  id: string;
+  data: () => FirestoreOrgData;
+}
+
+interface FirestoreOrgData {
+  id: string;
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface FirebaseAPIKeys {
+  ai?: {
+    openaiApiKey?: string;
+    openaiLastError?: string;
+    openaiLastChecked?: string | number;
+    anthropicApiKey?: string;
+    anthropicLastError?: string;
+    anthropicLastChecked?: string | number;
+    openrouterApiKey?: string;
+    openrouterLastError?: string;
+    openrouterLastChecked?: string | number;
+    geminiApiKey?: string;
+    geminiLastError?: string;
+    geminiLastChecked?: string | number;
+  };
+  email?: {
+    sendgrid?: {
+      apiKey?: string;
+      lastError?: string;
+    };
+  };
+  sms?: {
+    twilio?: {
+      accountSid?: string;
+      lastError?: string;
+    };
+  };
+  payments?: {
+    stripe?: {
+      secretKey?: string;
+      lastError?: string;
+    };
+  };
+}
+
+interface TestConnectionResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+type AIService = 'openai' | 'anthropic' | 'openrouter' | 'gemini';
+
 export default function APIHealthPage() {
   const { hasPermission } = useAdminAuth();
   const [orgs, setOrgs] = useState<OrgAPIHealth[]>([]);
@@ -29,7 +83,7 @@ export default function APIHealthPage() {
 
   useEffect(() => {
     if (hasPermission('canAccessSupportTools')) {
-      loadOrganizationHealth();
+      void loadOrganizationHealth();
     }
   }, [hasPermission]);
 
@@ -42,14 +96,14 @@ export default function APIHealthPage() {
       
       // Get all organizations (using environment-aware collection)
       const { COLLECTIONS } = await import('@/lib/firebase/collections');
-      let orgDocs: Array<{ id: string; data: () => any }>;
+      let orgDocs: FirestoreOrgDoc[];
       if (adminDb) {
         const snapshot = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).limit(50).get();
-        orgDocs = snapshot.docs;
+        orgDocs = snapshot.docs as unknown as FirestoreOrgDoc[];
       } else {
-        const orgsData = await FirestoreService.getAll('organizations', [firestoreLimit(50)]);
+        const orgsData = await FirestoreService.getAll<FirestoreOrgData>('organizations', [firestoreLimit(50)]);
         // Convert array to snapshot-like structure
-        orgDocs = orgsData.map((org: any) => ({
+        orgDocs = orgsData.map((org) => ({
           id: org.id,
           data: () => org,
         }));
@@ -60,9 +114,9 @@ export default function APIHealthPage() {
       for (const orgDoc of orgDocs) {
         const orgData = orgDoc.data();
         const orgId = orgDoc.id;
-        
+
         // Get API keys for this org (using environment-aware paths)
-        let apiKeys;
+        let apiKeys: FirebaseAPIKeys | null = null;
         try {
           if (adminDb) {
             const { getOrgSubCollection } = await import('@/lib/firebase/collections');
@@ -71,21 +125,25 @@ export default function APIHealthPage() {
               .collection(apiKeysPath)
               .doc(orgId)
               .get();
-            apiKeys = keysDoc.exists ? keysDoc.data() : null;
+            apiKeys = keysDoc.exists ? (keysDoc.data() as FirebaseAPIKeys) : null;
           } else {
-            apiKeys = await FirestoreService.get(
+            const result = await FirestoreService.get(
               `organizations/${orgId}/apiKeys`,
               orgId
             );
+            apiKeys = result as FirebaseAPIKeys | null;
           }
         } catch (error) {
-          logger.error('Error loading API keys:', error, { file: 'page.tsx', orgId });
+          const err = error instanceof Error ? error : new Error(String(error));
+          logger.error('Error loading API keys:', err, { file: 'page.tsx', orgId });
           apiKeys = null;
         }
         
+        const orgName = (typeof orgData.name === 'string' && orgData.name !== '') ? orgData.name : 'Unnamed Organization';
+
         orgHealthData.push({
           orgId,
-          orgName: (orgData.name !== '' && orgData.name != null) ? orgData.name : 'Unnamed Organization',
+          orgName,
           aiKeys: {
             openai: {
               configured: !!apiKeys?.ai?.openaiApiKey,
@@ -127,14 +185,16 @@ export default function APIHealthPage() {
       
       setOrgs(orgHealthData);
     } catch (error) {
-      logger.error('Failed to load API health:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to load API health:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
       alert('Failed to load API health data');
     } finally {
       setLoading(false);
     }
   };
 
-  const testConnection = async (orgId: string, service: 'openai' | 'anthropic' | 'openrouter' | 'gemini') => {
+  const testConnection = async (orgId: string, service: AIService) => {
     setTesting(`${orgId}-${service}`);
     try {
       // Call test endpoint
@@ -143,19 +203,24 @@ export default function APIHealthPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId, service })
       });
-      
-      const result = await response.json();
-      
+
+      const result = (await response.json()) as TestConnectionResult;
+
       if (result.success) {
-        alert(`✅ ${service.toUpperCase()} connection successful!\n\nResponse: ${(result.message !== '' && result.message != null) ? result.message : 'API key is valid'}`);
+        const message = (typeof result.message === 'string' && result.message !== '') ? result.message : 'API key is valid';
+        // eslint-disable-next-line no-alert
+        alert(`✅ ${service.toUpperCase()} connection successful!\n\nResponse: ${message}`);
         // Reload health data
         await loadOrganizationHealth();
       } else {
-        alert(`❌ ${service.toUpperCase()} connection failed!\n\nError: ${result.error}`);
+        // eslint-disable-next-line no-alert
+        alert(`❌ ${service.toUpperCase()} connection failed!\n\nError: ${result.error ?? 'Unknown error'}`);
       }
-    } catch (error: any) {
-      logger.error('Test connection failed:', error, { file: 'page.tsx' });
-      alert(`❌ Test failed: ${error.message}`);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Test connection failed:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
+      alert(`❌ Test failed: ${err.message}`);
     } finally {
       setTesting(null);
     }
@@ -170,7 +235,7 @@ export default function APIHealthPage() {
       <div style={{ padding: '2rem', color: '#fff' }}>
         <div style={{ padding: '1.5rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', color: '#fff' }}>
           <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Access Denied</div>
-          <div style={{ fontSize: '0.875rem' }}>You don't have permission to view API health.</div>
+          <div style={{ fontSize: '0.875rem' }}>You don&apos;t have permission to view API health.</div>
         </div>
       </div>
     );
@@ -212,7 +277,7 @@ export default function APIHealthPage() {
       {/* Actions */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem' }}>
         <button
-          onClick={loadOrganizationHealth}
+          onClick={() => { void loadOrganizationHealth(); }}
           disabled={loading}
           style={{
             padding: '0.625rem 1.25rem',
@@ -315,7 +380,7 @@ export default function APIHealthPage() {
                           </div>
                         )}
                         <button
-                          onClick={() => testConnection(org.orgId, service as any)}
+                          onClick={() => { void testConnection(org.orgId, service as AIService); }}
                           disabled={testing === `${org.orgId}-${service}`}
                           style={{
                             width: '100%',
@@ -392,8 +457,8 @@ export default function APIHealthPage() {
         </div>
         <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
           • Keys are stored in Firestore at: <code style={{ backgroundColor: '#020617', padding: '0.125rem 0.375rem', borderRadius: '0.25rem', fontFamily: 'monospace' }}>organizations/{'{orgId}'}/apiKeys/{'{orgId}'}</code><br />
-          • Encryption is handled by the platform's encryption utility<br />
-          • "Test Connection" sends a dummy prompt to verify key validity<br />
+          • Encryption is handled by the platform&apos;s encryption utility<br />
+          • &quot;Test Connection&quot; sends a dummy prompt to verify key validity<br />
           • Errors are captured from provider responses (401, 403, 429, etc.)
         </div>
       </div>

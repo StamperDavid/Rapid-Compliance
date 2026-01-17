@@ -6,6 +6,16 @@ import { useAdminAuth } from '@/hooks/useAdminAuth';
 import Link from 'next/link';
 import { logger } from '@/lib/logger/logger';
 
+interface OrganizationCreateResponse {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+interface ErrorResponse {
+  error: string;
+}
+
 export default function NewOrganizationPage() {
   const router = useRouter();
   const { isSuperAdmin } = useAdminAuth();
@@ -52,15 +62,16 @@ export default function NewOrganizationPage() {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        const result = await response.json() as OrganizationCreateResponse;
         logger.info('Organization created', { orgId: result.id, file: 'page.tsx' });
         router.push('/admin/organizations');
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json() as ErrorResponse;
         setError((errorData.error !== '' && errorData.error != null) ? errorData.error : 'Failed to create organization');
         setLoading(false);
       }
-    } catch (err) {
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
       logger.error('Failed to create organization', err, { file: 'page.tsx' });
       setError('An error occurred while creating the organization');
       setLoading(false);
@@ -136,7 +147,7 @@ export default function NewOrganizationPage() {
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => { void handleSubmit(e); }}>
         <div style={{
           backgroundColor: bgPaper,
           border: `1px solid ${borderColor}`,

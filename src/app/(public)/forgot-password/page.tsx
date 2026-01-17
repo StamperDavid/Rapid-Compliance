@@ -32,7 +32,8 @@ export default function ForgotPasswordPage() {
       setSuccess(true);
     } catch (err) {
       const error = err as FirebaseError;
-      logger.error('Password reset error:', error, { file: 'page.tsx' });
+      const logError = err instanceof Error ? err : new Error(String(err));
+      logger.error('Password reset error:', logError, { file: 'page.tsx' });
 
       // User-friendly error messages
       const errorMessages: Record<string, string> = {

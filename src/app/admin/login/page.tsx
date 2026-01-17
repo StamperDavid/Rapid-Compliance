@@ -127,8 +127,9 @@ export default function AdminLoginPage() {
       router.push('/admin');
       
     } catch (err) {
-      const error = err as FirebaseError;
+      const error = err instanceof Error ? err : new Error(String(err));
       logger.error('Login error:', error, { file: 'page.tsx' });
+      const firebaseError = err as FirebaseError;
       
       // Map Firebase error codes to user-friendly messages
       const errorMessages: Record<string, string> = {
@@ -140,7 +141,7 @@ export default function AdminLoginPage() {
         'auth/network-request-failed': 'Network error. Please check your connection',
       };
       
-      setError(errorMessages[error.code ?? ''] ?? error.message ?? 'Login failed');
+      setError(errorMessages[firebaseError.code ?? ''] ?? firebaseError.message ?? 'Login failed');
     } finally {
       setLoading(false);
     }

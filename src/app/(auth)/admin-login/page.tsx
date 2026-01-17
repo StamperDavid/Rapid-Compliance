@@ -121,7 +121,8 @@ export default function AdminLoginPage() {
       
     } catch (err) {
       const error = err as FirebaseError;
-      logger.error('Login error:', error, { file: 'page.tsx' });
+      const logError = err instanceof Error ? err : new Error(String(err));
+      logger.error('Login error:', logError, { file: 'page.tsx' });
       
       // Map Firebase error codes to user-friendly messages
       const errorMessages: Record<string, string> = {

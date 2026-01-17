@@ -18,7 +18,7 @@ export default function ImpersonatePage() {
       <div style={{ padding: '2rem', color: '#fff' }}>
         <div style={{ padding: '1.5rem', backgroundColor: '#7f1d1d', border: '1px solid #991b1b', borderRadius: '0.5rem', color: '#fff' }}>
           <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Access Denied</div>
-          <div style={{ fontSize: '0.875rem' }}>You don't have permission to impersonate users.</div>
+          <div style={{ fontSize: '0.875rem' }}>You don&apos;t have permission to impersonate users.</div>
         </div>
       </div>
     );
@@ -26,6 +26,7 @@ export default function ImpersonatePage() {
 
   const handleImpersonate = async () => {
     if (!userId && !userEmail) {
+      // eslint-disable-next-line no-alert
       alert('Please enter either User ID or Email');
       return;
     }
@@ -55,7 +56,8 @@ export default function ImpersonatePage() {
           false
         );
       } catch (error) {
-        logger.error('Failed to save impersonation session:', error, { file: 'page.tsx' });
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Failed to save impersonation session:', err, { file: 'page.tsx' });
         // Continue even if save fails
       }
       
@@ -63,7 +65,9 @@ export default function ImpersonatePage() {
       // In production, this would fetch the user's org and redirect properly
       router.push(`/workspace/demo-org/dashboard`);
     } catch (error) {
-      logger.error('Impersonation failed:', error, { file: 'page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Impersonation failed:', err, { file: 'page.tsx' });
+      // eslint-disable-next-line no-alert
       alert('Failed to start impersonation session');
     } finally {
       setLoading(false);
@@ -82,7 +86,7 @@ export default function ImpersonatePage() {
           Impersonate User
         </h1>
         <p style={{ color: '#666', fontSize: '0.875rem' }}>
-          Access a user's account for support purposes. All actions will be logged.
+          Access a user&apos;s account for support purposes. All actions will be logged.
         </p>
       </div>
 
@@ -102,7 +106,7 @@ export default function ImpersonatePage() {
           <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Important</div>
           <div style={{ fontSize: '0.875rem' }}>
             Impersonation sessions are logged and audited. Only use this feature for legitimate support purposes.
-            You will have full access to the user's account and data.
+            You will have full access to the user&apos;s account and data.
           </div>
         </div>
       </div>
@@ -174,7 +178,7 @@ export default function ImpersonatePage() {
         </div>
 
         <button
-          onClick={handleImpersonate}
+          onClick={() => void handleImpersonate()}
           disabled={loading || (!userId && !userEmail)}
           style={{
             width: '100%',

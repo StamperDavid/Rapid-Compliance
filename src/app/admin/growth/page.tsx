@@ -8,7 +8,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import Link from 'next/link';
 import { logger } from '@/lib/logger/logger';
 
 interface SEOSettings {
@@ -39,6 +38,20 @@ interface ScraperJob {
   createdAt: string;
 }
 
+interface APIResponse {
+  seo?: SEOSettings;
+  content?: ContentItem[];
+  scraperJobs?: ScraperJob[];
+}
+
+interface GenerateContentResponse {
+  content: ContentItem;
+}
+
+interface StartScraperResponse {
+  job: ScraperJob;
+}
+
 export default function AdminGrowthPage() {
   useAdminAuth();
 
@@ -65,7 +78,7 @@ export default function AdminGrowthPage() {
   const [scraperType, setScraperType] = useState<'competitor' | 'keywords' | 'backlinks'>('competitor');
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   async function loadData() {
@@ -74,13 +87,20 @@ export default function AdminGrowthPage() {
       // Load platform SEO settings
       const response = await fetch('/api/admin/growth/settings');
       if (response.ok) {
-        const data = await response.json();
-        if (data.seo) setSeoSettings(data.seo);
-        if (data.content) setContentItems(data.content);
-        if (data.scraperJobs) setScraperJobs(data.scraperJobs);
+        const data = (await response.json()) as APIResponse;
+        if (data.seo) {
+          setSeoSettings(data.seo);
+        }
+        if (data.content) {
+          setContentItems(data.content);
+        }
+        if (data.scraperJobs) {
+          setScraperJobs(data.scraperJobs);
+        }
       }
     } catch (error) {
-      logger.error('[AdminGrowth] Load data failed:', error, { file: 'growth/page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('[AdminGrowth] Load data failed:', err, { file: 'growth/page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -94,15 +114,18 @@ export default function AdminGrowthPage() {
         body: JSON.stringify(seoSettings),
       });
       if (response.ok) {
-        alert('SEO settings saved!');
+        logger.info('[AdminGrowth] SEO settings saved successfully', { file: 'growth/page.tsx' });
       }
     } catch (error) {
-      logger.error('[AdminGrowth] Save SEO failed:', error, { file: 'growth/page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('[AdminGrowth] Save SEO failed:', err, { file: 'growth/page.tsx' });
     }
   }
 
   async function generateContent() {
-    if (!contentTopic.trim()) return;
+    if (!contentTopic.trim()) {
+      return;
+    }
 
     try {
       setGenerating(true);
@@ -117,19 +140,22 @@ export default function AdminGrowthPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as GenerateContentResponse;
         setContentItems([data.content, ...contentItems]);
         setContentTopic('');
       }
     } catch (error) {
-      logger.error('[AdminGrowth] Generate content failed:', error, { file: 'growth/page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('[AdminGrowth] Generate content failed:', err, { file: 'growth/page.tsx' });
     } finally {
       setGenerating(false);
     }
   }
 
   async function startScraperJob() {
-    if (!scraperUrl.trim()) return;
+    if (!scraperUrl.trim()) {
+      return;
+    }
 
     try {
       const response = await fetch('/api/admin/growth/scraper/start', {
@@ -142,12 +168,13 @@ export default function AdminGrowthPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as StartScraperResponse;
         setScraperJobs([data.job, ...scraperJobs]);
         setScraperUrl('');
       }
     } catch (error) {
-      logger.error('[AdminGrowth] Start scraper failed:', error, { file: 'growth/page.tsx' });
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('[AdminGrowth] Start scraper failed:', err, { file: 'growth/page.tsx' });
     }
   }
 
@@ -307,7 +334,7 @@ export default function AdminGrowthPage() {
                 />
               </div>
 
-              <button onClick={saveSEOSettings} style={buttonStyle()}>
+              <button onClick={() => void saveSEOSettings()} style={buttonStyle()}>
                 Save SEO Settings
               </button>
             </div>
@@ -359,7 +386,7 @@ export default function AdminGrowthPage() {
                 />
 
                 <button
-                  onClick={generateContent}
+                  onClick={() => void generateContent()}
                   disabled={generating || !contentTopic.trim()}
                   style={{
                     ...buttonStyle(),
@@ -463,7 +490,7 @@ export default function AdminGrowthPage() {
                       : 'competitor.com'}
                   />
                   <button
-                    onClick={startScraperJob}
+                    onClick={() => void startScraperJob()}
                     disabled={!scraperUrl.trim()}
                     style={{
                       ...buttonStyle(),
