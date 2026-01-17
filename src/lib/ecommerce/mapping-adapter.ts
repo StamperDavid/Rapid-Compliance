@@ -127,7 +127,7 @@ function handleFieldRename(
   ];
   
   for (const field of mappingFields) {
-    if (mappings[field] === oldFieldKey) {
+    if (typeof mappings[field] === 'string' && mappings[field] === oldFieldKey) {
       (mappings as Record<string, string>)[field] = newFieldKey;
       updated = true;
       
@@ -162,7 +162,7 @@ async function handleFieldDeletion(
   organizationId: string,
   workspaceId: string,
   schemaId: string
-): boolean {
+): Promise<boolean> {
   let updated = false;
   
   // Get schema for field resolution
@@ -190,19 +190,20 @@ async function handleFieldDeletion(
     images: ['image', 'photo', 'pictures', 'gallery'],
   };
   
+  const mappingsRecord = mappings as Record<string, string>;
   for (const [mappingKey, alternatives] of Object.entries(criticalMappings)) {
-    const currentMapping = (mappings as any)[mappingKey];
-    
+    const currentMapping = mappingsRecord[mappingKey];
+
     if (currentMapping === deletedFieldKey) {
       // Try to find an alternative field
       const resolved = await FieldResolver.resolveField(schema, {
         aliases: alternatives,
       });
-      
+
       if (resolved && resolved.confidence >= 0.5) {
-        (mappings as Record<string, string>)[mappingKey] = resolved.fieldKey;
+        mappingsRecord[mappingKey] = resolved.fieldKey;
         updated = true;
-        
+
         logger.info('[E-Commerce Adapter] Found replacement field', {
           file: 'mapping-adapter.ts',
           mappingKey,
@@ -348,14 +349,15 @@ export async function autoConfigureEcommerceMappings(
       dimensions: ['dimensions', 'size'],
     };
     
+    const mappingsRecord = mappings as Record<string, string>;
     for (const [mappingKey, aliases] of Object.entries(fieldMappings)) {
       const resolved = await FieldResolver.resolveField(schema, {
         aliases,
       });
-      
+
       if (resolved && resolved.confidence >= 0.5) {
-        (mappings as Record<string, string>)[mappingKey] = resolved.fieldKey;
-        
+        mappingsRecord[mappingKey] = resolved.fieldKey;
+
         logger.info('[E-Commerce Adapter] Auto-configured mapping', {
           file: 'mapping-adapter.ts',
           mappingKey,
@@ -379,7 +381,7 @@ export async function autoConfigureEcommerceMappings(
  * Get e-commerce field value with mapping resolution
  */
 export function getEcommerceFieldValue(
-  product: any,
+  product: Record<string, unknown>,
   mappingKey: keyof ProductFieldMappings,
   config: EcommerceConfig,
   schema?: unknown

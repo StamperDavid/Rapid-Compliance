@@ -165,7 +165,7 @@ export async function generateSalesEmail(
     // 2. Get deal score (for personalization)
     let dealScore: DealScore | undefined = options.dealScore;
     if (!dealScore && options.deal) {
-      dealScore = await calculateDealScore({
+      dealScore = calculateDealScore({
         organizationId: options.organizationId,
         workspaceId: options.workspaceId,
         dealId: options.dealId,
@@ -653,9 +653,16 @@ async function emitEmailGeneratedSignal(params: {
 /**
  * Generate multiple email variants for A/B testing
  */
-export async function generateEmailVariants(
+export function generateEmailVariants(
   options: EmailGenerationOptions,
   variantCount: number = 3
+): Promise<EmailGenerationResult> {
+  return generateEmailVariantsAsync(options, variantCount);
+}
+
+async function generateEmailVariantsAsync(
+  options: EmailGenerationOptions,
+  variantCount: number
 ): Promise<EmailGenerationResult> {
   try {
     logger.info('Generating email variants', {
@@ -663,21 +670,21 @@ export async function generateEmailVariants(
       dealId: options.dealId,
       variantCount,
     });
-    
+
     const variants: GeneratedEmail[] = [];
-    
+
     // Generate variants with different tones
-    const tones: Array<'professional' | 'casual' | 'consultative' | 'urgent' | 'friendly'> = 
+    const tones: Array<'professional' | 'casual' | 'consultative' | 'urgent' | 'friendly'> =
       ['professional', 'consultative', 'friendly'];
-    
+
     for (let i = 0; i < Math.min(variantCount, tones.length); i++) {
       const variantOptions = {
         ...options,
         tone: tones[i],
       };
-      
+
       const result = await generateSalesEmail(variantOptions);
-      
+
       if (result.success && result.email) {
         result.email.version = i + 1;
         variants.push(result.email);

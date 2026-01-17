@@ -121,9 +121,9 @@ export async function calculatePredictiveLeadScore(
 
     return predictiveScore;
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Predictive scoring failed', error, { leadId: lead.id });
-    throw new Error(`Predictive scoring failed: ${error.message}`);
+    throw new Error(`Predictive scoring failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -195,10 +195,15 @@ function scoreFirmographics(lead: Lead): number {
   return Math.min(100, Math.max(0, score));
 }
 
+interface BehavioralActivityStats {
+  lastActivityDate?: string | Date;
+  avgActivitiesPerDay?: number;
+}
+
 /**
  * Score behavioral signals
  */
-function scoreBehavioralSignals(lead: Lead, activityStats: any): number {
+function scoreBehavioralSignals(lead: Lead, activityStats: BehavioralActivityStats): number {
   let score = 50;
 
   // Recent activity
@@ -291,10 +296,14 @@ function generateRecommendedActions(
   return actions.slice(0, 5); // Return top 5 actions
 }
 
+interface ConfidenceActivityStats {
+  totalActivities?: number;
+}
+
 /**
  * Calculate confidence in the score
  */
-function calculateConfidence(lead: Lead, activityStats: any): number {
+function calculateConfidence(lead: Lead, activityStats: ConfidenceActivityStats): number {
   let confidence = 60; // Base confidence
 
   // More data = higher confidence
@@ -303,10 +312,10 @@ function calculateConfidence(lead: Lead, activityStats: any): number {
   if (lead.company) {confidence += 5;}
   if (lead.title) {confidence += 5;}
   if (lead.enrichmentData) {confidence += 10;}
-  
+
   // More activity = higher confidence
-  if (activityStats.totalActivities > 10) {confidence += 10;}
-  else if (activityStats.totalActivities > 5) {confidence += 5;}
+  if ((activityStats.totalActivities ?? 0) > 10) {confidence += 10;}
+  else if ((activityStats.totalActivities ?? 0) > 5) {confidence += 5;}
 
   return Math.min(100, confidence);
 }

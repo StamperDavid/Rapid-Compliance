@@ -4,11 +4,6 @@
  * Replaces localStorage usage throughout the application
  */
 
-import type {
-  QueryConstraint,
-  DocumentData,
-  QueryDocumentSnapshot
-} from 'firebase/firestore';
 import {
   collection,
   doc,
@@ -22,7 +17,10 @@ import {
   startAfter,
   onSnapshot,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  type QueryConstraint,
+  type DocumentData,
+  type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase/config'
 import { logger } from '../logger/logger';
@@ -303,7 +301,7 @@ export class FirestoreService {
     type: 'set' | 'update' | 'delete';
     collectionPath: string;
     docId: string;
-    data?: any;
+    data?: Record<string, unknown>;
   }>): Promise<void> {
     const firestoreDb = ensureFirestore();
     const batch = writeBatch(firestoreDb);
@@ -345,7 +343,7 @@ export class OrganizationService {
     return FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
   }
 
-  static async set(orgId: string, data: any) {
+  static async set(orgId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       COLLECTIONS.ORGANIZATIONS,
       orgId,
@@ -354,7 +352,7 @@ export class OrganizationService {
     );
   }
 
-  static async update(orgId: string, data: any) {
+  static async update(orgId: string, data: Record<string, unknown>) {
     return FirestoreService.update(
       COLLECTIONS.ORGANIZATIONS,
       orgId,
@@ -362,7 +360,7 @@ export class OrganizationService {
     );
   }
 
-  static subscribe(orgId: string, callback: (data: any) => void) {
+  static subscribe(orgId: string, callback: (data: DocumentData | null) => void) {
     return FirestoreService.subscribe(
       COLLECTIONS.ORGANIZATIONS,
       orgId,
@@ -388,7 +386,7 @@ export class WorkspaceService {
     );
   }
 
-  static async set(orgId: string, workspaceId: string, data: any) {
+  static async set(orgId: string, workspaceId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}`,
       workspaceId,
@@ -397,7 +395,7 @@ export class WorkspaceService {
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, callback: (data: any) => void) {
+  static subscribe(orgId: string, workspaceId: string, callback: (data: Record<string, unknown>) => void) {
     return FirestoreService.subscribe(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}`,
       workspaceId,
@@ -423,7 +421,7 @@ export class SchemaService {
     );
   }
 
-  static async set(orgId: string, workspaceId: string, schemaId: string, data: any) {
+  static async set(orgId: string, workspaceId: string, schemaId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       schemaId,
@@ -432,7 +430,7 @@ export class SchemaService {
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, schemaId: string, callback: (data: any) => void) {
+  static subscribe(orgId: string, workspaceId: string, schemaId: string, callback: (data: Record<string, unknown>) => void) {
     return FirestoreService.subscribe(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       schemaId,
@@ -485,7 +483,7 @@ export class RecordService {
     );
   }
 
-  static async set(orgId: string, workspaceId: string, entityName: string, recordId: string, data: any) {
+  static async set(orgId: string, workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       RecordService.getCollectionPath(orgId, workspaceId, entityName),
       recordId,
@@ -494,7 +492,7 @@ export class RecordService {
     );
   }
 
-  static async update(orgId: string, workspaceId: string, entityName: string, recordId: string, data: any) {
+  static async update(orgId: string, workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
     return FirestoreService.update(
       RecordService.getCollectionPath(orgId, workspaceId, entityName),
       recordId,
@@ -509,7 +507,7 @@ export class RecordService {
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[], callback: (data: any[]) => void) {
+  static subscribe(orgId: string, workspaceId: string, entityName: string, filters: QueryConstraint[], callback: (data: Record<string, unknown>[]) => void) {
     return FirestoreService.subscribeToCollection(
       RecordService.getCollectionPath(orgId, workspaceId, entityName),
       filters,
@@ -553,7 +551,7 @@ export class WorkflowService {
     );
   }
 
-  static async set(orgId: string, workspaceId: string, workflowId: string, data: any) {
+  static async set(orgId: string, workspaceId: string, workflowId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
       workflowId,
@@ -597,7 +595,7 @@ export class EmailCampaignService {
     );
   }
 
-  static async set(orgId: string, campaignId: string, data: any) {
+  static async set(orgId: string, campaignId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
       campaignId,
@@ -624,7 +622,7 @@ export class LeadNurturingService {
     );
   }
 
-  static async setSequence(orgId: string, sequenceId: string, data: any) {
+  static async setSequence(orgId: string, sequenceId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.NURTURE_SEQUENCES}`,
       sequenceId,
@@ -640,7 +638,7 @@ export class LeadNurturingService {
     );
   }
 
-  static async setEnrichment(orgId: string, leadId: string, data: any) {
+  static async setEnrichment(orgId: string, leadId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.LEAD_ENRICHMENTS}`,
       leadId,

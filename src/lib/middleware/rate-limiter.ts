@@ -193,11 +193,11 @@ const store = new RateLimitStore();
 /**
  * Get identifier for rate limiting based on strategy
  */
-async function getIdentifier(
+function getIdentifier(
   request: NextRequest,
   strategy: RateLimitConfig['strategy'],
   customIdentifier?: string
-): Promise<string> {
+): string {
   switch (strategy) {
     case 'custom':
       if (!customIdentifier) {
@@ -285,7 +285,7 @@ export async function checkRateLimit(
     }
     
     // Get identifier based on strategy
-    const identifier = await getIdentifier(request, strategy, customIdentifier);
+    const identifier = getIdentifier(request, strategy, customIdentifier);
     
     // Increment counter
     const entry = store.increment(identifier, windowMs);

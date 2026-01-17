@@ -47,7 +47,7 @@ export interface RoutingRule {
 export interface RoutingCondition {
   field: string; // Lead field to check
   operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in';
-  value: any;
+  value: string | number | boolean | string[] | null;
 }
 
 export interface RoutingResult {
@@ -56,6 +56,18 @@ export interface RoutingResult {
   routingRuleId: string;
   routingRuleName: string;
   reason: string;
+}
+
+interface OrganizationMember {
+  userId: string;
+  role: string;
+  [key: string]: unknown;
+}
+
+interface Organization {
+  ownerId?: string;
+  createdBy?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -92,7 +104,7 @@ export async function routeLead(
           break;
 
         case 'territory':
-          assignedUserId = await getTerritoryUser(lead, rule);
+          assignedUserId = getTerritoryUser(lead, rule);
           break;
 
         case 'load-balance':
@@ -100,7 +112,7 @@ export async function routeLead(
           break;
 
         case 'skill-based':
-          assignedUserId = await getSkillBasedUser(lead, rule);
+          assignedUserId = getSkillBasedUser(lead, rule);
           break;
 
         default:
@@ -134,8 +146,8 @@ export async function routeLead(
       reason: 'No routing rules matched - assigned to default user',
     };
 
-  } catch (error: any) {
-    logger.error('Lead routing failed', error, { leadId: lead.id });
+  } catch (error: unknown) {
+    logger.error('Lead routing failed', error instanceof Error ? error : new Error(String(error)), { leadId: lead.id });
     throw error;
   }
 }
@@ -145,24 +157,24 @@ export async function routeLead(
  */
 function evaluateConditions(lead: Lead, conditions: RoutingCondition[]): boolean {
   return conditions.every(condition => {
-    const leadValue = (lead as any)[condition.field];
+    const leadValue = (lead as Record<string, unknown>)[condition.field];
 
     switch (condition.operator) {
       case 'equals':
         return leadValue === condition.value;
-      
+
       case 'contains':
         return String(leadValue).toLowerCase().includes(String(condition.value).toLowerCase());
-      
+
       case 'greater_than':
-        return leadValue > condition.value;
-      
+        return leadValue !== null && leadValue !== undefined && condition.value !== null && condition.value !== undefined && leadValue > condition.value;
+
       case 'less_than':
-        return leadValue < condition.value;
-      
+        return leadValue !== null && leadValue !== undefined && condition.value !== null && condition.value !== undefined && leadValue < condition.value;
+
       case 'in':
-        return Array.isArray(condition.value) && condition.value.includes(leadValue);
-      
+        return Array.isArray(condition.value) && condition.value.includes(leadValue as string);
+
       default:
         return false;
     }
@@ -196,7 +208,7 @@ async function getRoundRobinUser(
 
     return assignedUserId;
 
-  } catch (error) {
+  } catch (_error: unknown) {
     return userIds[0];
   }
 }
@@ -204,7 +216,7 @@ async function getRoundRobinUser(
 /**
  * Get territory-based assignment
  */
-async function getTerritoryUser(lead: Lead, rule: RoutingRule): Promise<string | null> {
+function getTerritoryUser(lead: Lead, rule: RoutingRule): string | null {
   const territories = rule.metadata?.territories ?? [];
 
   for (const territory of territories) {
@@ -267,8 +279,8 @@ async function getLoadBalancedUser(
 
     return selectedUser;
 
-  } catch (error) {
-    logger.warn('Load balancing failed, using first user', error as Error);
+  } catch (error: unknown) {
+    logger.warn('Load balancing failed, using first user', error instanceof Error ? error : new Error(String(error)));
     return rule.assignedUsers[0];
   }
 }
@@ -299,13 +311,16 @@ async function getUserLeadCount(
 
     // Filter by creation date
     const recentLeads = result.data.filter(lead => {
-      const createdAt = lead.createdAt?.toDate ? lead.createdAt.toDate() : new Date(lead.createdAt);
+      const leadCreatedAt = lead.createdAt;
+      const createdAt = leadCreatedAt && typeof leadCreatedAt === 'object' && 'toDate' in leadCreatedAt
+        ? (leadCreatedAt as { toDate: () => Date }).toDate()
+        : new Date(leadCreatedAt as string | number | Date);
       return createdAt >= since;
     });
 
     return recentLeads.length;
 
-  } catch (error) {
+  } catch (_error: unknown) {
     return 0;
   }
 }
@@ -313,7 +328,7 @@ async function getUserLeadCount(
 /**
  * Get skill-based assignment
  */
-async function getSkillBasedUser(lead: Lead, rule: RoutingRule): Promise<string | null> {
+function getSkillBasedUser(lead: Lead, rule: RoutingRule): string | null {
   const skillMappings = rule.metadata?.skills ?? [];
 
   // Check if lead requires specific skills
@@ -321,11 +336,11 @@ async function getSkillBasedUser(lead: Lead, rule: RoutingRule): Promise<string 
   // This would be enhanced with AI to detect required skills from lead data
 
   // For now, simple logic
-  if (lead.customFields?.language) {
+  if (lead.customFields?.language && typeof lead.customFields.language === 'string') {
     const requiredLanguage = lead.customFields.language;
-    
-    const match = skillMappings.find(mapping => 
-      mapping.skills.some(skill => 
+
+    const match = skillMappings.find(mapping =>
+      mapping.skills.some(skill =>
         skill.toLowerCase().includes(requiredLanguage.toLowerCase())
       )
     );
@@ -344,7 +359,7 @@ async function getSkillBasedUser(lead: Lead, rule: RoutingRule): Promise<string 
 async function getDefaultAssignment(organizationId: string): Promise<string> {
   try {
     // Get organization members
-    const membersResult = await FirestoreService.getAll<any>(
+    const membersResult = await FirestoreService.getAll<OrganizationMember>(
       `organizations/${organizationId}/members`
     );
 
@@ -358,12 +373,12 @@ async function getDefaultAssignment(organizationId: string): Promise<string> {
     }
 
     // Fallback to org owner
-    const org = await FirestoreService.get<any>('organizations', organizationId);
+    const org = await FirestoreService.get<Organization>('organizations', organizationId);
     const orgCreatedBy = org?.createdBy;
     return org?.ownerId ?? (orgCreatedBy ?? 'unknown');
 
-  } catch (error) {
-    logger.error('Failed to get default assignment', error);
+  } catch (error: unknown) {
+    logger.error('Failed to get default assignment', error instanceof Error ? error : new Error(String(error)));
     return 'unknown';
   }
 }

@@ -20,8 +20,8 @@ export interface Relationship {
   role?: string; // e.g., "Decision Maker", "Influencer", "Champion"
   influence?: number; // 0-100
   notes?: string;
-  createdAt: any;
-  updatedAt?: any;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 export type RelationshipType = 
@@ -104,9 +104,9 @@ export async function createRelationship(
     });
 
     return relationship;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to create relationship', error);
-    throw new Error(`Failed to create relationship: ${error.message}`);
+    throw new Error(`Failed to create relationship: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -131,7 +131,7 @@ export async function getEntityRelationships(
     );
 
     return filtered;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to get relationships', error);
     return [];
   }
@@ -184,9 +184,9 @@ export async function getDealStakeholderMap(
       orgChart,
       buyingCommittee,
     };
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to get stakeholder map', error);
-    throw new Error(`Failed to get stakeholder map: ${error.message}`);
+    throw new Error(`Failed to get stakeholder map: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -267,10 +267,14 @@ function analyzeBuyingCommittee(stakeholders: Stakeholder[]): BuyingCommitteeAna
   };
 }
 
+interface ActivityStatsResult {
+  engagementScore?: number;
+}
+
 /**
  * Determine sentiment from activity stats
  */
-function determineSentiment(activityStats: any): 'positive' | 'neutral' | 'negative' {
+function determineSentiment(activityStats: ActivityStatsResult): 'positive' | 'neutral' | 'negative' {
   // Simple heuristic based on engagement
   const engagement = activityStats.engagementScore ?? 0;
   if (engagement > 70) {return 'positive';}

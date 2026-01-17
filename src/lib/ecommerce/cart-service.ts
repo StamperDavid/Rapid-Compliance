@@ -427,15 +427,15 @@ async function getProduct(workspaceId: string, productId: string, organizationId
   
   // Map product fields using productMappings
   const mappings = config.productMappings;
-  const productData = product as Record<string, unknown>;
+  const productRecord = product as Record<string, unknown>;
   return {
-    id: product.id,
-    name: product[mappings.name],
-    price: parseFloat((product[mappings.price] !== '' && product[mappings.price] != null) ? product[mappings.price] : 0),
-    description: product[mappings.description],
-    images: product[mappings.images] ?? [],
-    sku: product[mappings.sku],
-    stockLevel: product[mappings.inventory],
+    id: productRecord.id as string,
+    name: productRecord[mappings.name] as string,
+    price: parseFloat(String((productRecord[mappings.price] !== '' && productRecord[mappings.price] != null) ? productRecord[mappings.price] : 0)),
+    description: productRecord[mappings.description] as string | undefined,
+    images: (productRecord[mappings.images] as string[] | undefined) ?? [],
+    sku: productRecord[mappings.sku] as string,
+    stockLevel: productRecord[mappings.inventory] as number | undefined,
   };
 }
 

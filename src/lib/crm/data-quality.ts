@@ -25,7 +25,7 @@ export interface DataQualityIssue {
 export interface DataQualitySuggestion {
   field: string;
   suggestion: string;
-  suggestedValue?: any;
+  suggestedValue?: string | number | boolean;
   confidence: number; // 0-100
   source: string; // Where the suggestion came from
 }
@@ -229,10 +229,12 @@ export function autoFixLeadData(lead: Partial<Lead>): { fixed: Partial<Lead>; ch
 
   // Trim whitespace
   Object.keys(fixed).forEach(key => {
-    if (typeof fixed[key as keyof Lead] === 'string') {
-      const trimmed = (fixed[key as keyof Lead] as string).trim();
-      if (trimmed !== fixed[key as keyof Lead]) {
-        (fixed as any)[key] = trimmed;
+    const leadKey = key as keyof Lead;
+    const value = fixed[leadKey];
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed !== value) {
+        (fixed as Record<string, unknown>)[key] = trimmed;
         changes.push(`Trimmed whitespace from ${key}`);
       }
     }

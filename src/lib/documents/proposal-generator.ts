@@ -37,14 +37,14 @@ export interface TemplateVariable {
   label: string; // "Customer Name"
   type: 'text' | 'number' | 'date' | 'currency';
   required: boolean;
-  defaultValue?: any;
+  defaultValue?: string | number | Date;
 }
 
 export interface ProposalData {
   templateId: string;
   dealId?: string;
   contactId?: string;
-  variables: Record<string, any>;
+  variables: Record<string, string | number | Date>;
   lineItems: Array<{
     description: string;
     quantity: number;
@@ -110,7 +110,7 @@ export async function generateProposal(
     // Generate PDF (using a PDF generation service)
     let pdfUrl: string | undefined;
     try {
-      pdfUrl = await generatePDF(htmlContent, organizationId);
+      pdfUrl = generatePDF(htmlContent, organizationId);
     } catch (pdfError) {
       logger.warn('PDF generation failed, continuing without PDF', { error: pdfError });
     }
@@ -149,7 +149,7 @@ export async function generateProposal(
 
     return proposal;
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Proposal generation failed', error, { organizationId });
     throw error;
   }
@@ -299,9 +299,9 @@ function buildSignatureSection(): string {
 /**
  * Replace variables in content
  */
-function replaceVariables(content: string, variables: Record<string, any>): string {
+function replaceVariables(content: string, variables: Record<string, string | number | Date>): string {
   let result = content;
-  
+
   Object.entries(variables).forEach(([key, value]) => {
     const placeholder = `{{${key}}}`;
     result = result.replace(new RegExp(placeholder, 'g'), String(value));
@@ -313,30 +313,24 @@ function replaceVariables(content: string, variables: Record<string, any>): stri
 /**
  * Generate PDF from HTML (using external service or library)
  */
-async function generatePDF(htmlContent: string, organizationId: string): Promise<string> {
-  try {
-    // In production, use service like:
-    // - PDFKit
-    // - Puppeteer
-    // - WeasyPrint
-    // - CloudConvert API
-    // - PDF.co API
+function generatePDF(_htmlContent: string, organizationId: string): string {
+  // In production, use service like:
+  // - PDFKit
+  // - Puppeteer
+  // - WeasyPrint
+  // - CloudConvert API
+  // - PDF.co API
 
-    // For now, return a placeholder URL
-    // The HTML can be rendered in browser and printed to PDF
-    const pdfId = `pdf-${Date.now()}.pdf`;
-    
-    // TODO: Implement actual PDF generation
-    // This would typically upload to cloud storage (S3, GCS, Firebase Storage)
-    
-    logger.info('PDF generation placeholder', { organizationId, pdfId });
+  // For now, return a placeholder URL
+  // The HTML can be rendered in browser and printed to PDF
+  const pdfId = `pdf-${Date.now()}.pdf`;
 
-    return `/api/proposals/pdf/${pdfId}`;
+  // TODO: Implement actual PDF generation
+  // This would typically upload to cloud storage (S3, GCS, Firebase Storage)
 
-  } catch (error: any) {
-    logger.error('PDF generation failed', error);
-    throw error;
-  }
+  logger.info('PDF generation placeholder', { organizationId, pdfId });
+
+  return `/api/proposals/pdf/${pdfId}`;
 }
 
 /**
@@ -393,7 +387,7 @@ Best regards
 
     logger.info('Proposal sent', { proposalId, recipientEmail });
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to send proposal', error, { proposalId });
     throw error;
   }

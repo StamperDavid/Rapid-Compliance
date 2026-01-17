@@ -7,6 +7,59 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import type { PaymentRequest, PaymentResult } from './payment-service'
 import { logger } from '@/lib/logger/logger';
 
+// API Key Configuration Interfaces
+interface AuthorizeNetKeys {
+  apiLoginId?: string;
+  transactionKey?: string;
+  mode?: string;
+  [key: string]: unknown;
+}
+
+interface TwoCheckoutKeys {
+  merchantCode?: string;
+  secretKey?: string;
+  mode?: string;
+  [key: string]: unknown;
+}
+
+interface MollieKeys {
+  apiKey?: string;
+  [key: string]: unknown;
+}
+
+// Authorize.Net Response Interfaces
+interface AuthorizeNetTransactionError {
+  errorText?: string;
+  [key: string]: unknown;
+}
+
+interface AuthorizeNetTransactionResponse {
+  responseCode?: string;
+  transId?: string;
+  accountNumber?: string;
+  accountType?: string;
+  errors?: AuthorizeNetTransactionError[];
+  [key: string]: unknown;
+}
+
+interface AuthorizeNetResponse {
+  transactionResponse?: AuthorizeNetTransactionResponse;
+  [key: string]: unknown;
+}
+
+// 2Checkout Response Interface
+interface TwoCheckoutResponse {
+  RefNo?: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+// Mollie Response Interface
+interface MolliePaymentResponse {
+  id?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Process Authorize.Net payment
  */
@@ -16,17 +69,18 @@ export async function processAuthorizeNetPayment(
 ): Promise<PaymentResult> {
   try {
     const orgId = request.workspaceId.split('/')[0];
-    const authNetKeys = await apiKeyService.getServiceKey(orgId, 'authorizenet');
-    
-    if (!authNetKeys) {
+    const authNetKeysResponse = await apiKeyService.getServiceKey(orgId, 'authorizenet');
+
+    if (!authNetKeysResponse) {
       return {
         success: false,
         error: 'Authorize.Net credentials not configured',
       };
     }
-    
+
+    const authNetKeys = authNetKeysResponse as AuthorizeNetKeys;
     const { apiLoginId, transactionKey, mode } = authNetKeys;
-    
+
     if (!apiLoginId || !transactionKey) {
       return {
         success: false,
@@ -77,22 +131,22 @@ export async function processAuthorizeNetPayment(
       },
       body: JSON.stringify(transactionRequest),
     });
-    
+
     if (!response.ok) {
       return {
         success: false,
         error: 'Authorize.Net API request failed',
       };
     }
-    
-    const result = await response.json();
+
+    const result = await response.json() as AuthorizeNetResponse;
     const txnResponse = result.transactionResponse;
-    
+
     if (txnResponse?.responseCode === '1') {
       // Approved
       return {
         success: true,
-        transactionId: txnResponse.transId,
+        transactionId: txnResponse.transId ?? '',
         provider: 'authorizenet',
         cardLast4: txnResponse.accountNumber?.slice(-4),
         cardBrand: txnResponse.accountType,
@@ -106,9 +160,8 @@ export async function processAuthorizeNetPayment(
       };
     }
   } catch (error: unknown) {
-    const err = error as Error;
     logger.error('Authorize.Net payment error:', error, { file: 'payment-providers.ts' });
-    const errorMessage = err.message;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
       error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Authorize.Net payment processing failed',
@@ -141,17 +194,18 @@ export async function process2CheckoutPayment(
 ): Promise<PaymentResult> {
   try {
     const orgId = request.workspaceId.split('/')[0];
-    const tcoKeys = await apiKeyService.getServiceKey(orgId, '2checkout');
-    
-    if (!tcoKeys) {
+    const tcoKeysResponse = await apiKeyService.getServiceKey(orgId, '2checkout');
+
+    if (!tcoKeysResponse) {
       return {
         success: false,
         error: '2Checkout credentials not configured',
       };
     }
-    
+
+    const tcoKeys = tcoKeysResponse as TwoCheckoutKeys;
     const { merchantCode, secretKey, mode } = tcoKeys;
-    
+
     if (!merchantCode || !secretKey) {
       return {
         success: false,
@@ -202,16 +256,16 @@ export async function process2CheckoutPayment(
       },
       body: JSON.stringify(orderData),
     });
-    
+
     if (!response.ok) {
       return {
         success: false,
         error: '2Checkout API request failed',
       };
     }
-    
-    const result = await response.json();
-    
+
+    const result = await response.json() as TwoCheckoutResponse;
+
     if (result.RefNo) {
       return {
         success: true,
@@ -226,11 +280,11 @@ export async function process2CheckoutPayment(
       };
     }
   } catch (error: unknown) {
-    const err = error as Error;
     logger.error('2Checkout payment error:', error, { file: 'payment-providers.ts' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
-      error:(err.message !== '' && err.message != null) ? err.message : '2Checkout payment processing failed',
+      error:(errorMessage !== '' && errorMessage != null) ? errorMessage : '2Checkout payment processing failed',
     };
   }
 }
@@ -260,17 +314,18 @@ export async function processMolliePayment(
 ): Promise<PaymentResult> {
   try {
     const orgId = request.workspaceId.split('/')[0];
-    const mollieKeys = await apiKeyService.getServiceKey(orgId, 'mollie');
-    
-    if (!mollieKeys) {
+    const mollieKeysResponse = await apiKeyService.getServiceKey(orgId, 'mollie');
+
+    if (!mollieKeysResponse) {
       return {
         success: false,
         error: 'Mollie credentials not configured',
       };
     }
-    
+
+    const mollieKeys = mollieKeysResponse as MollieKeys;
     const { apiKey } = mollieKeys;
-    
+
     if (!apiKey) {
       return {
         success: false,
@@ -299,16 +354,16 @@ export async function processMolliePayment(
         },
       }),
     });
-    
+
     if (!response.ok) {
       return {
         success: false,
         error: 'Mollie API request failed',
       };
     }
-    
-    const payment = await response.json();
-    
+
+    const payment = await response.json() as MolliePaymentResponse;
+
     if (payment.id) {
       return {
         success: true,
@@ -323,11 +378,11 @@ export async function processMolliePayment(
       };
     }
   } catch (error: unknown) {
-    const err = error as Error;
     logger.error('Mollie payment error:', error, { file: 'payment-providers.ts' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
-      error:(err.message !== '' && err.message != null) ? err.message : 'Mollie payment processing failed',
+      error:(errorMessage !== '' && errorMessage != null) ? errorMessage : 'Mollie payment processing failed',
     };
   }
 }

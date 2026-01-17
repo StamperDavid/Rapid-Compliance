@@ -50,7 +50,7 @@ export async function calculateTax(
   // Use shipping address for tax calculation (or billing if no shipping)
   const taxAddress = shippingAddress || billingAddress;
   
-  if (taxConfig.calculationType === 'automated') {
+  if (taxConfig?.calculationType === 'automated') {
     return calculateAutomatedTax(taxConfig, cart, taxAddress);
   } else {
     return calculateManualTax(taxConfig, cart, taxAddress);
@@ -71,23 +71,38 @@ async function calculateAutomatedTax(
   return calculateManualTax(taxConfig, cart, address);
 }
 
+interface TaxRate {
+  enabled: boolean;
+  country: string;
+  state?: string;
+  city?: string;
+  zipCode?: string;
+  rate: number;
+  name: string;
+  priority: number;
+  compound?: boolean;
+  applyToShipping?: boolean;
+}
+
 /**
  * Calculate tax using manual rates
  */
 function calculateManualTax(
-  taxConfig: Record<string, unknown>,
+  taxConfigParam: Record<string, unknown>,
   cart: Cart,
   address: Address
 ): Promise<TaxCalculation> {
-  const applicableRates = taxConfig.taxRates?.filter((rate: any) => {
+  const taxConfig = taxConfigParam;
+  const taxRates = (taxConfig.taxRates ?? []) as TaxRate[];
+  const applicableRates = taxRates.filter((rate: TaxRate) => {
     if (!rate.enabled) {return false;}
     if (rate.country !== address.country) {return false;}
     if (rate.state && rate.state !== address.state) {return false;}
     if (rate.city && rate.city !== address.city) {return false;}
     if (rate.zipCode && rate.zipCode !== address.zip) {return false;}
     return true;
-  }) ?? [];
-  
+  });
+
   if (applicableRates.length === 0) {
     return Promise.resolve({
       amount: 0,
@@ -95,25 +110,25 @@ function calculateManualTax(
       breakdown: [],
     });
   }
-  
+
   // Sort by priority (higher priority first)
-  applicableRates.sort((a: any, b: any) => b.priority - a.priority);
+  applicableRates.sort((a: TaxRate, b: TaxRate) => b.priority - a.priority);
   
   // Calculate tax
   let taxableAmount = cart.subtotal;
-  if (taxConfig.settings?.pricesIncludeTax) {
+  if (((taxConfig.settings as Record<string, unknown> | undefined)?.pricesIncludeTax ?? false) === true) {
     // Tax is already included in prices, calculate backwards
-    taxableAmount = cart.subtotal / (1 + applicableRates[0].rate / 100);
+    taxableAmount = cart.subtotal / (1 + (applicableRates[0].rate ?? 0) / 100);
   }
   
   const breakdown: Array<{ name: string; rate: number; amount: number }> = [];
   let totalTax = 0;
   
   for (const rate of applicableRates) {
-    const taxAmount = (taxableAmount * rate.rate) / 100;
+    const taxAmount = (taxableAmount * (rate.rate ?? 0)) / 100;
     breakdown.push({
       name: rate.name,
-      rate: rate.rate,
+      rate: rate.rate ?? 0,
       amount: taxAmount,
     });
     totalTax += taxAmount;
@@ -127,15 +142,15 @@ function calculateManualTax(
   }
   
   // Apply tax to shipping if configured
-  if (applicableRates[0]?.applyToShipping) {
-    const shippingTax = (cart.shipping * applicableRates[0].rate) / 100;
+  if (applicableRates[0]?.applyToShipping === true) {
+    const shippingTax = (cart.shipping * (applicableRates[0].rate ?? 0)) / 100;
     totalTax += shippingTax;
     breakdown[0].amount += shippingTax;
   }
-  
+
   return Promise.resolve({
     amount: totalTax,
-    rate: applicableRates[0].rate,
+    rate: applicableRates[0].rate ?? 0,
     breakdown,
   });
 }

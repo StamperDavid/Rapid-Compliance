@@ -6,6 +6,41 @@
 import { getActivityStats } from './activity-service';
 import { getDeal, type Deal } from './deal-service';
 import { logger } from '@/lib/logger/logger';
+import type { ActivityStats } from '@/types/activity';
+
+/**
+ * Type guard to check if value has a toDate method (Firestore Timestamp)
+ */
+interface FirestoreTimestamp {
+  toDate: () => Date;
+}
+
+/**
+ * Safely convert Firestore timestamp or date-like value to Date
+ * Handles any type from Firestore by checking structure at runtime
+ */
+function toDate(value: unknown): Date {
+  // Check if it's a Firestore Timestamp with toDate method
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const timestamp = value as FirestoreTimestamp;
+    if (typeof timestamp.toDate === 'function') {
+      return timestamp.toDate();
+    }
+  }
+
+  // Handle Date objects
+  if (value instanceof Date) {
+    return value;
+  }
+
+  // Handle strings and numbers
+  if (typeof value === 'string' || typeof value === 'number') {
+    return new Date(value);
+  }
+
+  // Fallback to current date if value is invalid
+  return new Date();
+}
 
 export interface DealHealthScore {
   overall: number; // 0-100 (higher is healthier)
@@ -43,7 +78,7 @@ export async function calculateDealHealth(
 
     // Factor 1: Activity Recency (20% weight)
     const activityStats = await getActivityStats(organizationId, workspaceId, 'deal', dealId);
-    const activityRecencyFactor = calculateActivityRecencyFactor(activityStats, deal);
+    const activityRecencyFactor = calculateActivityRecencyFactor(activityStats);
     factors.push(activityRecencyFactor);
     
     if (activityRecencyFactor.impact === 'negative') {
@@ -117,16 +152,17 @@ export async function calculateDealHealth(
 
     return healthScore;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to calculate deal health', error, { organizationId, dealId });
-    throw new Error(`Deal health calculation failed: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Deal health calculation failed: ${errorMessage}`);
   }
 }
 
 /**
  * Activity recency factor
  */
-function calculateActivityRecencyFactor(activityStats: any, deal: Deal): DealHealthFactor {
+function calculateActivityRecencyFactor(activityStats: ActivityStats): DealHealthFactor {
   const daysSinceLastActivity = getDaysSinceLastActivity(activityStats);
   
   let score = 100;
@@ -168,7 +204,7 @@ function calculateActivityRecencyFactor(activityStats: any, deal: Deal): DealHea
  * Stage duration factor
  */
 function calculateStageDurationFactor(deal: Deal): DealHealthFactor {
-  const createdAt = deal.createdAt?.toDate ? deal.createdAt.toDate() : new Date(deal.createdAt);
+  const createdAt = toDate(deal.createdAt);
   const daysSinceCreated = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
   // Expected days per stage (industry averages)
@@ -220,7 +256,7 @@ function calculateStageDurationFactor(deal: Deal): DealHealthFactor {
 /**
  * Engagement level factor
  */
-function calculateEngagementFactor(activityStats: any): DealHealthFactor {
+function calculateEngagementFactor(activityStats: ActivityStats): DealHealthFactor {
   const engagementScore = activityStats.engagementScore ?? 0;
   
   let impact: 'positive' | 'negative' | 'neutral' = 'neutral';
@@ -289,9 +325,7 @@ function calculateTimeToCloseFactor(deal: Deal): DealHealthFactor {
     };
   }
 
-  const expectedDate = deal.expectedCloseDate?.toDate ? 
-    deal.expectedCloseDate.toDate() : 
-    new Date(deal.expectedCloseDate);
+  const expectedDate = toDate(deal.expectedCloseDate);
   const daysToClose = Math.floor((expectedDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
   let score = 100;
@@ -332,7 +366,7 @@ function calculateTimeToCloseFactor(deal: Deal): DealHealthFactor {
 /**
  * Helper to get days since last activity
  */
-function getDaysSinceLastActivity(activityStats: any): number | null {
+function getDaysSinceLastActivity(activityStats: ActivityStats): number | null {
   if (!activityStats.lastActivityDate) {return null;}
   
   const lastDate = new Date(activityStats.lastActivityDate);

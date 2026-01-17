@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { Cart, Address } from '@/types/ecommerce';
+import type { Cart, Address, ShippingConfig, ShippingMethod } from '@/types/ecommerce';
 
 export interface ShippingCalculation {
   cost: number;
@@ -13,6 +13,17 @@ export interface ShippingCalculation {
   carrier?: string;
   service?: string;
   estimatedDelivery?: string;
+}
+
+interface EcommerceConfigDocument {
+  shipping?: ShippingConfig;
+}
+
+interface FreeShippingConfig {
+  enabled: boolean;
+  minOrderAmount?: number;
+  countries?: string[];
+  promoCode?: string;
 }
 
 /**
@@ -24,19 +35,21 @@ export async function calculateShipping(
   cart: Cart,
   address: Address,
   methodId?: string
-): ShippingCalculation {
+): Promise<ShippingCalculation> {
   // Get e-commerce config
-  const ecommerceConfig = await FirestoreService.get(
+  const rawConfig = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
-  
+
+  const ecommerceConfig = rawConfig as EcommerceConfigDocument | null;
+
   if (!ecommerceConfig) {
     throw new Error('E-commerce not configured');
   }
-  
-  const shippingConfig = (ecommerceConfig as Record<string, unknown>).shipping as Record<string, unknown> | undefined;
-  
+
+  const shippingConfig = ecommerceConfig.shipping;
+
   // If no shipping config, return default shipping
   if (!shippingConfig) {
     return {
@@ -46,10 +59,11 @@ export async function calculateShipping(
       estimatedDelivery: calculateEstimatedDelivery(5, 7),
     };
   }
-  
+
   // Check for free shipping
-  if (shippingConfig.freeShipping?.enabled) {
-    const minAmount = shippingConfig.freeShipping.minOrderAmount ?? 0;
+  const freeShippingConfig = shippingConfig.freeShipping as FreeShippingConfig | undefined;
+  if (freeShippingConfig?.enabled) {
+    const minAmount = freeShippingConfig.minOrderAmount ?? 0;
     if (cart.subtotal >= minAmount) {
       return {
         cost: 0,
@@ -59,17 +73,17 @@ export async function calculateShipping(
       };
     }
   }
-  
+
   // Get shipping method
   if (methodId) {
-    const method = shippingConfig.methods?.find((m: any) => m.id === methodId && m.enabled);
+    const method = shippingConfig.methods?.find((m: ShippingMethod) => m.id === methodId && m.enabled);
     if (method) {
       return calculateMethodCost(method, cart, address);
     }
   }
-  
+
   // Get default/cheapest method
-  const availableMethods = shippingConfig.methods?.filter((m: any) => m.enabled) ?? [];
+  const availableMethods = shippingConfig.methods?.filter((m: ShippingMethod) => m.enabled) ?? [];
   if (availableMethods.length === 0) {
     return {
       cost: 0,
@@ -77,34 +91,40 @@ export async function calculateShipping(
       methodName: 'No Shipping',
     };
   }
-  
+
   // Calculate costs for all methods and return cheapest
-  const calculations = await Promise.all(
-    availableMethods.map((method: Record<string, unknown>) => calculateMethodCost(method, cart, address))
-  );
-  
-  return calculations.sort((a, b) => a.cost - b.cost)[0];
+  const calculations = availableMethods.map((method: ShippingMethod) => calculateMethodCost(method, cart, address));
+
+  const cheapestMethod = calculations.sort((a, b) => a.cost - b.cost)[0];
+  if (!cheapestMethod) {
+    throw new Error('No shipping methods available');
+  }
+
+  return cheapestMethod;
 }
 
 /**
  * Calculate cost for specific shipping method
  */
 function calculateMethodCost(
-  method: Record<string, unknown>,
+  method: ShippingMethod,
   cart: Cart,
   address: Address
 ): ShippingCalculation {
   switch (method.rateType) {
     case 'flat':
       return {
-        cost: method.flatRate ?? 0,
+        cost: typeof method.flatRate === 'number' ? method.flatRate : 0,
         methodId: method.id,
         methodName: method.name,
         estimatedDelivery: method.estimatedDays
-          ? calculateEstimatedDelivery(method.estimatedDays.min, method.estimatedDays.max)
+          ? calculateEstimatedDelivery(
+          method.estimatedDays.min,
+          method.estimatedDays.max
+        )
           : undefined,
       };
-    
+
     case 'calculated':
       // Carrier APIs (USPS, UPS, FedEx) can be added via Settings > API Keys > Integrations
       // For now, return flat rate estimate
@@ -115,27 +135,33 @@ function calculateMethodCost(
         carrier: method.carrier,
         service: method.service,
         estimatedDelivery: method.estimatedDays
-          ? calculateEstimatedDelivery(method.estimatedDays.min, method.estimatedDays.max)
+          ? calculateEstimatedDelivery(
+          method.estimatedDays.min,
+          method.estimatedDays.max
+        )
           : undefined,
       };
-    
+
     case 'free':
       return {
         cost: 0,
         methodId: method.id,
         methodName: method.name,
         estimatedDelivery: method.estimatedDays
-          ? calculateEstimatedDelivery(method.estimatedDays.min, method.estimatedDays.max)
+          ? calculateEstimatedDelivery(
+          method.estimatedDays.min,
+          method.estimatedDays.max
+        )
           : undefined,
       };
-    
+
     case 'pickup':
       return {
         cost: 0,
         methodId: method.id,
         methodName: method.name,
       };
-    
+
     default:
       return {
         cost: 0,
@@ -148,13 +174,13 @@ function calculateMethodCost(
 /**
  * Estimate calculated shipping (placeholder for carrier API integration)
  */
-function estimateCalculatedShipping(method: Record<string, unknown>, cart: Cart, _address: Address): number {
+function estimateCalculatedShipping(method: ShippingMethod, cart: Cart, _address: Address): number {
   // Simple estimation based on cart total
   // In production, use carrier APIs
   const baseRate = 5.00;
   const weightMultiplier = 0.5; // $0.50 per estimated pound
   const estimatedWeight = cart.items.length * 1; // Assume 1 lb per item
-  
+
   return baseRate + (estimatedWeight * weightMultiplier);
 }
 
@@ -165,12 +191,12 @@ function calculateEstimatedDelivery(minDays: number, maxDays: number): string {
   const today = new Date();
   const deliveryDate = new Date();
   deliveryDate.setDate(today.getDate() + maxDays);
-  
+
   // Skip weekends
   while (deliveryDate.getDay() === 0 || deliveryDate.getDay() === 6) {
     deliveryDate.setDate(deliveryDate.getDate() + 1);
   }
-  
+
   return deliveryDate.toISOString().split('T')[0];
 }
 

@@ -99,7 +99,7 @@ export function wrapLinksWithTracking(html: string, trackingId: string): string 
   // Simple regex to find all <a> tags and wrap their href with tracking
   return html.replace(
     /<a\s+href=["']([^"']+)["']/gi,
-    (match, url) => {
+    (_match: string, url: string) => {
       const encodedUrl = encodeURIComponent(url);
       return `<a href="/api/email/track/link?trackingId=${trackingId}&url=${encodedUrl}"`;
     }
@@ -170,6 +170,13 @@ export function classifyBounce(message: string): 'hard' | 'soft' | 'spam' | 'blo
  * Get email tracking statistics from database
  * Queries Firestore for tracking events and calculates stats
  */
+interface TrackingData {
+  opened?: boolean;
+  clicked?: boolean;
+  openedAt?: string | number | Date;
+  clickedAt?: string | number | Date;
+}
+
 export async function getEmailTrackingStats(
   messageId: string,
   organizationId?: string
@@ -179,15 +186,16 @@ export async function getEmailTrackingStats(
   }
 
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  const trackingData = await FirestoreService.get(
+  const rawData = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId
   );
 
-  if (!trackingData) {
+  if (!rawData) {
     return null;
   }
 
+  const trackingData = rawData as TrackingData;
   const sent = 1; // Would come from email send record
   const delivered = 1; // Would come from provider webhook
   const opened = trackingData.opened ? 1 : 0;
@@ -215,7 +223,7 @@ export async function getEmailTrackingStats(
  * Get tracking stats for campaign
  * REAL: Aggregates stats for all emails in campaign
  */
-export async function getCampaignTrackingStats(campaignId: string): Promise<EmailTrackingStats | null> {
+export function getCampaignTrackingStats(_campaignId: string): EmailTrackingStats | null {
   // In production, this would query database for all emails in campaign
   // For now, return null (will be implemented with database)
   return null;
@@ -225,27 +233,22 @@ export async function getCampaignTrackingStats(campaignId: string): Promise<Emai
  * Record email open event
  * REAL: Stores open event in database
  */
-export async function recordEmailOpen(
+export function recordOpenEvent(
   trackingId: string,
   ipAddress?: string,
   userAgent?: string
-): Promise<void> {
+): void {
   // In production, this would:
   // 1. Look up messageId from trackingId
   // 2. Create/open tracking record in database
   // 3. Store IP, user agent, timestamp
   // 4. Trigger webhooks if configured
-  
-  // Store in Firestore (called from API route, so server-side)
-  // Extract organizationId from trackingId if possible, or pass as parameter
-  // For now, we'll need to update the API route to pass organizationId
-  const { recordEmailOpen } = await import('./email-service');
-  
+
   // Note: This function is called from API route, so we need organizationId
   // The API route should extract it from the tracking data or metadata
   // For now, log it (API route will handle the actual storage)
   logger.info('Email opened', { trackingId, ipAddress, userAgent, file: 'email-tracking.ts' });
-  
+
   // The actual storage happens in the API route which has access to organizationId
 }
 
@@ -253,23 +256,23 @@ export async function recordEmailOpen(
  * Record email click event
  * REAL: Stores click event and redirects to original URL
  */
-export async function recordEmailClick(
+export function recordClickEvent(
   linkId: string,
   ipAddress?: string,
   userAgent?: string
-): Promise<string | null> {
+): string | null {
   // In production, this would:
   // 1. Look up original URL from linkId
   // 2. Create click event in database
   // 3. Store IP, user agent, timestamp
   // 4. Return original URL for redirect
   // 5. Trigger webhooks if configured
-  
+
   // Get link data from Firestore (called from API route, so server-side)
   // The API route will handle this and return the original URL
   // For now, return null (API route will handle the lookup and redirect)
   logger.info('Email clicked', { linkId, ipAddress, userAgent, file: 'email-tracking.ts' });
-  
+
   // The actual lookup and redirect happens in the API route
   return null;
 }

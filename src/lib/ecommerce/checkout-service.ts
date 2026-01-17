@@ -174,12 +174,12 @@ async function validateCart(cart: Cart): Promise<void> {
     }
     
     // Check inventory
-    if (product.stockLevel !== undefined && product.stockLevel < item.quantity) {
+    if (typeof product?.stockLevel === 'number' && product.stockLevel < item.quantity) {
       throw new Error(`Insufficient stock for ${item.productName}`);
     }
     
     // Check if price changed
-    if (product.price !== item.price) {
+    if (typeof product?.price === 'number' && product.price !== item.price) {
       throw new Error(`Price for ${item.productName} has changed. Please refresh your cart.`);
     }
   }
@@ -341,11 +341,12 @@ async function getProduct(workspaceId: string, organizationId: string, productId
   }
   
   const mappings = (ecommerceConfig as unknown as EcommerceConfig).productMappings;
+  const productData = product as Record<string, unknown>;
   return {
-    id: product.id,
-    name: product[mappings.name],
-    price: parseFloat(product[mappings.price] ?? 0),
-    stockLevel: product[mappings.inventory],
+    id: productData.id as string,
+    name: productData[mappings.name] as string,
+    price: parseFloat(String(productData[mappings.price] ?? 0)),
+    stockLevel: productData[mappings.inventory] as number | undefined,
   };
 }
 
