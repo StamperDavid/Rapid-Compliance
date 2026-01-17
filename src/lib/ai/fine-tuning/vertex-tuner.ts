@@ -35,7 +35,7 @@ export async function createVertexAIFineTuningJob(params: {
   const formattedData = formatForVertexAI(examples);
   
   // Upload to Cloud Storage
-  const storageUri = await uploadToCloudStorage(
+  const storageUri = uploadToCloudStorage(
     formattedData,
     organizationId,
     'training_data.jsonl'
@@ -45,14 +45,14 @@ export async function createVertexAIFineTuningJob(params: {
   const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
   // Extract location - empty string is invalid region (Explicit Ternary for STRING)
   const envLocation = process.env.GOOGLE_CLOUD_LOCATION;
-  const location = (envLocation !== '' && envLocation != null) ? envLocation : 'us-central1';
-  
+  const _location = (envLocation !== '' && envLocation != null) ? envLocation : 'us-central1';
+
   if (!projectId) {
     throw new Error('Google Cloud project ID not configured');
   }
-  
+
   // Note: This is a simplified version. In production, use the actual Vertex AI SDK
-  const tuningJobConfig = {
+  const _tuningJobConfig = {
     baseModel,
     trainingDatasetUri: storageUri,
     validationDatasetUri: null, // Could split data
@@ -105,11 +105,11 @@ export async function createVertexAIFineTuningJob(params: {
 /**
  * Upload training data to Cloud Storage
  */
-async function uploadToCloudStorage(
-  data: string,
+function uploadToCloudStorage(
+  _data: string,
   organizationId: string,
   filename: string
-): Promise<string> {
+): string {
   // In production, use @google-cloud/storage
   // For now, return a simulated URI
   // Extract bucket name - empty string is invalid bucket (Explicit Ternary for STRING)

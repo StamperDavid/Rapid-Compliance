@@ -124,6 +124,11 @@ export async function createABTest(params: {
 /**
  * Get which model to use for a conversation (A/B routing)
  */
+interface OrganizationConfig {
+  activeABTest?: string;
+  preferredModel?: string;
+}
+
 export async function getModelForConversation(
   organizationId: string,
   conversationId: string
@@ -133,8 +138,8 @@ export async function getModelForConversation(
   testId?: string;
 }> {
   // Check if there's an active A/B test
-  const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId) as any;
-  
+  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, organizationId);
+
   if (!org?.activeABTest) {
     // No active test, use default model
     // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
@@ -144,13 +149,13 @@ export async function getModelForConversation(
       isTestGroup: false,
     };
   }
-  
+
   // Get the test
-  const test = await FirestoreService.get(
+  const test = await FirestoreService.get<ABTest>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/abTests`,
     org.activeABTest
-  ) as ABTest;
-  
+  );
+
   if (test?.status !== 'running') {
     // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
     const preferredModel = (org?.preferredModel !== '' && org?.preferredModel != null) ? org.preferredModel : 'gpt-4';
@@ -338,16 +343,17 @@ export async function evaluateABTest(
  * Get active A/B test for organization
  */
 export async function getActiveABTest(organizationId: string): Promise<ABTest | null> {
-  const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId) as any;
-  
+  const org = await FirestoreService.get<OrganizationConfig>(COLLECTIONS.ORGANIZATIONS, organizationId);
+
   if (!org?.activeABTest) {
     return null;
   }
-  
-  return await FirestoreService.get(
+
+  const test = await FirestoreService.get<ABTest>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/abTests`,
     org.activeABTest
-  ) as ABTest;
+  );
+  return test ?? null;
 }
 
 /**

@@ -3,13 +3,26 @@
  * Automatically improves agent from feedback
  */
 
-import type { ContinuousLearningConfig, TrainingExample } from '@/types/fine-tuning';
+import type { ContinuousLearningConfig, TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { collectTrainingExample, getTrainingDataStats } from '../fine-tuning/data-collector';
 import { createOpenAIFineTuningJob } from '../fine-tuning/openai-tuner';
 import { createVertexAIFineTuningJob } from '../fine-tuning/vertex-tuner';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { where } from 'firebase/firestore';
+import { where, type Timestamp } from 'firebase/firestore';
+
+interface OrganizationPreferences {
+  preferredModel?: string;
+}
+
+// Helper to convert Timestamp | string to Date
+function toDate(value: Timestamp | string): Date {
+  if (typeof value === 'string') {
+    return new Date(value);
+  }
+  // Firestore Timestamp has a toDate() method
+  return value.toDate();
+}
 
 /**
  * Process conversation feedback and trigger learning
@@ -95,9 +108,9 @@ async function shouldTriggerFineTuning(
   
   // Check last training date
   const lastJob = await getLastFineTuningJob(organizationId);
-  
+
   if (lastJob) {
-    const daysSinceLastTraining = getDaysSince(lastJob.createdAt);
+    const daysSinceLastTraining = getDaysSinceDate(toDate(lastJob.createdAt));
     
     switch (config.trainingFrequency) {
       case 'weekly':
@@ -127,39 +140,39 @@ async function shouldTriggerFineTuning(
  */
 async function triggerFineTuning(
   organizationId: string,
-  config: ContinuousLearningConfig
+  _config: ContinuousLearningConfig
 ): Promise<string> {
   logger.info('Continuous Learning Triggering fine-tuning for organizationId}', { file: 'continuous-learning-engine.ts' });
   
   // Get approved examples
-  const examples = await FirestoreService.getAll(
+  const examples = await FirestoreService.getAll<TrainingExample>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
-    [where('status', '==', 'approved')] as any
-  ) as unknown as TrainingExample[];
+    [where('status', '==', 'approved')]
+  );
   
   if (examples.length === 0) {
     throw new Error('No approved examples found');
   }
   
   // Get organization's model preferences
-  const orgConfig = await FirestoreService.get(
+  const orgConfig = await FirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
     organizationId
-  ) as any;
-  
+  );
+
   // Extract preferred model - empty string is invalid model name (Explicit Ternary for STRING)
   const rawPreferredModel = orgConfig?.preferredModel;
   const preferredModel = (rawPreferredModel !== '' && rawPreferredModel != null) ? rawPreferredModel : 'gpt-4';
   
   // Create fine-tuning job
   let job;
-  if (preferredModel.startsWith('gpt-')) {
+  if (preferredModel === 'gpt-4' || preferredModel === 'gpt-3.5-turbo') {
     job = await createOpenAIFineTuningJob({
       organizationId,
       baseModel: preferredModel,
       examples,
     });
-  } else if (preferredModel.startsWith('gemini-')) {
+  } else if (preferredModel === 'gemini-1.5-pro' || preferredModel === 'gemini-1.0-pro') {
     job = await createVertexAIFineTuningJob({
       organizationId,
       baseModel: preferredModel,
@@ -184,7 +197,7 @@ async function getLearningConfig(
       'continuousLearning'
     );
     return config as ContinuousLearningConfig;
-  } catch (error) {
+  } catch (_error) {
     // Return default config if not found
     return {
       organizationId,
@@ -208,19 +221,19 @@ async function getLearningConfig(
 /**
  * Get last fine-tuning job
  */
-async function getLastFineTuningJob(organizationId: string): Promise<any> {
-  const jobs = await FirestoreService.getAll(
+async function getLastFineTuningJob(organizationId: string): Promise<FineTuningJob | null> {
+  const jobs = await FirestoreService.getAll<FineTuningJob>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
     []
   );
-  
+
   if (jobs.length === 0) {return null;}
-  
+
   // Sort by created date descending
-  jobs.sort((a: any, b: any) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  jobs.sort((a, b) =>
+    toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime()
   );
-  
+
   return jobs[0];
 }
 
@@ -228,23 +241,23 @@ async function getLastFineTuningJob(organizationId: string): Promise<any> {
  * Get monthly training spend
  */
 async function getMonthlyTrainingSpend(organizationId: string): Promise<number> {
-  const jobs = await FirestoreService.getAll(
+  const jobs = await FirestoreService.getAll<FineTuningJob>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
     []
   );
-  
+
   const thisMonth = new Date();
   thisMonth.setDate(1);
   thisMonth.setHours(0, 0, 0, 0);
-  
-  const monthlyJobs = jobs.filter((job: any) => {
-    const jobDate = new Date(job.createdAt);
+
+  const monthlyJobs = jobs.filter((job) => {
+    const jobDate = toDate(job.createdAt);
     return jobDate >= thisMonth;
   });
-  
+
   // Costs are NUMBERS - 0 is valid (use ?? for numbers)
-  return monthlyJobs.reduce((sum: number, job: any) => 
-    sum + (job.actualCost ?? job.estimatedCost ?? 0), 
+  return monthlyJobs.reduce((sum: number, job) =>
+    sum + (job.actualCost ?? job.estimatedCost ?? 0),
     0
   );
 }
@@ -252,8 +265,7 @@ async function getMonthlyTrainingSpend(organizationId: string): Promise<number> 
 /**
  * Get days since a date
  */
-function getDaysSince(dateString: string): number {
-  const date = new Date(dateString);
+function getDaysSinceDate(date: Date): number {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   return diffMs / (1000 * 60 * 60 * 24);
@@ -290,11 +302,11 @@ export async function evaluateAndDeployModel(
   }
   
   // Get organization's current model
-  const orgConfig = await FirestoreService.get(
+  const orgConfig = await FirestoreService.get<OrganizationPreferences>(
     COLLECTIONS.ORGANIZATIONS,
     organizationId
-  ) as any;
-  
+  );
+
   // Extract current model - empty string is invalid model name (Explicit Ternary for STRING)
   const rawCurrentModel = orgConfig?.preferredModel;
   const currentModel = (rawCurrentModel !== '' && rawCurrentModel != null) ? rawCurrentModel : 'gpt-4';
@@ -331,15 +343,15 @@ export async function processCompletedFineTuningJob(
   testId?: string;
 }> {
   // Get the job
-  const job = await FirestoreService.get(
+  const job = await FirestoreService.get<FineTuningJob>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
     jobId
-  ) as any;
-  
+  );
+
   if (!job) {
     return { success: false, message: 'Job not found' };
   }
-  
+
   if (job.status !== 'completed' || !job.fineTunedModelId) {
     return { success: false, message: `Job not ready: status=${job.status}` };
   }

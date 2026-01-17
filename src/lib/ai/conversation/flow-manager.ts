@@ -9,17 +9,17 @@ export interface ConversationFlow {
   id: string;
   name: string;
   description: string;
-  
+
   // Flow steps
   steps: FlowStep[];
   currentStep: number;
-  
+
   // Completion
   isComplete: boolean;
   completedAt?: string;
-  
+
   // Data collected
-  collectedData: Record<string, any>;
+  collectedData: Record<string, string>;
 }
 
 export interface FlowStep {
@@ -32,7 +32,7 @@ export interface FlowStep {
   
   // Action
   action?: string; // Function to call
-  actionParams?: Record<string, any>;
+  actionParams?: Record<string, string | number | boolean>;
   
   // Branch
   condition?: string;
@@ -45,7 +45,7 @@ export interface FlowStep {
   nextStepId?: string;
   
   // Validation
-  validator?: (value: any) => boolean;
+  validator?: (value: string) => boolean;
 }
 
 /**
@@ -195,7 +195,7 @@ export function startFlow(flowName: string): ConversationFlow {
 export function advanceFlow(
   flow: ConversationFlow,
   userResponse: string,
-  entities: ConversationEntities
+  _entities: ConversationEntities
 ): {
   flow: ConversationFlow;
   currentStep: FlowStep;
@@ -249,7 +249,7 @@ export function advanceFlow(
 function evaluateCondition(
   condition: string,
   userResponse: string,
-  collectedData: Record<string, any>
+  _collectedData: Record<string, string>
 ): boolean {
   // Simple condition evaluation
   // In production, use a proper expression parser

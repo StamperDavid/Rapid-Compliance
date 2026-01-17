@@ -5,7 +5,7 @@
 
 import { logger } from '@/lib/logger/logger';
 
-interface OpenAIEmbeddingResponse {
+interface _OpenAIEmbeddingResponse {
   data: Array<{ embedding: number[] }>;
 }
 
@@ -16,7 +16,7 @@ interface CohereRerankResponse {
   }>;
 }
 
-interface GPTScoreResponse {
+interface _GPTScoreResponse {
   text: string;
 }
 
@@ -120,7 +120,7 @@ async function generateEmbedding(text: string): Promise<number[]> {
       throw new Error('Embedding generation failed');
     }
     
-    const data = await response.json();
+    const data = await response.json() as _OpenAIEmbeddingResponse;
     return data.data[0].embedding;
   } catch (error: unknown) {
     logger.error('[RAG] Embedding error:', error, { file: 'advanced-rag.ts' });
@@ -210,7 +210,7 @@ async function rerankChunks(
     
     // Fallback: Use GPT-4 for reranking
     return await rerankWithGPT4(query, chunks);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[RAG] Reranking error:', error, { file: 'advanced-rag.ts' });
     // Return original order if reranking fails
     return chunks;
@@ -250,7 +250,7 @@ async function rerankWithCohere(
       ...chunks[result.index],
       relevanceScore: result.relevance_score,
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[RAG] Cohere reranking error:', error, { file: 'advanced-rag.ts' });
     return chunks;
   }
@@ -284,8 +284,8 @@ Scores:`;
     });
     
     // Parse scores
-    const scores = JSON.parse(response.text.replace(/```json\n?|\n?```/g, ''));
-    
+    const scores = JSON.parse(response.text.replace(/```json\n?|\n?```/g, '')) as number[];
+
     // Apply new scores and resort - scores are NUMBERS (use ?? for numbers)
     return chunks
       .map((chunk, i) => ({
@@ -293,7 +293,7 @@ Scores:`;
         relevanceScore: (scores[i] ?? 0) / 100,
       }))
       .sort((a, b) => b.relevanceScore - a.relevanceScore);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('[RAG] GPT-4 reranking error:', error, { file: 'advanced-rag.ts' });
     return chunks;
   }

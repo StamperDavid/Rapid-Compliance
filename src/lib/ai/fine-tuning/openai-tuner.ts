@@ -8,6 +8,17 @@ import { formatForOpenAI, validateTrainingData } from './data-formatter';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 
+interface OpenAIFineTuningJobResponse {
+  id: string;
+  status: string;
+  fine_tuned_model?: string;
+  error?: { message: string };
+}
+
+interface OpenAIFileUploadResponse {
+  id: string;
+}
+
 /**
  * Create fine-tuning job with OpenAI
  */
@@ -62,15 +73,15 @@ export async function createOpenAIFineTuningJob(params: {
   });
   
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`OpenAI fine-tuning error: ${JSON.stringify(error)}`);
+    const errorData = await response.json() as { error?: { message: string } };
+    throw new Error(`OpenAI fine-tuning error: ${JSON.stringify(errorData)}`);
   }
-  
-  const jobData = await response.json();
-  
+
+  const jobData = await response.json() as OpenAIFineTuningJobResponse;
+
   // Estimate cost (rough approximation)
   const estimatedCost = estimateFineTuningCost(examples.length, baseModel);
-  
+
   // Save job to Firestore
   const job: FineTuningJob = {
     id: `job_${Date.now()}`,
@@ -86,18 +97,18 @@ export async function createOpenAIFineTuningJob(params: {
     createdAt: new Date().toISOString(),
     startedAt: new Date().toISOString(),
   };
-  
+
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
     job.id,
     job,
     false
   );
-  
+
   logger.info('OpenAI Fine-Tuning Job created: job.id}', { file: 'openai-tuner.ts' });
-  
-  // Start monitoring job
-  monitorFineTuningJob(organizationId, job.id, jobData.id);
+
+  // Start monitoring job (fire and forget)
+  void monitorFineTuningJob(organizationId, job.id, jobData.id);
   
   return job;
 }
@@ -126,73 +137,75 @@ async function uploadTrainingFile(data: string): Promise<string> {
   });
   
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to upload file: ${JSON.stringify(error)}`);
+    const errorData = await response.json() as { error?: { message: string } };
+    throw new Error(`Failed to upload file: ${JSON.stringify(errorData)}`);
   }
-  
-  const fileData = await response.json();
+
+  const fileData = await response.json() as OpenAIFileUploadResponse;
   return fileData.id;
 }
 
 /**
  * Monitor fine-tuning job progress
  */
-async function monitorFineTuningJob(
+function monitorFineTuningJob(
   organizationId: string,
   jobId: string,
   providerJobId: string
-): Promise<void> {
+): void {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {return;}
-  
-  const checkStatus = async () => {
-    try {
-      const response = await fetch(
-        `https://api.openai.com/v1/fine_tuning/jobs/${providerJobId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-          },
+
+  const checkStatus = (): void => {
+    void (async () => {
+      try {
+        const response = await fetch(
+          `https://api.openai.com/v1/fine_tuning/jobs/${providerJobId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          logger.error('[OpenAI Fine-Tuning] Failed to check status', new Error('[OpenAI Fine-Tuning] Failed to check status'), { file: 'openai-tuner.ts' });
+          return;
         }
-      );
-      
-      if (!response.ok) {
-        logger.error('[OpenAI Fine-Tuning] Failed to check status', new Error('[OpenAI Fine-Tuning] Failed to check status'), { file: 'openai-tuner.ts' });
-        return;
+
+        const jobData = await response.json() as OpenAIFineTuningJobResponse;
+
+        // Update job in Firestore
+        const updates: Partial<FineTuningJob> & { updatedAt: string } = {
+          status: mapJobStatus(jobData.status),
+          updatedAt: new Date().toISOString(),
+        };
+
+        if (jobData.fine_tuned_model) {
+          updates.fineTunedModelId = jobData.fine_tuned_model;
+          updates.completedAt = new Date().toISOString();
+        }
+
+        if (jobData.error) {
+          updates.error = JSON.stringify(jobData.error);
+        }
+
+        await FirestoreService.update(
+          `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
+          jobId,
+          updates
+        );
+
+        // If still running, check again in 30 seconds
+        if (jobData.status === 'running' || jobData.status === 'validating_files') {
+          setTimeout(checkStatus, 30000);
+        }
+      } catch (error) {
+        logger.error('[OpenAI Fine-Tuning] Monitoring error:', error, { file: 'openai-tuner.ts' });
       }
-      
-      const jobData = await response.json();
-      
-      // Update job in Firestore
-      const updates: any = {
-        status: mapJobStatus(jobData.status),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      if (jobData.fine_tuned_model) {
-        updates.fineTunedModelId = jobData.fine_tuned_model;
-        updates.completedAt = new Date().toISOString();
-      }
-      
-      if (jobData.error) {
-        updates.error = JSON.stringify(jobData.error);
-      }
-      
-      await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/fineTuningJobs`,
-        jobId,
-        updates
-      );
-      
-      // If still running, check again in 30 seconds
-      if (jobData.status === 'running' || jobData.status === 'validating_files') {
-        setTimeout(checkStatus, 30000);
-      }
-    } catch (error) {
-      logger.error('[OpenAI Fine-Tuning] Monitoring error:', error, { file: 'openai-tuner.ts' });
-    }
+    })();
   };
-  
+
   // Start monitoring
   setTimeout(checkStatus, 10000); // Check after 10 seconds
 }

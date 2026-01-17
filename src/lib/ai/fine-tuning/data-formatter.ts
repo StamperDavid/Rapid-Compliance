@@ -3,7 +3,7 @@
  * Format training examples for different providers
  */
 
-import type { TrainingExample, FineTuningDataset } from '@/types/fine-tuning';
+import type { TrainingExample } from '@/types/fine-tuning';
 
 /**
  * Format for OpenAI fine-tuning

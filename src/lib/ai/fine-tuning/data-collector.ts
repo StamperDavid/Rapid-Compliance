@@ -39,7 +39,7 @@ export async function collectTrainingExample(params: {
   
   if (!shouldCollect) {
     logger.info('[Data Collector] Example does not meet quality criteria', { file: 'data-collector.ts' });
-    return null as any;
+    return null as unknown as TrainingExample;
   }
   
   // Create training example
@@ -48,7 +48,7 @@ export async function collectTrainingExample(params: {
     organizationId,
     conversationId,
     messages: messages.map(m => ({
-      role: m.role as any,
+      role: m.role as 'system' | 'user' | 'assistant',
       content: m.content,
     })),
     confidence,
@@ -126,7 +126,7 @@ export async function collectFromHumanCorrection(params: {
   const {
     organizationId,
     conversationId,
-    originalResponse,
+    originalResponse: _originalResponse,
     correctedResponse,
     systemPrompt,
     userMessage,
@@ -197,12 +197,12 @@ export async function getTrainingExamples(
     ? [where('status', '==', status)]
     : [];
   
-  const examples = await FirestoreService.getAll(
+  const examples = await FirestoreService.getAll<TrainingExample>(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/trainingExamples`,
-    filters as any
+    filters
   );
-  
-  return examples as TrainingExample[];
+
+  return examples;
 }
 
 /**

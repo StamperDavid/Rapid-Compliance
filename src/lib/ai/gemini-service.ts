@@ -7,6 +7,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { logger } from '@/lib/logger/logger';
 
+interface PlatformApiKeys {
+  gemini?: { apiKey?: string };
+  google?: { apiKey?: string };
+}
+
+// Module-level cache
 let cachedGenAI: GoogleGenerativeAI | null = null;
 let cachedOrgId: string | null = null;
 let lastKeyFetch = 0;
@@ -27,8 +33,11 @@ async function getApiKey(organizationId?: string): Promise<string> {
     // Try organization-specific keys first if organizationId provided
     if (organizationId) {
       try {
-        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-        apiKey = await apiKeyService.getServiceKey(organizationId, 'gemini');
+        const apiKeyModule = await import('@/lib/api-keys/api-key-service') as {
+          apiKeyService: { getServiceKey: (orgId: string, service: string) => Promise<string | null> }
+        };
+        const fetchedKey = await apiKeyModule.apiKeyService.getServiceKey(organizationId, 'gemini');
+        apiKey = fetchedKey ?? null;
 
         if (apiKey) {
           logger.info('[Gemini] Using organization-specific API key', {
@@ -48,12 +57,12 @@ async function getApiKey(organizationId?: string): Promise<string> {
     // Fallback to platform admin keys if no org key found
     if (!apiKey) {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const adminKeys = await FirestoreService.get('admin', 'platform-api-keys');
+      const adminKeys = await FirestoreService.get<PlatformApiKeys>('admin', 'platform-api-keys');
 
       // Extract API key - prefer Gemini, fallback to Google key (Explicit Ternary for STRING)
       const geminiKey = adminKeys?.gemini?.apiKey;
       const googleKey = adminKeys?.google?.apiKey;
-      apiKey = (geminiKey !== '' && geminiKey != null) ? geminiKey : googleKey;
+      apiKey = (geminiKey !== '' && geminiKey != null) ? geminiKey : (googleKey ?? null);
 
       if (apiKey) {
         logger.info('[Gemini] Using platform admin API key', { file: 'gemini-service.ts' });
@@ -64,13 +73,15 @@ async function getApiKey(organizationId?: string): Promise<string> {
       throw new Error('Gemini API key not configured. Please add it in organization settings or admin settings.');
     }
 
-    // Update cache
+    // Update cache - intentional race condition acceptable for caching
+    /* eslint-disable require-atomic-updates */
     cachedGenAI = new GoogleGenerativeAI(apiKey);
     cachedOrgId = organizationId ?? null;
     lastKeyFetch = Date.now();
+    /* eslint-enable require-atomic-updates */
 
     return apiKey;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error fetching Gemini API key:', error, { file: 'gemini-service.ts' });
     throw new Error('Failed to fetch Gemini API key from settings');
   }
@@ -128,22 +139,25 @@ export async function sendChatMessage(
 
     const lastMessage = messages[messages.length - 1];
     const result = await chat.sendMessage(lastMessage.parts[0].text);
-    const response = await result.response;
+    const response = result.response;
     const text = response.text();
 
+    // Access usage metadata from result
+    const resultWithMetadata = result as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } };
     return {
       text,
       usage: {
         // Token counts are NUMBERS - 0 is valid (use ?? for numbers)
-        promptTokens: (result as any).usageMetadata?.promptTokenCount ?? 0,
-        completionTokens: (result as any).usageMetadata?.candidatesTokenCount ?? 0,
-        totalTokens: (result as any).usageMetadata?.totalTokenCount ?? 0,
+        promptTokens: resultWithMetadata.usageMetadata?.promptTokenCount ?? 0,
+        completionTokens: resultWithMetadata.usageMetadata?.candidatesTokenCount ?? 0,
+        totalTokens: resultWithMetadata.usageMetadata?.totalTokenCount ?? 0,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error calling Gemini API:', error, { file: 'gemini-service.ts' });
     // Extract error message to avoid empty error message (Explicit Ternary for STRING)
-    const errorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to get response from AI';
+    const errObj = error as { message?: string };
+    const errorMsg = (errObj.message !== '' && errObj.message != null) ? errObj.message : 'Failed to get response from AI';
     throw new Error(errorMsg);
   }
 }
@@ -163,12 +177,13 @@ export async function generateText(
       systemInstruction: systemInstruction,
     });
 
-    const response = await result.response;
+    const response = result.response;
     const text = response.text();
 
     // Get usage metadata if available
-    const usageMetadata = (result as any).usageMetadata;
-    
+    const resultWithMetadata = result as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } };
+    const usageMetadata = resultWithMetadata.usageMetadata;
+
     return {
       text,
       usage: {
@@ -178,10 +193,11 @@ export async function generateText(
         totalTokens: usageMetadata?.totalTokenCount ?? 0,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error generating text with Gemini:', error, { file: 'gemini-service.ts' });
     // Extract error message (Explicit Ternary for STRING)
-    const errorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to generate text';
+    const errObj = error as { message?: string };
+    const errorMsg = (errObj.message !== '' && errObj.message != null) ? errObj.message : 'Failed to generate text';
     throw new Error(errorMsg);
   }
 }
@@ -216,10 +232,11 @@ export async function* streamChatMessage(
       const chunkText = chunk.text();
       yield chunkText;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error streaming from Gemini:', error, { file: 'gemini-service.ts' });
     // Extract error message (Explicit Ternary for STRING)
-    const errorMsg = (error.message !== '' && error.message != null) ? error.message : 'Failed to stream response';
+    const errObj = error as { message?: string };
+    const errorMsg = (errObj.message !== '' && errObj.message != null) ? errObj.message : 'Failed to stream response';
     throw new Error(errorMsg);
   }
 }

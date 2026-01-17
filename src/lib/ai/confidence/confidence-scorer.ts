@@ -5,46 +5,63 @@
 
 import type { ConfidenceScore } from '@/types/ai-models';
 
+interface RetrievedContextItem {
+  score?: number;
+  content?: string;
+  text?: string;
+}
+
+interface KnowledgeBaseData {
+  id: string;
+  chunks?: Array<{ content: string }>;
+}
+
+interface HistoricalDataRecord {
+  query: string;
+  accuracy: number;
+  timestamp: string;
+}
+
 /**
  * Calculate confidence score for a response
  */
-export async function calculateConfidenceScore(params: {
+export function calculateConfidenceScore(params: {
   response: string;
   query: string;
-  retrievedContext: any[];
+  retrievedContext: RetrievedContextItem[];
   modelResponses?: Array<{ model: string; response: string }>;
-  knowledgeBase?: any;
-  historicalData?: any;
-}): Promise<ConfidenceScore> {
+  knowledgeBase?: KnowledgeBaseData;
+  historicalData?: HistoricalDataRecord[];
+}): ConfidenceScore {
   const {
     response,
     query,
     retrievedContext,
     modelResponses,
-    knowledgeBase,
+    knowledgeBase: _knowledgeBase,
     historicalData,
   } = params;
   
   // Score 1: Knowledge Coverage (0-100)
-  const knowledgeCoverage = await calculateKnowledgeCoverage(
+  const knowledgeCoverage = calculateKnowledgeCoverage(
     query,
     retrievedContext
   );
-  
+
   // Score 2: Model Agreement (0-100)
   const modelAgreement = modelResponses
-    ? await calculateModelAgreement(modelResponses)
+    ? calculateModelAgreement(modelResponses)
     : 100; // Default to 100 if only one model
-  
+
   // Score 3: Semantic Consistency (0-100)
-  const semanticConsistency = await calculateSemanticConsistency(
+  const semanticConsistency = calculateSemanticConsistency(
     response,
     retrievedContext
   );
-  
+
   // Score 4: Historical Accuracy (0-100)
   const historicalAccuracy = historicalData
-    ? await calculateHistoricalAccuracy(query, historicalData)
+    ? calculateHistoricalAccuracy(query, historicalData)
     : 75; // Default to 75 if no historical data
   
   // Weighted average
@@ -82,10 +99,10 @@ export async function calculateConfidenceScore(params: {
  * Calculate knowledge coverage
  * How much relevant context was found?
  */
-async function calculateKnowledgeCoverage(
-  query: string,
-  retrievedContext: any[]
-): Promise<number> {
+function calculateKnowledgeCoverage(
+  _query: string,
+  retrievedContext: RetrievedContextItem[]
+): number {
   if (retrievedContext.length === 0) {
     return 20; // Very low confidence if no context found
   }
@@ -110,9 +127,9 @@ async function calculateKnowledgeCoverage(
  * Calculate model agreement
  * Do multiple models agree on the answer?
  */
-async function calculateModelAgreement(
+function calculateModelAgreement(
   modelResponses: Array<{ model: string; response: string }>
-): Promise<number> {
+): number {
   if (modelResponses.length < 2) {
     return 100; // Can't disagree with yourself
   }
@@ -141,10 +158,10 @@ async function calculateModelAgreement(
  * Calculate semantic consistency
  * Does the response match the knowledge base?
  */
-async function calculateSemanticConsistency(
+function calculateSemanticConsistency(
   response: string,
-  retrievedContext: any[]
-): Promise<number> {
+  retrievedContext: RetrievedContextItem[]
+): number {
   if (retrievedContext.length === 0) {
     return 50; // Neutral if no context
   }
@@ -188,10 +205,10 @@ async function calculateSemanticConsistency(
  * Calculate historical accuracy
  * Has the model been accurate on similar questions?
  */
-async function calculateHistoricalAccuracy(
-  query: string,
-  historicalData: any
-): Promise<number> {
+function calculateHistoricalAccuracy(
+  _query: string,
+  _historicalData: HistoricalDataRecord[]
+): number {
   // In production, look up similar past queries and their outcomes
   // For now, return a default
   return 75;
