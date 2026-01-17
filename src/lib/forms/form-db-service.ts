@@ -40,8 +40,7 @@ import {
   increment,
   Timestamp,
   writeBatch,
-  runTransaction,
-  _QueryDocumentSnapshot
+  runTransaction
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
@@ -53,16 +52,13 @@ import type {
   FormAnalyticsSummary,
   FormFieldAnalytics,
   FormTemplate,
-  _FormStatus,
-  _SubmissionStatus,
   FormFilters,
   SubmissionFilters,
   PaginationOptions,
   PaginatedResult,
   FormWithFields,
   FieldResponse,
-  SubmissionMetadata,
-  _CRMFieldMapping,
+  SubmissionMetadata
 } from './types';
 
 // Helper to ensure db is available
@@ -882,9 +878,10 @@ export async function trackFormView(
   await batch.commit();
 
   // Update daily analytics (fire-and-forget for performance)
-  updateDailyAnalytics(orgId, workspaceId, formId, 'view', metadata).catch((err: unknown) =>
-    logger.warn('Failed to update daily analytics', { error: err })
-  );
+  updateDailyAnalytics(orgId, workspaceId, formId, 'view', metadata).catch((err: unknown) => {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.warn('Failed to update daily analytics', { error: message });
+  });
 
   return viewId;
 }
@@ -988,7 +985,8 @@ export async function updateDailyAnalytics(
       }
     });
   } catch (error) {
-    logger.warn('Failed to update daily analytics', { error, formId, eventType });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.warn('Failed to update daily analytics', { error: message, formId, eventType });
   }
 }
 
@@ -1093,7 +1091,7 @@ export async function createFormFromTemplate(
 
   const template = templateSnap.data() as FormTemplate;
 
-  return runTransaction(getDb(), (transaction) => {
+  return runTransaction(getDb(), async (transaction) => {
     // Create form
     const formsRef = collection(getDb(), PATHS.forms(orgId, workspaceId));
     const formDoc = doc(formsRef);

@@ -86,7 +86,9 @@ export class WorkflowCoordinator {
     };
     
     logger.info('WorkflowCoordinator initialized', {
-      config: this.config,
+      maxConcurrentExecutions: this.config.maxConcurrentExecutions,
+      executeForTestDeals: this.config.executeForTestDeals,
+      dryRun: this.config.dryRun,
     });
   }
   
@@ -146,11 +148,14 @@ export class WorkflowCoordinator {
       }
       
     } catch (error) {
-      logger.error('Failed to handle signal for workflows', {
-        error,
-        signalId: signal.id,
-        signalType: signal.type,
-      });
+      logger.error(
+        'Failed to handle signal for workflows',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          signalId: signal.id,
+          signalType: signal.type,
+        }
+      );
     }
   }
   
@@ -389,11 +394,13 @@ export class WorkflowCoordinator {
       return Promise.resolve([]);
 
     } catch (error) {
-      logger.error('Failed to find matching workflows', {
-        error,
-        organizationId,
-        triggerTypes,
-      });
+      logger.error(
+        'Failed to find matching workflows',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          organizationId,
+        }
+      );
       return Promise.resolve([]);
     }
   }
@@ -442,7 +449,10 @@ export class WorkflowCoordinator {
         if (this.config.dryRun) {
           logger.info('[DRY RUN] Would execute workflow', {
             workflowId: workflow.id,
-            context,
+            organizationId: context.organizationId,
+            workspaceId: context.workspaceId,
+            dealId: context.dealId,
+            triggeredBy: context.triggeredBy,
           });
           return;
         }
@@ -468,11 +478,14 @@ export class WorkflowCoordinator {
       }
       
     } catch (error) {
-      logger.error('Failed to execute workflow from signal', {
-        error,
-        workflowId: workflow.id,
-        signalType: signal.type,
-      });
+      logger.error(
+        'Failed to execute workflow from signal',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          workflowId: workflow.id,
+          signalType: signal.type,
+        }
+      );
     }
   }
   
@@ -566,11 +579,14 @@ export class WorkflowCoordinator {
       });
       
     } catch (error) {
-      logger.error('Failed to save workflow execution record', {
-        error,
-        executionId,
-        workflowId: workflow.id,
-      });
+      logger.error(
+        'Failed to save workflow execution record',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          executionId,
+          workflowId: workflow.id,
+        }
+      );
     }
   }
   
@@ -610,17 +626,22 @@ export class WorkflowCoordinator {
         workflow.id,
         { stats }
       );
-      
+
       logger.debug('Workflow stats updated', {
         workflowId: workflow.id,
-        stats,
+        totalExecutions: stats.totalExecutions,
+        successfulExecutions: stats.successfulExecutions,
+        failedExecutions: stats.failedExecutions,
       });
       
     } catch (error) {
-      logger.error('Failed to update workflow stats', {
-        error,
-        workflowId: workflow.id,
-      });
+      logger.error(
+        'Failed to update workflow stats',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          workflowId: workflow.id,
+        }
+      );
     }
   }
   

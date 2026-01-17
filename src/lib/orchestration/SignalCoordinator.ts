@@ -164,8 +164,12 @@ export class SignalCoordinator {
     };
     
     logger.info('🧠 SignalCoordinator initialized', {
-      environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
-      config: this.config,
+      environment: process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? 'unknown',
+      circuitBreakerThreshold: this.config.circuitBreakerThreshold,
+      circuitBreakerResetTimeout: this.config.circuitBreakerResetTimeout,
+      throttlerWindowDuration: this.config.throttlerWindowDuration,
+      throttlerMaxSignals: this.config.throttlerMaxSignals,
+      signalTTLDays: this.config.signalTTLDays,
       file: 'SignalCoordinator.ts'
     });
   }
@@ -287,11 +291,10 @@ export class SignalCoordinator {
       this.recordCircuitBreakerFailure(signalData.orgId);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      logger.error('❌ Signal emission failed', {
-        error: errorMessage,
-        orgId: signalData.orgId,
-        type: signalData.type,
+      const errorObj = error instanceof Error ? error : undefined;
+
+      logger.error('❌ Signal emission failed', errorObj, {
+        organizationId: signalData.orgId,
         file: 'SignalCoordinator.ts'
       });
       
@@ -399,10 +402,20 @@ export class SignalCoordinator {
       (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added' || change.type === 'modified') {
-            const signal = {
+            const docData = change.doc.data();
+            if (!docData) {
+              logger.warn('📨 Signal document has no data', {
+                signalId: change.doc.id,
+                file: 'SignalCoordinator.ts'
+              });
+              return;
+            }
+            // Type assertion after null check
+            const signalData = docData as Omit<SalesSignal, 'id'>;
+            const signal: SalesSignal = {
               id: change.doc.id,
-              ...change.doc.data(),
-            } as SalesSignal;
+              ...signalData,
+            };
             
             // Apply client-side filters (priority and confidence)
             if (!this.matchesSubscription(signal, subscription)) {
@@ -420,10 +433,8 @@ export class SignalCoordinator {
             
             // Invoke observer callback (async-safe)
             Promise.resolve(observer(signal)).catch((error) => {
-              logger.error('❌ Signal observer failed', {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                signalId: signal.id,
-                type: signal.type,
+              const errorObj = error instanceof Error ? error : undefined;
+              logger.error('❌ Signal observer failed', errorObj, {
                 file: 'SignalCoordinator.ts'
               });
             });
@@ -431,9 +442,9 @@ export class SignalCoordinator {
         });
       },
       (error) => {
-        logger.error('❌ Signal observation error', {
-          error: error.message,
-          orgId: subscription.orgId,
+        const errorObj = error instanceof Error ? error : undefined;
+        logger.error('❌ Signal observation error', errorObj, {
+          organizationId: subscription.orgId,
           file: 'SignalCoordinator.ts'
         });
       }
@@ -482,22 +493,19 @@ export class SignalCoordinator {
         processedAt: Timestamp.now(),
         processingResult: result,
       });
-      
+
       logger.info('✅ Signal marked as processed', {
-        signalId,
-        orgId,
-        result,
+        organizationId: orgId,
         file: 'SignalCoordinator.ts'
       });
       
     } catch (error) {
-      logger.error('❌ Failed to mark signal as processed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        signalId,
-        orgId,
+      const errorObj = error instanceof Error ? error : undefined;
+      logger.error('❌ Failed to mark signal as processed', errorObj, {
+        organizationId: orgId,
         file: 'SignalCoordinator.ts'
       });
-      
+
       throw error;
     }
   }
@@ -561,18 +569,14 @@ export class SignalCoordinator {
     if (breaker.failureCount >= breaker.failureThreshold) {
       breaker.isOpen = true;
       breaker.lastOpenedAt = Timestamp.now();
-      
-      logger.error('🚨 Circuit breaker OPENED', {
-        orgId,
-        failureCount: breaker.failureCount,
-        threshold: breaker.failureThreshold,
+
+      logger.error('🚨 Circuit breaker OPENED', undefined, {
+        organizationId: orgId,
         file: 'SignalCoordinator.ts'
       });
     } else {
       logger.warn('⚠️ Circuit breaker failure recorded', {
-        orgId,
-        failureCount: breaker.failureCount,
-        threshold: breaker.failureThreshold,
+        organizationId: orgId,
         file: 'SignalCoordinator.ts'
       });
     }
@@ -704,10 +708,9 @@ export class SignalCoordinator {
       
     } catch (error) {
       // Log errors but don't fail signal emission
-      logger.error('❌ Failed to log signal to audit trail', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        signalId,
-        orgId,
+      const errorObj = error instanceof Error ? error : undefined;
+      logger.error('❌ Failed to log signal to audit trail', errorObj, {
+        organizationId: orgId,
         file: 'SignalCoordinator.ts'
       });
     }

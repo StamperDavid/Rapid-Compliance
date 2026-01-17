@@ -287,11 +287,12 @@ export async function discoverCompany(
       scrapeId: scrapeResult.scrape.id,
     };
   } catch (error) {
-    logger.error('Failed to discover company', error, {
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to discover company', errorObj, {
       domain,
       organizationId,
     });
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to discover company ${domain}: ${errorMessage}`);
   }
@@ -323,7 +324,7 @@ async function checkDiscoveryArchive(
     if (cached.expiresAt < new Date()) {
       logger.info('Discovery archive entry expired', {
         domain,
-        expiresAt: cached.expiresAt,
+        expiresAt: cached.expiresAt.toISOString(),
       });
       return null;
     }
@@ -419,7 +420,8 @@ async function scrapeCompanyData(domain: string): Promise<RawScrapedData> {
       careerData,
     };
   } catch (error) {
-    logger.error('Failed to scrape company data', error, { domain });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to scrape company data', errorObj, { domain });
     throw error;
   } finally {
     await controller.close();
@@ -624,8 +626,9 @@ async function synthesizeLeadObject(
 
     return company;
   } catch (error) {
-    logger.error('Failed to synthesize lead object', error, { domain });
-    
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to synthesize lead object', errorObj, { domain });
+
     // Fallback to raw data only
     return {
       domain,
@@ -879,12 +882,13 @@ async function saveToArchive(
       organizationId,
       scrapeId: result.scrape.id,
       isNew: result.isNew,
-      expiresAt: result.scrape.expiresAt,
+      expiresAt: result.scrape.expiresAt.toISOString(),
     });
 
     return result;
   } catch (error) {
-    logger.error('Failed to save to discovery archive', error, {
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to save to discovery archive', errorObj, {
       domain,
       organizationId,
     });
@@ -1059,11 +1063,12 @@ export async function discoverPerson(
       scrapeId: scrapeResult.scrape.id,
     };
   } catch (error) {
-    logger.error('Failed to discover person', error, {
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to discover person', errorObj, {
       email,
       organizationId,
     });
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to discover person ${email}: ${errorMessage}`);
   }
@@ -1211,8 +1216,9 @@ async function discoverPersonData(
 
     return finalPerson;
   } catch (error) {
-    logger.error('Failed to discover person data', error, { email });
-    
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to discover person data', errorObj, { email });
+
     // Return minimal data
     return {
       email,
@@ -1520,15 +1526,14 @@ async function emitDiscoverySignals(
       domain: company.domain,
       organizationId,
       fromCache,
-      signalsEmitted: {
-        websiteDiscovered: 1,
-        technologyDetected: company.techStack.length > 0 ? 1 : 0,
-        leadsDiscovered: Math.min(company.teamMembers.filter(m => m.email).length, 10),
-      },
+      websiteDiscovered: 1,
+      technologyDetected: company.techStack.length > 0 ? 1 : 0,
+      leadsDiscovered: Math.min(company.teamMembers.filter(m => m.email).length, 10),
     });
   } catch (error) {
     // Don't fail discovery if signal emission fails
-    logger.error('Failed to emit discovery signals', error, {
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to emit discovery signals', errorObj, {
       domain: company.domain,
       organizationId,
     });
@@ -1584,7 +1589,8 @@ async function emitPersonDiscoverySignals(
     });
   } catch (error) {
     // Don't fail person discovery if signal emission fails
-    logger.error('Failed to emit person discovery signal', error, {
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Failed to emit person discovery signal', errorObj, {
       email: person.email,
       organizationId,
     });

@@ -159,7 +159,8 @@ export async function enrichCompany(
       scrapeCalls++;
       scrapedContent = await scrapeWithRetry(website, 3);
     } catch (error: unknown) {
-      logger.error(`[Enrichment] Scraping failed for ${domain}`, error, { file: 'enrichment-service.ts' });
+      const scrapeError = error instanceof Error ? error : new Error(String(error));
+      logger.error(`[Enrichment] Scraping failed for ${domain}`, scrapeError, { file: 'enrichment-service.ts' });
 
       // Don't give up yet - try backup sources
       return await useBackupSources(
@@ -191,7 +192,7 @@ export async function enrichCompany(
           domain,
           contentHash,
           temporaryScrapeId,
-          lastSeen: existingScrape.lastSeen,
+          lastSeen: existingScrape.lastSeen.toISOString(),
         });
       }
     }
@@ -232,7 +233,7 @@ export async function enrichCompany(
               logger.info('Temporary scrape saved', {
                 temporaryScrapeId,
                 isNew,
-                expiresAt: scrape.expiresAt,
+                expiresAt: scrape.expiresAt.toISOString(),
                 contentHash: scrape.contentHash,
                 size: scrapedContent.rawHtml.length,
               });
@@ -429,8 +430,9 @@ export async function enrichCompany(
       },
     };
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Enrichment] Unexpected error:', error, { file: 'enrichment-service.ts' });
+    const enrichError = error instanceof Error ? error : new Error(String(error));
+    const errorMessage = enrichError.message;
+    logger.error('[Enrichment] Unexpected error:', enrichError, { file: 'enrichment-service.ts' });
 
     await logEnrichmentCost(organizationId, {
       organizationId,

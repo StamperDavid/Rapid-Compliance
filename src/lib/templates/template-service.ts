@@ -40,7 +40,8 @@ export async function getGlobalTemplate(
       updatedAt: updatedAtValue?.toDate?.() ?? new Date(),
     } as GlobalTemplateDocument;
   } catch (error) {
-    logger.error('Error getting global template', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error getting global template', errorObj, { templateId });
     throw new Error('Failed to get global template');
   }
 }
@@ -54,7 +55,8 @@ export async function hasTemplateOverride(templateId: string): Promise<boolean> 
     const doc = await docRef.get();
     return doc.exists;
   } catch (error) {
-    logger.error('Error checking template override', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error checking template override', errorObj, { templateId });
     return false;
   }
 }
@@ -80,7 +82,8 @@ export async function listGlobalTemplates(): Promise<GlobalTemplateDocument[]> {
       } as GlobalTemplateDocument;
     });
   } catch (error) {
-    logger.error('Error listing global templates', { error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error listing global templates', errorObj);
     throw new Error('Failed to list global templates');
   }
 }
@@ -127,10 +130,10 @@ export async function saveGlobalTemplate(
       version,
     });
   } catch (error) {
-    logger.error('Error saving global template', {
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error saving global template', errorObj, {
       templateId: template.id,
       userId,
-      error,
     });
     throw new Error('Failed to save global template');
   }
@@ -146,7 +149,8 @@ export async function deleteGlobalTemplate(templateId: string): Promise<void> {
 
     logger.info('Global template deleted (reverted to default)', { templateId });
   } catch (error) {
-    logger.error('Error deleting global template', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error deleting global template', errorObj, { templateId });
     throw new Error('Failed to delete global template');
   }
 }
@@ -194,22 +198,30 @@ export async function getTemplateMetadata(templateId: string): Promise<{
 } | null> {
   try {
     const override = await getGlobalTemplate(templateId);
-    
-    if (override) {
-      return {
-        id: override.id,
-        name: override.name,
-        category: override.category,
-        hasOverride: true,
-        version: override.version,
-        updatedAt: override.updatedAt,
-        updatedBy: override.updatedBy,
-      };
+
+    if (!override) {
+      return null;
     }
 
-    return null;
+    // GlobalTemplateDocument extends IndustryTemplate which includes id, name, category
+    const template = override as IndustryTemplate & {
+      version: number;
+      updatedAt: Date;
+      updatedBy: string;
+    };
+
+    return {
+      id: template.id,
+      name: template.name,
+      category: template.category,
+      hasOverride: true,
+      version: template.version,
+      updatedAt: template.updatedAt,
+      updatedBy: template.updatedBy,
+    };
   } catch (error) {
-    logger.error('Error getting template metadata', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error getting template metadata', errorObj, { templateId });
     return null;
   }
 }

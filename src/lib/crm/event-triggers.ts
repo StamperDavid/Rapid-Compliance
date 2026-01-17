@@ -76,7 +76,8 @@ export async function fireCRMEvent(event: CRMEvent): Promise<void> {
       try {
         await executeTriggeredWorkflow(workflowRule, event);
       } catch (error: unknown) {
-        logger.error('Failed to execute triggered workflow', error, {
+        const err = error instanceof Error ? error : undefined;
+        logger.error('Failed to execute triggered workflow', err, {
           workflowId: workflowRule.workflowId,
           eventType: event.eventType,
         });
@@ -84,7 +85,14 @@ export async function fireCRMEvent(event: CRMEvent): Promise<void> {
     }
 
   } catch (error: unknown) {
-    logger.error('Failed to fire CRM event', error, { event });
+    const err = error instanceof Error ? error : undefined;
+    logger.error('Failed to fire CRM event', err, {
+      eventType: event.eventType,
+      entityType: event.entityType,
+      entityId: event.entityId,
+      organizationId: event.organizationId,
+      workspaceId: event.workspaceId,
+    });
   }
 }
 
@@ -130,10 +138,14 @@ function _evaluateConditions(
         return entityValue !== condition.value;
       
       case 'greater_than':
-        return entityValue > condition.value;
-      
+        return typeof entityValue === 'number' && typeof condition.value === 'number'
+          ? entityValue > condition.value
+          : false;
+
       case 'less_than':
-        return entityValue < condition.value;
+        return typeof entityValue === 'number' && typeof condition.value === 'number'
+          ? entityValue < condition.value
+          : false;
       
       case 'contains':
         return String(entityValue).toLowerCase().includes(String(condition.value).toLowerCase());
@@ -169,9 +181,9 @@ async function executeTriggeredWorkflow(
     
     // Load the workflow
     const workflow = await getWorkflow(event.organizationId, rule.workflowId);
-    
+
     if (!workflow) {
-      logger.error('Workflow not found for trigger', { workflowId: rule.workflowId });
+      logger.error('Workflow not found for trigger', undefined, { workflowId: rule.workflowId });
       return;
     }
     
@@ -191,7 +203,8 @@ async function executeTriggeredWorkflow(
     });
 
   } catch (error: unknown) {
-    logger.error('Triggered workflow execution failed', error, {
+    const err = error instanceof Error ? error : undefined;
+    logger.error('Triggered workflow execution failed', err, {
       workflowId: rule.workflowId,
     });
     throw error;

@@ -71,7 +71,9 @@ function buildPath(basePath: string): string {
  */
 async function documentExists(collectionPath: string, docId: string): Promise<boolean> {
   if (!adminDb) {
-    logger.error('[Provisioner] Admin SDK not initialized', { file: 'provisioner/index.ts' });
+    logger.error('[Provisioner] Admin SDK not initialized', undefined, {
+      file: 'provisioner/index.ts',
+    });
     return false;
   }
 
@@ -80,8 +82,9 @@ async function documentExists(collectionPath: string, docId: string): Promise<bo
     const docSnap = await docRef.get();
     return docSnap.exists;
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     logger.warn(`[Provisioner] Error checking existence: ${collectionPath}/${docId}`, {
-      error,
+      error: message,
       file: 'provisioner/index.ts',
     });
     return false;
@@ -137,14 +140,16 @@ async function provisionSystemConfig(): Promise<ProvisionResult> {
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    logger.error('[Provisioner] Error provisioning system config', error, {
+    const errorObj = error instanceof Error ? error : undefined;
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Provisioner] Error provisioning system config', errorObj, {
       file: 'provisioner/index.ts',
     });
     return {
       target,
       action: 'error',
       documentId: docId,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: message,
       timestamp: new Date().toISOString(),
     };
   }
@@ -195,14 +200,16 @@ async function provisionAdminPersona(): Promise<ProvisionResult> {
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    logger.error('[Provisioner] Error provisioning admin persona', error, {
+    const errorObj = error instanceof Error ? error : undefined;
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Provisioner] Error provisioning admin persona', errorObj, {
       file: 'provisioner/index.ts',
     });
     return {
       target,
       action: 'error',
       documentId: docId,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: message,
       timestamp: new Date().toISOString(),
     };
   }
@@ -254,14 +261,16 @@ async function provisionIndustryPersonas(): Promise<ProvisionResult[]> {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      logger.error(`[Provisioner] Error provisioning industry persona: ${industryId}`, error, {
+      const errorObj = error instanceof Error ? error : undefined;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Provisioner] Error provisioning industry persona: ${industryId}`, errorObj, {
         file: 'provisioner/index.ts',
       });
       results.push({
         target: 'INDUSTRY_PERSONAS',
         action: 'error',
         documentId: industryId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: message,
         timestamp: new Date().toISOString(),
       });
     }
@@ -316,14 +325,16 @@ async function provisionPricingTiers(): Promise<ProvisionResult[]> {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      logger.error(`[Provisioner] Error provisioning pricing tier: ${tierId}`, error, {
+      const errorObj = error instanceof Error ? error : undefined;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Provisioner] Error provisioning pricing tier: ${tierId}`, errorObj, {
         file: 'provisioner/index.ts',
       });
       results.push({
         target: 'PRICING_TIERS',
         action: 'error',
         documentId: tierId,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: message,
         timestamp: new Date().toISOString(),
       });
     }
@@ -376,9 +387,11 @@ export async function runProvisioner(): Promise<ProvisionReport> {
   try {
     // Check Firebase Admin SDK is initialized
     if (!adminDb) {
-      logger.error('[Provisioner] Firebase Admin SDK not initialized - cannot provision', {
-        file: 'provisioner/index.ts',
-      });
+      logger.error(
+        '[Provisioner] Firebase Admin SDK not initialized - cannot provision',
+        undefined,
+        { file: 'provisioner/index.ts' }
+      );
       return {
         environment: envInfo.env,
         projectId: envInfo.projectId,
@@ -433,7 +446,8 @@ export async function runProvisioner(): Promise<ProvisionReport> {
 
     return report;
   } catch (error) {
-    logger.error('[Provisioner] Fatal error during provisioning', error, {
+    const errorObj = error instanceof Error ? error : undefined;
+    logger.error('[Provisioner] Fatal error during provisioning', errorObj, {
       file: 'provisioner/index.ts',
     });
 

@@ -76,8 +76,9 @@ export class AdminFirestoreService {
         ...doc.data(),
       };
     } catch (error) {
-      logger.error(`[Admin Firestore] Error getting document ${collectionPath}/${docId}:`, error, { file: 'admin-firestore-service.ts' });
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error getting document ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
     }
   }
 
@@ -145,8 +146,9 @@ export class AdminFirestoreService {
         ...doc.data(),
       }));
     } catch (error) {
-      logger.error(`[Admin Firestore] Error getting documents from ${collectionPath}:`, error, { file: 'admin-firestore-service.ts' });
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error getting documents from ${collectionPath}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
     }
   }
 
@@ -237,8 +239,9 @@ export class AdminFirestoreService {
         hasMore,
       };
     } catch (error) {
-      logger.error(`[Admin Firestore] Error getting paginated documents from ${collectionPath}:`, error, { file: 'admin-firestore-service.ts' });
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error getting paginated documents from ${collectionPath}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
     }
   }
 
@@ -260,8 +263,9 @@ export class AdminFirestoreService {
         await docRef.set(data);
       }
     } catch (error) {
-      logger.error(`[Admin Firestore] Error setting document ${collectionPath}/${docId}:`, error, { file: 'admin-firestore-service.ts' });
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error setting document ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
     }
   }
 
@@ -273,8 +277,9 @@ export class AdminFirestoreService {
       const docRef = await ensureAdminDb().collection(collectionPath).add(data);
       return docRef.id;
     } catch (error) {
-      logger.error(`[Admin Firestore] Error adding document to ${collectionPath}:`, error, { file: 'admin-firestore-service.ts' });
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error adding document to ${collectionPath}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
     }
   }
 
@@ -290,8 +295,9 @@ export class AdminFirestoreService {
       const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       await docRef.update(data);
     } catch (error) {
-      logger.error(`[Admin Firestore] Error updating document ${collectionPath}/${docId}:`, error, { file: 'admin-firestore-service.ts' });
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error updating document ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
     }
   }
 
@@ -303,8 +309,9 @@ export class AdminFirestoreService {
       const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       await docRef.delete();
     } catch (error) {
-      logger.error(`[Admin Firestore] Error deleting document ${collectionPath}/${docId}:`, error, { file: 'admin-firestore-service.ts' });
-      throw error;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`[Admin Firestore] Error deleting document ${collectionPath}/${docId}:`, error instanceof Error ? error : undefined, { file: 'admin-firestore-service.ts' });
+      throw new Error(message);
     }
   }
 

@@ -245,7 +245,8 @@ export async function scheduleMeeting(
 
     return meeting;
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error scheduling meeting:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error scheduling meeting:', new Error(message), { file: 'meeting-scheduler.ts' });
     throw error;
   }
 }
@@ -343,7 +344,8 @@ Respond with ONLY the ISO datetime string (YYYY-MM-DDTHH:MM:SS), or "null" if no
 
     return new Date(extracted);
   } catch (error) {
-    logger.error('[Meeting Scheduler] Time extraction failed:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Time extraction failed:', new Error(message), { file: 'meeting-scheduler.ts' });
     return null;
   }
 }
@@ -413,7 +415,8 @@ async function getHostDetails(userId: string): Promise<{ name: string; email: st
       email: 'sales@company.com',
     };
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error getting host details:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error getting host details:', new Error(message), { file: 'meeting-scheduler.ts' });
     return {
       name: 'Sales Team',
       email: 'sales@company.com',
@@ -460,7 +463,8 @@ async function getUserMeetings(
       createdBy: 'ai',
     }));
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error fetching calendar events:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error fetching calendar events:', new Error(message), { file: 'meeting-scheduler.ts' });
     return [];
   }
 }
@@ -532,7 +536,8 @@ async function createCalendarEvent(meeting: ScheduledMeeting): Promise<{ id: str
       link:event.hangoutLink ?? event.htmlLink,
     };
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error creating calendar event:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error creating calendar event:', new Error(message), { file: 'meeting-scheduler.ts' });
     throw error;
   }
 }
@@ -563,9 +568,10 @@ async function updateCalendarEvent(meeting: ScheduledMeeting): Promise<void> {
       }
     );
 
-    
+
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error updating calendar event:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error updating calendar event:', new Error(message), { file: 'meeting-scheduler.ts' });
   }
 }
 
@@ -578,9 +584,10 @@ async function cancelCalendarEvent(calendarEventId: string, userId?: string): Pr
   try {
     const { deleteEvent } = await import('@/lib/integrations/google-calendar-service');
     await deleteEvent(tokens, 'primary', calendarEventId);
-    
+
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error cancelling calendar event:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error cancelling calendar event:', new Error(message), { file: 'meeting-scheduler.ts' });
   }
 }
 
@@ -621,7 +628,8 @@ async function getCalendarTokens(userId: string): Promise<{ access_token: string
 
     return null;
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error getting calendar tokens:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error getting calendar tokens:', new Error(message), { file: 'meeting-scheduler.ts' });
     return null;
   }
 }
@@ -720,10 +728,11 @@ async function sendMeetingUpdate(
         replyTo,
       });
     }
-    
+
     logger.info(`Meeting Scheduler Sent ${updateType} emails to ${meeting.attendees.length} attendees`, { file: 'meeting-scheduler.ts' });
   } catch (error) {
-    logger.error('[Meeting Scheduler] Error sending update email:', error, { file: 'meeting-scheduler.ts' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Meeting Scheduler] Error sending update email:', new Error(message), { file: 'meeting-scheduler.ts' });
     // Don't throw - email failure shouldn't block the main operation
   }
 }

@@ -81,7 +81,8 @@ export class FirestoreService {
       }
       return null;
     } catch (error) {
-      logger.error(`Error getting document ${docId} from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`Error getting document ${docId} from ${collectionPath}: ${message}`, error instanceof Error ? error : undefined, { file: 'firestore-service.ts' });
       return null; // Return null instead of throwing to prevent crashes
     }
   }
@@ -108,7 +109,8 @@ export class FirestoreService {
         ...doc.data(),
       })) as T[];
     } catch (error) {
-      logger.error(`Error getting all documents from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`Error getting all documents from ${collectionPath}: ${message}`, error instanceof Error ? error : undefined, { file: 'firestore-service.ts' });
       return []; // Return empty array instead of throwing
     }
   }
@@ -163,7 +165,8 @@ export class FirestoreService {
         hasMore,
       };
     } catch (error) {
-      logger.error(`Error getting paginated documents from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`Error getting paginated documents from ${collectionPath}: ${message}`, error instanceof Error ? error : undefined, { file: 'firestore-service.ts' });
       return { data: [], lastDoc: null, hasMore: false };
     }
   }
@@ -188,7 +191,8 @@ export class FirestoreService {
       };
       await setDoc(docRef, dataWithTimestamps, { merge });
     } catch (error) {
-      logger.error(`Error setting document ${docId} in ${collectionPath}:`, error, { file: 'firestore-service.ts' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`Error setting document ${docId} in ${collectionPath}: ${message}`, error instanceof Error ? error : undefined, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -210,7 +214,8 @@ export class FirestoreService {
         updatedAt: serverTimestamp(),
       } as Record<string, unknown>);
     } catch (error) {
-      logger.error(`Error updating document ${docId} in ${collectionPath}:`, error, { file: 'firestore-service.ts' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`Error updating document ${docId} in ${collectionPath}: ${message}`, error instanceof Error ? error : undefined, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -225,7 +230,8 @@ export class FirestoreService {
       const docRef = doc(firestoreDb, collectionPath, docId);
       await deleteDoc(docRef);
     } catch (error) {
-      logger.error(`Error deleting document ${docId} from ${collectionPath}:`, error, { file: 'firestore-service.ts' });
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error(`Error deleting document ${docId} from ${collectionPath}: ${message}`, error instanceof Error ? error : undefined, { file: 'firestore-service.ts' });
       throw error;
     }
   }
@@ -395,7 +401,7 @@ export class WorkspaceService {
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, callback: (data: Record<string, unknown>) => void) {
+  static subscribe(orgId: string, workspaceId: string, callback: (data: Record<string, unknown> | null) => void) {
     return FirestoreService.subscribe(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}`,
       workspaceId,
@@ -430,7 +436,7 @@ export class SchemaService {
     );
   }
 
-  static subscribe(orgId: string, workspaceId: string, schemaId: string, callback: (data: Record<string, unknown>) => void) {
+  static subscribe(orgId: string, workspaceId: string, schemaId: string, callback: (data: Record<string, unknown> | null) => void) {
     return FirestoreService.subscribe(
       `${COLLECTIONS.ORGANIZATIONS}/${orgId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
       schemaId,

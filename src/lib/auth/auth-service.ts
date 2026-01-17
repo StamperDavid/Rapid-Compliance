@@ -78,10 +78,10 @@ export async function signUp(
     }
 
     return userCredential;
-  } catch (error) {
-    logger.error('Error signing up:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign up';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error signing up:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to sign up');
   }
 }
 
@@ -95,10 +95,10 @@ export async function signIn(email: string, password: string): Promise<UserCrede
 
   try {
     return await signInWithEmailAndPassword(auth, email, password);
-  } catch (error) {
-    logger.error('Error signing in:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign in';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error signing in:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to sign in');
   }
 }
 
@@ -115,10 +115,10 @@ export async function signInWithGoogle(): Promise<UserCredential> {
     provider.addScope('email');
     provider.addScope('profile');
     return await signInWithPopup(auth, provider);
-  } catch (error) {
-    logger.error('Error signing in with Google:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign in with Google';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error signing in with Google:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to sign in with Google');
   }
 }
 
@@ -135,10 +135,10 @@ export async function signInWithMicrosoft(): Promise<UserCredential> {
     provider.addScope('email');
     provider.addScope('profile');
     return await signInWithPopup(auth, provider);
-  } catch (error) {
-    logger.error('Error signing in with Microsoft:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign in with Microsoft';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error signing in with Microsoft:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to sign in with Microsoft');
   }
 }
 
@@ -152,10 +152,10 @@ export async function signOutUser(): Promise<void> {
 
   try {
     await signOut(auth);
-  } catch (error) {
-    logger.error('Error signing out:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign out';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error signing out:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to sign out');
   }
 }
 
@@ -169,10 +169,10 @@ export async function resetPassword(email: string): Promise<void> {
 
   try {
     await sendPasswordResetEmail(auth, email);
-  } catch (error) {
-    logger.error('Error sending password reset:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to send password reset email';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error sending password reset:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to send password reset email');
   }
 }
 
@@ -190,10 +190,10 @@ export async function verifyEmail(): Promise<void> {
       throw new Error('No user is currently signed in');
     }
     await sendEmailVerification(user);
-  } catch (error) {
-    logger.error('Error sending email verification:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to send email verification';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error sending email verification:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to send email verification');
   }
 }
 
@@ -236,7 +236,7 @@ export function onAuthStateChange(
           emailVerified: user.emailVerified,
         });
       }).catch((error: unknown) => {
-        logger.error('Error loading user profile in auth state change:', error, { file: 'auth-service.ts' });
+        logger.error('Error loading user profile in auth state change:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
         // Still callback with basic user info even if profile load fails
         callback({
           uid: user.uid,
@@ -279,9 +279,9 @@ export async function updateUserProfile(updates: {
       audit: true,
       userId: user.uid,
     });
-  } catch (error) {
-    logger.error('Error updating profile:', error, { file: 'auth-service.ts' });
-    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to update profile';
-    throw new Error(errorMessage);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error updating profile:', error instanceof Error ? error : undefined, { file: 'auth-service.ts' });
+    throw new Error(message || 'Failed to update profile');
   }
 }

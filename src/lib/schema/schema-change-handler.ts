@@ -55,7 +55,7 @@ export async function processSchemaChangeEvent(
     });
     
   } catch (error) {
-    logger.error('[Schema Change Handler] Failed to process event', error, {
+    logger.error('[Schema Change Handler] Failed to process event', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
       eventId: event.id,
     });
@@ -127,7 +127,7 @@ event.newFieldName ?? event.oldFieldName ?? '',
       );
     }
   } catch (error) {
-    logger.error('[Schema Change Handler] Field type change handling failed', error, {
+    logger.error('[Schema Change Handler] Field type change handling failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
       eventId: event.id,
     });
@@ -145,7 +145,7 @@ async function handleWorkflowAdaptation(event: SchemaChangeEvent): Promise<void>
     await validateWorkflowsForSchema(event);
     
   } catch (error) {
-    logger.error('[Schema Change Handler] Workflow adaptation failed', error, {
+    logger.error('[Schema Change Handler] Workflow adaptation failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
       eventId: event.id,
     });
@@ -161,7 +161,7 @@ async function handleEcommerceAdaptation(event: SchemaChangeEvent): Promise<void
     await adaptEcommerceMappings(event);
     
   } catch (error) {
-    logger.error('[Schema Change Handler] E-commerce adaptation failed', error, {
+    logger.error('[Schema Change Handler] E-commerce adaptation failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
       eventId: event.id,
     });
@@ -177,7 +177,7 @@ async function handleAIAgentAdaptation(event: SchemaChangeEvent): Promise<void> 
     await handleSchemaChangeForAgent(event);
     
   } catch (error) {
-    logger.error('[Schema Change Handler] AI agent adaptation failed', error, {
+    logger.error('[Schema Change Handler] AI agent adaptation failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
       eventId: event.id,
     });
@@ -193,7 +193,7 @@ async function handleIntegrationAdaptation(event: SchemaChangeEvent): Promise<vo
     await FieldMappingManager.adaptToSchemaChange(event);
     
   } catch (error) {
-    logger.error('[Schema Change Handler] Integration adaptation failed', error, {
+    logger.error('[Schema Change Handler] Integration adaptation failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
       eventId: event.id,
     });
@@ -225,7 +225,7 @@ export async function processUnprocessedEvents(
         await processSchemaChangeEvent(event);
         processed++;
       } catch (error) {
-        logger.error('[Schema Change Handler] Failed to process event', error, {
+        logger.error('[Schema Change Handler] Failed to process event', error instanceof Error ? error : new Error(String(error)), {
           file: 'schema-change-handler.ts',
           eventId: event.id,
         });
@@ -234,7 +234,7 @@ export async function processUnprocessedEvents(
     }
     
   } catch (error) {
-    logger.error('[Schema Change Handler] Failed to get unprocessed events', error, {
+    logger.error('[Schema Change Handler] Failed to get unprocessed events', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
     });
   }
@@ -316,11 +316,11 @@ export async function getSchemaChangeImpactSummary(
     };
     
   } catch (error) {
-    logger.error('[Schema Change Handler] Failed to get impact summary', error, {
+    logger.error('[Schema Change Handler] Failed to get impact summary', error instanceof Error ? error : new Error(String(error)), {
       file: 'schema-change-handler.ts',
       schemaId,
     });
-    
+
     return {
       totalChanges: 0,
       byType: {},

@@ -1,0 +1,509 @@
+src/lib/api-error-handler.ts(227,7): error TS2698: Spread types may only be created from object types.
+src/lib/api/admin-auth.ts(194,39): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/api/error-handler.ts(36,31): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/auth/api-auth.ts(79,60): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/auth/api-auth.ts(193,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/auth/claims-validator.ts(108,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/auth/server-auth.ts(25,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/battlecard-engine.ts(377,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/battlecard-engine.ts(533,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/battlecard-engine.ts(608,63): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/battlecard-engine.ts(673,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/battlecard-engine.ts(863,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/battlecard-engine.ts(904,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/competitive-monitor.ts(248,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/competitive-monitor.ts(297,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/battlecard/competitive-monitor.ts(661,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/brand/brand-dna-service.ts(33,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/brand/brand-dna-service.ts(67,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/brand/brand-dna-service.ts(107,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/brand/brand-dna-service.ts(152,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/brand/brand-dna-service.ts(309,69): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/cached-firestore.ts(72,78): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/redis-service.ts(55,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/redis-service.ts(86,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/redis-service.ts(113,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/redis-service.ts(130,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/redis-service.ts(156,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/redis-service.ts(175,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/cache/redis-service.ts(220,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/coaching/team-coaching-engine.ts(41,34): error TS2614: Module '"../orchestration/SignalCoordinator"' has no exported member 'SalesSignal'. Did you mean to use 'import SalesSignal from "../orchestration/SignalCoordinator"' instead?
+src/lib/config/api-keys.ts(54,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/conversation/conversation-engine.ts(523,51): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/conversation/conversation-engine.ts(649,53): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/conversation/conversation-engine.ts(990,59): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/conversation/conversation-engine.ts(1086,59): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/crm/activity-service.ts(64,7): error TS2739: Type 'Date' is missing the following properties from type 'Timestamp': seconds, nanoseconds, toDate, toMillis, isEqual
+src/lib/crm/contact-service.ts(98,7): error TS2322: Type 'ContactFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'ContactFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/contact-service.ts(104,106): error TS2322: Type 'ContactFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'ContactFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/contact-service.ts(177,108): error TS2322: Type 'Omit<Contact, "organizationId" | "workspaceId" | "createdAt" | "id">' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/deal-health.ts(156,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/crm/deal-health.ts(391,68): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/crm/deal-monitor.ts(259,9): error TS2322: Type 'unknown' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/deal-monitor.ts(260,9): error TS2322: Type 'unknown' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/deal-service.ts(89,7): error TS2322: Type 'DealFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'DealFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/deal-service.ts(94,66): error TS2322: Type 'DealFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'DealFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/deal-service.ts(174,68): error TS2322: Type 'Omit<Deal, "organizationId" | "workspaceId" | "createdAt" | "id">' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/crm/deal-service.ts(251,91): error TS2345: Argument of type 'Deal' is not assignable to parameter of type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'Deal'.
+src/lib/crm/deal-service.ts(253,62): error TS2345: Argument of type 'Error' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'Error'.
+src/lib/crm/deal-service.ts(413,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/crm/lead-routing.ts(160,24): error TS2352: Conversion of type 'Lead' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Lead'.
+src/lib/crm/lead-routing.ts(225,37): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/crm/lead-routing.ts(232,40): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/lib/crm/lead-routing.ts(283,60): error TS2345: Argument of type 'Error' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'Error'.
+src/lib/crm/next-best-action-engine.ts(190,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/crm/predictive-scoring.ts(125,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/crm/predictive-scoring.ts(338,71): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/crm/relationship-mapping.ts(108,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/crm/relationship-mapping.ts(135,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/crm/relationship-mapping.ts(188,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/dal/BaseAgentDAL.ts(235,9): error TS2322: Type 'WithFieldValue<T>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'T' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type 'DocumentData' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+      Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+        Type 'T' is not assignable to type 'number[]'.
+          Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/dal/BaseAgentDAL.ts(281,9): error TS2322: Type 'UpdateData<T>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type '{ [x: string]: any; } & AddPrefixToKeys<string, any>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type '{ [x: string]: any; } & AddPrefixToKeys<string, any>' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/dal/BaseAgentDAL.ts(366,9): error TS2322: Type 'WithFieldValue<T>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'T' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type 'DocumentData' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+      Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+        Type 'T' is not assignable to type 'number[]'.
+          Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/documents/proposal-generator.ts(115,70): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/documents/proposal-generator.ts(153,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/documents/proposal-generator.ts(391,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/cart-service.ts(163,5): error TS2322: Type 'null' is not assignable to type 'Cart'.
+src/lib/ecommerce/cart-service.ts(187,7): error TS2322: Type 'string | number' is not assignable to type 'number'.
+  Type 'string' is not assignable to type 'number'.
+src/lib/ecommerce/cart-service.ts(189,17): error TS2362: The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+src/lib/ecommerce/cart-service.ts(292,5): error TS2322: Type 'string' is not assignable to type '"fixed" | "percentage" | "free_shipping"'.
+src/lib/ecommerce/cart-service.ts(370,11): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/ecommerce/cart-service.ts(489,30): error TS18048: 'discount.usageCount' is possibly 'undefined'.
+src/lib/ecommerce/mapping-adapter.ts(95,67): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/mapping-adapter.ts(131,8): error TS2352: Conversion of type 'ProductFieldMappings' to type 'Record<string, string>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'ProductFieldMappings'.
+src/lib/ecommerce/mapping-adapter.ts(177,7): error TS2353: Object literal may only specify known properties, and 'file' does not exist in type 'Error'.
+src/lib/ecommerce/mapping-adapter.ts(193,26): error TS2352: Conversion of type 'ProductFieldMappings' to type 'Record<string, string>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'ProductFieldMappings'.
+src/lib/ecommerce/mapping-adapter.ts(371,76): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/mapping-adapter.ts(399,63): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Schema | undefined'.
+src/lib/ecommerce/payment-providers.ts(163,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/payment-providers.ts(283,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/payment-providers.ts(381,43): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/payment-service.ts(244,43): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/payment-service.ts(334,43): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/ecommerce/payment-service.ts(491,43): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/email-writer/email-writer-engine.ts(193,11): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/email-writer/email-writer-engine.ts(296,7): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/email-writer/email-writer-engine.ts(645,61): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/email-writer/email-writer-engine.ts(709,7): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/email/campaign-service.ts(90,7): error TS2322: Type 'CampaignFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'CampaignFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/email/campaign-service.ts(95,70): error TS2322: Type 'CampaignFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'CampaignFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/email/campaign-service.ts(173,72): error TS2322: Type 'Omit<EmailCampaign, "id" | "organizationId" | "createdAt" | "stats">' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/email/email-builder.ts(256,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/email/email-builder.ts(375,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/email/email-sync.ts(166,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/email/sendgrid-service.ts(302,3): error TS2322: Type '{ email: string; timestamp: number; event: string; sg_event_id: string; sg_message_id: string; url: string | undefined; reason: string | undefined; type: string | undefined; status: string | undefined; }[]' is not assignable to type 'SendGridWebhookEvent[]'.
+  Type '{ email: string; timestamp: number; event: string; sg_event_id: string; sg_message_id: string; url: string; reason: string; type: string; status: string; }' is not assignable to type 'SendGridWebhookEvent'.
+    Types of property 'event' are incompatible.
+      Type 'string' is not assignable to type '"click" | "open" | "processed" | "unsubscribe" | "delivered" | "bounce" | "deferred" | "dropped" | "spamreport"'.
+src/lib/email/sendgrid-service.ts(303,5): error TS2783: 'email' is specified more than once, so this usage will be overwritten.
+src/lib/email/sendgrid-service.ts(304,5): error TS2783: 'timestamp' is specified more than once, so this usage will be overwritten.
+src/lib/email/sendgrid-service.ts(305,5): error TS2783: 'event' is specified more than once, so this usage will be overwritten.
+src/lib/email/sendgrid-service.ts(306,5): error TS2783: 'sg_event_id' is specified more than once, so this usage will be overwritten.
+src/lib/email/sendgrid-service.ts(307,5): error TS2783: 'sg_message_id' is specified more than once, so this usage will be overwritten.
+src/lib/enrichment/ai-extractor.ts(117,56): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/lib/enrichment/backup-sources.ts(37,36): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/backup-sources.ts(90,34): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/backup-sources.ts(148,41): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/backup-sources.ts(188,40): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/backup-sources.ts(244,40): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/browser-scraper.ts(126,61): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/browser-scraper.ts(178,77): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/cache-service.ts(60,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/cache-service.ts(95,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/cache-service.ts(115,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/cache-service.ts(163,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/cache-service.ts(202,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/enrichment-service.ts(241,91): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/enrichment-service.ts(283,82): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/enrichment-service.ts(685,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/enrichment-service.ts(739,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/enrichment-service.ts(839,67): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/search-service.ts(35,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/search-service.ts(116,36): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/search-service.ts(160,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/search-service.ts(213,43): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/search-service.ts(268,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/enrichment/web-scraper.ts(98,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/firebase/admin-dal.ts(166,9): error TS2322: Type 'T' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'DocumentData' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+      Type 'T' is not assignable to type 'number[]'.
+        Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/firebase/admin-dal.ts(221,9): error TS2322: Type 'Partial<T>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'Partial<T>' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/firebase/admin-dal.ts(319,9): error TS2322: Type 'T' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'DocumentData' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+      Type 'T' is not assignable to type 'number[]'.
+        Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/firebase/admin.ts(122,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/firebase/dal.ts(103,9): error TS2322: Type 'WithFieldValue<T>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'T' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type 'DocumentData' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+      Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+        Type 'T' is not assignable to type 'number[]'.
+          Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/firebase/dal.ts(155,9): error TS2322: Type 'UpdateData<T>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type '{ [x: string]: any; } & AddPrefixToKeys<string, any>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type '{ [x: string]: any; } & AddPrefixToKeys<string, any>' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/firebase/dal.ts(249,9): error TS2322: Type 'WithFieldValue<T>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'T' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type 'DocumentData' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+      Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+        Type 'T' is not assignable to type 'number[]'.
+          Type 'DocumentData' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/forms/crm-mapping.ts(543,7): error TS2353: Object literal may only specify known properties, and 'submissionId' does not exist in type 'Error'.
+src/lib/forms/form-db-service.ts(882,55): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/forms/form-db-service.ts(987,55): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/forms/form-service.ts(43,3): error TS2724: '"./types"' has no exported member named '_FormFieldConfig'. Did you mean 'FormFieldConfig'?
+src/lib/forms/form-service.ts(48,3): error TS2724: '"./types"' has no exported member named '_FormAnalyticsSummary'. Did you mean 'FormAnalyticsSummary'?
+src/lib/forms/form-service.ts(49,3): error TS2724: '"./types"' has no exported member named '_CRMFieldMapping'. Did you mean 'CRMFieldMapping'?
+src/lib/forms/form-service.ts(50,3): error TS2724: '"./types"' has no exported member named '_OrchestratorAction'. Did you mean 'OrchestratorAction'?
+src/lib/forms/form-service.ts(51,3): error TS2724: '"./types"' has no exported member named '_FormBehavior'. Did you mean 'FormBehavior'?
+src/lib/forms/orchestrator-trigger.ts(236,7): error TS2322: Type '{}' is not assignable to type 'string'.
+src/lib/integrations/custom-transforms.ts(382,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/integrations/ecommerce/shopify.ts(96,11): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/integrations/email-sync.ts(128,82): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/integrations/email-sync.ts(343,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/integrations/field-mapper.ts(355,79): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'Schema'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'Schema': id, workspaceId, name, pluralName, and 11 more.
+src/lib/integrations/field-mapper.ts(416,9): error TS2322: Type 'unknown' is not assignable to type '{}'.
+src/lib/integrations/field-mapper.ts(420,62): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'Schema'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'Schema': id, workspaceId, name, pluralName, and 11 more.
+src/lib/integrations/gmail-service.ts(390,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/integrations/gmail-service.ts(397,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/integrations/google-calendar-service.ts(172,25): error TS2345: Argument of type '(slot: BusySlot) => { start: string; end: string; }' is not assignable to parameter of type '(value: Schema$TimePeriod, index: number, array: Schema$TimePeriod[]) => { start: string; end: string; }'.
+  Types of parameters 'slot' and 'value' are incompatible.
+    Type 'Schema$TimePeriod' is not assignable to type 'BusySlot'.
+      Types of property 'start' are incompatible.
+        Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+          Type 'null' is not assignable to type 'string | undefined'.
+src/lib/integrations/oauth-service.ts(237,32): error TS2339: Property 'integrations' does not exist on type 'string | Record<string, unknown>'.
+  Property 'integrations' does not exist on type 'string'.
+src/lib/integrations/oauth-service.ts(257,35): error TS2339: Property 'integrations' does not exist on type 'string | Record<string, unknown>'.
+  Property 'integrations' does not exist on type 'string'.
+src/lib/integrations/oauth-service.ts(277,31): error TS2339: Property 'integrations' does not exist on type 'string | Record<string, unknown>'.
+  Property 'integrations' does not exist on type 'string'.
+src/lib/integrations/oauth-service.ts(298,36): error TS2339: Property 'integrations' does not exist on type 'string | Record<string, unknown>'.
+  Property 'integrations' does not exist on type 'string'.
+src/lib/integrations/oauth-service.ts(319,30): error TS2339: Property 'integrations' does not exist on type 'string | Record<string, unknown>'.
+  Property 'integrations' does not exist on type 'string'.
+src/lib/integrations/shopify.ts(251,85): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/intelligence/orchestrator.ts(818,45): error TS2345: Argument of type 'Record<string, unknown>' is not assignable to parameter of type 'LogContext'.
+  'string' index signatures are incompatible.
+    Type 'unknown' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/meetings/scheduler-engine.ts(124,79): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/meetings/scheduler-engine.ts(240,70): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/meetings/scheduler-engine.ts(280,51): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/monitoring/alerts.ts(124,5): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'Record<string, unknown>' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/monitoring/alerts.ts(186,69): error TS2322: Type 'Alert' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/monitoring/health-check.ts(272,5): error TS2322: Type 'HealthCheckResult' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/monitoring/health-check.ts(295,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/monitoring/sentry-middleware.ts(163,46): error TS2345: Argument of type 'Record<string, unknown> | undefined' is not assignable to parameter of type 'LogContext | undefined'.
+  Type 'Record<string, unknown>' is not assignable to type 'LogContext'.
+    'string' index signatures are incompatible.
+      Type 'unknown' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/onboarding/prefill-engine.ts(126,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/onboarding/prefill-engine.ts(484,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/onboarding/prefill-engine.ts(529,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/onboarding/prefill-engine.ts(570,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/onboarding/prefill-engine.ts(611,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/orchestration/SignalCoordinator.ts(296,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/orchestration/SignalCoordinator.ts(438,17): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/orchestration/SignalCoordinator.ts(449,11): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/orchestration/SignalCoordinator.ts(503,9): error TS2322: Type '{ success: boolean; action: string; module: string; error?: string | undefined; }' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/orchestration/SignalCoordinator.ts(509,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/orchestration/SignalCoordinator.ts(580,9): error TS2353: Object literal may only specify known properties, and 'orgId' does not exist in type 'Error'.
+src/lib/orchestration/SignalCoordinator.ts(722,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/orchestrator/jasper-tools.ts(1297,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/orchestrator/jasper-tools.ts(1464,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/orchestrator/jasper-tools.ts(1530,59): error TS2322: Type 'AgentDelegation' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/orchestrator/jasper-tools.ts(1654,60): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/orchestrator/system-state-service.ts(270,75): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/builtwith-service.ts(81,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/builtwith-service.ts(145,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/builtwith-service.ts(198,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/builtwith-service.ts(217,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/clearbit-service.ts(171,66): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Error'.
+src/lib/outbound/apis/clearbit-service.ts(178,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/clearbit-service.ts(238,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/clearbit-service.ts(287,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/clearbit-service.ts(336,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/clearbit-service.ts(355,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/crunchbase-service.ts(108,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/crunchbase-service.ts(154,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/crunchbase-service.ts(199,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/crunchbase-service.ts(218,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/linkedin-service.ts(39,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/linkedin-service.ts(99,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/linkedin-service.ts(158,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/linkedin-service.ts(260,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/news-service.ts(39,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/news-service.ts(102,38): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/news-service.ts(153,42): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/apis/news-service.ts(195,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/email-writer.ts(217,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/prospect-research.ts(108,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/prospect-research.ts(162,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/prospect-research.ts(332,3): error TS2739: Type 'string[]' is missing the following properties from type 'Promise<string[]>': then, catch, finally, [Symbol.toStringTag]
+src/lib/outbound/reply-handler.ts(96,60): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/reply-handler.ts(118,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/reply-handler.ts(273,15): error TS2367: This comparison appears to be unintentional because the types 'ReplyIntent | undefined' and '""' have no overlap.
+src/lib/outbound/reply-handler.ts(274,18): error TS2367: This comparison appears to be unintentional because the types '"positive" | "neutral" | "negative" | undefined' and '""' have no overlap.
+src/lib/outbound/reply-handler.ts(278,24): error TS2367: This comparison appears to be unintentional because the types 'ReplyAction | undefined' and '""' have no overlap.
+src/lib/outbound/reply-handler.ts(283,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/sequence-engine.ts(601,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/sequence-engine.ts(753,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/sequence-engine.ts(796,25): error TS2352: Conversion of type 'SequenceAnalytics' to type 'Record<string, number | undefined>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'SequenceAnalytics'.
+src/lib/outbound/sequence-engine.ts(897,9): error TS2322: Type 'Partial<SequenceStep>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/outbound/sequence-engine.ts(899,11): error TS2353: Object literal may only specify known properties, and 'sent' does not exist in type 'string[] | number[]'.
+src/lib/outbound/sequence-engine.ts(910,9): error TS2322: Type 'Partial<SequenceStep>' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/outbound/sequence-scheduler.ts(48,96): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/sequence-scheduler.ts(53,77): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/sequence-scheduler.ts(62,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/sequence-scheduler.ts(81,71): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/outbound/sequence-scheduler.ts(103,82): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/performance/performance-engine.ts(79,55): error TS1361: 'DEFAULT_PERFORMANCE_CONFIG' cannot be used as a value because it was imported using 'import type'.
+src/lib/performance/performance-engine.ts(104,7): error TS2322: Type 'Date' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'Date' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/performance/performance-engine.ts(105,7): error TS2322: Type 'Date' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'Date' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/performance/performance-engine.ts(205,64): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/performance/performance-engine.ts(1414,55): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/playbook/playbook-engine.ts(59,49): error TS1361: 'DEFAULT_PLAYBOOK_CONFIG' cannot be used as a value because it was imported using 'import type'.
+src/lib/playbook/playbook-engine.ts(186,49): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/playbook/playbook-engine.ts(736,35): error TS1361: 'DEFAULT_PLAYBOOK_CONFIG' cannot be used as a value because it was imported using 'import type'.
+src/lib/playbook/playbook-engine.ts(742,50): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/playbook/playbook-engine.ts(751,35): error TS1361: 'DEFAULT_PLAYBOOK_CONFIG' cannot be used as a value because it was imported using 'import type'.
+src/lib/pwa/install-prompt.ts(49,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/risk/risk-engine.ts(887,71): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/risk/risk-engine.ts(980,57): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/risk/risk-engine.ts(1010,44): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/risk/risk-engine.ts(1134,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/field-rename-manager.ts(169,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/field-rename-manager.ts(300,85): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/field-type-converter.ts(132,73): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/field-type-converter.ts(207,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/field-type-converter.ts(404,80): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/formula-engine.ts(28,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-debouncer.ts(98,77): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-debouncer.ts(111,73): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-debouncer.ts(368,9): error TS2322: Type 'string' is not assignable to type 'Timestamp'.
+src/lib/schema/schema-change-debouncer.ts(372,9): error TS2322: Type 'string' is not assignable to type 'Timestamp'.
+src/lib/schema/schema-change-debouncer.ts(385,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-severity.ts(315,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-severity.ts(368,69): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-tracker.ts(550,63): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-tracker.ts(592,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/schema-change-tracker.ts(626,73): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/workflow-validator.ts(66,60): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/workflow-validator.ts(206,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/schema/workflow-validator.ts(281,75): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/distillation-engine.ts(110,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/distillation-engine.ts(364,41): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/distillation-engine.ts(429,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/distillation-engine.ts(471,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/distillation-engine.ts(520,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/error-handler.ts(433,38): error TS2322: Type '{ type?: ScrapeErrorType | undefined; statusCode?: number | undefined; retryable?: boolean | undefined; metadata?: Record<string, any> | undefined; name: string; message: string; stack: string | undefined; }' is not assignable to type 'string'.
+src/lib/scraper-intelligence/pattern-matcher.ts(258,62): error TS2345: Argument of type 'Error | null' is not assignable to parameter of type 'Error | undefined'.
+  Type 'null' is not assignable to type 'Error | undefined'.
+src/lib/scraper-intelligence/pattern-matcher.ts(576,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/progress-tracker.ts(71,48): error TS2353: Object literal may only specify known properties, and 'event' does not exist in type 'Error'.
+src/lib/scraper-intelligence/progress-tracker.ts(248,53): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/scraper-cache.ts(76,44): error TS2322: Type 'Date' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'Date' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/scraper-intelligence/scraper-cache.ts(133,7): error TS2322: Type 'Date' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'Date' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/scraper-intelligence/scraper-intelligence-service.ts(825,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/scraper-intelligence-service.ts(915,41): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/scraper-queue.ts(139,46): error TS2353: Object literal may only specify known properties, and 'jobId' does not exist in type 'Error'.
+src/lib/scraper-intelligence/version-control.ts(273,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/version-control.ts(386,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/version-control.ts(540,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/version-control.ts(584,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/version-control.ts(662,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/scraper-intelligence/version-control.ts(818,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/search/search-service.ts(89,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/sequence/sequence-engine.ts(368,7): error TS2322: Type '{ id: string; type: PatternType; name: string; description: string; sampleSize: number; occurrences: number; patternPerformance: { replyRate: number; meetingRate: number; opportunityRate: number; }; ... 11 more ...; lastValidated: Date; }[]' is not assignable to type 'SequencePattern[]'.
+  Type '{ id: string; type: PatternType; name: string; description: string; sampleSize: number; occurrences: number; patternPerformance: { replyRate: number; meetingRate: number; opportunityRate: number; }; ... 11 more ...; lastValidated: Date; }' is not assignable to type 'SequencePattern'.
+    Types of property 'characteristics' are incompatible.
+      Type '{ attribute: string; value: string; importance: string; description: string; }[]' is not assignable to type 'PatternCharacteristic[]'.
+        Type '{ attribute: string; value: string; importance: string; description: string; }' is not assignable to type 'PatternCharacteristic'.
+          Types of property 'importance' are incompatible.
+            Type 'string' is not assignable to type '"critical" | "moderate" | "important"'.
+src/lib/sequence/sequence-engine.ts(486,7): error TS2322: Type '{ id: string; area: OptimizationArea; priority: RecommendationPriority; title: string; description: string; currentMetric: { name: string; value: number; unit: string; }; ... 12 more ...; createdAt: Date; }[]' is not assignable to type 'OptimizationRecommendation[]'.
+  Type '{ id: string; area: OptimizationArea; priority: RecommendationPriority; title: string; description: string; currentMetric: { name: string; value: number; unit: string; }; projectedMetric: { ...; }; ... 11 more ...; createdAt: Date; }' is not assignable to type 'OptimizationRecommendation'.
+    Types of property 'estimatedEffort' are incompatible.
+      Type 'string' is not assignable to type '"medium" | "low" | "high"'.
+src/lib/services/discovery-dispatcher.ts(142,67): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/services/discovery-dispatcher.ts(228,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/services/discovery-dispatcher.ts(324,69): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/services/discovery-dispatcher.ts(539,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/services/lead-scoring-engine.ts(1042,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/lib/services/lead-scoring-engine.ts(1045,68): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/services/lead-scoring-engine.ts(1055,67): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/slack/signal-handlers.ts(26,3): error TS2459: Module '"./types"' declares 'NotificationCategory' locally, but it is not exported.
+src/lib/slack/signal-handlers.ts(87,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/slack/signal-handlers.ts(611,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/slack/signal-handlers.ts(641,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/slack/signal-handlers.ts(683,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/slack/signal-handlers.ts(731,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/sms/sms-service.ts(495,65): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/middleware.ts(41,78): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/middleware.ts(84,75): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/middleware.ts(125,73): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/middleware.ts(218,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/record-counter.ts(75,63): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/record-counter.ts(92,67): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/record-counter.ts(114,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/record-counter.ts(183,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/record-counter.ts(209,65): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/record-counter.ts(228,65): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/subscription/record-counter.ts(261,67): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/team/collaboration.ts(173,19): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | number | FirestoreTimestamp' is not assignable to parameter of type 'string | number | Date'.
+      Type 'FirestoreTimestamp' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | number | FirestoreTimestamp' is not assignable to parameter of type 'string | number'.
+      Type 'FirestoreTimestamp' is not assignable to type 'string | number'.
+src/lib/team/collaboration.ts(205,55): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/team/collaboration.ts(277,55): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/templates/deal-scoring-engine.ts(318,58): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/templates/deal-scoring-engine.ts(870,62): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/templates/revenue-forecasting-engine.ts(241,63): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/templates/revenue-forecasting-engine.ts(560,71): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/templates/template-engine.ts(204,63): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/templates/template-resolver.ts(47,48): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-resolver.ts(66,56): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-resolver.ts(96,60): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/templates/template-resolver.ts(134,58): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-resolver.ts(168,69): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/templates/template-resolver.ts(199,57): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-service.ts(44,53): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-service.ts(59,56): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-service.ts(86,54): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/templates/template-service.ts(135,7): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-service.ts(154,54): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/template-service.ts(225,55): error TS2353: Object literal may only specify known properties, and 'templateId' does not exist in type 'Error'.
+src/lib/templates/workforce-orchestrator.ts(691,55): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/templates/workforce-orchestrator.ts(701,53): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/templates/workforce-orchestrator.ts(727,57): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type 'Error'.
+src/lib/templates/workforce-templates.ts(6199,5): error TS2353: Object literal may only specify known properties, and 'web_migrator' does not exist in type 'string[] | number[]'.
+src/lib/training/feedback-processor.ts(141,11): error TS2322: Type '{ id: string; type: string; area: string; currentBehavior: string; suggestedBehavior: string; implementation: { section: string; additions: string[]; removals: string[]; modifications: { from: string; to: string; }[]; } | undefined; priority: number; estimatedImpact: number; confidence: number; }[]' is not assignable to type 'ImprovementSuggestion[]'.
+  Type '{ id: string; type: string; area: string; currentBehavior: string; suggestedBehavior: string; implementation: { section: string; additions: string[]; removals: string[]; modifications: Array<{ from: string; to: string; }>; } | undefined; priority: number; estimatedImpact: number; confidence: number; }' is not assignable to type 'ImprovementSuggestion'.
+    Types of property 'type' are incompatible.
+      Type 'string' is not assignable to type '"prompt_update" | "behavior_change" | "knowledge_gap" | "tone_adjustment" | "process_improvement"'.
+src/lib/training/feedback-processor.ts(162,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/training/golden-master-updater.ts(178,26): error TS2352: Conversion of type 'BehaviorConfig' to type 'BehaviorConfigValue' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'responseLength' are incompatible.
+    Type '"balanced" | "detailed" | "concise"' is not comparable to type 'number | undefined'.
+      Type 'string' is not comparable to type 'number'.
+src/lib/training/golden-master-updater.ts(327,28): error TS2352: Conversion of type 'BehaviorConfig' to type 'BehaviorConfigValue' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'responseLength' are incompatible.
+    Type '"balanced" | "detailed" | "concise"' is not comparable to type 'number | undefined'.
+      Type 'string' is not comparable to type 'number'.
+src/lib/training/golden-master-updater.ts(346,64): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/video/engine/director-service.ts(223,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/video/engine/director-service.ts(451,19): error TS2552: Cannot find name 'maxDuration'. Did you mean '_maxDuration'?
+src/lib/video/engine/director-service.ts(456,34): error TS2552: Cannot find name 'maxDuration'. Did you mean '_maxDuration'?
+src/lib/video/engine/multi-model-picker.ts(281,9): error TS2353: Object literal may only specify known properties, and 'shotType' does not exist in type 'Error'.
+src/lib/video/engine/multi-model-picker.ts(389,7): error TS2322: Type '{ [k: string]: number; }' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type '{ [k: string]: number; }' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/video/engine/stitcher-service.ts(303,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/video/engine/stitcher-service.ts(370,62): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/video/engine/stitcher-service.ts(745,52): error TS2345: Argument of type 'ColorGradingParams' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'ColorGradingParams'.
+src/lib/video/engine/stitcher-service.ts(771,46): error TS2345: Argument of type 'OverlayParams' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'OverlayParams'.
+src/lib/video/engine/stitcher-service.ts(864,45): error TS2345: Argument of type 'RenderParams' is not assignable to parameter of type 'LogContext'.
+  Index signature for type 'string' is missing in type 'RenderParams'.
+src/lib/voice/ai-conversation-service.ts(243,71): error TS2353: Object literal may only specify known properties, and 'callId' does not exist in type 'Error'.
+src/lib/voice/voice-agent-handler.ts(549,66): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/BuyButton.tsx(77,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/ChatWidget.tsx(157,35): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/CheckoutFlow.tsx(83,38): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/CheckoutFlow.tsx(323,38): error TS2304: Cannot find name 'CartItem'.
+src/lib/widgets/FullStorefront.tsx(58,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/FullStorefront.tsx(104,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/ShoppingCart.tsx(54,43): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/ShoppingCart.tsx(77,48): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/widgets/ShoppingCart.tsx(93,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/workflow/workflow-engine.ts(124,7): error TS2322: Type 'boolean[]' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'boolean[]' is not assignable to type 'string[]'.
+    Type 'boolean' is not assignable to type 'string'.
+src/lib/workflow/workflow-engine.ts(357,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/workflow/workflow-engine.ts(459,9): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type 'Error'.
+src/lib/workflow/workflow-engine.ts(619,7): error TS2322: Type 'Date | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'Date' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+    Type 'Date' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.
+src/lib/workflow/workflow-service.ts(165,7): error TS2322: Type '{ name?: string | undefined; description?: string | undefined; status?: "active" | "paused" | "draft" | "archived" | undefined; trigger?: { name: string; description: string; id: string; type: "deal.score.changed" | ... 21 more ... | "manual"; conditions: { ...; }[]; conditionLogic: "AND" | "OR"; schedule?: { ...; }...' is not assignable to type 'string | number | boolean | number[] | string[] | null | undefined'.
+src/lib/workflow/workflow-service.ts(394,32): error TS2345: Argument of type 'FirebaseFirestore.Firestore' is not assignable to parameter of type 'import("C:/Users/David/PycharmProjects/AI Sales Platform/node_modules/@firebase/firestore/dist/index").Firestore'.
+  Type 'Firestore' is missing the following properties from type 'Firestore': type, app, toJSON
+src/lib/workflow/workflow-service.ts(414,32): error TS2345: Argument of type 'FirebaseFirestore.Firestore' is not assignable to parameter of type 'import("C:/Users/David/PycharmProjects/AI Sales Platform/node_modules/@firebase/firestore/dist/index").Firestore'.
+  Type 'Firestore' is missing the following properties from type 'Firestore': type, app, toJSON
+src/lib/workflow/workflow-service.ts(437,32): error TS2345: Argument of type 'FirebaseFirestore.Firestore' is not assignable to parameter of type 'import("C:/Users/David/PycharmProjects/AI Sales Platform/node_modules/@firebase/firestore/dist/index").Firestore'.
+  Type 'Firestore' is missing the following properties from type 'Firestore': type, app, toJSON
+src/lib/workflow/workflow-service.ts(452,32): error TS2345: Argument of type 'FirebaseFirestore.Firestore' is not assignable to parameter of type 'import("C:/Users/David/PycharmProjects/AI Sales Platform/node_modules/@firebase/firestore/dist/index").Firestore'.
+  Type 'Firestore' is missing the following properties from type 'Firestore': type, app, toJSON
+src/lib/workflow/workflow-service.ts(467,32): error TS2345: Argument of type 'FirebaseFirestore.Firestore' is not assignable to parameter of type 'import("C:/Users/David/PycharmProjects/AI Sales Platform/node_modules/@firebase/firestore/dist/index").Firestore'.
+  Type 'Firestore' is missing the following properties from type 'Firestore': type, app, toJSON
+src/lib/workflow/workflow-service.ts(481,32): error TS2345: Argument of type 'FirebaseFirestore.Firestore' is not assignable to parameter of type 'import("C:/Users/David/PycharmProjects/AI Sales Platform/node_modules/@firebase/firestore/dist/index").Firestore'.
+  Type 'Firestore' is missing the following properties from type 'Firestore': type, app, toJSON
+src/lib/workflows/actions/ai-agent-action.ts(90,65): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/workflows/actions/ai-agent-action.ts(123,80): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/lib/workflows/actions/entity-action.ts(140,18): error TS2322: Type '{}' is not assignable to type 'string'.
+src/lib/workflows/actions/entity-action.ts(245,18): error TS2322: Type '{}' is not assignable to type 'string'.
+src/lib/workflows/actions/entity-action.ts(387,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/workflows/actions/entity-action.ts(425,47): error TS2345: Argument of type 'unknown[]' is not assignable to parameter of type 'QueryConstraint[]'.
+  Type 'unknown' is not assignable to type 'QueryConstraint'.
+src/lib/workflows/actions/http-action.ts(27,7): error TS2698: Spread types may only be created from object types.
+src/lib/workflows/actions/http-action.ts(37,32): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(input: string | URL | Request, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | URL | Request'.
+  Overload 2 of 2, '(input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'URL | RequestInfo'.
+src/lib/workflows/triggers/firestore-trigger.ts(97,84): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/workflows/triggers/schedule-trigger.ts(88,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/workflows/triggers/schedule-trigger.ts(167,94): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+src/lib/workflows/workflow-service.ts(62,7): error TS2322: Type 'WorkflowFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'WorkflowFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/workflows/workflow-service.ts(67,70): error TS2322: Type 'WorkflowFilters | undefined' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+  Type 'WorkflowFilters' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+src/lib/workflows/workflow-service.ts(145,72): error TS2322: Type 'Omit<Workflow, "organizationId" | "workspaceId" | "createdAt" | "updatedAt" | "id" | "version" | "createdBy" | "stats">' is not assignable to type 'string | number | boolean | string[] | number[] | null | undefined'.
+temp_route.ts(57,39): error TS2339: Property 'includes' does not exist on type '{}'.
+tests/integration/sequencer.test.ts(258,47): error TS2339: Property 'email_opened' does not exist on type '{}'.
+tests/lib/risk/risk-engine.test.ts(168,55): error TS2345: Argument of type '{ dealId: string; score: number; closeProbability: number; tier: "warm"; confidence: number; factors: { id: string; name: string; score: number; weight: number; contribution: number; impact: "neutral"; description: string; value: number; benchmark: number; }[]; ... 4 more ...; calculatedAt: Date; }' is not assignable to parameter of type 'never'.
+tests/lib/risk/risk-engine.test.ts(231,57): error TS2345: Argument of type '{ score: number; tier: string; dealId: string; closeProbability: number; confidence: number; factors: { id: string; name: string; score: number; weight: number; contribution: number; impact: "neutral"; description: string; value: number; benchmark: number; }[]; ... 4 more ...; calculatedAt: Date; }' is not assignable to parameter of type 'never'.
+tests/lib/risk/risk-engine.test.ts(362,57): error TS2345: Argument of type '{ score: number; tier: string; dealId: string; closeProbability: number; confidence: number; factors: { id: string; name: string; score: number; weight: number; contribution: number; impact: "neutral"; description: string; value: number; benchmark: number; }[]; ... 4 more ...; calculatedAt: Date; }' is not assignable to parameter of type 'never'.
+tests/lib/risk/risk-engine.test.ts(387,57): error TS2345: Argument of type '{ score: number; tier: string; dealId: string; closeProbability: number; confidence: number; factors: { id: string; name: string; score: number; weight: number; contribution: number; impact: "neutral"; description: string; value: number; benchmark: number; }[]; ... 4 more ...; calculatedAt: Date; }' is not assignable to parameter of type 'never'.
+tests/unit/email-writer/email-writer-engine.test.ts(389,28): error TS2345: Argument of type 'DealScore' is not assignable to parameter of type 'never'.

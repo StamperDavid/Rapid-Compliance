@@ -221,7 +221,7 @@ async function createOrder(
   // Build payment info
   const payment: OrderPayment = {
     method: checkoutData.paymentMethod as OrderPayment["method"],
-    provider: paymentResult.provider,
+    provider: paymentResult.provider ?? '',
     transactionId: paymentResult.transactionId,
     status: 'captured',
     cardLast4: paymentResult.cardLast4,
@@ -363,8 +363,13 @@ async function updateInventory(workspaceId: string, organizationId: string, item
     return; // Inventory tracking disabled
   }
   
-  const productSchema = (ecommerceConfig as unknown as EcommerceConfig).productSchema;
-  const inventoryField = (ecommerceConfig as unknown as EcommerceConfig).inventory.inventoryField;
+  const config = ecommerceConfig as unknown as EcommerceConfig;
+  const productSchema = config.productSchema;
+  const inventoryField = config.inventory?.inventoryField;
+
+  if (!inventoryField) {
+    return; // No inventory field configured
+  }
   
   for (const item of items) {
     const product = await FirestoreService.get(
@@ -395,11 +400,15 @@ async function createCustomerEntity(workspaceId: string, organizationId: string,
     'config'
   );
   
-  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).integration?.createCustomerEntity) {
+  const config = ecommerceConfig as unknown as EcommerceConfig;
+
+  if (!ecommerceConfig || !config.integration?.createCustomerEntity) {
     return;
   }
-  
-  const customerSchema =((ecommerceConfig as unknown as EcommerceConfig).integration.customerSchema !== '' && (ecommerceConfig as unknown as EcommerceConfig).integration.customerSchema != null) ? (ecommerceConfig as unknown as EcommerceConfig).integration.customerSchema : 'contacts';
+
+  const customerSchema = (config.integration?.customerSchema && config.integration.customerSchema !== '')
+    ? config.integration.customerSchema
+    : 'contacts';
   
   // Check if customer already exists
   const { where } = await import('firebase/firestore');
@@ -439,11 +448,15 @@ async function createOrderEntity(workspaceId: string, organizationId: string, or
     'config'
   );
   
-  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).integration?.createOrderEntity) {
+  const config = ecommerceConfig as unknown as EcommerceConfig;
+
+  if (!ecommerceConfig || !config.integration?.createOrderEntity) {
     return;
   }
-  
-  const orderSchema =((ecommerceConfig as unknown as EcommerceConfig).integration.orderSchema !== '' && (ecommerceConfig as unknown as EcommerceConfig).integration.orderSchema != null) ? (ecommerceConfig as unknown as EcommerceConfig).integration.orderSchema : 'orders';
+
+  const orderSchema = (config.integration?.orderSchema && config.integration.orderSchema !== '')
+    ? config.integration.orderSchema
+    : 'orders';
   
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/${orderSchema}/records`,

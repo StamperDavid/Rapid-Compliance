@@ -209,9 +209,12 @@ export async function smartEnrollInSequence(params: {
       enrolled: true,
     };
   } catch (error) {
-    logger.error('Smart enrollment failed', error, {
+    const errorInstance = error instanceof Error ? error : undefined;
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Smart enrollment failed', errorInstance, {
       leadId,
       sequenceId,
+      errorMessage: message,
     });
     throw error;
   }
@@ -256,7 +259,11 @@ export async function smartEnrollBatch(params: {
       if (result.status === 'fulfilled') {
         results.push(result.value);
       } else {
-        logger.error('Batch enrollment failed for lead', result.reason);
+        const errorInstance = result.reason instanceof Error ? result.reason : undefined;
+        const message = result.reason instanceof Error ? result.reason.message : 'Unknown error';
+        logger.error('Batch enrollment failed for lead', errorInstance, {
+          errorMessage: message,
+        });
       }
     });
   }
@@ -344,8 +351,11 @@ export async function processSequenceStepsWithPriority(
         await executeSequenceStep(enrollmentId);
         processed++;
       } catch (error) {
-        logger.error('Failed to execute sequence step', error, {
+        const errorInstance = error instanceof Error ? error : undefined;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to execute sequence step', errorInstance, {
           enrollmentId,
+          errorMessage: message,
         });
       }
     }
@@ -358,7 +368,11 @@ export async function processSequenceStepsWithPriority(
 
     return processed;
   } catch (error) {
-    logger.error('Failed to process sequences with priority', error);
+    const errorInstance = error instanceof Error ? error : undefined;
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to process sequences with priority', errorInstance, {
+      errorMessage: message,
+    });
     throw error;
   }
 }
@@ -426,7 +440,12 @@ export async function rescoreActiveSequenceLeads(
             priority: score.priority,
           });
         } catch (error) {
-          logger.error('Failed to rescore lead', error, { leadId });
+          const errorInstance = error instanceof Error ? error : undefined;
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          logger.error('Failed to rescore lead', errorInstance, {
+            leadId,
+            errorMessage: message,
+          });
         }
       }
     }
@@ -439,7 +458,11 @@ export async function rescoreActiveSequenceLeads(
 
     return rescored;
   } catch (error) {
-    logger.error('Failed to rescore active leads', error);
+    const errorInstance = error instanceof Error ? error : undefined;
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to rescore active leads', errorInstance, {
+      errorMessage: message,
+    });
     throw error;
   }
 }
@@ -490,7 +513,12 @@ async function adjustEnrollmentTiming(
       adjustedNext: newNext.toISOString(),
     });
   } catch (error) {
-    logger.error('Failed to adjust timing', error, { enrollmentId });
+    const errorInstance = error instanceof Error ? error : undefined;
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to adjust timing', errorInstance, {
+      enrollmentId,
+      errorMessage: message,
+    });
   }
 }
 
@@ -529,10 +557,15 @@ export async function getRecommendedSequence(params: {
     
     // For now, return the first active sequence
     // TODO: Implement sequence tagging and smart matching
-    
+
     return sequences?.[0] ?? null;
   } catch (error) {
-    logger.error('Failed to get recommended sequence', error, { leadId });
+    const errorInstance = error instanceof Error ? error : undefined;
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get recommended sequence', errorInstance, {
+      leadId,
+      errorMessage: message,
+    });
     return null;
   }
 }

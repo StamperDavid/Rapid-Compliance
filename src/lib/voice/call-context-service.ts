@@ -5,6 +5,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import type { QueryConstraint } from 'firebase/firestore';
 
 export interface StoredCallContext {
   callId: string;
@@ -93,10 +94,11 @@ class CallContextService {
         file: 'call-context-service.ts',
       });
     } catch (error) {
-      logger.error('[CallContext] Failed to store context:', error, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CallContext] Failed to store context:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
-      throw error;
+      throw new Error(`Failed to store call context: ${message}`);
     }
   }
 
@@ -126,7 +128,8 @@ class CallContextService {
 
       return null;
     } catch (error) {
-      logger.error('[CallContext] Failed to get context:', error, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CallContext] Failed to get context:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
       return null;
@@ -151,7 +154,8 @@ class CallContextService {
 
       return results[0] ?? null;
     } catch (error) {
-      logger.error('[CallContext] Failed to get context by phone:', error, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CallContext] Failed to get context by phone:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
       return null;
@@ -187,10 +191,11 @@ class CallContextService {
         this.cache.set(callId, { ...cached, ...updates });
       }
     } catch (error) {
-      logger.error('[CallContext] Failed to update context:', error, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CallContext] Failed to update context:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
-      throw error;
+      throw new Error(`Failed to update call context: ${message}`);
     }
   }
 
@@ -231,7 +236,7 @@ class CallContextService {
       }
 
       const path = `organizations/${queryParams.organizationId}/callContexts`;
-      const constraints: any[] = [];
+      const constraints: QueryConstraint[] = [];
 
       if (queryParams.customerPhone) {
         constraints.push(where('customerPhone', '==', queryParams.customerPhone));
@@ -256,7 +261,8 @@ class CallContextService {
 
       return results;
     } catch (error) {
-      logger.error('[CallContext] Failed to query contexts:', error, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CallContext] Failed to query contexts:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
       return [];
@@ -302,7 +308,8 @@ class CallContextService {
       // Filter out transferred calls (Firestore doesn't support null comparisons well)
       return results.filter(r => !r.transferReason);
     } catch (error) {
-      logger.error('[CallContext] Failed to get follow-up calls:', error, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CallContext] Failed to get follow-up calls:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
       return [];
@@ -360,7 +367,7 @@ class CallContextService {
    */
   clearExpiredCache(): void {
     const now = Date.now();
-    for (const [callId, expiry] of this.cacheExpiry.entries()) {
+    for (const [callId, expiry] of Array.from(this.cacheExpiry.entries())) {
       if (expiry <= now) {
         this.cache.delete(callId);
         this.cacheExpiry.delete(callId);
@@ -376,7 +383,7 @@ class CallContextService {
     startDate: Date,
     endDate: Date,
     limit: number = 1000
-  ): Promise<Array<{ input: string; output: string; context: any }>> {
+  ): Promise<Array<{ input: string; output: string; context: { state: string; qualificationScore: number; sentiment: string; mode: string } }>> {
     try {
       const contexts = await this.queryContexts({
         organizationId,
@@ -385,7 +392,7 @@ class CallContextService {
         limit,
       });
 
-      const trainingData: Array<{ input: string; output: string; context: any }> = [];
+      const trainingData: Array<{ input: string; output: string; context: { state: string; qualificationScore: number; sentiment: string; mode: string } }> = [];
 
       for (const ctx of contexts) {
         // Create training pairs from conversation turns
@@ -410,7 +417,8 @@ class CallContextService {
 
       return trainingData;
     } catch (error) {
-      logger.error('[CallContext] Failed to get training data:', error, {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[CallContext] Failed to get training data:', error instanceof Error ? error : undefined, {
         file: 'call-context-service.ts',
       });
       return [];

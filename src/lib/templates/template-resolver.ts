@@ -44,7 +44,8 @@ export async function getIndustryTemplate(
     logger.warn('Template not found in Firestore or code', { templateId });
     return null;
   } catch (error) {
-    logger.error('Error resolving template', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error resolving template', errorObj, { templateId });
     throw new Error(`Failed to resolve template: ${templateId}`);
   }
 }
@@ -63,7 +64,8 @@ async function getHardcodedTemplate(
     
     return await getCodeTemplate(templateId);
   } catch (error) {
-    logger.error('Error loading hardcoded template', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error loading hardcoded template', errorObj, { templateId });
     return null;
   }
 }
@@ -93,7 +95,8 @@ export async function getAllIndustryTemplates(): Promise<
 
     return templates;
   } catch (error) {
-    logger.error('Error getting all industry templates', { error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error getting all industry templates', errorObj);
     throw new Error('Failed to get all industry templates');
   }
 }
@@ -131,7 +134,8 @@ export async function getTemplateWithSource(templateId: string): Promise<{
 
     return null;
   } catch (error) {
-    logger.error('Error getting template with source', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error getting template with source', errorObj, { templateId });
     throw error;
   }
 }
@@ -165,7 +169,8 @@ export async function getIndustryOptionsWithOverrides(): Promise<
 
     return optionsWithOverrides;
   } catch (error) {
-    logger.error('Error getting industry options with overrides', { error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error getting industry options with overrides', errorObj);
     throw new Error('Failed to get industry options');
   }
 }
@@ -196,7 +201,8 @@ export async function compareTemplateVersions(templateId: string): Promise<{
       hasChanges,
     };
   } catch (error) {
-    logger.error('Error comparing template versions', { templateId, error });
+    const errorObj = error instanceof Error ? error : new Error('Unknown error');
+    logger.error('Error comparing template versions', errorObj, { templateId });
     throw error;
   }
 }

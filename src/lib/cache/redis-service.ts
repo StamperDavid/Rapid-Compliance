@@ -52,7 +52,8 @@ export class RedisService {
         this.isConnected = false;
       }
     } catch (error) {
-      logger.error('[Redis] Connection failed:', error, { file: 'redis-service.ts' });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Redis] Connection failed:', errorObj, { file: 'redis-service.ts' });
       this.isConnected = false;
     }
   }
@@ -83,7 +84,8 @@ export class RedisService {
         return null;
       }
     } catch (error) {
-      logger.error('[Cache] Get error:', error, { file: 'redis-service.ts' });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Cache] Get error:', errorObj, { file: 'redis-service.ts' });
       return null;
     }
   }
@@ -110,7 +112,8 @@ export class RedisService {
         }
       }
     } catch (error) {
-      logger.error('[Cache] Set error:', error, { file: 'redis-service.ts' });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Cache] Set error:', errorObj, { file: 'redis-service.ts' });
     }
   }
   
@@ -127,7 +130,8 @@ export class RedisService {
         this.memoryCache.delete(fullKey);
       }
     } catch (error) {
-      logger.error('[Cache] Delete error:', error, { file: 'redis-service.ts' });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Cache] Delete error:', errorObj, { file: 'redis-service.ts' });
     }
   }
   
@@ -153,7 +157,8 @@ export class RedisService {
         }
       }
     } catch (error) {
-      logger.error('[Cache] Delete pattern error:', error, { file: 'redis-service.ts' });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Cache] Delete pattern error:', errorObj, { file: 'redis-service.ts' });
     }
   }
   
@@ -172,7 +177,8 @@ export class RedisService {
         return cached ? cached.expiry > Date.now() : false;
       }
     } catch (error) {
-      logger.error('[Cache] Exists error:', error, { file: 'redis-service.ts' });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Cache] Exists error:', errorObj, { file: 'redis-service.ts' });
       return false;
     }
   }
@@ -217,7 +223,8 @@ export class RedisService {
         return newValue;
       }
     } catch (error) {
-      logger.error('[Cache] Increment error:', error, { file: 'redis-service.ts' });
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Cache] Increment error:', errorObj, { file: 'redis-service.ts' });
       return 0;
     }
   }

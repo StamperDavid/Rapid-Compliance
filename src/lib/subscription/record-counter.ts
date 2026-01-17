@@ -72,7 +72,8 @@ export class RecordCounter {
       logger.info(`[RecordCounter] Counted ${totalCount} records for org ${organizationId}`);
       return totalCount;
     } catch (error) {
-      logger.error('[RecordCounter] Error counting records:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[RecordCounter] Error counting records:', new Error(message));
       return 0;
     }
   }
@@ -89,7 +90,8 @@ export class RecordCounter {
 
       return subscription?.recordCount ?? 0;
     } catch (error) {
-      logger.error('[RecordCounter] Error getting cached count:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[RecordCounter] Error getting cached count:', new Error(message));
       return 0;
     }
   }
@@ -111,7 +113,8 @@ export class RecordCounter {
         }
       );
     } catch (error) {
-      logger.error('[RecordCounter] Error updating cached count:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[RecordCounter] Error updating cached count:', new Error(message));
     }
   }
 
@@ -180,7 +183,8 @@ export class RecordCounter {
         message: `⚠️ Would exceed capacity (${newTotal} > ${currentCapacity}). Upgrade to ${VOLUME_TIERS[requiredTier].name} ($${requiredPrice}/mo) required.`,
       };
     } catch (error) {
-      logger.error('[RecordCounter] Error checking capacity:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[RecordCounter] Error checking capacity:', new Error(message));
       return {
         allowed: false,
         currentCount: 0,
@@ -206,7 +210,8 @@ export class RecordCounter {
       // Check if tier upgrade needed
       await this.checkAndNotifyTierChange(organizationId, currentCount + amount);
     } catch (error) {
-      logger.error('[RecordCounter] Error incrementing count:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[RecordCounter] Error incrementing count:', new Error(message));
     }
   }
 
@@ -225,7 +230,8 @@ export class RecordCounter {
       // Check if tier downgrade possible
       await this.checkAndNotifyTierChange(organizationId, newCount);
     } catch (error) {
-      logger.error('[RecordCounter] Error decrementing count:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[RecordCounter] Error decrementing count:', new Error(message));
     }
   }
 
@@ -258,7 +264,8 @@ export class RecordCounter {
         // For now, just log it
       }
     } catch (error) {
-      logger.error('[RecordCounter] Error checking tier change:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('[RecordCounter] Error checking tier change:', new Error(message));
     }
   }
 
