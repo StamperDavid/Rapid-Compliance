@@ -19,23 +19,22 @@
 
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
-import { discoverCompany, discoverPerson } from './discovery-engine';
-import type { DiscoveredCompany, DiscoveredPerson } from './discovery-engine';
+import { Timestamp } from 'firebase-admin/firestore';
+import { discoverCompany, discoverPerson, type DiscoveredCompany, type DiscoveredPerson } from './discovery-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import type {
-  LeadScore,
-  LeadScoreReason,
-  IntentSignal,
-  IntentSignalType,
-  ScoringRules,
-  LeadScoreRequest,
-  BatchLeadScoreRequest,
-  StoredLeadScore,
-  SeniorityLevel,
-  Department,
+import {
+  DEFAULT_SCORING_RULES,
+  type LeadScore,
+  type LeadScoreReason,
+  type IntentSignal,
+  type ScoringRules,
+  type LeadScoreRequest,
+  type BatchLeadScoreRequest,
+  type StoredLeadScore,
+  type SeniorityLevel,
+  type Department,
+  type CompanySizeRange,
 } from '@/types/lead-scoring';
-import { DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
 
 // ============================================================================
 // CONSTANTS
@@ -231,7 +230,8 @@ export async function calculateLeadScoresBatch(
       if (result.status === 'fulfilled') {
         results.set(leadId, result.value);
       } else {
-        logger.error('Batch scoring failed for lead', result.reason, { leadId });
+        const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+        logger.error('Batch scoring failed for lead', error, { leadId });
       }
     });
   }
@@ -375,7 +375,7 @@ function scoreCompanySize(company: DiscoveredCompany, rules: ScoringRules): Scor
     return { points: 0, reasons };
   }
 
-  if (rules.companyRules.size.preferred.includes(size as any)) {
+  if (rules.companyRules.size.preferred.includes(size as CompanySizeRange)) {
     points = rules.companyRules.size.preferredPoints;
     reasons.push({
       category: 'company',
@@ -884,7 +884,8 @@ async function calculateEngagement(
     // Check for engagement signals in metadata
     enrollments.docs.forEach((doc) => {
       const data = doc.data();
-      const conditions = data.metadata?.conditions ?? {};
+      const metadata = (data.metadata ?? {}) as { conditions?: Record<string, boolean | undefined> };
+      const conditions = metadata.conditions ?? {};
 
       if (conditions.email_opened) {hasEmailOpened = true;}
       if (conditions.email_clicked) {hasEmailClicked = true;}
@@ -1059,10 +1060,18 @@ async function getDiscoveryData(
   return { company, person };
 }
 
+interface LeadData {
+  id: string;
+  company?: string;
+  companyDomain?: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Get lead data from database
  */
-async function getLeadData(leadId: string, organizationId: string): Promise<any> {
+async function getLeadData(leadId: string, organizationId: string): Promise<LeadData | null> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
@@ -1128,11 +1137,14 @@ async function getScoringRules(
       const doc = await scoringRulesRef.doc(scoringRulesId).get();
 
       if (doc.exists) {
-        const data = doc.data()!;
+        const data = doc.data();
+        if (!data) {
+          return null;
+        }
         return {
           ...data,
-          createdAt:data.createdAt?.toDate() ?? new Date(),
-          updatedAt:data.updatedAt?.toDate() ?? new Date(),
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+          updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
         } as ScoringRules;
       }
     }
@@ -1147,8 +1159,8 @@ async function getScoringRules(
       const data = snapshot.docs[0].data();
       return {
         ...data,
-        createdAt:data.createdAt?.toDate() ?? new Date(),
-        updatedAt:data.updatedAt?.toDate() ?? new Date(),
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(),
       } as ScoringRules;
     }
 

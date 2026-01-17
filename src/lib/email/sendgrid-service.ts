@@ -3,7 +3,7 @@
  * REAL email sending, tracking, and webhook handling
  */
 
-import sgMail from '@sendgrid/mail';
+import sgMail, { type MailDataRequired, type ResponseError } from '@sendgrid/mail';
 import { logger } from '@/lib/logger/logger';
 
 const FROM_EMAIL =(process.env.FROM_EMAIL !== '' && process.env.FROM_EMAIL != null) ? process.env.FROM_EMAIL : 'noreply@yourdomain.com';
@@ -55,7 +55,7 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
   sgMail.setApiKey(SENDGRID_API_KEY);
 
   try {
-    const msg: any = {
+    const msg: MailDataRequired = {
       to: options.to,
       from:options.from ?? {
         email: FROM_EMAIL,
@@ -88,23 +88,27 @@ export async function sendEmail(options: SendEmailOptions, apiKey?: string): Pro
 
     logger.info('SendGrid Email sent successfully to options.to}', { file: 'sendgrid-service.ts' });
 
+    const headers = response.headers as Record<string, unknown> | undefined;
+    const messageId = headers?.['x-message-id'];
+
     return {
       success: true,
-      messageId: response.headers['x-message-id'],
+      messageId: typeof messageId === 'string' ? messageId : undefined,
     };
-  } catch (error: any) {
-    logger.error('[SendGrid] Error sending email:', error, { file: 'sendgrid-service.ts' });
-    
-    if (error.response) {
-      logger.error('[SendGrid] Response error', new Error('SendGrid error'), { 
-        responseBody: error.response.body,
-        file: 'sendgrid-service.ts' 
+  } catch (error) {
+    const err = error as ResponseError | Error;
+    logger.error('[SendGrid] Error sending email:', err instanceof Error ? err : new Error(String(error)), { file: 'sendgrid-service.ts' });
+
+    if ('response' in err && err.response) {
+      logger.error('[SendGrid] Response error', new Error('SendGrid error'), {
+        responseBody: err.response.body,
+        file: 'sendgrid-service.ts'
       });
     }
 
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to send email',
+      error: err instanceof Error && err.message ? err.message : 'Failed to send email',
     };
   }
 }
@@ -133,10 +137,13 @@ export async function sendBulkEmails(
       sent++;
     } else {
       failed++;
-      const error = result.status === 'rejected' 
-        ? result.reason.message 
-        : (result.value as any).error;
-      errors.push(`Email ${index + 1}: ${error}`);
+      let errorMessage: string;
+      if (result.status === 'rejected') {
+        errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      } else {
+        errorMessage = result.value.error ?? 'Unknown error';
+      }
+      errors.push(`Email ${index + 1}: ${errorMessage}`);
     }
   });
 
@@ -178,7 +185,7 @@ export function addClickTracking(html: string, trackingId: string): string {
   // Replace all href attributes with tracking redirect
   return html.replace(
     /href="([^"]+)"/g,
-    (match, url) => {
+    (_match, url: string) => {
       const trackingUrl = `${baseUrl}/api/email/track/link?t=${trackingId}&url=${encodeURIComponent(url)}`;
       return `href="${trackingUrl}"`;
     }
@@ -205,7 +212,7 @@ function stripHtml(html: string): string {
 export async function sendTemplateEmail(options: {
   to: string;
   templateId: string;
-  dynamicData: Record<string, any>;
+  dynamicData: Record<string, unknown>;
   metadata?: Record<string, string>;
 }): Promise<{
   success: boolean;
@@ -220,7 +227,7 @@ export async function sendTemplateEmail(options: {
   }
 
   try {
-    const msg: any = {
+    const msg: MailDataRequired = {
       to: options.to,
       from: {
         email: FROM_EMAIL,
@@ -236,15 +243,19 @@ export async function sendTemplateEmail(options: {
 
     const [response] = await sgMail.send(msg);
 
+    const headers = response.headers as Record<string, unknown> | undefined;
+    const messageId = headers?.['x-message-id'];
+
     return {
       success: true,
-      messageId: response.headers['x-message-id'],
+      messageId: typeof messageId === 'string' ? messageId : undefined,
     };
-  } catch (error: any) {
-    logger.error('[SendGrid] Error sending template email:', error, { file: 'sendgrid-service.ts' });
+  } catch (error) {
+    const err = error as ResponseError | Error;
+    logger.error('[SendGrid] Error sending template email:', err instanceof Error ? err : new Error(String(error)), { file: 'sendgrid-service.ts' });
     return {
       success: false,
-      error: error.message,
+      error: err instanceof Error && err.message ? err.message : 'Failed to send template email',
     };
   }
 }
@@ -270,15 +281,28 @@ export interface SendGridWebhookEvent {
   reason?: string; // For bounce/drop events
   type?: string; // bounce type
   status?: string; // delivery status
-  [key: string]: any; // Custom args
+  [key: string]: unknown; // Custom args
 }
 
-export function parseSendGridWebhook(body: any[]): SendGridWebhookEvent[] {
+interface RawSendGridEvent {
+  email: string;
+  timestamp: number;
+  event: string;
+  sg_event_id: string;
+  sg_message_id: string;
+  url?: string;
+  reason?: string;
+  type?: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
+export function parseSendGridWebhook(body: RawSendGridEvent[]): SendGridWebhookEvent[] {
   // SendGrid sends an array of events
   return body.map(event => ({
     email: event.email,
     timestamp: event.timestamp,
-    event: event.event,
+    event: event.event as SendGridWebhookEvent['event'],
     sg_event_id: event.sg_event_id,
     sg_message_id: event.sg_message_id,
     url: event.url,

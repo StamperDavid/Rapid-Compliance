@@ -24,6 +24,24 @@ interface VercelSSLResponse {
   expiration: number;
 }
 
+interface VercelErrorResponse {
+  error?: {
+    message?: string;
+  };
+}
+
+interface VercelDomainData {
+  name: string;
+  verified: boolean;
+  ssl?: VercelSSLResponse;
+  verification?: Array<{
+    type: string;
+    domain: string;
+    value: string;
+    reason: string;
+  }>;
+}
+
 /**
  * Add domain to Vercel project
  */
@@ -57,28 +75,31 @@ export async function addVercelDomain(domain: string): Promise<{
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[Vercel Domains] Add domain error:', error);
-      const errorMessage = error.error?.message;
+      const errorData = (await response.json()) as VercelErrorResponse;
+      // eslint-disable-next-line no-console
+      console.error('[Vercel Domains] Add domain error:', errorData);
+      const errorMessage = errorData.error?.message ?? '';
       return {
         success: false,
-        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to add domain to Vercel',
+        error: errorMessage !== '' ? errorMessage : 'Failed to add domain to Vercel',
       };
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as VercelDomainResponse;
+    // eslint-disable-next-line no-console
     console.log('[Vercel Domains] Domain added:', domain);
 
     return {
       success: true,
       domain: data,
     };
-  } catch (error: any) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[Vercel Domains] Add domain exception:', error);
-    const errorMessage = error.message;
+    const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
-      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to add domain to Vercel',
+      error: errorMessage !== '' ? errorMessage : 'Failed to add domain to Vercel',
     };
   }
 }
@@ -111,28 +132,31 @@ export async function verifyVercelDomain(domain: string): Promise<{
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[Vercel Domains] Verify domain error:', error);
-      const errorMessage = error.error?.message;
+      const errorData = (await response.json()) as VercelErrorResponse;
+      // eslint-disable-next-line no-console
+      console.error('[Vercel Domains] Verify domain error:', errorData);
+      const errorMessage = errorData.error?.message ?? '';
       return {
         success: false,
-        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to verify domain',
+        error: errorMessage !== '' ? errorMessage : 'Failed to verify domain',
       };
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as VercelDomainResponse;
+    // eslint-disable-next-line no-console
     console.log('[Vercel Domains] Domain verified:', domain);
 
     return {
       success: true,
       verified: data.verified ?? false,
     };
-  } catch (error: any) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[Vercel Domains] Verify domain exception:', error);
-    const errorMessage = error.message;
+    const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
-      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to verify domain',
+      error: errorMessage !== '' ? errorMessage : 'Failed to verify domain',
     };
   }
 }
@@ -142,7 +166,7 @@ export async function verifyVercelDomain(domain: string): Promise<{
  */
 export async function getVercelDomain(domain: string): Promise<{
   success: boolean;
-  domain?: any;
+  domain?: VercelDomainData;
   error?: string;
 }> {
   if (!VERCEL_TOKEN || !VERCEL_PROJECT_ID) {
@@ -165,26 +189,27 @@ export async function getVercelDomain(domain: string): Promise<{
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      const errorMessage = error.error?.message;
+      const errorData = (await response.json()) as VercelErrorResponse;
+      const errorMessage = errorData.error?.message ?? '';
       return {
         success: false,
-        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to get domain',
+        error: errorMessage !== '' ? errorMessage : 'Failed to get domain',
       };
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as VercelDomainData;
 
     return {
       success: true,
       domain: data,
     };
-  } catch (error: any) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[Vercel Domains] Get domain exception:', error);
-    const errorMessage = error.message;
+    const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
-      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to get domain',
+      error: errorMessage !== '' ? errorMessage : 'Failed to get domain',
     };
   }
 }
@@ -216,26 +241,29 @@ export async function removeVercelDomain(domain: string): Promise<{
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[Vercel Domains] Remove domain error:', error);
-      const errorMessage = error.error?.message;
+      const errorData = (await response.json()) as VercelErrorResponse;
+      // eslint-disable-next-line no-console
+      console.error('[Vercel Domains] Remove domain error:', errorData);
+      const errorMessage = errorData.error?.message ?? '';
       return {
         success: false,
-        error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to remove domain',
+        error: errorMessage !== '' ? errorMessage : 'Failed to remove domain',
       };
     }
 
+    // eslint-disable-next-line no-console
     console.log('[Vercel Domains] Domain removed:', domain);
 
     return {
       success: true,
     };
-  } catch (error: any) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[Vercel Domains] Remove domain exception:', error);
-    const errorMessage = error.message;
+    const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
-      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to remove domain',
+      error: errorMessage !== '' ? errorMessage : 'Failed to remove domain',
     };
   }
 }
@@ -251,14 +279,15 @@ export async function getSSLStatus(domain: string): Promise<{
   const domainInfo = await getVercelDomain(domain);
 
   if (!domainInfo.success || !domainInfo.domain) {
+    const errorMsg = domainInfo.error ?? 'Failed to get domain info';
     return {
       success: false,
-      error:(domainInfo.error !== '' && domainInfo.error != null) ? domainInfo.error : 'Failed to get domain info',
+      error: errorMsg !== '' ? errorMsg : 'Failed to get domain info',
     };
   }
 
   // SSL info is included in domain response
-  const sslInfo = domainInfo.domain.ssl;
+  const sslInfo: VercelSSLResponse | undefined = domainInfo.domain.ssl;
 
   if (!sslInfo) {
     return {
@@ -314,7 +343,9 @@ export async function provisionSSL(domain: string): Promise<{
     }
 
     // Wait a few seconds for SSL to provision
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise<void>(resolve => {
+      setTimeout(() => resolve(), 5000);
+    });
 
     // Check SSL status
     const sslStatus = await getSSLStatus(domain);
@@ -332,13 +363,14 @@ export async function provisionSSL(domain: string): Promise<{
       success: true,
       status: 'pending',
     };
-  } catch (error: any) {
+  } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('[Vercel Domains] SSL provisioning error:', error);
-    const errorMessage = error.message;
+    const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
       status: 'failed',
-      error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Failed to provision SSL',
+      error: errorMessage !== '' ? errorMessage : 'Failed to provision SSL',
     };
   }
 }

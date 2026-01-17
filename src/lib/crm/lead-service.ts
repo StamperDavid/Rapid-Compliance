@@ -4,10 +4,18 @@
  * Decouples UI from direct Firestore access
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
-import { where, orderBy } from 'firebase/firestore';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+
+export interface EnrichmentData {
+  linkedInUrl?: string;
+  title?: string;
+  companySize?: number;
+  industry?: string;
+  revenue?: number;
+  [key: string]: unknown;
+}
 
 export interface Lead {
   id: string;
@@ -26,10 +34,10 @@ export interface Lead {
   score?: number;
   ownerId?: string;
   tags?: string[];
-  customFields?: Record<string, any>;
-  enrichmentData?: Record<string, any>;
-  createdAt: any;
-  updatedAt?: any;
+  customFields?: Record<string, unknown>;
+  enrichmentData?: EnrichmentData;
+  createdAt: Date | Timestamp;
+  updatedAt?: Date | Timestamp;
 }
 
 export interface LeadFilters {
@@ -96,9 +104,10 @@ export async function getLeads(
     });
 
     return result;
-  } catch (error: any) {
-    logger.error('Failed to get leads', error, { organizationId, workspaceId, filters });
-    throw new Error(`Failed to retrieve leads: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get leads', error instanceof Error ? error : undefined, { organizationId, workspaceId, filters });
+    throw new Error(`Failed to retrieve leads: ${errorMessage}`);
   }
 }
 
@@ -123,9 +132,10 @@ export async function getLead(
 
     logger.info('Lead retrieved', { organizationId, leadId });
     return lead;
-  } catch (error: any) {
-    logger.error('Failed to get lead', error, { organizationId, leadId });
-    throw new Error(`Failed to retrieve lead: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get lead', error instanceof Error ? error : undefined, { organizationId, leadId });
+    throw new Error(`Failed to retrieve lead: ${errorMessage}`);
   }
 }
 
@@ -142,7 +152,7 @@ export async function createLead(
     const leadId = `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
 
-    let enrichmentData = null;
+    let enrichmentData: EnrichmentData | null = null;
     let enrichedScore = data.score ?? 50;
 
     // Auto-enrich if enabled and company provided
@@ -152,11 +162,11 @@ export async function createLead(
         const enrichmentResponse = await enrichCompany({
           companyName: data.company,
         }, organizationId);
-        
+
         if (enrichmentResponse.success) {
-          enrichmentData = enrichmentResponse.data;
+          enrichmentData = enrichmentResponse.data as EnrichmentData;
           enrichedScore = calculateEnrichedScore({ ...data, score: enrichedScore } as Lead, enrichmentData);
-          
+
           logger.info('Lead auto-enriched on creation', {
             leadId,
             dataPoints: Object.keys(enrichmentData ?? {}).length,
@@ -169,10 +179,10 @@ export async function createLead(
     }
 
     // Clean undefined values from enrichmentData (Firestore doesn't allow undefined)
-    const cleanEnrichmentData = enrichmentData ? 
+    const cleanEnrichmentData: EnrichmentData | null = enrichmentData ?
       Object.fromEntries(
-        Object.entries(enrichmentData).filter(([_, v]) => v !== undefined)
-      ) : null;
+        Object.entries(enrichmentData).filter(([_key, v]) => v !== undefined)
+      ) as EnrichmentData : null;
 
     const lead: Lead = {
       ...data,
@@ -228,9 +238,10 @@ export async function createLead(
     });
 
     return lead;
-  } catch (error: any) {
-    logger.error('Failed to create lead', error, { organizationId, data });
-    throw new Error(`Failed to create lead: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to create lead', error instanceof Error ? error : undefined, { organizationId, data });
+    throw new Error(`Failed to create lead: ${errorMessage}`);
   }
 }
 
@@ -303,9 +314,10 @@ export async function updateLead(
     }
 
     return lead;
-  } catch (error: any) {
-    logger.error('Failed to update lead', error, { organizationId, leadId, updates });
-    throw new Error(`Failed to update lead: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to update lead', error instanceof Error ? error : undefined, { organizationId, leadId, updates });
+    throw new Error(`Failed to update lead: ${errorMessage}`);
   }
 }
 
@@ -324,9 +336,10 @@ export async function deleteLead(
     );
 
     logger.info('Lead deleted', { organizationId, leadId });
-  } catch (error: any) {
-    logger.error('Failed to delete lead', error, { organizationId, leadId });
-    throw new Error(`Failed to delete lead: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to delete lead', error instanceof Error ? error : undefined, { organizationId, leadId });
+    throw new Error(`Failed to delete lead: ${errorMessage}`);
   }
 }
 
@@ -346,17 +359,17 @@ export async function enrichLead(
 
     // Call enrichment service for company data
     const { enrichCompany } = await import('@/lib/enrichment/enrichment-service');
-    
-    let enrichmentData = null;
-    
+
+    let enrichmentData: EnrichmentData | null = null;
+
     // Only enrich if we have company information
     if (lead.company) {
       const enrichmentResponse = await enrichCompany({
         companyName: lead.company,
       }, organizationId);
-      
+
       if (enrichmentResponse.success) {
-        enrichmentData = enrichmentResponse.data;
+        enrichmentData = enrichmentResponse.data as EnrichmentData;
       }
     }
 
@@ -374,25 +387,42 @@ export async function enrichLead(
     });
 
     return updatedLead;
-  } catch (error: any) {
-    logger.error('Failed to enrich lead', error, { organizationId, leadId });
-    throw new Error(`Failed to enrich lead: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to enrich lead', error instanceof Error ? error : undefined, { organizationId, leadId });
+    throw new Error(`Failed to enrich lead: ${errorMessage}`);
   }
 }
 
 /**
  * Calculate lead score based on enrichment data
  */
-function calculateEnrichedScore(lead: Lead, enrichmentData: any): number {
+function calculateEnrichedScore(lead: Lead, enrichmentData: EnrichmentData | null): number {
   let score = (lead.score !== 0 && lead.score != null) ? lead.score : 50;
 
+  if (!enrichmentData) {
+    return score;
+  }
+
   // Boost score based on enrichment data quality
-  if (enrichmentData?.linkedInUrl) {score += 10;}
-  if (enrichmentData?.title?.toLowerCase().includes('director') ||
-      enrichmentData?.title?.toLowerCase().includes('manager')) {score += 5;}
-  if (enrichmentData?.companySize && enrichmentData.companySize > 50) {score += 5;}
-  if (enrichmentData?.industry) {score += 5;}
-  if (enrichmentData?.revenue && enrichmentData.revenue > 1000000) {score += 10;}
+  if (enrichmentData.linkedInUrl) {
+    score += 10;
+  }
+  if (enrichmentData.title && typeof enrichmentData.title === 'string') {
+    const titleLower = enrichmentData.title.toLowerCase();
+    if (titleLower.includes('director') || titleLower.includes('manager')) {
+      score += 5;
+    }
+  }
+  if (enrichmentData.companySize && typeof enrichmentData.companySize === 'number' && enrichmentData.companySize > 50) {
+    score += 5;
+  }
+  if (enrichmentData.industry) {
+    score += 5;
+  }
+  if (enrichmentData.revenue && typeof enrichmentData.revenue === 'number' && enrichmentData.revenue > 1000000) {
+    score += 10;
+  }
 
   return Math.min(score, 100); // Cap at 100
 }
@@ -426,9 +456,10 @@ export async function bulkUpdateLeads(
     });
 
     return successCount;
-  } catch (error: any) {
-    logger.error('Bulk lead update failed', error, { organizationId, leadIds });
-    throw new Error(`Bulk update failed: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Bulk lead update failed', error instanceof Error ? error : undefined, { organizationId, leadIds });
+    throw new Error(`Bulk update failed: ${errorMessage}`);
   }
 }
 
@@ -465,9 +496,10 @@ export async function searchLeads(
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  } catch (error: any) {
-    logger.error('Lead search failed', error, { organizationId, searchTerm });
-    throw new Error(`Search failed: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Lead search failed', error instanceof Error ? error : undefined, { organizationId, searchTerm });
+    throw new Error(`Search failed: ${errorMessage}`);
   }
 }
 

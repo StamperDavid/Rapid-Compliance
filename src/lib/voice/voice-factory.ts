@@ -8,6 +8,43 @@ import type { VoiceProvider, VoiceProviderType, VoiceProviderConfig, VoiceProvid
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 
+// Type definitions for provider-specific API key structures
+interface TwilioKeys {
+  accountSid?: string;
+  account_sid?: string;
+  authToken?: string;
+  auth_token?: string;
+  phoneNumber?: string;
+  phone_number?: string;
+}
+
+interface TelnyxKeys {
+  apiKey?: string;
+  api_key?: string;
+  apiSecret?: string;
+  api_secret?: string;
+  phoneNumber?: string;
+  phone_number?: string;
+}
+
+interface BandwidthKeys {
+  accountId?: string;
+  account_id?: string;
+  apiToken?: string;
+  api_token?: string;
+  phoneNumber?: string;
+  phone_number?: string;
+}
+
+interface VonageKeys {
+  apiKey?: string;
+  api_key?: string;
+  apiSecret?: string;
+  api_secret?: string;
+  phoneNumber?: string;
+  phone_number?: string;
+}
+
 // Provider cost reference (cents)
 const PROVIDER_COSTS: Record<VoiceProviderType, VoiceProviderCosts> = {
   twilio: {
@@ -106,42 +143,50 @@ export class VoiceProviderFactory {
     providerType: VoiceProviderType
   ): Promise<VoiceProviderConfig | null> {
     try {
-      const keys = await apiKeyService.getServiceKey(organizationId, providerType);
-      if (!keys) {return null;}
+      const keysRaw: unknown = await apiKeyService.getServiceKey(organizationId, providerType);
+      if (!keysRaw) {return null;}
 
       // Map provider-specific key names to standard config
       switch (providerType) {
-        case 'twilio':
+        case 'twilio': {
+          const keys = keysRaw as TwilioKeys;
           return {
             accountId: keys.accountSid ?? keys.account_sid ?? '',
             authToken: keys.authToken ?? keys.auth_token ?? '',
             phoneNumber: keys.phoneNumber ?? keys.phone_number ?? '',
             webhookBaseUrl: process.env.NEXT_PUBLIC_APP_URL,
           };
+        }
 
-        case 'telnyx':
+        case 'telnyx': {
+          const keys = keysRaw as TelnyxKeys;
           return {
             accountId: keys.apiKey ?? keys.api_key ?? '',
             authToken: keys.apiSecret ?? keys.api_secret ?? keys.apiKey ?? '',
             phoneNumber: keys.phoneNumber ?? keys.phone_number ?? '',
             webhookBaseUrl: process.env.NEXT_PUBLIC_APP_URL,
           };
+        }
 
-        case 'bandwidth':
+        case 'bandwidth': {
+          const keys = keysRaw as BandwidthKeys;
           return {
             accountId: keys.accountId ?? keys.account_id ?? '',
             authToken: keys.apiToken ?? keys.api_token ?? '',
             phoneNumber: keys.phoneNumber ?? keys.phone_number ?? '',
             webhookBaseUrl: process.env.NEXT_PUBLIC_APP_URL,
           };
+        }
 
-        case 'vonage':
+        case 'vonage': {
+          const keys = keysRaw as VonageKeys;
           return {
             accountId: keys.apiKey ?? keys.api_key ?? '',
             authToken: keys.apiSecret ?? keys.api_secret ?? '',
             phoneNumber: keys.phoneNumber ?? keys.phone_number ?? '',
             webhookBaseUrl: process.env.NEXT_PUBLIC_APP_URL,
           };
+        }
 
         default:
           return null;

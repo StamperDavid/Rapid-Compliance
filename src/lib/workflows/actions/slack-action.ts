@@ -23,6 +23,29 @@ export interface SlackActionConfig extends BaseAction {
   };
 }
 
+// Slack API Response Types
+interface SlackIntegration {
+  accessToken?: string;
+  token?: string;
+}
+
+interface SlackChannel {
+  id: string;
+  name: string;
+}
+
+interface SlackUser {
+  id: string;
+}
+
+interface SlackApiResponse {
+  ok: boolean;
+  error?: string;
+  ts?: string;
+  channels?: SlackChannel[];
+  user?: SlackUser;
+}
+
 export async function executeSlackAction(
   action: SlackActionConfig,
   triggerData: Record<string, unknown>,
@@ -45,16 +68,17 @@ export async function executeSlackAction(
 
   // Get Slack credentials
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+
   let slackToken: string | null = null;
-  
+
   try {
     // Check for organization-level Slack integration
     const integration = await FirestoreService.get(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/integrations`,
       'slack'
     );
-    slackToken = (integration as any)?.accessToken ?? (integration as any)?.token;
+    const typedIntegration = integration as SlackIntegration | null;
+    slackToken = typedIntegration?.accessToken ?? typedIntegration?.token ?? null;
   } catch {
     // No integration found
   }
@@ -82,10 +106,10 @@ export async function executeSlackAction(
 
   // Replace template variables in message
   const processedMessage = replaceTemplateVariables(message, triggerData);
-  
+
   // Process blocks if provided
-  const processedBlocks = blocks 
-    ? JSON.parse(replaceTemplateVariables(JSON.stringify(blocks), triggerData))
+  const processedBlocks: unknown = blocks
+    ? JSON.parse(replaceTemplateVariables(JSON.stringify(blocks), triggerData)) as unknown
     : undefined;
 
   // Send message via Slack API
@@ -103,14 +127,14 @@ export async function executeSlackAction(
       unfurl_links: unfurlLinks,
       unfurl_media: unfurlMedia,
       ...(asBot && botName ? { username: botName } : {}),
-      ...(asBot && botIcon ? { 
+      ...(asBot && botIcon ? {
         icon_emoji: botIcon.startsWith(':') ? botIcon : undefined,
         icon_url: !botIcon.startsWith(':') ? botIcon : undefined,
       } : {}),
     }),
   });
 
-  const result = await response.json();
+  const result = await response.json() as SlackApiResponse;
 
   if (!result.ok) {
     throw new Error(`Slack API error: ${(result.error !== '' && result.error != null) ? result.error : 'Unknown error'}`);
@@ -119,7 +143,7 @@ export async function executeSlackAction(
   return {
     success: true,
     channel: target,
-    messageTs: result.ts,
+    messageTs: result.ts ?? '',
     message: processedMessage,
   };
 }
@@ -130,7 +154,7 @@ export async function executeSlackAction(
 async function getChannelIdByName(token: string, channelName: string): Promise<string> {
   // Remove # prefix if present
   const name = channelName.replace(/^#/, '');
-  
+
   const response = await fetch('https://slack.com/api/conversations.list', {
     method: 'GET',
     headers: {
@@ -138,14 +162,14 @@ async function getChannelIdByName(token: string, channelName: string): Promise<s
     },
   });
 
-  const result = await response.json();
+  const result = await response.json() as SlackApiResponse;
 
   if (!result.ok) {
-    throw new Error(`Failed to list Slack channels: ${result.error}`);
+    throw new Error(`Failed to list Slack channels: ${result.error ?? 'Unknown error'}`);
   }
 
-  const channel = result.channels?.find((c: any) => c.name === name);
-  
+  const channel = result.channels?.find((c: SlackChannel) => c.name === name);
+
   if (!channel) {
     throw new Error(`Slack channel not found: ${channelName}`);
   }
@@ -164,13 +188,17 @@ async function getUserIdByEmail(token: string, email: string): Promise<string> {
     },
   });
 
-  const result = await response.json();
+  const result = await response.json() as SlackApiResponse;
 
   if (!result.ok) {
     if (result.error === 'users_not_found') {
       throw new Error(`Slack user not found with email: ${email}`);
     }
-    throw new Error(`Failed to look up Slack user: ${result.error}`);
+    throw new Error(`Failed to look up Slack user: ${result.error ?? 'Unknown error'}`);
+  }
+
+  if (!result.user) {
+    throw new Error(`Slack user not found with email: ${email}`);
   }
 
   return result.user.id;
@@ -179,8 +207,8 @@ async function getUserIdByEmail(token: string, email: string): Promise<string> {
 /**
  * Replace {{variable}} placeholders with values from triggerData
  */
-function replaceTemplateVariables(template: string, data: any): string {
-  return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+function replaceTemplateVariables(template: string, data: Record<string, unknown>): string {
+  return template.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
     const value = getNestedValue(data, path.trim());
     if (value === undefined || value === null) {
       return match;
@@ -195,8 +223,13 @@ function replaceTemplateVariables(template: string, data: any): string {
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current != null && typeof current === 'object' && key in current) {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 
 

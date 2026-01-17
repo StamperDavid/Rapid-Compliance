@@ -18,7 +18,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { adminDal } from '@/lib/firebase/admin-dal';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type {
   TeamPerformanceAnalytics,
@@ -52,9 +51,8 @@ import type {
   MetricBreakdown,
   MetricBreakdownRequest,
   MetricDistribution,
-  MetricCorrelation,
+  DEFAULT_PERFORMANCE_CONFIG,
 } from './types';
-import { DEFAULT_PERFORMANCE_CONFIG } from './types';
 import type { ConversationAnalysis, CoachingCategory, ObjectionType, TopicCategory } from '@/lib/conversation/types';
 import {
   createPerformanceAnalyzedEvent,
@@ -144,7 +142,7 @@ export async function generatePerformanceAnalytics(
     // 9. Generate trend analysis (if requested)
     let trendAnalysis: TrendAnalysis;
     if (request.includeTrends !== false && fullConfig.includeTrendAnalysis) {
-      trendAnalysis = await generateTrendAnalysis(
+      trendAnalysis = generateTrendAnalysis(
         request.organizationId,
 (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
         rankedMetrics,
@@ -218,21 +216,24 @@ export async function generatePerformanceAnalytics(
  */
 async function calculateIndividualMetrics(
   analyses: ConversationAnalysis[],
-  config: PerformanceAnalyticsConfig
+  _config: PerformanceAnalyticsConfig
 ): Promise<RepPerformanceMetrics[]> {
   // Group analyses by rep
   const analysesByRep = new Map<string, ConversationAnalysis[]>();
-  
+
   for (const analysis of analyses) {
     // Get rep ID from conversation
     const conversation = await getConversationForAnalysis(analysis.conversationId);
     if (!conversation) {continue;}
-    
+
     const repId = conversation.repId;
     if (!analysesByRep.has(repId)) {
       analysesByRep.set(repId, []);
     }
-    analysesByRep.get(repId)!.push(analysis);
+    const repAnalyses = analysesByRep.get(repId);
+    if (repAnalyses) {
+      repAnalyses.push(analysis);
+    }
   }
   
   // Calculate metrics for each rep
@@ -317,7 +318,10 @@ async function calculateRepMetrics(
       if (!topicScores.has(topic.category)) {
         topicScores.set(topic.category, []);
       }
-      topicScores.get(topic.category)!.push(topic.sentiment);
+      const scores = topicScores.get(topic.category);
+      if (scores) {
+        scores.push(topic.sentiment);
+      }
     }
   }
   
@@ -553,7 +557,7 @@ function calculateBenchmarks(metrics: RepPerformanceMetrics[]): PerformanceBench
  */
 function assignPerformanceTiers(
   metrics: RepPerformanceMetrics[],
-  benchmarks: PerformanceBenchmarks
+  _benchmarks: PerformanceBenchmarks
 ): RepPerformanceMetrics[] {
   // Sort by overall score
   const sorted = [...metrics].sort((a, b) => b.scores.overall - a.scores.overall);
@@ -592,17 +596,16 @@ function assignPerformanceTiers(
  */
 function identifyTopPerformers(
   metrics: RepPerformanceMetrics[],
-  config: PerformanceAnalyticsConfig
+  _config: PerformanceAnalyticsConfig
 ): TopPerformer[] {
   // Get top 20%
   const topPerformersCount = Math.max(1, Math.ceil(metrics.length * 0.2));
   const topMetrics = metrics
     .filter(m => m.performanceTier === 'top_performer')
     .slice(0, topPerformersCount);
-  
+
   return topMetrics.map((metric, index) => {
     // Identify strengths (metrics significantly above team average)
-    const teamAvgScore = average(metrics.map(m => m.scores.overall));
     const strengths: Strength[] = [];
     
     // Check each score category
@@ -707,8 +710,8 @@ function identifyTopPerformers(
  */
 function findImprovementOpportunities(
   metrics: RepPerformanceMetrics[],
-  benchmarks: PerformanceBenchmarks,
-  config: PerformanceAnalyticsConfig
+  _benchmarks: PerformanceBenchmarks,
+  _config: PerformanceAnalyticsConfig
 ): ImprovementOpportunity[] {
   // Focus on bottom 40% (developing + needs_improvement)
   const needsImprovement = metrics.filter(
@@ -839,18 +842,17 @@ function findImprovementOpportunities(
 /**
  * Generate trend analysis
  */
-async function generateTrendAnalysis(
-  organizationId: string,
-  workspaceId: string,
+function generateTrendAnalysis(
+  _organizationId: string,
+  _workspaceId: string,
   currentMetrics: RepPerformanceMetrics[],
-  startDate: Date,
+  _startDate: Date,
   endDate: Date,
-  config: PerformanceAnalyticsConfig
-): Promise<TrendAnalysis> {
+  _config: PerformanceAnalyticsConfig
+): TrendAnalysis {
   // Get historical data points
-  const periodLength = endDate.getTime() - startDate.getTime();
   const dataPoints: TrendDataPoint[] = [];
-  
+
   // For simplicity, we'll just show current period
   // In production, you'd fetch multiple historical periods
   dataPoints.push({
@@ -961,35 +963,39 @@ function generateCoachingPriorities(
 ): CoachingPriority[] {
   // Count coaching needs by category
   const categoryNeeds = new Map<CoachingCategory, { count: number; totalGap: number }>();
-  
+
   for (const metric of metrics) {
     for (const category of metric.topCoachingAreas) {
       if (!categoryNeeds.has(category)) {
         categoryNeeds.set(category, { count: 0, totalGap: 0 });
       }
-      const needs = categoryNeeds.get(category)!;
-      needs.count++;
-      // Gap would be calculated from skill scores
-      needs.totalGap += 10; // Placeholder
+      const needs = categoryNeeds.get(category);
+      if (needs) {
+        needs.count++;
+        // Gap would be calculated from skill scores
+        needs.totalGap += 10; // Placeholder
+      }
     }
   }
-  
+
   // Convert to priorities
   const priorities: CoachingPriority[] = [];
-  
-  for (const [category, needs] of categoryNeeds.entries()) {
-    const avgGap = needs.totalGap / needs.count;
-    const repsAffected = needs.count;
+
+  for (const [category] of categoryNeeds.entries()) {
+    const categoryNeeds_value = categoryNeeds.get(category);
+    if (!categoryNeeds_value) {continue;}
+    const avgGap = categoryNeeds_value.totalGap / categoryNeeds_value.count;
+    const repsAffected = categoryNeeds_value.count;
     const percentageAffected = (repsAffected / metrics.length) * 100;
-    
+
     let priority: 'critical' | 'high' | 'medium' | 'low';
     if (percentageAffected >= 50 && avgGap >= 15) {priority = 'critical';}
     else if (percentageAffected >= 30 || avgGap >= 15) {priority = 'high';}
     else if (percentageAffected >= 20 || avgGap >= 10) {priority = 'medium';}
     else {priority = 'low';}
-    
+
     const estimatedROI = percentageAffected >= 40 ? 'high' : percentageAffected >= 20 ? 'medium' : 'low';
-    
+
     priorities.push({
       category,
       priority,
@@ -999,7 +1005,7 @@ function generateCoachingPriorities(
       estimatedROI,
       recommendation: getCoachingRecommendation(category),
       suggestedActions: getSuggestedActions(category),
-      resources: getResources(category),
+      resources: getResources(),
     });
   }
   
@@ -1264,7 +1270,7 @@ function getSuggestedActions(category: CoachingCategory): string[] {
 /**
  * Get resources
  */
-function getResources(category: CoachingCategory): string[] {
+function getResources(): string[] {
   return [
     'Internal training materials',
     'Best practice documentation',
@@ -1323,33 +1329,33 @@ function determinePeriod(request: PerformanceAnalyticsRequest): {
 /**
  * Get conversation analyses for a period
  */
-async function getConversationAnalyses(
-  organizationId: string,
-  workspaceId: string,
-  startDate: Date,
-  endDate: Date
+function getConversationAnalyses(
+  _organizationId: string,
+  _workspaceId: string,
+  _startDate: Date,
+  _endDate: Date
 ): Promise<ConversationAnalysis[]> {
   // This would query Firestore for conversation analyses
   // For now, returning empty array - would be implemented in production
-  return [];
+  return Promise.resolve([]);
 }
 
 /**
  * Get conversation for analysis
  */
-async function getConversationForAnalysis(conversationId: string): Promise<{ repId: string } | null> {
+function getConversationForAnalysis(_conversationId: string): Promise<{ repId: string } | null> {
   // This would query Firestore for conversation
   // For now, returning null - would be implemented in production
-  return null;
+  return Promise.resolve(null);
 }
 
 /**
  * Get rep info
  */
-async function getRepInfo(repId: string): Promise<{ name: string; email?: string }> {
+function getRepInfo(_repId: string): Promise<{ name: string; email?: string }> {
   // This would query Firestore for rep info
   // For now, returning placeholder
-  return { name: 'Rep Name', email: 'rep@example.com' };
+  return Promise.resolve({ name: 'Rep Name', email: 'rep@example.com' });
 }
 
 /**
@@ -1542,13 +1548,29 @@ export async function compareReps(
   const strengthComparison: ComparisonInsight[] = [];
   for (const [metric, diff] of Object.entries(scoreDifferences)) {
     if (Math.abs(diff) >= 5) {
+      const rep1Value = metric === 'overall' ? rep1.scores.overall :
+        metric === 'discovery' ? rep1.scores.discovery :
+        metric === 'valueArticulation' ? rep1.scores.valueArticulation :
+        metric === 'objectionHandling' ? rep1.scores.objectionHandling :
+        metric === 'closing' ? rep1.scores.closing :
+        metric === 'rapport' ? rep1.scores.rapport :
+        metric === 'engagement' ? rep1.scores.engagement : 0;
+
+      const rep2Value = metric === 'overall' ? rep2.scores.overall :
+        metric === 'discovery' ? rep2.scores.discovery :
+        metric === 'valueArticulation' ? rep2.scores.valueArticulation :
+        metric === 'objectionHandling' ? rep2.scores.objectionHandling :
+        metric === 'closing' ? rep2.scores.closing :
+        metric === 'rapport' ? rep2.scores.rapport :
+        metric === 'engagement' ? rep2.scores.engagement : 0;
+
       strengthComparison.push({
         metric,
-        rep1Value: (rep1.scores as any)[metric],
-        rep2Value: (rep2.scores as any)[metric],
+        rep1Value,
+        rep2Value,
         difference: diff,
         significance: Math.abs(diff) >= 15 ? 'major' : Math.abs(diff) >= 10 ? 'moderate' : 'minor',
-        insight: diff > 0 
+        insight: diff > 0
           ? `${rep1.repName} excels in ${metric}`
           : `${rep2.repName} excels in ${metric}`,
       });
@@ -1608,14 +1630,38 @@ export async function getMetricBreakdown(
   });
   
   // Extract metric values
-  const values = analytics.individualMetrics.map(m => (m.scores as any)[request.metric] ?? m.scores.overall);
-  
+  const values = analytics.individualMetrics.map(m => {
+    const metric = request.metric;
+    if (metric === 'overall') {
+      return m.scores.overall;
+    }
+    if (metric === 'discovery') {
+      return m.scores.discovery;
+    }
+    if (metric === 'valueArticulation') {
+      return m.scores.valueArticulation;
+    }
+    if (metric === 'objectionHandling') {
+      return m.scores.objectionHandling;
+    }
+    if (metric === 'closing') {
+      return m.scores.closing;
+    }
+    if (metric === 'rapport') {
+      return m.scores.rapport;
+    }
+    if (metric === 'engagement') {
+      return m.scores.engagement;
+    }
+    return m.scores.overall;
+  });
+
   // Calculate statistics
   const teamAvg = average(values);
   const teamMedian = median(values);
   const teamMin = Math.min(...values);
   const teamMax = Math.max(...values);
-  
+
   // Calculate standard deviation
   const variance = average(values.map(v => Math.pow(v - teamAvg, 2)));
   const standardDeviation = Math.sqrt(variance);
@@ -1637,7 +1683,31 @@ export async function getMetricBreakdown(
   const byTier: Record<string, number> = {};
   for (const tier of ['top_performer', 'high_performer', 'solid_performer', 'developing', 'needs_improvement']) {
     const tierMetrics = analytics.individualMetrics.filter(m => m.performanceTier === tier);
-    byTier[tier] = tierMetrics.length > 0 ? average(tierMetrics.map(m => (m.scores as any)[request.metric] ?? m.scores.overall)) : 0;
+    byTier[tier] = tierMetrics.length > 0 ? average(tierMetrics.map(m => {
+      const metric = request.metric;
+      if (metric === 'overall') {
+        return m.scores.overall;
+      }
+      if (metric === 'discovery') {
+        return m.scores.discovery;
+      }
+      if (metric === 'valueArticulation') {
+        return m.scores.valueArticulation;
+      }
+      if (metric === 'objectionHandling') {
+        return m.scores.objectionHandling;
+      }
+      if (metric === 'closing') {
+        return m.scores.closing;
+      }
+      if (metric === 'rapport') {
+        return m.scores.rapport;
+      }
+      if (metric === 'engagement') {
+        return m.scores.engagement;
+      }
+      return m.scores.overall;
+    })) : 0;
   }
   
   return {

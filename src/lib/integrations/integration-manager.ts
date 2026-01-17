@@ -12,7 +12,7 @@ export interface IntegrationCredentials {
   accessToken: string;
   refreshToken?: string;
   expiresAt?: Date;
-  metadata?: Record<string, any>; // Integration-specific data (realmId, shopDomain, etc.)
+  metadata?: Record<string, unknown>; // Integration-specific data (realmId, shopDomain, etc.)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,8 +44,8 @@ export async function saveIntegrationCredentials(
 
     logger.info('Integration credentials saved', { organizationId, integrationId });
 
-  } catch (error: any) {
-    logger.error('Failed to save integration credentials', error, { organizationId, integrationId });
+  } catch (error) {
+    logger.error('Failed to save integration credentials', error instanceof Error ? error : undefined, { organizationId, integrationId });
     throw error;
   }
 }
@@ -90,8 +90,8 @@ export async function getIntegrationCredentials(
 
     return credentials;
 
-  } catch (error: any) {
-    logger.error('Failed to get integration credentials', error, { organizationId, integrationId });
+  } catch (error) {
+    logger.error('Failed to get integration credentials', error instanceof Error ? error : undefined, { organizationId, integrationId });
     return null;
   }
 }
@@ -139,8 +139,8 @@ async function refreshIntegrationToken(
     // Return updated credentials
     return await getIntegrationCredentials(organizationId, integrationId);
 
-  } catch (error: any) {
-    logger.error('Token refresh failed', error, { integrationId });
+  } catch (error) {
+    logger.error('Token refresh failed', error instanceof Error ? error : undefined, { integrationId });
     return null;
   }
 }
@@ -168,7 +168,7 @@ async function refreshZoomToken(refreshToken: string): Promise<{ accessToken: st
     throw new Error('Zoom token refresh failed');
   }
 
-  const data = await response.json();
+  const data = await response.json() as { access_token: string; refresh_token: string; expires_in: number };
 
   return {
     accessToken: data.access_token,
@@ -200,7 +200,7 @@ async function refreshQuickBooksToken(refreshToken: string): Promise<{ accessTok
     throw new Error('QuickBooks token refresh failed');
   }
 
-  const data = await response.json();
+  const data = await response.json() as { access_token: string; refresh_token: string; expires_in: number };
 
   return {
     accessToken: data.access_token,
@@ -224,8 +224,8 @@ export async function disconnectIntegration(
 
     logger.info('Integration disconnected', { organizationId, integrationId });
 
-  } catch (error: any) {
-    logger.error('Failed to disconnect integration', error, { organizationId, integrationId });
+  } catch (error) {
+    logger.error('Failed to disconnect integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
     throw error;
   }
 }
@@ -243,8 +243,8 @@ export async function listConnectedIntegrations(
 
     return result;
 
-  } catch (error: any) {
-    logger.error('Failed to list integrations', error, { organizationId });
+  } catch (error) {
+    logger.error('Failed to list integrations', error instanceof Error ? error : undefined, { organizationId });
     return [];
   }
 }
@@ -279,8 +279,8 @@ export async function updateIntegration(
 
     logger.info('Integration updated', { organizationId, integrationId });
 
-  } catch (error: any) {
-    logger.error('Failed to update integration', error, { organizationId, integrationId });
+  } catch (error) {
+    logger.error('Failed to update integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
     throw error;
   }
 }
@@ -298,13 +298,13 @@ export async function deleteIntegration(
 /**
  * Sync integration data
  */
-export async function syncIntegration(
+export function syncIntegration(
   organizationId: string,
   integrationId: string
-): Promise<{ success: boolean; synced?: number; error?: string }> {
+): { success: boolean; synced?: number; error?: string } {
   try {
     logger.info('Syncing integration', { organizationId, integrationId });
-    
+
     // Implementation would depend on the integration type
     // For now, return success
     return {
@@ -312,9 +312,9 @@ export async function syncIntegration(
       synced: 0, // Number of records synced
     };
 
-  } catch (error: any) {
-    logger.error('Failed to sync integration', error, { organizationId, integrationId });
-    const syncErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Sync failed';
+  } catch (error) {
+    logger.error('Failed to sync integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    const syncErrorMsg = error instanceof Error && error.message ? error.message : 'Sync failed';
     return {
       success: false,
       error: syncErrorMsg,
@@ -353,9 +353,9 @@ export async function testIntegration(
       error: 'No access token found',
     };
 
-  } catch (error: any) {
-    logger.error('Failed to test integration', error, { organizationId, integrationId });
-    const testErrorMsg = (error.message !== '' && error.message != null) ? error.message : 'Test failed';
+  } catch (error) {
+    logger.error('Failed to test integration', error instanceof Error ? error : undefined, { organizationId, integrationId });
+    const testErrorMsg = error instanceof Error && error.message ? error.message : 'Test failed';
     return {
       success: false,
       error: testErrorMsg,

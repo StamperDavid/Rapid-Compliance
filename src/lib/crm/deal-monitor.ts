@@ -19,8 +19,8 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { calculateDealHealth } from './deal-health';
-import { generateNextBestActions } from './next-best-action-engine';
+import { calculateDealHealth, type DealHealthScore } from './deal-health';
+import { generateNextBestActions, type ActionRecommendations } from './next-best-action-engine';
 import type { SalesSignal } from '@/lib/orchestration/types';
 import type { Deal } from './deal-service';
 
@@ -60,9 +60,9 @@ export interface DealMonitorConfig {
  * unsubscribe();
  * ```
  */
-export async function startDealMonitor(
+export function startDealMonitor(
   config: DealMonitorConfig
-): Promise<() => void> {
+): () => void {
   const {
     organizationId,
     workspaceId,
@@ -326,7 +326,7 @@ async function emitHealthScoreSignal(
   organizationId: string,
   workspaceId: string,
   dealId: string,
-  healthScore: any,
+  healthScore: DealHealthScore,
   priority: 'High' | 'Medium' | 'Low'
 ): Promise<void> {
   try {
@@ -375,7 +375,7 @@ async function emitRecommendationsSignal(
   organizationId: string,
   workspaceId: string,
   dealId: string,
-  recommendations: any,
+  recommendations: ActionRecommendations,
   priority: 'High' | 'Medium' | 'Low'
 ): Promise<void> {
   try {

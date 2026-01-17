@@ -3,9 +3,45 @@
  * REAL Gmail integration for reading and sending emails
  */
 
-import { google } from 'googleapis';
-import type { OAuth2Client } from 'google-auth-library'
+import { google, type gmail_v1 } from 'googleapis';
+import type { OAuth2Client } from 'google-auth-library';
 import { logger } from '@/lib/logger/logger';
+
+// Type definitions for Gmail API
+interface GmailMessagePartHeader {
+  name?: string | null;
+  value?: string | null;
+}
+
+interface GmailMessagePartBody {
+  data?: string | null;
+}
+
+interface GmailMessagePart {
+  mimeType?: string | null;
+  body?: GmailMessagePartBody | null;
+  parts?: GmailMessagePart[] | null;
+}
+
+interface GmailMessagePayload {
+  headers?: GmailMessagePartHeader[] | null;
+  parts?: GmailMessagePart[] | null;
+  mimeType?: string | null;
+  body?: GmailMessagePartBody | null;
+}
+
+interface GmailMessage {
+  id?: string | null;
+  threadId?: string | null;
+  payload?: GmailMessagePayload | null;
+}
+
+interface GmailIntegration {
+  service?: string;
+  providerId?: string;
+  accessToken?: string;
+  refreshToken?: string;
+}
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -62,7 +98,7 @@ export async function listEmails(
     query?: string;
     labelIds?: string[];
   }
-): Promise<any[]> {
+): Promise<gmail_v1.Schema$Message[]> {
   const auth = createOAuth2Client(tokens);
   const gmail = google.gmail({ version: 'v1', auth });
 
@@ -74,13 +110,17 @@ export async function listEmails(
   });
 
   const messages = response.data.messages ?? [];
-  
+
   // Fetch full message details for each
   const fullMessages = await Promise.all(
     messages.map(async (msg) => {
+      const msgId = msg.id ?? '';
+      if (!msgId) {
+        return {} as gmail_v1.Schema$Message;
+      }
       const full = await gmail.users.messages.get({
         userId: 'me',
-        id: msg.id!,
+        id: msgId,
         format: 'full',
       });
       return full.data;
@@ -96,7 +136,7 @@ export async function listEmails(
 export async function getEmail(
   tokens: { access_token: string; refresh_token?: string },
   messageId: string
-): Promise<any> {
+): Promise<gmail_v1.Schema$Message> {
   const auth = createOAuth2Client(tokens);
   const gmail = google.gmail({ version: 'v1', auth });
 
@@ -149,8 +189,8 @@ export async function sendGmailEmail(
   });
 
   return {
-    id: response.data.id!,
-    threadId: response.data.threadId!,
+    id: response.data.id ?? '',
+    threadId: response.data.threadId ?? '',
   };
 }
 
@@ -173,8 +213,8 @@ export async function watchEmails(
   });
 
   return {
-    historyId: response.data.historyId!,
-    expiration: response.data.expiration!,
+    historyId: response.data.historyId ?? '',
+    expiration: response.data.expiration ?? '',
   };
 }
 
@@ -184,7 +224,7 @@ export async function watchEmails(
 export async function getHistory(
   tokens: { access_token: string; refresh_token?: string },
   startHistoryId: string
-): Promise<any[]> {
+): Promise<gmail_v1.Schema$History[]> {
   const auth = createOAuth2Client(tokens);
   const gmail = google.gmail({ version: 'v1', auth });
 
@@ -199,7 +239,7 @@ export async function getHistory(
 /**
  * Parse email headers
  */
-export function parseEmailHeaders(message: any): {
+export function parseEmailHeaders(message: GmailMessage): {
   from: string;
   to: string;
   subject: string;
@@ -209,9 +249,11 @@ export function parseEmailHeaders(message: any): {
   references?: string;
 } {
   const headers = message.payload?.headers ?? [];
-  
-  const getHeader = (name: string) => {
-    const header = headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase());
+
+  const getHeader = (name: string): string => {
+    const header = headers.find((h: GmailMessagePartHeader) =>
+      h.name?.toLowerCase() === name.toLowerCase()
+    );
     const headerValue = header?.value;
     return (headerValue !== '' && headerValue != null) ? headerValue : '';
   };
@@ -230,11 +272,11 @@ export function parseEmailHeaders(message: any): {
 /**
  * Get email body
  */
-export function getEmailBody(message: any): { text: string; html: string } {
+export function getEmailBody(message: GmailMessage): { text: string; html: string } {
   let text = '';
   let html = '';
 
-  const extractBody = (part: any) => {
+  const extractBody = (part: GmailMessagePart): void => {
     if (part.mimeType === 'text/plain' && part.body?.data) {
       text = Buffer.from(part.body.data, 'base64').toString('utf-8');
     } else if (part.mimeType === 'text/html' && part.body?.data) {
@@ -264,14 +306,16 @@ export async function sendEmailViaGmail(options: {
 }): Promise<void> {
   // Get Gmail tokens from organization's integrations
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
-  const integrations = await FirestoreService.getAll(
+
+  const integrations = await FirestoreService.getAll<GmailIntegration>(
     `${COLLECTIONS.ORGANIZATIONS}/${options.organizationId}/integrations`,
     []
   );
-  
-  const gmailIntegration = integrations.find((i: any) => i.service === 'gmail' || i.providerId === 'google');
-  
+
+  const gmailIntegration = integrations.find(
+    (i) => i.service === 'gmail' || i.providerId === 'google'
+  );
+
   if (!gmailIntegration?.accessToken) {
     throw new Error('Gmail not connected. Please connect your Google account first.');
   }
@@ -282,13 +326,13 @@ export async function sendEmailViaGmail(options: {
   };
 
   // Send the email
-  const result = await sendGmailEmail(tokens, {
+  await sendGmailEmail(tokens, {
     to: options.to,
     subject: options.subject,
     body: options.body,
   });
 
-  logger.info('Gmail Email sent successfully: result.id}', { file: 'gmail-service.ts' });
+  logger.info('Gmail Email sent successfully', { file: 'gmail-service.ts' });
 }
 
 /**
@@ -309,6 +353,14 @@ export async function syncEmailsToCRM(
 
     for (const email of emails) {
       try {
+        const emailId = email.id ?? '';
+        const threadId = email.threadId ?? '';
+
+        if (!emailId) {
+          errors++;
+          continue;
+        }
+
         const headers = parseEmailHeaders(email);
         const body = getEmailBody(email);
 
@@ -316,10 +368,10 @@ export async function syncEmailsToCRM(
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
           `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emails`,
-          email.id,
+          emailId,
           {
-            id: email.id,
-            threadId: email.threadId,
+            id: emailId,
+            threadId,
             from: headers.from,
             to: headers.to,
             subject: headers.subject,

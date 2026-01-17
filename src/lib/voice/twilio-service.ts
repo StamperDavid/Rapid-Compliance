@@ -50,15 +50,18 @@ export async function initiateCall(
       statusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/status`,
     });
     
+    const callStatus = call.status as 'queued' | 'ringing' | 'in-progress' | 'completed' | 'failed';
+
     return {
       callSid: call.sid,
       from: call.from,
       to: call.to,
-      status: call.status as any,
+      status: callStatus,
     };
-  } catch (error: any) {
-    logger.error('[Twilio] Call initiation error:', error, { file: 'twilio-service.ts' });
-    throw new Error(`Failed to initiate call: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Twilio] Call initiation error:', error instanceof Error ? error : undefined, { file: 'twilio-service.ts' });
+    throw new Error(`Failed to initiate call: ${errorMessage}`);
   }
 }
 
@@ -101,7 +104,7 @@ export function generateAgentTwiML(
  */
 export async function speechToText(
   audioUrl: string,
-  organizationId: string
+  _organizationId: string
 ): Promise<string> {
   try {
     // Use Whisper API for speech-to-text
@@ -115,16 +118,17 @@ export async function speechToText(
         model: 'whisper-1',
       }),
     });
-    
+
     if (!response.ok) {
       throw new Error('Speech-to-text conversion failed');
     }
-    
-    const data = await response.json();
+
+    const data = await response.json() as { text: string };
     return data.text;
-  } catch (error: any) {
-    logger.error('[Speech-to-Text] Error:', error, { file: 'twilio-service.ts' });
-    throw new Error(`Speech-to-text failed: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Speech-to-Text] Error:', error instanceof Error ? error : undefined, { file: 'twilio-service.ts' });
+    throw new Error(`Speech-to-text failed: ${errorMessage}`);
   }
 }
 
@@ -151,9 +155,10 @@ export async function sendSMS(
       messageSid: msg.sid,
       status: msg.status,
     };
-  } catch (error: any) {
-    logger.error('[Twilio] SMS error:', error, { file: 'twilio-service.ts' });
-    throw new Error(`Failed to send SMS: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Twilio] SMS error:', error instanceof Error ? error : undefined, { file: 'twilio-service.ts' });
+    throw new Error(`Failed to send SMS: ${errorMessage}`);
   }
 }
 
@@ -170,17 +175,19 @@ export async function getCallDetails(
     const client = twilio.default(config.accountSid, config.authToken);
     
     const call = await client.calls(callSid).fetch();
-    
+    const callStatus = call.status as 'queued' | 'ringing' | 'in-progress' | 'completed' | 'failed';
+
     return {
       callSid: call.sid,
       from: call.from,
       to: call.to,
-      status: call.status as any,
-      duration: parseInt(call.duration || '0'),
+      status: callStatus,
+      duration: parseInt(call.duration ?? '0'),
     };
-  } catch (error: any) {
-    logger.error('[Twilio] Get call error:', error, { file: 'twilio-service.ts' });
-    throw new Error(`Failed to get call details: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('[Twilio] Get call error:', error instanceof Error ? error : undefined, { file: 'twilio-service.ts' });
+    throw new Error(`Failed to get call details: ${errorMessage}`);
   }
 }
 
@@ -203,8 +210,8 @@ export async function getCallRecording(
     }
     
     return `https://api.twilio.com${recordings[0].uri.replace('.json', '.mp3')}`;
-  } catch (error: any) {
-    logger.error('[Twilio] Get recording error:', error, { file: 'twilio-service.ts' });
+  } catch (error) {
+    logger.error('[Twilio] Get recording error:', error instanceof Error ? error : undefined, { file: 'twilio-service.ts' });
     return null;
   }
 }
@@ -213,18 +220,23 @@ export async function getCallRecording(
  * Get Twilio configuration
  */
 async function getTwilioConfig(organizationId: string): Promise<VoiceConfig> {
-  const keys = await apiKeyService.getServiceKey(organizationId, 'twilio');
-  
+  const keys: unknown = await apiKeyService.getServiceKey(organizationId, 'twilio');
+
   if (!keys) {
     throw new Error('Twilio not configured');
   }
-  
-  const config = keys;
-  
-  if (!config.accountSid || !config.authToken || !config.phoneNumber) {
+
+  // Type guard to ensure we have the correct structure
+  const config = keys as Record<string, unknown>;
+
+  if (
+    typeof config.accountSid !== 'string' ||
+    typeof config.authToken !== 'string' ||
+    typeof config.phoneNumber !== 'string'
+  ) {
     throw new Error('Twilio configuration incomplete');
   }
-  
+
   return {
     accountSid: config.accountSid,
     authToken: config.authToken,
@@ -257,14 +269,15 @@ export class VoiceAgentHandler {
   ): Promise<string> {
     // Initialize conversation
     this.conversationHistory.set(callSid, []);
-    
+
     // Get agent greeting
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const agent = await FirestoreService.get(`${COLLECTIONS.ORGANIZATIONS}/*/agents`, agentId);
-    
-    const agentGreeting = (agent as any)?.greeting;
-    const greeting = (agentGreeting !== '' && agentGreeting != null) ? agentGreeting : 'Hello! How can I help you today?';
-    
+    const agent: unknown = await FirestoreService.get(`${COLLECTIONS.ORGANIZATIONS}/*/agents`, agentId);
+
+    const agentRecord = agent as Record<string, unknown> | null;
+    const agentGreeting = agentRecord && typeof agentRecord.greeting === 'string' ? agentRecord.greeting : '';
+    const greeting = agentGreeting !== '' ? agentGreeting : 'Hello! How can I help you today?';
+
     return generateAgentTwiML(greeting, {
       gather: true,
       action: `/api/voice/agent/${agentId}/respond`,
@@ -278,25 +291,25 @@ export class VoiceAgentHandler {
   ): Promise<string> {
     // Get conversation history
     const history = this.conversationHistory.get(callSid) ?? [];
-    
+
     // Add user input
     history.push({ role: 'user', content: speechResult });
-    
+
     // Get AI response
     const { sendUnifiedChatMessage } = await import('@/lib/ai/unified-ai-service');
-    
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4-turbo', // Use GPT-4 for voice
       messages: history.map(h => ({
-        role: h.role as any,
+        role: h.role as 'user' | 'assistant' | 'system',
         content: h.content,
       })),
     });
-    
+
     // Add AI response to history
     history.push({ role: 'assistant', content: response.text });
     this.conversationHistory.set(callSid, history);
-    
+
     // Generate TwiML response
     return generateAgentTwiML(response.text, {
       gather: true,
@@ -304,7 +317,7 @@ export class VoiceAgentHandler {
     });
   }
   
-  async endCall(callSid: string): Promise<void> {
+  endCall(callSid: string): void {
     // Clean up conversation history
     this.conversationHistory.delete(callSid);
   }

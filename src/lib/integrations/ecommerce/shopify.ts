@@ -5,14 +5,56 @@
 
 import type { ConnectedIntegration } from '@/types/integrations';
 
+// Shopify API Response Types
+interface ShopifyVariant {
+  id: string;
+  price: string;
+  inventory_quantity: number;
+}
+
+interface ShopifyImage {
+  src: string;
+}
+
+interface ShopifyProduct {
+  title: string;
+  body_html?: string;
+  variants: ShopifyVariant[];
+  images: ShopifyImage[];
+}
+
+interface ShopifyProductResponse {
+  product: ShopifyProduct;
+}
+
+// Function Result Types
+interface CheckInventoryResult {
+  inventory: number;
+}
+
+interface AddToCartResult {
+  cartUrl: string;
+  itemAdded: boolean;
+}
+
+interface GetProductResult {
+  title: string;
+  description: string;
+  price: number;
+  images: string[];
+  inStock: boolean;
+}
+
+type ShopifyFunctionResult = CheckInventoryResult | AddToCartResult | GetProductResult;
+
 /**
  * Execute a Shopify function
  */
 export async function executeShopifyFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<ShopifyFunctionResult> {
   if (!integration.config) {
     throw new Error('Shopify configuration missing');
   }
@@ -80,7 +122,7 @@ async function checkInventory(
   params: { productId: string },
   shopDomain: string,
   accessToken: string
-): Promise<number> {
+): Promise<CheckInventoryResult> {
   const response = await fetch(
     `https://${shopDomain}/admin/api/2024-01/products/${params.productId}.json`,
     {
@@ -90,21 +132,21 @@ async function checkInventory(
       },
     }
   );
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch product');
   }
-  
-  const data = await response.json();
+
+  const data = await response.json() as ShopifyProductResponse;
   const product = data.product;
-  
+
   // Sum up inventory across all variants
   const totalInventory = product.variants.reduce(
-    (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
+    (sum: number, variant: ShopifyVariant) => sum + (variant.inventory_quantity ?? 0),
     0
   );
-  
-  return totalInventory;
+
+  return { inventory: totalInventory };
 }
 
 /**
@@ -118,10 +160,10 @@ async function addToCart(
   },
   shopDomain: string,
   accessToken: string
-): Promise<{ cartUrl: string; itemAdded: boolean }> {
+): Promise<AddToCartResult> {
   // Get product to get variant ID if not provided
   let variantId = params.variantId;
-  
+
   if (!variantId) {
     const productResponse = await fetch(
       `https://${shopDomain}/admin/api/2024-01/products/${params.productId}.json`,
@@ -132,14 +174,18 @@ async function addToCart(
         },
       }
     );
-    
-    const productData = await productResponse.json();
-    variantId = productData.product.variants[0].id;
+
+    const productData = await productResponse.json() as ShopifyProductResponse;
+    const firstVariant = productData.product.variants[0];
+    if (!firstVariant) {
+      throw new Error('Product has no variants');
+    }
+    variantId = firstVariant.id;
   }
-  
+
   // Create cart URL with variant
   const cartUrl = `https://${shopDomain}/cart/${variantId}:${params.quantity}`;
-  
+
   return {
     cartUrl,
     itemAdded: true,
@@ -153,13 +199,7 @@ async function getProduct(
   params: { productId: string },
   shopDomain: string,
   accessToken: string
-): Promise<{
-  title: string;
-  description: string;
-  price: number;
-  images: string[];
-  inStock: boolean;
-}> {
+): Promise<GetProductResult> {
   const response = await fetch(
     `https://${shopDomain}/admin/api/2024-01/products/${params.productId}.json`,
     {
@@ -169,25 +209,30 @@ async function getProduct(
       },
     }
   );
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch product');
   }
-  
-  const data = await response.json();
+
+  const data = await response.json() as ShopifyProductResponse;
   const product = data.product;
-  
+
   const totalInventory = product.variants.reduce(
-    (sum: number, variant: any) => sum + (variant.inventory_quantity ?? 0),
+    (sum: number, variant: ShopifyVariant) => sum + (variant.inventory_quantity ?? 0),
     0
   );
 
-  const descriptionHtml = product.body_html?.replace(/<[^>]*>/g, '');
+  const descriptionHtml = product.body_html?.replace(/<[^>]*>/g, '') ?? '';
+  const firstVariant = product.variants[0];
+  if (!firstVariant) {
+    throw new Error('Product has no variants');
+  }
+
   return {
     title: product.title,
-    description: (descriptionHtml !== '' && descriptionHtml != null) ? descriptionHtml : '',
-    price: parseFloat(product.variants[0].price),
-    images: product.images.map((img: any) => img.src),
+    description: descriptionHtml !== '' ? descriptionHtml : '',
+    price: parseFloat(firstVariant.price),
+    images: product.images.map((img: ShopifyImage) => img.src),
     inStock: totalInventory > 0,
   };
 }

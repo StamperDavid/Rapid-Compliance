@@ -7,6 +7,70 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 // OrderPayment type not needed in this service
 import { logger } from '@/lib/logger/logger';
 
+// Type interfaces for ecommerce configuration
+interface PaymentProvider {
+  provider: string;
+  isDefault: boolean;
+  enabled: boolean;
+  mode?: string;
+  [key: string]: unknown;
+}
+
+interface PaymentConfig {
+  providers?: PaymentProvider[];
+  [key: string]: unknown;
+}
+
+interface EcommerceConfig {
+  payments?: PaymentConfig;
+  [key: string]: unknown;
+}
+
+interface StripeKeyConfig {
+  apiKey?: string;
+  secretKey?: string;
+  [key: string]: unknown;
+}
+
+interface SquareKeyConfig {
+  accessToken?: string;
+  locationId?: string;
+  [key: string]: unknown;
+}
+
+interface PayPalKeyConfig {
+  clientId?: string;
+  clientSecret?: string;
+  mode?: string;
+  [key: string]: unknown;
+}
+
+interface PayPalAuthResponse {
+  access_token: string;
+  [key: string]: unknown;
+}
+
+interface PayPalOrder {
+  id: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
+interface PayPalCaptureResult {
+  id: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface OrderRecord {
+  payment: {
+    transactionId: string;
+    provider: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export interface PaymentRequest {
   workspaceId: string;
   organizationId: string;
@@ -50,17 +114,18 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       error: 'E-commerce not configured',
     };
   }
-  
-  const paymentConfig = (ecommerceConfig as any).payments;
-  const defaultProvider = paymentConfig?.providers?.find((p: any) => p.isDefault && p.enabled);
-  
+
+  const typedConfig = ecommerceConfig as EcommerceConfig;
+  const paymentConfig = typedConfig.payments;
+  const defaultProvider = paymentConfig?.providers?.find((p: PaymentProvider) => p.isDefault && p.enabled);
+
   if (!paymentConfig || !defaultProvider) {
     return {
       success: false,
       error: 'No payment provider configured',
     };
   }
-  
+
   // Route to appropriate provider
   switch (defaultProvider.provider) {
     case 'stripe':
@@ -104,24 +169,25 @@ async function processStripePayment(
 ): Promise<PaymentResult> {
   try {
     // Get Stripe API key
-    const orgId = request.organizationId || request.workspaceId.split('/')[0]; // Use org ID directly or extract from workspace
-    const stripeKey = await apiKeyService.getServiceKey(orgId, 'stripe');
-    
-    if (!stripeKey) {
+    const orgId = request.organizationId ?? request.workspaceId.split('/')[0]; // Use org ID directly or extract from workspace
+    const stripeKeyResponse: unknown = await apiKeyService.getServiceKey(orgId, 'stripe');
+
+    if (!stripeKeyResponse) {
       return {
         success: false,
         error: 'Stripe API key not configured',
       };
     }
-    
-    const apiKey = typeof stripeKey === 'string' ? stripeKey : stripeKey.apiKey;
+
+    const typedStripeKey = stripeKeyResponse as string | StripeKeyConfig;
+    const apiKey = typeof typedStripeKey === 'string' ? typedStripeKey : typedStripeKey.apiKey;
     if (!apiKey) {
       return {
         success: false,
         error: 'Stripe API key not found',
       };
     }
-    
+
     // Use Stripe API
     const stripe = await import('stripe');
     const stripeClient = new stripe.Stripe(apiKey, {
@@ -151,8 +217,9 @@ async function processStripePayment(
         // Fetch payment method details
         try {
           const pm = await stripeClient.paymentMethods.retrieve(paymentIntent.payment_method);
-          cardLast4 = (pm as any).card?.last4;
-          cardBrand = (pm as any).card?.brand;
+          const pmCard = pm.card as { last4?: string; brand?: string } | undefined;
+          cardLast4 = pmCard?.last4;
+          cardBrand = pmCard?.brand;
         } catch {
           // Ignore if can't fetch
         }
@@ -200,42 +267,46 @@ async function processSquarePayment(
   try {
     // Get Square API credentials
     const orgId = request.workspaceId.split('/')[0];
-    const squareKeys = await apiKeyService.getServiceKey(orgId, 'square');
-    
-    if (!squareKeys) {
+    const squareKeysResponse: unknown = await apiKeyService.getServiceKey(orgId, 'square');
+
+    if (!squareKeysResponse) {
       return {
         success: false,
         error: 'Square API credentials not configured',
       };
     }
-    
-    const { accessToken, locationId } = squareKeys;
-    
+
+    const typedSquareKeys = squareKeysResponse as SquareKeyConfig;
+    const { accessToken, locationId } = typedSquareKeys;
+
     if (!accessToken || !locationId) {
       return {
         success: false,
         error: 'Square access token or location ID missing',
       };
     }
-    
+
     // Use Square API
     const square = await import('square');
     const client = new square.SquareClient({
       token: accessToken,
-      environment: providerConfig.mode === 'production' ? square.SquareEnvironment.Production : square.SquareEnvironment.Sandbox,
+      environment: _providerConfig && typeof _providerConfig === 'object' && 'mode' in _providerConfig && _providerConfig.mode === 'production'
+        ? square.SquareEnvironment.Production
+        : square.SquareEnvironment.Sandbox,
     });
-    
+
     // Create payment
+    const referenceId = request.metadata?.orderId;
     const response = await client.payments.create({
       sourceId: request.paymentToken ?? '', // Square payment token from frontend
       idempotencyKey: `${request.workspaceId}-${Date.now()}`, // Unique key
       amountMoney: {
         amount: BigInt(Math.round(request.amount * 100)), // Convert to cents
-        currency: request.currency.toUpperCase() as any,
+        currency: request.currency.toUpperCase() as 'USD' | 'EUR' | 'GBP' | 'AUD' | 'CAD' | 'JPY',
       },
       locationId,
       customerId: undefined, // Can link to Square customer
-      referenceId: request.metadata?.orderId,
+      referenceId: typeof referenceId === 'string' ? referenceId : undefined,
       note: `Payment for ${request.customer.email}`,
       buyerEmailAddress: request.customer.email,
     });
@@ -288,17 +359,18 @@ async function processPayPalPayment(
   try {
     // Get PayPal API credentials
     const orgId = request.workspaceId.split('/')[0];
-    const paypalKeys = await apiKeyService.getServiceKey(orgId, 'paypal');
-    
-    if (!paypalKeys) {
+    const paypalKeysResponse: unknown = await apiKeyService.getServiceKey(orgId, 'paypal');
+
+    if (!paypalKeysResponse) {
       return {
         success: false,
         error: 'PayPal API credentials not configured',
       };
     }
-    
-    const { clientId, clientSecret, mode } = paypalKeys;
-    
+
+    const typedPayPalKeys = paypalKeysResponse as PayPalKeyConfig;
+    const { clientId, clientSecret, mode } = typedPayPalKeys;
+
     if (!clientId || !clientSecret) {
       return {
         success: false,
@@ -307,10 +379,10 @@ async function processPayPalPayment(
     }
     
     // PayPal API base URL
-    const baseURL = mode === 'live' 
+    const baseURL = mode === 'live'
       ? 'https://api-m.paypal.com'
       : 'https://api-m.sandbox.paypal.com';
-    
+
     // Get access token
     const authResponse = await fetch(`${baseURL}/v1/oauth2/token`, {
       method: 'POST',
@@ -322,15 +394,16 @@ async function processPayPalPayment(
       },
       body: 'grant_type=client_credentials',
     });
-    
+
     if (!authResponse.ok) {
       return {
         success: false,
         error: 'PayPal authentication failed',
       };
     }
-    
-    const { access_token } = await authResponse.json();
+
+    const authData = await authResponse.json() as PayPalAuthResponse;
+    const { access_token } = authData;
     
     // Create order
     const orderResponse = await fetch(`${baseURL}/v2/checkout/orders`, {
@@ -342,7 +415,10 @@ async function processPayPalPayment(
       body: JSON.stringify({
         intent: 'CAPTURE',
         purchase_units: [{
-          reference_id: (() => { const v = request.metadata?.orderId; return (v !== '' && v != null) ? v : 'default'; })(),
+          reference_id: (() => {
+            const v = request.metadata?.orderId;
+            return (typeof v === 'string' && v !== '') ? v : 'default';
+          })(),
           amount: {
             currency_code: request.currency.toUpperCase(),
             value: request.amount.toFixed(2),
@@ -358,16 +434,16 @@ async function processPayPalPayment(
         },
       }),
     });
-    
+
     if (!orderResponse.ok) {
-      const error = await orderResponse.json();
+      const _errorResponse: unknown = await orderResponse.json();
       return {
         success: false,
-        error:(err.message !== '' && err.message != null) ? err.message : 'PayPal order creation failed',
+        error: 'PayPal order creation failed',
       };
     }
-    
-    const order = await orderResponse.json();
+
+    const order = await orderResponse.json() as PayPalOrder;
     
     // If we have a payment token (order ID from frontend), capture it
     if (request.paymentToken) {
@@ -378,16 +454,16 @@ async function processPayPalPayment(
           'Authorization': `Bearer ${access_token}`,
         },
       });
-      
+
       if (!captureResponse.ok) {
         return {
           success: false,
           error: 'PayPal payment capture failed',
         };
       }
-      
-      const captureResult = await captureResponse.json();
-      
+
+      const captureResult = await captureResponse.json() as PayPalCaptureResult;
+
       if (captureResult.status === 'COMPLETED') {
         return {
           success: true,
@@ -402,7 +478,7 @@ async function processPayPalPayment(
         };
       }
     }
-    
+
     // Return order ID for frontend to complete
     return {
       success: true,
@@ -461,10 +537,10 @@ export async function refundPayment(
       error: 'Order not found',
     };
   }
-  
-  const order = orders[0] as any;
+
+  const order = orders[0] as OrderRecord;
   const provider = order.payment.provider;
-  
+
   // Route to appropriate provider
   switch (provider) {
     case 'stripe':

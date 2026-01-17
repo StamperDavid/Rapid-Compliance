@@ -31,28 +31,78 @@ import { logger } from '@/lib/logger/logger';
 // TYPES
 // ============================================================================
 
-export interface RetryOptions<T = any> {
+/**
+ * Represents an error that may have HTTP status codes or network error codes
+ */
+export interface RetryableError {
+  code?: string;
+  status?: number;
+  statusCode?: number;
+  message?: string;
+}
+
+/**
+ * Type guard to check if an error has the RetryableError shape
+ */
+function isRetryableError(error: unknown): error is RetryableError {
+  return (
+    typeof error === 'object' &&
+    error !== null
+  );
+}
+
+/**
+ * Safely access error properties with type checking
+ */
+function getErrorCode(error: unknown): string | undefined {
+  if (isRetryableError(error) && typeof error.code === 'string') {
+    return error.code;
+  }
+  return undefined;
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (isRetryableError(error) && typeof error.status === 'number') {
+    return error.status;
+  }
+  if (isRetryableError(error) && typeof error.statusCode === 'number') {
+    return error.statusCode;
+  }
+  return undefined;
+}
+
+function getErrorMessage(error: unknown): string | undefined {
+  if (isRetryableError(error) && typeof error.message === 'string') {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return undefined;
+}
+
+export interface RetryOptions {
   /** Maximum number of retry attempts (default: 3) */
   maxRetries?: number;
-  
+
   /** Base delay between retries in milliseconds (default: 1000) */
   baseDelayMs?: number;
-  
+
   /** Maximum delay between retries in milliseconds (default: 30000 = 30s) */
   maxDelayMs?: number;
-  
+
   /** Custom function to determine if error should trigger retry */
-  shouldRetry?: (error: any, attempt: number) => boolean;
-  
+  shouldRetry?: (error: unknown, attempt: number) => boolean;
+
   /** Callback called before each retry */
-  onRetry?: (error: any, attempt: number, delayMs: number) => void;
-  
+  onRetry?: (error: unknown, attempt: number, delayMs: number) => void;
+
   /** AbortSignal for cancellation support */
   signal?: AbortSignal;
-  
+
   /** Operation name for logging (default: 'operation') */
   operationName?: string;
-  
+
   /** Whether to add jitter to delay (default: true) */
   addJitter?: boolean;
 }
@@ -85,7 +135,7 @@ export interface RetryResult<T> {
  */
 export async function retryWithBackoff<T>(
   operation: () => Promise<T>,
-  options: RetryOptions<T> = {}
+  options: RetryOptions = {}
 ): Promise<T> {
   const {
     maxRetries = 3,
@@ -97,9 +147,9 @@ export async function retryWithBackoff<T>(
     operationName = 'operation',
     addJitter = true
   } = options;
-  
+
   const startTime = Date.now();
-  let lastError: any;
+  let lastError: unknown;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -171,39 +221,42 @@ export async function retryWithBackoff<T>(
 /**
  * Default retry condition - retry on network errors and 5xx status codes
  */
-function defaultShouldRetry(error: any, attempt: number): boolean {
+function defaultShouldRetry(error: unknown, attempt: number): boolean {
   // Never retry after max attempts
   if (attempt >= 10) {
     return false;
   }
-  
+
+  const errorCode = getErrorCode(error);
+  const errorStatus = getErrorStatus(error);
+  const errorMessage = getErrorMessage(error);
+
   // Retry on network errors
   if (
-    error.code === 'ECONNRESET' ||
-    error.code === 'ETIMEDOUT' ||
-    error.code === 'ENOTFOUND' ||
-    error.message?.includes('network') ||
-    error.message?.includes('timeout')
+    errorCode === 'ECONNRESET' ||
+    errorCode === 'ETIMEDOUT' ||
+    errorCode === 'ENOTFOUND' ||
+    errorMessage?.includes('network') ||
+    errorMessage?.includes('timeout')
   ) {
     return true;
   }
-  
+
   // Retry on rate limits (429)
-  if (error.status === 429 || error.statusCode === 429) {
+  if (errorStatus === 429) {
     return true;
   }
-  
+
   // Retry on server errors (5xx)
-  if (error.status >= 500 || error.statusCode >= 500) {
+  if (errorStatus !== undefined && errorStatus >= 500) {
     return true;
   }
-  
+
   // Don't retry on client errors (4xx, except 429)
-  if ((error.status >= 400 && error.status < 500) || 
-      (error.statusCode >= 400 && error.statusCode < 500)) {
+  if (errorStatus !== undefined && errorStatus >= 400 && errorStatus < 500) {
     return false;
   }
-  
+
   // Retry on unknown errors
   return true;
 }
@@ -244,26 +297,30 @@ export const OpenAIRetryOptions: RetryOptions = {
   maxDelayMs: 10000,
   operationName: 'OpenAI API call',
   shouldRetry: (error, attempt) => {
+    const errorCode = getErrorCode(error);
+    const errorStatus = getErrorStatus(error);
+    const errorMessage = getErrorMessage(error);
+
     // Retry on rate limits
-    if (error.status === 429 || error.statusCode === 429) {
+    if (errorStatus === 429) {
       return true;
     }
-    
+
     // Retry on server errors
-    if (error.status >= 500 || error.statusCode >= 500) {
+    if (errorStatus !== undefined && errorStatus >= 500) {
       return true;
     }
-    
+
     // Retry on timeout
-    if (error.code === 'ETIMEDOUT' || error.message?.includes('timeout')) {
+    if (errorCode === 'ETIMEDOUT' || errorMessage?.includes('timeout')) {
       return true;
     }
-    
+
     // Don't retry on invalid requests
-    if (error.status === 400 || error.status === 401 || error.status === 403) {
+    if (errorStatus === 400 || errorStatus === 401 || errorStatus === 403) {
       return false;
     }
-    
+
     // Retry on unknown errors (but limit attempts)
     return attempt < 3;
   }
@@ -278,12 +335,15 @@ export const LLMRetryOptions: RetryOptions = {
   maxDelayMs: 15000,
   operationName: 'LLM call',
   shouldRetry: (error, attempt) => {
+    const errorCode = getErrorCode(error);
+    const errorStatus = getErrorStatus(error);
+
     // Retry on rate limits and server errors
     return (
-      error.status === 429 ||
-      error.status >= 500 ||
-      error.code === 'ETIMEDOUT' ||
-      (attempt < 3 && !error.status)
+      errorStatus === 429 ||
+      (errorStatus !== undefined && errorStatus >= 500) ||
+      errorCode === 'ETIMEDOUT' ||
+      (attempt < 3 && errorStatus === undefined)
     );
   }
 };
@@ -297,12 +357,16 @@ export const DatabaseRetryOptions: RetryOptions = {
   maxDelayMs: 5000,
   operationName: 'Database operation',
   shouldRetry: (error, attempt) => {
+    const errorCode = getErrorCode(error);
+    const errorStatus = getErrorStatus(error);
+    const errorMessage = getErrorMessage(error);
+
     // Retry on deadlocks and timeouts
-    const isConnReset = error.code === 'ECONNRESET';
-    const isTimeout = error.code === 'ETIMEDOUT';
-    const hasDeadlock = error.message?.includes('deadlock') ?? false;
-    const hasTimeoutMsg = error.message?.includes('timeout') ?? false;
-    const shouldRetry = attempt < 5 && !error.status;
+    const isConnReset = errorCode === 'ECONNRESET';
+    const isTimeout = errorCode === 'ETIMEDOUT';
+    const hasDeadlock = errorMessage ? errorMessage.includes('deadlock') : false;
+    const hasTimeoutMsg = errorMessage ? errorMessage.includes('timeout') : false;
+    const shouldRetry = attempt < 5 && errorStatus === undefined;
     return [isConnReset, isTimeout, hasDeadlock, hasTimeoutMsg, shouldRetry].some(Boolean);
   }
 };
@@ -327,11 +391,11 @@ export const ExternalAPIRetryOptions: RetryOptions = {
  */
 export async function retryWithBackoffDetailed<T>(
   operation: () => Promise<T>,
-  options: RetryOptions<T> = {}
+  options: RetryOptions = {}
 ): Promise<RetryResult<T>> {
   const startTime = Date.now();
   let attempts = 0;
-  
+
   const result = await retryWithBackoff(
     async () => {
       attempts++;
@@ -339,7 +403,7 @@ export async function retryWithBackoffDetailed<T>(
     },
     options
   );
-  
+
   return {
     result,
     attempts,

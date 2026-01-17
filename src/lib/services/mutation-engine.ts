@@ -15,9 +15,17 @@
  * - Testable: All mutations are verifiable through unit tests
  */
 
-import type { IndustryTemplate, MutationRule } from '@/lib/persona/templates/types';
+import type { IndustryTemplate, MutationRule, MutationOperation, MutableTemplate } from '@/lib/persona/templates/types';
 import type { OnboardingData } from '@/types/agent-memory';
 import { logger } from '@/lib/logger/logger';
+
+// Type for dynamic object access
+type DynamicObject = Record<string, unknown>;
+
+// Type guard for MutableTemplate
+function isMutableTemplate(template: IndustryTemplate): template is MutableTemplate {
+  return 'mutationRules' in template && Array.isArray((template as MutableTemplate).mutationRules);
+}
 
 export class MutationEngine {
   /**
@@ -47,8 +55,8 @@ export class MutationEngine {
     mutated = this.applyGlobalRules(mutated, onboarding);
 
     // Apply template-specific mutation rules (if any)
-    if ('mutationRules' in template && Array.isArray((template as any).mutationRules)) {
-      mutated = this.applyTemplateRules(mutated, onboarding, (template as any).mutationRules as MutationRule[]);
+    if (isMutableTemplate(template)) {
+      mutated = this.applyTemplateRules(mutated, onboarding, template.mutationRules ?? []);
     }
 
     logger.debug('[MutationEngine] Compilation complete', {
@@ -114,7 +122,7 @@ export class MutationEngine {
    */
   private applyMutations(
     template: IndustryTemplate,
-    mutations: any[]
+    mutations: MutationOperation[]
   ): IndustryTemplate {
     const mutated = this.deepClone(template);
 
@@ -145,20 +153,41 @@ export class MutationEngine {
   /**
    * Calculate new value based on operation
    */
-  private calculateNewValue(current: any, operation: string, value: any): any {
+  private calculateNewValue(
+    current: unknown,
+    operation: string,
+    value: string | number | boolean | string[] | Record<string, unknown>
+  ): unknown {
     switch (operation) {
       case 'add':
-        return (current ?? 0) + value;
+        return (typeof current === 'number' ? current : 0) + (typeof value === 'number' ? value : 0);
       case 'subtract':
-        return (current ?? 0) - value;
+        return (typeof current === 'number' ? current : 0) - (typeof value === 'number' ? value : 0);
       case 'multiply':
-        return (current ?? 0) * value;
+        return (typeof current === 'number' ? current : 0) * (typeof value === 'number' ? value : 0);
       case 'set':
         return value;
       case 'append':
-        return Array.isArray(current) ? [...current, value] : [value];
+        if (Array.isArray(current)) {
+          // Safely spread array elements
+          const newArray: unknown[] = [];
+          for (const item of current) {
+            newArray.push(item);
+          }
+          newArray.push(value);
+          return newArray;
+        }
+        return [value];
       case 'prepend':
-        return Array.isArray(current) ? [value, ...current] : [value];
+        if (Array.isArray(current)) {
+          // Safely spread array elements
+          const newArray: unknown[] = [value];
+          for (const item of current) {
+            newArray.push(item);
+          }
+          return newArray;
+        }
+        return [value];
       default:
         return current;
     }
@@ -167,26 +196,34 @@ export class MutationEngine {
   /**
    * Get value at nested path
    */
-  private getValueAtPath(obj: any, path: string): any {
+  private getValueAtPath(obj: unknown, path: string): unknown {
     // Handle array notation like "highValueSignals[funding].scoreBoost"
     const parts = path.split('.');
-    let current = obj;
+    let current: unknown = obj;
 
     for (const part of parts) {
-      if (!current) {return undefined;}
+      if (!current || typeof current !== 'object') {
+        return undefined;
+      }
 
       // Check for array index notation [id]
       const arrayMatch = part.match(/^([^[]+)\[([^\]]+)\]$/);
       if (arrayMatch) {
         const [, arrayKey, idValue] = arrayMatch;
-        const array = current[arrayKey];
+        const currentObj = current as DynamicObject;
+        const array = currentObj[arrayKey];
         if (Array.isArray(array)) {
-          current = array.find((item: any) => item.id === idValue);
+          current = array.find((item: unknown) => {
+            if (item && typeof item === 'object' && 'id' in item) {
+              return (item as { id: string }).id === idValue;
+            }
+            return false;
+          });
         } else {
           return undefined;
         }
       } else {
-        current = current[part];
+        current = (current as DynamicObject)[part];
       }
     }
 
@@ -196,29 +233,52 @@ export class MutationEngine {
   /**
    * Set value at nested path
    */
-  private setValueAtPath(obj: any, path: string, value: any): void {
+  private setValueAtPath(obj: unknown, path: string, value: unknown): void {
+    if (!obj || typeof obj !== 'object') {
+      return;
+    }
+
     const parts = path.split('.');
-    let current = obj;
+    let current: DynamicObject = obj as DynamicObject;
 
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
-      
+
+      if (!part) {
+        continue;
+      }
+
       // Handle array notation
       const arrayMatch = part.match(/^([^[]+)\[([^\]]+)\]$/);
       if (arrayMatch) {
         const [, arrayKey, idValue] = arrayMatch;
         const array = current[arrayKey];
         if (Array.isArray(array)) {
-          current = array.find((item: any) => item.id === idValue);
+          const foundItem: unknown = array.find((item: unknown) => {
+            if (item && typeof item === 'object' && 'id' in item) {
+              return (item as { id: string }).id === idValue;
+            }
+            return false;
+          });
+          if (foundItem && typeof foundItem === 'object') {
+            current = foundItem as DynamicObject;
+          }
         }
       } else {
-        current[part] ??= {};
-        current = current[part];
+        if (!(part in current)) {
+          current[part] = {};
+        }
+        const nextValue = current[part];
+        if (nextValue && typeof nextValue === 'object') {
+          current = nextValue as DynamicObject;
+        }
       }
     }
 
     const lastPart = parts[parts.length - 1];
-    current[lastPart] = value;
+    if (lastPart) {
+      current[lastPart] = value;
+    }
   }
 
   /**
@@ -332,6 +392,6 @@ export class MutationEngine {
    * Deep clone object (handles nested structures)
    */
   private deepClone<T>(obj: T): T {
-    return JSON.parse(JSON.stringify(obj));
+    return JSON.parse(JSON.stringify(obj)) as T;
   }
 }

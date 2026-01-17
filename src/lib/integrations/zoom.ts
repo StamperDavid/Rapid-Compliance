@@ -27,6 +27,26 @@ interface ZoomMeeting {
   duration: number;
 }
 
+interface ZoomApiMeetingResponse {
+  id: number;
+  join_url: string;
+  start_url: string;
+  password?: string;
+  topic: string;
+  start_time: string;
+  duration: number;
+}
+
+interface ZoomApiErrorResponse {
+  message?: string;
+}
+
+interface ZoomOAuthTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+}
+
 /**
  * Create a Zoom meeting
  */
@@ -69,12 +89,12 @@ export async function createZoomMeeting(
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      const zoomErrorMsg = (error.message !== '' && error.message != null) ? error.message : response.statusText;
+      const error = await response.json() as ZoomApiErrorResponse;
+      const zoomErrorMsg = error.message ?? response.statusText;
       throw new Error(`Zoom API error: ${zoomErrorMsg}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as ZoomApiMeetingResponse;
 
     logger.info('Zoom meeting created', {
       organizationId,
@@ -93,8 +113,8 @@ export async function createZoomMeeting(
       duration: data.duration,
     };
 
-  } catch (error: any) {
-    logger.error('Failed to create Zoom meeting', error, { organizationId });
+  } catch (error) {
+    logger.error('Failed to create Zoom meeting', error instanceof Error ? error : undefined, { organizationId });
     throw error;
   }
 }
@@ -127,8 +147,8 @@ export async function cancelZoomMeeting(
 
     logger.info('Zoom meeting cancelled', { organizationId, meetingId });
 
-  } catch (error: any) {
-    logger.error('Failed to cancel Zoom meeting', error, { organizationId, meetingId });
+  } catch (error) {
+    logger.error('Failed to cancel Zoom meeting', error instanceof Error ? error : undefined, { organizationId, meetingId });
     throw error;
   }
 }
@@ -184,7 +204,7 @@ export async function exchangeZoomCode(
       throw new Error('Failed to exchange Zoom code');
     }
 
-    const data = await response.json();
+    const data = await response.json() as ZoomOAuthTokenResponse;
 
     return {
       accessToken: data.access_token,
@@ -192,8 +212,8 @@ export async function exchangeZoomCode(
       expiresIn: data.expires_in,
     };
 
-  } catch (error: any) {
-    logger.error('Zoom OAuth exchange failed', error);
+  } catch (error) {
+    logger.error('Zoom OAuth exchange failed', error instanceof Error ? error : undefined);
     throw error;
   }
 }

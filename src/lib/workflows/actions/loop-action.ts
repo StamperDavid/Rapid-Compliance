@@ -4,6 +4,8 @@
  */
 
 import type { BaseAction, WorkflowAction, Workflow } from '@/types/workflow';
+import type { AIAgentActionConfig } from './ai-agent-action';
+import type { SlackActionConfig } from './slack-action';
 
 export interface LoopActionConfig extends BaseAction {
   type: 'loop';
@@ -19,19 +21,21 @@ export interface LoopActionConfig extends BaseAction {
   };
 }
 
+export interface LoopItemResult {
+  index: number;
+  item: unknown;
+  success: boolean;
+  result?: unknown;
+  error?: string;
+}
+
 export interface LoopResult {
   success: boolean;
   totalItems: number;
   processed: number;
   successful: number;
   failed: number;
-  results: Array<{
-    index: number;
-    item: any;
-    success: boolean;
-    result?: any;
-    error?: string;
-  }>;
+  results: LoopItemResult[];
 }
 
 export async function executeLoopAction(
@@ -79,12 +83,12 @@ export async function executeLoopAction(
       const itemIndex = i + batchIndex;
       
       // Create item context
-      const itemContext = {
+      const itemContext: Record<string, unknown> = {
         ...triggerData,
-        [itemVariable]: item,
+        [itemVariable]: item as unknown,
         [indexVariable]: itemIndex,
         _loop: {
-          item,
+          item: item as unknown,
           index: itemIndex,
           total: itemsToProcess.length,
           isFirst: itemIndex === 0,
@@ -115,24 +119,25 @@ export async function executeLoopAction(
 
         return {
           index: itemIndex,
-          item,
+          item: item as unknown,
           success: itemSuccess,
-          result: actionResults,
+          result: actionResults as unknown,
         };
-      } catch (error: any) {
+      } catch (error) {
         result.processed++;
         result.failed++;
-        
+
         if (!continueOnError) {
           result.success = false;
           throw error;
         }
 
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return {
           index: itemIndex,
-          item,
+          item: item as unknown,
           success: false,
-          error: error.message,
+          error: errorMessage,
         };
       }
     });
@@ -142,7 +147,9 @@ export async function executeLoopAction(
 
     // Add delay between batches (not after last batch)
     if (delayBetweenItems > 0 && i + batchSize < itemsToProcess.length) {
-      await new Promise(resolve => setTimeout(resolve, delayBetweenItems));
+      await new Promise<void>(resolve => {
+        setTimeout(resolve, delayBetweenItems);
+      });
     }
   }
 
@@ -154,6 +161,13 @@ export async function executeLoopAction(
   return result;
 }
 
+interface ActionResult {
+  actionId: string;
+  status: string;
+  result?: unknown;
+  error?: string;
+}
+
 /**
  * Execute workflow actions (helper for loop)
  */
@@ -162,7 +176,7 @@ async function executeWorkflowActions(
   triggerData: Record<string, unknown>,
   workflow: Workflow,
   organizationId: string
-): Promise<Array<{ actionId: string; status: string; result?: any; error?: string }>> {
+): Promise<ActionResult[]> {
   // Import action executors
   const { executeEmailAction } = await import('./email-action');
   const { executeSMSAction } = await import('./sms-action');
@@ -173,41 +187,57 @@ async function executeWorkflowActions(
   const { executeAIAgentAction } = await import('./ai-agent-action');
   const { executeSlackAction } = await import('./slack-action');
 
-  const results: Array<{ actionId: string; status: string; result?: any; error?: string }> = [];
+  const results: ActionResult[] = [];
 
   for (const action of actions) {
     try {
-      let result: any;
+      let result: unknown;
 
       switch (action.type) {
         case 'send_email':
-          result = await executeEmailAction(action as any, triggerData, organizationId);
+          if (action.type === 'send_email') {
+            result = await executeEmailAction(action, triggerData, organizationId);
+          }
           break;
         case 'send_sms':
-          result = await executeSMSAction(action as any, triggerData, organizationId);
+          if (action.type === 'send_sms') {
+            result = await executeSMSAction(action, triggerData, organizationId);
+          }
           break;
         case 'create_entity':
         case 'update_entity':
         case 'delete_entity':
-          result = await executeEntityAction(action as any, triggerData, organizationId);
+          if (action.type === 'create_entity' || action.type === 'update_entity' || action.type === 'delete_entity') {
+            result = await executeEntityAction(action, triggerData, organizationId);
+          }
           break;
         case 'http_request':
-          result = await executeHTTPAction(action as any, triggerData);
+          if (action.type === 'http_request') {
+            result = await executeHTTPAction(action, triggerData);
+          }
           break;
         case 'delay':
-          result = await executeDelayAction(action as any, triggerData);
+          if (action.type === 'delay') {
+            result = await executeDelayAction(action, triggerData);
+          }
           break;
         case 'conditional_branch':
-          result = await executeConditionalAction(action as any, triggerData, workflow, organizationId);
+          if (action.type === 'conditional_branch') {
+            result = await executeConditionalAction(action, triggerData, workflow, organizationId);
+          }
           break;
         case 'ai_agent':
-          result = await executeAIAgentAction(action as any, triggerData, organizationId);
+          if (action.type === 'ai_agent') {
+            result = await executeAIAgentAction(action as unknown as AIAgentActionConfig, triggerData, organizationId);
+          }
           break;
         case 'send_slack':
-          result = await executeSlackAction(action as any, triggerData, organizationId);
+          if (action.type === 'send_slack') {
+            result = await executeSlackAction(action as unknown as SlackActionConfig, triggerData, organizationId);
+          }
           break;
         default:
-          throw new Error(`Unknown action type: ${action.type}`);
+          throw new Error(`Unknown action type: ${(action as WorkflowAction).type}`);
       }
 
       results.push({
@@ -215,11 +245,12 @@ async function executeWorkflowActions(
         status: 'success',
         result,
       });
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       results.push({
         actionId: action.id,
         status: 'failed',
-        error: error.message,
+        error: errorMessage,
       });
       throw error; // Re-throw to be caught by loop
     }
@@ -231,8 +262,13 @@ async function executeWorkflowActions(
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current && typeof current === 'object' && key in current) {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 
 

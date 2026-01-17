@@ -77,21 +77,30 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   let credentials: Record<string, unknown> | null = null;
 
   // Try SendGrid first
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const sendgridKeys = await apiKeyService.getServiceKey(organizationId, 'sendgrid');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (sendgridKeys && typeof sendgridKeys.apiKey === 'string') {
     provider = 'sendgrid';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     credentials = sendgridKeys;
   } else {
     // Try Resend
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const resendKeys = await apiKeyService.getServiceKey(organizationId, 'resend');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     if (resendKeys && typeof resendKeys.apiKey === 'string') {
       provider = 'resend';
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       credentials = resendKeys;
     } else {
       // Try SMTP
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const smtpKeys = await apiKeyService.getServiceKey(organizationId, 'smtp');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (smtpKeys && typeof smtpKeys.host === 'string' && typeof smtpKeys.username === 'string' && typeof smtpKeys.password === 'string') {
         provider = 'smtp';
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         credentials = smtpKeys;
       }
     }
@@ -134,8 +143,8 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
  */
 async function sendViaSendGrid(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromEmail = options.from || (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : 'noreply@example.com');
-  const fromName = options.fromName || (typeof credentials.fromName === 'string' ? credentials.fromName : 'AI Sales Platform');
+  const fromEmail = options.from ?? (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : 'noreply@example.com');
+  const fromName = options.fromName ?? (typeof credentials.fromName === 'string' ? credentials.fromName : 'AI Sales Platform');
 
   interface SendGridPayload {
     personalizations: Array<{
@@ -253,18 +262,33 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
 /**
  * Send email via Resend
  */
-async function sendViaResend(options: EmailOptions, credentials: any): Promise<EmailResult> {
+async function sendViaResend(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromEmail =(options.from || credentials.fromEmail !== '' && options.from || credentials.fromEmail != null) ? options.from ?? credentials.fromEmail: 'noreply@example.com';
+  const fromEmail = options.from ?? (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : 'noreply@example.com');
 
-  const payload: any = {
+  interface ResendPayload {
+    from: string;
+    to: string[];
+    subject: string;
+    html?: string;
+    text?: string;
+    cc?: string[];
+    bcc?: string[];
+    reply_to?: string;
+    attachments?: Array<{
+      filename: string;
+      content: string;
+    }>;
+  }
+
+  const payload: ResendPayload = {
     from: fromEmail,
     to: recipients,
     subject: options.subject,
   };
 
   if (options.html) {
-    const orgId = options.metadata?.organizationId;
+    const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
     const { html: modifiedHtml } = addTrackingPixel(
       options.html,
       options.tracking?.trackOpens,
@@ -293,32 +317,33 @@ async function sendViaResend(options: EmailOptions, credentials: any): Promise<E
     }));
   }
 
+  const apiKey = typeof credentials.apiKey === 'string' ? credentials.apiKey : '';
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${credentials.apiKey}`,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json() as { message?: string };
     return {
       success: false,
-      error: `Resend error: ${error.message ?? JSON.stringify(error)}`,
+      error: `Resend error: ${error.message ?? 'Unknown error'}`,
       provider: 'resend',
     };
   }
 
-  const data = await response.json();
+  const data = await response.json() as { id: string };
   const messageId = data.id;
-  
+
   // Store tracking mapping if tracking is enabled
-  const orgId = options.metadata?.organizationId;
+  const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
   if (orgId && options.tracking?.trackOpens) {
-    import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
-      FirestoreService.set(
+    void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
+      void FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/emailTrackingMappings`,
         messageId,
         {
@@ -343,7 +368,7 @@ async function sendViaResend(options: EmailOptions, credentials: any): Promise<E
 /**
  * Send email via SMTP
  */
-async function sendViaSMTP(options: EmailOptions, credentials: any): Promise<EmailResult> {
+async function sendViaSMTP(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
   // For SMTP, we need to use a server-side implementation
   // This would typically use nodemailer or similar
   // For now, we'll make a call to an API route that handles SMTP
@@ -360,15 +385,15 @@ async function sendViaSMTP(options: EmailOptions, credentials: any): Promise<Ema
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json() as { error?: string };
     return {
       success: false,
-      error:(error.error !== '' && error.error != null) ? error.error : 'SMTP send failed',
+      error: error.error ?? 'SMTP send failed',
       provider: 'smtp',
     };
   }
 
-  const data = await response.json();
+  const data = await response.json() as { messageId?: string };
   return {
     success: true,
     messageId: data.messageId,
@@ -394,8 +419,8 @@ function addTrackingPixel(
   
   // Store tracking mapping in Firestore if we have organizationId
   if (organizationId && messageId) {
-    import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
-      FirestoreService.set(
+    void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
+      void FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTrackingMappings`,
         trackingId,
         {
@@ -404,8 +429,8 @@ function addTrackingPixel(
           createdAt: new Date().toISOString(),
         },
         false
-      ).catch((error) => {
-        logger.error('Failed to store tracking mapping:', error, { file: 'email-service.ts' });
+      ).catch((error: unknown) => {
+        logger.error('Failed to store tracking mapping:', error instanceof Error ? error : new Error(String(error)), { file: 'email-service.ts' });
       });
     });
   }
@@ -445,7 +470,9 @@ export async function sendBulkEmails(
     
     // Rate limiting: wait 1 second between batches
     if (i + batchSize < recipients.length) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), 1000);
+      });
     }
   }
 
@@ -462,6 +489,7 @@ export async function getEmailTracking(messageId: string, organizationId?: strin
   }
 
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const trackingData = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId
@@ -471,15 +499,29 @@ export async function getEmailTracking(messageId: string, organizationId?: strin
     return null;
   }
 
+  // Type guard for tracking data structure
+  interface TrackingData {
+    emailId: string;
+    opened: boolean;
+    openedAt?: string;
+    clicked: boolean;
+    clickedAt?: string;
+    clickLinks?: Array<{ url: string; clickedAt: string }>;
+  }
+
+  const data = trackingData as TrackingData;
+
   return {
-    ...trackingData,
-    openedAt: trackingData.openedAt ? new Date(trackingData.openedAt) : undefined,
-    clickedAt: trackingData.clickedAt ? new Date(trackingData.clickedAt) : undefined,
-    clickLinks: trackingData.clickLinks?.map((link: any) => ({
-      ...link,
+    emailId: data.emailId,
+    opened: data.opened,
+    openedAt: data.openedAt ? new Date(data.openedAt) : undefined,
+    clicked: data.clicked,
+    clickedAt: data.clickedAt ? new Date(data.clickedAt) : undefined,
+    clickLinks: data.clickLinks?.map((link) => ({
+      url: link.url,
       clickedAt: new Date(link.clickedAt),
     })) ?? [],
-  } as EmailTracking;
+  };
 }
 
 /**
@@ -493,12 +535,20 @@ export async function recordEmailOpen(
   userAgent?: string
 ): Promise<void> {
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+
   // Get existing tracking or create new
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const existing = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId
   );
+
+  interface ExistingTracking {
+    clicked?: boolean;
+    clickLinks?: Array<{ url: string; clickedAt: string }>;
+  }
+
+  const existingData = (existing ?? {}) as ExistingTracking;
 
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
@@ -507,8 +557,8 @@ export async function recordEmailOpen(
       emailId: messageId,
       opened: true,
       openedAt: new Date().toISOString(),
-      clicked: existing?.clicked ?? false,
-      clickLinks: existing?.clickLinks ?? [],
+      clicked: existingData.clicked ?? false,
+      clickLinks: existingData.clickLinks ?? [],
       ipAddress,
       userAgent,
     },
@@ -528,14 +578,24 @@ export async function recordEmailClick(
   userAgent?: string
 ): Promise<void> {
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+
   // Get existing tracking or create new
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const existing = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/emailTracking`,
     messageId
   );
 
-  const clickLinks = existing?.clickLinks ?? [];
+  interface ExistingClickTracking {
+    opened?: boolean;
+    openedAt?: string;
+    clickedAt?: string;
+    clickLinks?: Array<{ url: string; clickedAt: string }>;
+  }
+
+  const existingData = (existing ?? {}) as ExistingClickTracking;
+
+  const clickLinks: Array<{ url: string; clickedAt: string }> = existingData.clickLinks ?? [];
   clickLinks.push({
     url,
     clickedAt: new Date().toISOString(),
@@ -546,10 +606,10 @@ export async function recordEmailClick(
     messageId,
     {
       emailId: messageId,
-      opened: existing?.opened ?? false,
-      openedAt: existing?.openedAt,
+      opened: existingData.opened ?? false,
+      openedAt: existingData.openedAt,
       clicked: true,
-      clickedAt:existing?.clickedAt ?? new Date().toISOString(),
+      clickedAt: existingData.clickedAt ?? new Date().toISOString(),
       clickLinks,
       ipAddress,
       userAgent,

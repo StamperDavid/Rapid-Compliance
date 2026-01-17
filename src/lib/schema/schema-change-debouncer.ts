@@ -4,6 +4,7 @@
  */
 
 import type { SchemaChangeEvent } from './schema-change-tracker';
+import type { Schema, SchemaField } from '@/types/schema';
 import { processSchemaChangeEvent } from './schema-change-handler';
 import { logger } from '@/lib/logger/logger';
 
@@ -34,31 +35,32 @@ export class SchemaChangeDebouncer {
   /**
    * Add event to debounce queue
    */
-  async addEvent(event: SchemaChangeEvent): Promise<void> {
+  addEvent(event: SchemaChangeEvent): void {
     const key = this.getEventKey(event);
-    
+
     // Add event to pending list
     const events = this.pendingEvents.get(key) ?? [];
     events.push(event);
     this.pendingEvents.set(key, events);
-    
+
     logger.info('[Schema Change Debouncer] Event queued', {
       file: 'schema-change-debouncer.ts',
       eventId: event.id,
       queueKey: key,
       queueSize: events.length,
     });
-    
+
     // Clear existing timer
-    if (this.timers.has(key)) {
-      clearTimeout(this.timers.get(key));
+    const existingTimer = this.timers.get(key);
+    if (existingTimer !== undefined) {
+      clearTimeout(existingTimer);
     }
-    
+
     // Set new timer
     const timer = setTimeout(() => {
-      this.processBatch(key);
+      void this.processBatch(key);
     }, this.debounceMs);
-    
+
     this.timers.set(key, timer);
   }
   
@@ -235,8 +237,8 @@ export class SchemaChangeDebouncer {
 export interface SchemaChange {
   type: 'field_update' | 'field_add' | 'field_delete' | 'schema_update';
   fieldId?: string;
-  field?: any;
-  updates?: any;
+  field?: Partial<SchemaField>;
+  updates?: Partial<Schema> | Partial<SchemaField>;
 }
 
 export class SchemaBatchUpdater {
@@ -265,7 +267,7 @@ export class SchemaBatchUpdater {
   /**
    * Queue field update
    */
-  queueFieldUpdate(fieldId: string, updates: any): void {
+  queueFieldUpdate(fieldId: string, updates: Partial<SchemaField>): void {
     this.changes.push({
       type: 'field_update',
       fieldId,
@@ -276,7 +278,7 @@ export class SchemaBatchUpdater {
   /**
    * Queue field addition
    */
-  queueFieldAdd(field: any): void {
+  queueFieldAdd(field: Partial<SchemaField>): void {
     this.changes.push({
       type: 'field_add',
       field,
@@ -296,7 +298,7 @@ export class SchemaBatchUpdater {
   /**
    * Queue schema update
    */
-  queueSchemaUpdate(updates: any): void {
+  queueSchemaUpdate(updates: Partial<Schema>): void {
     this.changes.push({
       type: 'schema_update',
       updates,
@@ -306,7 +308,7 @@ export class SchemaBatchUpdater {
   /**
    * Commit batch
    */
-  async commitBatch(userId: string): Promise<void> {
+  async commitBatch(_userId: string): Promise<void> {
     if (this.changes.length === 0) {
       logger.warn('[Schema Batch Updater] No changes to commit', {
         file: 'schema-change-debouncer.ts',
@@ -322,35 +324,40 @@ export class SchemaBatchUpdater {
     
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
+
       // Get current schema
-      const schema = await FirestoreService.get(
+      const schemaData = await FirestoreService.get(
         `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
         this.schemaId
       );
-      
-      if (!schema) {
+
+      if (schemaData === null) {
         throw new Error(`Schema ${this.schemaId} not found`);
       }
-      
-      let updatedSchema = { ...schema };
-      
+
+      let updatedSchema: Schema = { ...schemaData } as Schema;
+
       // Apply all changes
       for (const change of this.changes) {
         updatedSchema = this.applyChange(updatedSchema, change);
       }
-      
+
       // Save schema with version increment
-      updatedSchema.version = (updatedSchema.version ?? 1) + 1;
-      updatedSchema.updatedAt = new Date().toISOString();
-      
+      const newVersion = (updatedSchema.version ?? 1) + 1;
+      const updatedAt = new Date().toISOString();
+      updatedSchema = {
+        ...updatedSchema,
+        version: newVersion,
+        updatedAt: updatedAt as unknown as Schema['updatedAt'],
+      };
+
       await FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${this.organizationId}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
         this.schemaId,
         updatedSchema,
         false
       );
-      
+
       // Publish single batch event
       const { SchemaChangeEventPublisher } = await import('./schema-change-tracker');
       await SchemaChangeEventPublisher.publishEvent({
@@ -358,11 +365,11 @@ export class SchemaBatchUpdater {
         organizationId: this.organizationId,
         workspaceId: this.workspaceId,
         schemaId: this.schemaId,
-        timestamp: updatedSchema.updatedAt,
+        timestamp: updatedAt,
         changeType: 'field_renamed', // Generic type for batch
         affectedSystems: [],
         processed: false,
-        createdAt: updatedSchema.updatedAt,
+        createdAt: updatedAt,
       });
       
       logger.info('[Schema Batch Updater] Batch committed successfully', {
@@ -386,41 +393,41 @@ export class SchemaBatchUpdater {
   /**
    * Apply single change to schema
    */
-  private applyChange(schema: any, change: SchemaChange): any {
-    const updatedSchema = { ...schema };
-    
+  private applyChange(schema: Schema, change: SchemaChange): Schema {
+    const updatedSchema: Schema = { ...schema };
+
     switch (change.type) {
       case 'field_update':
-        if (change.fieldId && change.updates) {
-          const fieldIndex = updatedSchema.fields.findIndex((f: any) => f.id === change.fieldId);
+        if (change.fieldId !== undefined && change.updates !== undefined) {
+          const fieldIndex = updatedSchema.fields.findIndex((f) => f.id === change.fieldId);
           if (fieldIndex !== -1) {
             updatedSchema.fields[fieldIndex] = {
               ...updatedSchema.fields[fieldIndex],
-              ...change.updates,
+              ...(change.updates as Partial<SchemaField>),
             };
           }
         }
         break;
-      
+
       case 'field_add':
-        if (change.field) {
-          updatedSchema.fields.push(change.field);
+        if (change.field !== undefined) {
+          updatedSchema.fields.push(change.field as SchemaField);
         }
         break;
-      
+
       case 'field_delete':
-        if (change.fieldId) {
-          updatedSchema.fields = updatedSchema.fields.filter((f: any) => f.id !== change.fieldId);
+        if (change.fieldId !== undefined) {
+          updatedSchema.fields = updatedSchema.fields.filter((f) => f.id !== change.fieldId);
         }
         break;
-      
+
       case 'schema_update':
-        if (change.updates) {
+        if (change.updates !== undefined) {
           Object.assign(updatedSchema, change.updates);
         }
         break;
     }
-    
+
     return updatedSchema;
   }
   

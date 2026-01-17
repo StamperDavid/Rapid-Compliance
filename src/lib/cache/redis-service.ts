@@ -4,20 +4,26 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import type Redis from 'ioredis';
 
 export interface CacheOptions {
   ttl?: number; // Time to live in seconds
   prefix?: string; // Key prefix for namespacing
 }
 
+interface CacheEntry {
+  value: unknown;
+  expiry: number;
+}
+
 export class RedisService {
-  private client: any;
+  private client: Redis | null = null;
   private isConnected: boolean = false;
-  private memoryCache: Map<string, { value: any; expiry: number }> = new Map();
+  private memoryCache: Map<string, CacheEntry> = new Map();
   
   constructor() {
     // Initialize Redis client (will use ioredis in production)
-    this.initializeClient();
+    void this.initializeClient();
   }
   
   /**
@@ -56,20 +62,20 @@ export class RedisService {
    */
   async get<T>(key: string, options?: CacheOptions): Promise<T | null> {
     const fullKey = this.buildKey(key, options?.prefix);
-    
+
     try {
       if (this.isConnected && this.client) {
         // Use Redis
         const value = await this.client.get(fullKey);
         if (value) {
-          return JSON.parse(value);
+          return JSON.parse(value) as T;
         }
         return null;
       } else {
         // Use in-memory cache
         const cached = this.memoryCache.get(fullKey);
         if (cached && cached.expiry > Date.now()) {
-          return cached.value;
+          return cached.value as T;
         }
         if (cached) {
           this.memoryCache.delete(fullKey);
@@ -85,10 +91,10 @@ export class RedisService {
   /**
    * Set value in cache
    */
-  async set(key: string, value: any, options?: CacheOptions): Promise<void> {
+  async set(key: string, value: unknown, options?: CacheOptions): Promise<void> {
     const fullKey = this.buildKey(key, options?.prefix);
     const ttl = options?.ttl ?? 3600; // Default 1 hour
-    
+
     try {
       if (this.isConnected && this.client) {
         // Use Redis
@@ -97,7 +103,7 @@ export class RedisService {
         // Use in-memory cache
         const expiry = Date.now() + (ttl * 1000);
         this.memoryCache.set(fullKey, { value, expiry });
-        
+
         // Clean up expired entries periodically
         if (this.memoryCache.size > 1000) {
           this.cleanupMemoryCache();
@@ -130,7 +136,7 @@ export class RedisService {
    */
   async deletePattern(pattern: string, options?: CacheOptions): Promise<void> {
     const fullPattern = this.buildKey(pattern, options?.prefix);
-    
+
     try {
       if (this.isConnected && this.client) {
         const keys = await this.client.keys(fullPattern);
@@ -199,13 +205,13 @@ export class RedisService {
    */
   async increment(key: string, options?: CacheOptions): Promise<number> {
     const fullKey = this.buildKey(key, options?.prefix);
-    
+
     try {
       if (this.isConnected && this.client) {
         return await this.client.incr(fullKey);
       } else {
         const cached = this.memoryCache.get(fullKey);
-        const current = cached?.value ?? 0;
+        const current = typeof cached?.value === 'number' ? cached.value : 0;
         const newValue = current + 1;
         await this.set(key, newValue, options);
         return newValue;
@@ -248,7 +254,7 @@ export class RedisService {
       if (this.isConnected && this.client) {
         const info = await this.client.info('stats');
         const keysMatch = info.match(/keys=(\d+)/)?.[1];
-        const size = parseInt((keysMatch !== '' && keysMatch != null) ? keysMatch : '0');
+        const size = parseInt(keysMatch ?? '0');
         return {
           connected: true,
           size,
@@ -261,7 +267,7 @@ export class RedisService {
           type: 'memory',
         };
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         connected: false,
         size: this.memoryCache.size,
