@@ -39,9 +39,9 @@ export async function GET(
     });
 
     return NextResponse.json(result);
-  } catch (error) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch forms';
-    logger.error('Failed to fetch forms:', error);
+    logger.error('Failed to fetch forms:', error instanceof Error ? error : undefined);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -120,9 +120,9 @@ export async function POST(
     const form = await createForm(orgId, workspaceId, formData);
 
     return NextResponse.json(form, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to create form';
-    logger.error('Failed to create form:', error);
+    logger.error('Failed to create form:', error instanceof Error ? error : undefined);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

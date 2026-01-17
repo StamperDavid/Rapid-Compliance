@@ -21,8 +21,8 @@ export default function ABTestResultsPage() {
     try {
       const data = await FirestoreService.get(`organizations/${orgId}/abTests`, testId);
       setTest(data);
-    } catch (error) {
-      logger.error('Error loading test:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading test:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

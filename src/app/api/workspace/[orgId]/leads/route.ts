@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getLeads, createLead } from '@/lib/crm/lead-service';
-import type { Lead } from '@/types/crm-entities';
+import { getLeads, createLead, type Lead } from '@/lib/crm/lead-service';
 
 const paramsSchema = z.object({
   orgId: z.string().min(1, 'orgId is required'),

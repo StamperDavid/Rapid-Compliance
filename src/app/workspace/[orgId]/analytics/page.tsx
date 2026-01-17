@@ -93,8 +93,8 @@ export default function AnalyticsDashboard() {
           ecommerce: ecommerce.success ? ecommerce.analytics : null,
           workflows: workflows.success ? workflows.analytics : null,
         });
-      } catch (error) {
-        logger.error('Failed to load analytics:', error, { file: 'page.tsx' });
+      } catch (error: unknown) {
+        logger.error('Failed to load analytics:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       } finally {
         setLoading(false);
       }

@@ -89,8 +89,8 @@ export async function GET(
       onboardingData,
     });
 
-  } catch (error) {
-    logger.error('Error fetching identity', error, {
+  } catch (error: unknown) {
+    logger.error('Error fetching identity', error instanceof Error ? error : undefined, {
       route: '/api/workspace/[orgId]/identity',
       method: 'GET'
     });
@@ -197,8 +197,8 @@ export async function POST(
 
     return NextResponse.json({ success: true });
 
-  } catch (error) {
-    logger.error('Error saving identity', error, {
+  } catch (error: unknown) {
+    logger.error('Error saving identity', error instanceof Error ? error : undefined, {
       route: '/api/workspace/[orgId]/identity',
       method: 'POST'
     });

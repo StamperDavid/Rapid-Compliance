@@ -24,8 +24,8 @@ export default function MakeCallPage() {
       if (!response.ok) {throw new Error('Call failed');}
       alert('Call initiated!');
       router.push(`/workspace/${orgId}/calls`);
-    } catch (error) {
-      logger.error('Error making call:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error making call:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to make call');
     } finally {
       setCalling(false);

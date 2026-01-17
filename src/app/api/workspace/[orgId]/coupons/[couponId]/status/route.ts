@@ -73,8 +73,8 @@ export async function PATCH(
       couponId,
       status,
     });
-  } catch (error) {
-    logger.error('[Workspace] Error updating coupon status:', error);
+  } catch (error: unknown) {
+    logger.error('[Workspace] Error updating coupon status:', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { success: false, error: 'Failed to update coupon status' },
       { status: 500 }

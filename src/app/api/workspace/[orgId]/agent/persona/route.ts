@@ -54,8 +54,8 @@ export async function GET(
 
     // Return empty if neither exists
     return NextResponse.json({ persona: null, onboarding: null });
-  } catch (error) {
-    logger.error('Error fetching persona', error, {
+  } catch (error: unknown) {
+    logger.error('Error fetching persona', error instanceof Error ? error : undefined, {
       route: '/api/workspace/[orgId]/agent/persona',
       method: 'GET'
     });
@@ -100,8 +100,8 @@ export async function POST(
     }, { merge: true });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    logger.error('Error saving persona', error, {
+  } catch (error: unknown) {
+    logger.error('Error saving persona', error instanceof Error ? error : undefined, {
       route: '/api/workspace/[orgId]/agent/persona',
       method: 'POST'
     });

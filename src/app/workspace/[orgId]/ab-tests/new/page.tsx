@@ -19,8 +19,8 @@ export default function NewABTestPage() {
       const testId = `abtest-${Date.now()}`;
       await FirestoreService.set(`organizations/${orgId}/abTests`, testId, { ...test, id: testId, status: 'draft', createdAt: Timestamp.now() }, false);
       router.push(`/workspace/${orgId}/ab-tests`);
-    } catch (error) {
-      logger.error('Error saving test:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error saving test:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to save test');
     } finally {
       setSaving(false);

@@ -73,8 +73,8 @@ export async function GET(
       success: true,
       analytics,
     });
-  } catch (error) {
-    logger.error('[Workspace] Error fetching coupon analytics:', error);
+  } catch (error: unknown) {
+    logger.error('[Workspace] Error fetching coupon analytics:', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch analytics' },
       { status: 500 }

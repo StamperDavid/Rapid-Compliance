@@ -48,9 +48,9 @@ export async function POST(
       form: updatedForm,
       message: 'Form published successfully',
     });
-  } catch (error) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to publish form';
-    logger.error('Failed to publish form:', error);
+    logger.error('Failed to publish form:', error instanceof Error ? error : undefined);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

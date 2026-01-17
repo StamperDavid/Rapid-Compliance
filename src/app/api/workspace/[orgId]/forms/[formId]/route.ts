@@ -66,9 +66,9 @@ export async function GET(
     const fields = fieldsSnapshot.docs.map((docSnap) => docSnap.data() as FormFieldConfig);
 
     return NextResponse.json({ form, fields });
-  } catch (error) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch form';
-    logger.error('Failed to fetch form:', error);
+    logger.error('Failed to fetch form:', error instanceof Error ? error : undefined);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -135,9 +135,9 @@ export async function PUT(
     const updatedForm = await getForm(orgId, workspaceId, formId);
 
     return NextResponse.json({ form: updatedForm, success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update form';
-    logger.error('Failed to update form:', error);
+    logger.error('Failed to update form:', error instanceof Error ? error : undefined);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -159,9 +159,9 @@ export async function DELETE(
     await deleteForm(orgId, workspaceId, formId);
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete form';
-    logger.error('Failed to delete form:', error);
+    logger.error('Failed to delete form:', error instanceof Error ? error : undefined);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
