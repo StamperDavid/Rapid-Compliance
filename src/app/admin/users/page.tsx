@@ -20,7 +20,7 @@ export default function UsersPage() {
         const { auth } = await import('@/lib/firebase/config');
         
         if (!auth) {
-          logger.error('Firebase auth not initialized', { file: 'page.tsx' });
+          logger.error('Firebase auth not initialized', new Error('Firebase auth not initialized'), { file: 'page.tsx' });
           setLoading(false);
           return;
         }
@@ -79,7 +79,7 @@ export default function UsersPage() {
           setUsers([]);
         }
       } catch (error) {
-        logger.error('Error loading users:', error, { file: 'page.tsx' });
+        logger.error('Error loading users:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         setUsers([]);
       } finally {
         setLoading(false);

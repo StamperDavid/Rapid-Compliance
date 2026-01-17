@@ -79,7 +79,7 @@ export async function PATCH(
       status,
     });
   } catch (error) {
-    logger.error('[Admin] Error updating coupon status:', error);
+    logger.error('[Admin] Error updating coupon status:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to update coupon status' },
       { status: 500 }

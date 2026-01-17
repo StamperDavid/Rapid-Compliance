@@ -100,7 +100,8 @@ async function getCollectionCount(collectionPath: string): Promise<number> {
 
     return count;
   } catch (error: unknown) {
-    logger.error('Failed to get collection count', error, {
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get collection count', errorObj, {
       collection: collectionPath,
       file: 'admin-stats-route.ts',
     });
@@ -154,7 +155,8 @@ async function getCollectionCountWhere(
 
     return count;
   } catch (error: unknown) {
-    logger.error('Failed to get filtered collection count', error, {
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    logger.error('Failed to get filtered collection count', errorObj, {
       collection: collectionPath,
       field,
       file: 'admin-stats-route.ts',
@@ -250,7 +252,13 @@ export async function GET(request: NextRequest) {
       };
 
       // DEBUG: Log the final stats object
-      logger.debug('[STATS DEBUG] Final stats:', stats);
+      logger.debug('[STATS DEBUG] Final stats:', {
+        totalOrgs: stats.totalOrgs,
+        totalUsers: stats.totalUsers,
+        trialOrgs: stats.trialOrgs,
+        activeAgents: stats.activeAgents,
+        scope: stats.scope,
+      });
 
       logger.info('Global platform stats fetched', {
         totalOrgs,
@@ -306,8 +314,9 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Admin stats fetch error', error, { route: '/api/admin/stats' });
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    const errorMessage = errorObj.message;
+    logger.error('Admin stats fetch error', errorObj, { route: '/api/admin/stats' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
         ? `Failed to fetch stats: ${errorMessage}`
@@ -358,7 +367,8 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    logger.error('Stats refresh error', error, { route: '/api/admin/stats' });
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    logger.error('Stats refresh error', errorObj, { route: '/api/admin/stats' });
     return createErrorResponse('Failed to refresh statistics', 500);
   }
 }

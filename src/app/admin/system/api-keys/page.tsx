@@ -188,7 +188,7 @@ export default function AdminAPIKeysPageNew() {
         setKeys(adminSettings as Record<string, any>);
       }
     } catch (error) {
-      logger.error('Error loading API keys:', error, { file: 'page.tsx' });
+      logger.error('Error loading API keys:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

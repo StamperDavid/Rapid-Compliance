@@ -75,7 +75,7 @@ export async function DELETE(
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Admin organization delete error', error, {
+    logger.error('Admin organization delete error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/admin/organizations/[orgId]',
       orgId: params.orgId
     });

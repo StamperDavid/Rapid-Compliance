@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ job });
   } catch (error) {
-    logger.error('[AdminScraper] Start failed:', error, { file: 'scraper/start/route.ts' });
+    logger.error('[AdminScraper] Start failed:', error instanceof Error ? error : new Error(String(error)), { file: 'scraper/start/route.ts' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

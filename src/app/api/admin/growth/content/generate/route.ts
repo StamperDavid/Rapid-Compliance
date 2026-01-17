@@ -81,7 +81,7 @@ Return a JSON object with:
 
     return NextResponse.json({ error: 'Failed to generate content' }, { status: 500 });
   } catch (error) {
-    logger.error('[AdminContent] Generate failed:', error, { file: 'content/generate/route.ts' });
+    logger.error('[AdminContent] Generate failed:', error instanceof Error ? error : new Error(String(error)), { file: 'content/generate/route.ts' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

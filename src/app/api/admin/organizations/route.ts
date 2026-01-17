@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Admin organizations fetch error', error, { route: '/api/admin/organizations' });
+    logger.error('Admin organizations fetch error', error instanceof Error ? error : new Error(String(error)), { route: '/api/admin/organizations' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
         ? `Failed to fetch organizations: ${errorMessage}`
@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Admin organization create error', error, { route: '/api/admin/organizations' });
+    logger.error('Admin organization create error', error instanceof Error ? error : new Error(String(error)), { route: '/api/admin/organizations' });
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
         ? `Failed to create organization: ${errorMessage}`

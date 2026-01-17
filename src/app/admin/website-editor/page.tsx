@@ -1684,7 +1684,7 @@ export default function WebsiteEditorPage() {
       // eslint-disable-next-line no-alert
       window.alert('Published successfully!');
     } catch (e) {
-      logger.error('Failed to save:', e, { file: 'page.tsx' });
+      logger.error('Failed to save:', e instanceof Error ? e : new Error(String(e)), { file: 'page.tsx' });
       // eslint-disable-next-line no-alert
       window.alert('Failed to save');
     } finally {

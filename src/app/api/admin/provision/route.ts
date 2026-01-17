@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Provisioner API] Error', error, { file: 'provision/route.ts' });
+    logger.error('[Provisioner API] Error', error instanceof Error ? error : new Error(String(error)), { file: 'provision/route.ts' });
     return NextResponse.json(
       {
         success: false,
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Provisioner API] Error', error, { file: 'provision/route.ts' });
+    logger.error('[Provisioner API] Error', error instanceof Error ? error : new Error(String(error)), { file: 'provision/route.ts' });
     return NextResponse.json(
       {
         success: false,

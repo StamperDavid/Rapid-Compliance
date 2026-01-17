@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       scraperJobs: [],
     });
   } catch (error) {
-    logger.error('[AdminGrowthSettings] GET failed:', error, { file: 'settings/route.ts' });
+    logger.error('[AdminGrowthSettings] GET failed:', error instanceof Error ? error : new Error(String(error)), { file: 'settings/route.ts' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

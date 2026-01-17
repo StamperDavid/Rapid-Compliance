@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       coupons: coupons || [],
     });
   } catch (error) {
-    logger.error('[Admin] Error fetching platform coupons:', error);
+    logger.error('[Admin] Error fetching platform coupons:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to fetch coupons' },
       { status: 500 }
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       message: isNew ? 'Coupon created successfully' : 'Coupon updated successfully',
     });
   } catch (error) {
-    logger.error('[Admin] Error saving platform coupon:', error);
+    logger.error('[Admin] Error saving platform coupon:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to save coupon' },
       { status: 500 }

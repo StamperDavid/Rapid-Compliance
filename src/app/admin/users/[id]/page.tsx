@@ -68,7 +68,7 @@ export default function UserDetailPage() {
         }
         setLoading(false);
       } catch (error) {
-        logger.error('Failed to load user:', error, { file: 'page.tsx' });
+        logger.error('Failed to load user:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
         setLoading(false);
       }
     }

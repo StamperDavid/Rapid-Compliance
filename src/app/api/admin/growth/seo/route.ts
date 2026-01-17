@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('[AdminSEO] POST failed:', error, { file: 'seo/route.ts' });
+    logger.error('[AdminSEO] POST failed:', error instanceof Error ? error : new Error(String(error)), { file: 'seo/route.ts' });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

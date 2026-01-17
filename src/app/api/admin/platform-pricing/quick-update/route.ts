@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       price_usd,
     });
   } catch (error) {
-    logger.error('[Admin] Error in quick price update:', error);
+    logger.error('[Admin] Error in quick price update:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { success: false, error: 'Failed to update price' },
       { status: 500 }

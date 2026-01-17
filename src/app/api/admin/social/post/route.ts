@@ -153,11 +153,15 @@ export async function POST(request: NextRequest) {
 
         if (!twitterResponse.ok) {
           const errorData: unknown = await twitterResponse.json().catch(() => ({}));
-          logger.error('[AdminSocialPost] Twitter API error', {
-            status: twitterResponse.status,
-            error: errorData,
-            file: 'admin/social/post/route.ts',
-          });
+          logger.error(
+            '[AdminSocialPost] Twitter API error',
+            new Error(`Twitter API returned status ${twitterResponse.status}`),
+            {
+              statusCode: twitterResponse.status,
+              details: JSON.stringify(errorData),
+              file: 'admin/social/post/route.ts',
+            }
+          );
 
           return NextResponse.json(
             {
@@ -180,7 +184,8 @@ export async function POST(request: NextRequest) {
           tweetUrl: tweetData.data?.id ? `https://twitter.com/i/web/status/${tweetData.data.id}` : null,
         });
       } catch (twitterError) {
-        logger.error('[AdminSocialPost] Twitter post failed', twitterError, {
+        const error = twitterError instanceof Error ? twitterError : new Error(String(twitterError));
+        logger.error('[AdminSocialPost] Twitter post failed', error, {
           file: 'admin/social/post/route.ts',
         });
 
@@ -271,11 +276,15 @@ export async function POST(request: NextRequest) {
 
         if (!linkedInResponse.ok) {
           const errorData: unknown = await linkedInResponse.json().catch(() => ({}));
-          logger.error('[AdminSocialPost] LinkedIn API error', {
-            status: linkedInResponse.status,
-            error: errorData,
-            file: 'admin/social/post/route.ts',
-          });
+          logger.error(
+            '[AdminSocialPost] LinkedIn API error',
+            new Error(`LinkedIn API returned status ${linkedInResponse.status}`),
+            {
+              statusCode: linkedInResponse.status,
+              details: JSON.stringify(errorData),
+              file: 'admin/social/post/route.ts',
+            }
+          );
 
           return NextResponse.json(
             {
@@ -297,7 +306,8 @@ export async function POST(request: NextRequest) {
           postedAt: new Date().toISOString(),
         });
       } catch (linkedInError) {
-        logger.error('[AdminSocialPost] LinkedIn post failed', linkedInError, {
+        const error = linkedInError instanceof Error ? linkedInError : new Error(String(linkedInError));
+        logger.error('[AdminSocialPost] LinkedIn post failed', error, {
           file: 'admin/social/post/route.ts',
         });
 
@@ -319,7 +329,8 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    logger.error('[AdminSocialPost] Unexpected error', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[AdminSocialPost] Unexpected error', err, {
       file: 'admin/social/post/route.ts',
     });
 
@@ -373,7 +384,8 @@ export async function GET(request: NextRequest) {
       scheduledPosts: [],
     });
   } catch (error) {
-    logger.error('[AdminSocialPost] GET failed', error, {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error('[AdminSocialPost] GET failed', err, {
       file: 'admin/social/post/route.ts',
     });
 
