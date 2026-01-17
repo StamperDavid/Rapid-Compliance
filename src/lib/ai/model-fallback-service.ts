@@ -9,8 +9,7 @@
  * 4. If all fail: Use Gemini as last resort (always available, no API key needed in dev)
  */
 
-import type { UnifiedChatMessage, UnifiedChatResponse } from './unified-ai-service';
-import { sendUnifiedChatMessage } from './unified-ai-service'
+import { sendUnifiedChatMessage, type UnifiedChatMessage, type UnifiedChatResponse } from './unified-ai-service';
 import { logger } from '@/lib/logger/logger';
 
 export interface FallbackRequest {
@@ -67,7 +66,7 @@ export async function sendWithFallback(
     attemptedModels.push(currentModel);
     
     try {
-      logger.info('Fallback Attempting model: currentModel}', { file: 'model-fallback-service.ts' });
+      logger.info(`Fallback Attempting model: ${currentModel}`, { file: 'model-fallback-service.ts' });
       
       const response = await sendUnifiedChatMessage({
         model: currentModel,
@@ -82,7 +81,7 @@ export async function sendWithFallback(
       const fallbackOccurred = currentModel !== model;
       
       if (fallbackOccurred) {
-        logger.info('Fallback Success with fallback model currentModel} (primary was model})', { file: 'model-fallback-service.ts' });
+        logger.info(`Fallback Success with fallback model ${currentModel} (primary was ${model})`, { file: 'model-fallback-service.ts' });
       }
       
       return {
@@ -92,12 +91,12 @@ export async function sendWithFallback(
         failureReasons,
       };
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Extract error message - empty string is valid (Explicit Ternary for STRING)
-      const errorMessage = (error.message !== '' && error.message != null) ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       failureReasons.push(`${currentModel}: ${errorMessage}`);
-      
-      logger.warn('[Fallback] Model ${currentModel} failed: ${errorMessage}', { file: 'model-fallback-service.ts' });
+
+      logger.warn(`[Fallback] Model ${currentModel} failed: ${errorMessage}`, { file: 'model-fallback-service.ts' });
       
       // Continue to next model in chain
       continue;
@@ -106,7 +105,7 @@ export async function sendWithFallback(
   
   // All models failed
   const errorSummary = `All models failed. Attempted: ${attemptedModels.join(', ')}. Errors: ${failureReasons.join('; ')}`;
-  logger.error('[Fallback] ${errorSummary}', new Error('[Fallback] ${errorSummary}'), { file: 'model-fallback-service.ts' });
+  logger.error(`[Fallback] ${errorSummary}`, new Error(`[Fallback] ${errorSummary}`), { file: 'model-fallback-service.ts' });
   
   throw new Error(errorSummary);
 }
@@ -135,9 +134,9 @@ export async function isModelAvailable(
       messages: [{ role: 'user', content: 'test' }],
       maxTokens: 1,
     }, organizationId);
-    
+
     return true;
-  } catch (error) {
+  } catch (_error: unknown) {
     return false;
   }
 }
@@ -190,7 +189,7 @@ export async function selectBestAvailableModel(
   
   for (const fallbackModel of fallbackChain) {
     if (await isModelAvailable(fallbackModel, organizationId)) {
-      logger.info('Fallback Using fallbackModel} instead of preferredModel}', { file: 'model-fallback-service.ts' });
+      logger.info(`Fallback Using ${fallbackModel} instead of ${preferredModel}`, { file: 'model-fallback-service.ts' });
       return fallbackModel;
     }
   }
@@ -207,29 +206,29 @@ export async function retryWithBackoff<T>(
   maxRetries: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: Error;
-  
+  let lastError: Error = new Error('No attempts made');
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn();
-    } catch (error: any) {
-      lastError = error;
-      
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
       // Don't retry on auth errors
-      if (error.message?.includes('API key') || error.message?.includes('401')) {
-        throw error;
+      if (lastError.message.includes('API key') || lastError.message.includes('401')) {
+        throw lastError;
       }
-      
+
       // Calculate delay with exponential backoff
       const delay = baseDelay * Math.pow(2, attempt);
-      
-      logger.warn('[Retry] Attempt ${attempt + 1}/${maxRetries} failed: ${error.message}. Retrying in ${delay}ms...', { file: 'model-fallback-service.ts' });
-      
-      await new Promise(resolve => setTimeout(resolve, delay));
+
+      logger.warn(`[Retry] Attempt ${attempt + 1}/${maxRetries} failed: ${lastError.message}. Retrying in ${delay}ms...`, { file: 'model-fallback-service.ts' });
+
+      await new Promise<void>(resolve => { setTimeout(resolve, delay); });
     }
   }
-  
-  throw lastError!;
+
+  throw lastError;
 }
 
 /**
@@ -269,7 +268,7 @@ class CircuitBreaker {
     this.lastFailTime.set(model, Date.now());
     
     if (failures >= this.failureThreshold) {
-      logger.warn('[CircuitBreaker] Circuit opened for ${model} (${failures} failures)', { file: 'model-fallback-service.ts' });
+      logger.warn(`[CircuitBreaker] Circuit opened for ${model} (${failures} failures)`, { file: 'model-fallback-service.ts' });
     }
   }
   
@@ -294,7 +293,7 @@ export async function sendWithCircuitBreaker(
   
   // Check circuit breaker
   if (circuitBreaker.isOpen(model)) {
-    logger.warn('[CircuitBreaker] Circuit is open for ${model}, using fallback', { file: 'model-fallback-service.ts' });
+    logger.warn(`[CircuitBreaker] Circuit is open for ${model}, using fallback`, { file: 'model-fallback-service.ts' });
     
     // Use fallback directly
     const fallbackModel = getRecommendedFallback(model);

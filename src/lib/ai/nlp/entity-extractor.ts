@@ -3,9 +3,22 @@
  * Extract and track entities from conversations
  */
 
-import type { ChatRequest } from '@/types/ai-models';
+import type { ChatRequest, ModelName } from '@/types/ai-models';
 import { sendChatRequest } from '../model-provider';
 import { logger } from '@/lib/logger/logger';
+
+/** Intent classification result */
+interface IntentResult {
+  primary: string;
+  confidence: number;
+  subIntents: string[];
+}
+
+/** Pain points and objections extraction result */
+interface PainPointsResult {
+  painPoints: string[];
+  objections: string[];
+}
 
 export interface ExtractedEntity {
   type: 'person' | 'company' | 'product' | 'email' | 'phone' | 'date' | 'money' | 'location' | 'custom';
@@ -51,11 +64,11 @@ export interface ConversationEntities {
  */
 export async function extractEntities(
   message: string,
-  model: string = 'gpt-4-turbo'
+  model: ModelName = 'gpt-4-turbo'
 ): Promise<ExtractedEntity[]> {
   try {
     const request: ChatRequest = {
-      model: model as any,
+      model,
       messages: [
         {
           role: 'system',
@@ -82,13 +95,13 @@ Be precise and only extract entities you're confident about.`,
     // Parse JSON from response
     const jsonMatch = response.content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
-      const entities = JSON.parse(jsonMatch[0]);
+      const entities = JSON.parse(jsonMatch[0]) as ExtractedEntity[];
       return entities;
     }
-    
+
     return [];
-  } catch (error: any) {
-    logger.error('[Entity Extractor] Error:', error, { file: 'entity-extractor.ts' });
+  } catch (error: unknown) {
+    logger.error('[Entity Extractor] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'entity-extractor.ts' });
     return [];
   }
 }
@@ -185,15 +198,11 @@ function updateStructuredData(
  */
 export async function extractIntent(
   message: string,
-  model: string = 'gpt-4-turbo'
-): Promise<{
-  primary: string;
-  confidence: number;
-  subIntents: string[];
-}> {
+  model: ModelName = 'gpt-4-turbo'
+): Promise<IntentResult> {
   try {
     const request: ChatRequest = {
-      model: model as any,
+      model,
       messages: [
         {
           role: 'system',
@@ -217,16 +226,16 @@ export async function extractIntent(
     
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      return JSON.parse(jsonMatch[0]) as IntentResult;
     }
-    
+
     return {
       primary: 'general_chat',
       confidence: 50,
       subIntents: [],
     };
-  } catch (error: any) {
-    logger.error('[Intent Extractor] Error:', error, { file: 'entity-extractor.ts' });
+  } catch (error: unknown) {
+    logger.error('[Intent Extractor] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'entity-extractor.ts' });
     return {
       primary: 'general_chat',
       confidence: 50,
@@ -240,14 +249,11 @@ export async function extractIntent(
  */
 export async function extractPainPointsAndObjections(
   message: string,
-  model: string = 'gpt-4-turbo'
-): Promise<{
-  painPoints: string[];
-  objections: string[];
-}> {
+  model: ModelName = 'gpt-4-turbo'
+): Promise<PainPointsResult> {
   try {
     const request: ChatRequest = {
-      model: model as any,
+      model,
       messages: [
         {
           role: 'system',
@@ -270,12 +276,12 @@ export async function extractPainPointsAndObjections(
     
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      return JSON.parse(jsonMatch[0]) as PainPointsResult;
     }
-    
+
     return { painPoints: [], objections: [] };
-  } catch (error: any) {
-    logger.error('[Pain Points Extractor] Error:', error, { file: 'entity-extractor.ts' });
+  } catch (error: unknown) {
+    logger.error('[Pain Points Extractor] Error:', error instanceof Error ? error : new Error(String(error)), { file: 'entity-extractor.ts' });
     return { painPoints: [], objections: [] };
   }
 }

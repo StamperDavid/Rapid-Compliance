@@ -3,8 +3,8 @@
  * Universal AI provider that can access 100+ models through one API key
  */
 
-import type { ModelName } from '@/types/ai-models';
-import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import type { ModelName, ChatResponse } from '@/types/ai-models';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 
 export interface OpenRouterConfig {
@@ -12,6 +12,16 @@ export interface OpenRouterConfig {
   model?: ModelName;
   baseURL?: string;
   organizationId?: string;
+}
+
+/** JSON Schema property definition - compatible with ToolParameter */
+interface JsonSchemaProperty {
+  type: string;
+  description?: string;
+  enum?: string[];
+  items?: JsonSchemaProperty;
+  properties?: Record<string, JsonSchemaProperty>;
+  required?: boolean | string[];
 }
 
 // Tool calling types (OpenAI-compatible format)
@@ -22,7 +32,7 @@ export interface ToolDefinition {
     description: string;
     parameters: {
       type: 'object';
-      properties: Record<string, any>;
+      properties: Record<string, JsonSchemaProperty>;
       required: string[];
     };
   };
@@ -55,6 +65,54 @@ export interface ChatCompletionResponse {
   provider: string;
   toolCalls?: ToolCall[];
   finishReason?: string;
+}
+
+/** OpenRouter API response structure */
+interface OpenRouterAPIResponse {
+  id: string;
+  model: string;
+  choices: Array<{
+    message: {
+      role: string;
+      content: string | null;
+      tool_calls?: ToolCall[];
+    };
+    finish_reason: string;
+  }>;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+/** OpenRouter models list response */
+interface OpenRouterModelsResponse {
+  data: Array<{
+    id: string;
+    name: string;
+    context_length: number;
+    pricing: {
+      prompt: string;
+      completion: string;
+    };
+  }>;
+}
+
+/** API Keys structure for type safety */
+interface APIKeys {
+  ai?: {
+    openrouterApiKey?: string;
+    openaiApiKey?: string;
+    anthropicApiKey?: string;
+    geminiApiKey?: string;
+  };
+}
+
+/** Provider result type */
+interface ProviderResult {
+  provider: string;
+  apiKey: string;
 }
 
 export class OpenRouterProvider {
@@ -100,10 +158,11 @@ export class OpenRouterProvider {
       try {
         const result = await this.makeRequest(model, params);
         return result;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If 404 (model not found), try fallback
-        if (error.message?.includes('404') && model !== OpenRouterProvider.FALLBACK_MODEL) {
-          console.log(`[OpenRouter] Model ${model} returned 404, trying fallback: ${OpenRouterProvider.FALLBACK_MODEL}`);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes('404') && model !== OpenRouterProvider.FALLBACK_MODEL) {
+          logger.info(`[OpenRouter] Model ${model} returned 404, trying fallback: ${OpenRouterProvider.FALLBACK_MODEL}`, { file: 'openrouter-provider.ts' });
           continue;
         }
         throw error;
@@ -121,11 +180,11 @@ export class OpenRouterProvider {
       maxTokens?: number;
       topP?: number;
     }
-  ) {
+  ): Promise<ChatResponse> {
+    const startTime = Date.now();
     const apiKey = await this.getApiKey();
 
-    console.log(`[OpenRouter] Making request to model: ${model}`);
-    console.log(`[OpenRouter] API Key passed to header: ${apiKey.slice(0, 12)}...`);
+    logger.debug(`[OpenRouter] Making request to model: ${model}`, { file: 'openrouter-provider.ts' });
 
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: 'POST',
@@ -149,19 +208,26 @@ export class OpenRouterProvider {
       throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
-    const data = await response.json();
-    console.log(`[OpenRouter] Response received from model: ${data.model}`);
+    const data = await response.json() as OpenRouterAPIResponse;
+    logger.debug(`[OpenRouter] Response received from model: ${data.model}`, { file: 'openrouter-provider.ts' });
 
     const responseContent = data.choices[0]?.message?.content ?? '';
+    const promptTokens = data.usage?.prompt_tokens ?? 0;
+    const completionTokens = data.usage?.completion_tokens ?? 0;
     return {
+      id: data.id,
       content: responseContent,
       usage: {
-        promptTokens: data.usage?.prompt_tokens ?? 0,
-        completionTokens: data.usage?.completion_tokens ?? 0,
-        totalTokens: data.usage?.total_tokens ?? 0,
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+        cost: 0, // OpenRouter handles billing separately
       },
-      model: data.model,
+      model: data.model as ModelName,
       provider: 'openrouter',
+      finishReason: 'stop' as const,
+      responseTime: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -181,10 +247,18 @@ export class OpenRouterProvider {
     const openrouterModel = this.mapModelName(params.model);
     const apiKey = await this.getApiKey();
 
-    console.log(`[OpenRouter] Making tool-enabled request to model: ${openrouterModel}`);
-    console.log(`[OpenRouter] Tools provided: ${params.tools?.map(t => t.function.name).join(', ') || 'none'}`);
+    logger.debug(`[OpenRouter] Making tool-enabled request to model: ${openrouterModel}`, { file: 'openrouter-provider.ts' });
+    logger.debug(`[OpenRouter] Tools provided: ${params.tools?.map(t => t.function.name).join(', ') ?? 'none'}`, { file: 'openrouter-provider.ts' });
 
-    const requestBody: Record<string, any> = {
+    const requestBody: {
+      model: string;
+      messages: ChatMessage[];
+      temperature: number;
+      max_tokens: number;
+      top_p: number;
+      tools?: ToolDefinition[];
+      tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+    } = {
       model: openrouterModel,
       messages: params.messages,
       temperature: params.temperature ?? 0.7,
@@ -214,13 +288,13 @@ export class OpenRouterProvider {
       throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as OpenRouterAPIResponse;
     const message = data.choices[0]?.message;
     const finishReason = data.choices[0]?.finish_reason;
 
-    console.log(`[OpenRouter] Response received. Finish reason: ${finishReason}`);
+    logger.debug(`[OpenRouter] Response received. Finish reason: ${finishReason}`, { file: 'openrouter-provider.ts' });
     if (message?.tool_calls) {
-      console.log(`[OpenRouter] Tool calls requested: ${message.tool_calls.map((tc: ToolCall) => tc.function.name).join(', ')}`);
+      logger.debug(`[OpenRouter] Tool calls requested: ${message.tool_calls.map((tc: ToolCall) => tc.function.name).join(', ')}`, { file: 'openrouter-provider.ts' });
     }
 
     return {
@@ -247,18 +321,18 @@ export class OpenRouterProvider {
       'gpt-4-turbo': 'openai/gpt-4-turbo',
       'gpt-4-turbo-preview': 'openai/gpt-4-turbo-preview',
       'gpt-3.5-turbo': 'openai/gpt-3.5-turbo',
-      
+
       // Anthropic models
       'claude-3-opus': 'anthropic/claude-3-opus',
       'claude-3-sonnet': 'anthropic/claude-3-sonnet',
       'claude-3-haiku': 'anthropic/claude-3-haiku',
       'claude-3.5-sonnet': 'anthropic/claude-3.5-sonnet',
-      
+
       // Google models
       'gemini-pro': 'google/gemini-pro',
       'gemini-pro-vision': 'google/gemini-pro-vision',
       'gemini-1.5-pro': 'google/gemini-pro-1.5',
-      
+
       // Meta models
       'llama-3-70b': 'meta-llama/llama-3-70b-instruct',
       'llama-3-8b': 'meta-llama/llama-3-8b-instruct',
@@ -268,13 +342,13 @@ export class OpenRouterProvider {
     if (typeof model === 'string' && model.startsWith('openrouter/')) {
       return model.replace('openrouter/', '');
     }
-    return modelMap[model] || model;
+    return modelMap[model] ?? model;
   }
 
   /**
    * Get available models from OpenRouter
    */
-  async getAvailableModels() {
+  async getAvailableModels(): Promise<OpenRouterModelsResponse['data']> {
     try {
       const response = await fetch(`${this.baseURL}/models`, {
         headers: {
@@ -286,35 +360,36 @@ export class OpenRouterProvider {
         throw new Error(`Failed to fetch models: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as OpenRouterModelsResponse;
       return data.data; // Array of available models
-    } catch (error: any) {
-      logger.error('[OpenRouterProvider] Error fetching models:', error, { file: 'openrouter-provider.ts' });
+    } catch (error: unknown) {
+      logger.error('[OpenRouterProvider] Error fetching models:', error instanceof Error ? error : new Error(String(error)), { file: 'openrouter-provider.ts' });
       throw error;
     }
   }
 
   private async getApiKey(): Promise<string> {
     if (this.apiKey) {
-      console.log('[OpenRouter] Using cached API key:', this.apiKey.slice(0, 8) + '...');
+      logger.debug(`[OpenRouter] Using cached API key: ${this.apiKey.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
       return this.apiKey;
     }
     if (!this.organizationId) {
-      console.error('[OpenRouter] No organizationId provided and no API key set');
+      logger.error('[OpenRouter] No organizationId provided and no API key set', new Error('No organizationId'), { file: 'openrouter-provider.ts' });
       throw new Error('OpenRouter API key not configured');
     }
-    console.log('[OpenRouter] Fetching API key for org:', this.organizationId);
+    logger.debug(`[OpenRouter] Fetching API key for org: ${this.organizationId}`, { file: 'openrouter-provider.ts' });
     const keys = await apiKeyService.getKeys(this.organizationId);
     const key = keys?.ai?.openrouterApiKey;
     if (!key) {
-      console.error('[OpenRouter] No openrouterApiKey found in keys:', {
+      logger.error('[OpenRouter] No openrouterApiKey found in keys', new Error('No API key'), {
+        file: 'openrouter-provider.ts',
         hasKeys: !!keys,
         hasAiSection: !!keys?.ai,
         aiKeys: keys?.ai ? Object.keys(keys.ai) : [],
       });
       throw new Error(`OpenRouter API key not configured for organization ${this.organizationId}. Please add it in the API Keys settings.`);
     }
-    console.log('[OpenRouter] API key loaded:', key.slice(0, 8) + '...');
+    logger.debug(`[OpenRouter] API key loaded: ${key.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
     this.apiKey = key;
     return key;
   }
@@ -323,14 +398,14 @@ export class OpenRouterProvider {
 /**
  * Helper to determine if we should use OpenRouter
  */
-export function shouldUseOpenRouter(keys: any): boolean {
+export function shouldUseOpenRouter(keys: APIKeys | null | undefined): boolean {
   return !!(keys?.ai?.openrouterApiKey);
 }
 
 /**
  * Helper to get the appropriate provider based on available keys
  */
-export function getAIProvider(keys: any, preferredModel?: ModelName) {
+export function getAIProvider(keys: APIKeys | null | undefined, preferredModel?: ModelName): ProviderResult | null {
   // If OpenRouter is available, prefer it (can access all models)
   if (keys?.ai?.openrouterApiKey) {
     return {
@@ -374,22 +449,3 @@ export function getAIProvider(keys: any, preferredModel?: ModelName) {
 
   return null;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

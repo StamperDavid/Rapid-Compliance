@@ -3,8 +3,8 @@
  * Multi-step thinking before responding
  */
 
-import type { ReasoningStep, ChatRequest, ChatResponse } from '@/types/ai-models';
-import { sendChatRequest } from '../model-provider'
+import type { ReasoningStep, ChatRequest, ModelName } from '@/types/ai-models';
+import { sendChatRequest } from '../model-provider';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -13,7 +13,7 @@ import { logger } from '@/lib/logger/logger';
 export async function executeChainOfThought(params: {
   query: string;
   context: string;
-  model: string;
+  model: ModelName;
   systemPrompt: string;
 }): Promise<{
   finalAnswer: string;
@@ -101,15 +101,15 @@ async function executeReasoningStep(params: {
   type: ReasoningStep['type'];
   description: string;
   input: string;
-  model: string;
+  model: ModelName;
   systemPrompt: string;
   prompt: string;
 }): Promise<ReasoningStep> {
   const startTime = Date.now();
-  
+
   try {
     const request: ChatRequest = {
-      model: params.model as any,
+      model: params.model,
       messages: [
         { role: 'system', content: params.systemPrompt },
         { role: 'user', content: params.prompt },
@@ -117,12 +117,12 @@ async function executeReasoningStep(params: {
       temperature: 0.3, // Lower temperature for reasoning
       maxTokens: 500,
     };
-    
+
     const response = await sendChatRequest(request);
-    
+
     // Estimate confidence based on response characteristics
     const confidence = estimateStepConfidence(response.content);
-    
+
     return {
       step: params.step,
       type: params.type,
@@ -132,16 +132,17 @@ async function executeReasoningStep(params: {
       confidence,
       duration: Date.now() - startTime,
     };
-  } catch (error: any) {
-    logger.error('[Chain-of-Thought] Step ${params.step} error:', error, { file: 'chain-of-thought.ts' });
-    
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`[Chain-of-Thought] Step ${params.step} error:`, error instanceof Error ? error : new Error(errorMessage), { file: 'chain-of-thought.ts' });
+
     // Return error step with low confidence
     return {
       step: params.step,
       type: params.type,
       description: params.description,
       input: params.input,
-      output: `Error: ${error.message}`,
+      output: `Error: ${errorMessage}`,
       confidence: 0,
       duration: Date.now() - startTime,
     };
@@ -182,7 +183,7 @@ function estimateStepConfidence(output: string): number {
 export async function executeSimplifiedReasoning(params: {
   query: string;
   context: string;
-  model: string;
+  model: ModelName;
   systemPrompt: string;
 }): Promise<{
   finalAnswer: string;
@@ -191,10 +192,10 @@ export async function executeSimplifiedReasoning(params: {
 }> {
   const { query, context, model, systemPrompt } = params;
   const startTime = Date.now();
-  
+
   // Single-step reasoning with explicit chain-of-thought prompting
   const request: ChatRequest = {
-    model: model as any,
+    model,
     messages: [
       { role: 'system', content: systemPrompt },
       {

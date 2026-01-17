@@ -4,21 +4,21 @@
  */
 
 import type { ModelProvider } from '@/lib/ai/model-provider';
-import type {
-  ChatRequest,
-  ChatResponse,
-  ChatMessage,
-  ModelName,
+import {
+  MODEL_CAPABILITIES,
+  type ChatRequest,
+  type ChatResponse,
+  type ModelName,
+  type ModelCapabilities,
 } from '@/types/ai-models';
-import { MODEL_CAPABILITIES } from '@/types/ai-models';
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { logger } from '@/lib/logger/logger';
 
 export class GeminiProvider implements ModelProvider {
   provider = 'google' as const;
   private client: GoogleGenerativeAI;
   private apiKey: string;
-  
+
   constructor() {
     // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
     const envApiKey = process.env.GOOGLE_API_KEY;
@@ -28,34 +28,34 @@ export class GeminiProvider implements ModelProvider {
     }
     this.client = new GoogleGenerativeAI(this.apiKey);
   }
-  
+
   /**
    * Send chat request to Gemini
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const startTime = Date.now();
-    
+
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
     }
-    
+
     try {
-      const model = this.client.getGenerativeModel({ 
+      const model = this.client.getGenerativeModel({
         model: request.model,
       });
-      
+
       // Extract system instruction and convert messages
       const systemMessage = request.messages.find(m => m.role === 'system');
       const messages = request.messages.filter(m => m.role !== 'system');
-      
+
       // Build chat history
       const history = messages.slice(0, -1).map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }],
       }));
-      
+
       const lastMessage = messages[messages.length - 1];
-      
+
       // Start chat
       const chat = model.startChat({
         history,
@@ -66,26 +66,26 @@ export class GeminiProvider implements ModelProvider {
         },
         systemInstruction: systemMessage?.content,
       });
-      
+
       // Send message
       const result = await chat.sendMessage(lastMessage.content);
       const response = result.response;
-      
+
       // Extract content
       const content = response.text();
-      
+
       // Calculate tokens and cost (approximation for Gemini)
       const promptTokens = this.estimateTokens(
         messages.map(m => m.content).join(' ')
       );
       const completionTokens = this.estimateTokens(content);
       const totalTokens = promptTokens + completionTokens;
-      
+
       const capabilities = MODEL_CAPABILITIES[request.model];
       const cost =
         (promptTokens * capabilities.costPerInputToken) +
         (completionTokens * capabilities.costPerOutputToken);
-      
+
       return {
         id: `gemini_${Date.now()}`,
         model: request.model,
@@ -101,12 +101,12 @@ export class GeminiProvider implements ModelProvider {
         responseTime: Date.now() - startTime,
         timestamp: new Date().toISOString(),
       };
-    } catch (error: any) {
-      logger.error('[Gemini] Chat error:', error, { file: 'gemini-provider.ts' });
+    } catch (error: unknown) {
+      logger.error('[Gemini] Chat error:', error instanceof Error ? error : new Error(String(error)), { file: 'gemini-provider.ts' });
       throw error;
     }
   }
-  
+
   /**
    * Send chat request with streaming
    */
@@ -114,22 +114,22 @@ export class GeminiProvider implements ModelProvider {
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
     }
-    
+
     try {
-      const model = this.client.getGenerativeModel({ 
+      const model = this.client.getGenerativeModel({
         model: request.model,
       });
-      
+
       const systemMessage = request.messages.find(m => m.role === 'system');
       const messages = request.messages.filter(m => m.role !== 'system');
-      
+
       const history = messages.slice(0, -1).map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }],
       }));
-      
+
       const lastMessage = messages[messages.length - 1];
-      
+
       const chat = model.startChat({
         history,
         generationConfig: {
@@ -138,35 +138,35 @@ export class GeminiProvider implements ModelProvider {
         },
         systemInstruction: systemMessage?.content,
       });
-      
+
       const result = await chat.sendMessageStream(lastMessage.content);
-      
+
       for await (const chunk of result.stream) {
         const text = chunk.text();
         if (text) {
           yield text;
         }
       }
-    } catch (error: any) {
-      logger.error('[Gemini] Stream error:', error, { file: 'gemini-provider.ts' });
+    } catch (error: unknown) {
+      logger.error('[Gemini] Stream error:', error instanceof Error ? error : new Error(String(error)), { file: 'gemini-provider.ts' });
       throw error;
     }
   }
-  
+
   /**
    * Check if model is available
    */
-  async isAvailable(model: ModelName): Promise<boolean> {
-    return this.apiKey !== '' && model.startsWith('gemini-');
+  isAvailable(model: ModelName): Promise<boolean> {
+    return Promise.resolve(this.apiKey !== '' && model.startsWith('gemini-'));
   }
-  
+
   /**
    * Get model capabilities
    */
-  async getCapabilities(model: ModelName): Promise<any> {
-    return MODEL_CAPABILITIES[model];
+  getCapabilities(model: ModelName): Promise<ModelCapabilities> {
+    return Promise.resolve(MODEL_CAPABILITIES[model]);
   }
-  
+
   /**
    * Estimate cost
    */
@@ -177,7 +177,7 @@ export class GeminiProvider implements ModelProvider {
       (completionTokens * capabilities.costPerOutputToken)
     );
   }
-  
+
   /**
    * Estimate tokens (rough approximation)
    * Gemini API doesn't provide token counts in responses yet
@@ -188,4 +188,3 @@ export class GeminiProvider implements ModelProvider {
     return Math.ceil(words * 1.3);
   }
 }
-

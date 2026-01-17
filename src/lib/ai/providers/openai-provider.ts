@@ -4,23 +4,67 @@
  */
 
 import type { ModelProvider } from '@/lib/ai/model-provider';
-import type {
-  ChatRequest,
-  ChatResponse,
-  ChatMessage,
-  ModelName,
-  AIFunction,
+import {
+  MODEL_CAPABILITIES,
+  type ChatRequest,
+  type ChatResponse,
+  type ChatMessage,
+  type ModelName,
+  type AIFunction,
+  type ModelCapabilities,
 } from '@/types/ai-models';
-import { MODEL_CAPABILITIES } from '@/types/ai-models';
-import { apiKeyService } from '@/lib/api-keys/api-key-service'
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
+
+/** OpenAI API response types */
+interface OpenAIAPIResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      content: string | null;
+      function_call?: {
+        name: string;
+        arguments: string;
+      };
+    };
+    finish_reason: string;
+  }>;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+/** OpenAI function format */
+interface OpenAIFunction {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+/** OpenAI message format */
+interface OpenAIMessage {
+  role: string;
+  content: string;
+  name?: string;
+  function_call?: {
+    name: string;
+    arguments: string;
+  };
+}
 
 export class OpenAIProvider implements ModelProvider {
   provider = 'openai' as const;
   private apiKey: string;
   private baseURL = 'https://api.openai.com/v1';
   private organizationId: string;
-  
+
   constructor(organizationId: string = 'demo') {
     this.organizationId = organizationId;
     // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
@@ -30,38 +74,38 @@ export class OpenAIProvider implements ModelProvider {
       logger.warn('[OpenAI] API key not configured in env, will attempt to load from database', { file: 'openai-provider.ts' });
     }
   }
-  
+
   /**
    * Load API key from database or use cached value
    */
   private async getApiKey(): Promise<string> {
-    if (this.apiKey) {return this.apiKey;}
-    
+    if (this.apiKey) { return this.apiKey; }
+
     try {
       const keys = await apiKeyService.getKeys(this.organizationId);
       // Extract API key - empty string means unconfigured (Explicit Ternary for STRING)
       const dbApiKey = keys?.ai?.openaiApiKey;
       this.apiKey = (dbApiKey !== '' && dbApiKey != null) ? dbApiKey : '';
-      
+
       if (!this.apiKey) {
         throw new Error('OpenAI API key not configured');
       }
-      
+
       return this.apiKey;
-    } catch (error) {
-      logger.error('[OpenAI] Failed to load API key:', error, { file: 'openai-provider.ts' });
+    } catch (error: unknown) {
+      logger.error('[OpenAI] Failed to load API key:', error instanceof Error ? error : new Error(String(error)), { file: 'openai-provider.ts' });
       throw new Error('OpenAI API key not configured');
     }
   }
-  
+
   /**
    * Send chat request to OpenAI
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const startTime = Date.now();
-    
+
     const apiKey = await this.getApiKey();
-    
+
     try {
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
@@ -83,21 +127,21 @@ export class OpenAIProvider implements ModelProvider {
           user: request.user,
         }),
       });
-      
+
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as Record<string, unknown>;
         throw new Error(`OpenAI API error: ${JSON.stringify(error)}`);
       }
-      
-      const data = await response.json();
+
+      const data = await response.json() as OpenAIAPIResponse;
       const choice = data.choices[0];
-      
+
       // Calculate cost
       const capabilities = MODEL_CAPABILITIES[request.model];
       const cost =
         (data.usage.prompt_tokens * capabilities.costPerInputToken) +
         (data.usage.completion_tokens * capabilities.costPerOutputToken);
-      
+
       return {
         id: data.id,
         model: request.model,
@@ -107,7 +151,7 @@ export class OpenAIProvider implements ModelProvider {
         finishReason: this.mapFinishReason(choice.finish_reason),
         functionCall: choice.message.function_call ? {
           name: choice.message.function_call.name,
-          arguments: JSON.parse(choice.message.function_call.arguments),
+          arguments: JSON.parse(choice.message.function_call.arguments) as Record<string, unknown>,
         } : undefined,
         usage: {
           promptTokens: data.usage.prompt_tokens,
@@ -118,18 +162,18 @@ export class OpenAIProvider implements ModelProvider {
         responseTime: Date.now() - startTime,
         timestamp: new Date().toISOString(),
       };
-    } catch (error: any) {
-      logger.error('[OpenAI] Chat error:', error, { file: 'openai-provider.ts' });
+    } catch (error: unknown) {
+      logger.error('[OpenAI] Chat error:', error instanceof Error ? error : new Error(String(error)), { file: 'openai-provider.ts' });
       throw error;
     }
   }
-  
+
   /**
    * Send chat request with streaming
    */
   async* chatStream(request: ChatRequest): AsyncGenerator<string, void, unknown> {
     const apiKey = await this.getApiKey();
-    
+
     try {
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: 'POST',
@@ -145,52 +189,52 @@ export class OpenAIProvider implements ModelProvider {
           stream: true,
         }),
       });
-      
+
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as Record<string, unknown>;
         throw new Error(`OpenAI API error: ${JSON.stringify(error)}`);
       }
-      
+
       const reader = response.body?.getReader();
       if (!reader) {
         throw new Error('No response body');
       }
-      
+
       const decoder = new TextDecoder();
       let buffer = '';
-      
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) {break;}
-        
+        if (done) { break; }
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         // Extract remaining buffer - empty string is valid (use ??)
         buffer = lines.pop() ?? '';
-        
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
-            if (data === '[DONE]') {continue;}
-            
+            if (data === '[DONE]') { continue; }
+
             try {
-              const parsed = JSON.parse(data);
+              const parsed = JSON.parse(data) as { choices: Array<{ delta?: { content?: string } }> };
               const content = parsed.choices[0]?.delta?.content;
               if (content) {
                 yield content;
               }
-            } catch (e) {
+            } catch (_parseError: unknown) {
               // Skip invalid JSON
             }
           }
         }
       }
-    } catch (error: any) {
-      logger.error('[OpenAI] Stream error:', error, { file: 'openai-provider.ts' });
+    } catch (error: unknown) {
+      logger.error('[OpenAI] Stream error:', error instanceof Error ? error : new Error(String(error)), { file: 'openai-provider.ts' });
       throw error;
     }
   }
-  
+
   /**
    * Check if model is available
    */
@@ -202,20 +246,20 @@ export class OpenAIProvider implements ModelProvider {
           'Authorization': `Bearer ${apiKey}`,
         },
       });
-      
+
       return response.ok;
-    } catch (error) {
+    } catch (_error: unknown) {
       return false;
     }
   }
-  
+
   /**
    * Get model capabilities
    */
-  async getCapabilities(model: ModelName): Promise<any> {
-    return MODEL_CAPABILITIES[model];
+  getCapabilities(model: ModelName): Promise<ModelCapabilities> {
+    return Promise.resolve(MODEL_CAPABILITIES[model]);
   }
-  
+
   /**
    * Estimate cost
    */
@@ -226,30 +270,35 @@ export class OpenAIProvider implements ModelProvider {
       (completionTokens * capabilities.costPerOutputToken)
     );
   }
-  
+
   /**
    * Convert messages to OpenAI format
    */
-  private convertMessages(messages: ChatMessage[]): any[] {
+  private convertMessages(messages: ChatMessage[]): OpenAIMessage[] {
     return messages.map(msg => ({
       role: msg.role,
       content: msg.content,
       name: msg.name,
-      function_call: msg.functionCall,
+      function_call: msg.functionCall ? {
+        name: msg.functionCall.name,
+        arguments: typeof msg.functionCall.arguments === 'string'
+          ? msg.functionCall.arguments
+          : JSON.stringify(msg.functionCall.arguments),
+      } : undefined,
     }));
   }
-  
+
   /**
    * Convert functions to OpenAI format
    */
-  private convertFunctions(functions: AIFunction[]): any[] {
+  private convertFunctions(functions: AIFunction[]): OpenAIFunction[] {
     return functions.map(fn => ({
       name: fn.name,
       description: fn.description,
-      parameters: fn.parameters,
+      parameters: fn.parameters as Record<string, unknown>,
     }));
   }
-  
+
   /**
    * Map finish reason to standard format
    */
@@ -263,4 +312,3 @@ export class OpenAIProvider implements ModelProvider {
     }
   }
 }
-

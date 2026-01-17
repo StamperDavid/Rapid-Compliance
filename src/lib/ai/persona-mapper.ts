@@ -604,8 +604,8 @@ const ADMIN_PERSONA: IndustryPersona = {
 /**
  * Get persona configuration based on industry
  */
-export function getIndustryPersona(industry: IndustryType | string): IndustryPersona {
-  return INDUSTRY_PERSONAS[industry] || INDUSTRY_PERSONAS.custom;
+export function getIndustryPersona(industry: string): IndustryPersona {
+  return INDUSTRY_PERSONAS[industry] ?? INDUSTRY_PERSONAS.custom;
 }
 
 /**
@@ -621,7 +621,7 @@ export function getAdminPersona(): IndustryPersona {
 export function generateIntroduction(
   assistantName: string,
   ownerName: string | undefined,
-  industry: IndustryType | string,
+  industry: string,
   context: PersonaContext = 'client'
 ): string {
   const persona = context === 'admin' ? ADMIN_PERSONA : getIndustryPersona(industry);
@@ -636,7 +636,7 @@ export function generateIntroduction(
  */
 export function generateStatusOpener(
   assistantName: string,
-  industry: IndustryType | string,
+  industry: string,
   context: PersonaContext = 'client'
 ): string {
   const persona = context === 'admin' ? ADMIN_PERSONA : getIndustryPersona(industry);
@@ -652,7 +652,7 @@ export function generateStatusOpener(
 export function buildPersonaSystemPrompt(
   assistantName: string,
   ownerName: string | undefined,
-  industry: IndustryType | string,
+  industry: string,
   context: PersonaContext = 'client'
 ): string {
   const persona = context === 'admin' ? ADMIN_PERSONA : getIndustryPersona(industry);
@@ -697,7 +697,7 @@ export function buildPersonaSystemPrompt(
  * Get specialist invocation triggers for the industry
  */
 export function getIndustrySpecialistTriggers(
-  industry: IndustryType | string,
+  industry: string,
   context: PersonaContext = 'client'
 ): SpecialistTrigger[] {
   const persona = context === 'admin' ? ADMIN_PERSONA : getIndustryPersona(industry);
@@ -709,7 +709,7 @@ export function getIndustrySpecialistTriggers(
  */
 export function matchSpecialistTrigger(
   input: string,
-  industry: IndustryType | string,
+  industry: string,
   context: PersonaContext = 'client'
 ): string | null {
   const triggers = getIndustrySpecialistTriggers(industry, context);
@@ -726,7 +726,7 @@ export function matchSpecialistTrigger(
   return null;
 }
 
-export default {
+const personaMapper = {
   getIndustryPersona,
   getAdminPersona,
   generateIntroduction,
@@ -735,3 +735,5 @@ export default {
   getIndustrySpecialistTriggers,
   matchSpecialistTrigger,
 };
+
+export default personaMapper;

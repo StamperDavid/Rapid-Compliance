@@ -9,9 +9,8 @@ import type {
   ModelName,
   ChatRequest,
   ChatResponse,
-  IntelligentResponse,
+  ModelCapabilities,
 } from '@/types/ai-models';
-import { OpenRouterProvider, getAIProvider } from './openrouter-provider'
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -38,7 +37,7 @@ export interface ModelProvider {
   /**
    * Get model capabilities
    */
-  getCapabilities(model: ModelName): Promise<any>;
+  getCapabilities(model: ModelName): Promise<ModelCapabilities>;
   
   /**
    * Estimate cost for a request
