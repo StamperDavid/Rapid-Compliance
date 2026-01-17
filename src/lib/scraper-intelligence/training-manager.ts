@@ -218,7 +218,7 @@ export async function submitFeedback(params: {
 
     // Process feedback into training data (async, don't block)
     processFeedbackAsync(feedback).catch((error) => {
-      logger.error('Failed to process feedback into training data', error, {
+      logger.error('Failed to process feedback into training data', error instanceof Error ? error : new Error(String(error)), {
         feedbackId,
         organizationId,
       });
@@ -238,7 +238,7 @@ export async function submitFeedback(params: {
       throw error;
     }
 
-    logger.error('Failed to submit feedback', error, {
+    logger.error('Failed to submit feedback', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       userId,
     });
@@ -395,7 +395,7 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
       processedAt: now,
     });
   } catch (error) {
-    logger.error('Error processing feedback', error, {
+    logger.error('Error processing feedback', error instanceof Error ? error : new Error(String(error)), {
       feedbackId: feedback.id,
       organizationId: feedback.organizationId,
     });
@@ -479,7 +479,7 @@ export async function getTrainingData(
 
     return docs.docs.map((doc) => toTrainingData(doc.data()));
   } catch (error) {
-    logger.error('Failed to get training data', error, {
+    logger.error('Failed to get training data', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       signalId,
     });
@@ -515,7 +515,7 @@ export async function getAllTrainingData(
 
     return docs.docs.map((doc) => toTrainingData(doc.data()));
   } catch (error) {
-    logger.error('Failed to get all training data', error, {
+    logger.error('Failed to get all training data', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     throw new TrainingManagerError(
@@ -602,7 +602,7 @@ export async function deactivateTrainingData(
       throw error;
     }
 
-    logger.error('Failed to deactivate training data', error, {
+    logger.error('Failed to deactivate training data', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
       organizationId,
     });
@@ -690,7 +690,7 @@ export async function activateTrainingData(
       throw error;
     }
 
-    logger.error('Failed to activate training data', error, {
+    logger.error('Failed to activate training data', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
       organizationId,
     });
@@ -778,7 +778,7 @@ export async function getTrainingHistory(
       } as TrainingHistory;
     });
   } catch (error) {
-    logger.error('Failed to get training history', error, {
+    logger.error('Failed to get training history', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
       organizationId,
     });
@@ -893,7 +893,7 @@ export async function rollbackTrainingData(
       throw error;
     }
 
-    logger.error('Failed to rollback training data', error, {
+    logger.error('Failed to rollback training data', error instanceof Error ? error : new Error(String(error)), {
       trainingDataId,
       targetVersion,
       organizationId,
@@ -938,7 +938,7 @@ export async function getFeedbackForScrape(
       } as ClientFeedback;
     });
   } catch (error) {
-    logger.error('Failed to get feedback for scrape', error, {
+    logger.error('Failed to get feedback for scrape', error instanceof Error ? error : new Error(String(error)), {
       sourceScrapeId,
       organizationId,
     });
@@ -979,7 +979,7 @@ export async function getUnprocessedFeedback(
       } as ClientFeedback;
     });
   } catch (error) {
-    logger.error('Failed to get unprocessed feedback', error, {
+    logger.error('Failed to get unprocessed feedback', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     throw new TrainingManagerError(
@@ -1063,7 +1063,7 @@ export async function getTrainingAnalytics(organizationId: string): Promise<{
       feedbackByType: feedbackByType as Record<FeedbackType, number>,
     };
   } catch (error) {
-    logger.error('Failed to get training analytics', error, {
+    logger.error('Failed to get training analytics', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     throw new TrainingManagerError(

@@ -100,13 +100,13 @@ export async function getLeads(
       workspaceId,
       count: result.data.length,
       hasMore: result.hasMore,
-      filters,
+      filters: filters ? JSON.stringify(filters) : undefined,
     });
 
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get leads', error instanceof Error ? error : undefined, { organizationId, workspaceId, filters });
+    logger.error('Failed to get leads', error instanceof Error ? error : undefined, { organizationId, workspaceId, filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve leads: ${errorMessage}`);
   }
 }
@@ -163,8 +163,8 @@ export async function createLead(
           companyName: data.company,
         }, organizationId);
 
-        if (enrichmentResponse.success) {
-          enrichmentData = enrichmentResponse.data as EnrichmentData;
+        if (enrichmentResponse.success && enrichmentResponse.data) {
+          enrichmentData = enrichmentResponse.data as unknown as EnrichmentData;
           enrichedScore = calculateEnrichedScore({ ...data, score: enrichedScore } as Lead, enrichmentData);
 
           logger.info('Lead auto-enriched on creation', {
@@ -174,7 +174,7 @@ export async function createLead(
         }
       } catch (enrichError) {
         // Don't fail lead creation if enrichment fails
-        logger.warn('Auto-enrichment failed, continuing with lead creation', enrichError as Error);
+        logger.warn('Auto-enrichment failed, continuing with lead creation', { error: enrichError instanceof Error ? enrichError.message : String(enrichError) });
       }
     }
 
@@ -218,15 +218,15 @@ export async function createLead(
         userName: 'System',
       });
     } catch (activityError) {
-      logger.warn('Failed to log lead creation activity', activityError as Error);
+      logger.warn('Failed to log lead creation activity', { error: activityError instanceof Error ? activityError.message : String(activityError) });
     }
 
     // Fire CRM event for workflow triggers
     try {
       const { fireLeadCreated } = await import('./event-triggers');
-      await fireLeadCreated(organizationId, workspaceId, leadId, lead);
+      await fireLeadCreated(organizationId, workspaceId, leadId, { ...lead } as Record<string, unknown>);
     } catch (triggerError) {
-      logger.warn('Failed to fire lead created event', triggerError as Error);
+      logger.warn('Failed to fire lead created event', { error: triggerError instanceof Error ? triggerError.message : String(triggerError) });
     }
 
     logger.info('Lead created', {
@@ -240,7 +240,7 @@ export async function createLead(
     return lead;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to create lead', error instanceof Error ? error : undefined, { organizationId, data });
+    logger.error('Failed to create lead', error instanceof Error ? error : undefined, { organizationId, dataKeys: Object.keys(data).join(',') });
     throw new Error(`Failed to create lead: ${errorMessage}`);
   }
 }
@@ -295,7 +295,7 @@ export async function updateLead(
           leadId,
           currentLead.status,
           updates.status,
-          lead
+          { ...lead } as Record<string, unknown>
         );
       }
 
@@ -306,17 +306,17 @@ export async function updateLead(
           leadId,
           currentLead.score ?? 0,
           updates.score,
-          lead
+          { ...lead } as Record<string, unknown>
         );
       }
     } catch (triggerError) {
-      logger.warn('Failed to fire lead update events', triggerError as Error);
+      logger.warn('Failed to fire lead update events', { error: triggerError instanceof Error ? triggerError.message : String(triggerError) });
     }
 
     return lead;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to update lead', error instanceof Error ? error : undefined, { organizationId, leadId, updates });
+    logger.error('Failed to update lead', error instanceof Error ? error : undefined, { organizationId, leadId, updatedFields: Object.keys(updates).join(',') });
     throw new Error(`Failed to update lead: ${errorMessage}`);
   }
 }
@@ -368,8 +368,8 @@ export async function enrichLead(
         companyName: lead.company,
       }, organizationId);
 
-      if (enrichmentResponse.success) {
-        enrichmentData = enrichmentResponse.data as EnrichmentData;
+      if (enrichmentResponse.success && enrichmentResponse.data) {
+        enrichmentData = enrichmentResponse.data as unknown as EnrichmentData;
       }
     }
 
@@ -444,7 +444,7 @@ export async function bulkUpdateLeads(
         await updateLead(organizationId, leadId, updates, workspaceId);
         successCount++;
       } catch (error) {
-        logger.warn('Failed to update lead in bulk operation', { leadId, error });
+        logger.warn('Failed to update lead in bulk operation', { leadId, error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -458,7 +458,7 @@ export async function bulkUpdateLeads(
     return successCount;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Bulk lead update failed', error instanceof Error ? error : undefined, { organizationId, leadIds });
+    logger.error('Bulk lead update failed', error instanceof Error ? error : undefined, { organizationId, leadCount: leadIds.length });
     throw new Error(`Bulk update failed: ${errorMessage}`);
   }
 }
