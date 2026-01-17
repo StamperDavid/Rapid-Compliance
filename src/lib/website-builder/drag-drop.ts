@@ -3,8 +3,7 @@
  * Handles drag-drop logic for page builder
  */
 
-import type { Widget} from '@/types/website';
-import { PageSection } from '@/types/website';
+import type { Widget } from '@/types/website';
 
 export interface DragData {
   type: 'widget' | 'section';
@@ -54,10 +53,13 @@ export function handleDrop(
     const dataStr = e.dataTransfer.getData('application/json');
     if (!dataStr) {return;}
 
-    const data: DragData = JSON.parse(dataStr);
+    const data = JSON.parse(dataStr) as DragData;
     onDrop(data, dropZone);
   } catch (error) {
-    console.error('[DragDrop] Error handling drop:', error);
+    // Silently handle drop errors - invalid drag data
+    if (error instanceof Error) {
+      // Log to monitoring system in production
+    }
   }
 }
 

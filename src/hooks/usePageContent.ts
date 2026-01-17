@@ -6,14 +6,14 @@ import { logger } from '@/lib/logger/logger';
 interface WidgetElement {
   id: string;
   type: string;
-  content?: any;
+  content?: Record<string, unknown>;
   children?: WidgetElement[];
   styles?: {
     desktop?: Record<string, string>;
     tablet?: Record<string, string>;
     mobile?: Record<string, string>;
   };
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }
 
 interface PageSection {
@@ -47,8 +47,8 @@ export function usePageContent(pageId: string) {
       try {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
         const config = await FirestoreService.get('platform/website', 'editor-config');
-        
-        if (config?.pages) {
+
+        if (config && typeof config === 'object' && 'pages' in config && Array.isArray(config.pages)) {
           const foundPage = config.pages.find((p: PageContent) => p.id === pageId);
           if (foundPage) {
             setPage(foundPage);
@@ -61,17 +61,8 @@ export function usePageContent(pageId: string) {
       }
     };
 
-    loadPage();
+    void loadPage();
   }, [pageId]);
 
   return { page, loading };
 }
-
-
-
-
-
-
-
-
-

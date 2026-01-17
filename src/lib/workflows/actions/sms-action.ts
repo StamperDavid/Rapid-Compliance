@@ -3,7 +3,7 @@
  * Executes SMS actions in workflows
  */
 
-import { sendSMS, SMSOptions } from '@/lib/sms/sms-service';
+import { sendSMS } from '@/lib/sms/sms-service';
 import type { SendSMSAction } from '@/types/workflow';
 
 /**
@@ -11,13 +11,13 @@ import type { SendSMSAction } from '@/types/workflow';
  */
 export async function executeSMSAction(
   action: SendSMSAction,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   organizationId: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   // Resolve variables
-  const to = resolveVariables(action.to, triggerData);
-  const message = resolveVariables(action.message, triggerData);
-  
+  const to = resolveVariables(action.to, triggerData) as string;
+  const message = resolveVariables(action.message, triggerData) as string;
+
   // Send SMS
   const result = await sendSMS({
     to,
@@ -39,18 +39,19 @@ export async function executeSMSAction(
 /**
  * Resolve variables in config
  */
-function resolveVariables(config: any, triggerData: any): any {
+function resolveVariables(config: unknown, triggerData: Record<string, unknown>): unknown {
   if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      const value = getNestedValue(triggerData, path.trim());
+    return config.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
+      const trimmedPath = typeof path === 'string' ? path.trim() : String(path);
+      const value = getNestedValue(triggerData, trimmedPath);
       return value !== undefined ? String(value) : match;
     });
   } else if (Array.isArray(config)) {
     return config.map(item => resolveVariables(item, triggerData));
   } else if (config && typeof config === 'object') {
-    const resolved: any = {};
-    for (const key in config) {
-      resolved[key] = resolveVariables(config[key], triggerData);
+    const resolved: Record<string, unknown> = {};
+    for (const key in config as Record<string, unknown>) {
+      resolved[key] = resolveVariables((config as Record<string, unknown>)[key], triggerData);
     }
     return resolved;
   }
@@ -60,7 +61,12 @@ function resolveVariables(config: any, triggerData: any): any {
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current && typeof current === 'object' && key in current) {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 

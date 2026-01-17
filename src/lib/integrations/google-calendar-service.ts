@@ -105,9 +105,14 @@ export async function getTokensFromCode(code: string): Promise<{
   const { tokens } = await oauth2Client.getToken(code);
   
   logger.info('[Google OAuth] Tokens received successfully', { file: 'google-calendar-service.ts' });
-  
+
+
+  if (!tokens.access_token) {
+    throw new Error('Failed to obtain access token from Google');
+  }
+
   return {
-    access_token: tokens.access_token!,
+    access_token: tokens.access_token,
     refresh_token: tokens.refresh_token ?? undefined,
     expiry_date: tokens.expiry_date ?? undefined,
   };
@@ -116,15 +121,22 @@ export async function getTokensFromCode(code: string): Promise<{
 /**
  * List calendars
  */
+interface CalendarListItem {
+  id?: string;
+  summary?: string;
+  description?: string;
+  primary?: boolean;
+}
+
 export async function listCalendars(tokens: {
   access_token: string;
   refresh_token?: string;
-}): Promise<any[]> {
+}): Promise<CalendarListItem[]> {
   const auth = createOAuth2Client(tokens);
   const calendar = google.calendar({ version: 'v3', auth });
 
   const response = await calendar.calendarList.list();
-  return response.data.items ?? [];
+  return (response.data.items ?? []) as CalendarListItem[];
 }
 
 /**
@@ -150,11 +162,16 @@ export async function getFreeBusy(
   });
 
   const busyTimes = response.data.calendars?.[calendarId]?.busy ?? [];
-  
+
+  interface BusySlot {
+    start?: string;
+    end?: string;
+  }
+
   return {
-    busy: busyTimes.map((slot: any) => ({
-      start: slot.start,
-      end: slot.end,
+    busy: busyTimes.map((slot: BusySlot) => ({
+      start: slot.start ?? '',
+      end: slot.end ?? '',
     })),
   };
 }
@@ -196,9 +213,16 @@ export async function createEvent(
     sendUpdates: 'all', // Send invites to attendees
   });
 
+  if (!response.data.id) {
+    throw new Error('Failed to create event: no ID returned');
+  }
+  if (!response.data.htmlLink) {
+    throw new Error('Failed to create event: no htmlLink returned');
+  }
+
   return {
-    id: response.data.id!,
-    htmlLink: response.data.htmlLink!,
+    id: response.data.id,
+    htmlLink: response.data.htmlLink,
     hangoutLink: response.data.hangoutLink ?? undefined,
   };
 }
@@ -221,13 +245,20 @@ export async function updateEvent(
   const response = await calendar.events.patch({
     calendarId,
     eventId,
-    requestBody: updates as any,
+    requestBody: updates,
     sendUpdates: 'all',
   });
 
+  if (!response.data.id) {
+    throw new Error('Failed to update event: no ID returned');
+  }
+  if (!response.data.htmlLink) {
+    throw new Error('Failed to update event: no htmlLink returned');
+  }
+
   return {
-    id: response.data.id!,
-    htmlLink: response.data.htmlLink!,
+    id: response.data.id,
+    htmlLink: response.data.htmlLink,
   };
 }
 
@@ -266,7 +297,6 @@ export async function findAvailableSlots(
 ): Promise<{ start: Date; end: Date }[]> {
   const businessStart = options?.businessHoursStart ?? 9;
   const businessEnd = options?.businessHoursEnd ?? 17;
-  const timezone = options?.timezone ?? 'America/New_York';
 
   // Get busy times
   const { busy } = await getFreeBusy(tokens, calendarId, startDate, endDate);

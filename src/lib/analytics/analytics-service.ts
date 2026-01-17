@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { where, Timestamp } from 'firebase/firestore';
 import type {
   RevenueReport,
   PipelineReport,
@@ -50,7 +50,7 @@ export async function getRevenueReport(
   
   // Calculate breakdowns
   const revenueBySource = calculateRevenueBySource(deals, orders);
-  const revenueByProduct = await calculateRevenueByProduct(workspaceId, deals, orders);
+  const revenueByProduct = calculateRevenueByProduct(workspaceId, deals, orders);
   const revenueBySalesRep = calculateRevenueBySalesRep(deals);
   const trends = calculateRevenueTrends(deals, orders, period, startDate, endDate);
   
@@ -371,7 +371,7 @@ function calculateRevenueBySource(deals: DealRecord[], orders: OrderRecord[]): R
   }));
 }
 
-async function calculateRevenueByProduct(workspaceId: string, deals: DealRecord[], orders: OrderRecord[]): Promise<RevenueByProductItem[]> {
+function calculateRevenueByProduct(_workspaceId: string, deals: DealRecord[], orders: OrderRecord[]): RevenueByProductItem[] {
   const productMap = new Map<string, { revenue: number; units: number; name: string }>();
   
   // From deals (line items)
@@ -448,13 +448,6 @@ function calculateRevenueBySalesRep(deals: DealRecord[]): RevenueBySalesRepItem[
   }));
 }
 
-/** Revenue trend item - internal type with Date object */
-interface RevenueTrendItemInternal {
-  date: Date;
-  revenue: number;
-  deals: number;
-  averageDealSize: number;
-}
 
 function calculateRevenueTrends(
   deals: DealRecord[],
@@ -713,7 +706,7 @@ async function calculateConversionRates(workspaceId: string, organizationId: str
   return rates;
 }
 
-async function calculatePipelineTrends(workspaceId: string, organizationId: string, period: string): Promise<PipelineTrend[]> {
+async function calculatePipelineTrends(workspaceId: string, organizationId: string, _period: string): Promise<PipelineTrend[]> {
   // Get deals over time
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);

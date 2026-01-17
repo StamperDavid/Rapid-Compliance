@@ -4,18 +4,17 @@
  */
 
 import type { NextRequest, NextResponse } from 'next/server';
-import type { LogContext } from '../logger/logger';
-import { logger } from '../logger/logger';
+import { logger, type LogContext } from '../logger/logger';
 
 /**
  * Log API request and response
  */
-export async function logApiRequest(
+export function logApiRequest(
   request: NextRequest,
   response: NextResponse,
   startTime: number,
   context: LogContext = {}
-) {
+): void {
   const method = request.method;
   const path = new URL(request.url).pathname;
   const statusCode = response.status;

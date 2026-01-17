@@ -24,7 +24,7 @@ export async function calculateShipping(
   cart: Cart,
   address: Address,
   methodId?: string
-): Promise<ShippingCalculation> {
+): ShippingCalculation {
   // Get e-commerce config
   const ecommerceConfig = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
@@ -35,7 +35,7 @@ export async function calculateShipping(
     throw new Error('E-commerce not configured');
   }
   
-  const shippingConfig = (ecommerceConfig as any).shipping;
+  const shippingConfig = (ecommerceConfig as Record<string, unknown>).shipping as Record<string, unknown> | undefined;
   
   // If no shipping config, return default shipping
   if (!shippingConfig) {
@@ -89,11 +89,11 @@ export async function calculateShipping(
 /**
  * Calculate cost for specific shipping method
  */
-async function calculateMethodCost(
-  method: any,
+function calculateMethodCost(
+  method: Record<string, unknown>,
   cart: Cart,
   address: Address
-): Promise<ShippingCalculation> {
+): ShippingCalculation {
   switch (method.rateType) {
     case 'flat':
       return {
@@ -148,7 +148,7 @@ async function calculateMethodCost(
 /**
  * Estimate calculated shipping (placeholder for carrier API integration)
  */
-function estimateCalculatedShipping(method: any, cart: Cart, address: Address): number {
+function estimateCalculatedShipping(method: Record<string, unknown>, cart: Cart, _address: Address): number {
   // Simple estimation based on cart total
   // In production, use carrier APIs
   const baseRate = 5.00;

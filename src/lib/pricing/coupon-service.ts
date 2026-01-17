@@ -5,7 +5,7 @@
  * Platform-level and Merchant-level coupons.
  */
 
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, increment, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
 import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collections';
 import type {
   MerchantCoupon,
@@ -86,9 +86,10 @@ export class PlatformPricingService {
     const existingPlan = await getDoc(planRef);
 
     const now = new Date().toISOString();
+    const existingData = existingPlan.exists() ? (existingPlan.data() as PlatformPricingPlan) : undefined;
     const planData: PlatformPricingPlan = {
       ...plan,
-      created_at: existingPlan.exists() ? existingPlan.data()?.created_at : now,
+      created_at: existingData?.created_at ?? now,
       updated_at: now,
     };
 
@@ -245,8 +246,8 @@ export class CouponService {
       coupon_code: coupon.code,
       organization_id: organizationId,
       original_amount: originalAmount,
-      discount_amount: validation.discount_amount!,
-      final_amount: validation.final_amount!,
+      discount_amount: validation.discount_amount ?? 0,
+      final_amount: validation.final_amount ?? originalAmount,
       applied_by: 'user',
       redeemed_at: new Date().toISOString(),
     };
@@ -453,8 +454,8 @@ export class CouponService {
       organization_id: organizationId,
       customer_id: customerId,
       original_amount: purchaseAmount,
-      discount_amount: validation.discount_amount!,
-      final_amount: validation.final_amount!,
+      discount_amount: validation.discount_amount ?? 0,
+      final_amount: validation.final_amount ?? purchaseAmount,
       applied_by: appliedBy,
       agent_id: agentId,
       redeemed_at: new Date().toISOString(),
@@ -489,7 +490,7 @@ export class CouponService {
   static async isInternalAdminOrg(organizationId: string): Promise<boolean> {
     const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, organizationId);
     const orgSnap = await getDoc(orgRef);
-    const orgData = orgSnap.data() || {};
+    const orgData = orgSnap.data() ?? {};
     return orgData.is_internal_admin === true;
   }
 
@@ -559,7 +560,7 @@ export class CouponService {
     // Get organization's AI discount settings
     const orgRef = doc(this.db, COLLECTIONS.ORGANIZATIONS, organizationId);
     const orgSnap = await getDoc(orgRef);
-    const orgData = orgSnap.data() || {};
+    const orgData = orgSnap.data() ?? {};
 
     // Calculate max AI discount from available coupons (post-filter)
     const maxAiDiscountPercentage = Math.max(
@@ -569,14 +570,20 @@ export class CouponService {
       0
     );
 
+    const maxAiDiscount = (orgData.ai_max_discount_percentage as number | undefined) ?? maxAiDiscountPercentage;
+    const humanApprovalThreshold = (orgData.ai_human_approval_threshold as number | undefined) ?? 30;
+    const canStackDiscounts = (orgData.ai_can_stack_discounts as boolean | undefined) ?? false;
+    const autoOfferHesitation = (orgData.ai_auto_offer_hesitation as boolean | undefined) ?? true;
+    const autoOfferPriceObjection = (orgData.ai_auto_offer_price_objection as boolean | undefined) ?? true;
+
     return {
       organization_id: organizationId,
       available_coupons: availableCoupons,
-      max_ai_discount_percentage: orgData.ai_max_discount_percentage || maxAiDiscountPercentage,
-      require_human_approval_above: orgData.ai_human_approval_threshold || 30,
-      can_stack_discounts: orgData.ai_can_stack_discounts || false,
-      auto_offer_on_hesitation: orgData.ai_auto_offer_hesitation || true,
-      auto_offer_on_price_objection: orgData.ai_auto_offer_price_objection || true,
+      max_ai_discount_percentage: maxAiDiscount,
+      require_human_approval_above: humanApprovalThreshold,
+      can_stack_discounts: canStackDiscounts,
+      auto_offer_on_hesitation: autoOfferHesitation,
+      auto_offer_on_price_objection: autoOfferPriceObjection,
     };
   }
 
@@ -610,7 +617,7 @@ export class CouponService {
       requested_discount: requestedDiscount,
       coupon_code: couponCode,
       status: isAutoApproved ? 'auto_approved' : 'pending_approval',
-      customer_context: customerContext || {},
+      customer_context: customerContext ?? {},
       created_at: new Date().toISOString(),
       resolved_at: isAutoApproved ? new Date().toISOString() : undefined,
     };
@@ -797,7 +804,7 @@ export class CouponService {
     // Calculate top coupons
     const couponStats = new Map<string, { uses: number; revenue_impact: number }>();
     for (const redemption of redemptions) {
-      const current = couponStats.get(redemption.coupon_code) || { uses: 0, revenue_impact: 0 };
+      const current = couponStats.get(redemption.coupon_code) ?? { uses: 0, revenue_impact: 0 };
       couponStats.set(redemption.coupon_code, {
         uses: current.uses + 1,
         revenue_impact: current.revenue_impact + redemption.discount_amount,

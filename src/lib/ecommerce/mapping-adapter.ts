@@ -49,7 +49,7 @@ export async function adaptEcommerceMappings(
     switch (event.changeType) {
       case 'field_renamed':
       case 'field_key_changed':
-        updated = await handleFieldRename(
+        updated = handleFieldRename(
           mappings,
 event.oldFieldKey ?? event.oldFieldName ?? '',
 event.newFieldKey ?? event.newFieldName ?? ''
@@ -102,11 +102,11 @@ event.oldFieldKey ?? event.oldFieldName ?? '',
 /**
  * Handle field rename in mappings
  */
-async function handleFieldRename(
+function handleFieldRename(
   mappings: ProductFieldMappings,
   oldFieldKey: string,
   newFieldKey: string
-): Promise<boolean> {
+): boolean {
   let updated = false;
   
   // Check each mapping field
@@ -128,7 +128,7 @@ async function handleFieldRename(
   
   for (const field of mappingFields) {
     if (mappings[field] === oldFieldKey) {
-      (mappings as any)[field] = newFieldKey;
+      (mappings as Record<string, string>)[field] = newFieldKey;
       updated = true;
       
       logger.info('[E-Commerce Adapter] Updated mapping', {
@@ -162,7 +162,7 @@ async function handleFieldDeletion(
   organizationId: string,
   workspaceId: string,
   schemaId: string
-): Promise<boolean> {
+): boolean {
   let updated = false;
   
   // Get schema for field resolution
@@ -200,7 +200,7 @@ async function handleFieldDeletion(
       });
       
       if (resolved && resolved.confidence >= 0.5) {
-        (mappings as any)[mappingKey] = resolved.fieldKey;
+        (mappings as Record<string, string>)[mappingKey] = resolved.fieldKey;
         updated = true;
         
         logger.info('[E-Commerce Adapter] Found replacement field', {
@@ -354,7 +354,7 @@ export async function autoConfigureEcommerceMappings(
       });
       
       if (resolved && resolved.confidence >= 0.5) {
-        (mappings as any)[mappingKey] = resolved.fieldKey;
+        (mappings as Record<string, string>)[mappingKey] = resolved.fieldKey;
         
         logger.info('[E-Commerce Adapter] Auto-configured mapping', {
           file: 'mapping-adapter.ts',
@@ -378,12 +378,12 @@ export async function autoConfigureEcommerceMappings(
 /**
  * Get e-commerce field value with mapping resolution
  */
-export async function getEcommerceFieldValue(
+export function getEcommerceFieldValue(
   product: any,
   mappingKey: keyof ProductFieldMappings,
   config: EcommerceConfig,
-  schema?: any
-): Promise<any> {
+  schema?: unknown
+): unknown {
   const fieldKey = config.productMappings[mappingKey];
   
   if (!fieldKey) {

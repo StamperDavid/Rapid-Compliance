@@ -10,7 +10,7 @@ export class APIError extends Error {
     message: string,
     public statusCode: number = 500,
     public code?: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'APIError';
@@ -20,7 +20,7 @@ export class APIError extends Error {
 /**
  * Handle API errors and return appropriate NextResponse
  */
-export function handleAPIError(error: any, context?: string): NextResponse {
+export function handleAPIError(error: unknown, context?: string): NextResponse {
   console.error(`[API Error${context ? ` - ${context}` : ''}]:`, error);
 
   // Handle known API errors
@@ -36,7 +36,7 @@ export function handleAPIError(error: any, context?: string): NextResponse {
   }
 
   // Handle Firebase errors
-  if (error.code) {
+  if (isFirebaseError(error)) {
     const firebaseError = handleFirebaseError(error);
     return NextResponse.json(
       {
@@ -51,21 +51,38 @@ export function handleAPIError(error: any, context?: string): NextResponse {
   return NextResponse.json(
     {
       error: 'An unexpected error occurred',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      details: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : undefined,
     },
     { status: 500 }
+  );
+}
+
+interface FirebaseError {
+  code: string;
+  message?: string;
+}
+
+/**
+ * Type guard to check if error is a Firebase error
+ */
+function isFirebaseError(error: unknown): error is FirebaseError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as FirebaseError).code === 'string'
   );
 }
 
 /**
  * Handle Firebase-specific errors
  */
-function handleFirebaseError(error: any): {
+function handleFirebaseError(error: FirebaseError): {
   message: string;
   code: string;
   statusCode: number;
 } {
-  const code =(error.code !== '' && error.code != null) ? error.code : 'unknown';
+  const code = error.code !== '' && error.code != null ? error.code : 'unknown';
 
   // Map Firebase error codes to HTTP status codes and messages
   const errorMap: Record<string, { message: string; statusCode: number }> = {
@@ -108,7 +125,7 @@ function handleFirebaseError(error: any): {
   };
 
   const mappedError = errorMap[code] || {
-    message:(error.message !== '' && error.message != null) ? error.message : 'An error occurred',
+    message: error.message !== '' && error.message != null ? error.message : 'An error occurred',
     statusCode: 500,
   };
 
@@ -122,7 +139,7 @@ function handleFirebaseError(error: any): {
  * Validate required parameters
  */
 export function validateParams(
-  params: Record<string, any>,
+  params: Record<string, unknown>,
   required: string[]
 ): void {
   const missing = required.filter(key => !params[key]);
@@ -140,7 +157,7 @@ export function validateParams(
 /**
  * Validate organizationId is present
  */
-export function validateOrgId(organizationId: any): string {
+export function validateOrgId(organizationId: unknown): string {
   if (!organizationId || typeof organizationId !== 'string') {
     throw new APIError(
       'organizationId is required and must be a string',
@@ -179,7 +196,7 @@ export function verifyOrgOwnership(
  * Success response helper
  */
 export function successResponse(
-  data: any,
+  data: Record<string, unknown>,
   message?: string,
   statusCode: number = 200
 ): NextResponse {
@@ -200,7 +217,7 @@ export function errorResponse(
   message: string,
   statusCode: number = 400,
   code?: string,
-  details?: any
+  details?: unknown
 ): NextResponse {
   return NextResponse.json(
     {
@@ -217,10 +234,10 @@ export function errorResponse(
  * Wrap async route handlers with error handling
  */
 export function withErrorHandler(
-  handler: (request: any, context?: any) => Promise<NextResponse>,
+  handler: (request: Request, context?: Record<string, unknown>) => Promise<NextResponse>,
   context?: string
 ) {
-  return async (request: any, contextParam?: any): Promise<NextResponse> => {
+  return async (request: Request, contextParam?: Record<string, unknown>): Promise<NextResponse> => {
     try {
       return await handler(request, contextParam);
     } catch (error) {

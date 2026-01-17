@@ -19,20 +19,19 @@ import type {
   WithFieldValue,
   DocumentData,
   UpdateData} from 'firebase/firestore';
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  setDoc, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  updateDoc,
   deleteDoc,
   getDoc,
   getDocs,
-  query,
-  where
+  query
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { COLLECTIONS, getCollection, getOrgSubCollection } from './collections';
+import { COLLECTIONS, getOrgSubCollection } from './collections';
 import { logger } from '@/lib/logger/logger';
 
 interface WriteOptions {
@@ -279,38 +278,38 @@ export class FirestoreDAL {
   /**
    * Safe getDoc with logging
    */
-  async safeGetDoc<T extends DocumentData>(
+  async safeGetDoc(
     collectionName: keyof typeof COLLECTIONS,
     docId: string
   ) {
     const collectionRef = COLLECTIONS[collectionName];
     const docRef = doc(this.db, collectionRef, docId);
-    
+
     logger.debug('📖 Reading from Firestore', {
       collection: collectionRef,
       docId,
       file: 'dal.ts'
     });
-    
+
     return getDoc(docRef);
   }
   
   /**
    * Safe getDocs with query support
    */
-  async safeGetDocs<T extends DocumentData>(
+  async safeGetDocs(
     collectionName: keyof typeof COLLECTIONS,
     ...queryConstraints: QueryConstraint[]
   ) {
     const collectionRef = COLLECTIONS[collectionName];
     const colRef = collection(this.db, collectionRef);
-    
+
     logger.debug('📚 Querying Firestore', {
       collection: collectionRef,
       constraints: queryConstraints.length,
       file: 'dal.ts'
     });
-    
+
     const q = query(colRef, ...queryConstraints);
     return getDocs(q);
   }
@@ -323,13 +322,13 @@ export class FirestoreDAL {
    * Log an audit trail entry
    * In a production system, this would write to an audit log collection
    */
-  private async logAudit(
+  private logAudit(
     action: 'CREATE' | 'UPDATE' | 'DELETE',
     collection: string,
     docId: string,
-    data: any,
+    data: Record<string, unknown>,
     userId?: string
-  ): Promise<void> {
+  ): void {
     const auditEntry = {
       action,
       collection,
@@ -340,9 +339,9 @@ export class FirestoreDAL {
       // Only log data preview for sensitive operations
       dataPreview: action === 'DELETE' ? null : Object.keys(data).join(', ')
     };
-    
+
     logger.info('📋 Audit Log', auditEntry);
-    
+
     // TODO: Implement actual audit log storage
     // await addDoc(collection(this.db, COLLECTIONS.AUDIT_LOGS), auditEntry);
   }
@@ -355,15 +354,15 @@ export class FirestoreDAL {
    * Verify that a user has access to an organization
    * This will be implemented as part of the security enhancement
    */
-  private async verifyOrgAccess(
-    userId: string | undefined,
-    organizationId: string
-  ): Promise<void> {
+  private verifyOrgAccess(
+    _userId: string | undefined,
+    _organizationId: string
+  ): void {
     // TODO: Implement organization-scoped access control
     // For now, just log the check
     logger.debug('🔒 Verifying org access', {
-      userId,
-      organizationId,
+      userId: _userId,
+      organizationId: _organizationId,
       file: 'dal.ts'
     });
   }
@@ -377,7 +376,11 @@ export class FirestoreDAL {
  * Singleton DAL instance
  * Import this in your services: import { dal } from '@/lib/firebase/dal'
  */
-export const dal = new FirestoreDAL(db!);
+// Type guard to ensure db is not null
+if (!db) {
+  throw new Error('Firestore instance is not initialized. Check Firebase configuration.');
+}
+export const dal = new FirestoreDAL(db);
 
 /**
  * Export the class for custom instances if needed

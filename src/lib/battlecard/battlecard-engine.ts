@@ -28,7 +28,6 @@ import { logger } from '@/lib/logger/logger';
 import { discoverCompany, type DiscoveredCompany } from '@/lib/services/discovery-engine';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { Timestamp } from 'firebase/firestore';
 
 // ============================================================================
 // TYPES
@@ -513,7 +512,7 @@ IMPORTANT:
       const content = response.text;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const intel = JSON.parse(jsonMatch[0]);
+        const intel = JSON.parse(jsonMatch[0]) as Partial<CompetitorProfile>;
         logger.info('Competitive intelligence extracted', {
           domain: company.domain,
           featuresFound: intel.productOffering?.keyFeatures?.length ?? 0,
@@ -601,7 +600,7 @@ export async function generateBattlecard(
       const content = response.text;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        battlecardData = JSON.parse(jsonMatch[0]);
+        battlecardData = JSON.parse(jsonMatch[0]) as Partial<Battlecard>;
       } else {
         throw new Error('No JSON found in LLM response');
       }
@@ -950,7 +949,9 @@ export async function discoverCompetitorsBatch(
     }
 
     if (i + concurrency < domains.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), delayMs);
+      });
     }
   }
 

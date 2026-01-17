@@ -11,6 +11,12 @@ import { auth } from '@/lib/firebase/config';
 import { ADMIN_ROLE_PERMISSIONS, type AdminRole, type AdminUser, type AdminPermissions } from '@/types/admin'
 import { logger } from '@/lib/logger/logger';
 
+interface AdminVerifyResponse {
+  email?: string;
+  name?: string;
+  role?: string;
+}
+
 export function useAdminAuth() {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,58 +28,65 @@ export function useAdminAuth() {
     }
 
     // Listen to Firebase auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          // Get the ID token
-          const token = await firebaseUser.getIdToken();
-          
-          // Verify admin status via API
-          const response = await fetch('/api/admin/verify', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            const userData = await response.json();
-            
-            // Create admin user session
-            const adminUserData: AdminUser = {
-              id: firebaseUser.uid,
-              email:firebaseUser.email ?? userData.email,
-              displayName:(userData.name || firebaseUser.displayName !== '' && userData.name || firebaseUser.displayName != null) ? userData.name ?? firebaseUser.displayName: 'Admin User',
-              role: userData.role as AdminRole,
-              permissions: ADMIN_ROLE_PERMISSIONS[userData.role as AdminRole] || ADMIN_ROLE_PERMISSIONS.admin,
-              createdAt: new Date() as any,
-              updatedAt: new Date() as any,
-              status: 'active',
-              mfaEnabled: false,
-            };
-            
-            logger.info('✅ Admin authenticated', { 
-              email: adminUserData.email, 
-              role: adminUserData.role,
-              file: 'useAdminAuth.ts' 
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      void (async () => {
+        if (firebaseUser) {
+          try {
+            // Get the ID token
+            const token = await firebaseUser.getIdToken();
+
+            // Verify admin status via API
+            const response = await fetch('/api/admin/verify', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
             });
-            setAdminUser(adminUserData);
-          } else {
-            // User is logged in to Firebase but not an admin
-            logger.info('❌ User is not an admin', { file: 'useAdminAuth.ts' });
+
+            if (response.ok) {
+              const userData = await response.json() as AdminVerifyResponse;
+
+              // Type guard for role
+              const userRole = (userData.role && typeof userData.role === 'string')
+                ? userData.role as AdminRole
+                : 'admin' as AdminRole;
+
+              // Create admin user session
+              const adminUserData: AdminUser = {
+                id: firebaseUser.uid,
+                email: firebaseUser.email ?? userData.email ?? '',
+                displayName: (userData.name || firebaseUser.displayName !== '' && userData.name || firebaseUser.displayName != null) ? userData.name ?? firebaseUser.displayName ?? 'Admin User' : 'Admin User',
+                role: userRole,
+                permissions: ADMIN_ROLE_PERMISSIONS[userRole] || ADMIN_ROLE_PERMISSIONS.admin,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                status: 'active',
+                mfaEnabled: false,
+              };
+
+              logger.info('✅ Admin authenticated', {
+                email: adminUserData.email,
+                role: adminUserData.role,
+                file: 'useAdminAuth.ts'
+              });
+              setAdminUser(adminUserData);
+            } else {
+              // User is logged in to Firebase but not an admin
+              logger.info('❌ User is not an admin', { file: 'useAdminAuth.ts' });
+              setAdminUser(null);
+            }
+          } catch (error) {
+            logger.error('Error verifying admin status:', error, { file: 'useAdminAuth.ts' });
             setAdminUser(null);
           }
-        } catch (error) {
-          logger.error('Error verifying admin status:', error, { file: 'useAdminAuth.ts' });
+        } else {
+          // No Firebase user logged in
+          logger.info('📊 No Firebase user logged in', { file: 'useAdminAuth.ts' });
           setAdminUser(null);
         }
-      } else {
-        // No Firebase user logged in
-        logger.info('📊 No Firebase user logged in', { file: 'useAdminAuth.ts' });
-        setAdminUser(null);
-      }
-      setLoading(false);
+        setLoading(false);
+      })();
     });
 
     return () => unsubscribe();

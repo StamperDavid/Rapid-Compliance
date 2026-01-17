@@ -11,6 +11,62 @@ import { processPayment } from './payment-service';
 import { calculateShipping } from './shipping-service';
 import { calculateTax } from './tax-service';
 
+interface ShippingInfo {
+  cost: number;
+  methodId: string;
+  methodName: string;
+  carrier?: string;
+  service?: string;
+  estimatedDelivery?: string;
+}
+
+interface TaxInfo {
+  amount: number;
+  rate: number;
+}
+
+interface PaymentResultInfo {
+  success: boolean;
+  transactionId?: string;
+  provider?: string;
+  cardLast4?: string;
+  cardBrand?: string;
+  processingFee?: number;
+  error?: string;
+}
+
+interface EcommerceConfig {
+  productSchema: string;
+  productMappings: Record<string, string>;
+  inventory?: { trackInventory: boolean; inventoryField: string };
+  integration?: {
+    createCustomerEntity: boolean;
+    customerSchema: string;
+    createOrderEntity: boolean;
+    orderSchema: string;
+    triggerWorkflows: boolean;
+  };
+  notifications?: {
+    customer?: {
+      orderConfirmation?: {
+        enabled: boolean;
+        subject: string;
+        body: string;
+        fromEmail: string;
+        fromName: string;
+      };
+    };
+  };
+}
+
+function serializeTimestamp(value: unknown): string {
+  if (typeof value === 'object' && value !== null && 'toDate' in value) {
+    return (value as { toDate: () => Date }).toDate().toISOString();
+  }
+  if (typeof value === 'string') {return value;}
+  return new Date().toISOString();
+}
+
 export interface CheckoutData {
   cartId: string;
   organizationId: string;
@@ -135,9 +191,9 @@ async function validateCart(cart: Cart): Promise<void> {
 async function createOrder(
   cart: Cart,
   checkoutData: CheckoutData,
-  shipping: any,
-  tax: any,
-  paymentResult: any
+  shipping: ShippingInfo,
+  tax: TaxInfo,
+  paymentResult: PaymentResultInfo
 ): Promise<Order> {
   const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const orderNumber = generateOrderNumber(checkoutData.workspaceId);
@@ -164,7 +220,7 @@ async function createOrder(
   
   // Build payment info
   const payment: OrderPayment = {
-    method: checkoutData.paymentMethod as any,
+    method: checkoutData.paymentMethod as OrderPayment["method"],
     provider: paymentResult.provider,
     transactionId: paymentResult.transactionId,
     status: 'captured',
@@ -254,7 +310,7 @@ async function createOrder(
 /**
  * Generate order number
  */
-function generateOrderNumber(workspaceId: string): string {
+function generateOrderNumber(_workspaceId: string): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substr(2, 4).toUpperCase();
   return `ORD-${timestamp}-${random}`;
@@ -263,7 +319,7 @@ function generateOrderNumber(workspaceId: string): string {
 /**
  * Get product (helper)
  */
-async function getProduct(workspaceId: string, organizationId: string, productId: string): Promise<any> {
+async function getProduct(workspaceId: string, organizationId: string, productId: string): Promise<Record<string, unknown> | null> {
   // Similar to cart-service implementation
   const ecommerceConfig = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
@@ -274,7 +330,7 @@ async function getProduct(workspaceId: string, organizationId: string, productId
     throw new Error('E-commerce not configured');
   }
   
-  const productSchema = (ecommerceConfig as any).productSchema;
+  const productSchema = (ecommerceConfig as unknown as EcommerceConfig).productSchema;
   const product = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/${productSchema}/records`,
     productId
@@ -284,7 +340,7 @@ async function getProduct(workspaceId: string, organizationId: string, productId
     return null;
   }
   
-  const mappings = (ecommerceConfig as any).productMappings;
+  const mappings = (ecommerceConfig as unknown as EcommerceConfig).productMappings;
   return {
     id: product.id,
     name: product[mappings.name],
@@ -296,18 +352,18 @@ async function getProduct(workspaceId: string, organizationId: string, productId
 /**
  * Update inventory
  */
-async function updateInventory(workspaceId: string, organizationId: string, items: any[]): Promise<void> {
+async function updateInventory(workspaceId: string, organizationId: string, items: Array<{ productId: string; quantity: number }>): Promise<void> {
   const ecommerceConfig = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   
-  if (!ecommerceConfig || !(ecommerceConfig as any).inventory?.trackInventory) {
+  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).inventory?.trackInventory) {
     return; // Inventory tracking disabled
   }
   
-  const productSchema = (ecommerceConfig as any).productSchema;
-  const inventoryField = (ecommerceConfig as any).inventory.inventoryField;
+  const productSchema = (ecommerceConfig as unknown as EcommerceConfig).productSchema;
+  const inventoryField = (ecommerceConfig as unknown as EcommerceConfig).inventory.inventoryField;
   
   for (const item of items) {
     const product = await FirestoreService.get(
@@ -332,17 +388,17 @@ async function updateInventory(workspaceId: string, organizationId: string, item
 /**
  * Create customer entity
  */
-async function createCustomerEntity(workspaceId: string, organizationId: string, customer: any, orderId: string): Promise<void> {
+async function createCustomerEntity(workspaceId: string, organizationId: string, customer: { firstName: string; lastName: string; email: string; phone?: string }, orderId: string): Promise<void> {
   const ecommerceConfig = await FirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/ecommerce`,
     'config'
   );
   
-  if (!ecommerceConfig || !(ecommerceConfig as any).integration?.createCustomerEntity) {
+  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).integration?.createCustomerEntity) {
     return;
   }
   
-  const customerSchema =((ecommerceConfig as any).integration.customerSchema !== '' && (ecommerceConfig as any).integration.customerSchema != null) ? (ecommerceConfig as any).integration.customerSchema : 'contacts';
+  const customerSchema =((ecommerceConfig as unknown as EcommerceConfig).integration.customerSchema !== '' && (ecommerceConfig as unknown as EcommerceConfig).integration.customerSchema != null) ? (ecommerceConfig as unknown as EcommerceConfig).integration.customerSchema : 'contacts';
   
   // Check if customer already exists
   const { where } = await import('firebase/firestore');
@@ -382,11 +438,11 @@ async function createOrderEntity(workspaceId: string, organizationId: string, or
     'config'
   );
   
-  if (!ecommerceConfig || !(ecommerceConfig as any).integration?.createOrderEntity) {
+  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).integration?.createOrderEntity) {
     return;
   }
   
-  const orderSchema =((ecommerceConfig as any).integration.orderSchema !== '' && (ecommerceConfig as any).integration.orderSchema != null) ? (ecommerceConfig as any).integration.orderSchema : 'orders';
+  const orderSchema =((ecommerceConfig as unknown as EcommerceConfig).integration.orderSchema !== '' && (ecommerceConfig as unknown as EcommerceConfig).integration.orderSchema != null) ? (ecommerceConfig as unknown as EcommerceConfig).integration.orderSchema : 'orders';
   
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/entities/${orderSchema}/records`,
@@ -396,7 +452,7 @@ async function createOrderEntity(workspaceId: string, organizationId: string, or
       customerEmail: order.customerEmail,
       total: order.total,
       status: order.status,
-      createdAt: (order.createdAt as any).toDate?.()?.toISOString() ?? order.createdAt,
+      createdAt: serializeTimestamp(order.createdAt),
     },
     false
   );
@@ -411,7 +467,7 @@ async function triggerOrderWorkflows(workspaceId: string, organizationId: string
     'config'
   );
   
-  if (!ecommerceConfig || !(ecommerceConfig as any).integration?.triggerWorkflows) {
+  if (!ecommerceConfig || !(ecommerceConfig as unknown as EcommerceConfig).integration?.triggerWorkflows) {
     return;
   }
   
@@ -441,7 +497,7 @@ async function sendOrderConfirmation(workspaceId: string, organizationId: string
     return;
   }
   
-  const notifications = (ecommerceConfig as any).notifications;
+  const notifications = (ecommerceConfig as unknown as EcommerceConfig).notifications;
   if (!notifications?.customer?.orderConfirmation?.enabled) {
     return;
   }

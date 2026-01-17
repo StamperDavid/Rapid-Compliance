@@ -26,18 +26,18 @@ if (!admin.apps.length) {
     }
     // In production, use service account from environment (JSON blob)
     else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as admin.ServiceAccount;
       credential = admin.credential.cert(serviceAccount);
-    } 
+    }
     // In development, use service account file
     else {
       try {
         // Only require in development when file exists
         if (process.env.NODE_ENV === 'development') {
           const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
-          
+
           if (fs.existsSync(keyPath)) {
-            const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+            const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8')) as admin.ServiceAccount;
             credential = admin.credential.cert(serviceAccount);
           } else {
             throw new Error('serviceAccountKey.json not found');
@@ -46,8 +46,8 @@ if (!admin.apps.length) {
           // In production without env var, use application default
           credential = admin.credential.applicationDefault();
         }
-      } catch (error) {
-        console.error('[Firebase Admin] Service account error, using application default credentials');
+      } catch {
+        // Using application default credentials as fallback
         credential = admin.credential.applicationDefault();
       }
     }
@@ -58,8 +58,14 @@ if (!admin.apps.length) {
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     });
 
-    console.log('[Firebase Admin] Initialized successfully');
-    console.log(`[Firebase Admin] 🎯 PROJECT ID: ${(process.env.FIREBASE_ADMIN_PROJECT_ID !== '' && process.env.FIREBASE_ADMIN_PROJECT_ID != null) ? process.env.FIREBASE_ADMIN_PROJECT_ID : 'NOT SET'}`);
+    // Firebase Admin initialized successfully
+    const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID !== '' && process.env.FIREBASE_ADMIN_PROJECT_ID != null
+      ? process.env.FIREBASE_ADMIN_PROJECT_ID
+      : 'NOT SET';
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Firebase Admin] Initialized successfully');
+      console.log(`[Firebase Admin] 🎯 PROJECT ID: ${projectId}`);
+    }
   } catch (error) {
     console.error('[Firebase Admin] Initialization failed:', error);
     throw error;

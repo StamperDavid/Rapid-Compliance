@@ -3,7 +3,7 @@
  * Executes entity CRUD actions in workflows
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+// FirestoreService and COLLECTIONS imported dynamically where needed
 import type { CreateEntityAction, UpdateEntityAction, DeleteEntityAction } from '@/types/workflow';
 import type { Schema } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
@@ -13,10 +13,10 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function executeCreateEntityAction(
   action: CreateEntityAction,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   organizationId: string,
   workspaceId: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   // Get schema for field resolution
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
@@ -31,10 +31,10 @@ export async function executeCreateEntityAction(
   const schema = schemaData as Schema;
   
   // Build entity data from field mappings with dynamic field resolution
-  const entityData: Record<string, any> = {};
-  
+  const entityData: Record<string, unknown> = {};
+
   for (const mapping of action.fieldMappings) {
-    let value: any;
+    let value: unknown;
     
     // Resolve target field using field resolver
     const { FieldResolver } = await import('@/lib/schema/field-resolver');
@@ -62,7 +62,7 @@ export async function executeCreateEntityAction(
         break;
       case 'variable': {
         // Get from workflow variables stored in triggerData._variables
-        const variables = (triggerData?._variables ?? triggerData?.variables) ?? {};
+        const variables = ((triggerData._variables ?? triggerData.variables) ?? {}) as Record<string, unknown>;
         value = FieldResolver.getFieldValue(variables, mapping.sourceField ?? '');
         // Fallback to trigger data if not found in variables
         if (value === undefined) {
@@ -92,7 +92,7 @@ export async function executeCreateEntityAction(
     entityData[resolvedTarget.fieldKey] = value;
   }
   
-  const entityName =(schema as any).name ?? action.schemaId;
+  const entityName = (schema.name ?? action.schemaId) as string;
   const entityPath = `${COL.ORGANIZATIONS}/${organizationId}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
   
   const recordId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -110,10 +110,10 @@ export async function executeCreateEntityAction(
  */
 export async function executeUpdateEntityAction(
   action: UpdateEntityAction,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   organizationId: string,
   workspaceId: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   // Get schema
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
@@ -215,10 +215,10 @@ export async function executeUpdateEntityAction(
  */
 export async function executeDeleteEntityAction(
   action: DeleteEntityAction,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   organizationId: string,
   workspaceId: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   // Get schema
   const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
@@ -286,9 +286,9 @@ export async function executeDeleteEntityAction(
  */
 export async function executeEntityAction(
   action: CreateEntityAction | UpdateEntityAction | DeleteEntityAction,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   organizationId: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   const workspaceId = triggerData?.workspaceId ?? (action as any).workspaceId;
   if (!workspaceId) {
     throw new Error('Workspace ID required for entity actions');
@@ -325,7 +325,7 @@ function applyTransform(value: any, transform: any): any {
 /**
  * Resolve variables in config
  */
-function resolveVariables(config: any, triggerData: any): any {
+function resolveVariables(config: any, triggerData: Record<string, unknown>): any {
   if (typeof config === 'string') {
     return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
       const value = getNestedValue(triggerData, path.trim());
@@ -395,13 +395,13 @@ Generate ONLY the value for this field. Do not include any explanation or format
 async function queryEntities(params: {
   entityPath: string;
   query: any;
-  triggerData: any;
+  triggerData: Record<string, unknown>;
 }): Promise<any[]> {
   const { entityPath, query, triggerData } = params;
   const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
   
   // Build Firestore query from criteria
-  const filters: any[] = [];
+  const filters: Array<unknown> = [];
   
   if (query.filters && Array.isArray(query.filters)) {
     for (const filter of query.filters) {

@@ -61,15 +61,11 @@ async function getJobsFromRapidAPI(
     );
 
     if (!response.ok) {
-      logger.error('[LinkedIn RapidAPI] Error: ${response.status}', new Error('[LinkedIn RapidAPI] Error: ${response.status}'), { file: 'linkedin-service.ts' });
+      logger.error(`[LinkedIn RapidAPI] Error: ${response.status}`, new Error(`[LinkedIn RapidAPI] Error: ${response.status}`), { file: 'linkedin-service.ts' });
       return [];
     }
 
-    const data = await response.json();
-    
-    if (!data.data || data.data.length === 0) {
-      return [];
-    }
+    const data: unknown = await response.json();
 
     interface RapidAPIJobResult {
       id: string;
@@ -79,8 +75,18 @@ async function getJobsFromRapidAPI(
       location?: string;
       type?: string;
     }
-    
-    return data.data.slice(0, maxResults).map((job: RapidAPIJobResult) => ({
+
+    interface RapidAPIResponse {
+      data?: RapidAPIJobResult[];
+    }
+
+    const typedData = data as RapidAPIResponse;
+
+    if (!typedData.data || typedData.data.length === 0) {
+      return [];
+    }
+
+    return typedData.data.slice(0, maxResults).map((job: RapidAPIJobResult) => ({
       title: job.title,
       department: extractDepartment(job.title),
       url: (job.url !== '' && job.url != null) ? job.url : `https://www.linkedin.com/jobs/view/${job.id}`,
@@ -157,7 +163,7 @@ async function getJobsFromPublicSearch(
 /**
  * Generate fallback job data (when scraping fails)
  */
-function generateFallbackJobs(companyName: string): LinkedInJob[] {
+function generateFallbackJobs(_companyName: string): LinkedInJob[] {
   // Return empty array - better than fake data
   // The prospect-research service will handle empty job arrays gracefully
   return [];

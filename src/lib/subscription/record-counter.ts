@@ -4,13 +4,12 @@
  */
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { 
-  SubscriptionTier} from '@/types/subscription';
-import { 
-  getTierForRecordCount, 
-  VOLUME_TIERS,
-  isWithinTierCapacity,
-  calculateRequiredTier
+import type {
+  SubscriptionTier
+} from '@/types/subscription';
+import {
+  getTierForRecordCount,
+  VOLUME_TIERS
 } from '@/types/subscription';
 import { logger } from '@/lib/logger/logger';
 

@@ -31,6 +31,41 @@ import type {
 } from './types';
 
 /**
+ * Type guards
+ */
+interface SlackIntegration {
+  accessToken: string;
+  [key: string]: unknown;
+}
+
+function isSlackIntegration(obj: unknown): obj is SlackIntegration {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'accessToken' in obj &&
+    typeof (obj as SlackIntegration).accessToken === 'string'
+  );
+}
+
+interface SlackResponse {
+  channel: string;
+  ts: string;
+  thread_ts?: string;
+  [key: string]: unknown;
+}
+
+function isSlackResponse(obj: unknown): obj is SlackResponse {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'channel' in obj &&
+    'ts' in obj &&
+    typeof (obj as SlackResponse).channel === 'string' &&
+    typeof (obj as SlackResponse).ts === 'string'
+  );
+}
+
+/**
  * Notification Service
  * Core service for managing notifications
  */
@@ -199,11 +234,17 @@ export class NotificationService {
         await this.deliverToChannel(notification, channel, preferences);
 
         // Update delivery status
-        await this.updateDeliveryStatus(notification.id!, channel, 'delivered');
+        if (!notification.id) {
+          throw new Error('Notification ID is required for delivery tracking');
+        }
+        await this.updateDeliveryStatus(notification.id, channel, 'delivered');
       } catch (error) {
         // Log error and schedule retry
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        await this.updateDeliveryError(notification.id!, channel, errorMessage);
+        if (!notification.id) {
+          throw new Error('Notification ID is required for error tracking');
+        }
+        await this.updateDeliveryError(notification.id, channel, errorMessage);
         await this.scheduleRetry(notification, channel);
       }
     });
@@ -245,7 +286,10 @@ export class NotificationService {
     }
 
     // Increment attempt counter
-    await this.incrementAttempts(notification.id!, channel);
+    if (!notification.id) {
+      throw new Error('Notification ID is required for tracking attempts');
+    }
+    await this.incrementAttempts(notification.id, channel);
   }
 
   /**
@@ -270,23 +314,19 @@ export class NotificationService {
       throw new Error('Slack integration not configured');
     }
 
-    const accessToken = (integration as any).accessToken;
+    if (!isSlackIntegration(integration)) {
+      throw new Error('Invalid Slack integration configuration');
+    }
+
+    const accessToken = integration.accessToken;
     if (!accessToken) {
       throw new Error('Slack access token not found');
     }
 
     // Determine channel
-    const channel = slackContent.channel ?? 
+    const channel = slackContent.channel ??
                    preferences.channels.slack?.channelId ??
                    '#notifications'; // Default channel
-
-    // Check if we should thread this message
-    let threadTs = slackContent.threadTs;
-    
-    if (preferences.channels.slack?.threadMessages && slackContent.threadTs) {
-      // Use existing thread
-      threadTs = slackContent.threadTs;
-    }
 
     // Send message
     const response = await sendMessage(accessToken, {
@@ -297,7 +337,15 @@ export class NotificationService {
     });
 
     // Store response for potential threading
-    await this.storeDeliveryResponse(notification.id!, 'slack', {
+    if (!notification.id) {
+      throw new Error('Notification ID is required for storing delivery response');
+    }
+
+    if (!isSlackResponse(response)) {
+      throw new Error('Invalid Slack response format');
+    }
+
+    await this.storeDeliveryResponse(notification.id, 'slack', {
       channel: response.channel,
       ts: response.ts,
       threadTs: response.thread_ts,
@@ -308,19 +356,12 @@ export class NotificationService {
    * Deliver to Email
    * (Placeholder - implement with SendGrid/AWS SES)
    */
-  private async deliverToEmail(
-    notification: Notification,
-    preferences: NotificationPreferences
+  private deliverToEmail(
+    _notification: Notification,
+    _preferences: NotificationPreferences
   ): Promise<void> {
-    const emailContent = notification.content.email;
-    if (!emailContent) {
-      throw new Error('No email content in notification');
-    }
-
     // TODO: Implement email delivery with SendGrid/AWS SES
-    console.log('Email delivery not yet implemented:', emailContent);
-    
-    // For now, just log (replace with actual email service)
+    // For now, just throw error (replace with actual email service)
     throw new Error('Email delivery not implemented');
   }
 
@@ -356,8 +397,11 @@ export class NotificationService {
     }
 
     // Store response
-    const responseData = await response.json().catch(() => ({}));
-    await this.storeDeliveryResponse(notification.id!, 'webhook', responseData);
+    if (!notification.id) {
+      throw new Error('Notification ID is required for storing webhook response');
+    }
+    const responseData: unknown = await response.json().catch(() => ({}));
+    await this.storeDeliveryResponse(notification.id, 'webhook', responseData);
   }
 
   /**
@@ -366,30 +410,32 @@ export class NotificationService {
   private async deliverToInApp(notification: Notification): Promise<void> {
     // In-app notifications are stored in Firestore and retrieved by the frontend
     // No additional delivery needed - just mark as delivered
-    await this.updateDeliveryStatus(notification.id!, 'in_app', 'delivered');
+    if (!notification.id) {
+      throw new Error('Notification ID is required for in-app delivery');
+    }
+    await this.updateDeliveryStatus(notification.id, 'in_app', 'delivered');
   }
 
   /**
    * Deliver to SMS
    * (Placeholder - implement with Twilio)
    */
-  private async deliverToSMS(
-    notification: Notification,
-    preferences: NotificationPreferences
+  private deliverToSMS(
+    _notification: Notification,
+    _preferences: NotificationPreferences
   ): Promise<void> {
     // TODO: Implement SMS delivery with Twilio
-    console.log('SMS delivery not yet implemented');
     throw new Error('SMS delivery not implemented');
   }
 
   /**
    * Render notification content from template
    */
-  private async renderContent(
+  private renderContent(
     template: NotificationTemplate,
     variables: NotificationVariables,
     preferences: NotificationPreferences
-  ): Promise<Notification['content']> {
+  ): Notification['content'] {
     const content: Notification['content'] = {};
 
     // Render Slack content
@@ -448,8 +494,9 @@ export class NotificationService {
    * Replaces {{variable}} with actual values
    */
   private interpolateVariables(template: string, variables: NotificationVariables): string {
-    return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      const value = this.getNestedValue(variables, path.trim());
+    return template.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
+      const trimmedPath = path.trim();
+      const value = this.getNestedValue(variables, trimmedPath);
       if (value === undefined || value === null) {
         return match; // Keep placeholder if variable not found
       }
@@ -466,7 +513,7 @@ export class NotificationService {
   private interpolateBlocks(blocks: SlackBlock[], variables: NotificationVariables): SlackBlock[] {
     const blocksStr = JSON.stringify(blocks);
     const interpolated = this.interpolateVariables(blocksStr, variables);
-    return JSON.parse(interpolated);
+    return JSON.parse(interpolated) as SlackBlock[];
   }
 
   /**
@@ -478,26 +525,31 @@ export class NotificationService {
   ): SlackAttachment[] {
     const attachmentsStr = JSON.stringify(attachments);
     const interpolated = this.interpolateVariables(attachmentsStr, variables);
-    return JSON.parse(interpolated);
+    return JSON.parse(interpolated) as SlackAttachment[];
   }
 
   /**
    * Interpolate variables in object
    */
   private interpolateObject(
-    obj: Record<string, any>,
+    obj: Record<string, unknown>,
     variables: NotificationVariables
-  ): Record<string, any> {
+  ): Record<string, unknown> {
     const objStr = JSON.stringify(obj);
     const interpolated = this.interpolateVariables(objStr, variables);
-    return JSON.parse(interpolated);
+    return JSON.parse(interpolated) as Record<string, unknown>;
   }
 
   /**
    * Get nested value from object using dot notation
    */
-  private getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+  private getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+    return path.split('.').reduce<unknown>((current, key) => {
+      if (current != null && typeof current === 'object') {
+        return (current as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, obj);
   }
 
   /**
@@ -510,11 +562,11 @@ export class NotificationService {
   ): NotificationChannel[] {
     // Get category-specific channel overrides
     const categoryPref = preferences.categories[category];
-    const preferredChannels =categoryPref.channels ?? templateChannels;
+    const preferredChannels = categoryPref.channels ?? templateChannels;
 
     // Filter to only enabled channels
     return preferredChannels.filter((channel) => {
-      const channelPref = (preferences.channels as Record<string, any>)[channel];
+      const channelPref = (preferences.channels as Record<string, { enabled?: boolean }>)[channel];
       return channelPref?.enabled === true;
     });
   }
@@ -528,9 +580,6 @@ export class NotificationService {
     const quietHours = preferences.channels.slack?.quietHours;
     if (!quietHours?.enabled) {return false;}
 
-    const now = new Date();
-    const timezone = quietHours.timezone || 'UTC';
-    
     // TODO: Implement proper timezone-aware quiet hours check
     // For now, return false
     return false;

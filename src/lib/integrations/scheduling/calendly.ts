@@ -82,6 +82,29 @@ export async function executeCalendlyFunction(
   }
 }
 
+interface CalendlyTimeSlot {
+  start_time: string;
+  status: string;
+}
+
+interface CalendlyEventType {
+  uri: string;
+}
+
+interface CalendlyUserResponse {
+  resource: {
+    uri: string;
+  };
+}
+
+interface CalendlyEventTypesResponse {
+  collection: CalendlyEventType[];
+}
+
+interface CalendlyAvailabilityResponse {
+  collection: CalendlyTimeSlot[];
+}
+
 /**
  * Check available time slots
  */
@@ -99,14 +122,14 @@ async function checkAvailability(
       'Content-Type': 'application/json',
     },
   });
-  
+
   if (!userResponse.ok) {
     throw new Error('Failed to fetch Calendly user');
   }
-  
-  const userData = await userResponse.json();
+
+  const userData = await userResponse.json() as CalendlyUserResponse;
   const userUri = userData.resource.uri;
-  
+
   // Get event types
   const eventTypesResponse = await fetch(
     `https://api.calendly.com/event_types?user=${userUri}`,
@@ -117,20 +140,20 @@ async function checkAvailability(
       },
     }
   );
-  
+
   if (!eventTypesResponse.ok) {
     throw new Error('Failed to fetch event types');
   }
-  
-  const eventTypesData = await eventTypesResponse.json();
+
+  const eventTypesData = await eventTypesResponse.json() as CalendlyEventTypesResponse;
   const eventType = eventTypesData.collection[0]; // Use first event type
-  
+
   // Get availability for the date
   const startTime = new Date(params.date);
   startTime.setHours(9, 0, 0, 0);
   const endTime = new Date(params.date);
   endTime.setHours(17, 0, 0, 0);
-  
+
   const availabilityResponse = await fetch(
     `https://api.calendly.com/event_type_available_times?event_type=${eventType.uri}&start_time=${startTime.toISOString()}&end_time=${endTime.toISOString()}`,
     {
@@ -140,22 +163,24 @@ async function checkAvailability(
       },
     }
   );
-  
+
   if (!availabilityResponse.ok) {
     throw new Error('Failed to fetch availability');
   }
-  
-  const availabilityData = await availabilityResponse.json();
-  
-  interface CalendlyTimeSlot {
-    start_time: string;
-    status: string;
-  }
-  
+
+  const availabilityData = await availabilityResponse.json() as CalendlyAvailabilityResponse;
+
   return availabilityData.collection.map((slot: CalendlyTimeSlot) => ({
     time: new Date(slot.start_time).toLocaleString(),
     available: true,
   }));
+}
+
+interface CalendlyScheduledEventResponse {
+  resource: {
+    start_time: string;
+    uri: string;
+  };
 }
 
 /**
@@ -177,10 +202,10 @@ async function bookAppointment(
       'Content-Type': 'application/json',
     },
   });
-  
-  const userData = await userResponse.json();
+
+  const userData = await userResponse.json() as CalendlyUserResponse;
   const userUri = userData.resource.uri;
-  
+
   // Get event types
   const eventTypesResponse = await fetch(
     `https://api.calendly.com/event_types?user=${userUri}`,
@@ -191,10 +216,10 @@ async function bookAppointment(
       },
     }
   );
-  
-  const eventTypesData = await eventTypesResponse.json();
+
+  const eventTypesData = await eventTypesResponse.json() as CalendlyEventTypesResponse;
   const eventType = eventTypesData.collection[0];
-  
+
   // Schedule the event
   const scheduleResponse = await fetch('https://api.calendly.com/scheduled_events', {
     method: 'POST',
@@ -217,14 +242,14 @@ async function bookAppointment(
       ] : [],
     }),
   });
-  
+
   if (!scheduleResponse.ok) {
-    const error = await scheduleResponse.json();
+    const error = await scheduleResponse.json() as Record<string, unknown>;
     throw new Error(`Failed to schedule appointment: ${JSON.stringify(error)}`);
   }
-  
-  const scheduledEvent = await scheduleResponse.json();
-  
+
+  const scheduledEvent = await scheduleResponse.json() as CalendlyScheduledEventResponse;
+
   return {
     scheduledTime: new Date(scheduledEvent.resource.start_time).toLocaleString(),
     confirmationUrl: scheduledEvent.resource.uri,

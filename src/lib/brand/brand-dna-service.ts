@@ -4,7 +4,13 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import type { BrandDNA, ToolTrainingContext } from '@/types/organization';
+import type {
+  BrandDNA,
+  ToolTrainingContext,
+  VoiceTrainingSettings,
+  SocialTrainingSettings,
+  SEOTrainingSettings,
+} from '@/types/organization';
 
 const FILE = 'brand-dna-service.ts';
 
@@ -119,26 +125,29 @@ export async function getToolTrainingContext(
       return null;
     }
 
+    // Cast to ToolTrainingContext for type safety
+    const typedToolDoc = toolDoc as ToolTrainingContext;
+
     // If tool inherits from brand DNA, merge the values
-    if (toolDoc.inheritFromBrandDNA !== false) {
+    if (typedToolDoc.inheritFromBrandDNA !== false) {
       const brandDNA = await getBrandDNA(orgId);
 
       if (brandDNA) {
         // Merge brand DNA with any tool-specific overrides
         const mergedContext: ToolTrainingContext = {
-          ...toolDoc,
+          ...typedToolDoc,
           toolType,
           orgId,
           inheritFromBrandDNA: true,
           // Apply overrides on top of brand DNA
-          overrides: toolDoc.overrides || {},
-        } as ToolTrainingContext;
+          overrides: typedToolDoc.overrides ?? {},
+        };
 
         return mergedContext;
       }
     }
 
-    return toolDoc as ToolTrainingContext;
+    return typedToolDoc;
   } catch (error) {
     logger.error('[BrandDNA] Failed to get tool context', error, { orgId, toolType, file: FILE });
     return null;
@@ -195,7 +204,7 @@ export async function buildToolSystemPrompt(
     const settings = toolContext.toolSettings;
 
     if (toolType === 'voice' && settings) {
-      const voiceSettings = settings as any;
+      const voiceSettings = settings as VoiceTrainingSettings;
       if (voiceSettings.greetingScript) {
         systemPrompt += `Greeting Script: "${voiceSettings.greetingScript}"\n`;
       }
@@ -208,14 +217,14 @@ export async function buildToolSystemPrompt(
     }
 
     if (toolType === 'social' && settings) {
-      const socialSettings = settings as any;
+      const socialSettings = settings as SocialTrainingSettings;
       if (socialSettings.emojiUsage) {
         systemPrompt += `Emoji Usage: ${socialSettings.emojiUsage}\n`;
       }
       if (socialSettings.ctaStyle) {
         systemPrompt += `CTA Style: ${socialSettings.ctaStyle}\n`;
       }
-      if (socialSettings.contentThemes?.length > 0) {
+      if (socialSettings.contentThemes && socialSettings.contentThemes.length > 0) {
         systemPrompt += `Content Themes: ${socialSettings.contentThemes.join(', ')}\n`;
       }
       if (socialSettings.postingPersonality) {
@@ -224,14 +233,14 @@ export async function buildToolSystemPrompt(
     }
 
     if (toolType === 'seo' && settings) {
-      const seoSettings = settings as any;
+      const seoSettings = settings as SEOTrainingSettings;
       if (seoSettings.writingStyle) {
         systemPrompt += `Writing Style: ${seoSettings.writingStyle}\n`;
       }
       if (seoSettings.targetSearchIntent) {
         systemPrompt += `Target Intent: ${seoSettings.targetSearchIntent}\n`;
       }
-      if (seoSettings.targetKeywords?.length > 0) {
+      if (seoSettings.targetKeywords && seoSettings.targetKeywords.length > 0) {
         systemPrompt += `Target Keywords: ${seoSettings.targetKeywords.join(', ')}\n`;
       }
       if (seoSettings.audienceExpertiseLevel) {
@@ -285,8 +294,8 @@ export async function initializeBrandDNAFromOnboarding(
   try {
     const brandDNA: Partial<BrandDNA> = {
       companyDescription: onboardingData.businessDescription,
-      uniqueValue: onboardingData.uniqueValue || '',
-      targetAudience: onboardingData.targetAudience || '',
+      uniqueValue: onboardingData.uniqueValue ?? '',
+      targetAudience: onboardingData.targetAudience ?? '',
       toneOfVoice: 'professional',
       communicationStyle: 'Helpful and informative',
       industry: onboardingData.industry,

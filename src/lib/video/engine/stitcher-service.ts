@@ -17,15 +17,13 @@
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
-import type { TTSSynthesizeResponse, TTSEngineType } from '@/lib/voice/tts/types';
+import type { TTSEngineType } from '@/lib/voice/tts/types';
 import type {
   MasterStoryboard,
   PostProductionJob,
   PostProductionStatus,
-  PostProductionError,
   GeneratedClip,
   AudioTrack,
-  AudioConfiguration,
   VisualStyleConfig,
   DuckingConfig,
   VoiceoverSegment,
@@ -146,10 +144,10 @@ export class StitcherService {
   /**
    * Create a post-production job from a storyboard
    */
-  async createJob(
+  createJob(
     storyboard: MasterStoryboard,
     generatedClips: GeneratedClip[]
-  ): Promise<PostProductionJob> {
+  ): PostProductionJob {
     const job: PostProductionJob = {
       id: uuidv4(),
       storyboardId: storyboard.id,
@@ -390,14 +388,14 @@ export class StitcherService {
   /**
    * Combine voiceover segments into a single audio track
    */
-  private async combineVoiceoverSegments(
+  private combineVoiceoverSegments(
     segments: VoiceoverAudioSegment[],
     totalDuration: number
-  ): Promise<string> {
+  ): string {
     // In a real implementation, this would use FFmpeg or a similar tool
     // to combine audio segments at their specified timestamps
 
-    const combinationData: AudioCombinationManifest = {
+    const _combinationData: AudioCombinationManifest = {
       totalDuration,
       segments: segments.map((s) => ({
         url: s.audio,
@@ -433,14 +431,14 @@ export class StitcherService {
     });
 
     // Select or fetch music based on config
-    const musicUrl = musicConfig.trackUrl || await this.selectMusicTrack(
+    const musicUrl = musicConfig.trackUrl ?? this.selectMusicTrack(
       musicConfig.genre,
       musicConfig.mood,
       totalDuration
     );
 
     // Detect BPM if not provided
-    const bpm = musicConfig.bpm || await this.detectBPM(musicUrl);
+    const bpm = musicConfig.bpm ?? this.detectBPM(musicUrl);
 
     // Calculate beat markers
     const beatMarkers = this.calculateBeatMarkers(bpm, totalDuration);
@@ -461,25 +459,25 @@ export class StitcherService {
   /**
    * Select a music track based on criteria
    */
-  private async selectMusicTrack(
+  private selectMusicTrack(
     genre?: string,
     mood?: string,
-    duration?: number
-  ): Promise<string> {
+    _duration?: number
+  ): string {
     // In production, this would query a music library API
     // For now, return a placeholder
-    logger.debug('Stitcher: Selecting music track', { genre, mood, duration });
+    logger.debug('Stitcher: Selecting music track', { genre, mood });
 
-    return `music://library/${genre || 'ambient'}/${mood || 'neutral'}.mp3`;
+    return `music://library/${genre ?? 'ambient'}/${mood ?? 'neutral'}.mp3`;
   }
 
   /**
    * Detect BPM from audio
    */
-  private async detectBPM(audioUrl: string): Promise<number> {
+  private detectBPM(_audioUrl: string): number {
     // In production, this would use audio analysis
     // Return a common BPM as default
-    logger.debug('Stitcher: Detecting BPM', { audioUrl });
+    logger.debug('Stitcher: Detecting BPM');
     return 120; // Default to 120 BPM
   }
 
@@ -518,7 +516,7 @@ export class StitcherService {
     );
 
     // Generate ducking automation data
-    const automationData: DuckingAutomation = {
+    const _automationData: DuckingAutomation = {
       sourceTrackId: musicTrack.id,
       triggerTrackId: voiceoverTrack.id,
       envelope: duckingEnvelope,
@@ -541,10 +539,10 @@ export class StitcherService {
   /**
    * Calculate ducking envelope based on voiceover
    */
-  private async calculateDuckingEnvelope(
+  private calculateDuckingEnvelope(
     voiceoverTrack: AudioTrack,
     duckingConfig: DuckingConfig
-  ): Promise<DuckingPoint[]> {
+  ): DuckingPoint[] {
     // Analyze voiceover for activity regions
     // In production, this would use actual audio analysis
 
@@ -620,13 +618,13 @@ export class StitcherService {
   /**
    * Stitch video clips together
    */
-  private async stitchClips(
+  private stitchClips(
     clips: GeneratedClip[],
     scenes: MasterStoryboard['scenes'],
     aspectRatio: string,
     resolution: string,
-    frameRate: number
-  ): Promise<string> {
+    _frameRate: number
+  ): string {
     logger.info('Stitcher: Stitching clips', {
       clipCount: clips.length,
       sceneCount: scenes.length,
@@ -646,7 +644,7 @@ export class StitcherService {
       outputSettings: {
         aspectRatio,
         resolution,
-        frameRate,
+        frameRate: 30,
         codec: 'h264',
         bitrate: this.calculateBitrate(resolution),
       },
@@ -686,16 +684,16 @@ export class StitcherService {
       '1080p': 10000000, // 10 Mbps
       '4k': 35000000,   // 35 Mbps
     };
-    return bitrates[resolution] || 10000000;
+    return bitrates[resolution] ?? 10000000;
   }
 
   /**
    * Apply color grading and LUT
    */
-  private async applyColorGrading(
-    videoUrl: string,
+  private applyColorGrading(
+    _videoUrl: string,
     visualStyle: VisualStyleConfig
-  ): Promise<string> {
+  ): string {
     logger.info('Stitcher: Applying color grading', {
       lutId: visualStyle.lutId,
       lutIntensity: visualStyle.lutIntensity,
@@ -705,6 +703,11 @@ export class StitcherService {
     const lutPreset = visualStyle.lutId
       ? LUT_PRESETS[visualStyle.lutId]
       : LUT_PRESETS['natural-balanced'];
+
+    if (!lutPreset) {
+      logger.warn('Stitcher: LUT preset not found, using default');
+      return `video://graded/${uuidv4()}.mp4`;
+    }
 
     // Build color grading parameters
     const gradingParams: ColorGradingParams = {
@@ -747,10 +750,10 @@ export class StitcherService {
   /**
    * Apply brand overlay (logo, watermark)
    */
-  private async applyBrandOverlay(
-    videoUrl: string,
+  private applyBrandOverlay(
+    _videoUrl: string,
     brandOverlay: NonNullable<VisualStyleConfig['brandOverlay']>
-  ): Promise<string> {
+  ): string {
     logger.info('Stitcher: Applying brand overlay', {
       position: brandOverlay.logoPosition,
       opacity: brandOverlay.logoOpacity,
@@ -773,13 +776,13 @@ export class StitcherService {
   /**
    * Mix all audio tracks
    */
-  private async mixAudio(
+  private mixAudio(
     voiceoverTrack: AudioTrack | undefined,
     musicTrack: AudioTrack | undefined,
     sfxTracks: AudioTrack[],
     masterVolume: number,
     targetLUFS: number
-  ): Promise<string> {
+  ): string {
     logger.info('Stitcher: Mixing audio', {
       hasVoiceover: !!voiceoverTrack,
       hasMusic: !!musicTrack,

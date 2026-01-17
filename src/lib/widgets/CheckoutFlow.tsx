@@ -292,7 +292,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
                   Back
                 </button>
                 <button
-                  onClick={handlePayment}
+                  onClick={() => { void handlePayment(); }}
                   disabled={loading}
                   style={{
                     flex: 2,
@@ -320,7 +320,7 @@ export function CheckoutFlow({ organizationId, onComplete, theme }: CheckoutFlow
               Order Summary
             </h3>
 
-            {cart?.items?.map((item: any) => (
+            {cart?.items?.map((item: CartItem) => (
               <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
                 <span>{item.name} × {item.quantity}</span>
                 <span style={{ fontWeight: '600' }}>{formatPrice(item.price * item.quantity)}</span>

@@ -23,9 +23,7 @@
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
-import { getTemplateById } from './industry-templates';
-import type { SalesIndustryTemplate } from './industry-templates';
-import { calculateDealScore } from './deal-scoring-engine';
+import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
 
 // ============================================================================
 // TYPES

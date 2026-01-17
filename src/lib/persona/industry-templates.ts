@@ -1,10 +1,11 @@
 export type { IndustryTemplate } from './templates/types';
 import type { IndustryTemplate } from './templates/types';
-import type { ResearchIntelligence } from '../../types/scraper-intelligence';
-import { ResearchIntelligenceSchema } from '../../types/scraper-intelligence';
+import { ResearchIntelligenceSchema, type ResearchIntelligence } from '../../types/scraper-intelligence';
+import { z } from 'zod';
 
 // Lazy-loaded templates cache to avoid OOM during build
 let templatesCache: Record<string, IndustryTemplate> | null = null;
+let loadingPromise: Promise<Record<string, IndustryTemplate>> | null = null;
 
 /**
  * Dynamically load all templates (lazy-loaded to avoid webpack OOM)
@@ -14,16 +15,13 @@ async function loadTemplates(): Promise<Record<string, IndustryTemplate>> {
     return templatesCache;
   }
 
+  // If already loading, return the existing promise to prevent duplicate loads
+  if (loadingPromise) {
+    return loadingPromise;
+  }
+
   // Dynamic imports - loaded only when needed, not during webpack build
-  const [
-    { realEstateTemplates },
-    { healthcareTemplates1 },
-    { healthcareTemplates2 },
-    { healthcareTemplates3 },
-    { homeServicesTemplates1 },
-    { homeServicesTemplates2 },
-    { homeServicesTemplates3 },
-  ] = await Promise.all([
+  loadingPromise = Promise.all([
     import('./templates/real-estate'),
     import('./templates/healthcare-1'),
     import('./templates/healthcare-2'),
@@ -31,19 +29,31 @@ async function loadTemplates(): Promise<Record<string, IndustryTemplate>> {
     import('./templates/home-services-1'),
     import('./templates/home-services-2'),
     import('./templates/home-services-3'),
-  ]);
+  ]).then(([
+    { realEstateTemplates },
+    { healthcareTemplates1 },
+    { healthcareTemplates2 },
+    { healthcareTemplates3 },
+    { homeServicesTemplates1 },
+    { homeServicesTemplates2 },
+    { homeServicesTemplates3 },
+  ]) => {
+    const loadedTemplates = {
+      ...realEstateTemplates,
+      ...healthcareTemplates1,
+      ...healthcareTemplates2,
+      ...healthcareTemplates3,
+      ...homeServicesTemplates1,
+      ...homeServicesTemplates2,
+      ...homeServicesTemplates3,
+    };
 
-  templatesCache = {
-    ...realEstateTemplates,
-    ...healthcareTemplates1,
-    ...healthcareTemplates2,
-    ...healthcareTemplates3,
-    ...homeServicesTemplates1,
-    ...homeServicesTemplates2,
-    ...homeServicesTemplates3,
-  };
+    templatesCache = loadedTemplates;
+    loadingPromise = null;
+    return loadedTemplates;
+  });
 
-  return templatesCache;
+  return loadingPromise;
 }
 
 /**
@@ -183,13 +193,15 @@ export function validateResearchIntelligence(
   try {
     ResearchIntelligenceSchema.parse(research);
     return { valid: true, errors: [] };
-  } catch (error: any) {
-    if (error.errors) {
-      error.errors.forEach((err: any) => {
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      error.errors.forEach((err) => {
         errors.push(`${err.path.join('.')}: ${err.message}`);
       });
+    } else if (error instanceof Error) {
+      errors.push(error.message !== '' && error.message != null ? error.message : 'Unknown validation error');
     } else {
-      errors.push((error.message !== '' && error.message != null) ? error.message : 'Unknown validation error');
+      errors.push('Unknown validation error');
     }
     return { valid: false, errors };
   }

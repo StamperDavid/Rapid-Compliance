@@ -23,7 +23,6 @@
 import { logger } from '@/lib/logger/logger';
 import { discoverCompetitor, type CompetitorProfile } from './battlecard-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import type { SignalObserver } from '@/lib/orchestration/types';
 
 // ============================================================================
 // TYPES
@@ -139,7 +138,9 @@ export class CompetitiveMonitor {
 
     // Schedule periodic checks (every hour)
     this.checkInterval = setInterval(
-      () => this.performScheduledChecks(),
+      () => {
+        void this.performScheduledChecks();
+      },
       60 * 60 * 1000 // 1 hour
     );
 
@@ -205,7 +206,6 @@ export class CompetitiveMonitor {
    */
   getStats(): MonitoringStats {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     return {
       totalCompetitors: this.monitoringConfigs.size,

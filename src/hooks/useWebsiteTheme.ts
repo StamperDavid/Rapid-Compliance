@@ -35,6 +35,31 @@ const DEFAULT_THEME: WebsiteTheme = {
   headingFont: 'Inter, sans-serif',
 };
 
+interface BrandingConfig {
+  logoUrl?: string;
+  logoHeight?: number;
+  companyName?: string;
+  tagline?: string;
+  colors?: {
+    primary?: string;
+    secondary?: string;
+    accent?: string;
+    background?: string;
+    text?: string;
+    navBackground?: string;
+    footerBackground?: string;
+  };
+  fonts?: {
+    body?: string;
+    heading?: string;
+  };
+}
+
+interface ConfigData {
+  branding?: BrandingConfig;
+  theme?: Partial<WebsiteTheme>;
+}
+
 export function useWebsiteTheme() {
   const [theme, setTheme] = useState<WebsiteTheme>(DEFAULT_THEME);
   const [loading, setLoading] = useState(true);
@@ -43,18 +68,18 @@ export function useWebsiteTheme() {
     const loadTheme = async () => {
       try {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
-        
+
         // Try to load from platform collection, website document
         // Firestore paths must have even segments: collection/document
         const configData = await FirestoreService.get('platformConfig', 'website');
-        
-        if (configData?.branding) {
+
+        if (configData && typeof configData === 'object' && 'branding' in configData) {
           const branding = configData.branding;
           setTheme({
-            logoUrl:branding.logoUrl ?? DEFAULT_THEME.logoUrl,
-            logoHeight:branding.logoHeight ?? DEFAULT_THEME.logoHeight,
-            companyName:branding.companyName ?? DEFAULT_THEME.companyName,
-            tagline:branding.tagline ?? DEFAULT_THEME.tagline,
+            logoUrl: branding.logoUrl ?? DEFAULT_THEME.logoUrl,
+            logoHeight: branding.logoHeight ?? DEFAULT_THEME.logoHeight,
+            companyName: branding.companyName ?? DEFAULT_THEME.companyName,
+            tagline: branding.tagline ?? DEFAULT_THEME.tagline,
             primaryColor: branding.colors?.primary ?? DEFAULT_THEME.primaryColor,
             secondaryColor: branding.colors?.secondary ?? DEFAULT_THEME.secondaryColor,
             accentColor: branding.colors?.accent ?? DEFAULT_THEME.accentColor,
@@ -70,7 +95,7 @@ export function useWebsiteTheme() {
           setTheme({ ...DEFAULT_THEME, ...configData.theme });
         }
         // If no config exists, DEFAULT_THEME is already set
-      } catch (error) {
+      } catch (_error) {
         // Silently fall back to default theme - this is expected if no config exists yet
         logger.info('Using default theme (no custom config found)', { file: 'useWebsiteTheme.ts' });
       } finally {
@@ -78,7 +103,7 @@ export function useWebsiteTheme() {
       }
     };
 
-    loadTheme();
+    void loadTheme();
   }, []);
 
   return { theme, loading };

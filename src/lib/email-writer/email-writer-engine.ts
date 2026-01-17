@@ -614,8 +614,8 @@ async function emitEmailGeneratedSignal(params: {
   dealScore?: DealScore;
 }): Promise<void> {
   try {
-    const coordinator = await getServerSignalCoordinator();
-    
+    const coordinator = getServerSignalCoordinator();
+
     await coordinator.emitSignal({
       type: 'email.generated',
       orgId: params.organizationId,

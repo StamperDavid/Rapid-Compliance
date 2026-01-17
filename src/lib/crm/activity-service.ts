@@ -6,12 +6,12 @@
 
 import { FirestoreService } from '@/lib/db/firestore-service';
 import type { QueryConstraint, QueryDocumentSnapshot} from 'firebase/firestore';
-import { where, orderBy, limit } from 'firebase/firestore';
+import { where, orderBy } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import type { 
-  Activity, 
-  ActivityFilters, 
-  ActivityStats, 
+import type {
+  Activity,
+  ActivityFilters,
+  ActivityStats,
   ActivityInsight,
   NextBestAction,
   TimelineGroup,
@@ -32,6 +32,16 @@ interface PaginatedResult<T> {
 }
 
 /**
+ * Helper to safely convert activity occurredAt to Date
+ */
+function toDate(value: Date | { toDate?: () => Date } | string | number): Date {
+  if (value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  return value instanceof Date ? value : new Date(value);
+}
+
+/**
  * Create a new activity
  */
 export async function createActivity(
@@ -48,8 +58,8 @@ export async function createActivity(
       id: activityId,
       organizationId,
       workspaceId,
-      occurredAt: (data.occurredAt || now) as any,
-      createdAt: now as any,
+      occurredAt: (data.occurredAt || now),
+      createdAt: now,
     };
 
     await FirestoreService.set(
@@ -67,9 +77,10 @@ export async function createActivity(
     });
 
     return activity;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create activity', error, { organizationId, data });
-    throw new Error(`Failed to create activity: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to create activity: ${errorMessage}`);
   }
 }
 
@@ -133,8 +144,10 @@ export async function getActivities(
     // Date range filter
     if (filters?.dateRange) {
       filteredData = filteredData.filter(activity => {
-        const occurredAt = activity.occurredAt?.toDate ? activity.occurredAt.toDate() : new Date(activity.occurredAt as any);
-        return occurredAt >= filters.dateRange!.start && occurredAt <= filters.dateRange!.end;
+        const occurredAt = toDate(activity.occurredAt);
+        const dateRange = filters.dateRange;
+        if (!dateRange) return true;
+        return occurredAt >= dateRange.start && occurredAt <= dateRange.end;
       });
     }
 
@@ -149,9 +162,10 @@ export async function getActivities(
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get activities', error, { organizationId, filters });
-    throw new Error(`Failed to retrieve activities: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to retrieve activities: ${errorMessage}`);
   }
 }
 
@@ -175,15 +189,18 @@ export async function getEntityTimeline(
 
     // Group by date
     const grouped = new Map<string, Activity[]>();
-    
+
     result.data.forEach(activity => {
-      const occurredAt = activity.occurredAt?.toDate ? activity.occurredAt.toDate() : new Date(activity.occurredAt as any);
+      const occurredAt = toDate(activity.occurredAt);
       const dateKey = occurredAt.toISOString().split('T')[0]; // YYYY-MM-DD
-      
+
       if (!grouped.has(dateKey)) {
         grouped.set(dateKey, []);
       }
-      grouped.get(dateKey)!.push(activity);
+      const dayActivities = grouped.get(dateKey);
+      if (dayActivities) {
+        dayActivities.push(activity);
+      }
     });
 
     // Convert to array and sort by date desc
@@ -191,8 +208,8 @@ export async function getEntityTimeline(
       .map(([date, activities]) => ({
         date,
         activities: activities.sort((a, b) => {
-          const aTime = a.occurredAt?.toDate ? a.occurredAt.toDate().getTime() : new Date(a.occurredAt as any).getTime();
-          const bTime = b.occurredAt?.toDate ? b.occurredAt.toDate().getTime() : new Date(b.occurredAt as any).getTime();
+          const aTime = toDate(a.occurredAt).getTime();
+          const bTime = toDate(b.occurredAt).getTime();
           return bTime - aTime;
         }),
       }))
@@ -207,9 +224,10 @@ export async function getEntityTimeline(
     });
 
     return timeline;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get timeline', error, { organizationId, entityType, entityId });
-    throw new Error(`Failed to retrieve timeline: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to retrieve timeline: ${errorMessage}`);
   }
 }
 
@@ -232,7 +250,7 @@ export async function getActivityStats(
 
     const activities = result.data;
     const activitiesByType: Partial<Record<ActivityType, number>> = {};
-    
+
     activities.forEach(activity => {
       activitiesByType[activity.type] = (activitiesByType[activity.type] ?? 0) + 1;
     });
@@ -251,16 +269,14 @@ export async function getActivityStats(
     let lastActivityDate: Date | undefined;
     if (activities.length > 0) {
       const lastActivity = activities[0]; // Already sorted by occurredAt desc
-      lastActivityDate = lastActivity.occurredAt?.toDate ? 
-        lastActivity.occurredAt.toDate() : 
-        new Date(lastActivity.occurredAt as any);
+      lastActivityDate = toDate(lastActivity.occurredAt);
     }
 
     // Calculate avg activities per day (last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentActivities = activities.filter(a => {
-      const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : new Date(a.occurredAt as any);
+      const occurredAt = toDate(a.occurredAt);
       return occurredAt >= thirtyDaysAgo;
     });
     const avgActivitiesPerDay = recentActivities.length / 30;
@@ -286,9 +302,10 @@ export async function getActivityStats(
     });
 
     return stats;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to calculate activity stats', error, { organizationId, entityType, entityId });
-    throw new Error(`Failed to calculate stats: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to calculate stats: ${errorMessage}`);
   }
 }
 
@@ -302,11 +319,9 @@ function calculateEngagementScore(activities: Activity[]): number {
 
   // Recency score (0-50 points)
   const lastActivity = activities[0];
-  const lastActivityDate = lastActivity.occurredAt?.toDate ? 
-    lastActivity.occurredAt.toDate() : 
-    new Date(lastActivity.occurredAt as any);
+  const lastActivityDate = toDate(lastActivity.occurredAt);
   const daysSinceLastActivity = (Date.now() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24);
-  
+
   if (daysSinceLastActivity < 1) {score += 50;}
   else if (daysSinceLastActivity < 3) {score += 40;}
   else if (daysSinceLastActivity < 7) {score += 30;}
@@ -318,7 +333,7 @@ function calculateEngagementScore(activities: Activity[]): number {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const recentActivities = activities.filter(a => {
-    const occurredAt = a.occurredAt?.toDate ? a.occurredAt.toDate() : new Date(a.occurredAt as any);
+    const occurredAt = toDate(a.occurredAt);
     return occurredAt >= thirtyDaysAgo;
   });
 
@@ -348,7 +363,7 @@ export async function getActivityInsights(
     // No recent activity warning
     if (stats.lastActivityDate) {
       const daysSinceLastActivity = (Date.now() - stats.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24);
-      
+
       if (daysSinceLastActivity > 14 && entityType === 'deal') {
         insights.push({
           type: 'warning',
@@ -390,7 +405,7 @@ export async function getActivityInsights(
     const emailsSent = stats.activitiesByType.email_sent || 0;
     const emailsOpened = stats.activitiesByType.email_opened || 0;
     const emailsReceived = stats.activitiesByType.email_received || 0;
-    
+
     if (emailsSent > 2 && emailsOpened > 2 && emailsReceived === 0) {
       insights.push({
         type: 'info',
@@ -408,9 +423,10 @@ export async function getActivityInsights(
     });
 
     return insights;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to generate insights', error, { organizationId, entityType, entityId });
-    throw new Error(`Failed to generate insights: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to generate insights: ${errorMessage}`);
   }
 }
 
@@ -437,9 +453,9 @@ export async function getNextBestAction(
     const lastActivityTypes = lastActivities.map(a => a.type);
 
     // Rule-based recommendations (in production, this would use ML)
-    
+
     // High engagement + no meeting scheduled = schedule meeting
-    if (stats.engagementScore && stats.engagementScore > 70 && 
+    if (stats.engagementScore && stats.engagementScore > 70 &&
         !lastActivityTypes.includes('meeting_scheduled')) {
       return {
         action: 'schedule_meeting',
@@ -454,7 +470,7 @@ export async function getNextBestAction(
     // Email opened multiple times but no response = follow up call
     const recentEmailOpens = lastActivityTypes.filter(t => t === 'email_opened').length;
     const recentEmailResponses = lastActivityTypes.filter(t => t === 'email_received').length;
-    
+
     if (recentEmailOpens >= 2 && recentEmailResponses === 0) {
       return {
         action: 'make_call',
@@ -469,7 +485,7 @@ export async function getNextBestAction(
     // No activity in 7+ days for deal = urgent follow-up
     if (entityType === 'deal' && stats.lastActivityDate) {
       const daysSinceLastActivity = (Date.now() - stats.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24);
-      
+
       if (daysSinceLastActivity > 7) {
         return {
           action: 'follow_up',
@@ -485,11 +501,9 @@ export async function getNextBestAction(
     // Meeting completed recently = send proposal/follow-up
     const lastMeeting = lastActivities.find(a => a.type === 'meeting_completed');
     if (lastMeeting) {
-      const meetingDate = lastMeeting.occurredAt?.toDate ? 
-        lastMeeting.occurredAt.toDate() : 
-        new Date(lastMeeting.occurredAt as any);
+      const meetingDate = toDate(lastMeeting.occurredAt);
       const daysSinceMeeting = (Date.now() - meetingDate.getTime()) / (1000 * 60 * 60 * 24);
-      
+
       if (daysSinceMeeting < 2) {
         return {
           action: 'send_proposal',
@@ -523,7 +537,7 @@ export async function getNextBestAction(
       basedOn: [],
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to get next best action', error, { organizationId, entityType, entityId });
     return null;
   }
@@ -557,9 +571,10 @@ export async function bulkCreateActivities(
     });
 
     return successCount;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Bulk activity creation failed', error, { organizationId });
-    throw new Error(`Bulk creation failed: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Bulk creation failed: ${errorMessage}`);
   }
 }
 
@@ -578,9 +593,9 @@ export async function deleteActivity(
     );
 
     logger.info('Activity deleted', { organizationId, activityId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to delete activity', error, { organizationId, activityId });
-    throw new Error(`Failed to delete activity: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to delete activity: ${errorMessage}`);
   }
 }
-

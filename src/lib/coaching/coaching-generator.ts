@@ -156,7 +156,12 @@ export class CoachingGenerator {
     });
     
     try {
-      const parsed = JSON.parse(response.text);
+      const parsed = JSON.parse(response.text) as {
+        assessment?: string;
+        trend?: 'improving' | 'stable' | 'declining';
+        keyMetrics?: Array<{ metric: string; value: number; vsTeamAverage: number; trend: 'up' | 'down' | 'stable' }>;
+        focusAreas?: string[];
+      };
       return {
         assessment:(parsed.assessment !== '' && parsed.assessment != null) ? parsed.assessment : 'Performance analysis completed',
         currentTier: performance.tier,
@@ -178,7 +183,7 @@ export class CoachingGenerator {
     performance: RepPerformanceMetrics
   ): Promise<Strength[]> {
     const prompt = this.buildStrengthsPrompt(performance);
-    
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -187,10 +192,10 @@ export class CoachingGenerator {
       temperature: 0.7,
       maxTokens: 1500
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
-return parsed.strengths ?? this.identifyStrengthsFallback(performance);
+      const parsed = JSON.parse(response.text) as { strengths?: Strength[] };
+      return parsed.strengths ?? this.identifyStrengthsFallback(performance);
     } catch (error) {
       logger.error('Error parsing strengths', { error });
       return this.identifyStrengthsFallback(performance);
@@ -204,7 +209,7 @@ return parsed.strengths ?? this.identifyStrengthsFallback(performance);
     performance: RepPerformanceMetrics
   ): Promise<Weakness[]> {
     const prompt = this.buildWeaknessesPrompt(performance);
-    
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -213,10 +218,10 @@ return parsed.strengths ?? this.identifyStrengthsFallback(performance);
       temperature: 0.7,
       maxTokens: 1500
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
-return parsed.weaknesses ?? this.identifyWeaknessesFallback(performance);
+      const parsed = JSON.parse(response.text) as { weaknesses?: Weakness[] };
+      return parsed.weaknesses ?? this.identifyWeaknessesFallback(performance);
     } catch (error) {
       logger.error('Error parsing weaknesses', { error });
       return this.identifyWeaknessesFallback(performance);
@@ -230,7 +235,7 @@ return parsed.weaknesses ?? this.identifyWeaknessesFallback(performance);
     performance: RepPerformanceMetrics
   ): Promise<Opportunity[]> {
     const prompt = this.buildOpportunitiesPrompt(performance);
-    
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -239,10 +244,10 @@ return parsed.weaknesses ?? this.identifyWeaknessesFallback(performance);
       temperature: 0.8,
       maxTokens: 2000
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
-return parsed.opportunities ?? this.identifyOpportunitiesFallback(performance);
+      const parsed = JSON.parse(response.text) as { opportunities?: Opportunity[] };
+      return parsed.opportunities ?? this.identifyOpportunitiesFallback(performance);
     } catch (error) {
       logger.error('Error parsing opportunities', { error });
       return this.identifyOpportunitiesFallback(performance);
@@ -256,7 +261,7 @@ return parsed.opportunities ?? this.identifyOpportunitiesFallback(performance);
     performance: RepPerformanceMetrics
   ): Promise<Risk[]> {
     const prompt = this.buildRisksPrompt(performance);
-    
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -265,10 +270,10 @@ return parsed.opportunities ?? this.identifyOpportunitiesFallback(performance);
       temperature: 0.6,
       maxTokens: 1500
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
-return parsed.risks ?? this.assessRisksFallback(performance);
+      const parsed = JSON.parse(response.text) as { risks?: Risk[] };
+      return parsed.risks ?? this.assessRisksFallback(performance);
     } catch (error) {
       logger.error('Error parsing risks', { error });
       return this.assessRisksFallback(performance);
@@ -282,7 +287,7 @@ return parsed.risks ?? this.assessRisksFallback(performance);
     performance: RepPerformanceMetrics
   ): Promise<BestPractice[]> {
     const prompt = this.buildBestPracticesPrompt(performance);
-    
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -291,9 +296,9 @@ return parsed.risks ?? this.assessRisksFallback(performance);
       temperature: 0.7,
       maxTokens: 2000
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
+      const parsed = JSON.parse(response.text) as { bestPractices?: BestPractice[] };
       return parsed.bestPractices ?? [];
     } catch (error) {
       logger.error('Error parsing best practices', { error });
@@ -308,7 +313,7 @@ return parsed.risks ?? this.assessRisksFallback(performance);
     performance: RepPerformanceMetrics
   ): Promise<CoachingRecommendation[]> {
     const prompt = this.buildRecommendationsPrompt(performance);
-    
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -317,10 +322,10 @@ return parsed.risks ?? this.assessRisksFallback(performance);
       temperature: 0.7,
       maxTokens: 3000
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
-return parsed.recommendations ?? this.generateRecommendationsFallback(performance);
+      const parsed = JSON.parse(response.text) as { recommendations?: CoachingRecommendation[] };
+      return parsed.recommendations ?? this.generateRecommendationsFallback(performance);
     } catch (error) {
       logger.error('Error parsing recommendations', { error });
       return this.generateRecommendationsFallback(performance);
@@ -332,10 +337,10 @@ return parsed.recommendations ?? this.generateRecommendationsFallback(performanc
    */
   private async generateTrainingSuggestions(
     performance: RepPerformanceMetrics,
-    weaknesses: Weakness[]
+    _weaknesses: Weakness[]
   ): Promise<TrainingSuggestion[]> {
-    const prompt = this.buildTrainingPrompt(performance, weaknesses);
-    
+    const prompt = this.buildTrainingPrompt(performance, _weaknesses);
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -344,9 +349,9 @@ return parsed.recommendations ?? this.generateRecommendationsFallback(performanc
       temperature: 0.7,
       maxTokens: 2000
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
+      const parsed = JSON.parse(response.text) as { trainingSuggestions?: TrainingSuggestion[] };
       return parsed.trainingSuggestions ?? [];
     } catch (error) {
       logger.error('Error parsing training suggestions', { error });
@@ -359,10 +364,10 @@ return parsed.recommendations ?? this.generateRecommendationsFallback(performanc
    */
   private async generateActionItems(
     performance: RepPerformanceMetrics,
-    recommendations: CoachingRecommendation[]
+    _recommendations: CoachingRecommendation[]
   ): Promise<ActionItem[]> {
-    const prompt = this.buildActionItemsPrompt(performance, recommendations);
-    
+    const prompt = this.buildActionItemsPrompt(performance, _recommendations);
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4o',
       messages: [
@@ -371,9 +376,9 @@ return parsed.recommendations ?? this.generateRecommendationsFallback(performanc
       temperature: 0.6,
       maxTokens: 2000
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text);
+      const parsed = JSON.parse(response.text) as { actionItems?: ActionItem[] };
       return parsed.actionItems ?? [];
     } catch (error) {
       logger.error('Error parsing action items', { error });
@@ -431,7 +436,7 @@ Return as JSON:
     return `You are an expert sales coach identifying a rep's key strengths.
 
 REP SKILLS (0-100):
-${Object.entries(performance.skills).map(([skill, score]) => `- ${skill}: ${score.toFixed(0)}`).join('\n')}
+${Object.entries(performance.skills).map(([skill, score]) => `- ${skill}: ${(score as number).toFixed(0)}`).join('\n')}
 
 PERFORMANCE METRICS:
 - Win Rate: ${(performance.deals.winRate * 100).toFixed(1)}%
@@ -466,8 +471,8 @@ Return as JSON:
 
 REP SKILLS (0-100):
 ${Object.entries(performance.skills)
-  .filter(([_, score]) => score < 60)
-  .map(([skill, score]) => `- ${skill}: ${score.toFixed(0)}`)
+  .filter(([, score]) => (score as number) < 60)
+  .map(([skill, score]) => `- ${skill}: ${(score as number).toFixed(0)}`)
   .join('\n')}
 
 CONVERSION FUNNEL:
@@ -586,7 +591,7 @@ Return as JSON:
 REP PERFORMANCE:
 - Current Tier: ${performance.tier}
 - Areas for Improvement: ${Object.entries(performance.skills)
-  .filter(([_, score]) => score < 60)
+  .filter(([, score]) => (score as number) < 60)
   .map(([skill]) => skill)
   .join(', ')}
 
@@ -626,10 +631,10 @@ SCORE: ${performance.overallScore}/100
 
 TOP AREAS TO IMPROVE:
 ${Object.entries(performance.skills)
-  .filter(([_, score]) => score < 60)
-  .sort((a, b) => a[1] - b[1])
+  .filter(([, score]) => (score as number) < 60)
+  .sort((a, b) => (a[1] as number) - (b[1] as number))
   .slice(0, 5)
-  .map(([skill, score]) => `- ${skill}: ${score.toFixed(0)}/100`)
+  .map(([skill, score]) => `- ${skill}: ${(score as number).toFixed(0)}/100`)
   .join('\n')}
 
 Create 3-5 actionable coaching recommendations. For each:
@@ -839,7 +844,7 @@ Return as JSON:
     return weaknesses;
   }
 
-  private identifyOpportunitiesFallback(performance: RepPerformanceMetrics): Opportunity[] {
+  private identifyOpportunitiesFallback(_performance: RepPerformanceMetrics): Opportunity[] {
     return [];
   }
 
@@ -862,7 +867,7 @@ Return as JSON:
     return risks;
   }
 
-  private generateRecommendationsFallback(performance: RepPerformanceMetrics): CoachingRecommendation[] {
+  private generateRecommendationsFallback(_performance: RepPerformanceMetrics): CoachingRecommendation[] {
     return [];
   }
 

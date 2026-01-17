@@ -6,12 +6,47 @@
 
 import { adminDb } from '@/lib/firebase/admin'
 import { logger } from '@/lib/logger/logger';
-import type { 
-  QueryConstraint, 
-  DocumentData, 
-  WhereFilterOp,
-  OrderByDirection,
+import type {
+  QueryConstraint,
 } from 'firebase/firestore';
+
+// Type definitions for constraint data extraction
+interface ConstraintFieldPath {
+  segments?: string[];
+  join?: (separator: string) => string;
+}
+
+interface WhereConstraintData {
+  type: 'where';
+  _field?: ConstraintFieldPath;
+  fieldPath?: string;
+  _op?: string;
+  opStr?: string;
+  _value?: unknown;
+  value?: unknown;
+}
+
+interface OrderByConstraintData {
+  type: 'orderBy';
+  _field?: ConstraintFieldPath;
+  fieldPath?: string;
+  _direction?: string;
+  directionStr?: string;
+}
+
+interface LimitConstraintData {
+  type: 'limit';
+  _limit?: number;
+  limit?: number;
+}
+
+type ConstraintData = WhereConstraintData | OrderByConstraintData | LimitConstraintData | { type?: string };
+
+// Type for Firestore document data
+interface FirestoreDocument {
+  id: string;
+  [key: string]: unknown;
+}
 
 /**
  * Ensure adminDb is initialized, throw if not
@@ -27,7 +62,7 @@ export class AdminFirestoreService {
   /**
    * Get a single document by ID
    */
-  static async get(collectionPath: string, docId: string): Promise<any | null> {
+  static async get(collectionPath: string, docId: string): Promise<FirestoreDocument | null> {
     try {
       const docRef = ensureAdminDb().collection(collectionPath).doc(docId);
       const doc = await docRef.get();
@@ -52,28 +87,29 @@ export class AdminFirestoreService {
   static async getAll(
     collectionPath: string,
     constraints: QueryConstraint[] = []
-  ): Promise<any[]> {
+  ): Promise<FirestoreDocument[]> {
     try {
       let query: FirebaseFirestore.Query = ensureAdminDb().collection(collectionPath);
       
       // Apply constraints (where, orderBy, limit)
       for (const constraint of constraints) {
-        const constraintData = constraint as any;
-        
+        const constraintData = constraint as unknown as ConstraintData;
+
         if (!constraintData?.type) {
           continue;
         }
-        
+
         if (constraintData.type === 'where') {
           // Client SDK stores these as _field, _op, _value (underscore-prefixed)
-          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
-          const op =constraintData._op ?? constraintData.opStr;
-          const value = constraintData._value !== undefined ? constraintData._value : constraintData.value;
-          
+          const whereData = constraintData as WhereConstraintData;
+          const fieldPath = whereData._field?.segments?.join('.') ?? whereData.fieldPath;
+          const op = whereData._op ?? whereData.opStr;
+          const value = whereData._value !== undefined ? whereData._value : whereData.value;
+
           if (!fieldPath || !op) {
             continue;
           }
-          
+
           query = query.where(
             fieldPath,
             op as FirebaseFirestore.WhereFilterOp,
@@ -81,19 +117,21 @@ export class AdminFirestoreService {
           );
         } else if (constraintData.type === 'orderBy') {
           // Client SDK stores these as _field, _direction
-          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
-          const direction =constraintData._direction ?? constraintData.directionStr;
-          
+          const orderData = constraintData as OrderByConstraintData;
+          const fieldPath = orderData._field?.segments?.join('.') ?? orderData.fieldPath;
+          const direction = orderData._direction ?? orderData.directionStr;
+
           if (!fieldPath) {
             continue;
           }
-          
+
           query = query.orderBy(
             fieldPath,
             direction as FirebaseFirestore.OrderByDirection
           );
         } else if (constraintData.type === 'limit') {
-          const limitValue =constraintData._limit ?? constraintData.limit;
+          const limitData = constraintData as LimitConstraintData;
+          const limitValue = limitData._limit ?? limitData.limit;
           if (limitValue) {
             query = query.limit(limitValue);
           }
@@ -119,35 +157,36 @@ export class AdminFirestoreService {
     collectionPath: string,
     constraints: QueryConstraint[] = [],
     pageSize: number = 50,
-    lastDoc?: any
+    lastDoc?: FirebaseFirestore.QueryDocumentSnapshot
   ): Promise<{
-    data: any[];
-    lastDoc: any | null;
+    data: FirestoreDocument[];
+    lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null;
     hasMore: boolean;
   }> {
     try {
       let query: FirebaseFirestore.Query = ensureAdminDb().collection(collectionPath);
       
-      
+
       // Apply constraints (where, orderBy, limit)
       for (const constraint of constraints) {
-        const constraintData = constraint as any;
-        
+        const constraintData = constraint as unknown as ConstraintData;
+
         // Skip invalid constraints
         if (!constraintData?.type) {
           continue;
         }
-        
+
         if (constraintData.type === 'where') {
           // Client SDK stores these as _field, _op, _value (underscore-prefixed)
-          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
-          const op =constraintData._op ?? constraintData.opStr;
-          const value = constraintData._value !== undefined ? constraintData._value : constraintData.value;
-          
+          const whereData = constraintData as WhereConstraintData;
+          const fieldPath = whereData._field?.segments?.join('.') ?? whereData.fieldPath;
+          const op = whereData._op ?? whereData.opStr;
+          const value = whereData._value !== undefined ? whereData._value : whereData.value;
+
           if (!fieldPath || !op) {
             continue;
           }
-          
+
           query = query.where(
             fieldPath,
             op as FirebaseFirestore.WhereFilterOp,
@@ -155,13 +194,14 @@ export class AdminFirestoreService {
           );
         } else if (constraintData.type === 'orderBy') {
           // Client SDK stores these as _field, _direction
-          const fieldPath = constraintData._field?.segments?.join('.') ?? constraintData.fieldPath;
-          const direction =constraintData._direction ?? constraintData.directionStr;
-          
+          const orderData = constraintData as OrderByConstraintData;
+          const fieldPath = orderData._field?.segments?.join('.') ?? orderData.fieldPath;
+          const direction = orderData._direction ?? orderData.directionStr;
+
           if (!fieldPath) {
             continue;
           }
-          
+
           query = query.orderBy(
             fieldPath,
             direction as FirebaseFirestore.OrderByDirection
@@ -208,7 +248,7 @@ export class AdminFirestoreService {
   static async set(
     collectionPath: string,
     docId: string,
-    data: any,
+    data: Record<string, unknown>,
     merge: boolean = false
   ): Promise<void> {
     try {
@@ -228,7 +268,7 @@ export class AdminFirestoreService {
   /**
    * Add a new document with auto-generated ID
    */
-  static async add(collectionPath: string, data: any): Promise<string> {
+  static async add(collectionPath: string, data: Record<string, unknown>): Promise<string> {
     try {
       const docRef = await ensureAdminDb().collection(collectionPath).add(data);
       return docRef.id;
@@ -244,7 +284,7 @@ export class AdminFirestoreService {
   static async update(
     collectionPath: string,
     docId: string,
-    data: any
+    data: Record<string, unknown>
   ): Promise<void> {
     try {
       const docRef = ensureAdminDb().collection(collectionPath).doc(docId);

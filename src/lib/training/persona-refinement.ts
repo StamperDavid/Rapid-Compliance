@@ -1,6 +1,6 @@
 /**
  * Training → Persona Refinement System
- * 
+ *
  * Analyzes training sessions to identify issues and automatically
  * update the agent persona for continuous improvement.
  */
@@ -12,7 +12,7 @@ export interface TrainingSession {
   userMessage: string;
   agentResponse: string;
   feedback: {
-    rating: number; // 1-5
+    rating: number;
     issues: TrainingIssue[];
     comments?: string;
   };
@@ -30,7 +30,30 @@ export interface PersonaRefinement {
   category: 'verbosity' | 'accuracy' | 'brand-alignment' | 'tone';
   adjustment: string;
   reasoning: string;
-  confidence: number; // 0-1
+  confidence: number;
+}
+
+interface VerbosityControl {
+  maxResponseLength: number;
+  preferBulletPoints: boolean;
+  avoidRepetition: boolean;
+  conversationalPacing: string;
+}
+
+interface TrainingInsight {
+  date: string;
+  issue: string;
+  adjustment: string;
+  category: string;
+}
+
+interface PersonaWithTraining {
+  trainingInsights?: TrainingInsight[];
+  verbosityControl?: VerbosityControl;
+  accuracyRules?: string[];
+  brandAlignmentNotes?: string;
+  dynamicToneRegister?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -59,7 +82,7 @@ export function analyzeTrainingSession(session: TrainingSession): PersonaRefinem
     }
   }
 
-  return refinements.filter(r => r.confidence > 0.6); // Only apply high-confidence adjustments
+  return refinements.filter(r => r.confidence > 0.6);
 }
 
 /**
@@ -68,7 +91,7 @@ export function analyzeTrainingSession(session: TrainingSession): PersonaRefinem
 function analyzeVerbosityIssue(session: TrainingSession, issue: TrainingIssue): PersonaRefinement {
   const responseLength = session.agentResponse.split(' ').length;
   const hasMultipleParagraphs = session.agentResponse.split('\n\n').length > 2;
-  
+
   let adjustment = '';
   let confidence = 0.7;
 
@@ -97,9 +120,9 @@ function analyzeVerbosityIssue(session: TrainingSession, issue: TrainingIssue): 
 function analyzeAccuracyIssue(session: TrainingSession, issue: TrainingIssue): PersonaRefinement {
   // Extract what was inaccurate
   const inaccurateTopic = extractTopicFromIssue(issue.description);
-  
-  const rule = (issue.suggestedFix !== '' && issue.suggestedFix != null) 
-    ? issue.suggestedFix 
+
+  const rule = (issue.suggestedFix !== '' && issue.suggestedFix != null)
+    ? issue.suggestedFix
     : `Always verify ${inaccurateTopic} from authoritative source before responding`;
 
   return {
@@ -127,7 +150,7 @@ function analyzeBrandAlignmentIssue(session: TrainingSession, issue: TrainingIss
  */
 function analyzeToneIssue(session: TrainingSession, issue: TrainingIssue): PersonaRefinement {
   let adjustment = '';
-  
+
   if (issue.description.toLowerCase().includes('aggressive')) {
     adjustment = 'Tone adjustment: Reduce sales pressure. Focus on value delivery over closing.';
   } else if (issue.description.toLowerCase().includes('formal')) {
@@ -162,10 +185,10 @@ function analyzeRepetitionIssue(session: TrainingSession, issue: TrainingIssue):
  * Applies refinements to a persona object
  */
 export function applyRefinementsToPersona(
-  persona: any,
+  persona: PersonaWithTraining,
   refinements: PersonaRefinement[]
-): { updatedPersona: any; changes: string[] } {
-  const updatedPersona = { ...persona };
+): { updatedPersona: PersonaWithTraining; changes: string[] } {
+  const updatedPersona: PersonaWithTraining = { ...persona };
   const changes: string[] = [];
 
   for (const refinement of refinements) {
@@ -203,68 +226,76 @@ export function applyRefinementsToPersona(
   return { updatedPersona, changes };
 }
 
-function applyVerbosityRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  persona.verbosityControl ??= {
-    maxResponseLength: 500,
-    preferBulletPoints: false,
-    avoidRepetition: false,
-    conversationalPacing: 'balanced'
-  };
+function applyVerbosityRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
+  if (!persona.verbosityControl) {
+    persona.verbosityControl = {
+      maxResponseLength: 500,
+      preferBulletPoints: false,
+      avoidRepetition: false,
+      conversationalPacing: 'balanced'
+    };
+  }
 
   if (refinement.adjustment.includes('maxResponseLength')) {
     const match = refinement.adjustment.match(/(\d+) words/);
     if (match) {
       persona.verbosityControl.maxResponseLength = parseInt(match[1]);
-      changes.push(`✓ Reduced max response length to ${match[1]} words`);
+      changes.push(`Reduced max response length to ${match[1]} words`);
     }
   }
 
   if (refinement.adjustment.includes('preferBulletPoints')) {
     persona.verbosityControl.preferBulletPoints = true;
-    changes.push('✓ Enabled bullet point preference');
+    changes.push('Enabled bullet point preference');
   }
 
   if (refinement.adjustment.includes('avoidRepetition')) {
     persona.verbosityControl.avoidRepetition = true;
-    changes.push('✓ Enabled repetition avoidance');
+    changes.push('Enabled repetition avoidance');
   }
 
   if (refinement.adjustment.includes('concise')) {
     persona.verbosityControl.conversationalPacing = 'concise';
-    changes.push('✓ Changed pacing to concise');
+    changes.push('Changed pacing to concise');
   }
 }
 
-function applyAccuracyRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  persona.accuracyRules ??= [];
+function applyAccuracyRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
+  if (!persona.accuracyRules) {
+    persona.accuracyRules = [];
+  }
 
   const ruleMatch = refinement.adjustment.match(/Add accuracy rule: "(.+)"/);
   if (ruleMatch) {
     const rule = ruleMatch[1];
     if (!persona.accuracyRules.includes(rule)) {
       persona.accuracyRules.push(rule);
-      changes.push(`✓ Added accuracy rule: ${rule}`);
+      changes.push(`Added accuracy rule: ${rule}`);
     }
   }
 }
 
-function applyBrandAlignmentRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  persona.brandAlignmentNotes ??= '';
+function applyBrandAlignmentRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
+  if (!persona.brandAlignmentNotes) {
+    persona.brandAlignmentNotes = '';
+  }
 
   const note = refinement.adjustment;
   if (!persona.brandAlignmentNotes.includes(note)) {
     persona.brandAlignmentNotes += (persona.brandAlignmentNotes ? '\n\n' : '') + note;
-    changes.push(`✓ Added brand alignment note`);
+    changes.push('Added brand alignment note');
   }
 }
 
-function applyToneRefinement(persona: any, refinement: PersonaRefinement, changes: string[]) {
-  persona.dynamicToneRegister ??= '';
+function applyToneRefinement(persona: PersonaWithTraining, refinement: PersonaRefinement, changes: string[]) {
+  if (!persona.dynamicToneRegister) {
+    persona.dynamicToneRegister = '';
+  }
 
   const toneAdjustment = refinement.adjustment;
   if (!persona.dynamicToneRegister.includes(toneAdjustment)) {
     persona.dynamicToneRegister += (persona.dynamicToneRegister ? ' ' : '') + toneAdjustment;
-    changes.push(`✓ Updated tone register`);
+    changes.push('Updated tone register');
   }
 }
 
@@ -272,13 +303,13 @@ function extractTopicFromIssue(description: string): string {
   // Simple extraction - in production, use NLP
   const words = description.toLowerCase().split(' ');
   const topics = ['pricing', 'features', 'integration', 'security', 'compliance', 'performance'];
-  
+
   for (const topic of topics) {
     if (words.includes(topic)) {
       return topic;
     }
   }
-  
+
   return 'this topic';
 }
 
@@ -310,7 +341,7 @@ export function batchProcessTrainingSessions(
   // Deduplicate and merge similar refinements
   const mergedRefinements = mergeRefinements(allRefinements);
 
-  const avgConfidence = mergedRefinements.reduce((sum, r) => sum + r.confidence, 0) / 
+  const avgConfidence = mergedRefinements.reduce((sum, r) => sum + r.confidence, 0) /
     (mergedRefinements.length || 1);
 
   return {
@@ -327,19 +358,20 @@ export function batchProcessTrainingSessions(
 function mergeRefinements(refinements: PersonaRefinement[]): PersonaRefinement[] {
   // Group by category and adjustment type
   const grouped = new Map<string, PersonaRefinement[]>();
-  
+
   for (const refinement of refinements) {
     const key = `${refinement.category}:${refinement.adjustment.substring(0, 50)}`;
-    if (!grouped.has(key)) {
-      grouped.set(key, []);
+    const group = grouped.get(key);
+    if (group) {
+      group.push(refinement);
+    } else {
+      grouped.set(key, [refinement]);
     }
-    grouped.get(key)!.push(refinement);
   }
 
   // Merge similar refinements, taking the highest confidence
   return Array.from(grouped.values()).map(group => {
     const sorted = group.sort((a, b) => b.confidence - a.confidence);
-    return sorted[0]; // Take highest confidence version
+    return sorted[0];
   });
 }
-

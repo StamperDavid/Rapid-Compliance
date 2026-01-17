@@ -23,7 +23,7 @@ import type {
 } from './types';
 import { searchCompany, searchCompanyNews, searchLinkedIn } from './search-service';
 import { scrapeWithRetry, rateLimiter } from './browser-scraper';
-import { extractCompanyData, calculateConfidence } from './ai-extractor';
+import { extractCompanyData } from './ai-extractor';
 import { getCachedEnrichment, cacheEnrichment } from './cache-service';
 import { validateEnrichmentData } from './validation-service';
 import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
@@ -123,8 +123,8 @@ export async function enrichCompany(
     const cached = await getCachedEnrichment(domain, organizationId);
     
     if (cached) {
-      logger.info('Enrichment ✅ Cache HIT for domain} - returning cached data', { file: 'enrichment-service.ts' });
-      
+      logger.info(`Enrichment ✅ Cache HIT for ${domain} - returning cached data`, { file: 'enrichment-service.ts' });
+
       return {
         success: true,
         data: cached,
@@ -142,8 +142,8 @@ export async function enrichCompany(
         },
       };
     }
-    
-    logger.info('Enrichment Cache MISS for domain} - scraping fresh data', { file: 'enrichment-service.ts' });
+
+    logger.info(`Enrichment Cache MISS for ${domain} - scraping fresh data`, { file: 'enrichment-service.ts' });
     
     // Step 4: Rate limit to avoid blocking
     await rateLimiter.throttle(domain);
@@ -158,9 +158,9 @@ export async function enrichCompany(
     try {
       scrapeCalls++;
       scrapedContent = await scrapeWithRetry(website, 3);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(`[Enrichment] Scraping failed for ${domain}`, error, { file: 'enrichment-service.ts' });
-      
+
       // Don't give up yet - try backup sources
       return await useBackupSources(
         companyIdentifier,
@@ -171,12 +171,11 @@ export async function enrichCompany(
         { searchCalls, scrapeCalls }
       );
     }
-    
+
     // Step 5a: Check content hash for duplicates (avoid re-processing same content)
     let contentHash: string | undefined;
     let temporaryScrapeId: string | undefined;
     let isDuplicate = false;
-    let temporaryScrapeDoc = null;
     
     if (ENABLE_DISTILLATION && scrapedContent.rawHtml) {
       contentHash = calculateContentHash(scrapedContent.rawHtml);
@@ -227,9 +226,8 @@ export async function enrichCompany(
                   keywords: scrapedContent.metadata?.keywords,
                 },
               });
-              
+
               temporaryScrapeId = scrape.id;
-              temporaryScrapeDoc = scrape;
               
               logger.info('Temporary scrape saved', {
                 temporaryScrapeId,
@@ -352,8 +350,8 @@ export async function enrichCompany(
     
     // If validation fails catastrophically, try backup sources
     if (!validation.isValid && validation.confidence < 30) {
-      logger.warn('[Enrichment] Validation failed for ${domain}, trying backup sources...', { file: 'enrichment-service.ts' });
-      
+      logger.warn(`[Enrichment] Validation failed for ${domain}, trying backup sources...`, { file: 'enrichment-service.ts' });
+
       return await useBackupSources(
         companyIdentifier,
         domain,
@@ -363,21 +361,21 @@ export async function enrichCompany(
         { searchCalls, scrapeCalls, aiTokens }
       );
     }
-    
+
     // Step 11: Log warnings if any
     if (validation.warnings.length > 0) {
-      logger.warn(`[Enrichment] Validation warnings for ${domain}`, { 
+      logger.warn(`[Enrichment] Validation warnings for ${domain}`, {
         warnings: validation.warnings,
-        file: 'enrichment-service.ts' 
+        file: 'enrichment-service.ts'
       });
     }
-    
+
     // Step 12: Calculate costs
     const totalCost = calculateCost(searchCalls, scrapeCalls, aiTokens);
-    
+
     // Step 13: Cache the results
     await cacheEnrichment(domain, enrichmentData, organizationId, 7); // 7 day TTL
-    
+
     // Calculate storage metrics
     const storageMetrics = distillationResult ? {
       rawScrapeSize: distillationResult.storageReduction.rawSizeBytes,
@@ -387,7 +385,7 @@ export async function enrichCompany(
       contentHash,
       isDuplicate,
     } : undefined;
-    
+
     // Step 14: Log cost for analytics (including storage savings from distillation)
     await logEnrichmentCost(organizationId, {
       organizationId,
@@ -403,14 +401,14 @@ export async function enrichCompany(
       success: true,
       storageMetrics,
     });
-    
-    logger.info('Enrichment ✅ SUCCESS for domain}', { file: 'enrichment-service.ts' });
-    logger.info('  Cost: $${totalCost.toFixed(4)} | Saved: $${(0.75 - totalCost).toFixed(4)}', { file: 'enrichment-service.ts' });
-    logger.info('  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms', { file: 'enrichment-service.ts' });
-    
+
+    logger.info(`Enrichment ✅ SUCCESS for ${domain}`, { file: 'enrichment-service.ts' });
+    logger.info(`  Cost: $${totalCost.toFixed(4)} | Saved: $${(0.75 - totalCost).toFixed(4)}`, { file: 'enrichment-service.ts' });
+    logger.info(`  Confidence: ${enrichmentData.confidence}% | Duration: ${Date.now() - startTime}ms`, { file: 'enrichment-service.ts' });
+
     if (distillationResult) {
-      logger.info('  Signals: ${distillationResult.signals.length} detected | Lead Score: ${leadScore ?? 0}', { file: 'enrichment-service.ts' });
-      logger.info('  Storage: ${distillationResult.storageReduction.reductionPercent}% reduction (${distillationResult.storageReduction.rawSizeBytes} → ${distillationResult.storageReduction.signalsSizeBytes} bytes)', { file: 'enrichment-service.ts' });
+      logger.info(`  Signals: ${distillationResult.signals.length} detected | Lead Score: ${leadScore ?? 0}`, { file: 'enrichment-service.ts' });
+      logger.info(`  Storage: ${distillationResult.storageReduction.reductionPercent}% reduction (${distillationResult.storageReduction.rawSizeBytes} → ${distillationResult.storageReduction.signalsSizeBytes} bytes)`, { file: 'enrichment-service.ts' });
       logger.info(`  Temporary Scrape: ${temporaryScrapeId ?? 'none'} | Duplicate: ${isDuplicate}`, { file: 'enrichment-service.ts' });
     }
     
@@ -430,9 +428,10 @@ export async function enrichCompany(
         storageMetrics,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('[Enrichment] Unexpected error:', error, { file: 'enrichment-service.ts' });
-    
+
     await logEnrichmentCost(organizationId, {
       organizationId,
       timestamp: new Date(),
@@ -446,8 +445,8 @@ export async function enrichCompany(
       durationMs: Date.now() - startTime,
       success: false,
     });
-    
-    return createErrorResponse(error.message, startTime);
+
+    return createErrorResponse(errorMessage, startTime);
   }
 }
 
@@ -514,9 +513,9 @@ async function useBackupSources(
         durationMs: Date.now() - startTime,
         success: true,
       });
-      
-      logger.info('Enrichment ⚠️ PARTIAL SUCCESS using backup sources for domain}', { file: 'enrichment-service.ts' });
-      
+
+      logger.info(`Enrichment ⚠️ PARTIAL SUCCESS using backup sources for ${domain}`, { file: 'enrichment-service.ts' });
+
       return {
         success: true,
         data: enrichmentData,
@@ -534,7 +533,7 @@ async function useBackupSources(
         },
       };
     }
-    
+
     // NO DATA AT ALL - return clear failure (NO FAKE DATA!)
     return createErrorResponse(
       `Could not enrich ${companyName} - website unreachable and no backup data available`,
@@ -545,9 +544,10 @@ async function useBackupSources(
         aiTokensUsed: costs.aiTokens ?? 0
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return createErrorResponse(
-      `Backup sources failed: ${error.message}`,
+      `Backup sources failed: ${errorMessage}`,
       startTime,
       {
         searchAPICalls: costs.searchCalls,
@@ -598,8 +598,8 @@ export async function enrichCompanies(
     maxConcurrent?: number;
   }
 ): Promise<EnrichmentResponse[]> {
-  logger.info('Enrichment Batch enriching companies.length} companies...', { file: 'enrichment-service.ts' });
-  
+  logger.info(`Enrichment Batch enriching ${companies.length} companies...`, { file: 'enrichment-service.ts' });
+
   if (options?.parallel === false) {
     // Sequential processing
     const results: EnrichmentResponse[] = [];
@@ -609,25 +609,27 @@ export async function enrichCompanies(
     }
     return results;
   }
-  
+
   // Parallel processing with concurrency limit
   const maxConcurrent = options?.maxConcurrent ?? 5;
   const results: EnrichmentResponse[] = [];
-  
+
   for (let i = 0; i < companies.length; i += maxConcurrent) {
     const batch = companies.slice(i, i + maxConcurrent);
     const batchResults = await Promise.all(
       batch.map(company => enrichCompany(company, organizationId))
     );
     results.push(...batchResults);
-    
+
     // Add delay between batches to avoid rate limiting
     if (i + maxConcurrent < companies.length) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second pause
+      await new Promise(resolve => {
+        setTimeout(resolve, 2000); // 2 second pause
+      });
     }
   }
-  
-  logger.info('Enrichment Batch complete: results.filter(r => r.success).length}/companies.length} successful', { file: 'enrichment-service.ts' });
+
+  logger.info(`Enrichment Batch complete: ${results.filter(r => r.success).length}/${companies.length} successful`, { file: 'enrichment-service.ts' });
   
   return results;
 }

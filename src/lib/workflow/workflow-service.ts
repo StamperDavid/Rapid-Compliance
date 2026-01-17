@@ -390,7 +390,7 @@ export async function createWorkflow(
   userId: string,
   workspaceId?: string
 ): Promise<Workflow> {
-  const dal = new BaseAgentDAL(db as any);
+  const dal = new BaseAgentDAL(db as Firestore);
   const service = getWorkflowService(dal);
   
   const input: CreateWorkflowInput = {
@@ -410,7 +410,7 @@ export async function getWorkflows(
   workspaceId: string,
   filters?: Record<string, unknown>
 ): Promise<{ data: Workflow[]; hasMore: boolean }> {
-  const dal = new BaseAgentDAL(db as any);
+  const dal = new BaseAgentDAL(db as Firestore);
   const service = getWorkflowService(dal);
   
   const result = await service.getWorkflows({
@@ -431,11 +431,11 @@ export async function getWorkflows(
 export async function getWorkflow(
   organizationId: string,
   workflowId: string,
-  workspaceId?: string
+  _workspaceId?: string
 ): Promise<Workflow | null> {
-  const dal = new BaseAgentDAL(db as any);
+  const dal = new BaseAgentDAL(db as Firestore);
   const service = getWorkflowService(dal);
-  
+
   return service.getWorkflow(organizationId, workflowId);
 }
 
@@ -446,11 +446,11 @@ export async function updateWorkflow(
   organizationId: string,
   workflowId: string,
   updates: UpdateWorkflowInput,
-  workspaceId?: string
+  _workspaceId?: string
 ): Promise<Workflow> {
-  const dal = new BaseAgentDAL(db as any);
+  const dal = new BaseAgentDAL(db as Firestore);
   const service = getWorkflowService(dal);
-  
+
   return service.updateWorkflow(organizationId, workflowId, updates);
 }
 
@@ -461,11 +461,11 @@ export async function setWorkflowStatus(
   organizationId: string,
   workflowId: string,
   status: WorkflowStatus,
-  workspaceId?: string
+  _workspaceId?: string
 ): Promise<Workflow> {
-  const dal = new BaseAgentDAL(db as any);
+  const dal = new BaseAgentDAL(db as Firestore);
   const service = getWorkflowService(dal);
-  
+
   return service.setWorkflowStatus(organizationId, workflowId, status);
 }
 
@@ -475,10 +475,10 @@ export async function setWorkflowStatus(
 export async function deleteWorkflow(
   organizationId: string,
   workflowId: string,
-  workspaceId?: string
+  _workspaceId?: string
 ): Promise<void> {
-  const dal = new BaseAgentDAL(db as any);
+  const dal = new BaseAgentDAL(db as Firestore);
   const service = getWorkflowService(dal);
-  
+
   return service.deleteWorkflow(organizationId, workflowId);
 }

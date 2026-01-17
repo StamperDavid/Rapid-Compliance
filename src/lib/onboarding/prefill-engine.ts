@@ -19,8 +19,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import type { DiscoveredCompany } from '@/lib/services/discovery-engine';
-import { discoverCompany } from '@/lib/services/discovery-engine';
+import { discoverCompany, type DiscoveredCompany } from '@/lib/services/discovery-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { OnboardingFormData, PrefillResult, FieldConfidence } from './types';
 import { CONFIDENCE_THRESHOLDS } from './constants';

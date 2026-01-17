@@ -4,17 +4,17 @@
  * The only limit is record capacity (storage), not feature access
  */
 
-import type { 
-  OrganizationSubscription, 
+import type {
+  OrganizationSubscription,
   SubscriptionPlan,
-  SubscriptionTier} from '@/types/subscription';
+  SubscriptionTier
+} from '@/types/subscription';
 import {
   PLAN_LIMITS,
   PLAN_PRICING,
   VOLUME_TIERS,
   TIER_PRICING,
-  getTierForRecordCount,
-  isWithinTierCapacity
+  getTierForRecordCount
 } from '@/types/subscription';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
@@ -26,7 +26,7 @@ export class FeatureGate {
    */
   static async hasFeature(
     orgId: string,
-    feature: keyof NonNullable<OrganizationSubscription['outboundFeatures']>
+    _feature: keyof NonNullable<OrganizationSubscription['outboundFeatures']>
   ): Promise<boolean> {
     try {
       const subscription = await this.getSubscription(orgId);
@@ -437,17 +437,16 @@ export class FeatureGate {
   ): Promise<OrganizationSubscription> {
     try {
       const subscription = await this.getSubscription(orgId);
-      
-      const oldPlan = subscription.plan;
+
       subscription.plan = newPlan;
       subscription.billingCycle = billingCycle;
-      
+
       // Update limits based on new plan
       const newLimits = PLAN_LIMITS[newPlan];
       subscription.outboundFeatures = {
         ...subscription.outboundFeatures,
         ...newLimits,
-      } as any;
+      } as NonNullable<OrganizationSubscription['outboundFeatures']>;
       
       // Update pricing
       const pricing = PLAN_PRICING[newPlan];
@@ -490,19 +489,22 @@ export class FeatureGate {
       const featureConfig = planLimits[feature];
       
       // Handle both boolean and object feature configs
-      const isFeatureAvailable = typeof featureConfig === 'boolean' 
-        ? featureConfig 
-        : (featureConfig as any)?.enabled === true;
-      
+      const isFeatureAvailable = typeof featureConfig === 'boolean'
+        ? featureConfig
+        : (featureConfig as { enabled?: boolean })?.enabled === true;
+
       if (!featureConfig || !isFeatureAvailable) {
         throw new Error(`Feature ${feature} not available on ${subscription.plan} plan`);
       }
-      
+
       // Toggle feature
       if (!subscription.outboundFeatures) {
         return;
       }
-      (subscription.outboundFeatures[feature] as any).enabled = enabled;
+      const featureObj = subscription.outboundFeatures[feature];
+      if (featureObj && typeof featureObj === 'object' && 'enabled' in featureObj) {
+        (featureObj as { enabled: boolean }).enabled = enabled;
+      }
       subscription.updatedAt = new Date().toISOString();
       
       await this.saveSubscription(orgId, subscription);

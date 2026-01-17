@@ -5,8 +5,8 @@
 
 import { OpenAIProvider } from './providers/openai-provider';
 import { AnthropicProvider } from './providers/anthropic-provider';
-import type { ChatMessage as GeminiChatMessage} from './gemini-service';
-import { sendChatMessage, streamChatMessage, ChatResponse as GeminiChatResponse } from './gemini-service';
+import type { ChatMessage as GeminiChatMessage } from './gemini-service';
+import { sendChatMessage, streamChatMessage } from './gemini-service';
 
 export interface UnifiedChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -69,8 +69,8 @@ export async function sendChatWithABTesting(
   actualModel: string;
 }> {
   // Get model for this conversation (may be different due to A/B test)
-  const { getModelForConversation, recordConversationResult } = await import('./learning/ab-testing-service');
-  
+  const { getModelForConversation } = await import('./learning/ab-testing-service');
+
   const modelAssignment = await getModelForConversation(organizationId, conversationId);
   
   // Use the assigned model instead of requested model
@@ -130,9 +130,9 @@ export async function* streamUnifiedChatMessage(
   if (model.startsWith('gpt-')) {
     const provider = new OpenAIProvider(organizationId);
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
-    
+
     yield* provider.chatStream({
-      model: model as any,
+      model,
       messages: chatMessages,
       temperature,
       maxTokens,
@@ -141,9 +141,9 @@ export async function* streamUnifiedChatMessage(
   } else if (model.startsWith('claude-')) {
     const provider = new AnthropicProvider(organizationId);
     const chatMessages = convertToProviderFormat(messages, systemInstruction);
-    
+
     yield* provider.chatStream({
-      model: model as any,
+      model,
       messages: chatMessages,
       temperature,
       maxTokens,
@@ -167,17 +167,17 @@ async function sendOpenAIMessage(
   organizationId?: string
 ): Promise<UnifiedChatResponse> {
   const provider = new OpenAIProvider(organizationId);
-  
+
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
-  
+
   const response = await provider.chat({
-    model: model as any,
+    model,
     messages: chatMessages,
     temperature: config?.temperature,
     maxTokens: config?.maxTokens,
     topP: config?.topP,
   });
-  
+
   return {
     text: response.content,
     usage: response.usage,
@@ -193,21 +193,21 @@ async function sendAnthropicMessage(
   model: string,
   messages: UnifiedChatMessage[],
   systemInstruction?: string,
-  config?: { temperature?: number; maxTokens?: number; topP?: number },
+  _config?: { temperature?: number; maxTokens?: number; topP?: number },
   organizationId?: string
 ): Promise<UnifiedChatResponse> {
   const provider = new AnthropicProvider(organizationId);
-  
+
   const chatMessages = convertToProviderFormat(messages, systemInstruction);
-  
+
   const response = await provider.chat({
-    model: model as any,
+    model,
     messages: chatMessages,
-    temperature: config?.temperature,
-    maxTokens: config?.maxTokens,
-    topP: config?.topP,
+    temperature: _config?.temperature,
+    maxTokens: _config?.maxTokens,
+    topP: _config?.topP,
   });
-  
+
   return {
     text: response.content,
     usage: response.usage,
@@ -223,12 +223,12 @@ async function sendGeminiMessage(
   model: string,
   messages: UnifiedChatMessage[],
   systemInstruction?: string,
-  config?: { temperature?: number; maxTokens?: number; topP?: number }
+  _config?: { temperature?: number; maxTokens?: number; topP?: number }
 ): Promise<UnifiedChatResponse> {
   const geminiMessages = convertToGeminiFormat(messages);
-  
+
   const response = await sendChatMessage(geminiMessages, systemInstruction);
-  
+
   return {
     text: response.text,
     usage: response.usage,
@@ -237,15 +237,20 @@ async function sendGeminiMessage(
   };
 }
 
+interface ProviderMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 /**
  * Convert unified messages to provider-specific format
  */
 function convertToProviderFormat(
   messages: UnifiedChatMessage[],
   systemInstruction?: string
-): any[] {
-  const providerMessages: any[] = [];
-  
+): ProviderMessage[] {
+  const providerMessages: ProviderMessage[] = [];
+
   // Add system message if provided
   if (systemInstruction) {
     providerMessages.push({
@@ -253,7 +258,7 @@ function convertToProviderFormat(
       content: systemInstruction,
     });
   }
-  
+
   // Add user/assistant messages
   for (const msg of messages) {
     if (msg.role !== 'system') {
@@ -263,7 +268,7 @@ function convertToProviderFormat(
       });
     }
   }
-  
+
   return providerMessages;
 }
 
@@ -302,18 +307,20 @@ export function estimateCost(model: string, promptTokens: number, completionToke
   return inputCost + outputCost;
 }
 
-/**
- * Get model information
- */
-export function getModelInfo(model: string): {
+interface ModelInfo {
   name: string;
   provider: 'openai' | 'anthropic' | 'gemini';
   speed: number; // 1-5
   quality: number; // 1-5
   cost: string;
   description: string;
-} {
-  const modelInfo: Record<string, any> = {
+}
+
+/**
+ * Get model information
+ */
+export function getModelInfo(model: string): ModelInfo {
+  const modelInfo: Record<string, ModelInfo> = {
     'gemini-2.0-flash-exp': {
       name: 'Gemini 2.0 Flash',
       provider: 'gemini',
@@ -371,7 +378,7 @@ export function getModelInfo(model: string): {
       description: 'Best reasoning and analysis. Ideal for complex problem-solving.',
     },
   };
-  
+
   // Model info lookup - use ?? for object/undefined
   return modelInfo[model] ?? modelInfo['gemini-2.0-flash-exp'];
 }

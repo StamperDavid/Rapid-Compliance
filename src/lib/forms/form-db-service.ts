@@ -22,9 +22,8 @@
  * @version 1.0.0
  */
 
-import type {
-  QueryConstraint} from 'firebase/firestore';
 import {
+  type QueryConstraint,
   collection,
   doc,
   getDoc,
@@ -42,19 +41,10 @@ import {
   Timestamp,
   writeBatch,
   runTransaction,
-  _QueryDocumentSnapshot,
-  DocumentReference
+  _QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
-
-// Helper to ensure db is available
-function getDb() {
-  if (!db) {
-    throw new Error('Firebase is not initialized');
-  }
-  return db;
-}
 import type {
   FormDefinition,
   FormFieldConfig,
@@ -74,6 +64,14 @@ import type {
   SubmissionMetadata,
   _CRMFieldMapping,
 } from './types';
+
+// Helper to ensure db is available
+function getDb() {
+  if (!db) {
+    throw new Error('Firebase is not initialized');
+  }
+  return db;
+}
 
 // ============================================================================
 // COLLECTION PATH HELPERS
@@ -884,8 +882,8 @@ export async function trackFormView(
   await batch.commit();
 
   // Update daily analytics (fire-and-forget for performance)
-  updateDailyAnalytics(orgId, workspaceId, formId, 'view', metadata).catch((err) =>
-    logger.warn('Failed to update daily analytics', err)
+  updateDailyAnalytics(orgId, workspaceId, formId, 'view', metadata).catch((err: unknown) =>
+    logger.warn('Failed to update daily analytics', { error: err })
   );
 
   return viewId;
@@ -944,10 +942,10 @@ export async function updateDailyAnalytics(
           completedSubmissions: eventType === 'submission' ? 1 : 0,
           conversionRate: 0,
           completionRate: 0,
-          totalCompletionTime: completionTime || 0,
-          averageCompletionTime: completionTime || 0,
-          minCompletionTime: completionTime || 0,
-          maxCompletionTime: completionTime || 0,
+          totalCompletionTime: completionTime ?? 0,
+          averageCompletionTime: completionTime ?? 0,
+          minCompletionTime: completionTime ?? 0,
+          maxCompletionTime: completionTime ?? 0,
           byDevice: {
             desktop: metadata?.deviceType === 'desktop' ? 1 : 0,
             tablet: metadata?.deviceType === 'tablet' ? 1 : 0,
@@ -1095,7 +1093,7 @@ export async function createFormFromTemplate(
 
   const template = templateSnap.data() as FormTemplate;
 
-  return runTransaction(getDb(), async (transaction) => {
+  return await runTransaction(getDb(), async (transaction) => {
     // Create form
     const formsRef = collection(getDb(), PATHS.forms(orgId, workspaceId));
     const formDoc = doc(formsRef);

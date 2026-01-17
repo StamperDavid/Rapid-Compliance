@@ -11,15 +11,15 @@ import { sendTeamsMessage, listTeams, listChannels } from '../teams-service';
  */
 export async function executeTeamsFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<unknown> {
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
 
   if (!accessToken) {
     throw new Error('Teams access token not configured');
   }
-  
+
   switch (functionName) {
     case 'sendMessage':
       // Validate required parameters
@@ -32,25 +32,25 @@ export async function executeTeamsFunction(
       if (!parameters.message || typeof parameters.message !== 'string') {
         throw new Error('message (string) is required for sendMessage');
       }
-      
+
       return sendTeamsMessage(accessToken, {
         teamId: parameters.teamId,
         channelId: parameters.channelId,
         message: parameters.message,
       });
-      
+
     case 'listTeams':
       // No parameters required
       return listTeams(accessToken);
-      
+
     case 'listChannels':
       // Validate required parameters
       if (!parameters.teamId || typeof parameters.teamId !== 'string') {
         throw new Error('teamId (string) is required for listChannels');
       }
-      
+
       return listChannels(accessToken, parameters.teamId);
-      
+
     default:
       throw new Error(`Unknown Teams function: ${functionName}`);
   }

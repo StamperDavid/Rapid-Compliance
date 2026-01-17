@@ -4,8 +4,7 @@
  */
 
 import Stripe from 'stripe';
-import type { SubscriptionTier} from '@/types/subscription';
-import { VOLUME_TIERS, TIER_PRICING, ALL_INCLUSIVE_FEATURES } from '@/types/subscription';
+import { VOLUME_TIERS, TIER_PRICING, ALL_INCLUSIVE_FEATURES, type SubscriptionTier } from '@/types/subscription';
 
 // Use placeholder during build, validate at runtime
 const stripeKey =(process.env.STRIPE_SECRET_KEY !== '' && process.env.STRIPE_SECRET_KEY != null) ? process.env.STRIPE_SECRET_KEY : 'sk_test_placeholder';
@@ -15,7 +14,8 @@ const stripe = new Stripe(stripeKey, {
 });
 
 // Helper to ensure Stripe is configured at runtime
-function ensureStripeConfigured() {
+// Prefixed with _ to indicate intentionally unused (reserved for future validation)
+function _ensureStripeConfigured() {
   if (!process.env.STRIPE_SECRET_KEY && process.env.NODE_ENV !== 'test') {
     throw new Error('STRIPE_SECRET_KEY is not set in environment variables');
   }
@@ -263,20 +263,20 @@ export async function checkRecordCapacity(
 }> {
   // Get organization's subscription
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-  
+  const org = await FirestoreService.get<OrganizationWithBilling>(COLLECTIONS.ORGANIZATIONS, organizationId);
+
   if (!org?.subscriptionId) {
-    return { 
-      allowed: false, 
+    return {
+      allowed: false,
       currentTier: 'tier1',
       requiredTier: 'tier1',
-      capacity: 0, 
+      capacity: 0,
       totalRecords: 0,
       needsUpgrade: false,
     };
   }
 
-  const subscription = await getSubscription(org.subscriptionId);
+  const subscription = await getSubscription(org.subscriptionId as string);
   const currentTierId = (subscription.metadata?.tierId as SubscriptionTier) || 'tier1';
   const currentTier = STRIPE_TIERS[currentTierId];
   
@@ -316,6 +316,17 @@ export interface UsageMetrics {
   gmv: number; // in cents
 }
 
+/**
+ * Organization document with billing fields (extends base Organization)
+ */
+interface OrganizationWithBilling {
+  id: string;
+  subscriptionId?: string;
+  usage?: Partial<UsageMetrics> & {
+    lastUpdated?: string;
+  };
+}
+
 export async function checkUsageLimit(
   organizationId: string,
   metric: keyof UsageMetrics,
@@ -345,11 +356,11 @@ export async function recordUsage(
   amount: number = 1
 ): Promise<void> {
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+
   // Get current usage
-  const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, organizationId);
-  const currentUsage = org?.usage?.[metric] ?? 0;
-  
+  const org = await FirestoreService.get<OrganizationWithBilling>(COLLECTIONS.ORGANIZATIONS, organizationId);
+  const currentUsage = (org?.usage?.[metric] as number | undefined) ?? 0;
+
   // Update usage
   await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, {
     usage: {

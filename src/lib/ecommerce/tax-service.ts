@@ -36,7 +36,7 @@ export async function calculateTax(
     throw new Error('E-commerce not configured');
   }
   
-  const taxConfig = (ecommerceConfig as any).tax;
+  const taxConfig = (ecommerceConfig as Record<string, unknown>).tax as Record<string, unknown> | undefined;
   
   // If no tax config or tax not enabled, return zero tax
   if (!taxConfig?.enabled) {
@@ -61,7 +61,7 @@ export async function calculateTax(
  * Calculate tax using automated provider (TaxJar, Avalara, etc.)
  */
 async function calculateAutomatedTax(
-  taxConfig: any,
+  taxConfig: Record<string, unknown>,
   cart: Cart,
   address: Address
 ): Promise<TaxCalculation> {
@@ -75,7 +75,7 @@ async function calculateAutomatedTax(
  * Calculate tax using manual rates
  */
 function calculateManualTax(
-  taxConfig: any,
+  taxConfig: Record<string, unknown>,
   cart: Cart,
   address: Address
 ): Promise<TaxCalculation> {

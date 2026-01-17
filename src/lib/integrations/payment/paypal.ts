@@ -7,57 +7,89 @@ import type { ConnectedIntegration } from '@/types/integrations';
 import { createOrder, getOrderDetails, captureOrder } from '../paypal-service';
 
 /**
+ * PayPal link object
+ */
+interface PayPalLink {
+  href: string;
+  rel: string;
+  method?: string;
+}
+
+/**
+ * PayPal order response
+ */
+interface PayPalOrder {
+  id: string;
+  status: string;
+  links?: PayPalLink[];
+}
+
+/**
+ * PayPal function parameters
+ */
+interface PayPalFunctionParams {
+  amount?: number;
+  currency?: string;
+  orderId?: string;
+}
+
+/**
  * Execute a PayPal function
  */
 export async function executePayPalFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<unknown> {
   const organizationId = (integration.organizationId !== '' && integration.organizationId != null) ? integration.organizationId : '';
 
   if (!organizationId) {
     throw new Error('Organization ID not configured');
   }
-  
+
+  // Type guard for parameters
+  const params = parameters as PayPalFunctionParams;
+
   switch (functionName) {
     case 'createPayment': {
       // Validate required parameters
-      if (typeof parameters.amount !== 'number') {
+      if (typeof params.amount !== 'number') {
         throw new Error('amount (number) is required for createPayment');
       }
-      
-      const order = await createOrder(
+
+      const order = (await createOrder(
         organizationId,
-        parameters.amount,
-        (parameters.currency !== '' && parameters.currency != null) ? parameters.currency : 'USD'
-      );
-      
+        params.amount,
+        (params.currency !== '' && params.currency != null) ? params.currency : 'USD'
+      )) as PayPalOrder;
+
+      const approvalLink = order.links?.find((l) => l.rel === 'approve');
+
       return {
         orderId: order.id,
-        approvalUrl: order.links?.find((l: any) => l.rel === 'approve')?.href,
+        approvalUrl: approvalLink?.href,
         status: order.status,
       };
     }
-      
+
     case 'getTransaction': {
       // Validate required parameters
-      if (!parameters.orderId || typeof parameters.orderId !== 'string') {
+      if (!params.orderId || typeof params.orderId !== 'string') {
         throw new Error('orderId (string) is required for getTransaction');
       }
-      
-      return getOrderDetails(organizationId, parameters.orderId);
+
+      return getOrderDetails(organizationId, params.orderId);
     }
-      
+
     case 'capturePayment': {
       // Validate required parameters
-      if (!parameters.orderId || typeof parameters.orderId !== 'string') {
+      if (!params.orderId || typeof params.orderId !== 'string') {
         throw new Error('orderId (string) is required for capturePayment');
       }
-      
-      return captureOrder(organizationId, parameters.orderId);
+
+      return captureOrder(organizationId, params.orderId);
     }
-      
+
     default:
       throw new Error(`Unknown PayPal function: ${functionName}`);
   }

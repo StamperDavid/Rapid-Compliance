@@ -40,15 +40,15 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
   const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
 
   useEffect(() => {
-    loadCart();
-  }, []);
+    void loadCart();
+  }, [organizationId]);
 
   const loadCart = async () => {
     try {
       const response = await fetch(`/api/ecommerce/cart?orgId=${organizationId}`);
-      const data = await response.json();
-      if (data.success) {
-        setCart(data.cart.items ?? []);
+      const data = await response.json() as { success?: boolean; cart?: { items?: CartItem[] } };
+      if (data.success && data.cart?.items) {
+        setCart(data.cart.items);
       }
     } catch (error) {
       logger.error('Error loading cart:', error, { file: 'ShoppingCart.tsx' });
@@ -198,7 +198,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <button
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    onClick={() => { void updateQuantity(item.id, item.quantity - 1); }}
                     style={{
                       padding: '0.25rem 0.5rem',
                       backgroundColor: '#e5e7eb',
@@ -215,7 +215,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() => { void updateQuantity(item.id, item.quantity + 1); }}
                     style={{
                       padding: '0.25rem 0.5rem',
                       backgroundColor: '#e5e7eb',
@@ -230,7 +230,7 @@ export function ShoppingCart({ organizationId, onCheckout, theme }: ShoppingCart
                   </button>
                 </div>
                 <button
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => { void removeItem(item.id); }}
                   style={{
                     padding: '0.25rem 0.5rem',
                     backgroundColor: 'transparent',

@@ -3,8 +3,7 @@
  * Protects API routes based on subscription features and usage limits
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { FeatureGate } from './feature-gate';
 import type { OrganizationSubscription } from '@/types/subscription'
 import { logger } from '@/lib/logger/logger';
@@ -14,21 +13,21 @@ import { logger } from '@/lib/logger/logger';
  * This now only checks if subscription is active, not which features they have
  */
 export async function requireFeature(
-  request: NextRequest,
+  _request: NextRequest,
   orgId: string,
   feature: 'aiEmailWriter' | 'prospectFinder' | 'multiChannel'
 ): Promise<NextResponse | null> {
   try {
     const hasAccess = await FeatureGate.hasFeature(orgId, feature);
-    
+
     if (!hasAccess) {
       const subscription = await FeatureGate.getSubscription(orgId);
-      
+
       // In new model, if hasAccess is false, it means subscription is inactive
       // NOT that they don't have the feature
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: `Your subscription is ${subscription.status}. Please reactivate to access this feature.`,
           subscriptionStatus: subscription.status,
           feature,
@@ -37,9 +36,9 @@ export async function requireFeature(
         { status: 403 }
       );
     }
-    
+
     return null; // Feature is available, continue
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[Subscription Middleware] Error checking feature access:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify feature access' },
@@ -53,17 +52,17 @@ export async function requireFeature(
  * Returns error response if limit is exceeded
  */
 export async function requireLimit(
-  request: NextRequest,
+  _request: NextRequest,
   orgId: string,
   feature: 'aiEmailWriter' | 'prospectFinder' | 'linkedin' | 'sms' | 'email',
   amount: number = 1
 ): Promise<NextResponse | null> {
   try {
     const limit = await FeatureGate.checkLimit(orgId, feature, amount);
-    
+
     if (!limit.allowed) {
       const subscription = await FeatureGate.getSubscription(orgId);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -80,9 +79,9 @@ export async function requireLimit(
         { status: 429 } // Too Many Requests
       );
     }
-    
+
     return null; // Under limit, continue
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[Subscription Middleware] Error checking usage limit:', error, { file: 'middleware.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to verify usage limit' },
@@ -149,48 +148,6 @@ function getFeatureKey(
   }
 }
 
-/**
- * Get user-friendly upgrade message for a feature
- */
-function getUpgradeMessage(
-  feature: keyof OrganizationSubscription['outboundFeatures'],
-  currentPlan: string
-): string {
-  const messages: Record<string, Record<string, string>> = {
-    aiEmailWriter: {
-      starter: 'Upgrade to Professional ($299/mo) to unlock AI Email Writer with 500 emails/month',
-      professional: 'This feature is already available on your plan',
-      enterprise: 'This feature is already available on your plan',
-    },
-    emailSequences: {
-      starter: 'Upgrade to Professional ($299/mo) to unlock Email Sequences',
-      professional: 'This feature is already available on your plan',
-      enterprise: 'This feature is already available on your plan',
-    },
-    emailReplyHandler: {
-      starter: 'Upgrade to Professional ($299/mo) to unlock AI Reply Handler',
-      professional: 'This feature is already available on your plan',
-      enterprise: 'This feature is already available on your plan',
-    },
-    prospectFinder: {
-      starter: 'Upgrade to Enterprise ($999/mo) to unlock Prospect Finder',
-      professional: 'Add Advanced Outbound add-on (+$199/mo) or upgrade to Enterprise ($999/mo)',
-      enterprise: 'This feature is already available on your plan',
-    },
-    multiChannel: {
-      starter: 'Upgrade to Enterprise ($999/mo) to unlock Multi-Channel Outreach',
-      professional: 'Add Advanced Outbound add-on (+$199/mo) or upgrade to Enterprise ($999/mo)',
-      enterprise: 'This feature is already available on your plan',
-    },
-    abTesting: {
-      starter: 'Upgrade to Professional ($299/mo) to unlock A/B Testing',
-      professional: 'This feature is already available on your plan',
-      enterprise: 'This feature is already available on your plan',
-    },
-  };
-  
-  return messages[feature]?.[currentPlan] || `Upgrade your plan to unlock ${feature}`;
-}
 
 /**
  * Get user-friendly upgrade message when limit is exceeded
@@ -245,22 +202,23 @@ export async function withFeatureGate<T>(
     // Check feature access and limits
     const gateCheck = await requireFeatureWithLimit(request, orgId, feature, amount);
     if (gateCheck) {return gateCheck;}
-    
+
     // Execute the handler
     const result = await handler();
-    
+
     // Increment usage on success
     await incrementFeatureUsage(orgId, feature, amount);
-    
+
     // Return success
     return NextResponse.json({
       success: true,
       ...result,
     });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Operation failed';
     logger.error('[Feature Gate] Error in handler:', error, { file: 'middleware.ts' });
     return NextResponse.json(
-      { success: false, error:(error.message !== '' && error.message != null) ? error.message : 'Operation failed'},
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

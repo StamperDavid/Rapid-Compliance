@@ -12,18 +12,17 @@
 
 import { db } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger/logger';
-import { discoverCompany, discoverPerson } from './discovery-engine';
-import type { DiscoveredCompany, DiscoveredPerson } from './discovery-engine';
-import type { EngineResult, BatchEngineResult } from '@/types/engine-runtime';
+import { discoverCompany, discoverPerson, type DiscoveredCompany, type DiscoveredPerson } from './discovery-engine';
 import {
   createSuccessResult,
   createFailureResult,
   createBatchResult,
   calculateLLMCost,
   calculateScrapingCost,
+  type EngineResult,
+  type BatchEngineResult
 } from '@/types/engine-runtime';
-import type { WorkflowState } from '@/types/workflow-state';
-import { updateWorkflowState, isReadyForProcessing, isStuck } from '@/types/workflow-state';
+import { updateWorkflowState, isStuck, type WorkflowState } from '@/types/workflow-state';
 import { Timestamp } from 'firebase-admin/firestore';
 
 // ============================================================================
@@ -163,31 +162,36 @@ export async function processDiscoveryTask(
   });
 
   try {
-    let discoveryResult: any;
+    let discoveryResult: DiscoveredCompany | DiscoveredPerson;
     let tokensIn = 0;
     let tokensOut = 0;
-    
+    let fromCache = false;
+
     // Execute discovery based on type
     if (task.type === 'company') {
-      discoveryResult = await discoverCompany(task.target, task.organizationId);
+      const companyResult = await discoverCompany(task.target, task.organizationId);
+      discoveryResult = companyResult.company;
+      fromCache = companyResult.fromCache ?? false;
     } else {
-      discoveryResult = await discoverPerson(task.target, task.organizationId);
+      const personResult = await discoverPerson(task.target, task.organizationId);
+      discoveryResult = personResult.person;
+      fromCache = personResult.fromCache ?? false;
     }
 
     const durationMs = Date.now() - startTime;
-    
+
     // Estimate token usage (approximate based on complexity)
     // In a real implementation, you'd track this from the actual LLM calls
-    if (!discoveryResult.fromCache) {
+    if (!fromCache) {
       tokensIn = 2000;  // Approximate prompt size
       tokensOut = 500;  // Approximate synthesis output
     }
 
     const llmCost = calculateLLMCost(tokensIn, tokensOut, 'gpt-4o-mini');
-    const scrapingCost = discoveryResult.fromCache ? 0 : calculateScrapingCost(500 * 1024); // ~500KB HTML
-    
+    const scrapingCost = fromCache ? 0 : calculateScrapingCost(500 * 1024); // ~500KB HTML
+
     const result = createSuccessResult(
-      task.type === 'company' ? discoveryResult.company : discoveryResult.person,
+      discoveryResult,
       {
         tokens: tokensIn + tokensOut,
         tokensIn,
@@ -198,7 +202,7 @@ export async function processDiscoveryTask(
           proxy: scrapingCost,
         },
         durationMs,
-        cacheHit: discoveryResult.fromCache,
+        cacheHit: fromCache,
       },
       {
         engine: 'discovery-engine',
@@ -213,7 +217,7 @@ export async function processDiscoveryTask(
       id: task.id,
       durationMs,
       cost: result.usage.cost,
-      fromCache: discoveryResult.fromCache,
+      fromCache,
     });
 
     return result;
@@ -263,7 +267,7 @@ async function findIdleTasks(
     // Query for entities with workflow.stage='discovery' and workflow.status='idle'
     // In a real implementation, you'd have a dedicated queue collection
     // For now, we'll simulate by checking a hypothetical 'discoveryQueue' collection
-    
+
     let query = db.collection('discoveryQueue')
       .where('workflow.stage', '==', 'discovery')
       .where('workflow.status', '==', 'idle')
@@ -276,37 +280,42 @@ async function findIdleTasks(
     }
 
     const snapshot = await query.get();
-    
+
     const tasks: DiscoveryTask[] = [];
-    
+
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      
+
       // Skip stuck tasks (failed too many times)
       if (isStuck(data.workflow as WorkflowState)) {
+        const workflowData = data.workflow as WorkflowState;
         logger.warn('[DiscoveryDispatcher] Skipping stuck task', {
           id: doc.id,
-          retryCount: data.workflow.retryCount,
+          retryCount: workflowData.retryCount,
         });
         continue;
       }
-      
+
+      const workflowData = data.workflow as WorkflowState;
+      const updatedAtValue = workflowData.updatedAt;
+      const createdAtValue = data.createdAt;
+
       tasks.push({
         id: doc.id,
-        type: data.type,
-        target: data.target,
-        organizationId: data.organizationId,
-        workspaceId: data.workspaceId,
+        type: data.type as 'company' | 'person',
+        target: data.target as string,
+        organizationId: data.organizationId as string,
+        workspaceId: data.workspaceId as string,
         workflow: {
-          ...data.workflow,
-          updatedAt: data.workflow.updatedAt instanceof Timestamp 
-            ? data.workflow.updatedAt.toDate() 
-            : new Date(data.workflow.updatedAt),
+          ...workflowData,
+          updatedAt: updatedAtValue instanceof Timestamp
+            ? updatedAtValue.toDate()
+            : new Date(updatedAtValue as string | number | Date),
         },
-        priority: data.priority,
-        createdAt: data.createdAt instanceof Timestamp 
-          ? data.createdAt.toDate() 
-          : new Date(data.createdAt),
+        priority: data.priority as number | undefined,
+        createdAt: createdAtValue instanceof Timestamp
+          ? createdAtValue.toDate()
+          : new Date(createdAtValue as string | number | Date),
       });
     }
 
@@ -365,20 +374,22 @@ async function processTasks(
         results.push(result.value);
       } else {
         // Promise rejected - create failure result
+        const errorReason = result.reason as Error | undefined;
+        const errorMessage = errorReason?.message || 'Unknown error';
         results.push(createFailureResult(
           {
             code: 'DISPATCHER_ERROR',
-            message: (() => { const v = result.reason?.message; return (v !== '' && v != null) ? v : 'Unknown error'; })(),
+            message: errorMessage,
             retryable: true,
           },
           { durationMs: 0 }
         ));
       }
     }
-    
+
     // Delay between batches
     if (i + config.concurrency < tasks.length) {
-      await new Promise(resolve => setTimeout(resolve, config.delayMs));
+      await new Promise<void>(resolve => setTimeout(resolve, config.delayMs));
     }
   }
   
@@ -398,7 +409,11 @@ async function updateTaskStates(
     const task = tasks[i];
     const result = results[i];
     const taskRef = db.collection('discoveryQueue').doc(task.id);
-    
+
+    if (!task || !result) {
+      continue;
+    }
+
     if (result.success) {
       // Success: Move to next stage (scoring)
       const updatedWorkflow = updateWorkflowState(task.workflow, {
@@ -406,7 +421,7 @@ async function updateTaskStates(
         stage: 'scoring',
         engine: 'discovery-engine',
       });
-      
+
       batch.update(taskRef, {
         'workflow.stage': 'scoring',
         'workflow.status': 'idle', // Ready for scoring
@@ -416,17 +431,22 @@ async function updateTaskStates(
       });
     } else {
       // Failure: Mark as failed
+      const error = result.error;
+      if (!error) {
+        continue;
+      }
+
       const updatedWorkflow = updateWorkflowState(task.workflow, {
         status: 'failed',
         engine: 'discovery-engine',
         error: {
-          code: result.error!.code,
-          message: result.error!.message,
-          stack: result.error!.stack,
+          code: error.code,
+          message: error.message,
+          stack: error.stack,
           occurredAt: new Date(),
         },
       });
-      
+
       batch.update(taskRef, {
         'workflow.status': 'failed',
         'workflow.lastEngine': 'discovery-engine',

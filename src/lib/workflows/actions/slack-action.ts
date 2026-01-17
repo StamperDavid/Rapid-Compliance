@@ -13,7 +13,7 @@ export interface SlackActionConfig extends BaseAction {
     userId?: string;            // User ID for DM
     userEmail?: string;         // User email for DM (alternative to ID)
     message: string;            // Message text with {{variable}} placeholders
-    blocks?: any[];             // Slack Block Kit blocks for rich formatting
+    blocks?: Array<unknown>;             // Slack Block Kit blocks for rich formatting
     threadTs?: string;          // Thread timestamp for replies
     unfurlLinks?: boolean;      // Expand link previews
     unfurlMedia?: boolean;      // Expand media previews
@@ -25,9 +25,9 @@ export interface SlackActionConfig extends BaseAction {
 
 export async function executeSlackAction(
   action: SlackActionConfig,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   organizationId: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   const {
     channelId,
     channelName,

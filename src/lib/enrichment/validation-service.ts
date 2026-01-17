@@ -108,15 +108,15 @@ async function validateDomain(domain: string): Promise<boolean> {
     // Try HTTP request
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
+
     const response = await fetch(`https://${domain}`, {
       method: 'HEAD',
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
     return response.ok || response.status < 500; // Even 404 means domain exists
-  } catch (error: any) {
+  } catch (_error: unknown) {
     // Domain doesn't exist or is unreachable
     return false;
   }
@@ -266,16 +266,16 @@ function validateConsistency(data: CompanyEnrichmentData): {
 export async function verifyEmailDomain(email: string): Promise<boolean> {
   try {
     const domain = email.split('@')[1];
-    
+
     // Simple check - verify domain responds to HTTP
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
-    const response = await fetch(`https://${domain}`, {
+
+    const _response = await fetch(`https://${domain}`, {
       method: 'HEAD',
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
     return true; // Domain exists
   } catch {

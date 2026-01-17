@@ -8,6 +8,19 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 
 /**
+ * Type definition for API keys stored in Firestore
+ */
+interface APIKeysDocument {
+  id?: string;
+  openai?: string;
+  sendgrid?: string;
+  google_client_id?: string;
+  google_client_secret?: string;
+  stripe_publishable?: string;
+  stripe_secret?: string;
+}
+
+/**
  * Get API key for organization
  * Checks Firestore first, falls back to environment variables
  */
@@ -17,7 +30,7 @@ export async function getAPIKey(
 ): Promise<string | null> {
   try {
     // Try Firestore first
-    const apiKeys = await FirestoreService.get(
+    const apiKeys = await FirestoreService.get<APIKeysDocument>(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}`,
       'apiKeys'
     );

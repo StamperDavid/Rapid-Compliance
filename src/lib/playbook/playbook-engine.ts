@@ -19,7 +19,6 @@
 import { logger } from '@/lib/logger/logger';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { adminDal } from '@/lib/firebase/admin-dal';
 import type {
   ExtractPatternsRequest,
   PatternExtractionResult,
@@ -32,25 +31,14 @@ import type {
   GeneratePlaybookResponse,
   PlaybookEngineConfig,
   ExtractionSummary,
-  PlaybookSuggestion,
-  PatternExample,
-  TalkTrackSection,
-  ObjectionResponseExample,
-  BestPracticeEvidence,
   SuccessMetrics,
-  ApplicabilityRule,
+  DEFAULT_PLAYBOOK_CONFIG,
 } from './types';
-import { DEFAULT_PLAYBOOK_CONFIG } from './types';
 import type {
   ConversationAnalysis,
   Conversation,
-  ObjectionAnalysis,
-  CoachingInsight,
   KeyMoment,
 } from '@/lib/conversation/types';
-import type {
-  RepPerformanceMetrics,
-} from '@/lib/performance/types';
 
 // ============================================================================
 // MAIN EXTRACTION FUNCTION
@@ -1014,13 +1002,13 @@ Return as JSON array.`;
 
 function parsePatternResponse(
   content: string,
-  candidates: PatternCandidate[],
-  analyses: ConversationAnalysisWithConversation[]
+  _candidates: PatternCandidate[],
+  _analyses: ConversationAnalysisWithConversation[]
 ): Pattern[] {
   // TODO: Implement robust JSON parsing with error handling
   try {
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed as Pattern[] : [];
   } catch {
     return [];
   }
@@ -1028,12 +1016,12 @@ function parsePatternResponse(
 
 function parseTalkTrackResponse(
   content: string,
-  candidates: TalkTrackCandidate[],
-  analyses: ConversationAnalysisWithConversation[]
+  _candidates: TalkTrackCandidate[],
+  _analyses: ConversationAnalysisWithConversation[]
 ): TalkTrack[] {
   try {
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed as TalkTrack[] : [];
   } catch {
     return [];
   }
@@ -1041,12 +1029,12 @@ function parseTalkTrackResponse(
 
 function parseObjectionResponseResponse(
   content: string,
-  candidates: ObjectionResponseCandidate[],
-  analyses: ConversationAnalysisWithConversation[]
+  _candidates: ObjectionResponseCandidate[],
+  _analyses: ConversationAnalysisWithConversation[]
 ): ObjectionResponse[] {
   try {
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed as ObjectionResponse[] : [];
   } catch {
     return [];
   }
@@ -1054,13 +1042,13 @@ function parseObjectionResponseResponse(
 
 function parseBestPracticeResponse(
   content: string,
-  candidates: BestPracticeCandidate[],
-  topPerformers: ConversationAnalysisWithConversation[],
-  allAnalyses: ConversationAnalysisWithConversation[]
+  _candidates: BestPracticeCandidate[],
+  _topPerformers: ConversationAnalysisWithConversation[],
+  _allAnalyses: ConversationAnalysisWithConversation[]
 ): PlaybookBestPractice[] {
   try {
-    const parsed = JSON.parse(content);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed: unknown = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed as PlaybookBestPractice[] : [];
   } catch {
     return [];
   }
@@ -1127,33 +1115,82 @@ interface ConversationAnalysisWithConversation {
   analysis: ConversationAnalysis;
 }
 
+interface PatternOccurrence {
+  conversationId: string;
+  repId: string;
+  moment?: KeyMoment;
+  insight?: {
+    category: string;
+    skillArea: string;
+    whatWentWell?: string;
+  };
+  overallScore: number;
+  sentimentScore: number;
+}
+
 interface PatternCandidate {
   key: string;
   type: string;
   category?: string;
-  occurrences: any[];
+  occurrences: PatternOccurrence[];
   successRate: number;
   avgSentimentChange: number;
 }
 
+interface TalkTrackExample {
+  conversationId: string;
+  repId: string;
+  repName: string;
+  phrase: string;
+  context: string;
+  overallScore: number;
+  sentimentScore: number;
+}
+
 interface TalkTrackCandidate {
   purpose: string;
-  examples: any[];
+  examples: TalkTrackExample[];
   avgSuccessRate: number;
   avgSentiment: number;
+}
+
+interface ObjectionResponseExample {
+  conversationId: string;
+  repId: string;
+  repName: string;
+  objection: {
+    type: string;
+    severity: string;
+    timestamp: number;
+  };
+  overallScore: number;
+  objectionHandlingScore: number;
+  sentimentChange: number;
 }
 
 interface ObjectionResponseCandidate {
   objectionType: string;
   severity: string;
-  examples: any[];
+  examples: ObjectionResponseExample[];
   avgSuccessRate: number;
+}
+
+interface BestPracticeExample {
+  conversationId: string;
+  repId: string;
+  repName: string;
+  insight: {
+    category: string;
+    skillArea: string;
+    whatWentWell?: string;
+  };
+  overallScore: number;
 }
 
 interface BestPracticeCandidate {
   category: string;
   skillArea: string;
-  examples: any[];
+  examples: BestPracticeExample[];
   topPerformerIds: Set<string>;
   avgImpact: number;
 }

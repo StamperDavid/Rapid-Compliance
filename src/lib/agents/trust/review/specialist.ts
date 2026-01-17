@@ -656,23 +656,22 @@ export class ReviewSpecialist extends BaseSpecialist {
     }
   }
 
-  private async handleQuery(message: AgentMessage): Promise<AgentReport> {
+  private handleQuery(message: AgentMessage): Promise<AgentReport> {
     const payload = message.payload as { queryType?: string };
 
     if (payload.queryType === 'platformStats') {
-      return this.createReport(message.id, 'COMPLETED', {
+      return Promise.resolve(this.createReport(message.id, 'COMPLETED', {
         platformStats: Object.fromEntries(this.platformStats),
-      });
+      }));
     } else if (payload.queryType === 'followUpSequences') {
-      return this.createReport(message.id, 'COMPLETED', {
+      return Promise.resolve(this.createReport(message.id, 'COMPLETED', {
         followUpSequences: Array.from(this.followUpSequences.values()),
-      });
+      }));
     }
 
-    await Promise.resolve();
-    return this.createReport(message.id, 'COMPLETED', {
+    return Promise.resolve(this.createReport(message.id, 'COMPLETED', {
       message: 'Query processed',
-    });
+    }));
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {
@@ -1098,7 +1097,7 @@ export class ReviewSpecialist extends BaseSpecialist {
     }
   }
 
-  private async executeAction(action: string, review: Review, _sentiment: SentimentAnalysis): Promise<void> {
+  private executeAction(action: string, review: Review, _sentiment: SentimentAnalysis): Promise<void> {
     switch (action) {
       case 'immediate_escalation':
         this.log('WARN', `CRITICAL REVIEW ALERT: 1-star review from ${review.reviewerName} on ${review.platform}`);
@@ -1130,7 +1129,7 @@ export class ReviewSpecialist extends BaseSpecialist {
       default:
         this.log('INFO', `Executed action: ${action} for review ${review.id}`);
     }
-    await Promise.resolve();
+    return Promise.resolve();
   }
 
   // ============================================================================

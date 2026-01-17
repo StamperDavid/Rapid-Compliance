@@ -4,7 +4,7 @@
  */
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import type { OrderPayment } from '@/types/ecommerce'
+// OrderPayment type not needed in this service
 import { logger } from '@/lib/logger/logger';
 
 export interface PaymentRequest {
@@ -20,7 +20,7 @@ export interface PaymentRequest {
     lastName: string;
     phone?: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PaymentResult {
@@ -100,7 +100,7 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
  */
 async function processStripePayment(
   request: PaymentRequest,
-  providerConfig: any
+  _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
     // Get Stripe API key
@@ -153,7 +153,7 @@ async function processStripePayment(
           const pm = await stripeClient.paymentMethods.retrieve(paymentIntent.payment_method);
           cardLast4 = (pm as any).card?.last4;
           cardBrand = (pm as any).card?.brand;
-        } catch (e) {
+        } catch {
           // Ignore if can't fetch
         }
       }
@@ -172,11 +172,12 @@ async function processStripePayment(
         error: `Payment status: ${paymentIntent.status}`,
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+      const err = error as Error;
     logger.error('Stripe payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Payment processing failed',
+      error:(err.message !== '' && err.message != null) ? err.message : 'Payment processing failed',
     };
   }
 }
@@ -194,7 +195,7 @@ export function calculateStripeFee(amount: number): number {
  */
 async function processSquarePayment(
   request: PaymentRequest,
-  providerConfig: any
+  _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
     // Get Square API credentials
@@ -257,9 +258,10 @@ async function processSquarePayment(
         error: (errorDetail !== '' && errorDetail != null) ? errorDetail : 'Square payment failed',
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+      const err = error as Error;
     logger.error('Square payment error:', error, { file: 'payment-service.ts' });
-    const errorMessage = error.message;
+    const errorMessage = err.message;
     return {
       success: false,
       error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Square payment processing failed',
@@ -281,7 +283,7 @@ export function calculateSquareFee(amount: number): number {
  */
 async function processPayPalPayment(
   request: PaymentRequest,
-  providerConfig: any
+  _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
     // Get PayPal API credentials
@@ -361,7 +363,7 @@ async function processPayPalPayment(
       const error = await orderResponse.json();
       return {
         success: false,
-        error:(error.message !== '' && error.message != null) ? error.message : 'PayPal order creation failed',
+        error:(err.message !== '' && err.message != null) ? err.message : 'PayPal order creation failed',
       };
     }
     
@@ -408,11 +410,12 @@ async function processPayPalPayment(
       provider: 'paypal',
     };
     
-  } catch (error: any) {
+  } catch (error: unknown) {
+      const err = error as Error;
     logger.error('PayPal payment error:', error, { file: 'payment-service.ts' });
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'PayPal payment processing failed',
+      error:(err.message !== '' && err.message != null) ? err.message : 'PayPal payment processing failed',
     };
   }
 }
@@ -512,10 +515,11 @@ async function refundStripePayment(
       transactionId: refund.id,
       provider: 'stripe',
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+      const err = error as Error;
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Refund failed',
+      error:(err.message !== '' && err.message != null) ? err.message : 'Refund failed',
     };
   }
 }

@@ -22,7 +22,7 @@ export interface EmailOptions {
     trackOpens?: boolean;
     trackClicks?: boolean;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface EmailAttachment {
@@ -74,23 +74,23 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
 
   // Determine provider and get credentials
   let provider: 'sendgrid' | 'resend' | 'smtp' | null = null;
-  let credentials: any = null;
+  let credentials: Record<string, unknown> | null = null;
 
   // Try SendGrid first
   const sendgridKeys = await apiKeyService.getServiceKey(organizationId, 'sendgrid');
-  if (sendgridKeys?.apiKey) {
+  if (sendgridKeys && typeof sendgridKeys.apiKey === 'string') {
     provider = 'sendgrid';
     credentials = sendgridKeys;
   } else {
     // Try Resend
     const resendKeys = await apiKeyService.getServiceKey(organizationId, 'resend');
-    if (resendKeys?.apiKey) {
+    if (resendKeys && typeof resendKeys.apiKey === 'string') {
       provider = 'resend';
       credentials = resendKeys;
     } else {
       // Try SMTP
       const smtpKeys = await apiKeyService.getServiceKey(organizationId, 'smtp');
-      if (smtpKeys?.host && smtpKeys?.username && smtpKeys?.password) {
+      if (smtpKeys && typeof smtpKeys.host === 'string' && typeof smtpKeys.username === 'string' && typeof smtpKeys.password === 'string') {
         provider = 'smtp';
         credentials = smtpKeys;
       }
@@ -119,10 +119,11 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
           error: 'Unknown email provider',
         };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send email';
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to send email',
+      error: errorMessage,
       provider,
     };
   }
@@ -131,12 +132,35 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
 /**
  * Send email via SendGrid
  */
-async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise<EmailResult> {
+async function sendViaSendGrid(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromEmail =(options.from || credentials.fromEmail !== '' && options.from || credentials.fromEmail != null) ? options.from ?? credentials.fromEmail: 'noreply@example.com';
-  const fromName =(options.fromName || credentials.fromName !== '' && options.fromName || credentials.fromName != null) ? options.fromName ?? credentials.fromName: 'AI Sales Platform';
+  const fromEmail = options.from || (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : 'noreply@example.com');
+  const fromName = options.fromName || (typeof credentials.fromName === 'string' ? credentials.fromName : 'AI Sales Platform');
 
-  const payload: any = {
+  interface SendGridPayload {
+    personalizations: Array<{
+      to: Array<{ email: string }>;
+      cc?: Array<{ email: string }>;
+      bcc?: Array<{ email: string }>;
+    }>;
+    from: {
+      email: string;
+      name: string;
+    };
+    subject: string;
+    content: Array<{
+      type: string;
+      value: string;
+    }>;
+    attachments?: Array<{
+      content: string;
+      filename: string;
+      type: string;
+      disposition: string;
+    }>;
+  }
+
+  const payload: SendGridPayload = {
     personalizations: recipients.map(to => ({
       to: [{ email: to }],
       ...(options.cc && { cc: Array.isArray(options.cc) ? options.cc.map(e => ({ email: e })) : [{ email: options.cc }] }),
@@ -151,7 +175,7 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
   };
 
   if (options.html) {
-    const orgId = options.metadata?.organizationId;
+    const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
     const { html: modifiedHtml } = addTrackingPixel(
       options.html,
       options.tracking?.trackOpens,
@@ -179,10 +203,11 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
     }));
   }
 
+  const apiKey = typeof credentials.apiKey === 'string' ? credentials.apiKey : '';
   const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${credentials.apiKey}`,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
@@ -200,10 +225,10 @@ async function sendViaSendGrid(options: EmailOptions, credentials: any): Promise
   const messageIdValue = response.headers.get('x-message-id') ?? `sg_${Date.now()}`;
 
   // Store tracking mapping if tracking is enabled
-  const orgId = options.metadata?.organizationId;
+  const orgId = typeof options.metadata?.organizationId === 'string' ? options.metadata.organizationId : undefined;
   if (orgId && options.tracking?.trackOpens) {
-    import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
-      FirestoreService.set(
+    void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
+      void FirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${orgId}/emailTrackingMappings`,
         messageIdValue,
         {

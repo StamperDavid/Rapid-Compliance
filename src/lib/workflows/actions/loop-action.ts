@@ -36,7 +36,7 @@ export interface LoopResult {
 
 export async function executeLoopAction(
   action: LoopActionConfig,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   workflow: Workflow,
   organizationId: string
 ): Promise<LoopResult> {
@@ -159,7 +159,7 @@ export async function executeLoopAction(
  */
 async function executeWorkflowActions(
   actions: WorkflowAction[],
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   workflow: Workflow,
   organizationId: string
 ): Promise<Array<{ actionId: string; status: string; result?: any; error?: string }>> {

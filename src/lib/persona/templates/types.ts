@@ -63,7 +63,7 @@ export interface MutationOperation {
   /**
    * Value to use in the operation
    */
-  value: any;
+  value: string | number | boolean | string[] | Record<string, unknown>;
 
   /**
    * Optional: Only apply if path exists

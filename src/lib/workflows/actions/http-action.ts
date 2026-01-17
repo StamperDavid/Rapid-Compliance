@@ -59,18 +59,19 @@ export async function executeHTTPAction(
 /**
  * Resolve variables in config
  */
-function resolveVariables(config: any, triggerData: any): any {
+function resolveVariables(config: unknown, triggerData: Record<string, unknown>): unknown {
   if (typeof config === 'string') {
-    return config.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      const value = getNestedValue(triggerData, path.trim());
+    return config.replace(/\{\{([^}]+)\}\}/g, (match, path: string) => {
+      const trimmedPath = typeof path === 'string' ? path.trim() : String(path);
+      const value = getNestedValue(triggerData, trimmedPath);
       return value !== undefined ? String(value) : match;
     });
   } else if (Array.isArray(config)) {
     return config.map(item => resolveVariables(item, triggerData));
   } else if (config && typeof config === 'object') {
-    const resolved: any = {};
-    for (const key in config) {
-      resolved[key] = resolveVariables(config[key], triggerData);
+    const resolved: Record<string, unknown> = {};
+    for (const key in config as Record<string, unknown>) {
+      resolved[key] = resolveVariables((config as Record<string, unknown>)[key], triggerData);
     }
     return resolved;
   }
@@ -80,7 +81,12 @@ function resolveVariables(config: any, triggerData: any): any {
 /**
  * Get nested value from object using dot notation
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current && typeof current === 'object' && key in current) {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 

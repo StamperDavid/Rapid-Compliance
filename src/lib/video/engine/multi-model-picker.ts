@@ -579,12 +579,14 @@ export class MultiModelPicker {
 
     // Apply allowed providers filter
     if (config?.allowedProviders && config.allowedProviders.length > 0) {
-      filtered = filtered.filter((p) => config.allowedProviders!.includes(p));
+      const allowedProviders = config.allowedProviders;
+      filtered = filtered.filter((p) => allowedProviders.includes(p));
     }
 
     // Apply blocked providers filter
     if (config?.blockedProviders && config.blockedProviders.length > 0) {
-      filtered = filtered.filter((p) => !config.blockedProviders!.includes(p));
+      const blockedProviders = config.blockedProviders;
+      filtered = filtered.filter((p) => !blockedProviders.includes(p));
     }
 
     return filtered;

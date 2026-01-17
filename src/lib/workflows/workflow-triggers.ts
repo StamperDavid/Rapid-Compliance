@@ -14,7 +14,7 @@ import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
  */
 export async function triggerWorkflow(
   workflow: Workflow,
-  triggerData: any
+  triggerData: Record<string, unknown>
 ): Promise<void> {
   // Workflow execution:
   // 1. Verify trigger matches workflow trigger config

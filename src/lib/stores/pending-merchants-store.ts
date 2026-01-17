@@ -115,8 +115,8 @@ export const usePendingMerchantStore = create<PendingMerchantState>()(
 
         const merchant: PendingMerchant = {
           id,
-          email: data.email || '',
-          fullName: data.fullName || '',
+          email: data.email ?? '',
+          fullName: data.fullName ?? '',
           phoneNumber: data.phoneNumber,
           industry: data.industry,
           industryName: data.industryName,

@@ -15,14 +15,14 @@ export class FormulaEngine {
     formula: string,
     record: EntityRecord,
     allFields: SchemaField[]
-  ): any {
+  ): unknown {
     try {
       // Create safe context with field values
       const context = this.createContext(record, allFields);
-      
+
       // Parse and evaluate formula
       const result = this.safeEval(formula, context);
-      
+
       return result;
     } catch (error) {
       logger.error('Formula evaluation error:', error, { file: 'formula-engine.ts' });
@@ -36,8 +36,8 @@ export class FormulaEngine {
   private createContext(
     record: EntityRecord,
     fields: SchemaField[]
-  ): Record<string, any> {
-    const context: Record<string, any> = {};
+  ): Record<string, unknown> {
+    const context: Record<string, unknown> = {};
 
     // Add field values
     fields.forEach(field => {
@@ -89,7 +89,7 @@ export class FormulaEngine {
    * Safe evaluation of formula
    * Prevents arbitrary code execution
    */
-  private safeEval(formula: string, context: Record<string, any>): any {
+  private safeEval(formula: string, context: Record<string, unknown>): unknown {
     // Create function with restricted scope
     const keys = Object.keys(context);
     const values = Object.values(context);
@@ -99,9 +99,10 @@ export class FormulaEngine {
     values.push(Math);
 
     try {
-      // Create function from formula
-      const func = new Function(...keys, `"use strict"; return (${formula});`);
-      
+      // Create function from formula - using Function is intentional for formula evaluation
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval
+      const func = new Function(...keys, `"use strict"; return (${formula});`) as (...args: unknown[]) => unknown;
+
       // Execute with context
       return func(...values);
     } catch (error) {
@@ -115,7 +116,7 @@ export class FormulaEngine {
   validate(formula: string, fields: SchemaField[]): { valid: boolean; error?: string } {
     try {
       // Create dummy context
-      const context: Record<string, any> = {};
+      const context: Record<string, unknown> = {};
       fields.forEach(field => {
         context[field.key] = this.getDummyValue(field.type);
       });
@@ -135,7 +136,7 @@ export class FormulaEngine {
   /**
    * Get dummy value for field type (for validation)
    */
-  private getDummyValue(fieldType: string): any {
+  private getDummyValue(fieldType: string): unknown {
     switch (fieldType) {
       case 'text':
       case 'longText':
@@ -166,23 +167,23 @@ export class FormulaEngine {
 
   // ============ Formula Functions ============
 
-  private IF(condition: boolean, trueValue: any, falseValue: any): any {
+  private IF(condition: boolean, trueValue: unknown, falseValue: unknown): unknown {
     return condition ? trueValue : falseValue;
   }
 
-  private AND(...args: any[]): boolean {
+  private AND(...args: unknown[]): boolean {
     return args.every(Boolean);
   }
 
-  private OR(...args: any[]): boolean {
+  private OR(...args: unknown[]): boolean {
     return args.some(Boolean);
   }
 
-  private NOT(value: any): boolean {
+  private NOT(value: unknown): boolean {
     return !value;
   }
 
-  private CONCAT(...args: any[]): string {
+  private CONCAT(...args: unknown[]): string {
     return args.map(String).join('');
   }
 
@@ -232,7 +233,7 @@ export class FormulaEngine {
     return this.SUM(...args) / args.length;
   }
 
-  private COUNT(...args: any[]): number {
+  private COUNT(...args: unknown[]): number {
     return args.filter(v => v !== null && v !== undefined).length;
   }
 

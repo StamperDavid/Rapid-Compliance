@@ -22,7 +22,7 @@ export interface Alert {
   threshold: number;
   firstOccurrence: Date;
   lastOccurrence: Date;
-  details: any;
+  details: Record<string, unknown>;
 }
 
 // In-memory alert tracking (in production, use Redis or Firestore)
@@ -45,7 +45,7 @@ const DEFAULT_CONFIGS: AlertConfig[] = [
  */
 export async function trackEvent(
   type: AlertConfig['type'],
-  details: any = {},
+  details: Record<string, unknown> = {},
   orgId?: string
 ): Promise<void> {
   const key = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`;
@@ -91,7 +91,7 @@ async function triggerAlert(
   type: AlertConfig['type'],
   count: number,
   threshold: number,
-  details: any,
+  details: Record<string, unknown>,
   orgId?: string
 ): Promise<void> {
   const alertId = `${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}:${Date.now()}`;
@@ -108,20 +108,20 @@ async function triggerAlert(
     threshold,
     firstOccurrence: counter.firstSeen,
     lastOccurrence: counter.lastSeen,
-    details,
+    details: { ...details, orgId },
   };
 
   // Store alert
   activeAlerts.set(`${type}:${(orgId !== '' && orgId != null) ? orgId : 'platform'}`, alert);
 
-  // Log to console and Sentry
+  // Log to Sentry
   logger.error(`🚨 ALERT: ${alert.message}`, new Error('Alert triggered'), {
     alertId,
     type,
     count,
     threshold,
     orgId,
-    details,
+    details: alert.details,
   });
 
   // Send to Sentry with high priority
@@ -145,7 +145,7 @@ async function triggerAlert(
   // - PagerDuty incident (for critical)
   
   if (alert.severity === 'critical') {
-    await sendCriticalAlert(alert);
+    sendCriticalAlert(alert);
   }
 }
 
@@ -182,16 +182,14 @@ function getAlertMessage(type: string, count: number, threshold: number): string
 /**
  * Send critical alert via multiple channels
  */
-async function sendCriticalAlert(alert: Alert): Promise<void> {
+function sendCriticalAlert(alert: Alert): void {
   logger.error('🚨🚨🚨 CRITICAL ALERT', new Error(alert.message), { alert });
-  
+
   // In production, implement:
   // 1. Send email to platform admin
   // 2. Send Slack message to #alerts channel
   // 3. Create PagerDuty incident
   // 4. Send SMS to on-call engineer
-  
-  console.error('🚨 CRITICAL ALERT:', alert.message);
 }
 
 /**
@@ -199,7 +197,10 @@ async function sendCriticalAlert(alert: Alert): Promise<void> {
  */
 export function getActiveAlerts(orgId?: string): Alert[] {
   if (orgId) {
-    return Array.from(activeAlerts.values()).filter(a => a.details.orgId === orgId);
+    return Array.from(activeAlerts.values()).filter(a => {
+      const alertOrgId = a.details.orgId;
+      return typeof alertOrgId === 'string' && alertOrgId === orgId;
+    });
   }
   return Array.from(activeAlerts.values());
 }

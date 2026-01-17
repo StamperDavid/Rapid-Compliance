@@ -10,6 +10,34 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 
+interface OrganizationMember {
+  userId: string;
+  email: string;
+  name?: string;
+  role?: string;
+}
+
+interface FirestoreTimestamp {
+  toDate(): Date;
+}
+
+type FirestoreDateField = Date | FirestoreTimestamp | string | number;
+
+interface HasCreatedAt {
+  createdAt?: FirestoreDateField;
+}
+
+interface HasActualCloseDate {
+  actualCloseDate?: FirestoreDateField;
+  updatedAt?: FirestoreDateField;
+  stage?: string;
+  value: number;
+}
+
+interface HasOccurredAt {
+  occurredAt?: FirestoreDateField;
+}
+
 export interface TeamComment {
   id: string;
   organizationId: string;
@@ -118,7 +146,7 @@ export async function createComment(
 
     return comment;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create comment', error);
     throw error;
   }
@@ -134,6 +162,18 @@ function extractMentions(content: string): string[] {
 }
 
 /**
+ * Helper function to convert Firestore date field to Date
+ */
+function toDate(field: FirestoreDateField | undefined | null): Date {
+  if (!field) {return new Date();}
+  if (field instanceof Date) {return field;}
+  if (typeof field === 'object' && 'toDate' in field && typeof field.toDate === 'function') {
+    return field.toDate();
+  }
+  return new Date(field);
+}
+
+/**
  * Notify users who were mentioned
  */
 async function notifyMentionedUsers(
@@ -146,7 +186,7 @@ async function notifyMentionedUsers(
 
     for (const userId of mentionedUserIds) {
       // Get user email
-      const user = await FirestoreService.get<any>(
+      const user = await FirestoreService.get<OrganizationMember>(
         `organizations/${organizationId}/members`,
         userId
       );
@@ -203,7 +243,7 @@ export async function createTask(
 
     return newTask;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create task', error);
     throw error;
   }
@@ -219,7 +259,7 @@ async function notifyTaskAssignment(
   try {
     const { sendEmail } = await import('@/lib/email/email-service');
 
-    const user = await FirestoreService.get<any>(
+    const user = await FirestoreService.get<OrganizationMember>(
       `organizations/${organizationId}/members`,
       task.assignedTo
     );
@@ -248,7 +288,7 @@ export async function calculateLeaderboard(
 ): Promise<LeaderboardEntry[]> {
   try {
     // Get all team members
-    const membersResult = await FirestoreService.getAll<any>(
+    const membersResult = await FirestoreService.getAll<OrganizationMember>(
       `organizations/${organizationId}/members`
     );
 
@@ -274,7 +314,7 @@ export async function calculateLeaderboard(
       );
 
       // Calculate gamification points
-      const points = 
+      const points =
         metrics.leadsCreated * 10 +
         metrics.dealsClosed * 100 +
         (metrics.revenueGenerated / 1000) +
@@ -305,7 +345,7 @@ export async function calculateLeaderboard(
 
     return leaderboard;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to calculate leaderboard', error, { organizationId });
     throw error;
   }
@@ -328,16 +368,16 @@ async function calculateUserMetrics(
 
     // Get leads created by user
     const leadsResult = await getLeads(organizationId, workspaceId, { ownerId: userId }, { pageSize: 1000 });
-    const leadsInPeriod = leadsResult.data.filter(l => {
-      const createdAt = l.createdAt?.toDate ? l.createdAt.toDate() : new Date(l.createdAt);
+    const leadsInPeriod = leadsResult.data.filter((l: HasCreatedAt) => {
+      const createdAt = toDate(l.createdAt);
       return createdAt >= startDate && createdAt <= endDate;
     });
 
     // Get deals closed by user
     const dealsResult = await getDeals(organizationId, workspaceId, { ownerId: userId }, { pageSize: 1000 });
-    const dealsClosedWon = dealsResult.data.filter(d => {
+    const dealsClosedWon = dealsResult.data.filter((d: HasActualCloseDate) => {
       if (d.stage !== 'closed_won') {return false;}
-      const closedAt = d.actualCloseDate?.toDate ? d.actualCloseDate.toDate() : new Date(d.actualCloseDate ?? d.updatedAt);
+      const closedAt = toDate(d.actualCloseDate ?? d.updatedAt);
       return closedAt >= startDate && closedAt <= endDate;
     });
 
@@ -357,18 +397,8 @@ async function calculateUserMetrics(
       { createdBy: userId },
       { pageSize: 1000 }
     );
-    const activitiesInPeriod = activitiesResult.data.filter(a => {
-      let occurredAt: Date;
-      if (a.occurredAt?.toDate) {
-        occurredAt = a.occurredAt.toDate();
-      } else if (a.occurredAt instanceof Date) {
-        occurredAt = a.occurredAt;
-      } else if (typeof a.occurredAt === 'string' || typeof a.occurredAt === 'number') {
-        occurredAt = new Date(a.occurredAt);
-      } else {
-        // Fallback: use current date if occurredAt is invalid
-        occurredAt = new Date();
-      }
+    const activitiesInPeriod = activitiesResult.data.filter((a: HasOccurredAt) => {
+      const occurredAt = toDate(a.occurredAt);
       return occurredAt >= startDate && occurredAt <= endDate;
     });
 
@@ -393,7 +423,7 @@ async function calculateUserMetrics(
       winRate,
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to calculate user metrics', error, { userId });
     return {
       leadsCreated: 0,

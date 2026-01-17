@@ -5,7 +5,8 @@
 
 import type {
   User,
-  UserCredential} from 'firebase/auth';
+  UserCredential
+} from 'firebase/auth';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -19,6 +20,9 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
+import { dal } from '@/lib/firebase/dal';
+import { serverTimestamp } from 'firebase/firestore';
+import { logger } from '@/lib/logger/logger';
 
 // Check if Firebase is configured before using auth
 // Only warn in non-build environments
@@ -27,10 +31,6 @@ if (!isFirebaseConfigured || !auth) {
     logger.warn('Firebase Auth is not configured. Authentication features will be disabled.', { file: 'auth-service.ts' });
   }
 }
-import { dal } from '@/lib/firebase/dal';
-import { COLLECTIONS } from '@/lib/firebase/collections';
-import { serverTimestamp } from 'firebase/firestore';
-import { logger } from '@/lib/logger/logger';
 
 export interface AuthUser {
   uid: string;
@@ -54,17 +54,17 @@ export async function signUp(
 
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    
+
     // Update profile if display name provided
     if (displayName && userCredential.user) {
       await updateProfile(userCredential.user, { displayName });
     }
-    
+
     // Send email verification
     if (userCredential.user) {
       await sendEmailVerification(userCredential.user);
     }
-    
+
     // Create user document in Firestore using DAL
     if (userCredential.user) {
       await dal.safeSetDoc('USERS', userCredential.user.uid, {
@@ -78,11 +78,12 @@ export async function signUp(
         userId: userCredential.user.uid,
       });
     }
-    
+
     return userCredential;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error signing up:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign up');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign up';
+    throw new Error(errorMessage);
   }
 }
 
@@ -96,9 +97,10 @@ export async function signIn(email: string, password: string): Promise<UserCrede
 
   try {
     return await signInWithEmailAndPassword(auth, email, password);
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error signing in:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign in');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign in';
+    throw new Error(errorMessage);
   }
 }
 
@@ -115,9 +117,10 @@ export async function signInWithGoogle(): Promise<UserCredential> {
     provider.addScope('email');
     provider.addScope('profile');
     return await signInWithPopup(auth, provider);
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error signing in with Google:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign in with Google');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign in with Google';
+    throw new Error(errorMessage);
   }
 }
 
@@ -134,9 +137,10 @@ export async function signInWithMicrosoft(): Promise<UserCredential> {
     provider.addScope('email');
     provider.addScope('profile');
     return await signInWithPopup(auth, provider);
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error signing in with Microsoft:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign in with Microsoft');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign in with Microsoft';
+    throw new Error(errorMessage);
   }
 }
 
@@ -150,9 +154,10 @@ export async function signOutUser(): Promise<void> {
 
   try {
     await signOut(auth);
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error signing out:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to sign out');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to sign out';
+    throw new Error(errorMessage);
   }
 }
 
@@ -166,9 +171,10 @@ export async function resetPassword(email: string): Promise<void> {
 
   try {
     await sendPasswordResetEmail(auth, email);
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error sending password reset:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to send password reset email');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to send password reset email';
+    throw new Error(errorMessage);
   }
 }
 
@@ -186,9 +192,10 @@ export async function verifyEmail(): Promise<void> {
       throw new Error('No user is currently signed in');
     }
     await sendEmailVerification(user);
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error sending email verification:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to send email verification');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to send email verification';
+    throw new Error(errorMessage);
   }
 }
 
@@ -214,18 +221,29 @@ export function onAuthStateChange(
     return () => {};
   }
 
-  return onAuthStateChanged(auth, async (user) => {
+  return onAuthStateChanged(auth, (user) => {
     if (user) {
       // Load user profile from Firestore using DAL
-      const userDoc = await dal.safeGetDoc('USERS', user.uid);
-      const userProfile = userDoc.exists() ? userDoc.data() : null;
-      
-      callback({
-        uid: user.uid,
-        email: user.email,
-        displayName:user.displayName ?? userProfile?.displayName ?? null,
-        photoURL: user.photoURL,
-        emailVerified: user.emailVerified,
+      void dal.safeGetDoc('USERS', user.uid).then((userDoc) => {
+        const userProfile = userDoc.exists() ? userDoc.data() : null;
+
+        callback({
+          uid: user.uid,
+          email: user.email,
+          displayName:user.displayName ?? userProfile?.displayName ?? null,
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified,
+        });
+      }).catch((error: unknown) => {
+        logger.error('Error loading user profile in auth state change:', error, { file: 'auth-service.ts' });
+        // Still callback with basic user info even if profile load fails
+        callback({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          emailVerified: user.emailVerified,
+        });
       });
     } else {
       callback(null);
@@ -249,9 +267,9 @@ export async function updateUserProfile(updates: {
     if (!user) {
       throw new Error('No user is currently signed in');
     }
-    
+
     await updateProfile(user, updates);
-    
+
     // Also update Firestore using DAL
     await dal.safeUpdateDoc('USERS', user.uid, {
       ...updates,
@@ -260,9 +278,9 @@ export async function updateUserProfile(updates: {
       audit: true,
       userId: user.uid,
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error updating profile:', error, { file: 'auth-service.ts' });
-    throw new Error((error.message !== '' && error.message != null) ? error.message : 'Failed to update profile');
+    const errorMessage = error instanceof Error && error.message ? error.message : 'Failed to update profile';
+    throw new Error(errorMessage);
   }
 }
-

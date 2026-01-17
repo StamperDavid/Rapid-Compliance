@@ -11,7 +11,7 @@ export class APIError extends Error {
     message: string,
     public statusCode: number = 500,
     public code?: string,
-    public details?: any
+    public details?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'APIError';
@@ -24,7 +24,7 @@ export interface ErrorResponse {
     message: string;
     code?: string;
     statusCode: number;
-    details?: any;
+    details?: Record<string, unknown>;
   };
   timestamp: string;
 }

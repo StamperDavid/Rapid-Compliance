@@ -11,15 +11,15 @@ import { sendMessage, listChannels, createChannel } from '../slack-service';
  */
 export async function executeSlackFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<unknown> {
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
 
   if (!accessToken) {
     throw new Error('Slack access token not configured');
   }
-  
+
   switch (functionName) {
     case 'sendMessage':
       // Validate required parameters
@@ -29,30 +29,30 @@ export async function executeSlackFunction(
       if (!parameters.text || typeof parameters.text !== 'string') {
         throw new Error('text (string) is required for sendMessage');
       }
-      
+
       return sendMessage(accessToken, {
         channel: parameters.channel,
         text: parameters.text,
-        attachments: parameters.attachments,
-        blocks: parameters.blocks,
+        attachments: parameters.attachments as unknown[] | undefined,
+        blocks: parameters.blocks as unknown[] | undefined,
       });
-      
+
     case 'createChannel':
       // Validate required parameters
       if (!parameters.name || typeof parameters.name !== 'string') {
         throw new Error('name (string) is required for createChannel');
       }
-      
+
       return createChannel(
         accessToken,
         parameters.name,
-        parameters.isPrivate ?? false
+        (parameters.isPrivate as boolean | undefined) ?? false
       );
-      
+
     case 'listChannels':
       // No parameters required
       return listChannels(accessToken);
-      
+
     default:
       throw new Error(`Unknown Slack function: ${functionName}`);
   }

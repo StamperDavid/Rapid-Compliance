@@ -45,6 +45,12 @@ export function isAuthError(result: AuthResult): result is AuthError {
   return result.success === false;
 }
 
+interface UserData {
+  email?: string;
+  role?: string;
+  organizationId?: string;
+}
+
 /**
  * Verify the request is from an authenticated admin (super_admin or admin).
  * Uses Firebase Custom Claims as the source of truth for authorization.
@@ -87,15 +93,16 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
     let decodedToken;
     try {
       decodedToken = await adminAuth.verifyIdToken(token);
-    } catch (tokenError: any) {
-      logger.error('Token verification failed', tokenError, {
-        code: tokenError.code,
+    } catch (tokenError: unknown) {
+      const error = tokenError as { code?: string; message?: string };
+      logger.error('Token verification failed', error instanceof Error ? error : new Error(String(tokenError)), {
+        code: error.code,
         file: 'admin-auth.ts',
       });
       return {
         success: false,
         error:
-          tokenError.code === 'auth/id-token-expired'
+          error.code === 'auth/id-token-expired'
             ? 'Token expired - please re-authenticate'
             : 'Invalid authentication token',
         status: 401,
@@ -127,7 +134,21 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       };
     }
 
-    const userData = userDoc.data()!;
+    const rawUserData = userDoc.data();
+
+    if (!rawUserData) {
+      return {
+        success: false,
+        error: 'User data not found',
+        status: 403,
+      };
+    }
+
+    const userData: UserData = {
+      email: rawUserData.email as string | undefined,
+      role: rawUserData.role as string | undefined,
+      organizationId: rawUserData.organizationId as string | undefined,
+    };
 
     // Merge token claims with database role
     const effectiveRole = claims.role ?? userData.role;
@@ -162,14 +183,14 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AuthResu
       user: {
         uid: userId,
         email: userData.email ?? decodedToken.email ?? '',
-        role: (effectiveClaims.role as 'super_admin' | 'admin') ?? userData.role,
+        role: (effectiveClaims.role as 'super_admin' | 'admin') ?? (userData.role as 'super_admin' | 'admin'),
         organizationId:
           effectiveClaims.tenant_id ?? userData.organizationId ?? 'platform',
         isGlobalAdmin,
         tenantId: effectiveClaims.tenant_id,
       },
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Admin auth error:', error, { file: 'admin-auth.ts' });
     return {
       success: false,

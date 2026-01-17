@@ -23,7 +23,10 @@ export interface LogContext {
   duration?: number;
   ip?: string;
   userAgent?: string;
-  [key: string]: any;
+  error?: string;
+  stack?: string;
+  path?: string;
+  [key: string]: string | number | boolean | undefined | null | string[] | number[];
 }
 
 /**
@@ -43,21 +46,25 @@ const PII_FIELDS = [
   'cookie',
 ];
 
+type RedactableValue = string | number | boolean | null | undefined | RedactableObject | RedactableArray;
+type RedactableObject = { [key: string]: RedactableValue };
+type RedactableArray = RedactableValue[];
+
 /**
  * Redact PII from context before logging
  */
-function redactPII(obj: any): any {
+function redactPII(obj: RedactableValue): RedactableValue {
   if (!obj || typeof obj !== 'object') {return obj;}
-  
+
   if (Array.isArray(obj)) {
-    return obj.map(item => redactPII(item));
+    return obj.map(item => redactPII(item)) as RedactableArray;
   }
-  
-  const redacted: any = {};
+
+  const redacted: RedactableObject = {};
   for (const [key, value] of Object.entries(obj)) {
     const keyLower = key.toLowerCase();
     const shouldRedact = PII_FIELDS.some(field => keyLower.includes(field.toLowerCase()));
-    
+
     if (shouldRedact) {
       redacted[key] = '[REDACTED]';
     } else if (value && typeof value === 'object') {
@@ -66,7 +73,7 @@ function redactPII(obj: any): any {
       redacted[key] = value;
     }
   }
-  
+
   return redacted;
 }
 
@@ -120,17 +127,17 @@ class Logger {
   /**
    * Log errors (critical issues)
    */
-  error(message: string, error?: Error | unknown, context?: LogContext) {
+  error(message: string, error?: Error, context?: LogContext) {
     if (this.isTest) {return;}
-    
+
     const errorObj = error instanceof Error ? error : new Error(String(error));
-    
+
     this.log(LogLevel.ERROR, message, {
       ...context,
       error: errorObj.message,
       stack: errorObj.stack,
     });
-    
+
     // Send to Sentry with full error details
     Sentry.captureException(errorObj, {
       tags: {
@@ -147,10 +154,10 @@ class Logger {
    */
   private log(level: LogLevel, message: string, context?: LogContext) {
     const timestamp = new Date().toISOString();
-    
+
     // Redact PII from context (GDPR/CCPA compliance)
-    const safeContext = context ? redactPII(context) : {};
-    
+    const safeContext = context ? (redactPII(context) as Record<string, unknown>) : {};
+
     const logData = {
       timestamp,
       level,
@@ -169,14 +176,14 @@ class Logger {
       };
       const reset = '\x1b[0m';
       const color = colors[level];
-      
-      console.log(
-        `${color}[${level.toUpperCase()}]${reset} ${timestamp} - ${message}`,
-        context ?? ''
+
+      const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+      process.stdout.write(
+        `${color}[${level.toUpperCase()}]${reset} ${timestamp} - ${message}${contextStr}\n`
       );
     } else {
       // In production, output structured JSON logs
-      console.log(JSON.stringify(logData));
+      process.stdout.write(`${JSON.stringify(logData)}\n`);
     }
   }
 
@@ -209,7 +216,7 @@ class ChildLogger {
     this.parent.warn(message, { ...this.defaultContext, ...context });
   }
 
-  error(message: string, error?: Error | unknown, context?: LogContext) {
+  error(message: string, error?: Error, context?: LogContext) {
     this.parent.error(message, error, { ...this.defaultContext, ...context });
   }
 }
@@ -222,6 +229,6 @@ export const log = {
   debug: (msg: string, ctx?: LogContext) => logger.debug(msg, ctx),
   info: (msg: string, ctx?: LogContext) => logger.info(msg, ctx),
   warn: (msg: string, ctx?: LogContext) => logger.warn(msg, ctx),
-  error: (msg: string, err?: Error | unknown, ctx?: LogContext) => logger.error(msg, err, ctx),
+  error: (msg: string, err?: Error, ctx?: LogContext) => logger.error(msg, err, ctx),
 };
 

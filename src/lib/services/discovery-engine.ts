@@ -20,18 +20,16 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { BrowserController, createBrowserController } from './BrowserController';
-import { 
-  saveToDiscoveryArchive, 
+import { createBrowserController } from './BrowserController';
+import {
+  saveToDiscoveryArchive,
   getFromDiscoveryArchiveByHash,
-  calculateContentHash 
+  calculateContentHash
 } from '@/lib/scraper-intelligence/discovery-archive-service';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
-import type { WorkflowState } from '@/types/workflow-state';
-import { createWorkflowState } from '@/types/workflow-state';
+import { createWorkflowState, type WorkflowState } from '@/types/workflow-state';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { Timestamp } from 'firebase/firestore';
 
 // ============================================================================
 // TYPES
@@ -177,9 +175,28 @@ export interface RawScrapedData {
     text: string;
     type?: string;
   }>;
-  teamMembers: Array<any>;
-  techStack: Array<any>;
-  careerData: any;
+  teamMembers: Array<{
+    name: string;
+    title?: string;
+    imageUrl?: string;
+    linkedinUrl?: string;
+    email?: string;
+  }>;
+  techStack: Array<{
+    name: string;
+    category: string;
+    confidence: number;
+    evidence: string;
+  }>;
+  careerData: {
+    jobCount: number;
+    positions: Array<{
+      title: string;
+      location?: string;
+      url?: string;
+    }>;
+    careerPageUrl?: string;
+  } | null;
 }
 
 // ============================================================================

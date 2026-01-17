@@ -66,7 +66,7 @@ export interface CompanyEnrichmentData {
   /**
    * Custom industry-specific fields
    */
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
   
   // Metadata
   lastUpdated: Date;

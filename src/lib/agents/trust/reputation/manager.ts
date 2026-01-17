@@ -669,12 +669,12 @@ export class ReputationManager extends BaseManager {
     super(REPUTATION_MANAGER_CONFIG);
   }
 
-  initialize(): Promise<void> {
+  async initialize(): Promise<void> {
     this.log('INFO', 'Initializing Reputation Manager...');
     this.log('INFO', `Loaded ${Object.keys(SENTIMENT_THRESHOLDS).length} sentiment levels`);
     this.log('INFO', `Configured ${Object.keys(RESPONSE_STRATEGIES).length} response strategies`);
     this.isInitialized = true;
-    return Promise.resolve();
+    await Promise.resolve();
   }
 
   /**
@@ -1369,8 +1369,9 @@ export class ReputationManager extends BaseManager {
 
   /**
    * Route to appropriate department specialist
+   * NOTE: Reserved for future dynamic routing implementation
    */
-  private routeToDepartmentSpecialist(
+  private _routeToDepartmentSpecialist(
     signal: SentimentSignal,
     _taskId: string
   ): Promise<DelegationRecommendation> {
@@ -1407,8 +1408,9 @@ export class ReputationManager extends BaseManager {
 
   /**
    * Detect crisis conditions
+   * NOTE: Reserved for future real-time crisis detection
    */
-  private detectCrisis(sentiment: SentimentAnalysis, signals: SentimentSignal[]): boolean {
+  private _detectCrisis(sentiment: SentimentAnalysis, signals: SentimentSignal[]): boolean {
     // Crisis if sentiment in crisis zone
     if (sentiment.level === SentimentLevel.CRISIS) {return true;}
 

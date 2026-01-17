@@ -7,6 +7,65 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Cart, CartItem, AppliedDiscount } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 
+interface ProductData {
+  id: string;
+  name: string;
+  sku: string;
+  price: number | string;
+  description?: string;
+  images?: string[];
+  stockLevel?: number;
+}
+
+interface DiscountData {
+  code: string;
+  type: string;
+  value: number;
+  status: string;
+  startsAt?: string | Date;
+  expiresAt?: string | Date;
+  usageLimit?: number;
+  usageCount?: number;
+  minPurchaseAmount?: number;
+  maxDiscountAmount?: number;
+}
+
+interface EcommerceConfig {
+  productSchema: string;
+  productMappings: Record<string, string>;
+}
+
+interface SerializedCartItem {
+  id: string;
+  productId: string;
+  productName: string;
+  sku: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+  addedAt: string;
+  variantId?: string;
+  variantOptions?: Record<string, string>;
+  image?: string;
+}
+
+type FirestoreTimestamp = { toDate: () => Date };
+
+function isTimestamp(value: unknown): value is FirestoreTimestamp {
+  return typeof value === 'object' && value !== null && 'toDate' in value;
+}
+
+function toDateOrString(value: unknown): Date {
+  if (isTimestamp(value)) {return value.toDate();}
+  return new Date(value as string | number | Date);
+}
+
+function serializeTimestamp(value: unknown): string {
+  if (isTimestamp(value)) {return value.toDate().toISOString();}
+  if (typeof value === 'string') {return value;}
+  return new Date().toISOString();
+}
+
 /**
  * Get or create cart for session
  */
@@ -24,8 +83,9 @@ export async function getOrCreateCart(
   
   if (existingCart) {
     // Check if cart is expired
-    const expiresAt = existingCart.expiresAt as any;
-    if (expiresAt && new Date(expiresAt.toDate?.() ?? expiresAt) < new Date()) {
+    const expiresAt = existingCart.expiresAt;
+    const expiresDate = toDateOrString(expiresAt);
+    if (expiresAt && expiresDate < new Date()) {
       // Cart expired, create new one
       return createCart(sessionId, workspaceId, organizationId, userId);
     }
@@ -100,7 +160,7 @@ export async function addToCart(
   // Get product details (from CRM entity)
   const product = await getProduct(workspaceId, productId, organizationId);
   if (!product) {
-    throw new Error('Product not found');
+    return null;
   }
   
   // Check if item already in cart
@@ -135,7 +195,7 @@ export async function addToCart(
   }
   
   // Recalculate totals
-  await recalculateCartTotals(cart);
+  recalculateCartTotals(cart);
   
   // Save cart
   await saveCart(cart);
@@ -157,7 +217,7 @@ export async function removeFromCart(
   cart.items = cart.items.filter(item => item.id !== itemId);
   
   // Recalculate totals
-  await recalculateCartTotals(cart);
+  recalculateCartTotals(cart);
   
   // Save cart
   await saveCart(cart);
@@ -190,7 +250,7 @@ export async function updateCartItemQuantity(
   item.subtotal = item.price * quantity;
   
   // Recalculate totals
-  await recalculateCartTotals(cart);
+  recalculateCartTotals(cart);
   
   // Save cart
   await saveCart(cart);
@@ -237,7 +297,7 @@ export async function applyDiscountCode(
   cart.discountCodes.push(appliedDiscount);
   
   // Recalculate totals
-  await recalculateCartTotals(cart);
+  recalculateCartTotals(cart);
   
   // Save cart
   await saveCart(cart);
@@ -259,7 +319,7 @@ export async function removeDiscountCode(
   cart.discountCodes = cart.discountCodes.filter(dc => dc.code !== code);
   
   // Recalculate totals
-  await recalculateCartTotals(cart);
+  recalculateCartTotals(cart);
   
   // Save cart
   await saveCart(cart);
@@ -270,7 +330,7 @@ export async function removeDiscountCode(
 /**
  * Recalculate cart totals
  */
-async function recalculateCartTotals(cart: Cart): Promise<void> {
+function recalculateCartTotals(cart: Cart): void {
   // Calculate subtotal
   cart.subtotal = cart.items.reduce((sum, item) => sum + item.subtotal, 0);
   
@@ -299,11 +359,11 @@ async function saveCart(cart: Cart): Promise<void> {
     cart.id,
     {
       ...cart,
-      createdAt: (cart.createdAt as any).toDate?.()?.toISOString() ?? cart.createdAt,
-      updatedAt: (cart.updatedAt as any).toDate?.()?.toISOString() ?? cart.updatedAt,
-      expiresAt: (cart.expiresAt as any).toDate?.()?.toISOString() ?? cart.expiresAt,
+      createdAt: serializeTimestamp(cart.createdAt),
+      updatedAt: serializeTimestamp(cart.updatedAt),
+      expiresAt: serializeTimestamp(cart.expiresAt),
       items: cart.items.map(item => {
-        const serializedItem: any = {
+        const serializedItem: SerializedCartItem = {
           id: item.id,
           productId: item.productId,
           productName: item.productName,
@@ -311,7 +371,7 @@ async function saveCart(cart: Cart): Promise<void> {
           price: item.price,
           quantity: item.quantity,
           subtotal: item.subtotal,
-          addedAt: (item.addedAt as any).toDate?.()?.toISOString() ?? item.addedAt,
+          addedAt: serializeTimestamp(item.addedAt),
         };
         
         // Only include optional fields if they are defined
@@ -329,7 +389,7 @@ async function saveCart(cart: Cart): Promise<void> {
 /**
  * Get product from CRM
  */
-async function getProduct(workspaceId: string, productId: string, organizationId?: string): Promise<any> {
+async function getProduct(workspaceId: string, productId: string, organizationId?: string): Promise<ProductData | null> {
   // Determine organization ID
   // Try to extract from workspaceId path first (e.g., "org-123/workspaces/default")
   let orgId = organizationId;
@@ -352,7 +412,8 @@ async function getProduct(workspaceId: string, productId: string, organizationId
     throw new Error('E-commerce not configured for this workspace');
   }
   
-  const productSchema = (ecommerceConfig as any).productSchema;
+  const config = ecommerceConfig as unknown as EcommerceConfig;
+  const productSchema = config.productSchema;
   
   // Get product entity from records collection
   const product = await FirestoreService.get(
@@ -361,11 +422,12 @@ async function getProduct(workspaceId: string, productId: string, organizationId
   );
   
   if (!product) {
-    throw new Error('Product not found');
+    return null;
   }
   
   // Map product fields using productMappings
-  const mappings = (ecommerceConfig as any).productMappings;
+  const mappings = config.productMappings;
+  const productData = product as Record<string, unknown>;
   return {
     id: product.id,
     name: product[mappings.name],
@@ -380,20 +442,33 @@ async function getProduct(workspaceId: string, productId: string, organizationId
 /**
  * Get discount code
  */
-async function getDiscountCode(workspaceId: string, organizationId: string, code: string): Promise<any> {
+async function getDiscountCode(workspaceId: string, organizationId: string, code: string): Promise<DiscountData | null> {
   const { where } = await import('firebase/firestore');
   const discounts = await FirestoreService.getAll(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/workspaces/${workspaceId}/discountCodes`,
     [where('code', '==', code.toUpperCase())]
   );
   
-  return discounts.length > 0 ? discounts[0] : null;
+  if (discounts.length === 0) {return null;}
+  const d = discounts[0] as Record<string, unknown>;
+  return {
+    code: d.code as string,
+    type: d.type as string,
+    value: d.value as number,
+    status: d.status as string,
+    startsAt: d.startsAt as string | Date | undefined,
+    expiresAt: d.expiresAt as string | Date | undefined,
+    usageLimit: d.usageLimit as number | undefined,
+    usageCount: d.usageCount as number | undefined,
+    minPurchaseAmount: d.minPurchaseAmount as number | undefined,
+    maxDiscountAmount: d.maxDiscountAmount as number | undefined,
+  };
 }
 
 /**
  * Validate discount code
  */
-function validateDiscount(discount: any, cart: Cart): void {
+function validateDiscount(discount: DiscountData, cart: Cart): void {
   const now = new Date();
   
   // Check status
@@ -424,7 +499,7 @@ function validateDiscount(discount: any, cart: Cart): void {
 /**
  * Calculate discount amount
  */
-function calculateDiscountAmount(discount: any, cart: Cart): number {
+function calculateDiscountAmount(discount: DiscountData, cart: Cart): number {
   let amount = 0;
   
   switch (discount.type) {

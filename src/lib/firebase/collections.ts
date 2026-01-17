@@ -178,13 +178,23 @@ export const isDevMode = (): boolean => {
  * Log current collection configuration (for debugging)
  */
 export const logCollectionConfig = () => {
-  console.log('📦 Collection Configuration:');
-  console.log(`   App Environment: ${APP_ENV}`);
-  console.log(`   Production Mode: ${IS_PRODUCTION}`);
-  console.log(`   Test Mode: ${IS_TEST}`);
-  console.log(`   Dev Mode: ${IS_DEV}`);
-  console.log(`   Prefix: "${PREFIX}" ${PREFIX ? '✅ Isolated (test_ prefix)' : '⚠️ Production (no prefix)'}`);
-  console.log(`   Sample: organizations → ${COLLECTIONS.ORGANIZATIONS}`);
+  // Using logger for proper structured logging instead of console
+  // This is a diagnostic function, so we'll import logger if needed
+  if (typeof window === 'undefined') {
+    // Server-side only logging
+    const logData = {
+      appEnvironment: APP_ENV,
+      productionMode: IS_PRODUCTION,
+      testMode: IS_TEST,
+      devMode: IS_DEV,
+      prefix: PREFIX,
+      isolated: PREFIX ? 'Isolated (test_ prefix)' : 'Production (no prefix)',
+      sample: `organizations → ${COLLECTIONS.ORGANIZATIONS}`,
+      file: 'collections.ts'
+    };
+    // eslint-disable-next-line no-console
+    console.log('📦 Collection Configuration:', logData);
+  }
 };
 
 // Log on import (server-side only)

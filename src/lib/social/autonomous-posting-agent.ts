@@ -11,9 +11,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { TwitterService} from '@/lib/integrations/twitter-service';
-import { createTwitterService } from '@/lib/integrations/twitter-service';
-import { sendLinkedInMessage } from '@/lib/integrations/linkedin-messaging';
+import { createTwitterService, type TwitterService } from '@/lib/integrations/twitter-service';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
   SocialPlatform,
@@ -23,11 +21,8 @@ import type {
   GeneratedContent,
   PostingResult,
   BatchPostingResult,
-  PostQueue,
-  QueueSettings,
   QueuedPost,
   ScheduledPost,
-  PostMetrics,
 } from '@/types/social';
 
 // Collection paths
@@ -47,12 +42,12 @@ export class AutonomousPostingAgent {
     this.organizationId = organizationId;
     this.config = {
       organizationId,
-      platforms: config?.platforms || ['twitter', 'linkedin'],
-      contentSources: config?.contentSources || [
+      platforms: config?.platforms ?? ['twitter', 'linkedin'],
+      contentSources: config?.contentSources ?? [
         { type: 'ai_generated', enabled: true, priority: 1 },
         { type: 'blog', enabled: true, priority: 2 },
       ],
-      schedule: config?.schedule || {
+      schedule: config?.schedule ?? {
         timezone: 'America/New_York',
         slots: [
           { dayOfWeek: 1, hour: 9, minute: 0, platforms: ['twitter', 'linkedin'] },
@@ -65,7 +60,7 @@ export class AutonomousPostingAgent {
       },
       approvalRequired: config?.approvalRequired ?? true,
       autoHashtags: config?.autoHashtags ?? true,
-      maxDailyPosts: config?.maxDailyPosts || 5,
+      maxDailyPosts: config?.maxDailyPosts ?? 5,
     };
   }
 
@@ -130,7 +125,7 @@ export class AutonomousPostingAgent {
         platformPostId: result.platformPostId,
         publishedAt: result.publishedAt,
         error: result.error,
-        createdBy: options.createdBy || 'autonomous-agent',
+        createdBy: options.createdBy ?? 'autonomous-agent',
       });
     }
 
@@ -200,10 +195,8 @@ export class AutonomousPostingAgent {
     content: string,
     _mediaUrls?: string[]
   ): Promise<PostingResult> {
-    if (!this.twitterService) {
-      // Try to initialize again
-      this.twitterService = await createTwitterService(this.organizationId);
-    }
+    // Try to initialize if not already initialized
+    this.twitterService ??= await createTwitterService(this.organizationId);
 
     if (!this.twitterService) {
       return {
@@ -286,12 +279,12 @@ export class AutonomousPostingAgent {
         });
 
         if (response.ok) {
-          const data = await response.json();
+          const data = await response.json() as { postId?: string; id?: string };
           return {
             success: true,
             platform: 'linkedin',
             postId,
-            platformPostId: data.postId || data.id,
+            platformPostId: data.postId ?? data.id,
             publishedAt: new Date(),
           };
         }
@@ -412,7 +405,7 @@ export class AutonomousPostingAgent {
           mediaUrls: options.mediaUrls,
           status: 'scheduled',
           scheduledAt,
-          createdBy: options.createdBy || 'autonomous-agent',
+          createdBy: options.createdBy ?? 'autonomous-agent',
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -486,7 +479,7 @@ export class AutonomousPostingAgent {
           status: 'queued',
           queuePosition,
           preferredTimeSlot: options.preferredTimeSlot,
-          createdBy: options.createdBy || 'autonomous-agent',
+          createdBy: options.createdBy ?? 'autonomous-agent',
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -741,7 +734,7 @@ export class AutonomousPostingAgent {
         postId,
         platform: data.platform,
         status: data.status,
-        publishedAt: data.publishedAt || new Date(),
+        publishedAt: data.publishedAt ?? new Date(),
         success: data.status === 'published',
         createdAt: new Date(),
       }
@@ -933,7 +926,7 @@ export class AutonomousPostingAgent {
 
       const prompt = `Generate a ${options.platform} post about: ${options.topic}
 
-Tone: ${options.tone || 'professional'}
+Tone: ${options.tone ?? 'professional'}
 ${platformGuide}
 ${options.includeHashtags ? 'Include 3-5 relevant hashtags.' : ''}
 
@@ -945,12 +938,19 @@ Return ONLY a JSON object with:
       const jsonMatch = response.text.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {
-        const generated = JSON.parse(jsonMatch[0]);
+        const generated = JSON.parse(jsonMatch[0]) as { content?: string; hashtags?: string[] };
+        const content = generated.content;
+        const hashtags = generated.hashtags;
+
+        if (!content) {
+          return null;
+        }
+
         return {
           id: `generated-${Date.now()}`,
           sourceType: 'ai_generated',
-          content: generated.content,
-          hashtags: generated.hashtags,
+          content,
+          hashtags,
           suggestedPlatforms: [options.platform],
           generatedAt: new Date(),
           metadata: { topic: options.topic, tone: options.tone },

@@ -25,8 +25,7 @@
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import type { Deal } from '@/lib/crm/deal-service';
-import { getTemplateById } from './industry-templates';
-import type { SalesIndustryTemplate } from './industry-templates';
+import { getTemplateById, type SalesIndustryTemplate } from './industry-templates';
 
 // ============================================================================
 // TYPES
@@ -124,7 +123,7 @@ export async function calculateDealScore(
     });
     
     // 1. Get deal data (mock for now)
-    const deal =options.deal ?? await fetchDeal(options.organizationId, options.workspaceId, options.dealId);
+    const deal = options.deal ?? fetchDeal(options.organizationId, options.workspaceId, options.dealId);
     
     // 2. Get industry template for custom weights
     let template: SalesIndustryTemplate | null = null;
@@ -174,7 +173,7 @@ export async function calculateDealScore(
     });
     
     // Factor 3: Engagement
-    const engagementFactor = await calculateEngagementFactor(deal, options.organizationId, options.workspaceId);
+    const engagementFactor = calculateEngagementFactor(deal, options.organizationId, options.workspaceId);
     factors.push({
       id: 'engagement',
       name: 'Engagement Level',
@@ -230,7 +229,7 @@ export async function calculateDealScore(
     });
     
     // Factor 7: Historical Win Rate
-    const historicalFactor = await calculateHistoricalWinRateFactor(deal, options.organizationId, options.workspaceId, template);
+    const historicalFactor = calculateHistoricalWinRateFactor(deal, options.organizationId, options.workspaceId, template);
     factors.push({
       id: 'historical_win_rate',
       name: 'Historical Win Rate',
@@ -288,8 +287,8 @@ export async function calculateDealScore(
     
     // 11. Emit Signal Bus event
     try {
-      const coordinator = await getServerSignalCoordinator();
-      await coordinator.emitSignal({
+      const coordinator = getServerSignalCoordinator();
+      void coordinator.emitSignal({
         type: 'deal.scored',
         orgId: options.organizationId,
         workspaceId: options.workspaceId,
@@ -449,13 +448,13 @@ function calculateStageVelocityFactor(deal: Deal, template: SalesIndustryTemplat
  * Calculate engagement factor
  * Activity level and recency
  */
-async function calculateEngagementFactor(deal: Deal, orgId: string, workspaceId: string): Promise<{
+function calculateEngagementFactor(_deal: Deal, _orgId: string, _workspaceId: string): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
   value: string;
   benchmark: string;
-}> {
+} {
   // Mock implementation - in real version, fetch activity stats
   const lastActivityDays = Math.floor(Math.random() * 14); // Mock: 0-14 days ago
   const totalActivities = Math.floor(Math.random() * 20) + 5; // Mock: 5-25 activities
@@ -507,7 +506,7 @@ async function calculateEngagementFactor(deal: Deal, orgId: string, workspaceId:
  * Calculate decision maker factor
  * Is C-level involved?
  */
-function calculateDecisionMakerFactor(deal: Deal): {
+function calculateDecisionMakerFactor(_deal: Deal): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
@@ -595,7 +594,7 @@ function calculateBudgetFactor(deal: Deal): {
 /**
  * Calculate competition factor
  */
-function calculateCompetitionFactor(deal: Deal): {
+function calculateCompetitionFactor(_deal: Deal): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
@@ -640,13 +639,13 @@ function calculateCompetitionFactor(deal: Deal): {
 /**
  * Calculate historical win rate factor
  */
-async function calculateHistoricalWinRateFactor(deal: Deal, orgId: string, workspaceId: string, template: SalesIndustryTemplate | null): Promise<{
+function calculateHistoricalWinRateFactor(_deal: Deal, _orgId: string, _workspaceId: string, template: SalesIndustryTemplate | null): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
   value: string;
   benchmark: string;
-}> {
+} {
   // Mock: use benchmark from template
   const winRate = template?.benchmarks.avgWinRate ?? 30;
   
@@ -722,7 +721,7 @@ function calculateConfidence(deal: Deal, factors: ScoringFactor[]): number {
   return Math.min(100, Math.round(confidence));
 }
 
-function identifyRiskFactors(deal: Deal, factors: ScoringFactor[], template: SalesIndustryTemplate | null): RiskFactor[] {
+function identifyRiskFactors(_deal: Deal, factors: ScoringFactor[], _template: SalesIndustryTemplate | null): RiskFactor[] {
   const risks: RiskFactor[] = [];
   
   factors.forEach(factor => {
@@ -761,7 +760,7 @@ function mapFactorToCategory(factorId: string): RiskFactor['category'] {
   return mapping[factorId] || 'engagement';
 }
 
-function generateMitigation(factorId: string, description: string): string {
+function generateMitigation(factorId: string, _description: string): string {
   const mitigations: Record<string, string> = {
     deal_age: 'Reach out immediately to re-engage. Consider offering limited-time incentive.',
     stage_velocity: 'Identify blockers and schedule next steps with clear timeline.',
@@ -833,7 +832,7 @@ function predictFinalValue(deal: Deal, factors: ScoringFactor[]): number {
  * Mock function to fetch deal
  * In real implementation, this would fetch from Firestore
  */
-async function fetchDeal(orgId: string, workspaceId: string, dealId: string): Promise<Deal> {
+function fetchDeal(orgId: string, _workspaceId: string, dealId: string): Deal {
   // Mock deal
   return {
     id: dealId,

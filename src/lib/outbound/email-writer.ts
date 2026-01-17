@@ -3,8 +3,8 @@
  * Generates personalized cold emails using AI and prospect research
  */
 
-import type { ProspectData, ProspectResearch} from './prospect-research';
-import { generatePersonalizationTokens } from './prospect-research'
+import type { ProspectData, ProspectResearch } from './prospect-research';
+import { generatePersonalizationTokens } from './prospect-research';
 import { logger } from '@/lib/logger/logger';
 
 export interface EmailGenerationRequest {
@@ -274,10 +274,10 @@ Write only the email body. Don't include subject line or signature.`;
 /**
  * Generate subject line variants for A/B testing
  */
-async function generateSubjectVariants(
+function generateSubjectVariants(
   request: EmailGenerationRequest,
   tokens: Record<string, string>
-): Promise<string[]> {
+): string[] {
   const variants: string[] = [];
   
   // Insight-based subject
@@ -353,18 +353,28 @@ async function shouldUseAI(organizationId?: string): Promise<boolean> {
   
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
-    
+
+    interface OrganizationSettings {
+      emailGeneration?: {
+        useAI?: boolean;
+      };
+    }
+
+    interface OrganizationDoc {
+      settings?: OrganizationSettings;
+    }
+
     // Get organization document
-    const orgDoc = await FirestoreService.get<any>(
+    const orgDoc = await FirestoreService.get<OrganizationDoc>(
       'organizations',
       organizationId
     );
-    
+
     if (!orgDoc) {
       // Organization not found, default to true
       return true;
     }
-    
+
     // Check if AI email generation is enabled
     // Settings structure: settings.emailGeneration.useAI (default: true)
     const useAI = orgDoc.settings?.emailGeneration?.useAI;

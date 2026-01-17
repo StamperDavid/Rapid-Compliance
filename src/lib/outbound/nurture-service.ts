@@ -8,6 +8,11 @@ import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore'
 import { where, orderBy } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
+interface Condition {
+  type: string;
+  value?: unknown;
+}
+
 export interface NurtureStep {
   id: string;
   order: number;
@@ -18,7 +23,7 @@ export interface NurtureStep {
     body?: string;
     template?: string;
   };
-  conditions?: any[];
+  conditions?: Condition[];
 }
 
 export interface NurtureCampaign {
@@ -28,10 +33,10 @@ export interface NurtureCampaign {
   description?: string;
   status: 'draft' | 'active' | 'paused' | 'archived';
   triggerType: 'manual' | 'lead_created' | 'lead_scored' | 'tag_added';
-  triggerConfig?: Record<string, any>;
+  triggerConfig?: Record<string, unknown>;
   steps: NurtureStep[];
-  entryConditions?: any[];
-  exitConditions?: any[];
+  entryConditions?: Condition[];
+  exitConditions?: Condition[];
   enrolled?: number;
   completed?: number;
   stats?: {
@@ -40,8 +45,8 @@ export interface NurtureCampaign {
     completed: number;
     dropped: number;
   };
-  createdAt: any;
-  updatedAt?: any;
+  createdAt: Date;
+  updatedAt?: Date;
   createdBy?: string;
 }
 
@@ -96,9 +101,10 @@ export async function getNurtureCampaigns(
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to get nurture campaigns', error, { organizationId, filters });
-    throw new Error(`Failed to retrieve nurture campaigns: ${error.message}`);
+    throw new Error(`Failed to retrieve nurture campaigns: ${errorMessage}`);
   }
 }
 
@@ -122,9 +128,10 @@ export async function getNurtureCampaign(
 
     logger.info('Nurture campaign retrieved', { organizationId, campaignId });
     return campaign;
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to get nurture campaign', error, { organizationId, campaignId });
-    throw new Error(`Failed to retrieve nurture campaign: ${error.message}`);
+    throw new Error(`Failed to retrieve nurture campaign: ${errorMessage}`);
   }
 }
 
@@ -172,9 +179,10 @@ export async function createNurtureCampaign(
     });
 
     return campaign;
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to create nurture campaign', error, { organizationId, data });
-    throw new Error(`Failed to create nurture campaign: ${error.message}`);
+    throw new Error(`Failed to create nurture campaign: ${errorMessage}`);
   }
 }
 
@@ -210,9 +218,10 @@ export async function updateNurtureCampaign(
     }
 
     return campaign;
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to update nurture campaign', error, { organizationId, campaignId });
-    throw new Error(`Failed to update nurture campaign: ${error.message}`);
+    throw new Error(`Failed to update nurture campaign: ${errorMessage}`);
   }
 }
 
@@ -230,9 +239,10 @@ export async function deleteNurtureCampaign(
     );
 
     logger.info('Nurture campaign deleted', { organizationId, campaignId });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to delete nurture campaign', error, { organizationId, campaignId });
-    throw new Error(`Failed to delete nurture campaign: ${error.message}`);
+    throw new Error(`Failed to delete nurture campaign: ${errorMessage}`);
   }
 }
 
@@ -254,7 +264,8 @@ export async function setNurtureCampaignStatus(
     });
 
     return campaign;
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to change nurture campaign status', error, { organizationId, campaignId, status });
     throw new Error(`Failed to change campaign status: ${error.message}`);
   }
@@ -305,7 +316,8 @@ export async function enrollLead(
     });
 
     return { success: true, enrollmentId };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to enroll lead', error, { organizationId, campaignId, leadId });
     throw new Error(`Failed to enroll lead: ${error.message}`);
   }
@@ -344,7 +356,8 @@ export async function getCampaignStats(
     });
 
     return stats;
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to get campaign stats', error, { organizationId, campaignId });
     throw new Error(`Failed to get campaign stats: ${error.message}`);
   }

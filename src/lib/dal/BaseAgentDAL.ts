@@ -15,18 +15,17 @@
  * This prevents test data pollution and ensures clean environment separation.
  */
 
-import type { 
-  Firestore,
-  CollectionReference,
-  DocumentReference,
-  QueryConstraint,
-  SetOptions,
-  WithFieldValue,
-  DocumentData,
-  UpdateData,
-  DocumentSnapshot,
-  QuerySnapshot} from 'firebase/firestore';
 import {
+  type Firestore,
+  type CollectionReference,
+  type DocumentReference,
+  type QueryConstraint,
+  type SetOptions,
+  type WithFieldValue,
+  type DocumentData,
+  type UpdateData,
+  type DocumentSnapshot,
+  type QuerySnapshot,
   collection,
   doc,
   addDoc,
@@ -35,8 +34,7 @@ import {
   deleteDoc,
   getDoc,
   getDocs,
-  query,
-  where
+  query
 } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 
@@ -243,7 +241,7 @@ export class BaseAgentDAL {
     
     // TODO: Add organization-scoped access check
     if (options?.organizationId) {
-      await this.verifyOrgAccess(options.userId, options.organizationId);
+      this.verifyOrgAccess(options.userId, options.organizationId);
     }
     
     const docRef = doc(this.db, path, docId) as DocumentReference<T>;
@@ -261,7 +259,7 @@ export class BaseAgentDAL {
     await setDoc(docRef, data, setOptions);
     
     if (options?.audit) {
-      await this.logAudit('CREATE', path, docId, data, options?.userId);
+      this.logAudit('CREATE', path, docId, data, options?.userId);
     }
   }
   
@@ -287,7 +285,7 @@ export class BaseAgentDAL {
     }
     
     if (options?.organizationId) {
-      await this.verifyOrgAccess(options.userId, options.organizationId);
+      this.verifyOrgAccess(options.userId, options.organizationId);
     }
     
     const docRef = doc(this.db, path, docId) as DocumentReference<T>;
@@ -303,7 +301,7 @@ export class BaseAgentDAL {
     await updateDoc(docRef, data);
     
     if (options?.audit) {
-      await this.logAudit('UPDATE', path, docId, data, options?.userId);
+      this.logAudit('UPDATE', path, docId, data, options?.userId);
     }
   }
   
@@ -348,7 +346,7 @@ export class BaseAgentDAL {
     await deleteDoc(docRef);
     
     if (options?.audit) {
-      await this.logAudit('DELETE', path, docId, {}, options?.userId);
+      this.logAudit('DELETE', path, docId, {}, options?.userId);
     }
   }
   
@@ -381,9 +379,9 @@ export class BaseAgentDAL {
     });
     
     const docRef = await addDoc(colRef, data);
-    
+
     if (options?.audit) {
-      await this.logAudit('CREATE', path, docRef.id, data, options?.userId);
+      this.logAudit('CREATE', path, docRef.id, data, options?.userId);
     }
     
     return docRef;
@@ -440,13 +438,13 @@ export class BaseAgentDAL {
    * Log an audit trail entry
    * In production, this writes to the audit_logs collection
    */
-  private async logAudit(
+  private logAudit(
     action: 'CREATE' | 'UPDATE' | 'DELETE',
     collection: string,
     docId: string,
-    data: any,
+    data: DocumentData | UpdateData<DocumentData> | Record<string, never>,
     userId?: string
-  ): Promise<void> {
+  ): void {
     const auditEntry = {
       action,
       collection,
@@ -454,28 +452,28 @@ export class BaseAgentDAL {
       userId:(userId !== '' && userId != null) ? userId : 'system',
       timestamp: new Date().toISOString(),
       environment:process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
-      dataPreview: action === 'DELETE' ? null : Object.keys(data).slice(0, 10).join(', ')
+      dataPreview: action === 'DELETE' ? null : Object.keys(data as Record<string, unknown>).slice(0, 10).join(', ')
     };
-    
+
     logger.info('📋 Audit Log', auditEntry);
-    
+
     // TODO: Implement actual audit log storage
     // const auditColRef = this.getCollection('audit_logs');
     // await addDoc(auditColRef, auditEntry);
   }
-  
+
   // ========================================
   // ACCESS CONTROL
   // ========================================
-  
+
   /**
    * Verify that a user has access to an organization
    * This will be implemented as part of the security enhancement
    */
-  private async verifyOrgAccess(
+  private verifyOrgAccess(
     userId: string | undefined,
     organizationId: string
-  ): Promise<void> {
+  ): void {
     // TODO: Implement organization-scoped access control
     logger.debug('🔒 Verifying org access', {
       userId,

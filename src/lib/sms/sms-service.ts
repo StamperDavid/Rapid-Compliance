@@ -13,7 +13,7 @@ export interface SMSOptions {
   from?: string; // Phone number or sender ID
   organizationId: string;
   workspaceId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SMSResult {
@@ -29,6 +29,54 @@ export interface SMSTemplate {
   message: string;
   variables?: string[]; // e.g., ['{{name}}', '{{orderNumber}}']
   organizationId: string;
+}
+
+interface TwilioCredentials {
+  accountSid: string;
+  authToken: string;
+  phoneNumber?: string;
+}
+
+interface VonageCredentials {
+  apiKey: string;
+  apiSecret: string;
+  phoneNumber?: string;
+}
+
+type SMSCredentials = TwilioCredentials | VonageCredentials;
+
+interface TwilioMessageResponse {
+  sid: string;
+  status?: string;
+  date_sent?: string;
+  date_updated?: string;
+  error_code?: string | number;
+  error_message?: string;
+}
+
+interface VonageMessageResponse {
+  messages?: Array<{
+    status: string;
+    'message-id': string;
+    'error-text'?: string;
+  }>;
+}
+
+interface SMSMessageRecord {
+  status?: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
+// Type guards
+function isTwilioCredentials(credentials: SMSCredentials): credentials is TwilioCredentials {
+  return 'accountSid' in credentials && 'authToken' in credentials;
+}
+
+function isVonageCredentials(credentials: SMSCredentials): credentials is VonageCredentials {
+  return 'apiKey' in credentials && 'apiSecret' in credentials;
 }
 
 /**
@@ -47,7 +95,7 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
   // Validate phone number format
   const phoneRegex = /^\+?[1-9]\d{1,14}$/;
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  
+
   for (const phone of recipients) {
     const cleaned = phone.replace(/\s/g, '');
     if (!phoneRegex.test(cleaned)) {
@@ -60,19 +108,31 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
 
   // Determine provider and get credentials
   let provider: 'twilio' | 'vonage' | null = null;
-  let credentials: any = null;
+  let credentials: SMSCredentials | null = null;
 
   // Try Twilio first
-  const twilioKeys = await apiKeyService.getServiceKey(options.organizationId, 'twilio');
-  if (twilioKeys?.accountSid && twilioKeys?.authToken) {
+  const twilioKeysRaw: unknown = await apiKeyService.getServiceKey(options.organizationId, 'twilio');
+  if (twilioKeysRaw != null && typeof twilioKeysRaw === 'object' && 'accountSid' in twilioKeysRaw && 'authToken' in twilioKeysRaw) {
+    const twilioKeys = twilioKeysRaw as Record<string, unknown>;
+    const twilioCredentials: TwilioCredentials = {
+      accountSid: String(twilioKeys.accountSid),
+      authToken: String(twilioKeys.authToken),
+      phoneNumber: 'phoneNumber' in twilioKeys && twilioKeys.phoneNumber != null ? String(twilioKeys.phoneNumber) : undefined,
+    };
     provider = 'twilio';
-    credentials = twilioKeys;
+    credentials = twilioCredentials;
   } else {
     // Try Vonage
-    const vonageKeys = await apiKeyService.getServiceKey(options.organizationId, 'vonage');
-    if (vonageKeys?.apiKey && vonageKeys?.apiSecret) {
+    const vonageKeysRaw: unknown = await apiKeyService.getServiceKey(options.organizationId, 'vonage');
+    if (vonageKeysRaw != null && typeof vonageKeysRaw === 'object' && 'apiKey' in vonageKeysRaw && 'apiSecret' in vonageKeysRaw) {
+      const vonageKeys = vonageKeysRaw as Record<string, unknown>;
+      const vonageCredentials: VonageCredentials = {
+        apiKey: String(vonageKeys.apiKey),
+        apiSecret: String(vonageKeys.apiSecret),
+        phoneNumber: 'phoneNumber' in vonageKeys && vonageKeys.phoneNumber != null ? String(vonageKeys.phoneNumber) : undefined,
+      };
       provider = 'vonage';
-      credentials = vonageKeys;
+      credentials = vonageCredentials;
     }
   }
 
@@ -87,19 +147,30 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
   try {
     switch (provider) {
       case 'twilio':
-        return await sendViaTwilio(options, credentials);
+        if (isTwilioCredentials(credentials)) {
+          return await sendViaTwilio(options, credentials);
+        }
+        break;
       case 'vonage':
-        return await sendViaVonage(options, credentials);
+        if (isVonageCredentials(credentials)) {
+          return await sendViaVonage(options, credentials);
+        }
+        break;
       default:
         return {
           success: false,
           error: 'Unknown SMS provider',
         };
     }
-  } catch (error: any) {
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Failed to send SMS',
+      error: 'Invalid credentials for provider',
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send SMS';
+    return {
+      success: false,
+      error: errorMessage,
       provider,
     };
   }
@@ -108,9 +179,9 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
 /**
  * Send SMS via Twilio
  */
-async function sendViaTwilio(options: SMSOptions, credentials: any): Promise<SMSResult> {
+async function sendViaTwilio(options: SMSOptions, credentials: TwilioCredentials): Promise<SMSResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromNumber =options.from ?? credentials.phoneNumber;
+  const fromNumber = options.from ?? credentials.phoneNumber;
 
   if (!fromNumber) {
     return {
@@ -149,7 +220,7 @@ async function sendViaTwilio(options: SMSOptions, credentials: any): Promise<SMS
       };
     }
 
-    const data = await response.json();
+    const data = await response.json() as TwilioMessageResponse;
     results.push({
       success: true,
       messageId: data.sid,
@@ -168,9 +239,9 @@ async function sendViaTwilio(options: SMSOptions, credentials: any): Promise<SMS
 /**
  * Send SMS via Vonage (Nexmo)
  */
-async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMSResult> {
+async function sendViaVonage(options: SMSOptions, credentials: VonageCredentials): Promise<SMSResult> {
   const recipients = Array.isArray(options.to) ? options.to : [options.to];
-  const fromNumber =(options.from ?? credentials.phoneNumber ?? 'Vonage');
+  const fromNumber = options.from ?? credentials.phoneNumber ?? 'Vonage';
 
   // Vonage API endpoint
   const vonageUrl = 'https://rest.nexmo.com/sms/json';
@@ -201,10 +272,10 @@ async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMS
       };
     }
 
-    const data = await response.json();
+    const data = await response.json() as VonageMessageResponse;
     if (data.messages?.[0]?.status === '0') {
       const messageId = data.messages[0]['message-id'];
-      
+
       // Store SMS record in Firestore
       if (options.organizationId) {
         const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
@@ -222,21 +293,22 @@ async function sendViaVonage(options: SMSOptions, credentials: any): Promise<SMS
             organizationId: options.organizationId,
           },
           false
-        ).catch((error) => {
-          logger.error('Failed to save SMS to Firestore:', error, { file: 'sms-service.ts' });
+        ).catch((error: unknown) => {
+          logger.error('Failed to save SMS to Firestore:', error instanceof Error ? error : new Error(String(error)), { file: 'sms-service.ts' });
           // Don't fail the send if Firestore save fails
         });
       }
-      
+
       results.push({
         success: true,
         messageId,
         provider: 'vonage',
       });
     } else {
+      const errorText = data.messages?.[0]?.['error-text'];
       return {
         success: false,
-        error: `Vonage error: ${(() => { const v = data.messages?.[0]?.['error-text']; return (v !== '' && v != null) ? v : 'Unknown error'; })()}`,
+        error: `Vonage error: ${errorText ?? 'Unknown error'}`,
         provider: 'vonage',
       };
     }
@@ -261,7 +333,7 @@ export async function sendBulkSMS(
   // Send in batches to avoid rate limits
   const batchSize = 5; // SMS providers typically have stricter rate limits
   const results: SMSResult[] = [];
-  
+
   for (let i = 0; i < recipients.length; i += batchSize) {
     const batch = recipients.slice(i, i + batchSize);
     const batchResults = await Promise.all(
@@ -272,10 +344,12 @@ export async function sendBulkSMS(
       }))
     );
     results.push(...batchResults);
-    
+
     // Rate limiting: wait 2 seconds between batches for SMS
     if (i + batchSize < recipients.length) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise<void>(resolve => {
+        setTimeout(() => resolve(), 2000);
+      });
     }
   }
 
@@ -357,13 +431,16 @@ export async function getSMSDeliveryStatus(
     return null;
   }
 
+  const record = smsData as SMSMessageRecord;
+  const validStatus = record.status && record.status !== '' ? record.status : 'sent';
+
   return {
     messageId,
-    status:(smsData.status !== '' && smsData.status != null) ? smsData.status : 'sent',
-    sentAt: smsData.sentAt ? new Date(smsData.sentAt) : new Date(),
-    deliveredAt: smsData.deliveredAt ? new Date(smsData.deliveredAt) : undefined,
-    errorCode: smsData.errorCode,
-    errorMessage: smsData.errorMessage,
+    status: validStatus as SMSDeliveryStatus['status'],
+    sentAt: record.sentAt ? new Date(record.sentAt) : new Date(),
+    deliveredAt: record.deliveredAt ? new Date(record.deliveredAt) : undefined,
+    errorCode: record.errorCode,
+    errorMessage: record.errorMessage,
   };
 }
 
@@ -380,16 +457,23 @@ export async function queryTwilioStatus(
     const keys = await apiKeyService.getKeys(organizationId);
     const twilioConfig = keys?.sms?.twilio;
 
-    if (!twilioConfig?.accountSid || !twilioConfig?.authToken) {
+    if (!twilioConfig || typeof twilioConfig !== 'object') {
+      throw new Error('Twilio configuration not found');
+    }
+
+    if (!('accountSid' in twilioConfig) || !('authToken' in twilioConfig)) {
       throw new Error('Twilio credentials not configured');
     }
 
+    const accountSid = String(twilioConfig.accountSid);
+    const authToken = String(twilioConfig.authToken);
+
     // Query Twilio API
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${twilioConfig.accountSid}/Messages/${messageId}.json`;
-    
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages/${messageId}.json`;
+
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Basic ${btoa(`${twilioConfig.accountSid}:${twilioConfig.authToken}`)}`,
+        'Authorization': `Basic ${btoa(`${accountSid}:${authToken}`)}`,
       },
     });
 
@@ -397,14 +481,14 @@ export async function queryTwilioStatus(
       throw new Error(`Twilio API error: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as TwilioMessageResponse;
 
     return {
       messageId: data.sid,
-      status: data.status,
+      status: (data.status as SMSDeliveryStatus['status']) ?? 'sent',
       sentAt: data.date_sent ? new Date(data.date_sent) : undefined,
       deliveredAt: data.date_updated && data.status === 'delivered' ? new Date(data.date_updated) : undefined,
-      errorCode: data.error_code?.toString(),
+      errorCode: data.error_code != null ? String(data.error_code) : undefined,
       errorMessage: data.error_message,
     };
   } catch (error) {
@@ -445,10 +529,12 @@ export function validatePhoneNumber(phone: string): boolean {
  * Render SMS template with variable replacement
  * Replaces {{variableName}} with actual values
  */
-export function renderSMSTemplate(template: string, variables: Record<string, any>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-    return variables[key]?.toString() ?? match;
+export function renderSMSTemplate(template: string, variables: Record<string, unknown>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => {
+    const value = variables[key];
+    if (value == null) {
+      return match;
+    }
+    return String(value);
   });
 }
-
-

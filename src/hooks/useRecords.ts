@@ -4,9 +4,9 @@
  * Replaces all mock data usage across CRM pages
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RecordService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint } from 'firebase/firestore'
+import { type QueryConstraint } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 
 export interface UseRecordsOptions {
@@ -19,7 +19,7 @@ export interface UseRecordsOptions {
   enablePagination?: boolean;
 }
 
-export interface UseRecordsReturn<T = any> {
+export interface UseRecordsReturn<T = Record<string, unknown>> {
   records: T[];
   loading: boolean;
   error: Error | null;
@@ -46,14 +46,14 @@ export interface UseRecordsReturn<T = any> {
  *   realTime: true
  * });
  */
-export function useRecords<T = any>(
+export function useRecords<T = Record<string, unknown>>(
   options: UseRecordsOptions
 ): UseRecordsReturn<T> {
-  const { 
-    organizationId, 
-    workspaceId, 
-    entityName, 
-    filters = [], 
+  const {
+    organizationId,
+    workspaceId,
+    entityName,
+    filters = [],
     realTime = false,
     pageSize: initialPageSize = 50,
     enablePagination = false,
@@ -63,11 +63,14 @@ export function useRecords<T = any>(
   const [allRecords, setAllRecords] = useState<T[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Create stable reference for filters to avoid dependency issues
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
 
   // Apply pagination to records
   const paginateRecords = useCallback((allRecs: T[]) => {
@@ -80,7 +83,7 @@ export function useRecords<T = any>(
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginated = allRecs.slice(startIndex, endIndex);
-    
+
     setRecords(paginated);
     setTotalItems(allRecs.length);
   }, [currentPage, pageSize, enablePagination]);
@@ -111,11 +114,11 @@ export function useRecords<T = any>(
     } finally {
       setLoading(false);
     }
-  }, [organizationId, workspaceId, entityName, JSON.stringify(filters), paginateRecords]);
+  }, [organizationId, workspaceId, entityName, filtersKey, paginateRecords]);
 
   // Initial load
   useEffect(() => {
-    loadRecords();
+    void loadRecords();
   }, [loadRecords]);
 
   // Real-time subscription (optional)
@@ -139,7 +142,7 @@ export function useRecords<T = any>(
     return () => {
       unsubscribe();
     };
-  }, [realTime, organizationId, workspaceId, entityName, JSON.stringify(filters), paginateRecords]);
+  }, [realTime, organizationId, workspaceId, entityName, filtersKey, paginateRecords]);
 
   // Create new record
   const create = useCallback(
@@ -251,4 +254,3 @@ export function useRecords<T = any>(
     setPageSize: updatePageSize,
   };
 }
-

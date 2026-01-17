@@ -113,7 +113,7 @@ export interface ABTestResults {
 /**
  * Build email HTML from blocks
  */
-export function buildEmailHTML(template: EmailTemplate, variables: Record<string, any>): string {
+export function buildEmailHTML(template: EmailTemplate, variables: Record<string, unknown>): string{
   const blocksHTML = template.blocks
     .sort((a, b) => a.order - b.order)
     .map(block => buildBlockHTML(block, template.styling))
@@ -209,7 +209,7 @@ function buildBlockHTML(block: EmailBlock, globalStyling: EmailTemplate['styling
 /**
  * Replace personalization variables
  */
-export function replaceVariables(content: string, variables: Record<string, any>): string {
+export function replaceVariables(content: string, variables: Record<string, unknown>): string {
   let result = content;
   
   Object.entries(variables).forEach(([key, value]) => {
@@ -252,7 +252,7 @@ export async function createABTest(
 
     return abTest;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to create A/B test', error, { organizationId });
     throw error;
   }
@@ -282,7 +282,7 @@ export async function getABTestVariant(
 
     return percentage <= test.splitPercentage ? 'A' : 'B';
 
-  } catch (error) {
+  } catch (_error: unknown) {
     return 'A';
   }
 }
@@ -343,8 +343,9 @@ export async function calculateABTestResults(
     );
 
     const metric = test?.winnerMetric ?? 'open_rate';
-    const aValue = (variantAResults as any)[metric.replace('_rate', 'Rate')];
-    const bValue = (variantBResults as any)[metric.replace('_rate', 'Rate')];
+    const metricKey = metric.replace('_rate', 'Rate') as keyof typeof variantAResults;
+    const aValue = variantAResults[metricKey];
+    const bValue = variantBResults[metricKey];
 
     let winner: 'A' | 'B' | 'tie' = 'tie';
     if (aValue > bValue * 1.1) {winner = 'A';} // 10% better
@@ -370,7 +371,7 @@ export async function calculateABTestResults(
 
     return results;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Failed to calculate A/B test results', error, { testId });
     throw error;
   }

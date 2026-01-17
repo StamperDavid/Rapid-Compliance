@@ -104,8 +104,9 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
       valid: true,
       claims,
     };
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Failed to extract tenant claims', error, { file: 'claims-validator.ts' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       valid: false,
       claims: {
@@ -115,7 +116,7 @@ export function extractTenantClaims(decodedToken: DecodedIdToken): ClaimsValidat
         email: null,
         uid: decodedToken.uid,
       },
-      error: error.message,
+      error: errorMessage,
     };
   }
 }
@@ -300,7 +301,7 @@ export function buildCustomClaims(
   };
 }
 
-export default {
+const claimsValidator = {
   extractTenantClaims,
   checkTenantAccess,
   hasAdminRole,
@@ -309,3 +310,5 @@ export default {
   buildCustomClaims,
   SUPER_ADMIN_EMAILS,
 };
+
+export default claimsValidator;

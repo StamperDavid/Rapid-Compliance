@@ -3,15 +3,9 @@
  * Bidirectional calendar syncing between Google Calendar and CRM
  */
 
-import type { calendar_v3} from 'googleapis';
-import { google } from 'googleapis';
+import { google, type calendar_v3 } from 'googleapis';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-
-const CALENDAR_SCOPES = [
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/calendar.events',
-];
 
 export interface CalendarEvent {
   id: string;
@@ -54,13 +48,18 @@ export interface CalendarSyncStatus {
   errors: number;
 }
 
+interface ContactWithId {
+  id: string;
+  email?: string;
+}
+
 /**
  * Initialize Calendar API client
  */
 function getCalendarClient(accessToken: string): calendar_v3.Calendar {
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
-  
+
   return google.calendar({ version: 'v3', auth });
 }
 
@@ -73,16 +72,16 @@ export async function syncCalendarEvents(
   calendarId: string = 'primary'
 ): Promise<CalendarSyncStatus> {
   const calendar = getCalendarClient(accessToken);
-  
+
   try {
     // Get last sync status
     const lastSync = await getLastSyncStatus(organizationId, calendarId);
-    
+
     // If we have a sync token, use incremental sync
     if (lastSync?.syncToken) {
       return await incrementalSync(calendar, organizationId, calendarId, lastSync.syncToken);
     }
-    
+
     // Full sync (first time)
     return await fullSync(calendar, organizationId, calendarId);
   } catch (error) {
@@ -102,16 +101,16 @@ async function fullSync(
   let eventsSynced = 0;
   let errors = 0;
   let syncToken: string | undefined;
-  
+
   try {
     const now = new Date();
     const oneMonthAgo = new Date(now);
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     const threeMonthsLater = new Date(now);
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
-    
+
     let pageToken: string | undefined;
-    
+
     do {
       const response = await calendar.events.list({
         calendarId,
@@ -122,7 +121,7 @@ async function fullSync(
         orderBy: 'startTime',
         pageToken,
       });
-      
+
       if (response.data.items) {
         for (const event of response.data.items) {
           try {
@@ -130,7 +129,7 @@ async function fullSync(
             await saveEventToCRM(organizationId, parsed);
             eventsSynced++;
           } catch (err) {
-            logger.error('[Calendar Sync] Error processing event ${event.id}:', err, { file: 'calendar-sync-service.ts' });
+            logger.error(`[Calendar Sync] Error processing event ${event.id ?? 'unknown'}:`, err, { file: 'calendar-sync-service.ts' });
             errors++;
           }
         }
@@ -141,7 +140,7 @@ async function fullSync(
       const nextSync = response.data.nextSyncToken;
       syncToken = (nextSync !== '' && nextSync != null) ? nextSync : undefined;
     } while (pageToken);
-    
+
     const status: CalendarSyncStatus = {
       organizationId,
       lastSyncAt: new Date().toISOString(),
@@ -149,9 +148,9 @@ async function fullSync(
       eventsSynced,
       errors,
     };
-    
+
     await saveSyncStatus(organizationId, calendarId, status);
-    
+
     return status;
   } catch (error) {
     logger.error('[Calendar Sync] Full sync error:', error, { file: 'calendar-sync-service.ts' });
@@ -171,23 +170,25 @@ async function incrementalSync(
   let eventsSynced = 0;
   let errors = 0;
   let syncToken: string | undefined = startSyncToken;
-  
+
   try {
     let pageToken: string | undefined;
-    
+
     do {
-      const response: any = await calendar.events.list({
+      const response = await calendar.events.list({
         calendarId,
         syncToken,
         pageToken,
       });
-      
+
       if (response.data.items) {
         for (const event of response.data.items) {
           try {
             if (event.status === 'cancelled') {
               // Delete cancelled events
-              await deleteEventFromCRM(organizationId, event.id);
+              if (event.id) {
+                await deleteEventFromCRM(organizationId, event.id);
+              }
             } else {
               // Update or create event
               const parsed = parseCalendarEvent(event, calendarId);
@@ -195,7 +196,7 @@ async function incrementalSync(
               eventsSynced++;
             }
           } catch (err) {
-            logger.error('[Calendar Sync] Error processing event ${event.id}:', err, { file: 'calendar-sync-service.ts' });
+            logger.error(`[Calendar Sync] Error processing event ${event.id ?? 'unknown'}:`, err, { file: 'calendar-sync-service.ts' });
             errors++;
           }
         }
@@ -206,7 +207,7 @@ async function incrementalSync(
       const nextSync2 = response.data.nextSyncToken;
       syncToken = (nextSync2 !== '' && nextSync2 != null) ? nextSync2 : syncToken;
     } while (pageToken);
-    
+
     const status: CalendarSyncStatus = {
       organizationId,
       lastSyncAt: new Date().toISOString(),
@@ -214,14 +215,14 @@ async function incrementalSync(
       eventsSynced,
       errors,
     };
-    
+
     await saveSyncStatus(organizationId, calendarId, status);
-    
+
     return status;
   } catch (error) {
     logger.error('[Calendar Sync] Incremental sync error:', error, { file: 'calendar-sync-service.ts' });
     // If sync token is invalid, fall back to full sync
-    if ((error as any).code === 410) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 410) {
       logger.info('[Calendar Sync] Sync token invalid, performing full sync', { file: 'calendar-sync-service.ts' });
       return fullSync(calendar, organizationId, calendarId);
     }
@@ -233,8 +234,18 @@ async function incrementalSync(
  * Parse Google Calendar event to our format
  */
 function parseCalendarEvent(event: calendar_v3.Schema$Event, calendarId: string): CalendarEvent {
+  if (!event.id) {
+    throw new Error('Event ID is required');
+  }
+  if (!event.created) {
+    throw new Error('Event created date is required');
+  }
+  if (!event.updated) {
+    throw new Error('Event updated date is required');
+  }
+
   return {
-    id: event.id!,
+    id: event.id,
     calendarId,
     summary: (event.summary !== '' && event.summary != null) ? event.summary : '(No title)',
     description: event.description ?? undefined,
@@ -249,21 +260,26 @@ function parseCalendarEvent(event: calendar_v3.Schema$Event, calendarId: string)
       date: event.end?.date ?? undefined,
       timeZone: event.end?.timeZone ?? undefined,
     },
-    attendees: event.attendees?.map(a => ({
-      email: a.email!,
-      displayName: a.displayName ?? undefined,
-      responseStatus: (a.responseStatus ?? 'needsAction') as 'needsAction' | 'declined' | 'tentative' | 'accepted',
-    })),
-    organizer: event.organizer ? {
-      email: event.organizer.email!,
+    attendees: event.attendees?.map(a => {
+      if (!a.email) {
+        throw new Error('Attendee email is required');
+      }
+      return {
+        email: a.email,
+        displayName: a.displayName ?? undefined,
+        responseStatus: (a.responseStatus ?? 'needsAction') as 'needsAction' | 'declined' | 'tentative' | 'accepted',
+      };
+    }),
+    organizer: event.organizer && event.organizer.email ? {
+      email: event.organizer.email,
       displayName: event.organizer.displayName ?? undefined,
     } : undefined,
     meetLink: (event.hangoutLink ?? event.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri) ?? undefined,
-    status: (event.status ?? 'confirmed') as any,
-    visibility: (event.visibility ?? 'default') as any,
+    status: (event.status ?? 'confirmed') as 'confirmed' | 'tentative' | 'cancelled',
+    visibility: (event.visibility ?? 'default') as 'default' | 'public' | 'private',
     recurringEventId: event.recurringEventId ?? undefined,
-    created: event.created!,
-    updated: event.updated!,
+    created: event.created,
+    updated: event.updated,
   };
 }
 
@@ -277,12 +293,12 @@ async function saveEventToCRM(organizationId: string, event: CalendarEvent): Pro
     if (event.attendees) {
       for (const attendee of event.attendees) {
         const contact = await findContactByEmail(organizationId, attendee.email);
-        if (contact) {
+        if (contact && contact.id) {
           contactIds.push(contact.id);
         }
       }
     }
-    
+
     const eventData = {
       id: event.id,
       organizationId,
@@ -290,9 +306,9 @@ async function saveEventToCRM(organizationId: string, event: CalendarEvent): Pro
       title: event.summary,
       description: event.description,
       location: event.location,
-      startTime: event.start.dateTime ? new Date(event.start.dateTime) : 
+      startTime: event.start.dateTime ? new Date(event.start.dateTime) :
                  event.start.date ? new Date(event.start.date) : new Date(),
-      endTime: event.end.dateTime ? new Date(event.end.dateTime) : 
+      endTime: event.end.dateTime ? new Date(event.end.dateTime) :
                event.end.date ? new Date(event.end.date) : new Date(),
       isAllDay: !!event.start.date,
       attendees: event.attendees?.map(a => a.email),
@@ -308,13 +324,13 @@ async function saveEventToCRM(organizationId: string, event: CalendarEvent): Pro
       createdAt: new Date(event.created),
       updatedAt: new Date(event.updated),
     };
-    
+
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/calendarEvents`,
       event.id,
       eventData
     );
-    
+
     // Update contacts with last interaction
     for (const contactId of contactIds) {
       await FirestoreService.update(
@@ -364,7 +380,7 @@ export async function createCalendarEvent(
   }
 ): Promise<string> {
   const calendar = getCalendarClient(accessToken);
-  
+
   try {
     const request: calendar_v3.Schema$Event = {
       summary: eventData.summary,
@@ -374,7 +390,7 @@ export async function createCalendarEvent(
       end: eventData.end,
       attendees: eventData.attendees?.map(email => ({ email })),
     };
-    
+
     // Add Google Meet conference if requested
     if (eventData.conferenceData) {
       request.conferenceData = {
@@ -384,15 +400,19 @@ export async function createCalendarEvent(
         },
       };
     }
-    
+
     const response = await calendar.events.insert({
       calendarId,
       requestBody: request,
       conferenceDataVersion: eventData.conferenceData ? 1 : 0,
       sendUpdates: 'all', // Send email invitations
     });
-    
-    return response.data.id!;
+
+    if (!response.data.id) {
+      throw new Error('Failed to create calendar event: no ID returned');
+    }
+
+    return response.data.id;
   } catch (error) {
     logger.error('[Calendar Sync] Error creating event:', error, { file: 'calendar-sync-service.ts' });
     throw error;
@@ -416,13 +436,13 @@ export async function updateCalendarEvent(
   }>
 ): Promise<void> {
   const calendar = getCalendarClient(accessToken);
-  
+
   try {
     const request: calendar_v3.Schema$Event = {
       ...eventData,
       attendees: eventData.attendees?.map(email => ({ email })),
     };
-    
+
     await calendar.events.patch({
       calendarId,
       eventId,
@@ -444,7 +464,7 @@ export async function deleteCalendarEvent(
   eventId: string
 ): Promise<void> {
   const calendar = getCalendarClient(accessToken);
-  
+
   try {
     await calendar.events.delete({
       calendarId,
@@ -460,13 +480,17 @@ export async function deleteCalendarEvent(
 /**
  * Find contact by email
  */
-async function findContactByEmail(organizationId: string, email: string): Promise<any | null> {
+async function findContactByEmail(organizationId: string, email: string): Promise<ContactWithId | null> {
   try {
     const contacts = await FirestoreService.getAll(
       `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/contacts`
     );
-    const contactsFiltered = contacts.filter((c: any) => c.email === email);
-    
+    const contactsFiltered = contacts.filter((c: unknown): c is ContactWithId => {
+      if (typeof c !== 'object' || c === null) return false;
+      const contact = c as Record<string, unknown>;
+      return typeof contact.email === 'string' && contact.email === email;
+    });
+
     return contactsFiltered.length > 0 ? contactsFiltered[0] : null;
   } catch (error) {
     logger.error('[Calendar Sync] Error finding contact:', error, { file: 'calendar-sync-service.ts' });
@@ -484,7 +508,7 @@ async function getLastSyncStatus(organizationId: string, calendarId: string): Pr
       `calendar-sync-${calendarId}`
     );
     return status as CalendarSyncStatus | null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -513,7 +537,7 @@ export async function setupCalendarPushNotifications(
   webhookUrl: string
 ): Promise<string> {
   const calendar = getCalendarClient(accessToken);
-  
+
   try {
     const response = await calendar.events.watch({
       calendarId,
@@ -523,9 +547,14 @@ export async function setupCalendarPushNotifications(
         address: webhookUrl,
       },
     });
-    
+
     logger.info('[Calendar Sync] Push notifications enabled', { file: 'calendar-sync-service.ts' });
-    return response.data.id!;
+
+    if (!response.data.id) {
+      throw new Error('Failed to setup push notifications: no channel ID returned');
+    }
+
+    return response.data.id;
   } catch (error) {
     logger.error('[Calendar Sync] Error setting up push notifications:', error, { file: 'calendar-sync-service.ts' });
     throw error;
@@ -541,7 +570,7 @@ export async function stopCalendarPushNotifications(
   resourceId: string
 ): Promise<void> {
   const calendar = getCalendarClient(accessToken);
-  
+
   try {
     await calendar.channels.stop({
       requestBody: {
@@ -549,11 +578,10 @@ export async function stopCalendarPushNotifications(
         resourceId,
       },
     });
-    
+
     logger.info('[Calendar Sync] Push notifications disabled', { file: 'calendar-sync-service.ts' });
   } catch (error) {
     logger.error('[Calendar Sync] Error stopping push notifications:', error, { file: 'calendar-sync-service.ts' });
     throw error;
   }
 }
-

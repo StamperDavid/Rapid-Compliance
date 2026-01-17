@@ -5,10 +5,20 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ProductGrid } from './ProductGrid';
 import { ShoppingCart } from './ShoppingCart'
 import { logger } from '@/lib/logger/logger';
+
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image?: string;
+  currency?: string;
+  category?: string;
+}
 
 export interface FullStorefrontProps {
   organizationId: string;
@@ -20,8 +30,8 @@ export interface FullStorefrontProps {
 }
 
 export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
-  const [products, setProducts] = useState<any[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,23 +43,15 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
   const primaryColor = (themePrimaryColor !== '' && themePrimaryColor != null) ? themePrimaryColor : '#6366f1';
   const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  useEffect(() => {
-    filterProducts();
-  }, [selectedCategory, searchQuery, products]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       const response = await fetch(`/api/ecommerce/products?orgId=${organizationId}`);
-      const data = await response.json();
-      if (data.success) {
-        setProducts(data.products ?? []);
-        
+      const data = await response.json() as { success?: boolean; products?: Product[] };
+      if (data.success && data.products) {
+        setProducts(data.products);
+
         // Extract categories
-        const cats = [...new Set(data.products.map((p: any) => p.category).filter(Boolean))] as string[];
+        const cats = [...new Set(data.products.map((p: Product) => p.category).filter((c): c is string => Boolean(c)))] as string[];
         setCategories(cats);
       }
     } catch (error) {
@@ -57,9 +59,9 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [organizationId]);
 
-  const filterProducts = () => {
+  const filterProducts = useCallback(() => {
     let filtered = products;
 
     // Filter by category
@@ -70,16 +72,24 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
     // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
+      filtered = filtered.filter(p =>
         [
-          p.name.toLowerCase().includes(query),
+          p.name?.toLowerCase().includes(query),
           p.description?.toLowerCase().includes(query)
         ].some(Boolean)
       );
     }
 
     setFilteredProducts(filtered);
-  };
+  }, [products, selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    void loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    filterProducts();
+  }, [filterProducts]);
 
   const handleAddToCart = async (productId: string) => {
     try {
@@ -88,8 +98,8 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId, quantity: 1 }),
       });
-      
-      alert('Added to cart!');
+
+      logger.info('Added to cart!', { file: 'FullStorefront.tsx' });
     } catch (error) {
       logger.error('Error adding to cart:', error, { file: 'FullStorefront.tsx' });
     }
@@ -169,7 +179,7 @@ export function FullStorefront({ organizationId, theme }: FullStorefrontProps) {
           <ProductGrid
             products={filteredProducts}
             columns={3}
-            onAddToCart={handleAddToCart}
+            onAddToCart={(productId: string) => { void handleAddToCart(productId); }}
             theme={theme}
           />
         )}

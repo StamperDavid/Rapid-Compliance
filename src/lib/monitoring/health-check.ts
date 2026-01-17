@@ -52,8 +52,6 @@ export interface RequestMetrics {
  * Perform comprehensive health check
  */
 export async function performHealthCheck(): Promise<HealthCheckResult> {
-  const startTime = Date.now();
-  
   const [
     databaseHealth,
     cacheHealth,
@@ -122,10 +120,11 @@ async function checkDatabase(): Promise<HealthStatus> {
       responseTime,
       lastChecked: new Date().toISOString(),
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       status: 'fail',
-      message: `Database error: ${error.message}`,
+      message: `Database error: ${errorMessage}`,
       lastChecked: new Date().toISOString(),
     };
   }
@@ -152,10 +151,11 @@ async function checkCache(): Promise<HealthStatus> {
       responseTime,
       lastChecked: new Date().toISOString(),
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       status: 'warn',
-      message: `Cache unavailable (using fallback): ${error.message}`,
+      message: `Cache unavailable (using fallback): ${errorMessage}`,
       lastChecked: new Date().toISOString(),
     };
   }
@@ -164,13 +164,13 @@ async function checkCache(): Promise<HealthStatus> {
 /**
  * Check AI services
  */
-async function checkAI(): Promise<HealthStatus> {
+function checkAI(): HealthStatus {
   try {
     // Check if AI services are configured
     const hasGemini = !!process.env.GEMINI_API_KEY;
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
     const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
-    
+
     if (!hasGemini && !hasOpenAI && !hasAnthropic) {
       return {
         status: 'fail',
@@ -178,16 +178,17 @@ async function checkAI(): Promise<HealthStatus> {
         lastChecked: new Date().toISOString(),
       };
     }
-    
+
     return {
       status: 'pass',
       message: `AI providers configured: ${[hasGemini && 'Gemini', hasOpenAI && 'OpenAI', hasAnthropic && 'Anthropic'].filter(Boolean).join(', ')}`,
       lastChecked: new Date().toISOString(),
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       status: 'fail',
-      message: `AI check error: ${error.message}`,
+      message: `AI check error: ${errorMessage}`,
       lastChecked: new Date().toISOString(),
     };
   }
@@ -196,19 +197,20 @@ async function checkAI(): Promise<HealthStatus> {
 /**
  * Check payment services
  */
-async function checkPayments(): Promise<HealthStatus> {
+function checkPayments(): HealthStatus {
   try {
     const hasStripe = !!process.env.STRIPE_SECRET_KEY;
-    
+
     return {
       status: hasStripe ? 'pass' : 'warn',
       message: hasStripe ? 'Payment providers configured' : 'No payment providers configured',
       lastChecked: new Date().toISOString(),
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       status: 'warn',
-      message: `Payment check error: ${error.message}`,
+      message: `Payment check error: ${errorMessage}`,
       lastChecked: new Date().toISOString(),
     };
   }
@@ -217,17 +219,18 @@ async function checkPayments(): Promise<HealthStatus> {
 /**
  * Check integrations
  */
-async function checkIntegrations(): Promise<HealthStatus> {
+function checkIntegrations(): HealthStatus {
   try {
     return {
       status: 'pass',
       message: 'Integrations operational',
       lastChecked: new Date().toISOString(),
     };
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       status: 'warn',
-      message: `Integration check error: ${error.message}`,
+      message: `Integration check error: ${errorMessage}`,
       lastChecked: new Date().toISOString(),
     };
   }
@@ -236,13 +239,13 @@ async function checkIntegrations(): Promise<HealthStatus> {
 /**
  * Gather system metrics
  */
-async function gatherMetrics(): Promise<{
+function gatherMetrics(): {
   memory: MemoryMetrics;
   cpu: CPUMetrics;
   requests: RequestMetrics;
-}> {
+} {
   const memUsage = process.memoryUsage();
-  
+
   return {
     memory: {
       used: memUsage.heapUsed,

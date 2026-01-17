@@ -220,7 +220,7 @@ export interface OnboardingState {
   setAccountInfo: (email: string, companyName: string) => void;
   setStep: (step: OnboardingState['currentStep']) => void;
   reset: () => void;
-  getIndustryDefaults: () => IndustryOption['defaultPersona'] | undefined;
+  getIndustryDefaults: () => { tone: string; objectives: string[] } | undefined;
 }
 
 const initialState = {
@@ -245,7 +245,7 @@ export const useOnboardingStore = create<OnboardingState>()(
 
       setIndustry: (industry) => set({
         selectedIndustry: industry,
-        startedAt: get().startedAt || new Date().toISOString(),
+        startedAt: get().startedAt ?? new Date().toISOString(),
       }),
 
       setCustomIndustry: (name) => set({

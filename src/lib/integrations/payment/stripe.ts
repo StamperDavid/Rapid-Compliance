@@ -6,62 +6,75 @@
 import type { ConnectedIntegration } from '@/types/integrations';
 
 /**
+ * Stripe function parameters
+ */
+interface StripeFunctionParams {
+  amount?: number;
+  description?: string;
+  currency?: string;
+  customerEmail?: string;
+}
+
+/**
  * Execute a Stripe function
  */
 export async function executeStripeFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<unknown> {
   const apiKey = integration.config.apiKey as string | undefined;
 
   if (!apiKey) {
     throw new Error('Stripe API key not configured');
   }
-  
+
+  // Type guard for parameters
+  const params = parameters as StripeFunctionParams;
+
   switch (functionName) {
     case 'createStripeCheckout':
       // Validate required parameters
-      if (typeof parameters.amount !== 'number') {
+      if (typeof params.amount !== 'number') {
         throw new Error('amount (number) is required for createStripeCheckout');
       }
-      if (!parameters.description || typeof parameters.description !== 'string') {
+      if (!params.description || typeof params.description !== 'string') {
         throw new Error('description (string) is required for createStripeCheckout');
       }
-      if (parameters.currency && typeof parameters.currency !== 'string') {
+      if (params.currency && typeof params.currency !== 'string') {
         throw new Error('currency must be a string');
       }
-      if (parameters.customerEmail && typeof parameters.customerEmail !== 'string') {
+      if (params.customerEmail && typeof params.customerEmail !== 'string') {
         throw new Error('customerEmail must be a string');
       }
-      
+
       return createCheckoutSession(
         {
-          amount: parameters.amount,
-          description: parameters.description,
-          currency: parameters.currency,
-          customerEmail: parameters.customerEmail,
+          amount: params.amount,
+          description: params.description,
+          currency: params.currency,
+          customerEmail: params.customerEmail,
         },
         apiKey
       );
-      
+
     case 'createStripePaymentLink':
       // Validate required parameters
-      if (typeof parameters.amount !== 'number') {
+      if (typeof params.amount !== 'number') {
         throw new Error('amount (number) is required for createStripePaymentLink');
       }
-      if (!parameters.description || typeof parameters.description !== 'string') {
+      if (!params.description || typeof params.description !== 'string') {
         throw new Error('description (string) is required for createStripePaymentLink');
       }
-      
+
       return createPaymentLink(
         {
-          amount: parameters.amount,
-          description: parameters.description,
+          amount: params.amount,
+          description: params.description,
         },
         apiKey
       );
-      
+
     default:
       throw new Error(`Unknown Stripe function: ${functionName}`);
   }
@@ -81,7 +94,7 @@ async function createCheckoutSession(
 ): Promise<{ url: string; sessionId: string }> {
   const Stripe = (await import('stripe')).default;
   const stripe = new Stripe(apiKey, { apiVersion: '2023-10-16' });
-  
+
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
@@ -101,9 +114,13 @@ async function createCheckoutSession(
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/cancelled`,
     customer_email: params.customerEmail,
   });
-  
+
+  if (!session.url) {
+    throw new Error('Stripe checkout session URL is missing');
+  }
+
   return {
-    url: session.url!,
+    url: session.url,
     sessionId: session.id,
   };
 }
@@ -120,19 +137,19 @@ async function createPaymentLink(
 ): Promise<{ url: string }> {
   const Stripe = (await import('stripe')).default;
   const stripe = new Stripe(apiKey, { apiVersion: '2023-10-16' });
-  
+
   // Create a product
   const product = await stripe.products.create({
     name: params.description,
   });
-  
+
   // Create a price
   const price = await stripe.prices.create({
     product: product.id,
     unit_amount: params.amount,
     currency: 'usd',
   });
-  
+
   // Create payment link
   const paymentLink = await stripe.paymentLinks.create({
     line_items: [{
@@ -140,9 +157,8 @@ async function createPaymentLink(
       quantity: 1,
     }],
   });
-  
+
   return {
     url: paymentLink.url,
   };
 }
-

@@ -19,20 +19,18 @@ import crypto from 'crypto';
 import type {
   SlackMessage,
   SlackWorkspace,
-  SlackChannel,
   SlackBlock,
   SlackAttachment,
   SlackAPIError,
   SlackRateLimitInfo,
   SlackServiceConfig,
-  SlackMessagePriority,
   SlackChannelType,
 } from './types';
 
 /**
  * Slack API Response
  */
-interface SlackAPIResponse<T = unknown> {
+interface SlackAPIResponse {
   ok: boolean;
   error?: string;
   response_metadata?: {
@@ -88,53 +86,63 @@ interface SlackOAuthResponse extends SlackAPIResponse {
 }
 
 /**
+ * Slack Channel Data
+ */
+interface SlackChannelData {
+  id: string;
+  name: string;
+  is_channel: boolean;
+  is_group: boolean;
+  is_im: boolean;
+  is_mpim: boolean;
+  is_private: boolean;
+  created: number;
+  is_archived: boolean;
+  is_general: boolean;
+  is_member: boolean;
+  num_members?: number;
+  topic?: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+  purpose?: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+}
+
+/**
  * Slack Channels List Response
  */
 interface SlackChannelsResponse extends SlackAPIResponse {
-  channels: Array<{
-    id: string;
-    name: string;
-    is_channel: boolean;
-    is_group: boolean;
-    is_im: boolean;
-    is_mpim: boolean;
-    is_private: boolean;
-    created: number;
-    is_archived: boolean;
-    is_general: boolean;
-    is_member: boolean;
-    num_members?: number;
-    topic?: {
-      value: string;
-      creator: string;
-      last_set: number;
-    };
-    purpose?: {
-      value: string;
-      creator: string;
-      last_set: number;
-    };
-  }>;
+  channels: SlackChannelData[];
+}
+
+/**
+ * Slack User Data
+ */
+interface SlackUserData {
+  id: string;
+  team_id: string;
+  name: string;
+  deleted: boolean;
+  profile: {
+    email?: string;
+    display_name?: string;
+    real_name?: string;
+    image_24?: string;
+  };
+  is_bot: boolean;
+  is_app_user: boolean;
 }
 
 /**
  * Slack Users List Response
  */
 interface SlackUsersResponse extends SlackAPIResponse {
-  members: Array<{
-    id: string;
-    team_id: string;
-    name: string;
-    deleted: boolean;
-    profile: {
-      email?: string;
-      display_name?: string;
-      real_name?: string;
-      image_24?: string;
-    };
-    is_bot: boolean;
-    is_app_user: boolean;
-  }>;
+  members: SlackUserData[];
 }
 
 /**
@@ -597,12 +605,12 @@ export class SlackService {
     memberCount?: number;
   }> {
     try {
-      const response = await this.makeAPICall<SlackAPIResponse & { channel: any }>(
+      const response = await this.makeAPICall<SlackAPIResponse & { channel: SlackChannelData }>(
         'conversations.info',
         { channel: channelId },
         token
       );
-      
+
       const channel = response.channel;
       
       let type: SlackChannelType = 'public_channel';

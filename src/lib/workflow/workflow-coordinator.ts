@@ -35,7 +35,6 @@ import type {
   Workflow,
   WorkflowExecution,
   WorkflowTriggerType,
-  WorkflowExecutionStatus,
 } from './types';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
 import type { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
@@ -364,18 +363,12 @@ export class WorkflowCoordinator {
   /**
    * Find workflows that match the trigger types
    */
-  private async findMatchingWorkflows(
+  private findMatchingWorkflows(
     organizationId: string,
     workspaceId: string,
     triggerTypes: WorkflowTriggerType[]
   ): Promise<Workflow[]> {
     try {
-      // Get workflows collection
-      const workflowsCollection = this.dal.getOrgSubCollection(
-        organizationId,
-        'workflows'
-      );
-      
       // In production, this would query Firestore with proper filters
       // For now, return empty array (workflows will be stored/retrieved in API layer)
       logger.debug('Querying workflows', {
@@ -383,7 +376,7 @@ export class WorkflowCoordinator {
         workspaceId,
         triggerTypes,
       });
-      
+
       // TODO: Implement Firestore query when workflows are stored
       // const q = query(
       //   workflowsCollection,
@@ -392,16 +385,16 @@ export class WorkflowCoordinator {
       // );
       // const snapshot = await getDocs(q);
       // return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Workflow));
-      
-      return [];
-      
+
+      return Promise.resolve([]);
+
     } catch (error) {
       logger.error('Failed to find matching workflows', {
         error,
         organizationId,
         triggerTypes,
       });
-      return [];
+      return Promise.resolve([]);
     }
   }
   
@@ -488,7 +481,7 @@ export class WorkflowCoordinator {
    */
   private shouldExecuteWorkflow(
     workflow: Workflow,
-    context: WorkflowExecutionContext
+    _context: WorkflowExecutionContext
   ): boolean {
     const { settings } = workflow;
     

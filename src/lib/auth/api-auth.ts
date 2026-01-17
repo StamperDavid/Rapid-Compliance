@@ -3,16 +3,21 @@
  * Validates authentication tokens and user permissions for API routes
  */
 
-import type { NextRequest} from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import type { Auth } from 'firebase-admin/auth';
 
 // Firebase Admin SDK (optional - only if configured)
-let adminAuth: any = null;
+let adminAuth: Auth | null = null;
 let adminInitialized = false;
 
-async function initializeAdminAuth() {
+interface UserProfileData {
+  role?: string;
+  organizationId?: string;
+}
+
+async function initializeAdminAuth(): Promise<Auth | null> {
   if (adminInitialized) {
     return adminAuth;
   }
@@ -28,39 +33,42 @@ async function initializeAdminAuth() {
     // Check if already initialized
     const existingApps = admin.apps;
     if (existingApps.length > 0 && existingApps[0]) {
-      adminAuth = admin.auth(existingApps[0]);
+      const authInstance = admin.auth(existingApps[0]);
+      adminAuth = authInstance;
       adminInitialized = true;
-      console.log('[API Auth] Using existing Firebase Admin app');
-      return adminAuth;
+      logger.info('[API Auth] Using existing Firebase Admin app', { file: 'api-auth.ts' });
+      return authInstance;
     }
 
     // Get project ID from env
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-      || process.env.FIREBASE_PROJECT_ID
-      || 'ai-sales-platform-dev';
+      ?? process.env.FIREBASE_PROJECT_ID
+      ?? 'ai-sales-platform-dev';
 
     // Initialize with service account or project ID
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    const serviceAccount = serviceAccountKey
+      ? (JSON.parse(serviceAccountKey) as Record<string, unknown>)
       : undefined;
 
     let app;
     if (serviceAccount) {
-      console.log('[API Auth] Initializing Firebase Admin with service account');
+      logger.info('[API Auth] Initializing Firebase Admin with service account', { file: 'api-auth.ts' });
       app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
     } else {
       // Initialize with just project ID (works for emulator and some GCP scenarios)
-      console.log('[API Auth] Initializing Firebase Admin with project ID:', projectId);
+      logger.info('[API Auth] Initializing Firebase Admin with project ID', { file: 'api-auth.ts', projectId });
       app = admin.initializeApp({
         projectId,
       });
     }
 
-    adminAuth = admin.auth(app);
+    const authInstance = admin.auth(app);
+    adminAuth = authInstance;
     adminInitialized = true;
-    return adminAuth;
+    return authInstance;
   } catch (error) {
     logger.error('Failed to initialize Firebase Admin:', error, { file: 'api-auth.ts' });
     adminInitialized = true; // Mark as initialized to prevent retries
@@ -84,31 +92,32 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      console.log('[API Auth] No Bearer token in Authorization header');
+      logger.debug('[API Auth] No Bearer token in Authorization header', { file: 'api-auth.ts' });
       return null;
     }
 
     const token = authHeader.substring(7);
-    console.log('[API Auth] Token received, length:', token.length);
+    logger.debug('[API Auth] Token received', { file: 'api-auth.ts', tokenLength: token.length });
 
     // Try to verify token using Firebase Admin SDK
-    console.log('[API Auth] Initializing Admin Auth...');
+    logger.debug('[API Auth] Initializing Admin Auth...', { file: 'api-auth.ts' });
     const auth = await initializeAdminAuth();
 
     if (!auth) {
-      console.log('[API Auth] Admin Auth not available');
+      logger.debug('[API Auth] Admin Auth not available', { file: 'api-auth.ts' });
       // In development, if admin SDK is not configured, allow requests
       if (process.env.NODE_ENV === 'development') {
-        logger.warn('⚠️ Firebase Admin not configured. Skipping token verification in development.', { file: 'api-auth.ts' });
+        logger.warn('Firebase Admin not configured. Skipping token verification in development.', { file: 'api-auth.ts' });
         return null; // Will be handled by requireAuth
       }
       return null;
     }
 
-    console.log('[API Auth] Verifying ID token...');
+    logger.debug('[API Auth] Verifying ID token...', { file: 'api-auth.ts' });
     const decodedToken = await auth.verifyIdToken(token);
-    console.log('[API Auth] Token verified for:', decodedToken.email);
-    console.log('[API Auth] Token claims:', {
+    logger.debug('[API Auth] Token verified', { file: 'api-auth.ts', email: decodedToken.email });
+    logger.debug('[API Auth] Token claims', {
+      file: 'api-auth.ts',
       role: decodedToken.role,
       organizationId: decodedToken.organizationId,
       admin: decodedToken.admin,
@@ -120,39 +129,42 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
 
     // If no role in claims, try to fetch from Firestore
     if (!role) {
-      console.log('[API Auth] No role in token claims, checking Firestore...');
+      logger.debug('[API Auth] No role in token claims, checking Firestore...', { file: 'api-auth.ts' });
       try {
         const { adminDb } = await import('../firebase/admin');
         if (adminDb) {
           const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
           if (userDoc.exists) {
-            const userProfile = userDoc.data();
+            const userProfile = userDoc.data() as UserProfileData | undefined;
             role = userProfile?.role;
-            organizationId = organizationId || userProfile?.organizationId;
-            console.log('[API Auth] User profile loaded via Admin SDK:', {
+            organizationId = organizationId ?? userProfile?.organizationId;
+            logger.debug('[API Auth] User profile loaded via Admin SDK', {
+              file: 'api-auth.ts',
               uid: decodedToken.uid,
               role,
               organizationId,
             });
           }
         }
-      } catch (adminError: any) {
-        console.log('[API Auth] Admin SDK Firestore failed:', adminError.message);
+      } catch (adminError) {
+        const errorMessage = adminError instanceof Error ? adminError.message : 'Unknown error';
+        logger.debug('[API Auth] Admin SDK Firestore failed', { file: 'api-auth.ts', error: errorMessage });
         // Try client SDK as last resort
         try {
-          const userProfile = await FirestoreService.get('users', decodedToken.uid);
+          const userProfile = await FirestoreService.get('users', decodedToken.uid) as UserProfileData | null;
           if (userProfile) {
             role = userProfile.role;
-            organizationId = organizationId || userProfile.organizationId;
-            console.log('[API Auth] User profile loaded via client SDK:', { role, organizationId });
+            organizationId = organizationId ?? userProfile.organizationId;
+            logger.debug('[API Auth] User profile loaded via client SDK', { file: 'api-auth.ts', role, organizationId });
           }
-        } catch (clientError: any) {
-          console.log('[API Auth] Client SDK also failed:', clientError.message);
+        } catch (clientError) {
+          const clientErrorMessage = clientError instanceof Error ? clientError.message : 'Unknown error';
+          logger.debug('[API Auth] Client SDK also failed', { file: 'api-auth.ts', error: clientErrorMessage });
         }
       }
     }
 
-    console.log('[API Auth] Final auth result:', { uid: decodedToken.uid, email: decodedToken.email, role, organizationId });
+    logger.debug('[API Auth] Final auth result', { file: 'api-auth.ts', uid: decodedToken.uid, email: decodedToken.email, role, organizationId });
 
     return {
       uid: decodedToken.uid,
@@ -195,7 +207,7 @@ export async function optionalAuth(
   try {
     const user = await verifyAuthToken(request);
     return user;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -208,7 +220,7 @@ export async function requireRole(
   allowedRoles: string[]
 ): Promise<{ user: AuthenticatedUser } | NextResponse> {
   const authResult = await requireAuth(request);
-  
+
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -233,7 +245,7 @@ export async function requireOrganization(
   organizationId?: string
 ): Promise<{ user: AuthenticatedUser } | NextResponse> {
   const authResult = await requireAuth(request);
-  
+
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -259,4 +271,3 @@ export async function requireOrganization(
 
   return { user };
 }
-

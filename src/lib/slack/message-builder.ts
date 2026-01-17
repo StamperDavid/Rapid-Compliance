@@ -135,15 +135,15 @@ export class SlackMessageBuilder {
             type: 'mrkdwn',
             text: `*Rep:*\n${variables.userName}`,
           },
-          alertType === 'low_score' && {
-            type: 'mrkdwn',
+          ...(alertType === 'low_score' ? [{
+            type: 'mrkdwn' as const,
             text: `*Score:*\n${variables.conversationScore}/100`,
-          },
-          alertType === 'red_flag' && {
-            type: 'mrkdwn',
+          }] : []),
+          ...(alertType === 'red_flag' ? [{
+            type: 'mrkdwn' as const,
             text: `*Issue:*\n${variables.redFlagType}`,
-          },
-        ].filter(Boolean) as any[],
+          }] : []),
+        ],
       },
     ];
     
@@ -269,23 +269,21 @@ export class SlackMessageBuilder {
             type: 'mrkdwn',
             text: `*Rep:*\n${variables.userName}`,
           },
-          alertType === 'top_performer' && {
-            type: 'mrkdwn',
+          ...(alertType === 'top_performer' ? [{
+            type: 'mrkdwn' as const,
             text: `*Score:*\n${variables.performanceScore}/100`,
-          },
-          alertType === 'top_performer' && {
-            type: 'mrkdwn',
+          }, {
+            type: 'mrkdwn' as const,
             text: `*Tier:*\n${variables.performanceTier}`,
-          },
-          alertType === 'improvement' && {
-            type: 'mrkdwn',
+          }] : []),
+          ...(alertType === 'improvement' ? [{
+            type: 'mrkdwn' as const,
             text: `*Area:*\n${variables.improvementArea}`,
-          },
-          alertType === 'improvement' && {
-            type: 'mrkdwn',
+          }, {
+            type: 'mrkdwn' as const,
             text: `*Gap:*\n${variables.skillGap}`,
-          },
-        ].filter(Boolean) as any[],
+          }] : []),
+        ],
       },
       {
         type: 'divider',
@@ -398,15 +396,15 @@ export class SlackMessageBuilder {
             type: 'mrkdwn',
             text: `*Sequence:*\n${variables.sequenceName}`,
           },
-          alertType === 'underperforming' && {
-            type: 'mrkdwn',
+          ...(alertType === 'underperforming' ? [{
+            type: 'mrkdwn' as const,
             text: `*Performance:*\n${variables.performanceScore}/100`,
-          },
-          alertType === 'optimization' && {
-            type: 'mrkdwn',
+          }] : []),
+          ...(alertType === 'optimization' ? [{
+            type: 'mrkdwn' as const,
             text: `*Opportunities:*\n${variables.optimizationCount} optimizations`,
-          },
-        ].filter(Boolean) as any[],
+          }] : []),
+        ],
       },
       {
         type: 'divider',
@@ -643,11 +641,11 @@ export class SlackMessageBuilder {
             type: 'mrkdwn',
             text: `*Attainment:*\n${Math.round((variables.attainment as number) * 100)}%`,
           },
-          alertType === 'at_risk' && {
-            type: 'mrkdwn',
+          ...(alertType === 'at_risk' ? [{
+            type: 'mrkdwn' as const,
             text: `*Gap:*\n$${(variables.gap as number).toLocaleString()}`,
-          },
-        ].filter(Boolean) as any[],
+          }] : []),
+        ],
       },
       {
         type: 'divider',

@@ -13,7 +13,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { Timestamp } from 'firebase-admin/firestore';
 import type { SalesSignal } from '@/lib/orchestration/types';
 import type { NotificationVariables } from '@/lib/notifications/types';
 import type { SlackService } from './slack-service';
@@ -24,6 +23,7 @@ import type {
   SlackChannelMapping,
   SlackMessage,
   SlackMessagePriority,
+  NotificationCategory,
 } from './types';
 
 /**
@@ -589,7 +589,7 @@ export class SlackSignalHandler {
       
       // Set message priority and category
       message.priority = priority;
-      message.category = category as any;
+      message.category = category as NotificationCategory;
       message.workspaceId = workspace.id;
       message.organizationId = workspace.organizationId;
       

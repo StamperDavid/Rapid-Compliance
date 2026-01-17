@@ -497,7 +497,7 @@ async function executeWorkflow(
 async function executeCRMUpdate(
   action: OrchestratorAction,
   submission: FormSubmission,
-  _form: FormDefinition
+  form: FormDefinition
 ): Promise<ActionExecutionResult> {
   const result: ActionExecutionResult = {
     actionId: action.type,
@@ -517,7 +517,7 @@ async function executeCRMUpdate(
     result.success = true;
     result.result = syncResult;
   } catch (error) {
-    result.error = String(error);
+    result.error = error instanceof Error ? error.message : String(error);
     logger.error('Failed to update CRM', { error, action });
   }
 
@@ -534,10 +534,10 @@ async function executeCRMUpdate(
 function replacePlaceholders(template: string, submission: FormSubmission): string {
   return template.replace(/\{\{(\w+)\}\}/g, (match, fieldName) => {
     // Check indexed fields first
-    if (fieldName === 'email') {return submission.indexedEmail || '';}
-    if (fieldName === 'phone') {return submission.indexedPhone || '';}
-    if (fieldName === 'name') {return submission.indexedName || '';}
-    if (fieldName === 'company') {return submission.indexedCompany || '';}
+    if (fieldName === 'email') {return submission.indexedEmail ?? '';}
+    if (fieldName === 'phone') {return submission.indexedPhone ?? '';}
+    if (fieldName === 'name') {return submission.indexedName ?? '';}
+    if (fieldName === 'company') {return submission.indexedCompany ?? '';}
     if (fieldName === 'confirmationNumber') {return submission.confirmationNumber;}
     if (fieldName === 'submissionId') {return submission.id;}
     if (fieldName === 'formId') {return submission.formId;}
@@ -545,7 +545,7 @@ function replacePlaceholders(template: string, submission: FormSubmission): stri
     // Check responses
     const response = submission.responses.find((r) => r.fieldName === fieldName);
     if (response) {
-      return response.displayValue || String(response.value || '');
+      return response.displayValue ?? String(response.value ?? '');
     }
 
     return match; // Keep placeholder if not found
@@ -561,7 +561,7 @@ function replacePlaceholders(template: string, submission: FormSubmission): stri
  */
 export async function triggerOrchestratorActions(
   submission: FormSubmission,
-  _form: FormDefinition
+  form: FormDefinition
 ): Promise<TriggerResult> {
   const result: TriggerResult = {
     submissionId: submission.id,
@@ -581,12 +581,13 @@ export async function triggerOrchestratorActions(
       formId: form.id,
     });
   } catch (error) {
-    result.errors.push(`Failed to emit default signal: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    result.errors.push(`Failed to emit default signal: ${errorMessage}`);
     logger.error('Failed to emit default submission signal', { error });
   }
 
   // Get configured actions (if any)
-  const actions = submission.orchestratorActions || [];
+  const actions = submission.orchestratorActions ?? [];
 
   // Create responses map for condition evaluation
   const _responsesMap = createResponsesMap(submission.responses);
@@ -678,7 +679,7 @@ export async function triggerOrchestratorActions(
  */
 export async function onFormSubmit(
   submission: FormSubmission,
-  _form: FormDefinition
+  form: FormDefinition
 ): Promise<TriggerResult> {
   logger.info('Form submission received, triggering orchestrator', {
     submissionId: submission.id,

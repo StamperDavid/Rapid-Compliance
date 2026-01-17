@@ -91,7 +91,7 @@ const generateId = () => `msg_${Date.now()}_${Math.random().toString(36).substr(
 
 export const useOrchestratorStore = create<OrchestratorUIState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Initial state
       isOpen: false,
       isMinimized: false,
@@ -132,7 +132,7 @@ export const useOrchestratorStore = create<OrchestratorUIState>()(
       // Feedback actions
       openFeedbackModal: (path) => set({
         feedbackModalOpen: true,
-        feedbackPath: path || null
+        feedbackPath: path ?? null
       }),
 
       closeFeedbackModal: () => set({

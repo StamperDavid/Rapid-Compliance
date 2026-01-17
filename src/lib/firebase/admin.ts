@@ -118,7 +118,7 @@ if (typeof window === 'undefined') {
       adminApp: adminApp ? 'INITIALIZED' : 'NULL',
       file: 'admin.ts' 
     });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[Firebase Admin] ❌ Initialization failed', error, { file: 'admin.ts' });
   }
 }

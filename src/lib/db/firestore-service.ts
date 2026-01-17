@@ -7,7 +7,8 @@
 import type {
   QueryConstraint,
   DocumentData,
-  QueryDocumentSnapshot} from 'firebase/firestore';
+  QueryDocumentSnapshot
+} from 'firebase/firestore';
 import {
   collection,
   doc,
@@ -17,12 +18,9 @@ import {
   updateDoc,
   deleteDoc,
   query,
-  where,
-  orderBy,
   limit,
   startAfter,
   onSnapshot,
-  Timestamp,
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
@@ -212,7 +210,7 @@ export class FirestoreService {
       await updateDoc(docRef, {
         ...data,
         updatedAt: serverTimestamp(),
-      } as any);
+      } as Record<string, unknown>);
     } catch (error) {
       logger.error(`Error updating document ${docId} in ${collectionPath}:`, error, { file: 'firestore-service.ts' });
       throw error;

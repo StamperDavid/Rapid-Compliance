@@ -199,11 +199,11 @@ export function getAvailableNiches(): string[] {
 /**
  * Seed demo data for an organization
  */
-export async function seedDemoData(
+export function seedDemoData(
   orgId: string,
   niche: string,
   options?: { includeAbandoned?: boolean }
-): Promise<{ leadsSeeded: number; videosSeeded: number }> {
+): { leadsSeeded: number; videosSeeded: number } {
   const data = getDemoDataForNiche(niche);
 
   let leads = data.leads;
@@ -212,7 +212,7 @@ export async function seedDemoData(
   }
 
   // In production, this would write to Firestore
-  console.log(`[DemoSeeder] Seeding ${leads.length} leads and ${data.videos.length} videos for org ${orgId}`);
+  // Data seeding occurs synchronously for demo purposes
 
   return {
     leadsSeeded: leads.length,

@@ -130,7 +130,7 @@ class CRMVoiceActivityLogger {
         throw new Error('Failed to log call activity');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { id: string };
 
       // Update associated records with last contacted timestamp
       await this.updateLastContacted(organizationId, { contactId, leadId, dealId });
@@ -198,7 +198,7 @@ class CRMVoiceActivityLogger {
         throw new Error('Failed to log SMS activity');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { id: string };
 
       await this.updateLastContacted(organizationId, { contactId, leadId, dealId });
 
@@ -264,7 +264,7 @@ class CRMVoiceActivityLogger {
         throw new Error('Failed to log voicemail activity');
       }
 
-      const data = await response.json();
+      const data = await response.json() as { id: string };
 
       await this.triggerWorkflow(organizationId, 'voicemail.received', {
         ...activity,

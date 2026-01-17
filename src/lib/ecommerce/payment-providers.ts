@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger/logger';
  */
 export async function processAuthorizeNetPayment(
   request: PaymentRequest,
-  providerConfig: any
+  _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
     const orgId = request.workspaceId.split('/')[0];
@@ -105,9 +105,10 @@ export async function processAuthorizeNetPayment(
         error: (errorText !== '' && errorText != null) ? errorText : 'Transaction failed',
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Authorize.Net payment error:', error, { file: 'payment-providers.ts' });
-    const errorMessage = error.message;
+    const errorMessage = err.message;
     return {
       success: false,
       error: (errorMessage !== '' && errorMessage != null) ? errorMessage : 'Authorize.Net payment processing failed',
@@ -136,7 +137,7 @@ function calculateAuthorizeNetFee(amount: number): number {
  */
 export async function process2CheckoutPayment(
   request: PaymentRequest,
-  providerConfig: any
+  _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
     const orgId = request.workspaceId.split('/')[0];
@@ -224,11 +225,12 @@ export async function process2CheckoutPayment(
         error:(result.message !== '' && result.message != null) ? result.message : '2Checkout payment failed',
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('2Checkout payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : '2Checkout payment processing failed',
+      error:(err.message !== '' && err.message != null) ? err.message : '2Checkout payment processing failed',
     };
   }
 }
@@ -254,7 +256,7 @@ function calculate2CheckoutFee(amount: number): number {
  */
 export async function processMolliePayment(
   request: PaymentRequest,
-  providerConfig: any
+  _providerConfig: unknown
 ): Promise<PaymentResult> {
   try {
     const orgId = request.workspaceId.split('/')[0];
@@ -320,11 +322,12 @@ export async function processMolliePayment(
         error: 'Mollie payment creation failed',
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Mollie payment error:', error, { file: 'payment-providers.ts' });
     return {
       success: false,
-      error:(error.message !== '' && error.message != null) ? error.message : 'Mollie payment processing failed',
+      error:(err.message !== '' && err.message != null) ? err.message : 'Mollie payment processing failed',
     };
   }
 }

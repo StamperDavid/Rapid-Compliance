@@ -28,9 +28,7 @@ import type { Timestamp } from 'firebase/firestore';
 import type {
   ConversationType,
   ObjectionType,
-  TopicCategory,
   CoachingCategory,
-  KeyMomentType,
 } from '@/lib/conversation/types';
 import type { PerformanceTier } from '@/lib/performance/types';
 
@@ -407,18 +405,18 @@ export interface TalkTrackVariation {
 export interface ABTestResults {
   variantA: string; // variation ID
   variantB: string; // variation ID
-  
+
   // Results
   variantASuccessRate: number;
   variantBSuccessRate: number;
-  winner: string | 'inconclusive';
-  
+  winner: 'inconclusive' | string;
+
   // Stats
   sampleSizeA: number;
   sampleSizeB: number;
   confidence: number; // 0-100
   pValue: number;
-  
+
   // Recommendation
   recommendation: string;
 }

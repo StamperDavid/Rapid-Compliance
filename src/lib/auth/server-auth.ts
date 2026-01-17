@@ -4,8 +4,7 @@
  */
 
 import type { NextRequest } from 'next/server';
-import type { AuthenticatedUser } from '@/lib/auth/api-auth';
-import { requireAuth, requireRole, requireOrganization } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole, requireOrganization, type AuthenticatedUser } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 /**

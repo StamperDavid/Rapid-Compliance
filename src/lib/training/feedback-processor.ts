@@ -9,8 +9,30 @@ import type {
   TrainingSession,
   TrainingAnalysis,
   ImprovementSuggestion,
-  PromptUpdate,
 } from '@/types/training';
+
+interface ParsedSuggestion {
+  type: string;
+  area: string;
+  currentBehavior: string;
+  suggestedBehavior: string;
+  implementation?: {
+    section: string;
+    additions: string[];
+    removals: string[];
+    modifications: Array<{ from: string; to: string }>;
+  };
+  priority: number;
+  estimatedImpact: number;
+}
+
+interface ParsedAnalysisResponse {
+  strengths?: string[];
+  weaknesses?: string[];
+  suggestions: ParsedSuggestion[];
+  overallAssessment?: string;
+  confidence?: number;
+}
 
 /**
  * Analyze a training session and generate improvement suggestions
@@ -19,18 +41,18 @@ export async function analyzeTrainingSession(
   session: TrainingSession
 ): Promise<TrainingAnalysis> {
   logger.info('Feedback Processor Analyzing session session.id}', { file: 'feedback-processor.ts' });
-  
+
   // Build analysis prompt
   const prompt = buildAnalysisPrompt(session);
-  
+
   // Get AI analysis
   const response = await generateText(prompt);
-  
+
   // Parse the response
   const analysis = parseAnalysisResponse(response.text, session);
-  
+
   logger.info('Feedback Processor Analysis complete. Found analysis.suggestions.length} improvement suggestions', { file: 'feedback-processor.ts' });
-  
+
   return analysis;
 }
 
@@ -41,7 +63,7 @@ function buildAnalysisPrompt(session: TrainingSession): string {
   const conversationText = session.messages
     .map(msg => `${msg.role.toUpperCase()}: ${msg.message}`)
     .join('\n\n');
-  
+
   return `You are an expert AI trainer analyzing a training session for a sales/support AI agent.
 
 # Training Session Details
@@ -112,11 +134,11 @@ function parseAnalysisResponse(
     if (!jsonMatch) {
       throw new Error('No JSON found in response');
     }
-    
-    const parsed = JSON.parse(jsonMatch[0]);
-    
+
+    const parsed = JSON.parse(jsonMatch[0]) as ParsedAnalysisResponse;
+
     // Add IDs to suggestions
-    const suggestions: ImprovementSuggestion[] = parsed.suggestions.map((s: any, index: number) => ({
+    const suggestions: ImprovementSuggestion[] = parsed.suggestions.map((s: ParsedSuggestion, index: number) => ({
       id: `${session.id}_suggestion_${index}`,
       type: s.type,
       area: s.area,
@@ -127,7 +149,7 @@ function parseAnalysisResponse(
       estimatedImpact: s.estimatedImpact,
       confidence: parsed.confidence ?? 0.8,
     }));
-    
+
     return {
       strengths: parsed.strengths ?? [],
       weaknesses: parsed.weaknesses ?? [],
@@ -138,7 +160,7 @@ function parseAnalysisResponse(
     };
   } catch (error) {
     logger.error('[Feedback Processor] Failed to parse analysis:', error, { file: 'feedback-processor.ts' });
-    
+
     // Return fallback analysis based on score
     return generateFallbackAnalysis(session);
   }
@@ -149,7 +171,7 @@ function parseAnalysisResponse(
  */
 function generateFallbackAnalysis(session: TrainingSession): TrainingAnalysis {
   const suggestions: ImprovementSuggestion[] = [];
-  
+
   // If score is low, suggest general improvements
   if (session.score < 70) {
     suggestions.push({
@@ -163,7 +185,7 @@ function generateFallbackAnalysis(session: TrainingSession): TrainingAnalysis {
       confidence: 0.6,
     });
   }
-  
+
   return {
     strengths: session.score >= 70 ? ['Acceptable performance'] : [],
     weaknesses: session.score < 70 ? ['Performance below target'] : [],
@@ -181,36 +203,38 @@ export function aggregateSuggestions(
   sessions: TrainingSession[]
 ): ImprovementSuggestion[] {
   const allSuggestions: ImprovementSuggestion[] = [];
-  
+
   // Collect all suggestions
   for (const session of sessions) {
     if (session.analysis?.suggestions) {
       allSuggestions.push(...session.analysis.suggestions);
     }
   }
-  
+
   // Group by area
   const suggestionsByArea = new Map<string, ImprovementSuggestion[]>();
   for (const suggestion of allSuggestions) {
     const area = suggestion.area;
-    if (!suggestionsByArea.has(area)) {
-      suggestionsByArea.set(area, []);
+    const areaList = suggestionsByArea.get(area);
+    if (areaList) {
+      areaList.push(suggestion);
+    } else {
+      suggestionsByArea.set(area, [suggestion]);
     }
-    suggestionsByArea.get(area)!.push(suggestion);
   }
-  
+
   // Aggregate suggestions for each area
   const aggregated: ImprovementSuggestion[] = [];
-  
+
   for (const [area, suggestions] of suggestionsByArea.entries()) {
     // Calculate average priority and impact
     const avgPriority = suggestions.reduce((sum, s) => sum + s.priority, 0) / suggestions.length;
     const avgImpact = suggestions.reduce((sum, s) => sum + s.estimatedImpact, 0) / suggestions.length;
     const avgConfidence = suggestions.reduce((sum, s) => sum + s.confidence, 0) / suggestions.length;
-    
+
     // Get the most common suggestion
     const mostCommon = suggestions[0];
-    
+
     aggregated.push({
       ...mostCommon,
       id: `aggregated_${area}_${Date.now()}`,
@@ -219,14 +243,14 @@ export function aggregateSuggestions(
       confidence: avgConfidence,
     });
   }
-  
+
   // Sort by priority * impact
   aggregated.sort((a, b) => {
     const scoreA = a.priority * a.estimatedImpact;
     const scoreB = b.priority * b.estimatedImpact;
     return scoreB - scoreA;
   });
-  
+
   return aggregated;
 }
 
@@ -255,25 +279,3 @@ export function getTopSuggestions(
     })
     .slice(0, count);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

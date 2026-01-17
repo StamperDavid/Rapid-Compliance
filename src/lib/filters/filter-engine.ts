@@ -3,13 +3,13 @@
  * Apply Airtable-style filters to data
  */
 
-import type { FilterCondition, FilterGroup, FilterLogic, ViewFilter } from '@/types/filters';
+import type { FilterCondition, FilterGroup, ViewFilter } from '@/types/filters';
 
 export class FilterEngine {
   /**
    * Apply filter to data array
    */
-  static applyFilter(data: any[], filter: ViewFilter): any[] {
+  static applyFilter<T extends Record<string, unknown>>(data: T[], filter: ViewFilter): T[] {
     if (!filter.groups || filter.groups.length === 0) {
       return data;
     }
@@ -29,7 +29,7 @@ export class FilterEngine {
   /**
    * Evaluate a filter group
    */
-  private static evaluateGroup(record: any, group: FilterGroup): boolean {
+  private static evaluateGroup(record: Record<string, unknown>, group: FilterGroup): boolean {
     if (group.conditions.length === 0) {return true;}
 
     const results = group.conditions.map(condition =>
@@ -44,8 +44,8 @@ export class FilterEngine {
   /**
    * Evaluate single condition
    */
-  private static evaluateCondition(record: any, condition: FilterCondition): boolean {
-    const fieldValue = record[condition.field];
+  private static evaluateCondition(record: Record<string, unknown>, condition: FilterCondition): boolean {
+    const fieldValue: unknown = record[condition.field];
     const { operator, value } = condition;
 
     // Handle empty/not empty operators

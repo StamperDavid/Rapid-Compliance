@@ -14,13 +14,13 @@ import { logger } from '../logger/logger';
  */
 export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
   try {
-    logger.info('Browser Scraper Launching browser for: url}', { file: 'browser-scraper.ts' });
-    
+    logger.info(`Browser Scraper Launching browser for: ${url}`, { file: 'browser-scraper.ts' });
+
     // Dynamic import to avoid loading Playwright in edge runtime
     let playwright;
     try {
       playwright = await import('playwright');
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Playwright not installed. Run: npm install playwright && npx playwright install chromium');
     }
     
@@ -106,9 +106,9 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
       const rawHtml = await page.content();
       
       await browser.close();
-      
-      logger.info('Browser Scraper Successfully scraped url} - cleanedText.length} chars', { file: 'browser-scraper.ts' });
-      
+
+      logger.info(`Browser Scraper Successfully scraped ${url} - ${cleanedText.length} chars`, { file: 'browser-scraper.ts' });
+
       return {
         url,
         title,
@@ -117,13 +117,14 @@ export async function scrapeWithBrowser(url: string): Promise<ScrapedContent> {
         rawHtml,
         metadata,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       await browser.close();
       throw error;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error(`[Browser Scraper] Error scraping ${url}`, error, { file: 'browser-scraper.ts' });
-    throw new Error(`Browser scraping failed: ${error.message}`);
+    throw new Error(`Browser scraping failed: ${errorMessage}`);
   }
 }
 
@@ -139,16 +140,16 @@ export async function smartScrape(url: string): Promise<ScrapedContent> {
     
     // If we got meaningful content, return it
     if (result.cleanedText.length > 200) {
-      logger.info('Smart Scraper Static scrape successful for url}', { file: 'browser-scraper.ts' });
+      logger.info(`Smart Scraper Static scrape successful for ${url}`, { file: 'browser-scraper.ts' });
       return result;
     }
-    
+
     // Otherwise, fall back to browser (for JavaScript sites)
-    logger.info('Smart Scraper Static scrape insufficient, using browser for url}', { file: 'browser-scraper.ts' });
+    logger.info(`Smart Scraper Static scrape insufficient, using browser for ${url}`, { file: 'browser-scraper.ts' });
     return await scrapeWithBrowser(url);
-  } catch (error) {
+  } catch (_error) {
     // If simple fetch fails, try browser
-    logger.info('Smart Scraper Static scrape failed, using browser for url}', { file: 'browser-scraper.ts' });
+    logger.info(`Smart Scraper Static scrape failed, using browser for ${url}`, { file: 'browser-scraper.ts' });
     return scrapeWithBrowser(url);
   }
 }
@@ -167,28 +168,29 @@ export async function scrapeWithRetry(
       // Add delay between retries (exponential backoff)
       if (attempt > 0) {
         const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-        logger.info('Scraper Retry attempt attempt + 1}/maxRetries} after delay}ms delay...', { file: 'browser-scraper.ts' });
+        logger.info(`Scraper Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms delay...`, { file: 'browser-scraper.ts' });
         await sleep(delay);
       }
-      
+
       return await smartScrape(url);
-    } catch (error: any) {
-      lastError = error;
-      logger.error(`[Scraper] Attempt ${attempt + 1}/${maxRetries} failed`, error, { 
-        attempt: attempt + 1, 
+    } catch (error: unknown) {
+      lastError = error as Error;
+      logger.error(`[Scraper] Attempt ${attempt + 1}/${maxRetries} failed`, error, {
+        attempt: attempt + 1,
         maxRetries,
-        file: 'browser-scraper.ts' 
+        file: 'browser-scraper.ts'
       });
-      
+
       // Don't retry on certain errors
-      if (error.message.includes('ERR_NAME_NOT_RESOLVED') || 
-          error.message.includes('404')) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('ERR_NAME_NOT_RESOLVED') ||
+          errorMessage.includes('404')) {
         throw error; // Domain doesn't exist, no point retrying
       }
     }
   }
-  
-throw lastError ?? new Error('Scraping failed after retries');
+
+  throw lastError ?? new Error('Scraping failed after retries');
 }
 
 /**
@@ -210,7 +212,9 @@ function getRandomUserAgent(): string {
  * Sleep helper
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
 }
 
 /**
@@ -226,10 +230,10 @@ class RateLimiter {
     
     if (timeSinceLastRequest < this.minDelay) {
       const delay = this.minDelay - timeSinceLastRequest;
-      logger.info('Rate Limiter Throttling request to domain} for delay}ms', { file: 'browser-scraper.ts' });
+      logger.info(`Rate Limiter Throttling request to ${domain} for ${delay}ms`, { file: 'browser-scraper.ts' });
       await sleep(delay);
     }
-    
+
     this.lastRequestTime.set(domain, Date.now());
   }
 }

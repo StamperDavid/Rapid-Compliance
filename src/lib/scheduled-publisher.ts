@@ -6,7 +6,7 @@
  * REFACTORED: Now uses adminDal for environment-aware collection access
  */
 
-import { db, admin } from '@/lib/firebase-admin';
+import { admin } from '@/lib/firebase-admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 
 interface ScheduledItem {
@@ -28,8 +28,7 @@ export async function processScheduledPages(): Promise<{
   let errors = 0;
 
   try {
-    console.log('[Scheduled Publisher] Starting scheduled pages check...');
-
+    // Starting scheduled pages check
     const now = new Date();
     const items: ScheduledItem[] = [];
 
@@ -57,13 +56,13 @@ export async function processScheduledPages(): Promise<{
         pagesSnapshot.forEach(doc => {
           const data = doc.data();
           if (data.scheduledFor) {
-            const scheduledDate = new Date(data.scheduledFor);
+            const scheduledDate = new Date(data.scheduledFor as string | number | Date);
             if (scheduledDate <= now) {
               items.push({
                 id: doc.id,
                 organizationId,
-                scheduledFor: data.scheduledFor,
-                title:(data.title !== '' && data.title != null) ? data.title : 'Untitled',
+                scheduledFor: data.scheduledFor as string,
+                title: data.title !== '' && data.title != null ? (data.title as string) : 'Untitled',
                 type: 'page',
               });
             }

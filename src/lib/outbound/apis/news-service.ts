@@ -63,15 +63,11 @@ async function getNewsFromNewsAPI(
     );
 
     if (!response.ok) {
-      logger.error('[NewsAPI] API error: ${response.status}', new Error('[NewsAPI] API error: ${response.status}'), { file: 'news-service.ts' });
+      logger.error(`[NewsAPI] API error: ${response.status}`, new Error(`[NewsAPI] API error: ${response.status}`), { file: 'news-service.ts' });
       return [];
     }
 
-    const data = await response.json();
-    
-    if (!data.articles || data.articles.length === 0) {
-      return [];
-    }
+    const data: unknown = await response.json();
 
     interface NewsAPIArticle {
       title: string;
@@ -82,8 +78,18 @@ async function getNewsFromNewsAPI(
       urlToImage?: string;
       author?: string;
     }
-    
-    return data.articles.map((article: NewsAPIArticle) => ({
+
+    interface NewsAPIResponse {
+      articles?: NewsAPIArticle[];
+    }
+
+    const typedData = data as NewsAPIResponse;
+
+    if (!typedData.articles || typedData.articles.length === 0) {
+      return [];
+    }
+
+    return typedData.articles.map((article: NewsAPIArticle) => ({
       title: article.title,
       url: article.url,
       publishedDate: article.publishedAt,

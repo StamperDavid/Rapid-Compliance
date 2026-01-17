@@ -11,15 +11,15 @@ import { sendEmail, listCalendarEvents, createCalendarEvent } from '../outlook-s
  */
 export async function executeOutlookFunction(
   functionName: string,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   integration: ConnectedIntegration
-): Promise<any> {
+): Promise<unknown> {
   const accessToken = (integration.accessToken !== '' && integration.accessToken != null) ? integration.accessToken : '';
 
   if (!accessToken) {
     throw new Error('Outlook access token not configured');
   }
-  
+
   switch (functionName) {
     case 'sendEmail':
       // Validate required parameters
@@ -32,24 +32,24 @@ export async function executeOutlookFunction(
       if (!parameters.body || typeof parameters.body !== 'string') {
         throw new Error('body (string) is required for sendEmail');
       }
-      
+
       return sendEmail(accessToken, {
         to: parameters.to,
         subject: parameters.subject,
         body: parameters.body,
       });
-      
+
     case 'getCalendar': {
       // Optional parameters
-      const startDateTime = parameters.startDateTime;
-      const endDateTime = parameters.endDateTime;
-      
+      const startDateTime = parameters.startDateTime as string | undefined;
+      const endDateTime = parameters.endDateTime as string | undefined;
+
       return listCalendarEvents(accessToken, {
         startDateTime,
         endDateTime,
       });
     }
-      
+
     case 'createCalendarEvent':
       // Validate required parameters
       if (!parameters.subject || typeof parameters.subject !== 'string') {
@@ -61,16 +61,16 @@ export async function executeOutlookFunction(
       if (!parameters.end || typeof parameters.end !== 'string') {
         throw new Error('end (string) is required for createCalendarEvent');
       }
-      
+
       return createCalendarEvent(accessToken, {
         subject: parameters.subject,
-        body: parameters.body,
+        body: parameters.body as string | undefined,
         start: parameters.start,
         end: parameters.end,
-        attendees: parameters.attendees,
-        location: parameters.location,
+        attendees: parameters.attendees as string[] | undefined,
+        location: parameters.location as string | undefined,
       });
-      
+
     default:
       throw new Error(`Unknown Outlook function: ${functionName}`);
   }

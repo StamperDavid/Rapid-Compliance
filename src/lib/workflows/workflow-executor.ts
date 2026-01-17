@@ -13,7 +13,7 @@ import type { WorkflowExecution } from './workflow-engine';
  */
 export async function executeWorkflow(
   workflow: Workflow,
-  triggerData: any
+  triggerData: Record<string, unknown>
 ): Promise<WorkflowExecution> {
   // Dynamic import to avoid circular dependency
   const { executeWorkflowImpl } = await import('./workflow-engine');

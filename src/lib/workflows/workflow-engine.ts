@@ -12,7 +12,7 @@ export interface WorkflowExecution {
   id: string;
   workflowId: string;
   triggerId: string;
-  triggerData: any;
+  triggerData: Record<string, unknown>;
   status: 'running' | 'completed' | 'failed' | 'cancelled';
   startedAt: Date;
   completedAt?: Date;
@@ -32,7 +32,7 @@ export interface WorkflowExecution {
  */
 export async function executeWorkflowImpl(
   workflow: Workflow,
-  triggerData: any
+  triggerData: Record<string, unknown>
 ): Promise<WorkflowExecution> {
   const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const execution: WorkflowExecution = {
@@ -117,7 +117,7 @@ export async function executeWorkflowImpl(
  */
 async function evaluateConditions(
   conditions: WorkflowCondition[],
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   operator: 'and' | 'or'
 ): Promise<boolean> {
   const results = await Promise.all(
@@ -134,7 +134,7 @@ async function evaluateConditions(
 /**
  * Evaluate single condition
  */
-function evaluateCondition(condition: WorkflowCondition, triggerData: any): boolean {
+function evaluateCondition(condition: WorkflowCondition, triggerData: Record<string, unknown>): boolean {
   const fieldValue = getNestedValue(triggerData, condition.field);
   
   switch (condition.operator) {
@@ -168,9 +168,9 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: any): bool
  */
 async function executeAction(
   action: WorkflowAction,
-  triggerData: any,
+  triggerData: Record<string, unknown>,
   workflow: Workflow
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   const organizationId = triggerData?.organizationId ?? workflow.workspaceId;
   
   if (!organizationId) {

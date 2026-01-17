@@ -14,7 +14,7 @@ export interface TypeConversionResult {
   failed: number;
   failedRecords: Array<{
     recordId: string;
-    oldValue: any;
+    oldValue: unknown;
     error: string;
   }>;
   preview: TypeConversionPreview[];
@@ -25,8 +25,8 @@ export interface TypeConversionResult {
  */
 export interface TypeConversionPreview {
   recordId: string;
-  before: any;
-  after: any;
+  before: unknown;
+  after: unknown;
   status: 'success' | 'fail' | 'warning';
   message?: string;
 }
@@ -84,36 +84,37 @@ export class FieldTypeConverter {
         throw new Error('Schema not found');
       }
       
-      const schemaName = (schema as any).name;
+      const schemaData = schema as Record<string, unknown>;
+      const schemaName = typeof schemaData.name === 'string' ? schemaData.name : 'unknown';
       const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${schemaName}/${COLLECTIONS.RECORDS}`;
-      
+
       // Get sample records
       const records = await FirestoreService.getAll(entityPath);
       const totalRecords = records.length;
-      
+
       // Sample records for preview
       const sampleRecords = records.slice(0, sampleSize);
-      
+
       const preview: TypeConversionPreview[] = [];
       let successCount = 0;
-      let failureCount = 0;
-      
+      const _failureCount = 0;
+
       for (const record of sampleRecords) {
-        const oldValue = (record as any)[fieldKey];
+        const recordData = record as Record<string, unknown>;
+        const oldValue = recordData[fieldKey];
         const conversion = this.convertValue(oldValue, oldType, newType);
-        
+
+        const recordId = typeof recordData.id === 'string' ? recordData.id : 'unknown';
         preview.push({
-          recordId: (record as any).id,
+          recordId,
           before: oldValue,
           after: conversion.value,
           status: conversion.success ? 'success' : 'fail',
           message: conversion.message,
         });
-        
+
         if (conversion.success) {
           successCount++;
-        } else {
-          failureCount++;
         }
       }
       
@@ -166,27 +167,30 @@ export class FieldTypeConverter {
         throw new Error('Schema not found');
       }
       
-      const schemaName = (schema as any).name;
+      const schemaData = schema as Record<string, unknown>;
+      const schemaName = typeof schemaData.name === 'string' ? schemaData.name : 'unknown';
       const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${schemaName}/${COLLECTIONS.RECORDS}`;
-      
+
       // Get all records
       const records = await FirestoreService.getAll(entityPath);
-      
+
       // Convert each record
       for (const record of records) {
-        const recordData = record as any;
+        const recordData = record as Record<string, unknown>;
         const oldValue = recordData[fieldKey];
         const conversion = this.convertValue(oldValue, oldType, newType);
-        
+
+        const recordId = typeof recordData.id === 'string' ? recordData.id : 'unknown';
+
         if (conversion.success) {
           // Update record
           recordData[fieldKey] = conversion.value;
-          await FirestoreService.set(entityPath, recordData.id, recordData, false);
+          await FirestoreService.set(entityPath, recordId, recordData, false);
           result.successful++;
         } else {
           result.failed++;
           result.failedRecords.push({
-            recordId: recordData.id,
+            recordId,
             oldValue,
             error:(conversion.message !== '' && conversion.message != null) ? conversion.message : 'Conversion failed',
           });
@@ -213,10 +217,10 @@ export class FieldTypeConverter {
    * Convert a single value
    */
   private static convertValue(
-    value: any,
+    value: unknown,
     oldType: FieldType,
     newType: FieldType
-  ): { success: boolean; value: any; message?: string } {
+  ): { success: boolean; value: unknown; message?: string } {
     // Handle null/undefined
     if (value === null || value === undefined) {
       return { success: true, value: null };

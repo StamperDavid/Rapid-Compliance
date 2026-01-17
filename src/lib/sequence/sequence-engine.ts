@@ -1,15 +1,15 @@
 /**
  * Email Sequence Intelligence Engine
- * 
+ *
  * AI-powered email sequence analysis, pattern detection, optimization,
  * and performance tracking. Analyzes email sequences to identify high-
  * performing patterns and provide actionable optimization recommendations.
- * 
+ *
  * @module sequence/sequence-engine
  */
 
-import type { 
-  SequenceAnalysis, 
+import type {
+  SequenceAnalysis,
   SequenceAnalysisInput,
   SequenceMetrics,
   SequencePattern,
@@ -21,18 +21,11 @@ import type {
   PatternConfidence,
   PatternType,
   OptimizationArea,
-  RecommendationPriority} from './types';
-import {
-  EmailMetrics,
-  OptimizationRequest,
-  SequenceExecution,
-  ExecutionStatus
+  RecommendationPriority
 } from './types';
-import { 
+import {
   sequenceAnalysisInputSchema,
-  sequenceMetricsSchema,
   patternDetectionRequestSchema,
-  optimizationRequestSchema,
 } from './validation';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 
@@ -43,8 +36,88 @@ import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 const DEFAULT_TIME_RANGE_DAYS = 30;
 const MIN_SAMPLE_SIZE_FOR_PATTERNS = 30;
 const MIN_LIFT_FOR_PATTERN = 10; // 10% minimum lift
-const HIGH_CONFIDENCE_THRESHOLD = 0.95;
-const MEDIUM_CONFIDENCE_THRESHOLD = 0.80;
+
+// ============================================================================
+// INTERNAL TYPES FOR AI RESPONSES
+// ============================================================================
+
+/**
+ * AI response format for pattern detection
+ */
+interface AIPatternResponse {
+  type: string;
+  name: string;
+  description: string;
+  sampleSize: number;
+  occurrences: number;
+  patternPerformance: {
+    replyRate: number;
+    meetingRate: number;
+    opportunityRate: number;
+  };
+  replyLift: number;
+  meetingLift: number;
+  opportunityLift: number;
+  confidence: string;
+  pValue?: number;
+  characteristics: Array<{
+    attribute: string;
+    value: string;
+    importance: string;
+    description: string;
+  }>;
+  exampleSequences?: string[];
+  recommendation: string;
+  implementationSteps: string[];
+}
+
+/**
+ * AI response format for optimization recommendations
+ */
+interface AIOptimizationResponse {
+  area: string;
+  priority: string;
+  title: string;
+  description: string;
+  currentMetric: {
+    name: string;
+    value: number;
+    unit: string;
+  };
+  projectedMetric: {
+    name: string;
+    value: number;
+    unit: string;
+  };
+  expectedLift: number;
+  issue: string;
+  solution: string;
+  rationale: string;
+  actionItems: Array<{
+    step: number;
+    action: string;
+    estimatedTime: number;
+  }>;
+  estimatedEffort: string;
+  estimatedImpact: string;
+  basedOnPatterns?: string[];
+  confidence: string;
+  suggestedTest?: {
+    testType: string;
+    variants: string[];
+    duration: string;
+  };
+}
+
+/**
+ * AI insights response format
+ */
+interface AIInsightsResponse {
+  keyFindings: string[];
+  concerns: string[];
+  opportunities: string[];
+  nextSteps: string[];
+}
 
 // ============================================================================
 // SEQUENCE INTELLIGENCE ENGINE
@@ -56,7 +129,7 @@ const MEDIUM_CONFIDENCE_THRESHOLD = 0.80;
 export class SequenceIntelligenceEngine {
   /**
    * Analyze email sequences with comprehensive insights
-   * 
+   *
    * @param input - Analysis input parameters
    * @returns Complete sequence analysis with metrics, patterns, and optimizations
    * @throws {Error} If validation fails or AI analysis encounters an error
@@ -64,40 +137,40 @@ export class SequenceIntelligenceEngine {
   async analyzeSequences(input: SequenceAnalysisInput): Promise<SequenceAnalysis> {
     // Validate input
     const validatedInput = sequenceAnalysisInputSchema.parse(input);
-    
+
     // Set default time range if not provided
     const endDate = validatedInput.endDate ?? new Date();
     const startDate = validatedInput.startDate ?? new Date(endDate.getTime() - (DEFAULT_TIME_RANGE_DAYS * 24 * 60 * 60 * 1000));
-    
+
     // TODO: In production, fetch from database
     // For now, we'll use mock data structure
-    const sequences = await this.fetchSequences(validatedInput);
-    const metrics = await this.calculateMetrics(sequences, startDate, endDate);
-    
+    const sequences = this.fetchSequences(validatedInput);
+    const metrics = this.calculateMetrics(sequences, startDate, endDate);
+
     // Generate analysis components based on input flags
-    const patterns = validatedInput.includePatterns !== false 
+    const patterns = validatedInput.includePatterns !== false
       ? await this.detectPatterns({ sequenceMetrics: metrics })
       : undefined;
-    
+
     const optimizations = validatedInput.includeOptimizations !== false && patterns
       ? await this.generateOptimizations(metrics, patterns)
       : undefined;
-    
+
     const timingAnalysis = validatedInput.includeTimingAnalysis !== false
-      ? await this.analyzeTimings(metrics)
+      ? this.analyzeTimings()
       : undefined;
-    
+
     // TODO: Implement A/B test fetching
     const abTests = validatedInput.includeABTests !== false
       ? { active: 0, completed: 0, winningVariants: [], ongoingTests: [] }
       : undefined;
-    
+
     // Generate AI insights
     const aiInsights = await this.generateAIInsights(metrics, patterns, optimizations);
-    
+
     // Calculate summary
     const summary = this.calculateSummary(sequences, metrics);
-    
+
     return {
       analysisId: this.generateAnalysisId(),
       generatedAt: new Date(),
@@ -112,56 +185,56 @@ export class SequenceIntelligenceEngine {
       aiInsights,
     };
   }
-  
+
   /**
    * Detect patterns in sequence performance
-   * 
+   *
    * @param request - Pattern detection request
    * @returns Identified sequence patterns
    */
   async detectPatterns(request: PatternDetectionRequest): Promise<SequencePattern[]> {
     // Validate request
     const validatedRequest = patternDetectionRequestSchema.parse(request);
-    
+
     const minimumSampleSize = (validatedRequest.minimumSampleSize !== 0 && validatedRequest.minimumSampleSize != null) ? validatedRequest.minimumSampleSize : MIN_SAMPLE_SIZE_FOR_PATTERNS;
     const minimumLift = (validatedRequest.minimumLift !== 0 && validatedRequest.minimumLift != null) ? validatedRequest.minimumLift : MIN_LIFT_FOR_PATTERN;
-    
+
     // Filter sequences with sufficient data
     const qualifiedMetrics = (validatedRequest.sequenceMetrics as SequenceMetrics[]).filter(
       m => m.totalRecipients >= minimumSampleSize
     );
-    
+
     if (qualifiedMetrics.length === 0) {
       return [];
     }
-    
+
     // Use AI to detect patterns
     const aiPatterns = await this.detectPatternsWithAI(qualifiedMetrics, minimumLift);
-    
+
     // Statistical validation
     const validatedPatterns = aiPatterns.filter(pattern => {
       return pattern.sampleSize >= minimumSampleSize &&
-             (pattern.replyLift >= minimumLift || 
+             (pattern.replyLift >= minimumLift ||
               pattern.meetingLift >= minimumLift ||
               pattern.opportunityLift >= minimumLift);
     });
-    
+
     return validatedPatterns;
   }
-  
+
   /**
    * Generate optimization recommendations
-   * 
+   *
    * @param metrics - Sequence metrics
    * @param patterns - Detected patterns
    * @returns Optimization recommendations
    */
   async generateOptimizations(
-    metrics: SequenceMetrics[], 
+    metrics: SequenceMetrics[],
     patterns: SequencePattern[]
   ): Promise<OptimizationRecommendation[]> {
     const recommendations: OptimizationRecommendation[] = [];
-    
+
     // Generate optimizations for each sequence
     for (const metric of metrics) {
       const sequenceOptimizations = await this.generateOptimizationsForSequence(
@@ -170,7 +243,7 @@ export class SequenceIntelligenceEngine {
       );
       recommendations.push(...sequenceOptimizations);
     }
-    
+
     // Sort by priority and expected impact
     return recommendations.sort((a, b) => {
       const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -180,11 +253,11 @@ export class SequenceIntelligenceEngine {
       return b.expectedLift - a.expectedLift;
     });
   }
-  
+
   // ============================================================================
   // PRIVATE METHODS - AI-POWERED ANALYSIS
   // ============================================================================
-  
+
   /**
    * Detect patterns using AI analysis
    */
@@ -194,7 +267,7 @@ export class SequenceIntelligenceEngine {
   ): Promise<SequencePattern[]> {
     // Calculate baseline performance
     const baseline = this.calculateBaselinePerformance(metrics);
-    
+
     // Prepare data for AI
     const metricsData = metrics.map(m => ({
       sequenceId: m.sequenceId,
@@ -212,7 +285,7 @@ export class SequenceIntelligenceEngine {
         replyRate: s.replyRate,
       })),
     }));
-    
+
     const prompt = `Analyze these email sequence performance metrics and identify high-performing patterns.
 
 BASELINE PERFORMANCE:
@@ -281,18 +354,18 @@ Return patterns in this JSON format:
         temperature: 0.3,
         maxTokens: 3000,
       });
-      
+
       const content = response.text || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      
+
       if (!jsonMatch) {
         throw new Error('Failed to parse AI response');
       }
-      
-      const result = JSON.parse(jsonMatch[0]);
-      
+
+      const result = JSON.parse(jsonMatch[0]) as { patterns: AIPatternResponse[] };
+
       // Transform AI response to SequencePattern objects
-      return result.patterns.map((p: any, index: number) => ({
+      return result.patterns.map((p: AIPatternResponse, index: number) => ({
         id: `pattern-${Date.now()}-${index}`,
         type: p.type as PatternType,
         name: p.name,
@@ -313,12 +386,12 @@ Return patterns in this JSON format:
         identifiedAt: new Date(),
         lastValidated: new Date(),
       }));
-    } catch (error) {
-      console.error('Error detecting patterns with AI:', error);
+    } catch {
+      // If AI analysis fails, return empty array
       return [];
     }
   }
-  
+
   /**
    * Generate optimizations for a single sequence
    */
@@ -399,18 +472,18 @@ Return JSON format:
         temperature: 0.3,
         maxTokens: 2500,
       });
-      
+
       const content = response.text || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      
+
       if (!jsonMatch) {
         throw new Error('Failed to parse AI response');
       }
-      
-      const result = JSON.parse(jsonMatch[0]);
-      
+
+      const result = JSON.parse(jsonMatch[0]) as { recommendations: AIOptimizationResponse[] };
+
       // Transform to OptimizationRecommendation objects
-      return result.recommendations.map((r: any, index: number) => ({
+      return result.recommendations.map((r: AIOptimizationResponse, index: number) => ({
         id: `opt-${metrics.sequenceId}-${index}`,
         area: r.area as OptimizationArea,
         priority: r.priority as RecommendationPriority,
@@ -431,12 +504,12 @@ Return JSON format:
         suggestedTest: r.suggestedTest,
         createdAt: new Date(),
       }));
-    } catch (error) {
-      console.error('Error generating optimizations:', error);
+    } catch {
+      // If AI analysis fails, return empty array
       return [];
     }
   }
-  
+
   /**
    * Generate AI insights summary
    */
@@ -488,17 +561,17 @@ Return concise JSON:
         temperature: 0.3,
         maxTokens: 1000,
       });
-      
+
       const content = response.text || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      
+
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        return JSON.parse(jsonMatch[0]) as AIInsightsResponse;
       }
-    } catch (error) {
-      console.error('Error generating AI insights:', error);
+    } catch {
+      // Errors are logged but don't block the analysis
     }
-    
+
     // Fallback
     return {
       keyFindings: ['Analysis complete'],
@@ -507,19 +580,19 @@ Return concise JSON:
       nextSteps: ['Review patterns and optimizations'],
     };
   }
-  
+
   // ============================================================================
   // PRIVATE METHODS - DATA PROCESSING
   // ============================================================================
-  
+
   /**
    * Fetch sequences based on input
    */
-  private async fetchSequences(input: SequenceAnalysisInput): Promise<EmailSequence[]> {
+  private fetchSequences(input: SequenceAnalysisInput): EmailSequence[] {
     // TODO: Implement database fetching
     // For now, return mock structure
     const sequenceIds = input.sequenceIds ?? (input.sequenceId ? [input.sequenceId] : []);
-    
+
     return sequenceIds.map((id, index) => ({
       id,
       name: `Email Sequence ${index + 1}`,
@@ -542,20 +615,20 @@ Return concise JSON:
       createdBy: 'system',
     }));
   }
-  
+
   /**
    * Calculate sequence metrics
    */
-  private async calculateMetrics(
+  private calculateMetrics(
     sequences: EmailSequence[],
     startDate: Date,
     endDate: Date
-  ): Promise<SequenceMetrics[]> {
+  ): SequenceMetrics[] {
     // TODO: Implement real metric calculation from database
     // For now, generate sample metrics
     return sequences.map(seq => this.generateMockMetrics(seq, startDate, endDate));
   }
-  
+
   /**
    * Generate mock metrics (to be replaced with real data)
    */
@@ -566,7 +639,7 @@ Return concise JSON:
   ): SequenceMetrics {
     const totalRecipients = 150;
     const totalSent = totalRecipients * sequence.steps.length;
-    
+
     return {
       sequenceId: sequence.id,
       sequenceName: sequence.name,
@@ -614,17 +687,17 @@ Return concise JSON:
       dataPoints: totalRecipients,
     };
   }
-  
+
   /**
    * Analyze timing patterns
    */
-  private async analyzeTimings(metrics: SequenceMetrics[]): Promise<{
+  private analyzeTimings(): {
     bestSendTimes: HourOfDay[];
     bestDaysOfWeek: DayOfWeek[];
     worstSendTimes: HourOfDay[];
     worstDaysOfWeek: DayOfWeek[];
     recommendation: string;
-  }> {
+  } {
     // TODO: Implement real timing analysis
     // For now, return sample data
     const bestSendTimes: HourOfDay[] = [
@@ -632,23 +705,23 @@ Return concise JSON:
       { hour: 14, openRate: 52.1, clickRate: 17.1, replyRate: 11.3, sampleSize: 380 },
       { hour: 10, openRate: 51.3, clickRate: 16.8, replyRate: 10.9, sampleSize: 420 },
     ];
-    
+
     const worstSendTimes: HourOfDay[] = [
       { hour: 22, openRate: 12.3, clickRate: 3.2, replyRate: 1.1, sampleSize: 85 },
       { hour: 1, openRate: 8.1, clickRate: 1.8, replyRate: 0.5, sampleSize: 45 },
     ];
-    
+
     const bestDaysOfWeek: DayOfWeek[] = [
       { day: 'tuesday', openRate: 53.2, clickRate: 17.8, replyRate: 11.5, sampleSize: 650 },
       { day: 'wednesday', openRate: 52.1, clickRate: 17.2, replyRate: 11.1, sampleSize: 680 },
       { day: 'thursday', openRate: 51.3, clickRate: 16.9, replyRate: 10.8, sampleSize: 620 },
     ];
-    
+
     const worstDaysOfWeek: DayOfWeek[] = [
       { day: 'saturday', openRate: 22.1, clickRate: 5.3, replyRate: 2.1, sampleSize: 120 },
       { day: 'sunday', openRate: 18.3, clickRate: 4.1, replyRate: 1.5, sampleSize: 95 },
     ];
-    
+
     return {
       bestSendTimes,
       bestDaysOfWeek,
@@ -657,7 +730,7 @@ Return concise JSON:
       recommendation: 'Send emails Tuesday-Thursday between 9-10 AM or 2-3 PM for optimal engagement.',
     };
   }
-  
+
   /**
    * Calculate baseline performance across all sequences
    */
@@ -670,14 +743,14 @@ Return concise JSON:
     const totalReplies = metrics.reduce((sum, m) => sum + m.totalReplied, 0);
     const totalMeetings = metrics.reduce((sum, m) => sum + m.meetingBooked, 0);
     const totalOpportunities = metrics.reduce((sum, m) => sum + m.opportunityCreated, 0);
-    
+
     return {
       replyRate: totalRecipients > 0 ? (totalReplies / totalRecipients) * 100 : 0,
       meetingRate: totalRecipients > 0 ? (totalMeetings / totalRecipients) * 100 : 0,
       opportunityRate: totalRecipients > 0 ? (totalOpportunities / totalRecipients) * 100 : 0,
     };
   }
-  
+
   /**
    * Categorize patterns by confidence
    */
@@ -700,7 +773,7 @@ Return concise JSON:
         .slice(0, 5),
     };
   }
-  
+
   /**
    * Categorize optimizations by priority
    */
@@ -717,7 +790,7 @@ Return concise JSON:
     const quickWins = optimizations.filter(
       o => o.estimatedEffort === 'low' && o.estimatedImpact === 'high'
     );
-    
+
     return {
       total: optimizations.length,
       critical: optimizations.filter(o => o.priority === 'critical').length,
@@ -729,7 +802,7 @@ Return concise JSON:
       topPriority: optimizations.slice(0, 3),
     };
   }
-  
+
   /**
    * Calculate summary statistics
    */
@@ -751,11 +824,11 @@ Return concise JSON:
     const avgReplyRate = metrics.reduce((sum, m) => sum + m.overallReplyRate, 0) / metrics.length;
     const avgMeetingRate = metrics.reduce((sum, m) => sum + m.meetingRate, 0) / metrics.length;
     const avgOpportunityRate = metrics.reduce((sum, m) => sum + m.opportunityRate, 0) / metrics.length;
-    
+
     const sortedByReply = [...metrics].sort((a, b) => b.overallReplyRate - a.overallReplyRate);
     const topMetric = sortedByReply[0];
     const lowestMetric = sortedByReply[sortedByReply.length - 1];
-    
+
     return {
       totalSequences: sequences.length,
       totalRecipients,
@@ -775,12 +848,12 @@ Return concise JSON:
       },
     };
   }
-  
+
   /**
    * Generate unique analysis ID
    */
   private generateAnalysisId(): string {
-    return `analysis-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `analysis-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 }
 

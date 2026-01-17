@@ -5,7 +5,6 @@
  */
 
 import { VoiceProviderFactory } from './voice-factory';
-import type { VoiceProvider, VoiceCall, TransferOptions, ConferenceOptions } from './types';
 import { logger } from '@/lib/logger/logger';
 
 export interface TransferAgent {
@@ -74,7 +73,12 @@ class CallTransferService {
   async coldTransfer(request: TransferRequest): Promise<TransferResult> {
     try {
       const provider = await VoiceProviderFactory.getProvider(request.organizationId);
-      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId!);
+
+      if (!request.toPhone && !request.toAgentId) {
+        throw new Error('Either toPhone or toAgentId must be provided');
+      }
+
+      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId as string);
 
       await provider.transfer(request.callId, {
         to: destination,
@@ -90,10 +94,11 @@ class CallTransferService {
       }
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallTransfer] Cold transfer failed:', error, { file: 'call-transfer-service.ts' });
-      await this.logTransfer(request, 'cold', false, error.message);
-      return { success: false, error: error.message };
+      await this.logTransfer(request, 'cold', false, errorMessage);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -104,7 +109,12 @@ class CallTransferService {
   async warmTransfer(request: TransferRequest): Promise<TransferResult> {
     try {
       const provider = await VoiceProviderFactory.getProvider(request.organizationId);
-      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId!);
+
+      if (!request.toPhone && !request.toAgentId) {
+        throw new Error('Either toPhone or toAgentId must be provided');
+      }
+
+      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId as string);
 
       // Step 1: Put original call on hold
       await provider.holdCall(request.callId, true);
@@ -131,7 +141,8 @@ class CallTransferService {
       });
 
       return { success: true, newCallId: consultCall.callId };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallTransfer] Warm transfer failed:', error, { file: 'call-transfer-service.ts' });
 
       // Try to unhold the original call if something goes wrong
@@ -142,8 +153,8 @@ class CallTransferService {
         // Ignore errors here
       }
 
-      await this.logTransfer(request, 'warm', false, error.message);
-      return { success: false, error: error.message };
+      await this.logTransfer(request, 'warm', false, errorMessage);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -176,9 +187,10 @@ class CallTransferService {
       this.activeTransfers.delete(originalCallId);
 
       return { success: true, conferenceId: conferenceName };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallTransfer] Complete warm transfer failed:', error, { file: 'call-transfer-service.ts' });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -199,9 +211,10 @@ class CallTransferService {
       this.activeTransfers.delete(originalCallId);
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallTransfer] Cancel warm transfer failed:', error, { file: 'call-transfer-service.ts' });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -212,7 +225,12 @@ class CallTransferService {
   async conferenceTransfer(request: TransferRequest): Promise<TransferResult> {
     try {
       const provider = await VoiceProviderFactory.getProvider(request.organizationId);
-      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId!);
+
+      if (!request.toPhone && !request.toAgentId) {
+        throw new Error('Either toPhone or toAgentId must be provided');
+      }
+
+      const destination = request.toPhone ?? await this.getAgentPhone(request.organizationId, request.toAgentId as string);
 
       // Create conference
       const conferenceName = `conf-${request.callId}-${Date.now()}`;
@@ -254,10 +272,11 @@ class CallTransferService {
       await this.logTransfer(request, 'conference', true);
 
       return { success: true, conferenceId: conferenceName, newCallId: newCall.callId };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallTransfer] Conference transfer failed:', error, { file: 'call-transfer-service.ts' });
-      await this.logTransfer(request, 'conference', false, error.message);
-      return { success: false, error: error.message };
+      await this.logTransfer(request, 'conference', false, errorMessage);
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -311,9 +330,10 @@ class CallTransferService {
       await this.logAIHandoff(context, agent, result.success);
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[CallTransfer] AI-to-Human handoff failed:', error, { file: 'call-transfer-service.ts' });
-      return { success: false, error: error.message };
+      return { success: false, error: errorMessage };
     }
   }
 
@@ -325,7 +345,7 @@ class CallTransferService {
       const response = await fetch(`/api/voice/agents/available?organizationId=${organizationId}&intent=${encodeURIComponent(intent ?? '')}`);
       if (!response.ok) {return null;}
 
-      const data = await response.json();
+      const data = await response.json() as { agents?: TransferAgent[] };
       const agents: TransferAgent[] = data.agents ?? [];
 
       // Find agent with matching skills and lowest workload
@@ -356,7 +376,7 @@ class CallTransferService {
     if (!response.ok) {
       throw new Error('Agent not found');
     }
-    const data = await response.json();
+    const data = await response.json() as { phone: string };
     return data.phone;
   }
 
@@ -368,7 +388,7 @@ class CallTransferService {
     if (!response.ok) {
       throw new Error('Voice settings not found');
     }
-    const data = await response.json();
+    const data = await response.json() as { callerId?: string; phoneNumber: string };
     return data.callerId ?? data.phoneNumber;
   }
 

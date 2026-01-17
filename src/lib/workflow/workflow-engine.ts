@@ -27,13 +27,14 @@ import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase/firestore';
 import type {
   Workflow,
-  WorkflowExecution,
-  WorkflowExecutionStatus,
   WorkflowAction,
-  WorkflowTrigger,
   TriggerCondition,
   ActionExecutionResult,
-  WorkflowActionType,
+  EmailActionConfig,
+  TaskActionConfig,
+  DealActionConfig,
+  NotificationActionConfig,
+  WaitActionConfig,
 } from './types';
 import type { DealScore } from '@/lib/templates/deal-scoring-engine';
 
@@ -487,9 +488,10 @@ export class WorkflowEngine {
     context: WorkflowExecutionContext,
     workflow: Workflow
   ): Promise<ActionExecutionResult> {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const retry = action.retry!;
     let lastError: Error | undefined;
-    
+
     for (let attempt = 0; attempt < retry.maxAttempts; attempt++) {
       try {
         logger.info('Retrying action execution', {
@@ -498,12 +500,12 @@ export class WorkflowEngine {
           attempt: attempt + 1,
           maxAttempts: retry.maxAttempts,
         });
-        
+
         // Wait before retry (with exponential backoff)
         if (attempt > 0) {
           const backoff = retry.backoffMultiplier ?? 1;
           const delay = retry.delayMs * Math.pow(backoff, attempt - 1);
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          await new Promise<void>((resolve) => setTimeout(resolve, delay));
         }
         
         return await this.executeAction(action, context, workflow);
@@ -545,8 +547,8 @@ export class WorkflowEngine {
   ): Promise<Record<string, unknown>> {
     // Import dynamically to avoid circular dependencies
     const { generateSalesEmail } = await import('@/lib/email-writer/email-writer-engine');
-    
-    const config = action.config as any; // EmailActionConfig
+
+    const config = action.config as EmailActionConfig;
     
     // Resolve recipient
     const recipientEmail = config.recipientEmail ?? 

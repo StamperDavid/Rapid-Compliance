@@ -99,8 +99,8 @@ export function useAuth() {
       });
 
       return () => unsubscribe();
-    }).catch((error) => {
-      logger.error('Error checking Firebase config:', error, { file: 'useAuth.ts' });
+    }).catch((error: unknown) => {
+      logger.error('Error checking Firebase config:', error as Error, { file: 'useAuth.ts' });
       // Fallback to demo mode
       setUser({
         id: 'demo-user',

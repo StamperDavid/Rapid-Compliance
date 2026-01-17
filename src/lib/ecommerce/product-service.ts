@@ -3,7 +3,7 @@
  * Business logic layer for product/catalog management
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { QueryConstraint, QueryDocumentSnapshot } from 'firebase/firestore';
 import { where, orderBy } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -28,11 +28,11 @@ export interface Product {
   isDigital?: boolean;
   downloadUrl?: string;
   variants?: ProductVariant[];
-  customFields?: Record<string, any>;
+  customFields?: Record<string, unknown>;
   seoTitle?: string;
   seoDescription?: string;
-  createdAt: any;
-  updatedAt?: any;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface ProductVariant {
@@ -97,10 +97,10 @@ export async function getProducts(
     // Client-side price filtering (Firestore can't do range queries on multiple fields)
     let filtered = result.data;
     if (filters?.minPrice !== undefined) {
-      filtered = filtered.filter(p => p.price >= filters.minPrice!);
+      filtered = filtered.filter(p => filters.minPrice !== undefined && p.price >= filters.minPrice);
     }
     if (filters?.maxPrice !== undefined) {
-      filtered = filtered.filter(p => p.price <= filters.maxPrice!);
+      filtered = filtered.filter(p => filters.maxPrice !== undefined && p.price <= filters.maxPrice);
     }
 
     logger.info('Products retrieved', {
@@ -113,9 +113,10 @@ export async function getProducts(
       ...result,
       data: filtered,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Failed to get products', error, { organizationId, filters });
-    throw new Error(`Failed to retrieve products: ${error.message}`);
+    throw new Error(`Failed to retrieve products: ${err.message}`);
   }
 }
 
@@ -140,9 +141,10 @@ export async function getProduct(
 
     logger.info('Product retrieved', { organizationId, productId });
     return product;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Failed to get product', error, { organizationId, productId });
-    throw new Error(`Failed to retrieve product: ${error.message}`);
+    throw new Error(`Failed to retrieve product: ${err.message}`);
   }
 }
 
@@ -188,9 +190,10 @@ export async function createProduct(
     });
 
     return product;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Failed to create product', error, { organizationId, data });
-    throw new Error(`Failed to create product: ${error.message}`);
+    throw new Error(`Failed to create product: ${err.message}`);
   }
 }
 
@@ -227,9 +230,10 @@ export async function updateProduct(
     }
 
     return product;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Failed to update product', error, { organizationId, productId });
-    throw new Error(`Failed to update product: ${error.message}`);
+    throw new Error(`Failed to update product: ${err.message}`);
   }
 }
 
@@ -248,9 +252,10 @@ export async function deleteProduct(
     );
 
     logger.info('Product deleted', { organizationId, productId });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Failed to delete product', error, { organizationId, productId });
-    throw new Error(`Failed to delete product: ${error.message}`);
+    throw new Error(`Failed to delete product: ${err.message}`);
   }
 }
 
@@ -291,9 +296,10 @@ export async function updateInventory(
     });
 
     return updated;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Failed to update inventory', error, { organizationId, productId, quantityChange });
-    throw new Error(`Failed to update inventory: ${error.message}`);
+    throw new Error(`Failed to update inventory: ${err.message}`);
   }
 }
 
@@ -340,9 +346,10 @@ export async function searchProducts(
       lastDoc: result.lastDoc,
       hasMore: result.hasMore,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Product search failed', error, { organizationId, searchTerm });
-    throw new Error(`Search failed: ${error.message}`);
+    throw new Error(`Search failed: ${err.message}`);
   }
 }
 
@@ -375,9 +382,10 @@ export async function bulkUpdateProducts(
     });
 
     return successCount;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     logger.error('Bulk product update failed', error, { organizationId, productIds });
-    throw new Error(`Bulk update failed: ${error.message}`);
+    throw new Error(`Bulk update failed: ${err.message}`);
   }
 }
 

@@ -375,12 +375,18 @@ function getMeetingDescription(type: string): string {
 async function getHostDetails(userId: string): Promise<{ name: string; email: string }> {
   try {
     const { dal } = await import('@/lib/firebase/dal');
-    
+
+    interface UserDoc {
+      name?: string;
+      displayName?: string;
+      email?: string;
+    }
+
     // Get user from Firestore using DAL
     const userDoc = await dal.safeGetDoc('USERS', userId);
-    
+
     if (userDoc.exists()) {
-      const user = userDoc.data() as any;
+      const user = userDoc.data() as UserDoc;
       return {
         name:(user.name ?? user.displayName ?? 'Sales Team'),
         email:(user.email ?? 'sales@company.com'),
@@ -578,7 +584,7 @@ async function cancelCalendarEvent(calendarEventId: string, userId?: string): Pr
   }
 }
 
-async function sendCalendarInvite(meeting: ScheduledMeeting): Promise<void> {
+function sendCalendarInvite(meeting: ScheduledMeeting): void {
   // Google Calendar sends invites automatically when creating event
   const attendees = meeting.attendees.map(a => a.email).join(', ');
   logger.info(`Meeting Scheduler Calendar invites sent to ${attendees}`, { file: 'meeting-scheduler.ts' });
@@ -588,7 +594,16 @@ async function getCalendarTokens(userId: string): Promise<{ access_token: string
   try {
     const { dal } = await import('@/lib/firebase/dal');
     const { where } = await import('firebase/firestore');
-    
+
+    interface IntegrationCredentials {
+      access_token: string;
+      refresh_token?: string;
+    }
+
+    interface IntegrationDoc {
+      credentials: IntegrationCredentials;
+    }
+
     const snapshot = await dal.safeGetDocs('INTEGRATIONS',
       where('userId', '==', userId),
       where('provider', '==', 'google'),
@@ -597,7 +612,7 @@ async function getCalendarTokens(userId: string): Promise<{ access_token: string
     );
 
     if (!snapshot.empty) {
-      const integration = snapshot.docs[0].data();
+      const integration = snapshot.docs[0].data() as IntegrationDoc;
       return {
         access_token: integration.credentials.access_token,
         refresh_token: integration.credentials.refresh_token,
@@ -627,9 +642,14 @@ async function sendMeetingUpdate(
     const { getOrgSubCollection } = await import('@/lib/firebase/collections');
     
     const settingsPath = getOrgSubCollection(meeting.organizationId, 'settings');
+    interface OrgEmailSettings {
+      companyName?: string;
+      replyToEmail?: string;
+    }
+
     const settingsDoc = await getDoc(doc(db, settingsPath, 'email'));
-    const orgSettings = settingsDoc.exists() ? settingsDoc.data() : null;
-    
+    const orgSettings = settingsDoc.exists() ? (settingsDoc.data() as OrgEmailSettings) : null;
+
     const settingsCompanyName = orgSettings?.companyName;
     const companyName = (settingsCompanyName !== '' && settingsCompanyName != null) ? settingsCompanyName : 'Our Team';
     const replyTo = orgSettings?.replyToEmail ?? meeting.host.email;

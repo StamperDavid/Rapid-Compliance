@@ -184,8 +184,17 @@ export async function getFundingRounds(
       return [];
     }
 
-    const data = await response.json();
-    return data.cards?.funding_rounds ?? [];
+    const data: unknown = await response.json();
+
+    interface FundingResponse {
+      cards?: {
+        funding_rounds?: CrunchbaseFundingRound[];
+      };
+    }
+
+    const typedData = data as FundingResponse;
+
+    return typedData.cards?.funding_rounds ?? [];
   } catch (error) {
     logger.error('[Crunchbase] Error getting funding rounds:', error, { file: 'crunchbase-service.ts' });
     return [];

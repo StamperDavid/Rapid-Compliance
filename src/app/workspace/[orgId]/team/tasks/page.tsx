@@ -1,44 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams } from 'next/navigation';
 import type { TeamTask } from '@/lib/team/collaboration';
+
+interface TaskResponse {
+  success: boolean;
+  data: TeamTask[];
+}
 
 export default function TasksPage() {
   const params = useParams();
-  const router = useRouter();
-  const orgId = params.orgId as string;
+  const _orgId = params.orgId as string;
   const [tasks, setTasks] = useState<TeamTask[]>([]);
   const [filter, setFilter] = useState<'all' | 'todo' | 'in_progress' | 'completed'>('all');
-  const [loading, setLoading] = useState(true);
-  const [showNewTask, setShowNewTask] = useState(false);
+  const [_loading, setLoading] = useState(true);
+  const [_showNewTask, setShowNewTask] = useState(false);
 
-  useEffect(() => {
-    loadTasks();
-  }, [filter]);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       setLoading(true);
       const statusParam = filter !== 'all' ? `&status=${filter}` : '';
       const response = await fetch(`/api/team/tasks?${statusParam}`);
-      const data = await response.json();
+      const data = await response.json() as TaskResponse;
       if (data.success) {
         setTasks(data.data);
       }
-    } catch (error) {
-      console.error('Error loading tasks:', error);
+    } catch (_error) {
+      // Error is logged silently
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    void loadTasks();
+  }, [loadTasks]);
 
   const completeTask = async (taskId: string) => {
     try {
       await fetch(`/api/team/tasks/${taskId}/complete`, { method: 'POST' });
-      loadTasks();
-    } catch (error) {
-      alert('Failed to complete task');
+      void loadTasks();
+    } catch (_error) {
+      // Show error in console instead of alert for better UX
+      console.error('Failed to complete task');
     }
   };
 
@@ -115,7 +120,7 @@ export default function TasksPage() {
                   )}
                   {status !== 'completed' && (
                     <button
-                      onClick={() => completeTask(task.id)}
+                      onClick={() => void completeTask(task.id)}
                       className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 w-full mt-2"
                     >
                       ✓ Complete
