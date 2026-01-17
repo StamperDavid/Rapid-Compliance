@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       analysis,
     });
   } catch (error: unknown) {
-    logger.error('Error analyzing session', error, { route: '/api/training/analyze-session' });
+    logger.error('Error analyzing session', error instanceof Error ? error : undefined, { route: '/api/training/analyze-session' });
     return errors.database('Failed to analyze session', error instanceof Error ? error : undefined);
   }
 }

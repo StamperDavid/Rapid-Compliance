@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         });
         sent = true;
       } catch (sendError) {
-        logger.error('Failed to auto-send reply', sendError, { route: '/api/outbound/reply/process' });
+        logger.error('Failed to auto-send reply', sendError instanceof Error ? sendError : undefined, { route: '/api/outbound/reply/process' });
         sent = false;
       }
     }
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Reply processing error', error, { route: '/api/outbound/reply/process' });
+    logger.error('Reply processing error', error instanceof Error ? error : undefined, { route: '/api/outbound/reply/process' });
     return errors.internal('Failed to process reply', error instanceof Error ? error : undefined);
   }
 }

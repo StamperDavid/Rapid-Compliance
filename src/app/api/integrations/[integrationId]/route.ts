@@ -43,7 +43,7 @@ export async function GET(
       integration,
     });
   } catch (error: unknown) {
-    logger.error('Error fetching integration', error, { route: '/api/integrations' });
+    logger.error('Error fetching integration', error instanceof Error ? error : undefined, { route: '/api/integrations' });
     return errors.database('Failed to fetch integration', error instanceof Error ? error : undefined);
   }
 }
@@ -93,7 +93,7 @@ export async function PATCH(
       message: 'Integration updated',
     });
   } catch (error: unknown) {
-    logger.error('Error updating integration', error, { route: '/api/integrations' });
+    logger.error('Error updating integration', error instanceof Error ? error : undefined, { route: '/api/integrations' });
     return errors.database('Failed to update integration', error instanceof Error ? error : undefined);
   }
 }
@@ -124,7 +124,7 @@ export async function DELETE(
       message: 'Integration deleted',
     });
   } catch (error: unknown) {
-    logger.error('Error deleting integration', error, { route: '/api/integrations' });
+    logger.error('Error deleting integration', error instanceof Error ? error : undefined, { route: '/api/integrations' });
     return errors.database('Failed to delete integration', error instanceof Error ? error : undefined);
   }
 }

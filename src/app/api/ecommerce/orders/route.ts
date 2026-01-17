@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       route: '/api/ecommerce/orders',
       workspaceId,
       pageSize,
-      filters: { customerEmail, status },
+      filters: JSON.stringify({ customerEmail, status }),
     });
 
     // Use paginated query
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    logger.error('Error listing orders', error, {
+    logger.error('Error listing orders', error instanceof Error ? error : undefined, {
       route: '/api/ecommerce/orders',
     });
     return errors.database('Failed to list orders', error instanceof Error ? error : undefined);

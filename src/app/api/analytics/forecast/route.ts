@@ -264,7 +264,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error getting sales forecast', error, { route: '/api/analytics/forecast' });
+    logger.error('Error getting sales forecast', error instanceof Error ? error : undefined, { route: '/api/analytics/forecast' });
     return errors.database('Failed to get sales forecast', error instanceof Error ? error : new Error(message));
   }
 }

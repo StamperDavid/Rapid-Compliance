@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Domains API] GET error', error, { route: '/api/website/domains' });
+    logger.error('[Domains API] GET error', error instanceof Error ? error : undefined, { route: '/api/website/domains' });
     return NextResponse.json(
       { error: 'Failed to fetch domains', details: message },
       { status: 500 }
@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('[Domains API] POST error', error, { route: '/api/website/domains' });
+    logger.error('[Domains API] POST error', error instanceof Error ? error : undefined, { route: '/api/website/domains' });
     return NextResponse.json(
       { error: 'Failed to add domain', details: message },
       { status: 500 }

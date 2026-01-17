@@ -40,7 +40,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, schema: { id: docSnap.id, ...docSnap.data() } });
   } catch (error: unknown) {
-    logger.error('Failed to fetch schema', error, {
+    logger.error('Failed to fetch schema', error instanceof Error ? error : undefined, {
       route: '/api/schemas/[schemaId]',
       method: 'GET'
     });
@@ -90,7 +90,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    logger.error('Failed to delete schema', error, {
+    logger.error('Failed to delete schema', error instanceof Error ? error : undefined, {
       route: '/api/schemas/[schemaId]',
       method: 'DELETE'
     });

@@ -86,7 +86,7 @@ export async function GET(
     return NextResponse.redirect(authUrl);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to initiate OAuth';
-    logger.error('OAuth initiation error', { error: errorMessage, route: '/api/integrations/oauth' });
+    logger.error('OAuth initiation error', error instanceof Error ? error : undefined, { route: '/api/integrations/oauth' });
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

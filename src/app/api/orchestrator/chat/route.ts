@@ -444,7 +444,7 @@ export async function POST(request: NextRequest) {
       try {
         await persistConversation(organizationId, context, message, finalResponse, modelUsed);
       } catch (error) {
-        logger.warn('[Jasper] Failed to persist conversation', { error });
+        logger.warn('[Jasper] Failed to persist conversation', { error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -472,7 +472,7 @@ export async function POST(request: NextRequest) {
           charactersUsed: ttsResponse.charactersUsed,
         });
       } catch (ttsError) {
-        logger.warn('[Jasper] TTS generation failed', { error: ttsError });
+        logger.warn('[Jasper] TTS generation failed', { error: ttsError instanceof Error ? ttsError.message : String(ttsError) });
         // Continue without audio - don't fail the whole request
       }
     }
@@ -519,16 +519,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the FULL error to the terminal for debugging
-    logger.error('[Jasper] OpenRouter API FAILED', structuredError, {
+    logger.error('[Jasper] OpenRouter API FAILED', structuredError instanceof Error ? structuredError : undefined, {
       message: structuredError.message,
-      openRouterDetails,
+      openRouterDetails: openRouterDetails ? JSON.stringify(openRouterDetails) : undefined,
       stack: structuredError.stack,
       name: structuredError.name,
-      cause: structuredError.cause,
+      cause: structuredError.cause ? String(structuredError.cause) : undefined,
     });
-    logger.error('[Jasper] Chat error', structuredError, {
+    logger.error('[Jasper] Chat error', structuredError instanceof Error ? structuredError : undefined, {
       route: '/api/orchestrator/chat',
-      openRouterDetails,
+      openRouterDetails: openRouterDetails ? JSON.stringify(openRouterDetails) : undefined,
     });
 
     // Return structured error response

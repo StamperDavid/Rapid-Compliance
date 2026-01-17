@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error: unknown) {
-    logger.error('Report execution error', error, { route: '/api/reports/execute' });
+    logger.error('Report execution error', error instanceof Error ? error : undefined, { route: '/api/reports/execute' });
     return errors.internal('Failed to execute report', error instanceof Error ? error : undefined);
   }
 }

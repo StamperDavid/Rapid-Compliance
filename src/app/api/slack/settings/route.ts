@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: unknown) {
-    logger.error('Failed to get Slack settings', { error });
+    logger.error('Failed to get Slack settings', error instanceof Error ? error : undefined, {});
     const errorMessage = error instanceof Error ? error.message : 'Failed to get settings';
 
     return NextResponse.json(
@@ -164,7 +164,7 @@ export async function PUT(request: NextRequest) {
     });
     
   } catch (error: unknown) {
-    logger.error('Failed to update Slack settings', { error });
+    logger.error('Failed to update Slack settings', error instanceof Error ? error : undefined, {});
     const errorMessage = error instanceof Error ? error.message : 'Failed to update settings';
 
     return NextResponse.json(

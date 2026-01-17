@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Failed to start deal monitor', error);
+    logger.error('Failed to start deal monitor', error instanceof Error ? error : undefined);
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to start deal monitor';
     return NextResponse.json(

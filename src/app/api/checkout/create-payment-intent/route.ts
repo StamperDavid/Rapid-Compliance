@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    logger.error('Payment intent creation error', error, {
+    logger.error('Payment intent creation error', error instanceof Error ? error : undefined, {
       route: '/api/checkout/create-payment-intent',
       organizationId: requestOrganizationId,
     });

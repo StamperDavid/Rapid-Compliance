@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to generate auth URL';
-    logger.error('Error generating auth URL', { error: errorMessage, route: '/api/integrations/oauth/authorize' });
+    logger.error('Error generating auth URL', error instanceof Error ? error : undefined, { route: '/api/integrations/oauth/authorize' });
     return errors.externalService('OAuth service', error instanceof Error ? error : undefined);
   }
 }

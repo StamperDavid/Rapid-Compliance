@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         research = await researchProspect(prospectData);
         logger.info('Prospect research completed', { route: '/api/outbound/email/generate', company: prospectData.company });
       } catch (researchError) {
-        logger.warn('Prospect research failed, continuing without it', { route: '/api/outbound/email/generate', error: researchError });
+        logger.warn('Prospect research failed, continuing without it', { route: '/api/outbound/email/generate', error: researchError instanceof Error ? researchError.message : String(researchError) });
         // Continue without research - won't fail the email generation
       }
     }
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Email generation error', error, { route: '/api/outbound/email/generate' });
+    logger.error('Email generation error', error instanceof Error ? error : undefined, { route: '/api/outbound/email/generate' });
     return errors.externalService('AI email generation', error instanceof Error ? error : undefined);
   }
 }

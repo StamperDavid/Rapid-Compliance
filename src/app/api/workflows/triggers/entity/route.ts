@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       message: 'Entity change processed, workflows triggered',
     });
   } catch (error: unknown) {
-    logger.error('Error processing entity change', error, { route: '/api/workflows/triggers/entity' });
+    logger.error('Error processing entity change', error instanceof Error ? error : undefined, { route: '/api/workflows/triggers/entity' });
     return errors.internal('Failed to process entity change', error instanceof Error ? error : undefined);
   }
 }

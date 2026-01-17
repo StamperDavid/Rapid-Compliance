@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     if (validation.success === false) {
       logger.warn('Invalid workflow execution request', {
         error: validation.error,
-        details: validation.details,
+        details: validation.details ? JSON.stringify(validation.details) : undefined,
       });
 
       return NextResponse.json(
@@ -111,8 +111,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     const duration = Date.now() - startTime;
 
-    logger.error('Unexpected error in workflow execution endpoint', {
-      error,
+    logger.error('Unexpected error in workflow execution endpoint', error instanceof Error ? error : undefined, {
       durationMs: duration,
     });
 

@@ -22,7 +22,7 @@ export function GET(_request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('[Debouncer API] GET failed', error, {
+    logger.error('[Debouncer API] GET failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
     
   } catch (error) {
-    logger.error('[Debouncer API] POST failed', error, {
+    logger.error('[Debouncer API] POST failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     

@@ -30,7 +30,7 @@ interface GmailMessagePayload {
   body?: GmailMessagePartBody | null;
 }
 
-interface GmailMessage {
+export interface GmailMessage {
   id?: string | null;
   threadId?: string | null;
   payload?: GmailMessagePayload | null;

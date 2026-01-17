@@ -83,7 +83,7 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
           },
         });
       } catch (transferError) {
-        logger.error('[AI-Fallback] Transfer notification failed:', transferError, {
+        logger.error('[AI-Fallback] Transfer notification failed:', transferError instanceof Error ? transferError : undefined, {
           file: 'ai-agent/fallback/route.ts',
         });
       }
@@ -111,7 +111,7 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
     });
 
   } catch (error: unknown) {
-    logger.error('[AI-Fallback] Error in fallback handler:', error, {
+    logger.error('[AI-Fallback] Error in fallback handler:', error instanceof Error ? error : undefined, {
       file: 'ai-agent/fallback/route.ts',
     });
 

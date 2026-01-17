@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       templateId: body.templateId,
       dealId: body.dealId,
       contactId: body.contactId,
-      variables: body.variables ?? {},
+      variables: (body.variables ?? {}) as Record<string, string | number | Date>,
       lineItems: body.lineItems ?? [],
       validUntil: body.validUntil ? new Date(body.validUntil) : undefined,
       notes: body.notes,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('Proposal generation API failed', error);
+    logger.error('Proposal generation API failed', error instanceof Error ? error : undefined);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { success: false, error: message },

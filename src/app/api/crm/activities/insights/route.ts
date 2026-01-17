@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('Insights GET failed', error);
+    logger.error('Insights GET failed', error instanceof Error ? error : undefined);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       { success: false, error: errorMessage },

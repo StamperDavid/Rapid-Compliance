@@ -171,7 +171,7 @@ export async function POST(
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to publish blog post', error, {
+    logger.error('Failed to publish blog post', error instanceof Error ? error : undefined, {
       route: '/api/website/blog/posts/[postId]/publish',
       method: 'POST'
     });
@@ -279,7 +279,7 @@ export async function DELETE(
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to unpublish blog post', error, {
+    logger.error('Failed to unpublish blog post', error instanceof Error ? error : undefined, {
       route: '/api/website/blog/posts/[postId]/publish',
       method: 'DELETE'
     });

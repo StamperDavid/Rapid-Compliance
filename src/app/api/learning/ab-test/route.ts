@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('A/B test GET error', error, { route: '/api/learning/ab-test' });
+    logger.error('A/B test GET error', error instanceof Error ? error : undefined, { route: '/api/learning/ab-test' });
     return errors.database('Failed to get A/B test', error instanceof Error ? error : undefined);
   }
 }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       message: `A/B test started: ${controlModel} vs ${treatmentModel}`,
     });
   } catch (error) {
-    logger.error('A/B test creation error', error, { route: '/api/learning/ab-test' });
+    logger.error('A/B test creation error', error instanceof Error ? error : undefined, { route: '/api/learning/ab-test' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to create A/B test';
     return NextResponse.json(
       { error: errorMessage },
@@ -192,7 +192,7 @@ export async function PUT(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    logger.error('A/B test PUT error', error, { route: '/api/learning/ab-test' });
+    logger.error('A/B test PUT error', error instanceof Error ? error : undefined, { route: '/api/learning/ab-test' });
     return errors.database('Failed to update A/B test', error instanceof Error ? error : undefined);
   }
 }

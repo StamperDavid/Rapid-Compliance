@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
     const validation = oauthCallbackSchema.safeParse({ code, state });
 
     if (!validation.success) {
-      logger.error('Invalid OAuth callback parameters', {
-        errors: validation.error.errors,
+      logger.error('Invalid OAuth callback parameters', undefined, {
+        errors: JSON.stringify(validation.error.errors),
       });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=invalid_callback`
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     const stateDoc = await db.collection('slack_oauth_states').doc(validatedState).get();
     
     if (!stateDoc.exists) {
-      logger.error('Invalid or expired OAuth state', { state });
+      logger.error('Invalid or expired OAuth state', undefined, { state });
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=invalid_state`
       );
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     
     // Check expiration
     if (oauthState.expiresAt.toMillis() < Date.now()) {
-      logger.error('OAuth state expired', { state });
+      logger.error('OAuth state expired', undefined, { state });
       await db.collection('slack_oauth_states').doc(validatedState).delete();
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=state_expired`
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${redirectUrl}?success=slack_connected`);
     
   } catch (error) {
-    logger.error('Failed to handle Slack OAuth callback', { error });
+    logger.error('Failed to handle Slack OAuth callback', error instanceof Error ? error : undefined, {});
     
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=oauth_failed`

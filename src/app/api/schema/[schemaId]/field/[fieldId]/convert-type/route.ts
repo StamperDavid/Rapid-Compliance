@@ -73,7 +73,7 @@ export async function GET(
     });
     
   } catch (error) {
-    logger.error('[Type Conversion API] GET failed', error, {
+    logger.error('[Type Conversion API] GET failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     
@@ -229,7 +229,7 @@ export async function POST(
     });
     
   } catch (error) {
-    logger.error('[Type Conversion] Execution failed', error, {
+    logger.error('[Type Conversion] Execution failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     

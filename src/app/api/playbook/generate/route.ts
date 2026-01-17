@@ -137,7 +137,7 @@ function parsePlaybookRequestOrError(body: unknown): GeneratePlaybookRequest | N
     return validateGeneratePlaybookRequest(body) as GeneratePlaybookRequest;
   } catch (error) {
     if (error instanceof ZodError) {
-      logger.warn('Invalid playbook generation request', { errors: error.errors });
+      logger.warn('Invalid playbook generation request', { errors: JSON.stringify(error.errors) });
       return NextResponse.json(
         {
           success: false,
@@ -303,9 +303,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const processingTime = Date.now() - startTime;
     
-    logger.error('Playbook generation failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+    logger.error('Playbook generation failed', error instanceof Error ? error : undefined, {
       processingTime,
     });
     

@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     const stateValidation = OAuthStateSchema.safeParse(decodedState);
     if (!stateValidation.success) {
-      logger.warn('Invalid OAuth state', { errors: stateValidation.error.errors });
+      logger.warn('Invalid OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
       return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=invalid_state'));
     }
 
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?success=gmail'));
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Google OAuth callback error', { error: errorMessage, route: '/api/integrations/google/callback' });
+    logger.error('Google OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/google/callback' });
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=oauth_failed'));
   }
 }

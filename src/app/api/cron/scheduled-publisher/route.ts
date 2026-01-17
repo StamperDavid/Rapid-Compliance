@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Scheduled publisher error', error, {
+    logger.error('Scheduled publisher error', error instanceof Error ? error : undefined, {
       route: '/api/cron/scheduled-publisher',
       method: 'GET'
     });

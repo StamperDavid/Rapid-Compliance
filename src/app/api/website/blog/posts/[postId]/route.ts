@@ -114,7 +114,7 @@ export async function GET(
       },
     });
   } catch (error: unknown) {
-    logger.error('Failed to fetch blog post', error, {
+    logger.error('Failed to fetch blog post', error instanceof Error ? error : undefined, {
       route: '/api/website/blog/posts/[postId]',
       method: 'GET'
     });
@@ -209,7 +209,7 @@ export async function PUT(
 
     return NextResponse.json({ post: updatedPost });
   } catch (error: unknown) {
-    logger.error('Failed to update blog post', error, {
+    logger.error('Failed to update blog post', error instanceof Error ? error : undefined, {
       route: '/api/website/blog/posts/[postId]',
       method: 'PUT'
     });
@@ -283,7 +283,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    logger.error('Failed to delete blog post', error, {
+    logger.error('Failed to delete blog post', error instanceof Error ? error : undefined, {
       route: '/api/website/blog/posts/[postId]',
       method: 'DELETE'
     });

@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         userId = stateValidation.data.userId;
         orgId = stateValidation.data.orgId;
       } else {
-        logger.warn('Invalid QuickBooks OAuth state', { errors: stateValidation.error.errors });
+        logger.warn('Invalid QuickBooks OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
       }
     }
 
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`/workspace/${orgId}/integrations?success=quickbooks`);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('QuickBooks OAuth callback error', { error: errorMessage, route: '/api/integrations/quickbooks/callback' });
+    logger.error('QuickBooks OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/quickbooks/callback' });
     return NextResponse.redirect('/integrations?error=oauth_failed');
   }
 }

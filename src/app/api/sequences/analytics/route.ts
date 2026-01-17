@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('[Analytics API] Error fetching analytics', error);
+    logger.error('[Analytics API] Error fetching analytics', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: 'Failed to fetch analytics' },
       { status: 500 }
@@ -326,7 +326,7 @@ async function getSequencePerformance(
       }
 
       if (!isNativeSequenceData(data)) {
-        logger.error('[Analytics] Invalid native sequence data structure', { sequenceId });
+        logger.error('[Analytics] Invalid native sequence data structure', undefined, { sequenceId });
         return null;
       }
 
@@ -350,14 +350,14 @@ async function getSequencePerformance(
     }
 
     if (!isLegacySequenceData(legacyData)) {
-      logger.error('[Analytics] Invalid legacy sequence data structure', { sequenceId });
+      logger.error('[Analytics] Invalid legacy sequence data structure', undefined, { sequenceId });
       return null;
     }
 
     return buildLegacySequencePerformance(sequenceId, legacyData);
 
   } catch (error) {
-    logger.error('[Analytics] Error fetching sequence performance', error, { sequenceId });
+    logger.error('[Analytics] Error fetching sequence performance', error instanceof Error ? error : undefined, { sequenceId });
     throw error;
   }
 }
@@ -410,7 +410,7 @@ async function getAllSequencePerformances(
     return performances;
 
   } catch (error) {
-    logger.error('[Analytics] Error fetching all performances', error);
+    logger.error('[Analytics] Error fetching all performances', error instanceof Error ? error : undefined);
     throw error;
   }
 }
@@ -683,7 +683,7 @@ async function getAnalyticsSummary(
     };
 
   } catch (error) {
-    logger.error('[Analytics] Error building summary', error);
+    logger.error('[Analytics] Error building summary', error instanceof Error ? error : undefined);
     throw error;
   }
 }

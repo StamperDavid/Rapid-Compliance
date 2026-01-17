@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ navigation: navigationData });
   } catch (error) {
-    logger.error('Failed to fetch navigation', error, {
+    logger.error('Failed to fetch navigation', error instanceof Error ? error : undefined, {
       route: '/api/website/navigation',
       method: 'GET'
     });
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ navigation: navigationData });
   } catch (error) {
-    logger.error('Failed to save navigation', error, {
+    logger.error('Failed to save navigation', error instanceof Error ? error : undefined, {
       route: '/api/website/navigation',
       method: 'POST'
     });

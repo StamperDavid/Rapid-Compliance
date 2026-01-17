@@ -243,7 +243,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error getting workflow analytics', error, { route: '/api/analytics/workflows' });
+    logger.error('Error getting workflow analytics', error instanceof Error ? error : undefined, { route: '/api/analytics/workflows' });
     return errors.database('Failed to get workflow analytics', error instanceof Error ? error : new Error(message));
   }
 }

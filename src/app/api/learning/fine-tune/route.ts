@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         );
     }
   } catch (error) {
-    logger.error('Fine-tune API error', error, { route: '/api/learning/fine-tune' });
+    logger.error('Fine-tune API error', error instanceof Error ? error : undefined, { route: '/api/learning/fine-tune' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to get training data';
     return NextResponse.json(
       { error: errorMessage },
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    logger.error('Fine-tune POST error', error, { route: '/api/learning/fine-tune' });
+    logger.error('Fine-tune POST error', error instanceof Error ? error : undefined, { route: '/api/learning/fine-tune' });
     return errors.database('Failed to process request', error instanceof Error ? error : undefined);
   }
 }
@@ -311,7 +311,7 @@ export async function PUT(request: NextRequest) {
       message: 'Learning configuration updated',
     });
   } catch (error) {
-    logger.error('Fine-tune PUT error', error, { route: '/api/learning/fine-tune' });
+    logger.error('Fine-tune PUT error', error instanceof Error ? error : undefined, { route: '/api/learning/fine-tune' });
     return errors.database('Failed to update config', error instanceof Error ? error : undefined);
   }
 }

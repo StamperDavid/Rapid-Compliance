@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         logger.debug('Creating new organization during onboarding', { organizationId, userId: user.uid, route: '/api/agent/process-onboarding' });
       }
     } catch (error: unknown) {
-      logger.error('Error checking organization access', error, { route: '/api/agent/process-onboarding' });
+      logger.error('Error checking organization access', error instanceof Error ? error : undefined, { route: '/api/agent/process-onboarding' });
       // If we can't verify, allow it (onboarding scenario)
     }
 
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
       orgUpdate.ownerName = typedOnboardingData.ownerName;
     }
 
-    await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, orgUpdate);
+    await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, organizationId, orgUpdate as unknown as Record<string, unknown>);
 
     // Process onboarding
     const result = await processOnboarding({
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
             updatedAt: new Date().toISOString(),
           });
         } catch (error: unknown) {
-          logger.warn('Failed to update user organizationId', { route: '/api/agent/process-onboarding', error });
+          logger.warn('Failed to update user organizationId', { route: '/api/agent/process-onboarding', error: error instanceof Error ? error.message : String(error) });
           // Continue anyway - onboarding succeeded
         }
       }
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error: unknown) {
-    logger.error('Onboarding processing error', error, { route: '/api/agent/process-onboarding' });
+    logger.error('Onboarding processing error', error instanceof Error ? error : undefined, { route: '/api/agent/process-onboarding' });
     return errors.internal('Failed to process onboarding', error instanceof Error ? error : undefined);
   }
 }

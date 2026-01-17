@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Error listing sequences', error, { route: '/api/outbound/sequences' });
+    logger.error('Error listing sequences', error instanceof Error ? error : undefined, { route: '/api/outbound/sequences' });
     return errors.database('Failed to list sequences', error instanceof Error ? error : undefined);
   }
 }
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
       sequence,
     });
   } catch (error) {
-    logger.error('Error creating sequence', error, { route: '/api/outbound/sequences' });
+    logger.error('Error creating sequence', error instanceof Error ? error : undefined, { route: '/api/outbound/sequences' });
     return errors.database('Failed to create sequence', error instanceof Error ? error : undefined);
   }
 }

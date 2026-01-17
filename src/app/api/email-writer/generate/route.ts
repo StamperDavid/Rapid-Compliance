@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
     if (validation.success === false) {
       const { error, details } = validation;
       logger.warn('Invalid email generation request', {
-        error,
-        details,
+        error: String(error),
+        details: details ? JSON.stringify(details) : undefined,
       });
 
       return NextResponse.json(
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime;
 
     if (!result.success) {
-      logger.error('Email generation failed', {
+      logger.error('Email generation failed', undefined, {
         error: result.error,
         organizationId: validData.organizationId,
         dealId: validData.dealId,
@@ -117,8 +117,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
 
-    logger.error('Unexpected error in email generation endpoint', {
-      error,
+    logger.error('Unexpected error in email generation endpoint', error instanceof Error ? error : undefined, {
       duration,
     });
 

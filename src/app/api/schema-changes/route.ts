@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('[Schema Changes API] GET failed', error, {
+    logger.error('[Schema Changes API] GET failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     }
     
   } catch (error) {
-    logger.error('[Schema Changes API] POST failed', error, {
+    logger.error('[Schema Changes API] POST failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     

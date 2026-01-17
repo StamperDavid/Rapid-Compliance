@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: unknown) {
-    logger.error('Fatal error processing sequences (cron)', error, { route: '/api/cron/process-sequences' });
+    logger.error('Fatal error processing sequences (cron)', error instanceof Error ? error : undefined, { route: '/api/cron/process-sequences' });
     return errors.internal('Failed to process sequences', error instanceof Error ? error : undefined);
   }
 }

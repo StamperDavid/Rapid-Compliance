@@ -96,7 +96,7 @@ Sitemap: https://${host}/sitemap.xml`;
       },
     });
   } catch (error) {
-    logger.error('Robots.txt generation error', error, {
+    logger.error('Robots.txt generation error', error instanceof Error ? error : undefined, {
       route: '/api/website/robots.txt',
       method: 'GET'
     });

@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(analytics);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error getting pipeline analytics', error, { route: '/api/analytics/pipeline' });
+    logger.error('Error getting pipeline analytics', error instanceof Error ? error : undefined, { route: '/api/analytics/pipeline' });
     return errors.database('Failed to get pipeline analytics', error instanceof Error ? error : new Error(message));
   }
 }

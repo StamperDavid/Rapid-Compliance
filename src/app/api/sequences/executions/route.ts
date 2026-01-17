@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ executions });
 
   } catch (error) {
-    logger.error('[Executions API] Error fetching executions', error);
+    logger.error('[Executions API] Error fetching executions', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: 'Failed to fetch executions' },
       { status: 500 }
@@ -297,7 +297,7 @@ async function getRecentExecutions(
     return executions.slice(0, limit);
 
   } catch (error) {
-    logger.error('[Executions] Error fetching executions', error);
+    logger.error('[Executions] Error fetching executions', error instanceof Error ? error : undefined);
     throw error;
   }
 }

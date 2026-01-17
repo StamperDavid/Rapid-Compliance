@@ -218,7 +218,7 @@ export async function GET(req: NextRequest) {
       totalScores: scores.length,
     });
   } catch (error) {
-    logger.error('Lead scoring analytics error', error);
+    logger.error('Lead scoring analytics error', error instanceof Error ? error : undefined);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     const stateValidation = OAuthStateSchema.safeParse(decodedState);
     if (!stateValidation.success) {
-      logger.warn('Invalid OAuth state', { errors: stateValidation.error.errors });
+      logger.warn('Invalid OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
       return NextResponse.redirect('/integrations?error=invalid_state');
     }
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`/workspace/${orgId}/integrations?success=microsoft`);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Microsoft OAuth callback error', { error: errorMessage, route: '/api/integrations/microsoft/callback' });
+    logger.error('Microsoft OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/microsoft/callback' });
     return NextResponse.redirect('/integrations?error=oauth_failed');
   }
 }

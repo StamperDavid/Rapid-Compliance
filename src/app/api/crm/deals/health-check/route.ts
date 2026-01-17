@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       data: summary,
     });
   } catch (error) {
-    logger.error('Failed to run health check', error);
+    logger.error('Failed to run health check', error instanceof Error ? error : undefined);
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to run health check';
     return NextResponse.json(

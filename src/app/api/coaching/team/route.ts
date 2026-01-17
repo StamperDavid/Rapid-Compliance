@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     
     if (!validationResult.success) {
       logger.warn('Invalid team coaching insights request', {
-        errors: validationResult.error.errors
+        errors: JSON.stringify(validationResult.error.errors)
       });
       
       return NextResponse.json(
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('Error generating team coaching insights', { error });
+    logger.error('Error generating team coaching insights', error instanceof Error ? error : undefined);
     
     // Emit error signal
     try {
@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
         }
       } as unknown as Parameters<typeof coordinator.emitSignal>[0]);
     } catch (signalError) {
-      logger.error('Failed to emit error signal', { signalError });
+      logger.error('Failed to emit error signal', signalError instanceof Error ? signalError : undefined);
     }
     
     return NextResponse.json(

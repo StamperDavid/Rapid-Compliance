@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    logger.error('[Schema Change Impact API] GET failed', error, {
+    logger.error('[Schema Change Impact API] GET failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     

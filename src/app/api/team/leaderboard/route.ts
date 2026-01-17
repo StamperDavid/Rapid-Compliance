@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Leaderboard API failed', { error: errorMessage });
+    logger.error('Leaderboard API failed', error instanceof Error ? error : undefined, {});
     return NextResponse.json(
       { success: false, error: errorMessage },
       { status: 500 }

@@ -107,7 +107,7 @@ export async function POST(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to generate page preview', error, {
+    logger.error('Failed to generate page preview', error instanceof Error ? error : undefined, {
       route: '/api/website/pages/[pageId]/preview',
       method: 'POST'
     });
@@ -221,7 +221,7 @@ export async function GET(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to fetch page preview', error, {
+    logger.error('Failed to fetch page preview', error instanceof Error ? error : undefined, {
       route: '/api/website/pages/[pageId]/preview',
       method: 'GET'
     });

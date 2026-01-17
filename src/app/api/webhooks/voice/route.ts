@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Voice webhook error', error, { route: '/api/webhooks/voice' });
+    logger.error('Voice webhook error', error instanceof Error ? error : undefined, { route: '/api/webhooks/voice' });
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }

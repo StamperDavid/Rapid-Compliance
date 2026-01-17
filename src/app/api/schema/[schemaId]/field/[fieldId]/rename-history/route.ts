@@ -93,7 +93,7 @@ export async function GET(
     });
     
   } catch (error) {
-    logger.error('[Rename History API] GET failed', error, {
+    logger.error('[Rename History API] GET failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     
@@ -140,7 +140,7 @@ export async function POST(
     });
     
   } catch (error) {
-    logger.error('[Rename History API] POST failed', error, {
+    logger.error('[Rename History API] POST failed', error instanceof Error ? error : undefined, {
       file: 'route.ts',
     });
     

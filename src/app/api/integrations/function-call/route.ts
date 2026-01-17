@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to execute function';
-    logger.error('Error executing function call', error, { route: '/api/integrations/function-call' });
+    logger.error('Error executing function call', error instanceof Error ? error : undefined, { route: '/api/integrations/function-call' });
     return NextResponse.json(
       {
         success: false,

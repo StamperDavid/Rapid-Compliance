@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, schemas });
   } catch (error: unknown) {
-    logger.error('[Schemas API][GET] Failed to list schemas', error, { route: '/api/schemas' });
+    logger.error('[Schemas API][GET] Failed to list schemas', error instanceof Error ? error : undefined, { route: '/api/schemas' });
     return NextResponse.json(
       { error: 'Failed to fetch schemas', details: getErrorMessage(error) },
       { status: 500 }
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, schema: newSchema });
   } catch (error: unknown) {
-    logger.error('[Schemas API][POST] Failed to create schema', error, { route: '/api/schemas' });
+    logger.error('[Schemas API][POST] Failed to create schema', error instanceof Error ? error : undefined, { route: '/api/schemas' });
     return NextResponse.json(
       { error: 'Failed to create schema', details: getErrorMessage(error) },
       { status: 500 }

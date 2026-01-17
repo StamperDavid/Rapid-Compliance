@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       message: 'Scheduled workflows executed',
     });
   } catch (error: unknown) {
-    logger.error('Error executing scheduled workflows', error, { route: '/api/workflows/triggers/schedule' });
+    logger.error('Error executing scheduled workflows', error instanceof Error ? error : undefined, { route: '/api/workflows/triggers/schedule' });
     return errors.internal('Failed to execute scheduled workflows', error instanceof Error ? error : undefined);
   }
 }

@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error('Merge API failed', error);
+    logger.error('Merge API failed', error instanceof Error ? error : undefined);
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
       { success: false, error: errorMessage },

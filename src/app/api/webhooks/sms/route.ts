@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('SMS webhook error', error, { route: '/api/webhooks/sms' });
+    logger.error('SMS webhook error', error instanceof Error ? error : undefined, { route: '/api/webhooks/sms' });
     // Return 200 even on error to prevent Twilio retries for unrecoverable errors
     return NextResponse.json({ success: false, error: errorMessage });
   }
@@ -201,7 +201,7 @@ async function updateSMSRecord(
           return; // Found and updated, exit
         }
       } catch (err) {
-        logger.debug('Error searching org for SMS', { orgId: org.id, error: err });
+        logger.debug('Error searching org for SMS', { orgId: org.id, error: err instanceof Error ? err.message : String(err) });
         continue;
       }
     }
@@ -211,7 +211,7 @@ async function updateSMSRecord(
       messageSid
     });
   } catch (error) {
-    logger.error('Error updating SMS record', error, { route: '/api/webhooks/sms' });
+    logger.error('Error updating SMS record', error instanceof Error ? error : undefined, { route: '/api/webhooks/sms' });
   }
 }
 
@@ -300,6 +300,6 @@ async function handleSMSFailure(
       }
     }
   } catch (error) {
-    logger.error('Error handling SMS failure', error, { route: '/api/webhooks/sms' });
+    logger.error('Error handling SMS failure', error instanceof Error ? error : undefined, { route: '/api/webhooks/sms' });
   }
 }

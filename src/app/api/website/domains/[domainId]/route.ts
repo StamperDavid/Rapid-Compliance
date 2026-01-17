@@ -75,7 +75,7 @@ export async function DELETE(
       const { removeVercelDomain } = await import('@/lib/vercel-domains');
       await removeVercelDomain(domainId);
     } catch (vercelError) {
-      logger.error('Vercel integration error during domain deletion', vercelError, {
+      logger.error('Vercel integration error during domain deletion', vercelError instanceof Error ? vercelError : undefined, {
         route: '/api/website/domains/[domainId]',
         domainId,
         organizationId
@@ -112,7 +112,7 @@ export async function DELETE(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to remove domain', error, {
+    logger.error('Failed to remove domain', error instanceof Error ? error : undefined, {
       route: '/api/website/domains/[domainId]',
       method: 'DELETE'
     });

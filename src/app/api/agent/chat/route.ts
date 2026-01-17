@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
       const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
-      logger.warn('RAG enhancement failed, using base prompt', { error, orgId, customerId });
+      logger.warn('RAG enhancement failed, using base prompt', { error: error instanceof Error ? error.message : String(error), orgId, customerId });
       // Continue with base prompt if RAG fails
     }
 
@@ -337,7 +337,7 @@ export async function POST(request: NextRequest) {
       processingTime,
     });
   } catch (error: unknown) {
-    logger.error('Agent chat error', error, { route: '/api/agent/chat' });
+    logger.error('Agent chat error', error instanceof Error ? error : undefined, { route: '/api/agent/chat' });
 
     // Type-safe error handling using type guards
     if (isAPIKeyError(error)) {

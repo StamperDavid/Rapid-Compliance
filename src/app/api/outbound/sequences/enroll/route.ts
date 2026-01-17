@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logger.error('Error enrolling prospects in sequence', error, { route: '/api/outbound/sequences/enroll' });
+    logger.error('Error enrolling prospects in sequence', error instanceof Error ? error : undefined, { route: '/api/outbound/sequences/enroll' });
     return errors.database('Failed to enroll prospects', error instanceof Error ? error : undefined);
   }
 }

@@ -97,7 +97,7 @@ export async function GET(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Domain lookup error', error, {
+    logger.error('Domain lookup error', error instanceof Error ? error : undefined, {
       route: '/api/website/domain/[domain]',
       method: 'GET'
     });

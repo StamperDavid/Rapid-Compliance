@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       const ragResult = await enhanceChatWithRAG(ragMessages, orgId, instance.systemPrompt);
       enhancedSystemPrompt = ragResult.enhancedSystemPrompt;
     } catch (error) {
-      logger.warn('RAG enhancement failed, using base prompt', { route: '/api/chat/public', error });
+      logger.warn('RAG enhancement failed, using base prompt', { route: '/api/chat/public', error: error instanceof Error ? error.message : String(error) });
     }
 
     // Generate response using AI
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
         false
       );
     } catch (error) {
-      logger.warn('Failed to track chat message', { route: '/api/chat/public', error });
+      logger.warn('Failed to track chat message', { route: '/api/chat/public', error: error instanceof Error ? error.message : String(error) });
       // Don't fail the request if analytics tracking fails
     }
 
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    logger.error('Public chat error', error, { route: '/api/chat/public' });
+    logger.error('Public chat error', error instanceof Error ? error : undefined, { route: '/api/chat/public' });
     
     // Handle API key issues
     if (error?.message?.includes('API key')) {

@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    logger.error('Prefill API error', error, {
+    logger.error('Prefill API error', error instanceof Error ? error : undefined, {
       endpoint: '/api/onboarding/prefill',
     });
 

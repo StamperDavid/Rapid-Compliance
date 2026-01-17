@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to fetch audit log', error, {
+    logger.error('Failed to fetch audit log', error instanceof Error ? error : undefined, {
       route: '/api/website/audit-log',
       method: 'GET'
     });

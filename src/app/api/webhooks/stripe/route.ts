@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
-      logger.error('[Stripe Webhook] Signature verification failed:', err);
+      logger.error('[Stripe Webhook] Signature verification failed:', err instanceof Error ? err : undefined);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error: unknown) {
-    logger.error('[Stripe Webhook] Error processing webhook:', error);
+    logger.error('[Stripe Webhook] Error processing webhook:', error instanceof Error ? error : undefined);
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }
@@ -159,10 +159,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     const shippingMethodId = session.metadata?.shippingMethodId;
 
     if (!cartId || !customerData || (!shippingAddress && !billingAddress)) {
-      logger.error('[Stripe Webhook] Missing required data in checkout session metadata', {
-        hasCartId: Boolean(cartId),
-        hasCustomer: Boolean(customerData),
-        hasAddress: Boolean(shippingAddress ?? billingAddress),
+      logger.error('[Stripe Webhook] Missing required data in checkout session metadata', undefined, {
+        hasCartId: String(Boolean(cartId)),
+        hasCustomer: String(Boolean(customerData)),
+        hasAddress: String(Boolean(shippingAddress ?? billingAddress)),
       });
       return;
     }
@@ -197,7 +197,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       amount: session.amount_total,
     });
   } catch (error) {
-    logger.error('[Stripe Webhook] Error processing checkout session:', error);
+    logger.error('[Stripe Webhook] Error processing checkout session:', error instanceof Error ? error : undefined);
   }
 }
 
@@ -247,7 +247,7 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
 
     logger.info(`[Stripe Webhook] Successfully updated tier for trial end: ${organizationId}`);
   } catch (error) {
-    logger.error('[Stripe Webhook] Error handling trial_will_end:', error);
+    logger.error('[Stripe Webhook] Error handling trial_will_end:', error instanceof Error ? error : undefined);
   }
 }
 
@@ -277,7 +277,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
     logger.info(`[Stripe Webhook] Updated subscription for org: ${organizationId}`);
   } catch (error) {
-    logger.error('[Stripe Webhook] Error handling subscription_updated:', error);
+    logger.error('[Stripe Webhook] Error handling subscription_updated:', error instanceof Error ? error : undefined);
   }
 }
 
@@ -300,7 +300,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
     logger.info(`[Stripe Webhook] Subscription canceled for org: ${organizationId}`);
   } catch (error) {
-    logger.error('[Stripe Webhook] Error handling subscription_deleted:', error);
+    logger.error('[Stripe Webhook] Error handling subscription_deleted:', error instanceof Error ? error : undefined);
   }
 }
 
@@ -337,7 +337,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
     logger.info(`[Stripe Webhook] Payment succeeded for org: ${organizationId}, amount: ${invoice.amount_paid}`);
   } catch (error) {
-    logger.error('[Stripe Webhook] Error handling payment_succeeded:', error);
+    logger.error('[Stripe Webhook] Error handling payment_succeeded:', error instanceof Error ? error : undefined);
   }
 }
 
@@ -368,7 +368,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
     logger.warn(`[Stripe Webhook] Payment failed for org: ${organizationId}`);
   } catch (error) {
-    logger.error('[Stripe Webhook] Error handling payment_failed:', error);
+    logger.error('[Stripe Webhook] Error handling payment_failed:', error instanceof Error ? error : undefined);
   }
 }
 
@@ -518,7 +518,7 @@ AI Sales Platform | Volume-Based Pricing
       });
     }
   } catch (error) {
-    logger.error('[Email] Error sending trial end email:', error);
+    logger.error('[Email] Error sending trial end email:', error instanceof Error ? error : undefined);
   }
 }
 
@@ -667,6 +667,6 @@ AI Sales Platform
       });
     }
   } catch (error) {
-    logger.error('[Email] Error sending payment failed email:', error);
+    logger.error('[Email] Error sending payment failed email:', error instanceof Error ? error : undefined);
   }
 }

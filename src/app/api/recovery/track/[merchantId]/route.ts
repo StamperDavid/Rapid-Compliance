@@ -46,7 +46,7 @@ export async function GET(
 
     return NextResponse.redirect(redirectUrl);
   } catch (error: unknown) {
-    logger.error('[RecoveryTracking] Error:', error);
+    logger.error('[RecoveryTracking] Error:', error instanceof Error ? error : undefined);
     return NextResponse.redirect(new URL('/onboarding/industry', request.url));
   }
 }

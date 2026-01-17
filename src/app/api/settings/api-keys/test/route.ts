@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
         });
     }
   } catch (error: unknown) {
-    logger.error('API key test error', error, { route: '/api/settings/api-keys/test' });
+    logger.error('API key test error', error instanceof Error ? error : undefined, { route: '/api/settings/api-keys/test' });
     return errors.externalService('API service', error instanceof Error ? error : undefined);
   }
 }

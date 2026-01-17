@@ -5,7 +5,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { getEmail, parseEmailHeaders, getEmailBody } from '@/lib/integrations/gmail-service';
+import { getEmail, parseEmailHeaders, getEmailBody, type GmailMessage } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail, type ReplyClassification } from '@/lib/outbound/reply-handler';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -57,15 +57,7 @@ interface GmailHistoryItem {
   }>;
 }
 
-interface GmailMessage {
-  id: string;
-  threadId: string;
-  payload?: {
-    headers?: Array<{ name: string; value: string }>;
-    parts?: unknown[];
-    body?: { data?: string };
-  };
-}
+// GmailMessage is now imported from gmail-service
 
 interface Prospect {
   id: string;
@@ -92,11 +84,11 @@ export async function POST(request: NextRequest) {
 
     // Type guard for notification structure
     if (!isGmailPushNotification(body)) {
-      logger.info('Invalid Gmail webhook payload', { route: '/api/webhooks/gmail', notification: body });
+      logger.info('Invalid Gmail webhook payload', { route: '/api/webhooks/gmail', notification: JSON.stringify(body) });
       return NextResponse.json({ success: true }); // Acknowledge but skip
     }
 
-    logger.info('Gmail webhook received', { route: '/api/webhooks/gmail', notification: body });
+    logger.info('Gmail webhook received', { route: '/api/webhooks/gmail', notification: JSON.stringify(body) });
 
     // Decode the message
     const message = body.message;
@@ -166,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    logger.error('Gmail webhook error', error, { route: '/api/webhooks/gmail' });
+    logger.error('Gmail webhook error', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
     return errors.internal('Internal error', error instanceof Error ? error : undefined);
   }
 }
@@ -275,7 +267,7 @@ async function findIntegrationByEmail(email: string): Promise<GmailIntegration |
 
     return matchedIntegration && isGmailIntegration(matchedIntegration) ? matchedIntegration : null;
   } catch (error) {
-    logger.error('Error finding integration', error, { route: '/api/webhooks/gmail' });
+    logger.error('Error finding integration', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
     return null;
   }
 }
@@ -317,7 +309,7 @@ async function processNewEmail(
       to: headers.to,
       subject: headers.subject,
       body: body.html || body.text,
-      threadId: emailData.threadId,
+      threadId: emailData.threadId ?? '',
       inReplyTo: headers.inReplyTo,
       receivedAt: headers.date,
     });
@@ -336,7 +328,7 @@ async function processNewEmail(
               `Re: ${headers.subject}`,
               response,
               headers.messageId,
-              emailData.threadId
+              emailData.threadId ?? undefined
             );
             logger.info('Auto-sent reply', { route: '/api/webhooks/gmail' });
           }
@@ -384,7 +376,7 @@ async function processNewEmail(
         await saveForReview(organizationId, emailData, classification);
     }
   } catch (error) {
-    logger.error('Error processing Gmail email', error, { route: '/api/webhooks/gmail' });
+    logger.error('Error processing Gmail email', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
   }
 }
 
@@ -447,7 +439,7 @@ async function unenrollProspectFromSequences(
       });
     }
   } catch (error) {
-    logger.error('Error unenrolling prospect', error, { route: '/api/webhooks/gmail' });
+    logger.error('Error unenrolling prospect', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
   }
 }
 
@@ -506,7 +498,7 @@ async function pauseProspectSequences(
       });
     }
   } catch (error) {
-    logger.error('Error pausing sequences', error, { route: '/api/webhooks/gmail' });
+    logger.error('Error pausing sequences', error instanceof Error ? error : undefined, { route: '/api/webhooks/gmail' });
   }
 }
 
@@ -521,11 +513,12 @@ async function saveForReview(
   const headers = parseEmailHeaders(email);
   const body = getEmailBody(email);
 
+  const emailId = email.id ?? `unknown_${Date.now()}`;
   await FirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${organizationId}/inbox`,
-    email.id,
+    emailId,
     {
-      id: email.id,
+      id: emailId,
       from: headers.from,
       to: headers.to,
       subject: headers.subject,

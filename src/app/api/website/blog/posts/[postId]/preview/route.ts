@@ -131,7 +131,7 @@ export async function POST(
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to generate blog post preview', error, {
+    logger.error('Failed to generate blog post preview', error instanceof Error ? error : undefined, {
       route: '/api/website/blog/posts/[postId]/preview',
       method: 'POST'
     });
@@ -248,7 +248,7 @@ export async function GET(
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to fetch blog post preview', error, {
+    logger.error('Failed to fetch blog post preview', error instanceof Error ? error : undefined, {
       route: '/api/website/blog/posts/[postId]/preview',
       method: 'GET'
     });

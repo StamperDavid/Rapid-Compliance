@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const callId = searchParams.get('callId');
 
     if (!callId) {
-      logger.error('[AI-Speech] Missing callId', { file: 'ai-agent/speech/route.ts' });
+      logger.error('[AI-Speech] Missing callId', undefined, { file: 'ai-agent/speech/route.ts' });
       return new NextResponse(generateErrorTwiML('Missing call identifier'), {
         headers: { 'Content-Type': 'text/xml' },
       });
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: unknown) {
-    logger.error('[AI-Speech] Error processing speech:', error, { file: 'ai-agent/speech/route.ts' });
+    logger.error('[AI-Speech] Error processing speech:', error instanceof Error ? error : undefined, { file: 'ai-agent/speech/route.ts' });
 
     // Return fallback TwiML
     return new NextResponse(generateFallbackTwiML(), {

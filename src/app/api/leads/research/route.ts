@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Parse the natural language query
     const parsedQuery = parseSearchQuery(query);
     
-    logger.debug('Lead research query parsed', { route: '/api/leads/research', parsedQuery });
+    logger.debug('Lead research query parsed', { route: '/api/leads/research', parsedQuery: JSON.stringify(parsedQuery) });
     
     // For now, we'll do a simple implementation
     // In the future, this can use AI to understand complex queries
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       savings: (leads.length * 0.75) - totalCost,
     });
   } catch (error) {
-    logger.error('Lead research error', error, { route: '/api/leads/research' });
+    logger.error('Lead research error', error instanceof Error ? error : undefined, { route: '/api/leads/research' });
     return errors.externalService('Lead research service', error instanceof Error ? error : undefined);
   }
 }

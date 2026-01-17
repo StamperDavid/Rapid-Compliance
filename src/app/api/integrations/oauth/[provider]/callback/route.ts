@@ -136,7 +136,7 @@ export async function GET(
     } catch (innerError) {
       const innerErrorMsg = innerError instanceof Error ? innerError.message : 'Unknown error';
       const resolvedParams = await params;
-      logger.error('OAuth callback inner error', { error: innerErrorMsg, route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
+      logger.error('OAuth callback inner error', innerError instanceof Error ? innerError : undefined, { route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
       return NextResponse.redirect(
         `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(innerErrorMsg)}`
       );
@@ -144,7 +144,7 @@ export async function GET(
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     const resolvedParams = await params;
-    logger.error('OAuth callback error', { error: errorMsg, route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
+    logger.error('OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/oauth/callback', provider: resolvedParams.provider });
     return NextResponse.redirect(
       `${request.nextUrl.origin}/workspace/demo-org/settings/integrations?error=${encodeURIComponent(errorMsg)}`
     );

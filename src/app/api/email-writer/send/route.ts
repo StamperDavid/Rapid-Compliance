@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     if (!validation.success) {
       logger.warn('Invalid send email request', {
-        errors: validation.error.errors,
+        errors: JSON.stringify(validation.error.errors),
       });
 
       return NextResponse.json(
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime;
 
     if (!result.success) {
-      logger.error('Email sending failed', {
+      logger.error('Email sending failed', undefined, {
         error: result.error,
         organizationId: validData.organizationId,
         to: validData.to,
@@ -178,8 +178,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
 
-    logger.error('Unexpected error in send email endpoint', {
-      error,
+    logger.error('Unexpected error in send email endpoint', error instanceof Error ? error : undefined, {
       duration,
     });
 

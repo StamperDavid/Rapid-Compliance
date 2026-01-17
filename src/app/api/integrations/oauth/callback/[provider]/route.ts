@@ -46,7 +46,7 @@ export async function GET(
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'OAuth failed';
-    logger.error('OAuth callback error', { error: errorMessage, route: '/api/integrations/oauth/callback' });
+    logger.error('OAuth callback error', error instanceof Error ? error : undefined, { route: '/api/integrations/oauth/callback' });
     return NextResponse.redirect(
       `${getAppUrl()}/workspace/*/settings/integrations?error=${encodeURIComponent(errorMessage)}`
     );

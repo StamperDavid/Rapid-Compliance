@@ -81,7 +81,7 @@ export async function GET(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to fetch page', error, {
+    logger.error('Failed to fetch page', error instanceof Error ? error : undefined, {
       route: '/api/website/pages/[pageId]',
       method: 'GET'
     });
@@ -175,7 +175,7 @@ export async function PUT(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to update page', error, {
+    logger.error('Failed to update page', error instanceof Error ? error : undefined, {
       route: '/api/website/pages/[pageId]',
       method: 'PUT'
     });
@@ -250,7 +250,7 @@ export async function DELETE(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to delete page', error, {
+    logger.error('Failed to delete page', error instanceof Error ? error : undefined, {
       route: '/api/website/pages/[pageId]',
       method: 'DELETE'
     });

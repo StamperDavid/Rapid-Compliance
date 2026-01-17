@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       hasMore: result.hasMore,
     });
   } catch (error: unknown) {
-    logger.error('Failed to get workflows', error);
+    logger.error('Failed to get workflows', error instanceof Error ? error : undefined);
     const message = error instanceof Error ? error.message : 'Failed to get workflows';
     return NextResponse.json(
       { error: message },
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ workflow: newWorkflow }, { status: 201 });
   } catch (error: unknown) {
-    logger.error('Failed to create workflow', error);
+    logger.error('Failed to create workflow', error instanceof Error ? error : undefined);
     const message = error instanceof Error ? error.message : 'Failed to create workflow';
     return NextResponse.json(
       { error: message },

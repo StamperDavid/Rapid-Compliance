@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       url: session.url,
     });
   } catch (error) {
-    logger.error('Error creating billing portal session', error, { route: '/api/billing/portal' });
+    logger.error('Error creating billing portal session', error instanceof Error ? error : undefined, { route: '/api/billing/portal' });
     return errors.externalService('Stripe', error instanceof Error ? error : undefined);
   }
 }

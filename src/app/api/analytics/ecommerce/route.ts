@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error getting ecommerce analytics', error, { route: '/api/analytics/ecommerce' });
+    logger.error('Error getting ecommerce analytics', error instanceof Error ? error : undefined, { route: '/api/analytics/ecommerce' });
     return errors.database('Failed to get ecommerce analytics', error instanceof Error ? error : new Error(message));
   }
 }

@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       message: 'Order placed successfully',
     });
   } catch (error: unknown) {
-    logger.error('Checkout processing error', error, { route: '/api/ecommerce/checkout' });
+    logger.error('Checkout processing error', error instanceof Error ? error : undefined, { route: '/api/ecommerce/checkout' });
     return errors.externalService('Checkout service', error instanceof Error ? error : undefined);
   }
 }

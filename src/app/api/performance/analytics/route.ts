@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     try {
       validatedRequest = validatePerformanceAnalyticsRequest(body) as PerformanceAnalyticsRequest;
     } catch (error) {
-      logger.warn('Invalid performance analytics request', { error });
+      logger.warn('Invalid performance analytics request', { error: error instanceof Error ? error.message : String(error) });
       return NextResponse.json(
         {
           success: false,
@@ -248,8 +248,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const processingTime = Date.now() - startTime;
     
-    logger.error('Failed to generate performance analytics', {
-      error,
+    logger.error('Failed to generate performance analytics', error instanceof Error ? error : undefined, {
       processingTime,
     });
     

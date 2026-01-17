@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(authUrl);
     
   } catch (error) {
-    logger.error('Failed to start Slack OAuth flow', { error });
+    logger.error('Failed to start Slack OAuth flow', error instanceof Error ? error : undefined, {});
     
     return NextResponse.json(
       {
