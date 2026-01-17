@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       count: options.length,
     });
   } catch (error) {
-    logger.error('Error listing templates', { error });
+    logger.error('Error listing templates', error instanceof Error ? error : undefined);
     
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       templateId: validation.data.id,
     });
   } catch (error) {
-    logger.error('Error saving template', { error });
+    logger.error('Error saving template', error instanceof Error ? error : undefined);
     
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(
@@ -149,7 +149,7 @@ export async function DELETE(request: NextRequest) {
       templateId,
     });
   } catch (error) {
-    logger.error('Error deleting template', { error });
+    logger.error('Error deleting template', error instanceof Error ? error : undefined);
     
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(

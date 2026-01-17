@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
         }
       } catch (dbError) {
         logger.warn('[AdminVoiceStats] Failed to fetch from Firestore, using mock data', {
-          error: dbError,
+          error: dbError instanceof Error ? dbError.message : 'Unknown error',
           file: 'admin/voice/stats/route.ts',
         });
       }
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
       isDemo: true,
     });
   } catch (error) {
-    logger.error('[AdminVoiceStats] GET failed', error, {
+    logger.error('[AdminVoiceStats] GET failed', error instanceof Error ? error : undefined, {
       file: 'admin/voice/stats/route.ts',
     });
 
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
 
     logger.info('[AdminVoiceStats] Updating default agent settings', {
       adminId: authResult.user.uid,
-      settings: defaultSettings,
+      settings: JSON.stringify(defaultSettings),
       file: 'admin/voice/stats/route.ts',
     });
 
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
           settings: defaultSettings,
         });
       } catch (dbError) {
-        logger.error('[AdminVoiceStats] Failed to save to Firestore', dbError, {
+        logger.error('[AdminVoiceStats] Failed to save to Firestore', dbError instanceof Error ? dbError : undefined, {
           file: 'admin/voice/stats/route.ts',
         });
 
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
       isDemo: true,
     });
   } catch (error) {
-    logger.error('[AdminVoiceStats] POST failed', error, {
+    logger.error('[AdminVoiceStats] POST failed', error instanceof Error ? error : undefined, {
       file: 'admin/voice/stats/route.ts',
     });
 

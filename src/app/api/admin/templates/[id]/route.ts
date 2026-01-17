@@ -47,7 +47,7 @@ export async function GET(
       hasOverride: result.hasOverride,
     });
   } catch (error) {
-    logger.error('Error getting template', { error, templateId: params.id });
+    logger.error('Error getting template', error instanceof Error ? error : undefined, { templateId: params.id });
     
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(

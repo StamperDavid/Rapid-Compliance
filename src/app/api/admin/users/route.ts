@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
     return createSuccessResponse(response);
 
   } catch (error: unknown) {
-    logger.error('Admin users fetch error', error, { route: '/api/admin/users' });
+    logger.error('Admin users fetch error', error instanceof Error ? error : undefined, { route: '/api/admin/users' });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
@@ -340,7 +340,7 @@ export async function PATCH(request: NextRequest) {
     return createSuccessResponse(response);
 
   } catch (error: unknown) {
-    logger.error('Admin user update error', error, { route: '/api/admin/users' });
+    logger.error('Admin user update error', error instanceof Error ? error : undefined, { route: '/api/admin/users' });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return createErrorResponse(
       process.env.NODE_ENV === 'development'

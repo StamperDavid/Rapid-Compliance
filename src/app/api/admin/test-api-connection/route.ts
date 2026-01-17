@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
           });
       }
     } catch (updateError: unknown) {
-      logger.error('Failed to update API key test result:', updateError, { file: 'route.ts' });
+      logger.error('Failed to update API key test result:', updateError instanceof Error ? updateError : undefined, { file: 'route.ts' });
     }
 
     if (testResult.success) {
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error: unknown) {
-    logger.error('API connection test error:', error, { file: 'route.ts' });
+    logger.error('API connection test error:', error instanceof Error ? error : undefined, { file: 'route.ts' });
     const errorMessage = isError(error) ? error.message : 'Unknown error';
     return createErrorResponse(
       process.env.NODE_ENV === 'development'
