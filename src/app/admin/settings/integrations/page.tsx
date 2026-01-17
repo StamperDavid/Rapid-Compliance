@@ -104,7 +104,7 @@ export default function PlatformIntegrationsPage() {
                 Connect Gmail
               </button>
               <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.75rem', textAlign: 'center' }}>
-                You'll be redirected to Google to authorize the connection
+                You&apos;ll be redirected to Google to authorize the connection
               </p>
             </div>
           </div>

@@ -7,7 +7,7 @@
  * Revenue Officer AI headquarters.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RecoveryAnalytics, type RecoveryMetrics } from '@/components/orchestrator/RecoveryAnalytics';
 import { RecoveryInsights, type RecoveryInsight } from '@/components/orchestrator/RecoveryInsights';
 import { motion } from 'framer-motion';
@@ -19,15 +19,11 @@ export default function AdminRecoveryPage() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d');
 
-  useEffect(() => {
-    loadRecoveryData();
-  }, [dateRange]);
-
-  async function loadRecoveryData() {
+  const loadRecoveryData = useCallback(async () => {
     setLoading(true);
     try {
       // Simulate API call - replace with actual endpoint
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise<void>((resolve) => { setTimeout(resolve, 800); });
 
       // Mock data - production would fetch from /api/admin/recovery
       const mockMetrics: RecoveryMetrics = {
@@ -183,7 +179,11 @@ export default function AdminRecoveryPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [dateRange]);
+
+  useEffect(() => {
+    void loadRecoveryData();
+  }, [loadRecoveryData]);
 
   if (loading) {
     return (
@@ -208,7 +208,7 @@ export default function AdminRecoveryPage() {
         <div className="text-center">
           <p className="text-white text-xl mb-2">Failed to load dashboard</p>
           <button
-            onClick={loadRecoveryData}
+            onClick={() => { void loadRecoveryData(); }}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
           >
             Retry
@@ -244,7 +244,7 @@ export default function AdminRecoveryPage() {
               <option value="90d">Last 90 days</option>
             </select>
             <button
-              onClick={loadRecoveryData}
+              onClick={() => { void loadRecoveryData(); }}
               className="p-2 bg-black/40 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
             >
               <RefreshCw className="w-5 h-5" />

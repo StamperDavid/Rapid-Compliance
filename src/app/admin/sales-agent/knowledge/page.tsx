@@ -3,12 +3,57 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface KnowledgeFeature {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  keyPoints: string[];
+  enabled: boolean;
+}
+
+interface PricingPlan {
+  id: string;
+  plan: string;
+  price: number | string;
+  billingPeriod: string;
+  recordRange: string;
+  features: string[];
+  idealFor: string;
+  enabled: boolean;
+  popular?: boolean;
+}
+
+interface Competitor {
+  id: string;
+  name: string;
+  strengths: string[];
+  weaknesses: string[];
+  ourAdvantage: string;
+  enabled: boolean;
+}
+
+interface CaseStudy {
+  id: string;
+  company: string;
+  industry: string;
+  challenge: string;
+  solution: string;
+  results: string[];
+  metrics: {
+    roi: string;
+    timeToValue: string;
+    costSavings: string;
+  };
+  enabled: boolean;
+}
+
 export default function KnowledgeBasePage() {
   const [activeTab, setActiveTab] = useState('features');
-  const [features, setFeatures] = useState<any[]>([]);
-  const [pricing, setPricing] = useState<any[]>([]);
-  const [competitors, setCompetitors] = useState<any[]>([]);
-  const [caseStudies, setCaseStudies] = useState<any[]>([]);
+  const [features, setFeatures] = useState<KnowledgeFeature[]>([]);
+  const [pricing, setPricing] = useState<PricingPlan[]>([]);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
 
   useEffect(() => {
     // Load platform knowledge base
@@ -436,7 +481,7 @@ export default function KnowledgeBasePage() {
 
               <div>
                 <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#666', marginBottom: '0.75rem' }}>
-                  What's Included:
+                  What&apos;s Included:
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#999' }}>
                   {plan.features.map((feature: string, idx: number) => (

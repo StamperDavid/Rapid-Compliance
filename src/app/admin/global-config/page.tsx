@@ -1,9 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import type { PlatformPricingPlan, PlatformCoupon, FeatureLimits } from '@/types/pricing';
-import { DEFAULT_PRICING_TIERS, DEFAULT_FEATURE_LIMITS } from '@/types/pricing';
+import { DEFAULT_PRICING_TIERS, type PlatformPricingPlan, type PlatformCoupon, type FeatureLimits } from '@/types/pricing';
+
+interface PricingApiResponse {
+  plans?: PlatformPricingPlan[];
+}
+
+interface CouponApiResponse {
+  coupons?: PlatformCoupon[];
+}
+
+interface SavedPlanResponse {
+  plan: PlatformPricingPlan;
+}
+
+interface SavedCouponResponse {
+  coupon: PlatformCoupon;
+}
 
 type TabType = 'pricing' | 'coupons';
 
@@ -23,18 +38,14 @@ export default function GlobalConfigPage() {
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Partial<PlatformCoupon> | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       // Load pricing plans
       const pricingRes = await fetch('/api/admin/platform-pricing');
       if (pricingRes.ok) {
-        const data = await pricingRes.json();
-        setPricingPlans(data.plans || []);
+        const data = await pricingRes.json() as PricingApiResponse;
+        setPricingPlans(data.plans ?? []);
       } else {
         // Use defaults
         const now = new Date().toISOString();
@@ -48,15 +59,19 @@ export default function GlobalConfigPage() {
       // Load platform coupons
       const couponsRes = await fetch('/api/admin/platform-coupons');
       if (couponsRes.ok) {
-        const data = await couponsRes.json();
-        setCoupons(data.coupons || []);
+        const data = await couponsRes.json() as CouponApiResponse;
+        setCoupons(data.coupons ?? []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   // ============================================
   // PRICING PLAN HANDLERS
@@ -98,7 +113,7 @@ export default function GlobalConfigPage() {
       });
 
       if (response.ok) {
-        const savedPlan = await response.json();
+        const savedPlan = await response.json() as SavedPlanResponse;
         setPricingPlans(prev => {
           const exists = prev.find(p => p.plan_id === plan.plan_id);
           if (exists) {
@@ -123,7 +138,9 @@ export default function GlobalConfigPage() {
   // ============================================
 
   const handleSaveCoupon = async () => {
-    if (!editingCoupon) return;
+    if (!editingCoupon) {
+      return;
+    }
 
     setSaving(true);
     setMessage({ type: '', text: '' });
@@ -135,7 +152,7 @@ export default function GlobalConfigPage() {
       });
 
       if (response.ok) {
-        const savedCoupon = await response.json();
+        const savedCoupon = await response.json() as SavedCouponResponse;
         setCoupons(prev => {
           const exists = prev.find(c => c.id === savedCoupon.coupon.id);
           if (exists) {
@@ -250,8 +267,8 @@ export default function GlobalConfigPage() {
             plans={pricingPlans}
             editingPlan={editingPlan}
             setEditingPlan={setEditingPlan}
-            onQuickUpdate={handleQuickPriceUpdate}
-            onSavePlan={handleSavePlan}
+            onQuickUpdate={(planId, price) => { void handleQuickPriceUpdate(planId, price); }}
+            onSavePlan={(plan) => { void handleSavePlan(plan); }}
             saving={saving}
           />
         )}
@@ -263,8 +280,8 @@ export default function GlobalConfigPage() {
             setShowModal={setShowCouponModal}
             editingCoupon={editingCoupon}
             setEditingCoupon={setEditingCoupon}
-            onSaveCoupon={handleSaveCoupon}
-            onToggleStatus={handleToggleCouponStatus}
+            onSaveCoupon={() => { void handleSaveCoupon(); }}
+            onToggleStatus={(id, status) => { void handleToggleCouponStatus(id, status); }}
             saving={saving}
           />
         )}
@@ -537,8 +554,8 @@ function PlanEditorModal({
               <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Badge</label>
               <input
                 type="text"
-                value={editedPlan.badge || ''}
-                onChange={(e) => updateField('badge', e.target.value || undefined)}
+                value={editedPlan.badge ?? ''}
+                onChange={(e) => updateField('badge', e.target.value ? e.target.value : undefined)}
                 placeholder="e.g., Most Popular"
                 style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff' }}
               />
@@ -548,7 +565,7 @@ function PlanEditorModal({
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Description</label>
             <textarea
-              value={editedPlan.description || ''}
+              value={editedPlan.description ?? ''}
               onChange={(e) => updateField('description', e.target.value)}
               style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff', minHeight: '80px' }}
             />
@@ -569,8 +586,8 @@ function PlanEditorModal({
               <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Yearly Price ($)</label>
               <input
                 type="number"
-                value={editedPlan.yearly_price_usd || ''}
-                onChange={(e) => updateField('yearly_price_usd', parseInt(e.target.value) || undefined)}
+                value={editedPlan.yearly_price_usd ?? ''}
+                onChange={(e) => updateField('yearly_price_usd', e.target.value ? parseInt(e.target.value) : undefined)}
                 style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff' }}
               />
             </div>
@@ -788,7 +805,7 @@ function CouponsTab({
                 <div style={{ color: '#999', fontSize: '0.875rem' }}>
                   {coupon.discount_type === 'percentage' ? `${coupon.value}% off` : `$${coupon.value / 100} off`}
                   {' | '}
-                  {coupon.current_uses} / {coupon.max_uses || '&infin;'} uses
+                  {coupon.current_uses} / {coupon.max_uses ?? '∞'} uses
                   {coupon.valid_until && ` | Expires ${new Date(coupon.valid_until).toLocaleDateString()}`}
                 </div>
               </div>
@@ -887,7 +904,7 @@ function CouponEditorModal({
             </label>
             <input
               type="text"
-              value={coupon.code || ''}
+              value={coupon.code ?? ''}
               onChange={(e) => updateField('code', e.target.value.toUpperCase())}
               placeholder="e.g., LAUNCH2024"
               style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff', fontFamily: 'monospace', fontSize: '1.125rem' }}
@@ -899,7 +916,7 @@ function CouponEditorModal({
             <div>
               <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Discount Type</label>
               <select
-                value={coupon.discount_type || 'percentage'}
+                value={coupon.discount_type ?? 'percentage'}
                 onChange={(e) => updateField('discount_type', e.target.value)}
                 style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff' }}
               >
@@ -913,7 +930,7 @@ function CouponEditorModal({
               </label>
               <input
                 type="number"
-                value={coupon.value || 0}
+                value={coupon.value ?? 0}
                 onChange={(e) => updateField('value', parseInt(e.target.value) || 0)}
                 style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff' }}
               />
@@ -926,7 +943,7 @@ function CouponEditorModal({
               <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Max Uses (empty = unlimited)</label>
               <input
                 type="number"
-                value={coupon.max_uses || ''}
+                value={coupon.max_uses ?? ''}
                 onChange={(e) => updateField('max_uses', e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder="Unlimited"
                 style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff' }}
@@ -950,7 +967,7 @@ function CouponEditorModal({
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={coupon.is_free_forever || false}
+                  checked={coupon.is_free_forever ?? false}
                   onChange={(e) => {
                     updateField('is_free_forever', e.target.checked);
                     if (e.target.checked) {
@@ -969,7 +986,7 @@ function CouponEditorModal({
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={coupon.is_internal_only || false}
+                  checked={coupon.is_internal_only ?? false}
                   onChange={(e) => updateField('is_internal_only', e.target.checked)}
                 />
                 <div>
@@ -986,7 +1003,7 @@ function CouponEditorModal({
           <div>
             <label style={{ display: 'block', fontSize: '0.875rem', color: '#999', marginBottom: '0.5rem' }}>Internal Notes</label>
             <textarea
-              value={coupon.notes || ''}
+              value={coupon.notes ?? ''}
               onChange={(e) => updateField('notes', e.target.value)}
               placeholder="e.g., For Product Hunt launch campaign"
               style={{ width: '100%', padding: '0.75rem', backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '0.25rem', color: '#fff', minHeight: '60px' }}

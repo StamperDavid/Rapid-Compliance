@@ -4,11 +4,36 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
+interface GoldenMaster {
+  id: string;
+  version: number;
+  name: string;
+  status: 'active' | 'training';
+  trainingScore: number;
+  lastTrainingDate: Date;
+  totalConversations: number;
+  successRate: number;
+  businessContext: {
+    businessName: string;
+    industry: string;
+    problemSolved: string;
+    uniqueValue: string;
+  };
+}
+
+interface ActiveConversation {
+  id: string;
+  customerName: string;
+  status: string;
+  duration: string;
+  stage: string;
+}
+
 export default function AdminSalesAgentPage() {
   useAdminAuth();
-  const [goldenMaster, setGoldenMaster] = useState<any>(null);
+  const [goldenMaster, setGoldenMaster] = useState<GoldenMaster | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeConversations, setActiveConversations] = useState<any[]>([]);
+  const [activeConversations, setActiveConversations] = useState<ActiveConversation[]>([]);
 
   useEffect(() => {
     // Load platform sales agent Golden Master

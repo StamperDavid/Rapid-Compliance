@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import type { SubscriptionTier } from '@/types/subscription';
-import { VOLUME_TIERS, TIER_PRICING } from '@/types/subscription';
+import { VOLUME_TIERS, TIER_PRICING, type SubscriptionTier } from '@/types/subscription';
 
 interface TierConfig {
   id: SubscriptionTier;
@@ -15,6 +14,10 @@ interface TierConfig {
   active: boolean;
 }
 
+interface TiersApiResponse {
+  tiers: TierConfig[];
+}
+
 export default function PricingTiersAdmin() {
   useAuth();
   const [tiers, setTiers] = useState<TierConfig[]>([]);
@@ -22,16 +25,12 @@ export default function PricingTiersAdmin() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    loadTiers();
-  }, []);
-
-  const loadTiers = async () => {
+  const loadTiers = useCallback(async () => {
     try {
       // Try to load from Firestore first
       const response = await fetch('/api/admin/pricing-tiers');
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as TiersApiResponse;
         setTiers(data.tiers);
       } else {
         // Fall back to code defaults
@@ -79,10 +78,14 @@ export default function PricingTiersAdmin() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const updateTier = (tierId: SubscriptionTier, field: string, value: any) => {
-    setTiers(prev => prev.map(t => 
+  useEffect(() => {
+    void loadTiers();
+  }, [loadTiers]);
+
+  const updateTier = (tierId: SubscriptionTier, field: keyof TierConfig, value: TierConfig[keyof TierConfig]) => {
+    setTiers(prev => prev.map(t =>
       t.id === tierId ? { ...t, [field]: value } : t
     ));
   };
@@ -330,7 +333,7 @@ export default function PricingTiersAdmin() {
         {/* Save Button */}
         <div style={{ marginTop: '3rem', display: 'flex', justifyContent: 'center' }}>
           <button
-            onClick={saveTiers}
+            onClick={() => { void saveTiers(); }}
             disabled={saving}
             style={{
               padding: '1rem 3rem',

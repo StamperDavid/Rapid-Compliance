@@ -95,7 +95,9 @@ export default function AdminSocialPage() {
   }, []);
 
   const handlePostTweet = async () => {
-    if (!tweetContent.trim()) return;
+    if (!tweetContent.trim()) {
+      return;
+    }
 
     setPosting(true);
     setPostResult(null);
@@ -115,14 +117,14 @@ export default function AdminSocialPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { error?: string };
 
       if (response.ok) {
         setPostResult({ success: true, message: scheduleTime ? 'Tweet scheduled successfully!' : 'Tweet posted successfully!' });
         setTweetContent('');
         setScheduleTime('');
       } else {
-        setPostResult({ success: false, message: data.error || 'Failed to post tweet' });
+        setPostResult({ success: false, message: data.error ?? 'Failed to post tweet' });
       }
     } catch {
       setPostResult({ success: false, message: 'Network error. Please try again.' });
@@ -132,7 +134,9 @@ export default function AdminSocialPage() {
   };
 
   const handlePostLinkedIn = async () => {
-    if (!linkedInContent.trim()) return;
+    if (!linkedInContent.trim()) {
+      return;
+    }
 
     setPosting(true);
     setPostResult(null);
@@ -152,14 +156,14 @@ export default function AdminSocialPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { error?: string };
 
       if (response.ok) {
         setPostResult({ success: true, message: scheduleTime ? 'Post scheduled successfully!' : 'Posted to LinkedIn successfully!' });
         setLinkedInContent('');
         setScheduleTime('');
       } else {
-        setPostResult({ success: false, message: data.error || 'Failed to post to LinkedIn' });
+        setPostResult({ success: false, message: data.error ?? 'Failed to post to LinkedIn' });
       }
     } catch {
       setPostResult({ success: false, message: 'Network error. Please try again.' });
@@ -260,7 +264,7 @@ export default function AdminSocialPage() {
                 {tweetContent.length}/280
               </span>
               <button
-                onClick={handlePostTweet}
+                onClick={() => { void handlePostTweet(); }}
                 disabled={!tweetContent.trim() || posting}
                 style={{
                   padding: '0.625rem 1.25rem',
@@ -305,7 +309,7 @@ export default function AdminSocialPage() {
                 {linkedInContent.length}/3000
               </span>
               <button
-                onClick={handlePostLinkedIn}
+                onClick={() => { void handlePostLinkedIn(); }}
                 disabled={!linkedInContent.trim() || posting}
                 style={{
                   padding: '0.625rem 1.25rem',
