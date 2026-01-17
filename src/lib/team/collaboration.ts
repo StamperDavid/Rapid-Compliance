@@ -147,7 +147,7 @@ export async function createComment(
     return comment;
 
   } catch (error: unknown) {
-    logger.error('Failed to create comment', error);
+    logger.error('Failed to create comment', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -244,7 +244,7 @@ export async function createTask(
     return newTask;
 
   } catch (error: unknown) {
-    logger.error('Failed to create task', error);
+    logger.error('Failed to create task', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -346,7 +346,7 @@ export async function calculateLeaderboard(
     return leaderboard;
 
   } catch (error: unknown) {
-    logger.error('Failed to calculate leaderboard', error, { organizationId });
+    logger.error('Failed to calculate leaderboard', error instanceof Error ? error : new Error(String(error)), { organizationId });
     throw error;
   }
 }
@@ -424,7 +424,7 @@ async function calculateUserMetrics(
     };
 
   } catch (error: unknown) {
-    logger.error('Failed to calculate user metrics', error, { userId });
+    logger.error('Failed to calculate user metrics', error instanceof Error ? error : new Error(String(error)), { userId });
     return {
       leadsCreated: 0,
       dealsClosed: 0,
@@ -474,7 +474,7 @@ export async function getUserTasks(
     return tasks;
 
   } catch (error: unknown) {
-    logger.error('Failed to get user tasks', error, { userId });
+    logger.error('Failed to get user tasks', error instanceof Error ? error : new Error(String(error)), { userId });
     return [];
   }
 }
@@ -501,7 +501,7 @@ export async function completeTask(
     logger.info('Task completed', { taskId });
 
   } catch (error: unknown) {
-    logger.error('Failed to complete task', error, { taskId });
+    logger.error('Failed to complete task', error instanceof Error ? error : new Error(String(error)), { taskId });
     throw error;
   }
 }

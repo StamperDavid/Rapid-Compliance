@@ -65,17 +65,24 @@ export async function executeWorkflowImpl(
           status: 'success',
           result,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        logger.error('[Workflow Engine] Action execution failed', errorObj, {
+          file: 'workflow-engine.ts',
+          actionId: action.id,
+          actionName: action.name,
+        });
+
         execution.actionResults.push({
           actionId: action.id,
           status: 'failed',
-          error: error.message,
+          error: errorObj.message,
         });
-        
+
         // Stop execution if action fails and workflow is set to stop on error
         if (workflow.settings.onError === 'stop') {
           execution.status = 'failed';
-          execution.error = `Action ${action.name} failed: ${error.message}`;
+          execution.error = `Action ${action.name} failed: ${errorObj.message}`;
           execution.completedAt = new Date();
           return execution;
         }
@@ -103,9 +110,15 @@ export async function executeWorkflowImpl(
     }
 
     return execution;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    logger.error('[Workflow Engine] Workflow execution failed', errorObj, {
+      file: 'workflow-engine.ts',
+      workflowId: workflow.id,
+    });
+
     execution.status = 'failed';
-    execution.error = error.message;
+    execution.error = errorObj.message;
     execution.completedAt = new Date();
     return execution;
   }
@@ -171,9 +184,9 @@ async function executeAction(
   triggerData: Record<string, unknown>,
   workflow: Workflow
 ): Promise<Record<string, unknown>> {
-  const organizationId = triggerData?.organizationId ?? workflow.workspaceId;
-  
-  if (!organizationId) {
+  const organizationId = (triggerData?.organizationId ?? workflow.workspaceId) as string;
+
+  if (!organizationId || typeof organizationId !== 'string') {
     throw new Error('Organization ID required for workflow execution');
   }
   
@@ -213,7 +226,7 @@ async function executeAction(
       return executeSlackAction(action as any, triggerData, organizationId);
     
     case 'loop':
-      return executeLoopAction(action as any, triggerData, workflow, organizationId);
+      return executeLoopAction(action as any, triggerData, workflow, organizationId) as unknown as Record<string, unknown>;
     
     case 'ai_agent':
       return executeAIAgentAction(action as any, triggerData, organizationId);

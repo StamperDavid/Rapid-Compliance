@@ -77,31 +77,25 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   let credentials: Record<string, unknown> | null = null;
 
   // Try SendGrid first
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const sendgridKeys = await apiKeyService.getServiceKey(organizationId, 'sendgrid');
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  if (sendgridKeys && typeof sendgridKeys.apiKey === 'string') {
+  const sendgridKeys = await apiKeyService.getServiceKey(String(organizationId), 'sendgrid');
+  const sendgridKeysObj = typeof sendgridKeys === 'object' && sendgridKeys !== null ? sendgridKeys as Record<string, unknown> : null;
+  if (sendgridKeysObj && typeof sendgridKeysObj.apiKey === 'string') {
     provider = 'sendgrid';
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    credentials = sendgridKeys;
+    credentials = sendgridKeysObj;
   } else {
     // Try Resend
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const resendKeys = await apiKeyService.getServiceKey(organizationId, 'resend');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    if (resendKeys && typeof resendKeys.apiKey === 'string') {
+    const resendKeys = await apiKeyService.getServiceKey(String(organizationId), 'resend');
+    const resendKeysObj = typeof resendKeys === 'object' && resendKeys !== null ? resendKeys as Record<string, unknown> : null;
+    if (resendKeysObj && typeof resendKeysObj.apiKey === 'string') {
       provider = 'resend';
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      credentials = resendKeys;
+      credentials = resendKeysObj;
     } else {
       // Try SMTP
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const smtpKeys = await apiKeyService.getServiceKey(organizationId, 'smtp');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (smtpKeys && typeof smtpKeys.host === 'string' && typeof smtpKeys.username === 'string' && typeof smtpKeys.password === 'string') {
+      const smtpKeys = await apiKeyService.getServiceKey(String(organizationId), 'smtp');
+      const smtpKeysObj = typeof smtpKeys === 'object' && smtpKeys !== null ? smtpKeys as Record<string, unknown> : null;
+      if (smtpKeysObj && typeof smtpKeysObj.host === 'string' && typeof smtpKeysObj.username === 'string' && typeof smtpKeysObj.password === 'string') {
         provider = 'smtp';
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        credentials = smtpKeys;
+        credentials = smtpKeysObj;
       }
     }
   }

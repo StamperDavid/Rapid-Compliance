@@ -120,7 +120,7 @@ export class FieldMappingManager {
       
       return fullMapping;
     } catch (error) {
-      logger.error('[Field Mapper] Failed to create field mapping', error, {
+      logger.error('[Field Mapper] Failed to create field mapping', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-mapper.ts',
       });
       throw error;
@@ -153,7 +153,7 @@ export class FieldMappingManager {
       
       return mappings.length > 0 ? (mappings[0] as IntegrationFieldMapping) : null;
     } catch (error) {
-      logger.error('[Field Mapper] Failed to get field mapping', error, {
+      logger.error('[Field Mapper] Failed to get field mapping', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-mapper.ts',
         integrationId,
       });
@@ -196,7 +196,7 @@ export class FieldMappingManager {
         mappingId,
       });
     } catch (error) {
-      logger.error('[Field Mapper] Failed to update field mapping', error, {
+      logger.error('[Field Mapper] Failed to update field mapping', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-mapper.ts',
         mappingId,
       });
@@ -269,7 +269,7 @@ export class FieldMappingManager {
       }
       
     } catch (error) {
-      logger.error('[Field Mapper] Failed to adapt to schema change', error, {
+      logger.error('[Field Mapper] Failed to adapt to schema change', error instanceof Error ? error : new Error(String(error)), {
         file: 'field-mapper.ts',
         eventId: event.id,
       });
@@ -283,7 +283,7 @@ export class FieldMappingManager {
     mapping: IntegrationFieldMapping,
     oldFieldKey: string,
     newFieldKey: string
-  ): Promise<boolean> {
+  ): boolean {
     let updated = false;
     
     for (const rule of mapping.mappings) {
@@ -310,7 +310,7 @@ export class FieldMappingManager {
   private static handleFieldDeletionInMapping(
     mapping: IntegrationFieldMapping,
     deletedFieldKey: string
-  ): Promise<boolean> {
+  ): boolean {
     let updated = false;
     
     // Find rules using the deleted field
@@ -469,7 +469,7 @@ export class FieldMappingManager {
       
       case 'currency': {
         // Format as currency
-        const amount = parseFloat(value);
+        const amount = parseFloat(String(value));
         return isNaN(amount) ? value : amount.toFixed(2);
       }
       
@@ -477,7 +477,7 @@ export class FieldMappingManager {
         // Format date
         if (transform.format) {
           // Apply date formatting (would use date-fns or similar)
-          return new Date(value).toISOString();
+          return new Date(value as string | number | Date).toISOString();
         }
         return value;
       }
@@ -519,7 +519,7 @@ export class FieldMappingManager {
     for (const rule of rules) {
       switch (rule.type) {
         case 'regex': {
-          const regex = new RegExp(rule.value);
+          const regex = new RegExp(String(rule.value));
           if (!regex.test(String(value))) {
             return false;
           }

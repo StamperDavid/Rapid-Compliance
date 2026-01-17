@@ -105,7 +105,10 @@ export async function getProducts(
     logger.info('Products retrieved', {
       organizationId,
       count: filtered.length,
-      filters,
+      category: filters?.category,
+      inStock: filters?.inStock,
+      minPrice: filters?.minPrice,
+      maxPrice: filters?.maxPrice,
     });
 
     return {
@@ -114,7 +117,13 @@ export async function getProducts(
     };
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to get products', error, { organizationId, filters });
+    logger.error('Failed to get products', error instanceof Error ? error : new Error(String(error)), {
+      organizationId,
+      category: filters?.category,
+      inStock: filters?.inStock,
+      minPrice: filters?.minPrice,
+      maxPrice: filters?.maxPrice,
+    });
     throw new Error(`Failed to retrieve products: ${err.message}`);
   }
 }
@@ -142,7 +151,7 @@ export async function getProduct(
     return product;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to get product', error, { organizationId, productId });
+    logger.error('Failed to get product', error instanceof Error ? error : new Error(String(error)), { organizationId, productId });
     throw new Error(`Failed to retrieve product: ${err.message}`);
   }
 }
@@ -191,7 +200,11 @@ export async function createProduct(
     return product;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to create product', error, { organizationId, data });
+    logger.error('Failed to create product', error instanceof Error ? error : new Error(String(error)), {
+      organizationId,
+      productName: data.name,
+      price: data.price,
+    });
     throw new Error(`Failed to create product: ${err.message}`);
   }
 }
@@ -231,7 +244,7 @@ export async function updateProduct(
     return product;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to update product', error, { organizationId, productId });
+    logger.error('Failed to update product', error instanceof Error ? error : new Error(String(error)), { organizationId, productId });
     throw new Error(`Failed to update product: ${err.message}`);
   }
 }
@@ -253,7 +266,7 @@ export async function deleteProduct(
     logger.info('Product deleted', { organizationId, productId });
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to delete product', error, { organizationId, productId });
+    logger.error('Failed to delete product', error instanceof Error ? error : new Error(String(error)), { organizationId, productId });
     throw new Error(`Failed to delete product: ${err.message}`);
   }
 }
@@ -297,7 +310,7 @@ export async function updateInventory(
     return updated;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Failed to update inventory', error, { organizationId, productId, quantityChange });
+    logger.error('Failed to update inventory', error instanceof Error ? error : new Error(String(error)), { organizationId, productId, quantityChange });
     throw new Error(`Failed to update inventory: ${err.message}`);
   }
 }
@@ -347,7 +360,7 @@ export async function searchProducts(
     };
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Product search failed', error, { organizationId, searchTerm });
+    logger.error('Product search failed', error instanceof Error ? error : new Error(String(error)), { organizationId, searchTerm });
     throw new Error(`Search failed: ${err.message}`);
   }
 }
@@ -369,7 +382,10 @@ export async function bulkUpdateProducts(
         await updateProduct(organizationId, productId, updates, workspaceId);
         successCount++;
       } catch (error) {
-        logger.warn('Failed to update product in bulk operation', { productId, error });
+        logger.warn('Failed to update product in bulk operation', {
+          productId,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
@@ -383,7 +399,7 @@ export async function bulkUpdateProducts(
     return successCount;
   } catch (error: unknown) {
     const err = error as Error;
-    logger.error('Bulk product update failed', error, { organizationId, productIds });
+    logger.error('Bulk product update failed', error instanceof Error ? error : new Error(String(error)), { organizationId, productIds });
     throw new Error(`Bulk update failed: ${err.message}`);
   }
 }

@@ -584,8 +584,12 @@ async function synthesizeLeadObject(
         ? rawData.teamMembers 
         : (synthesized.teamMembers ?? []),
       
-      techStack: rawData.techStack.length > 0 
-        ? rawData.techStack 
+      techStack: rawData.techStack.length > 0
+        ? rawData.techStack.map(t => ({
+            name: t.name,
+            category: t.category as 'frontend' | 'backend' | 'analytics' | 'marketing' | 'infrastructure' | 'other',
+            confidence: t.confidence,
+          }))
         : (synthesized.techStack ?? []),
       
       pressmentions: synthesized.pressmentions ?? [],
@@ -627,7 +631,11 @@ async function synthesizeLeadObject(
       domain,
       companyName: extractDomainName(domain),
       teamMembers: rawData.teamMembers ?? [],
-      techStack: rawData.techStack ?? [],
+      techStack: (rawData.techStack ?? []).map(t => ({
+        name: t.name,
+        category: t.category as 'frontend' | 'backend' | 'analytics' | 'marketing' | 'infrastructure' | 'other',
+        confidence: t.confidence,
+      })),
       pressmentions: [],
       contactInfo: { socialMedia: {} },
       signals: {
@@ -1475,7 +1483,7 @@ async function emitDiscoverySignals(
             confidence: t.confidence,
           })),
           techStackCount: company.techStack.length,
-          categories: [...new Set(company.techStack.map(t => t.category))],
+          categories: Array.from(new Set(company.techStack.map(t => t.category))),
         },
       });
     }

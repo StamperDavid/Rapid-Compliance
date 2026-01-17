@@ -96,13 +96,13 @@ export async function getNurtureCampaigns(
     logger.info('Nurture campaigns retrieved', {
       organizationId,
       count: result.data.length,
-      filters,
+      filters: filters ? JSON.stringify(filters) : undefined,
     });
 
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get nurture campaigns', error, { organizationId, filters });
+    logger.error('Failed to get nurture campaigns', error instanceof Error ? error : new Error(String(error)), { organizationId, filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve nurture campaigns: ${errorMessage}`);
   }
 }
@@ -129,7 +129,7 @@ export async function getNurtureCampaign(
     return campaign;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get nurture campaign', error, { organizationId, campaignId });
+    logger.error('Failed to get nurture campaign', error instanceof Error ? error : new Error(String(error)), { organizationId, campaignId });
     throw new Error(`Failed to retrieve nurture campaign: ${errorMessage}`);
   }
 }
@@ -180,7 +180,7 @@ export async function createNurtureCampaign(
     return campaign;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to create nurture campaign', error, { organizationId, data });
+    logger.error('Failed to create nurture campaign', error instanceof Error ? error : new Error(String(error)), { organizationId });
     throw new Error(`Failed to create nurture campaign: ${errorMessage}`);
   }
 }
@@ -219,7 +219,7 @@ export async function updateNurtureCampaign(
     return campaign;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to update nurture campaign', error, { organizationId, campaignId });
+    logger.error('Failed to update nurture campaign', error instanceof Error ? error : new Error(String(error)), { organizationId, campaignId });
     throw new Error(`Failed to update nurture campaign: ${errorMessage}`);
   }
 }
@@ -240,7 +240,7 @@ export async function deleteNurtureCampaign(
     logger.info('Nurture campaign deleted', { organizationId, campaignId });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to delete nurture campaign', error, { organizationId, campaignId });
+    logger.error('Failed to delete nurture campaign', error instanceof Error ? error : new Error(String(error)), { organizationId, campaignId });
     throw new Error(`Failed to delete nurture campaign: ${errorMessage}`);
   }
 }
@@ -265,7 +265,7 @@ export async function setNurtureCampaignStatus(
     return campaign;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to change nurture campaign status', error, { organizationId, campaignId, status });
+    logger.error('Failed to change nurture campaign status', error instanceof Error ? error : new Error(String(error)), { organizationId, campaignId, status });
     throw new Error(`Failed to change campaign status: ${errorMessage}`);
   }
 }
@@ -317,7 +317,7 @@ export async function enrollLead(
     return { success: true, enrollmentId };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to enroll lead', error, { organizationId, campaignId, leadId });
+    logger.error('Failed to enroll lead', error instanceof Error ? error : new Error(String(error)), { organizationId, campaignId, leadId });
     throw new Error(`Failed to enroll lead: ${errorMessage}`);
   }
 }
@@ -345,11 +345,12 @@ export async function getCampaignStats(
       status: string;
     }
 
+    const typedEnrollments = enrollments as EnrollmentStatus[];
     const stats = {
-      enrolled: enrollments.length,
-      active: enrollments.filter((e: EnrollmentStatus) => e.status === 'active').length,
-      completed: enrollments.filter((e: EnrollmentStatus) => e.status === 'completed').length,
-      dropped: enrollments.filter((e: EnrollmentStatus) => e.status === 'dropped').length,
+      enrolled: typedEnrollments.length,
+      active: typedEnrollments.filter((e) => e.status === 'active').length,
+      completed: typedEnrollments.filter((e) => e.status === 'completed').length,
+      dropped: typedEnrollments.filter((e) => e.status === 'dropped').length,
     };
 
     logger.info('Campaign stats calculated', {
@@ -361,7 +362,7 @@ export async function getCampaignStats(
     return stats;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get campaign stats', error, { organizationId, campaignId });
+    logger.error('Failed to get campaign stats', error instanceof Error ? error : new Error(String(error)), { organizationId, campaignId });
     throw new Error(`Failed to get campaign stats: ${errorMessage}`);
   }
 }

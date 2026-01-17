@@ -165,7 +165,7 @@ export async function analyzeConversation(
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Conversation analysis failed', error, {
+    logger.error('Conversation analysis failed', error instanceof Error ? error : new Error(String(error)), {
       conversationId: request.conversationId,
       organizationId: request.organizationId,
     });
@@ -283,7 +283,7 @@ export async function analyzeTranscript(
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Transcript analysis failed', error, {
+    logger.error('Transcript analysis failed', error instanceof Error ? error : new Error(String(error)), {
       organizationId: request.organizationId,
     });
     throw new Error(`Transcript analysis failed: ${errorMessage}`);
@@ -348,7 +348,7 @@ export async function analyzeBatchConversations(
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Batch conversation analysis failed', error, {
+    logger.error('Batch conversation analysis failed', error instanceof Error ? error : new Error(String(error)), {
       organizationId: request.organizationId,
     });
     throw new Error(`Batch conversation analysis failed: ${errorMessage}`);
@@ -1049,7 +1049,7 @@ function parseCoachingInsights(aiResponse: string, maxInsights: number): Coachin
     return parsed.slice(0, maxInsights);
 
   } catch (error) {
-    logger.warn('Failed to parse coaching insights', { error });
+    logger.warn('Failed to parse coaching insights', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -1136,7 +1136,7 @@ function parseFollowUpActions(aiResponse: string, maxActions: number): FollowUpA
     return parsed.slice(0, maxActions);
 
   } catch (error) {
-    logger.warn('Failed to parse follow-up actions', { error });
+    logger.warn('Failed to parse follow-up actions', { error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }
@@ -1290,7 +1290,7 @@ async function emitAnalysisSignal(
     });
 
   } catch (error) {
-    logger.error('Failed to emit analysis signal', error, {
+    logger.error('Failed to emit analysis signal', error instanceof Error ? error : new Error(String(error)), {
       conversationId: conversation.id,
     });
   }

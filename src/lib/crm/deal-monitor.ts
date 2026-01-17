@@ -112,7 +112,7 @@ export function startDealMonitor(
 
     return unsubscribe;
   } catch (error) {
-    logger.error('Failed to start deal monitor', error, {
+    logger.error('Failed to start deal monitor', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       workspaceId,
     });
@@ -169,7 +169,7 @@ async function handleDealSignal(
           signalPriority
         );
       } catch (error) {
-        logger.error('Failed to recalculate health score', error, { dealId });
+        logger.error('Failed to recalculate health score', error instanceof Error ? error : new Error(String(error)), { dealId });
       }
     }
 
@@ -198,7 +198,7 @@ async function handleDealSignal(
           signalPriority
         );
       } catch (error) {
-        logger.error('Failed to generate recommendations', error, { dealId });
+        logger.error('Failed to generate recommendations', error instanceof Error ? error : new Error(String(error)), { dealId });
       }
     }
 
@@ -211,7 +211,7 @@ async function handleDealSignal(
       signalPriority
     );
   } catch (error) {
-    logger.error('Failed to handle deal signal', error, {
+    logger.error('Failed to handle deal signal', error instanceof Error ? error : new Error(String(error)), {
       signalType: signal.type,
     });
   }
@@ -364,7 +364,7 @@ async function emitHealthScoreSignal(
       status: healthScore.status,
     });
   } catch (error) {
-    logger.error('Failed to emit health score signal', error, { dealId });
+    logger.error('Failed to emit health score signal', error instanceof Error ? error : new Error(String(error)), { dealId });
   }
 }
 
@@ -424,7 +424,7 @@ async function emitRecommendationsSignal(
       urgency: recommendations.urgency,
     });
   } catch (error) {
-    logger.error('Failed to emit recommendations signal', error, { dealId });
+    logger.error('Failed to emit recommendations signal', error instanceof Error ? error : new Error(String(error)), { dealId });
   }
 }
 
@@ -501,7 +501,7 @@ export async function runDealHealthCheck(
           recommendationsGenerated++;
         }
       } catch (error) {
-        logger.error('Failed to process deal in health check', error, {
+        logger.error('Failed to process deal in health check', error instanceof Error ? error : new Error(String(error)), {
           dealId: deal.id,
         });
       }
@@ -519,7 +519,7 @@ export async function runDealHealthCheck(
 
     return summary;
   } catch (error) {
-    logger.error('Failed to run deal health check', error, {
+    logger.error('Failed to run deal health check', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       workspaceId,
     });

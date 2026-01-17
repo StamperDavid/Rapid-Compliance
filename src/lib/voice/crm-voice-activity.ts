@@ -143,7 +143,7 @@ class CRMVoiceActivityLogger {
 
       return { id: data.id, ...activity };
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Log call failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Log call failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
       return null;
     }
   }
@@ -209,7 +209,7 @@ class CRMVoiceActivityLogger {
 
       return { id: data.id, ...activity };
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Log SMS failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Log SMS failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
       return null;
     }
   }
@@ -273,7 +273,7 @@ class CRMVoiceActivityLogger {
 
       return { id: data.id, ...activity };
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Log voicemail failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Log voicemail failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
       return null;
     }
   }
@@ -313,7 +313,7 @@ class CRMVoiceActivityLogger {
 
       return true;
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Update disposition failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Update disposition failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
       return false;
     }
   }
@@ -346,7 +346,7 @@ class CRMVoiceActivityLogger {
       const data = await response.json() as { activities?: VoiceActivity[] };
       return data.activities ?? [];
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Get activities failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Get activities failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
       return [];
     }
   }
@@ -381,7 +381,7 @@ class CRMVoiceActivityLogger {
       const data = await response.json() as { stats: ActivityStats };
       return data.stats;
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Get stats failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Get stats failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
       return {
         totalCalls: 0,
         totalDuration: 0,
@@ -432,7 +432,7 @@ class CRMVoiceActivityLogger {
         companyId: data.companyId,
       };
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Find associated records failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Find associated records failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
       return {};
     }
   }
@@ -455,7 +455,7 @@ class CRMVoiceActivityLogger {
         }),
       });
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Update last contacted failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Update last contacted failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
     }
   }
 
@@ -479,7 +479,7 @@ class CRMVoiceActivityLogger {
         }),
       });
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Trigger workflow failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Trigger workflow failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
     }
   }
 
@@ -509,7 +509,7 @@ class CRMVoiceActivityLogger {
         }),
       });
     } catch (error) {
-      logger.error('[CRMVoiceActivity] Create follow-up task failed:', error, { file: 'crm-voice-activity.ts' });
+      logger.error('[CRMVoiceActivity] Create follow-up task failed:', error instanceof Error ? error : new Error(String(error)), { file: 'crm-voice-activity.ts' });
     }
   }
 }

@@ -96,7 +96,7 @@ class CallTransferService {
       return { success: true };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('[CallTransfer] Cold transfer failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Cold transfer failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
       await this.logTransfer(request, 'cold', false, errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -143,7 +143,7 @@ class CallTransferService {
       return { success: true, newCallId: consultCall.callId };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('[CallTransfer] Warm transfer failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Warm transfer failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
 
       // Try to unhold the original call if something goes wrong
       try {
@@ -189,7 +189,7 @@ class CallTransferService {
       return { success: true, conferenceId: conferenceName };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('[CallTransfer] Complete warm transfer failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Complete warm transfer failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
       return { success: false, error: errorMessage };
     }
   }
@@ -213,7 +213,7 @@ class CallTransferService {
       return { success: true };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('[CallTransfer] Cancel warm transfer failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Cancel warm transfer failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
       return { success: false, error: errorMessage };
     }
   }
@@ -274,7 +274,7 @@ class CallTransferService {
       return { success: true, conferenceId: conferenceName, newCallId: newCall.callId };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('[CallTransfer] Conference transfer failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Conference transfer failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
       await this.logTransfer(request, 'conference', false, errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -332,7 +332,7 @@ class CallTransferService {
       return result;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('[CallTransfer] AI-to-Human handoff failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] AI-to-Human handoff failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
       return { success: false, error: errorMessage };
     }
   }
@@ -363,7 +363,7 @@ class CallTransferService {
 
       return available[0] ?? null;
     } catch (error) {
-      logger.error('[CallTransfer] Find available agent failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Find available agent failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
       return null;
     }
   }
@@ -412,7 +412,7 @@ class CallTransferService {
         }),
       });
     } catch (error) {
-      logger.error('[CallTransfer] Create screen pop failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Create screen pop failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
     }
   }
 
@@ -444,7 +444,7 @@ class CallTransferService {
         }),
       });
     } catch (error) {
-      logger.error('[CallTransfer] Log transfer failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Log transfer failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
     }
   }
 
@@ -480,7 +480,7 @@ class CallTransferService {
         }),
       });
     } catch (error) {
-      logger.error('[CallTransfer] Log AI handoff failed:', error, { file: 'call-transfer-service.ts' });
+      logger.error('[CallTransfer] Log AI handoff failed:', error instanceof Error ? error : new Error(String(error)), { file: 'call-transfer-service.ts' });
     }
   }
 }

@@ -186,7 +186,7 @@ export async function calculateLeadScore(
 
     return score;
   } catch (error) {
-    logger.error('Failed to calculate lead score', error, {
+    logger.error('Failed to calculate lead score', error instanceof Error ? error : new Error(String(error)), {
       leadId: request.leadId,
       organizationId: request.organizationId,
     });
@@ -230,8 +230,7 @@ export async function calculateLeadScoresBatch(
       if (result.status === 'fulfilled') {
         results.set(leadId, result.value);
       } else {
-        const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason));
-        logger.error('Batch scoring failed for lead', error, { leadId });
+        logger.error('Batch scoring failed for lead', result.reason instanceof Error ? result.reason : new Error(String(result.reason)), { leadId });
       }
     });
   }
@@ -958,7 +957,7 @@ async function calculateEngagement(
       });
     }
   } catch (error) {
-    logger.error('Failed to calculate engagement score', error, { leadId });
+    logger.error('Failed to calculate engagement score', error instanceof Error ? error : new Error(String(error)), { leadId });
   }
 
   return { points: Math.min(10, points), reasons };
@@ -1110,7 +1109,7 @@ async function getLeadData(leadId: string, organizationId: string): Promise<Lead
 
     return null;
   } catch (error) {
-    logger.error('Failed to get lead data', error, { leadId });
+    logger.error('Failed to get lead data', error instanceof Error ? error : new Error(String(error)), { leadId });
     return null;
   }
 }
@@ -1167,7 +1166,7 @@ async function getScoringRules(
     // If no rules exist, create default
     return await createDefaultScoringRules(organizationId);
   } catch (error) {
-    logger.error('Failed to get scoring rules', error, { organizationId });
+    logger.error('Failed to get scoring rules', error instanceof Error ? error : new Error(String(error)), { organizationId });
     return null;
   }
 }
@@ -1256,7 +1255,7 @@ async function getCachedScore(
       },
     };
   } catch (error) {
-    logger.error('Failed to get cached score', error, { leadId });
+    logger.error('Failed to get cached score', error instanceof Error ? error : new Error(String(error)), { leadId });
     return null;
   }
 }
@@ -1309,7 +1308,7 @@ async function cacheScore(
 
     logger.info('Cached lead score', { leadId, score: score.totalScore });
   } catch (error) {
-    logger.error('Failed to cache score', error, { leadId });
+    logger.error('Failed to cache score', error instanceof Error ? error : new Error(String(error)), { leadId });
   }
 }
 
@@ -1424,7 +1423,7 @@ async function emitScoringSignals(
     });
   } catch (error) {
     // Don't fail scoring if signal emission fails
-    logger.error('Failed to emit scoring signals', error, {
+    logger.error('Failed to emit scoring signals', error instanceof Error ? error : new Error(String(error)), {
       leadId,
       organizationId,
     });

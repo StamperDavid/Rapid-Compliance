@@ -33,11 +33,14 @@ interface PaginatedResult<T> {
 /**
  * Helper to safely convert activity occurredAt to Date
  */
-function toDate(value: Date | { toDate?: () => Date } | string | number): Date {
-  if (value && typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
-    return value.toDate();
+function toDate(value: Date | { toDate?: () => Date } | string | number | unknown): Date {
+  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate();
   }
-  return value instanceof Date ? value : new Date(value);
+  if (value instanceof Date) {
+    return value;
+  }
+  return new Date(value as string | number);
 }
 
 /**
@@ -57,7 +60,7 @@ export async function createActivity(
       id: activityId,
       organizationId,
       workspaceId,
-      occurredAt: (data.occurredAt || now),
+      occurredAt: data.occurredAt ?? now,
       createdAt: now,
     };
 
@@ -77,7 +80,7 @@ export async function createActivity(
 
     return activity;
   } catch (error: unknown) {
-    logger.error('Failed to create activity', error, { organizationId, data });
+    logger.error('Failed to create activity', error instanceof Error ? error : new Error(String(error)), { organizationId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to create activity: ${errorMessage}`);
   }
@@ -153,7 +156,7 @@ export async function getActivities(
     logger.info('Activities retrieved', {
       organizationId,
       count: filteredData.length,
-      filters,
+      filters: filters ? JSON.stringify(filters) : undefined,
     });
 
     return {
@@ -162,7 +165,7 @@ export async function getActivities(
       hasMore: result.hasMore,
     };
   } catch (error: unknown) {
-    logger.error('Failed to get activities', error, { organizationId, filters });
+    logger.error('Failed to get activities', error instanceof Error ? error : new Error(String(error)), { organizationId, filters: filters ? JSON.stringify(filters) : undefined });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to retrieve activities: ${errorMessage}`);
   }
@@ -224,7 +227,7 @@ export async function getEntityTimeline(
 
     return timeline;
   } catch (error: unknown) {
-    logger.error('Failed to get timeline', error, { organizationId, entityType, entityId });
+    logger.error('Failed to get timeline', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to retrieve timeline: ${errorMessage}`);
   }
@@ -302,7 +305,7 @@ export async function getActivityStats(
 
     return stats;
   } catch (error: unknown) {
-    logger.error('Failed to calculate activity stats', error, { organizationId, entityType, entityId });
+    logger.error('Failed to calculate activity stats', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to calculate stats: ${errorMessage}`);
   }
@@ -423,7 +426,7 @@ export async function getActivityInsights(
 
     return insights;
   } catch (error: unknown) {
-    logger.error('Failed to generate insights', error, { organizationId, entityType, entityId });
+    logger.error('Failed to generate insights', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to generate insights: ${errorMessage}`);
   }
@@ -537,7 +540,7 @@ export async function getNextBestAction(
     };
 
   } catch (error: unknown) {
-    logger.error('Failed to get next best action', error, { organizationId, entityType, entityId });
+    logger.error('Failed to get next best action', error instanceof Error ? error : new Error(String(error)), { organizationId, entityType, entityId });
     return null;
   }
 }
@@ -558,7 +561,7 @@ export async function bulkCreateActivities(
         await createActivity(organizationId, workspaceId, activityData);
         successCount++;
       } catch (error) {
-        logger.warn('Failed to create activity in bulk operation', { error });
+        logger.warn('Failed to create activity in bulk operation', { error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -571,7 +574,7 @@ export async function bulkCreateActivities(
 
     return successCount;
   } catch (error: unknown) {
-    logger.error('Bulk activity creation failed', error, { organizationId });
+    logger.error('Bulk activity creation failed', error instanceof Error ? error : new Error(String(error)), { organizationId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Bulk creation failed: ${errorMessage}`);
   }
@@ -593,7 +596,7 @@ export async function deleteActivity(
 
     logger.info('Activity deleted', { organizationId, activityId });
   } catch (error: unknown) {
-    logger.error('Failed to delete activity', error, { organizationId, activityId });
+    logger.error('Failed to delete activity', error instanceof Error ? error : new Error(String(error)), { organizationId, activityId });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(`Failed to delete activity: ${errorMessage}`);
   }

@@ -182,7 +182,7 @@ export async function saveToDiscoveryArchive(params: {
 
     return { scrape: newScrape, isNew: true };
   } catch (error) {
-    logger.error('Failed to save to discovery archive', error, {
+    logger.error('Failed to save to discovery archive', error instanceof Error ? error : new Error(String(error)), {
       organizationId: params.organizationId,
       url: params.url,
     });
@@ -219,7 +219,7 @@ export async function flagArchiveEntryForDeletion(scrapeId: string): Promise<voi
       scrapeId,
     });
   } catch (error) {
-    logger.error('Failed to flag archive entry for deletion', error, {
+    logger.error('Failed to flag archive entry for deletion', error instanceof Error ? error : new Error(String(error)), {
       scrapeId,
     });
     
@@ -273,7 +273,7 @@ export async function deleteFlaggedArchiveEntries(organizationId: string): Promi
 
     return deletedCount;
   } catch (error) {
-    logger.error('Failed to delete flagged archive entries', error, {
+    logger.error('Failed to delete flagged archive entries', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     
@@ -322,7 +322,7 @@ export async function deleteExpiredArchiveEntries(organizationId: string): Promi
 
     return deletedCount;
   } catch (error) {
-    logger.error('Failed to delete expired archive entries', error, {
+    logger.error('Failed to delete expired archive entries', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     
@@ -359,7 +359,7 @@ export async function getFromDiscoveryArchive(scrapeId: string): Promise<Tempora
       verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
     } as TemporaryScrape;
   } catch (error) {
-    logger.error('Failed to get from discovery archive', error, {
+    logger.error('Failed to get from discovery archive', error instanceof Error ? error : new Error(String(error)), {
       scrapeId,
     });
     
@@ -402,7 +402,7 @@ export async function getFromDiscoveryArchiveByHash(
       verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
     } as TemporaryScrape;
   } catch (error) {
-    logger.error('Failed to get from discovery archive by hash', error, {
+    logger.error('Failed to get from discovery archive by hash', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       contentHash: contentHash.substring(0, 16),
     });
@@ -446,7 +446,7 @@ export async function getFromDiscoveryArchiveByUrl(
       } as TemporaryScrape;
     });
   } catch (error) {
-    logger.error('Failed to get from discovery archive by URL', error, {
+    logger.error('Failed to get from discovery archive by URL', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       url,
     });
@@ -512,7 +512,7 @@ export async function calculateStorageCost(organizationId: string): Promise<{
       projectedSavingsWithTTL,
     };
   } catch (error) {
-    logger.error('Failed to calculate storage cost', error, {
+    logger.error('Failed to calculate storage cost', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     
@@ -588,7 +588,7 @@ export async function getStorageStats(organizationId: string): Promise<{
       newestScrape,
     };
   } catch (error) {
-    logger.error('Failed to get storage stats', error, {
+    logger.error('Failed to get storage stats', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     

@@ -173,7 +173,7 @@ export async function saveTemporaryScrape(params: {
 
     return { scrape: newScrape, isNew: true };
   } catch (error) {
-    logger.error('Failed to save temporary scrape', error, {
+    logger.error('Failed to save temporary scrape', error instanceof Error ? error : new Error(String(error)), {
       organizationId: params.organizationId,
       url: params.url,
     });
@@ -210,7 +210,7 @@ export async function flagScrapeForDeletion(scrapeId: string): Promise<void> {
       scrapeId,
     });
   } catch (error) {
-    logger.error('Failed to flag scrape for deletion', error, {
+    logger.error('Failed to flag scrape for deletion', error instanceof Error ? error : new Error(String(error)), {
       scrapeId,
     });
     
@@ -264,7 +264,7 @@ export async function deleteFlaggedScrapes(organizationId: string): Promise<numb
 
     return deletedCount;
   } catch (error) {
-    logger.error('Failed to delete flagged scrapes', error, {
+    logger.error('Failed to delete flagged scrapes', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     
@@ -313,7 +313,7 @@ export async function deleteExpiredScrapes(organizationId: string): Promise<numb
 
     return deletedCount;
   } catch (error) {
-    logger.error('Failed to delete expired scrapes', error, {
+    logger.error('Failed to delete expired scrapes', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     
@@ -350,7 +350,7 @@ export async function getTemporaryScrape(scrapeId: string): Promise<TemporaryScr
       verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
     } as TemporaryScrape;
   } catch (error) {
-    logger.error('Failed to get temporary scrape', error, {
+    logger.error('Failed to get temporary scrape', error instanceof Error ? error : new Error(String(error)), {
       scrapeId,
     });
     
@@ -393,7 +393,7 @@ export async function getTemporaryScrapeByHash(
       verifiedAt: raw.verifiedAt ? toDate(raw.verifiedAt) : undefined,
     } as TemporaryScrape;
   } catch (error) {
-    logger.error('Failed to get temporary scrape by hash', error, {
+    logger.error('Failed to get temporary scrape by hash', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       contentHash: contentHash.substring(0, 16),
     });
@@ -437,7 +437,7 @@ export async function getTemporaryScrapesByUrl(
       } as TemporaryScrape;
     });
   } catch (error) {
-    logger.error('Failed to get temporary scrapes by URL', error, {
+    logger.error('Failed to get temporary scrapes by URL', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
       url,
     });
@@ -503,7 +503,7 @@ export async function calculateStorageCost(organizationId: string): Promise<{
       projectedSavingsWithTTL,
     };
   } catch (error) {
-    logger.error('Failed to calculate storage cost', error, {
+    logger.error('Failed to calculate storage cost', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     
@@ -579,7 +579,7 @@ export async function getStorageStats(organizationId: string): Promise<{
       newestScrape,
     };
   } catch (error) {
-    logger.error('Failed to get storage stats', error, {
+    logger.error('Failed to get storage stats', error instanceof Error ? error : new Error(String(error)), {
       organizationId,
     });
     

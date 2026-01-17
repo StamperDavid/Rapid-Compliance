@@ -38,7 +38,7 @@ export class FeatureGate {
       // If subscription is past_due, canceled, or paused, block access
       return false;
     } catch (error) {
-      logger.error('[FeatureGate] Error checking feature access:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error checking feature access:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       return false;
     }
   }
@@ -86,7 +86,7 @@ export class FeatureGate {
         requiredTier,
       };
     } catch (error) {
-      logger.error('[FeatureGate] Error checking record capacity:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error checking record capacity:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       return {
         allowed: false,
         currentCount: 0,
@@ -168,7 +168,7 @@ export class FeatureGate {
       
       return { allowed, remaining, limit, used };
     } catch (error) {
-      logger.error('[FeatureGate] Error checking usage limit:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error checking usage limit:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       return { allowed: false, remaining: 0, limit: 0, used: 0 };
     }
   }
@@ -220,7 +220,7 @@ export class FeatureGate {
       
       await this.saveSubscription(orgId, subscription);
     } catch (error) {
-      logger.error('[FeatureGate] Error incrementing usage:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error incrementing usage:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -287,7 +287,7 @@ export class FeatureGate {
       
       logger.info('FeatureGate Reset monthly limits for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      logger.error('[FeatureGate] Error resetting monthly limits:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error resetting monthly limits:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -309,7 +309,7 @@ export class FeatureGate {
       
       return sub as OrganizationSubscription;
     } catch (error) {
-      logger.error('[FeatureGate] Error getting subscription:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error getting subscription:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -329,7 +329,7 @@ export class FeatureGate {
         false
       );
     } catch (error) {
-      logger.error('[FeatureGate] Error saving subscription:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error saving subscription:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -465,7 +465,7 @@ export class FeatureGate {
       
       return subscription;
     } catch (error) {
-      logger.error('[FeatureGate] Error updating plan:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error updating plan:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -509,7 +509,7 @@ export class FeatureGate {
       
       logger.info('FeatureGate Toggled feature} to enabled} for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      logger.error('[FeatureGate] Error toggling feature:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error toggling feature:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       throw error;
     }
   }
@@ -558,7 +558,7 @@ export class FeatureGate {
       
       logger.info('FeatureGate Added add-on addOnId} for org: orgId}', { file: 'feature-gate.ts' });
     } catch (error) {
-      logger.error('[FeatureGate] Error adding add-on:', error, { file: 'feature-gate.ts' });
+      logger.error('[FeatureGate] Error adding add-on:', error instanceof Error ? error : new Error(String(error)), { file: 'feature-gate.ts' });
       throw error;
     }
   }

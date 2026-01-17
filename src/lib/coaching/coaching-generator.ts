@@ -130,7 +130,7 @@ export class CoachingGenerator {
     } catch (error) {
       logger.error('Error generating coaching insights', {
         repId: performance.repId,
-        error
+        error: error instanceof Error ? error : new Error(String(error))
       });
       throw error;
     }
@@ -168,7 +168,7 @@ export class CoachingGenerator {
         focusAreas:parsed.focusAreas ?? this.getFocusAreas(performance)
       };
     } catch (error) {
-      logger.error('Error parsing performance summary', { error });
+      logger.error('Error parsing performance summary', { error: error instanceof Error ? error : new Error(String(error)) });
       // Fallback to rule-based summary
       return this.generateFallbackSummary(performance);
     }
@@ -195,7 +195,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { strengths?: Strength[] };
       return parsed.strengths ?? this.identifyStrengthsFallback(performance);
     } catch (error) {
-      logger.error('Error parsing strengths', { error });
+      logger.error('Error parsing strengths', { error: error instanceof Error ? error : new Error(String(error)) });
       return this.identifyStrengthsFallback(performance);
     }
   }
@@ -221,7 +221,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { weaknesses?: Weakness[] };
       return parsed.weaknesses ?? this.identifyWeaknessesFallback(performance);
     } catch (error) {
-      logger.error('Error parsing weaknesses', { error });
+      logger.error('Error parsing weaknesses', { error: error instanceof Error ? error : new Error(String(error)) });
       return this.identifyWeaknessesFallback(performance);
     }
   }
@@ -247,7 +247,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { opportunities?: Opportunity[] };
       return parsed.opportunities ?? this.identifyOpportunitiesFallback(performance);
     } catch (error) {
-      logger.error('Error parsing opportunities', { error });
+      logger.error('Error parsing opportunities', { error: error instanceof Error ? error : new Error(String(error)) });
       return this.identifyOpportunitiesFallback(performance);
     }
   }
@@ -273,7 +273,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { risks?: Risk[] };
       return parsed.risks ?? this.assessRisksFallback(performance);
     } catch (error) {
-      logger.error('Error parsing risks', { error });
+      logger.error('Error parsing risks', { error: error instanceof Error ? error : new Error(String(error)) });
       return this.assessRisksFallback(performance);
     }
   }
@@ -299,7 +299,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { bestPractices?: BestPractice[] };
       return parsed.bestPractices ?? [];
     } catch (error) {
-      logger.error('Error parsing best practices', { error });
+      logger.error('Error parsing best practices', { error: error instanceof Error ? error : new Error(String(error)) });
       return [];
     }
   }
@@ -325,7 +325,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { recommendations?: CoachingRecommendation[] };
       return parsed.recommendations ?? this.generateRecommendationsFallback(performance);
     } catch (error) {
-      logger.error('Error parsing recommendations', { error });
+      logger.error('Error parsing recommendations', { error: error instanceof Error ? error : new Error(String(error)) });
       return this.generateRecommendationsFallback(performance);
     }
   }
@@ -352,7 +352,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { trainingSuggestions?: TrainingSuggestion[] };
       return parsed.trainingSuggestions ?? [];
     } catch (error) {
-      logger.error('Error parsing training suggestions', { error });
+      logger.error('Error parsing training suggestions', { error: error instanceof Error ? error : new Error(String(error)) });
       return [];
     }
   }
@@ -379,7 +379,7 @@ export class CoachingGenerator {
       const parsed = JSON.parse(response.text) as { actionItems?: ActionItem[] };
       return parsed.actionItems ?? [];
     } catch (error) {
-      logger.error('Error parsing action items', { error });
+      logger.error('Error parsing action items', { error: error instanceof Error ? error : new Error(String(error)) });
       return [];
     }
   }
