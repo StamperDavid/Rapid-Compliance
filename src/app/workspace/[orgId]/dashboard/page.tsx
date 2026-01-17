@@ -264,8 +264,8 @@ export default function WorkspaceDashboardPage() {
           wonDeals,
           lostDeals,
         });
-      } catch (error) {
-        logger.error('Error fetching dashboard data:', error, { file: 'page.tsx' });
+      } catch (error: unknown) {
+        logger.error('Error fetching dashboard data:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       } finally {
         setLoading(false);
       }

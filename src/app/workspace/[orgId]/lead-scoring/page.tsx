@@ -77,8 +77,8 @@ export default function LeadScoringDashboard({ params }: LeadScoringDashboardPro
       }
 
       setScores([]);
-    } catch (error) {
-      logger.error('Failed to load lead scoring data', error);
+    } catch (error: unknown) {
+      logger.error('Failed to load lead scoring data', error instanceof Error ? error : undefined);
     } finally {
       setLoading(false);
     }

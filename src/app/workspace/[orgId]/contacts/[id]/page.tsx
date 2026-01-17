@@ -21,8 +21,8 @@ export default function ContactDetailPage() {
     try {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/contacts/records`, contactId);
       setContact(data);
-    } catch (error) {
-      logger.error('Error loading contact:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading contact:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

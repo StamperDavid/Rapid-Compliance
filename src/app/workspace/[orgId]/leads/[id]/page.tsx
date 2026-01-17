@@ -31,8 +31,8 @@ export default function LeadDetailPage() {
       
       // Load intelligence features
       loadIntelligence(data);
-    } catch (error) {
-      logger.error('Error loading lead:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -50,8 +50,8 @@ export default function LeadDetailPage() {
       const { calculateLeadDataQuality } = await import('@/lib/crm/data-quality');
       const quality = calculateLeadDataQuality(leadData);
       setDataQuality(quality);
-    } catch (error) {
-      logger.error('Error loading intelligence:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading intelligence:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoadingIntelligence(false);
     }
@@ -265,8 +265,8 @@ export default function LeadDetailPage() {
                     );
                     alert('Lead converted to deal!');
                     router.push(`/workspace/${orgId}/deals/${dealId}`);
-                  } catch (error) {
-                    logger.error('Error converting lead:', error, { file: 'page.tsx' });
+                  } catch (error: unknown) {
+                    logger.error('Error converting lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
                     alert('Failed to convert lead');
                   }
                 }}

@@ -197,8 +197,8 @@ export default function IdentityRefinementPage() {
         }));
       }
 
-    } catch (error) {
-      logger.error('Error loading identity data:', error, { file: 'identity-refine-page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading identity data:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -233,8 +233,8 @@ export default function IdentityRefinementPage() {
           }));
         }
       }
-    } catch (error) {
-      logger.error('Error loading voices:', error, { file: 'identity-refine-page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading voices:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
     } finally {
       setLoadingVoices(false);
     }
@@ -267,8 +267,8 @@ export default function IdentityRefinementPage() {
       } else {
         alert(data.error || 'Failed to generate audio');
       }
-    } catch (error) {
-      logger.error('Error testing voice:', error, { file: 'identity-refine-page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error testing voice:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
       alert('Failed to test voice');
     } finally {
       setTestingVoice(false);
@@ -373,8 +373,8 @@ export default function IdentityRefinementPage() {
       // Navigate to dashboard
       router.push(`/workspace/${orgId}/dashboard`);
 
-    } catch (error) {
-      logger.error('Error saving identity:', error, { file: 'identity-refine-page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error saving identity:', error instanceof Error ? error : undefined, { file: 'identity-refine-page.tsx' });
       alert('Failed to save. Please try again.');
     } finally {
       setSaving(false);

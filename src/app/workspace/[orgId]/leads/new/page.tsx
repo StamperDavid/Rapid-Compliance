@@ -51,8 +51,8 @@ export default function NewLeadPage() {
       if (data.success) {
         setDuplicateResult(data.data);
       }
-    } catch (error) {
-      logger.error('Error checking duplicates:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error checking duplicates:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setCheckingDuplicates(false);
     }
@@ -63,8 +63,8 @@ export default function NewLeadPage() {
       const { calculateLeadDataQuality } = await import('@/lib/crm/data-quality');
       const quality = calculateLeadDataQuality(lead);
       setDataQuality(quality);
-    } catch (error) {
-      logger.error('Error calculating quality:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error calculating quality:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     }
   };
 
@@ -94,8 +94,8 @@ export default function NewLeadPage() {
       }
       
       router.push(`/workspace/${orgId}/leads`);
-    } catch (error) {
-      logger.error('Error creating lead:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error creating lead:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to create lead');
     } finally {
       setSaving(false);
@@ -117,8 +117,8 @@ export default function NewLeadPage() {
       if (response.ok) {
         router.push(`/workspace/${orgId}/leads/${mergeId}`);
       }
-    } catch (error) {
-      logger.error('Error merging:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error merging:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     }
   };
 
@@ -226,7 +226,7 @@ export default function NewLeadPage() {
                     onClick={() => {
                       const suggestion = dataQuality.suggestions.find(s => s.field === 'phone');
                       if (suggestion?.suggestedValue) {
-                        setLead({...lead, phone: suggestion.suggestedValue});
+                        setLead({...lead, phone: String(suggestion.suggestedValue)});
                       }
                     }}
                     className="text-xs text-blue-400 mt-1 hover:text-blue-300"

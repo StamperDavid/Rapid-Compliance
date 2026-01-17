@@ -113,8 +113,8 @@ export default function IntegrationsPage() {
 
       await refresh(); // Refresh pagination
       alert(`${INTEGRATION_PROVIDERS[providerId].name} connected successfully!`);
-    } catch (error) {
-      logger.error('Failed to save integration:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Failed to save integration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to connect integration');
     }
   };
@@ -131,8 +131,8 @@ export default function IntegrationsPage() {
         integrationId
       );
       await refresh(); // Refresh pagination
-    } catch (error) {
-      logger.error('Failed to disconnect integration:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Failed to disconnect integration:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to disconnect integration');
     }
   };

@@ -27,8 +27,8 @@ export default function DealDetailPage() {
       const data = await FirestoreService.get(`organizations/${orgId}/workspaces/default/entities/deals/records`, dealId);
       setDeal(data);
       loadDealHealth();
-    } catch (error) {
-      logger.error('Error loading deal:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading deal:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }
@@ -40,8 +40,8 @@ export default function DealDetailPage() {
       const { calculateDealHealth } = await import('@/lib/crm/deal-health');
       const health = await calculateDealHealth(orgId, 'default', dealId);
       setHealthScore(health);
-    } catch (error) {
-      logger.error('Error loading deal health:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading deal health:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoadingHealth(false);
     }
@@ -235,8 +235,8 @@ export default function DealDetailPage() {
                     );
                     await loadDeal();
                     alert('Deal marked as won! 🎉');
-                  } catch (error) {
-                    logger.error('Error updating deal:', error, { file: 'page.tsx' });
+                  } catch (error: unknown) {
+                    logger.error('Error updating deal:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
                     alert('Failed to update deal');
                   }
                 }}
@@ -256,8 +256,8 @@ export default function DealDetailPage() {
                     );
                     await loadDeal();
                     alert('Deal marked as lost');
-                  } catch (error) {
-                    logger.error('Error updating deal:', error, { file: 'page.tsx' });
+                  } catch (error: unknown) {
+                    logger.error('Error updating deal:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
                     alert('Failed to update deal');
                   }
                 }}

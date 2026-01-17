@@ -51,8 +51,8 @@ export default function EmailCampaignsPage() {
     try {
       await deleteCampaign(orgId, campaignId);
       await refresh();
-    } catch (err) {
-      logger.error('Error deleting campaign:', err, { file: 'page.tsx' });
+    } catch (err: unknown) {
+      logger.error('Error deleting campaign:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
       // eslint-disable-next-line no-alert
       window.alert('Failed to delete campaign');
     }

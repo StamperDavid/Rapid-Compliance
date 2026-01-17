@@ -88,8 +88,8 @@ export default function LivingLedgerPage() {
         }
 
         setLoading(false);
-      } catch (error) {
-        logger.error('Failed to load deals', error);
+      } catch (error: unknown) {
+        logger.error('Failed to load deals', error instanceof Error ? error : undefined);
         setLoading(false);
       }
     };
@@ -117,8 +117,8 @@ export default function LivingLedgerPage() {
           const data = await response.json();
           setHealthScores(new Map(healthScores.set(selectedDealId, data.data)));
         }
-      } catch (error) {
-        logger.error('Failed to load health score', error, { dealId: selectedDealId });
+      } catch (error: unknown) {
+        logger.error('Failed to load health score', error instanceof Error ? error : undefined, { dealId: selectedDealId });
       }
     };
 
@@ -145,8 +145,8 @@ export default function LivingLedgerPage() {
           const data = await response.json();
           setRecommendations(data.data);
         }
-      } catch (error) {
-        logger.error('Failed to load recommendations', error, { dealId: selectedDealId });
+      } catch (error: unknown) {
+        logger.error('Failed to load recommendations', error instanceof Error ? error : undefined, { dealId: selectedDealId });
       }
     };
 
@@ -174,8 +174,8 @@ export default function LivingLedgerPage() {
         setMonitoringEnabled(true);
         logger.info('Deal monitoring started');
       }
-    } catch (error) {
-      logger.error('Failed to start monitoring', error);
+    } catch (error: unknown) {
+      logger.error('Failed to start monitoring', error instanceof Error ? error : undefined);
     }
   };
 
@@ -196,8 +196,8 @@ export default function LivingLedgerPage() {
         setHealthCheckSummary(data.data);
         logger.info('Health check complete', data.data);
       }
-    } catch (error) {
-      logger.error('Failed to run health check', error);
+    } catch (error: unknown) {
+      logger.error('Failed to run health check', error instanceof Error ? error : undefined);
     }
   };
 
@@ -457,7 +457,7 @@ export default function LivingLedgerPage() {
                     <NextBestActionsCard
                       recommendations={recommendations}
                       onActionClick={(action) => {
-                        logger.info('Action clicked', { action });
+                        logger.info('Action clicked', { actionId: action.id, actionTitle: action.title });
                         alert(`Action: ${action.title}\n\n${action.description}`);
                       }}
                     />

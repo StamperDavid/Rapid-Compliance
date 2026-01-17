@@ -59,8 +59,8 @@ export default function EntityTablePage() {
         if (isMounted) {
           setSchemaList(data.schemas ?? []);
         }
-      } catch (err) {
-        logger.error('Error loading schemas for entity page', err, { file: 'page.tsx' });
+      } catch (err: unknown) {
+        logger.error('Error loading schemas for entity page', err instanceof Error ? err : undefined, { file: 'page.tsx' });
       } finally {
         // no-op
       }
@@ -190,8 +190,8 @@ export default function EntityTablePage() {
       await createRecord(data);
       setIsAdding(false);
       setFormData(getDefaultFormData());
-    } catch (err) {
-      logger.error('Error creating record:', err, { file: 'page.tsx' });
+    } catch (err: unknown) {
+      logger.error('Error creating record:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
       alert('Failed to create record.');
     }
   };
@@ -213,8 +213,8 @@ export default function EntityTablePage() {
       await updateRecord(editingId, updateData);
       setEditingId(null);
       setFormData(getDefaultFormData());
-    } catch (err) {
-      logger.error('Error updating record:', err, { file: 'page.tsx' });
+    } catch (err: unknown) {
+      logger.error('Error updating record:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
       alert('Failed to update record.');
     }
   };
@@ -223,8 +223,8 @@ export default function EntityTablePage() {
     if (confirm('Delete this record?')) {
       try {
         await deleteRecord(id);
-      } catch (err) {
-        logger.error('Error deleting record:', err, { file: 'page.tsx' });
+      } catch (err: unknown) {
+        logger.error('Error deleting record:', err instanceof Error ? err : undefined, { file: 'page.tsx' });
         alert('Failed to delete record.');
       }
     }
@@ -492,7 +492,7 @@ export default function EntityTablePage() {
               </thead>
               <tbody>
                 {filteredRecords.map((record) => (
-                  <tr key={record.id} style={{ borderBottom: '1px solid #1a1a1a' }}>
+                  <tr key={String(record.id)} style={{ borderBottom: '1px solid #1a1a1a' }}>
                     {tableFields.map(field => (
                       <td key={field.key} style={{ padding: '1rem 1.5rem', color: '#fff' }}>
                         {field.type === 'checkbox' ? (
@@ -513,7 +513,7 @@ export default function EntityTablePage() {
                             borderRadius: '0.25rem', 
                             fontSize: '0.75rem' 
                           }}>
-                            {record[field.key]}
+                            {String(record[field.key])}
                           </span>
                         ) : (
                           <span style={{ fontWeight: field.key === 'name' || field.key === 'first_name' ? '600' : '400' }}>
@@ -524,13 +524,13 @@ export default function EntityTablePage() {
                     ))}
                     <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                       <button
-                        onClick={() => handleEdit(record)}
+                        onClick={() => handleEdit(record as EntityRecord)}
                         style={{ color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', marginRight: '1rem', fontSize: '0.875rem', fontWeight: '500' }}
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(record.id)}
+                        onClick={() => handleDelete(String(record.id))}
                         style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}
                       >
                         Delete

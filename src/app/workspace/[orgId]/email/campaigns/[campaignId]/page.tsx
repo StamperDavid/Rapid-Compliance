@@ -22,8 +22,8 @@ export default function CampaignStatsPage() {
     try {
       const data = await getCampaignStats(campaignId);
       setStats(data);
-    } catch (error) {
-      logger.error('Error loading campaign stats:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error loading campaign stats:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     } finally {
       setLoading(false);
     }

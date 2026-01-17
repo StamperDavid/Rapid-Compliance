@@ -20,8 +20,8 @@ export default function NewContactPage() {
       const contactId = `contact-${Date.now()}`;
       await FirestoreService.set(`organizations/${orgId}/workspaces/default/entities/contacts/records`, contactId, { ...contact, id: contactId, createdAt: Timestamp.now() }, false);
       router.push(`/workspace/${orgId}/contacts`);
-    } catch (error) {
-      logger.error('Error creating contact:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Error creating contact:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
       alert('Failed to create contact');
     } finally {
       setSaving(false);

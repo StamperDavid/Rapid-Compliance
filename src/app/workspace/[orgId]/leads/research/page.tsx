@@ -155,8 +155,8 @@ export default function LeadResearchPage() {
           timestamp: new Date().toISOString(),
         }),
       });
-    } catch (error) {
-      logger.error('Failed to save feedback:', error, { file: 'page.tsx' });
+    } catch (error: unknown) {
+      logger.error('Failed to save feedback:', error instanceof Error ? error : undefined, { file: 'page.tsx' });
     }
   };
 
