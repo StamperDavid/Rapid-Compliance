@@ -50,7 +50,7 @@ export function usePagination<T, C = unknown>({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
       setError(errorMessage);
-      logger.error('Pagination error:', err, { file: 'usePagination.ts' });
+      logger.error('Pagination error:', err instanceof Error ? err : undefined, { file: 'usePagination.ts' });
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export function usePagination<T, C = unknown>({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to refresh data';
       setError(errorMessage);
-      logger.error('Refresh error:', err, { file: 'usePagination.ts' });
+      logger.error('Refresh error:', err instanceof Error ? err : undefined, { file: 'usePagination.ts' });
     } finally {
       setLoading(false);
     }

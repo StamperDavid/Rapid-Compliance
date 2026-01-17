@@ -4,7 +4,7 @@
  * Replaces all mock data usage across CRM pages
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { RecordService } from '@/lib/db/firestore-service';
 import { type QueryConstraint } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
@@ -72,6 +72,10 @@ export function useRecords<T = Record<string, unknown>>(
   // Create stable reference for filters to avoid dependency issues
   const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
 
+  // Use ref to access current filters in callbacks without causing re-renders
+  const filtersRef = useRef<QueryConstraint[]>(filters);
+  filtersRef.current = filters;
+
   // Apply pagination to records
   const paginateRecords = useCallback((allRecs: T[]) => {
     if (!enablePagination) {
@@ -95,6 +99,9 @@ export function useRecords<T = Record<string, unknown>>(
       return;
     }
 
+    // Parse current filters from serialized key (ensures dependency is used)
+    const currentFilters: QueryConstraint[] = filtersKey ? filtersRef.current : [];
+
     try {
       setLoading(true);
       setError(null);
@@ -103,13 +110,13 @@ export function useRecords<T = Record<string, unknown>>(
         organizationId,
         workspaceId,
         entityName,
-        filters
+        currentFilters
       );
 
       setAllRecords(data as T[]);
       paginateRecords(data as T[]);
     } catch (err) {
-      logger.error('Error loading records:', err, { file: 'useRecords.ts' });
+      logger.error('Error loading records:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
       setError(err as Error);
     } finally {
       setLoading(false);
@@ -127,11 +134,14 @@ export function useRecords<T = Record<string, unknown>>(
       return;
     }
 
+    // Access current filters from ref (filtersKey in deps ensures re-subscription on filter change)
+    const currentFilters: QueryConstraint[] = filtersKey ? filtersRef.current : [];
+
     const unsubscribe = RecordService.subscribe(
       organizationId,
       workspaceId,
       entityName,
-      filters,
+      currentFilters,
       (data) => {
         setAllRecords(data as T[]);
         paginateRecords(data as T[]);
@@ -165,7 +175,7 @@ export function useRecords<T = Record<string, unknown>>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        logger.error('Error creating record:', err, { file: 'useRecords.ts' });
+        logger.error('Error creating record:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
         throw err;
       }
     },
@@ -187,7 +197,7 @@ export function useRecords<T = Record<string, unknown>>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        logger.error('Error updating record:', err, { file: 'useRecords.ts' });
+        logger.error('Error updating record:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
         throw err;
       }
     },
@@ -208,7 +218,7 @@ export function useRecords<T = Record<string, unknown>>(
         // Refresh records
         await loadRecords();
       } catch (err) {
-        logger.error('Error deleting record:', err, { file: 'useRecords.ts' });
+        logger.error('Error deleting record:', err instanceof Error ? err : undefined, { file: 'useRecords.ts' });
         throw err;
       }
     },

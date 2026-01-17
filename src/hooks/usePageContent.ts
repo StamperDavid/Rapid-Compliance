@@ -38,6 +38,10 @@ export interface PageContent {
   metaDescription?: string;
 }
 
+interface EditorConfig {
+  pages?: PageContent[];
+}
+
 export function usePageContent(pageId: string) {
   const [page, setPage] = useState<PageContent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,14 +52,18 @@ export function usePageContent(pageId: string) {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
         const config = await FirestoreService.get('platform/website', 'editor-config');
 
-        if (config && typeof config === 'object' && 'pages' in config && Array.isArray(config.pages)) {
-          const foundPage = config.pages.find((p: PageContent) => p.id === pageId);
-          if (foundPage) {
-            setPage(foundPage);
+        if (config && typeof config === 'object' && 'pages' in config) {
+          const typedConfig = config as EditorConfig;
+          const pages = typedConfig.pages;
+          if (pages && Array.isArray(pages)) {
+            const foundPage = pages.find((p: PageContent) => p.id === pageId);
+            if (foundPage) {
+              setPage(foundPage);
+            }
           }
         }
       } catch (error) {
-        logger.error('Failed to load page content:', error, { file: 'usePageContent.ts' });
+        logger.error('Failed to load page content:', error instanceof Error ? error : undefined, { file: 'usePageContent.ts' });
       } finally {
         setLoading(false);
       }

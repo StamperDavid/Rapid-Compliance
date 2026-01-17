@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Timestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/config';
 import { ADMIN_ROLE_PERMISSIONS, type AdminRole, type AdminUser, type AdminPermissions } from '@/types/admin'
 import { logger } from '@/lib/logger/logger';
@@ -59,8 +60,8 @@ export function useAdminAuth() {
                 displayName: (userData.name || firebaseUser.displayName !== '' && userData.name || firebaseUser.displayName != null) ? userData.name ?? firebaseUser.displayName ?? 'Admin User' : 'Admin User',
                 role: userRole,
                 permissions: ADMIN_ROLE_PERMISSIONS[userRole] || ADMIN_ROLE_PERMISSIONS.admin,
-                createdAt: new Date(),
-                updatedAt: new Date(),
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now(),
                 status: 'active',
                 mfaEnabled: false,
               };
@@ -77,7 +78,7 @@ export function useAdminAuth() {
               setAdminUser(null);
             }
           } catch (error) {
-            logger.error('Error verifying admin status:', error, { file: 'useAdminAuth.ts' });
+            logger.error('Error verifying admin status:', error instanceof Error ? error : undefined, { file: 'useAdminAuth.ts' });
             setAdminUser(null);
           }
         } else {

@@ -74,7 +74,7 @@ export function useAuth() {
                 workspaceId: userProfile?.currentWorkspaceId,
               });
             } catch (error) {
-              logger.error('Error loading user profile:', error, { file: 'useAuth.ts' });
+              logger.error('Error loading user profile:', error instanceof Error ? error : undefined, { file: 'useAuth.ts' });
               // Fallback to basic user info with admin role
               setUser({
                 id: authUser.uid,
